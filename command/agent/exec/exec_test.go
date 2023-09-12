@@ -4,12 +4,10 @@
 package exec
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -403,19 +401,22 @@ func TestExecServer_LogFiles(t *testing.T) {
 		}
 	})
 
-	tempStderr := filepath.Join(os.TempDir(), "vault-exec-test.stderr.log")
-	t.Cleanup(func() {
-		_ = os.Remove(tempStderr)
-	})
-
 	testCases := map[string]struct {
-		testAppPort   int
-		stderrFile    string
+		testAppPort int
+		testAppArgs []string
+		stderrFile  string
+		stdoutFile  string
+
 		expectedError error
 	}{
-		"can_log_to_file": {
+		"can_log_stderr_to_file": {
 			testAppPort: 34001,
-			stderrFile:  tempStderr,
+			stderrFile:  "vault-exec-test.stderr.log",
+		},
+		"can_log_stdout_to_file": {
+			testAppPort: 34001,
+			stdoutFile:  "vault-exec-test.stdout.log",
+			testAppArgs: []string{"-log-to-stdout"},
 		},
 		"cant_open_file": {
 			testAppPort:   34002,
@@ -437,6 +438,25 @@ func TestExecServer_LogFiles(t *testing.T) {
 				"60s",
 			}
 
+			execConfig := &config.ExecConfig{
+				RestartOnSecretChanges: "always",
+				Command:                append(testAppCommand, testCase.testAppArgs...),
+			}
+
+			if testCase.stdoutFile != "" {
+				execConfig.ChildProcessStdout = filepath.Join(os.TempDir(), "vault-agent-exec.stdout.log")
+				t.Cleanup(func() {
+					_ = os.Remove(execConfig.ChildProcessStdout)
+				})
+			}
+
+			if testCase.stderrFile != "" {
+				execConfig.ChildProcessStderr = filepath.Join(os.TempDir(), "vault-agent-exec.stderr.log")
+				t.Cleanup(func() {
+					_ = os.Remove(execConfig.ChildProcessStderr)
+				})
+			}
+
 			execServer, err := NewServer(&ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
@@ -446,11 +466,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 							NumRetries: 3,
 						},
 					},
-					Exec: &config.ExecConfig{
-						RestartOnSecretChanges: "always",
-						Command:                testAppCommand,
-						ChildProcessStderr:     testCase.stderrFile,
-					},
+					Exec: execConfig,
 					EnvTemplates: []*ctconfig.TemplateConfig{{
 						Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
 						MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
@@ -474,10 +490,6 @@ func TestExecServer_LogFiles(t *testing.T) {
 				}
 				t.Fatalf("could not create exec server: %q", err)
 			}
-
-			// replace the tempfile created with one owned by this test
-			var stdoutBuffer bytes.Buffer
-			execServer.childProcessStderr = noopCloser{&stdoutBuffer}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -532,17 +544,26 @@ func TestExecServer_LogFiles(t *testing.T) {
 			// wait for app to stop
 			time.Sleep(5 * time.Second)
 
-			if stdoutBuffer.Len() == 0 {
-				t.Fatalf("stdout log file does not have any data!")
+			// check if the files have content
+			if testCase.stdoutFile != "" {
+				stdoutInfo, err := os.Stat(execConfig.ChildProcessStdout)
+				if err != nil {
+					t.Fatalf("error calling stat on stdout file: %q", err)
+				}
+				if stdoutInfo.Size() == 0 {
+					t.Fatalf("stdout log file does not haev any data!")
+				}
+			}
+
+			if testCase.stderrFile != "" {
+				stderrInfo, err := os.Stat(execConfig.ChildProcessStderr)
+				if err != nil {
+					t.Fatalf("error calling stat on stdout file: %q", err)
+				}
+				if stderrInfo.Size() == 0 {
+					t.Fatalf("stdout log file does not haev any data!")
+				}
 			}
 		})
 	}
-}
-
-type noopCloser struct {
-	io.Writer
-}
-
-func (_ noopCloser) Close() error {
-	return nil
 }
