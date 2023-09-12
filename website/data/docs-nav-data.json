@@ -1784,6 +1784,10 @@
                     "path": "platform/k8s/helm/examples/ha-with-raft"
                   },
                   {
+                    "title": "HA Cluster with Raft and TLS",
+                    "path": "platform/k8s/helm/examples/ha-tls"
+                  },
+                  {
                     "title": "HA Enterprise Cluster with Raft",
                     "path": "platform/k8s/helm/examples/enterprise-with-raft"
                   },
