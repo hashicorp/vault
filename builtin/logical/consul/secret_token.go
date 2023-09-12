@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -84,6 +85,17 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 		version = versionRaw.(string)
 	}
 
+	// Extract Consul Namespace info from secret
+	var namespace string
+	namespaceRaw, ok := req.Data["consul_namespace"]
+	if ok {
+		namespace = namespaceRaw.(string)
+	}
+
+	revokeWriteOptions := &api.WriteOptions{
+		Namespace: namespace,
+	}
+
 	switch version {
 	case "":
 		// Pre 1.4 tokens
@@ -92,7 +104,7 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 			return nil, err
 		}
 	case tokenPolicyType:
-		_, err := c.ACL().TokenDelete(tokenRaw.(string), nil)
+		_, err := c.ACL().TokenDelete(tokenRaw.(string), revokeWriteOptions)
 		if err != nil {
 			return nil, err
 		}
