@@ -28,57 +28,6 @@ const SELECTORS = {
   },
 };
 
-const KEY_TYPES = [
-  {
-    type: 'ed25519',
-    derived: true,
-    exportable: true,
-  },
-  {
-    type: 'rsa-2048',
-    exportable: true,
-  },
-  {
-    type: 'rsa-3072',
-    exportable: true,
-  },
-  {
-    type: 'rsa-4096',
-    exportable: true,
-    supportsEncryption: true,
-  },
-  {
-    type: 'ecdsa-p256',
-    exportable: true,
-  },
-  {
-    type: 'ecdsa-p384',
-    exportable: true,
-  },
-  {
-    type: 'ecdsa-p521',
-    exportable: true,
-  },
-  {
-    type: 'aes128-gcm96',
-    'convergent-encryption': true,
-    derived: true,
-    exportable: true,
-  },
-  {
-    type: 'aes256-gcm96',
-    'convergent-encryption': true,
-    derived: true,
-    exportable: true,
-  },
-  {
-    type: 'chacha20-poly1305',
-    'convergent-encryption': true,
-    derived: true,
-    exportable: true,
-  },
-];
-
 const testConvergentEncryption = async function (assert, keyName) {
   const tests = [
     // raw bytes for plaintext and context
@@ -316,7 +265,57 @@ module('Acceptance | transit (flaky)', function (hooks) {
   test('create form renders supported options for each key type', async function (assert) {
     assert.expect(30);
     await visit(`/vault/secrets/${this.path}/create`);
-    for (const key of KEY_TYPES) {
+    const KEY_OPTIONS = [
+      {
+        type: 'ed25519',
+        derived: true,
+        exportable: true,
+      },
+      {
+        type: 'rsa-2048',
+        exportable: true,
+      },
+      {
+        type: 'rsa-3072',
+        exportable: true,
+      },
+      {
+        type: 'rsa-4096',
+        exportable: true,
+        supportsEncryption: true,
+      },
+      {
+        type: 'ecdsa-p256',
+        exportable: true,
+      },
+      {
+        type: 'ecdsa-p384',
+        exportable: true,
+      },
+      {
+        type: 'ecdsa-p521',
+        exportable: true,
+      },
+      {
+        type: 'aes128-gcm96',
+        'convergent-encryption': true,
+        derived: true,
+        exportable: true,
+      },
+      {
+        type: 'aes256-gcm96',
+        'convergent-encryption': true,
+        derived: true,
+        exportable: true,
+      },
+      {
+        type: 'chacha20-poly1305',
+        'convergent-encryption': true,
+        derived: true,
+        exportable: true,
+      },
+    ];
+    for (const key of KEY_OPTIONS) {
       const { type } = key;
       await fillIn(SELECTORS.form('type'), type);
 
