@@ -60,6 +60,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
       const message = `Successfully deleted role ${model.name}.`;
       await model.destroyRecord();
       this.store.clearDataset('ldap/role');
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
