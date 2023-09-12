@@ -40,7 +40,9 @@ func waitForSubscriber() <-chan bool {
 	subscribers := eventbus.SubscriptionsCount()
 
 	go func() {
-		for subscribers != eventbus.SubscriptionsCount() {
+		// busy wait
+		for subscribers == eventbus.SubscriptionsCount() {
+			time.Sleep(1 * time.Millisecond)
 		}
 		notifyCh <- true
 	}()
