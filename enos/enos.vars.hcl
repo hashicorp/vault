@@ -24,7 +24,7 @@
 # aws_ssh_private_key_path = "./support/private_key.pem"
 
 # backend_edition is the backend (consul) release edition if applicable to the scenario.
-# backend_edition = "oss"
+# backend_edition = "ce"
 
 # backend_license_path is the license for the backend if applicable (Consul Enterprise)".
 # backend_license_path = "./support/consul.hclic"
@@ -75,14 +75,6 @@
 # It should be 'package' for .deb or # .rpm package and 'bundle' for .zip bundles"
 # vault_artifact_type = "bundle"
 
-# vault_autopilot_initial_release is the version of Vault to deploy before doing an autopilot upgrade
-# to the test artifact.
-# vault_autopilot_initial_release = {
-#     edition = "ent"
-#     version = "1.11.0"
-#   }
-# }
-
 # vault_build_date is the build date for Vault artifact. Some validations will require the binary build
 # date to match"
 # vault_build_date = "2023-07-07T14:06:37Z" // make ci-get-date for example
@@ -108,7 +100,7 @@
 # vault_instance_count = 3
 
 # vault_license_path is the path to a valid Vault enterprise edition license.
-# This is only required for non-oss editions"
+# This is only required for non-ce editions"
 # vault_license_path = "./support/vault.hclic"
 
 # vault_local_build_tags override the build tags we pass to the Go compiler for builder:local variants.
@@ -122,16 +114,6 @@
 # binary and cluster to report this version.
 # vault_product_version = "1.15.0"
 
-# vault_upgrade_initial_release is the Vault release to deploy before upgrading.
-
 # vault_revision is the git sha of Vault artifact we are testing. Some validations will expect the vault
 # binary and cluster to report this revision.
 # vault_revision = "df733361af26f8bb29b63704168bbc5ab8d083de"
-
-# vault_upgrade_initial_release is the Vault release to deploy before doing an in-place upgrade.
-# vault_upgrade_initial_release = {
-#     edition = "oss"
-#     // Vault 1.10.5 has a known issue with retry_join.
-#     version = "1.10.4"
-#   }
-# }

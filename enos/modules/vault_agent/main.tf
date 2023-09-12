@@ -55,12 +55,14 @@ locals {
 }
 
 resource "enos_remote_exec" "set_up_approle_auth_and_agent" {
-  content = templatefile("${path.module}/templates/set-up-approle-and-agent.sh", {
-    vault_install_dir                = var.vault_install_dir
-    vault_token                      = var.vault_root_token
-    vault_agent_template_destination = var.vault_agent_template_destination
-    vault_agent_template_contents    = var.vault_agent_template_contents
-  })
+  environment = {
+    VAULT_INSTALL_DIR                = var.vault_install_dir,
+    VAULT_TOKEN                      = var.vault_root_token,
+    VAULT_AGENT_TEMPLATE_DESTINATION = var.vault_agent_template_destination,
+    VAULT_AGENT_TEMPLATE_CONTENTS    = var.vault_agent_template_contents,
+  }
+
+  scripts = [abspath("${path.module}/scripts/set-up-approle-and-agent.sh")]
 
   transport = {
     ssh = {
