@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
 import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
+import type StoreService from 'vault/services/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
 import type LdapRoleModel from 'vault/models/ldap/role';
@@ -24,23 +24,44 @@ interface LdapRolesRouteModel {
 interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRolesRouteModel;
+  pageFilter: string | undefined;
+  currentPage: number | undefined;
+}
+
+interface LdapRolesRouteParams {
+  currentPage?: string;
+  pageFilter: string;
 }
 
 @withConfig('ldap/config')
 export default class LdapRolesRoute extends Route {
-  @service declare readonly store: Store;
+  @service declare readonly store: StoreService;
   @service declare readonly secretMountPath: SecretMountPath;
 
   declare promptConfig: boolean;
 
-  model() {
+  queryParams = {
+    pageFilter: {
+      refreshModel: true,
+    },
+    currentPage: {
+      refreshModel: true,
+    },
+  };
+
+  model(params: LdapRolesRouteParams) {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.store.query(
+      roles: this.store.lazyPaginatedQuery(
         'ldap/role',
-        { backend: backendModel.id },
+        {
+          backend: backendModel.id,
+          page: Number(params.currentPage) || 1,
+          pageFilter: params.pageFilter,
+          responsePath: 'data.keys',
+        },
         { adapterOptions: { showPartialError: true } }
       ),
     });
@@ -57,5 +78,12 @@ export default class LdapRolesRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backendModel.id },
     ];
+  }
+
+  resetController(controller: LdapRolesController, isExiting: boolean) {
+    if (isExiting) {
+      controller.set('pageFilter', undefined);
+      controller.set('currentPage', undefined);
+    }
   }
 }
