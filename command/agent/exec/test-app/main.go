@@ -79,12 +79,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	flag.Parse()
+
 	logOut := os.Stderr
 	if logToStdout {
 		logOut = os.Stdout
 	}
 	logger := log.New(logOut, "test-app: ", log.LstdFlags)
 
+	logger.Printf("running on port %d", port)
 	if err := run(logger); err != nil {
 		log.Fatalf("error: %v\n", err)
 	}
@@ -100,8 +103,6 @@ func run(logger *log.Logger) error {
 
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelContextFunc()
-
-	flag.Parse()
 
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", port),

@@ -414,12 +414,12 @@ func TestExecServer_LogFiles(t *testing.T) {
 			stderrFile:  "vault-exec-test.stderr.log",
 		},
 		"can_log_stdout_to_file": {
-			testAppPort: 34001,
+			testAppPort: 34002,
 			stdoutFile:  "vault-exec-test.stdout.log",
 			testAppArgs: []string{"-log-to-stdout"},
 		},
 		"cant_open_file": {
-			testAppPort:   34002,
+			testAppPort:   34003,
 			stderrFile:    "/file/does/not/exist",
 			expectedError: os.ErrNotExist,
 		},
@@ -551,17 +551,17 @@ func TestExecServer_LogFiles(t *testing.T) {
 					t.Fatalf("error calling stat on stdout file: %q", err)
 				}
 				if stdoutInfo.Size() == 0 {
-					t.Fatalf("stdout log file does not haev any data!")
+					t.Fatalf("stdout log file does not have any data!")
 				}
 			}
 
 			if testCase.stderrFile != "" {
 				stderrInfo, err := os.Stat(execConfig.ChildProcessStderr)
 				if err != nil {
-					t.Fatalf("error calling stat on stdout file: %q", err)
+					t.Fatalf("error calling stat on stderr file: %q", err)
 				}
 				if stderrInfo.Size() == 0 {
-					t.Fatalf("stdout log file does not haev any data!")
+					t.Fatalf("stderr log file does not have any data!")
 				}
 			}
 		})
