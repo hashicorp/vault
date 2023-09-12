@@ -15,7 +15,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap/ldap v0.0.0-20230824195246-512b26a36f79
+	github.com/hashicorp/cap/ldap v0.0.0-20230907231022-8e71bfc048ed
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v1.4.0

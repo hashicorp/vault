@@ -71,7 +71,7 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.7.0
 	github.com/hashicorp/cap v0.3.5-0.20230824011758-99585a2d0319
-	github.com/hashicorp/cap/ldap v0.0.0-20230824195246-512b26a36f79
+	github.com/hashicorp/cap/ldap v0.0.0-20230907231022-8e71bfc048ed
 	github.com/hashicorp/consul-template v0.32.0
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/hashicorp/errwrap v1.1.0
