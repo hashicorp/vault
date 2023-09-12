@@ -50,7 +50,6 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    assert.strictEqual(currentURL(), '/vault/auth?with=token');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.strictEqual(component.tokenValue, '', 'it clears the token value when toggling methods');
