@@ -106,7 +106,7 @@ export default Store.extend({
     let newData = dataset || [];
     if (filter) {
       newData = dataset.filter(function (item) {
-        const id = item.id || item;
+        const id = item.id || item.name || item;
         return id.toLowerCase().includes(filter.toLowerCase());
       });
     }
