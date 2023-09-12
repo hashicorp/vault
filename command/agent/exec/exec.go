@@ -65,13 +65,11 @@ type Server struct {
 
 	logger hclog.Logger
 
-	childProcess            *child.Child
-	childProcessState       childProcessState
-	childProcessLock        sync.Mutex
-	childProcessStdout      io.WriteCloser
-	childProcessStderr      io.WriteCloser
-	childProcessCloseStdout bool
-	childProcessCloseStderr bool
+	childProcess       *child.Child
+	childProcessState  childProcessState
+	childProcessLock   sync.Mutex
+	childProcessStdout io.WriteCloser
+	childProcessStderr io.WriteCloser
 
 	// exit channel of the child process
 	childProcessExitCh chan int
@@ -92,9 +90,7 @@ func (e *ProcessExitError) Error() string {
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	var err error
 
-	childProcessCloseStdout := false
 	childProcessStdout := os.Stdout
-	childProcessCloseStderr := false
 	childProcessStderr := os.Stderr
 
 	if cfg.AgentConfig.Exec != nil {
@@ -103,7 +99,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
 			}
-			childProcessCloseStdout = true
 		}
 
 		if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
@@ -111,19 +106,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
 			}
-			childProcessCloseStderr = true
 		}
 	}
 
 	server := Server{
-		logger:                  cfg.Logger,
-		config:                  cfg,
-		childProcessState:       childProcessStateNotStarted,
-		childProcessExitCh:      make(chan int),
-		childProcessStdout:      childProcessStdout,
-		childProcessStderr:      childProcessStderr,
-		childProcessCloseStdout: childProcessCloseStdout,
-		childProcessCloseStderr: childProcessCloseStderr,
+		logger:             cfg.Logger,
+		config:             cfg,
+		childProcessState:  childProcessStateNotStarted,
+		childProcessExitCh: make(chan int),
+		childProcessStdout: childProcessStdout,
+		childProcessStderr: childProcessStderr,
 	}
 
 	return &server, nil
@@ -375,11 +367,6 @@ func (s *Server) Close() {
 }
 
 func (s *Server) close() {
-	if s.childProcessCloseStdout {
-		_ = s.childProcessStdout.Close()
-	}
-
-	if s.childProcessCloseStderr {
-		_ = s.childProcessStderr.Close()
-	}
+	_ = s.childProcessStdout.Close()
+	_ = s.childProcessStderr.Close()
 }
