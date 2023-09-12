@@ -669,7 +669,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status, SealType: status.Type}
+	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status}
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
 	// we cannot query for the leader since we are sealed.
