@@ -26,7 +26,7 @@ following:
 
 - The presence of a `seal "pkcs11"` block in Vault's configuration file
 - The presence of the environment variable `VAULT_HSM_LIB` set to the library's
-  path as well as `VAULT_HSM_TYPE` set to `pkcs11`. If enabling via environment
+  path as well as `VAULT_SEAL_TYPE` set to `pkcs11`. If enabling via environment
   variable, all other required values (i.e. `VAULT_HSM_SLOT`) must be also
   supplied.
 
@@ -188,8 +188,8 @@ Alternatively, the HSM seal can be activated by providing the following
 environment variables:
 
 ```text
+VAULT_SEAL_TYPE
 VAULT_HSM_LIB
-VAULT_HSM_TYPE
 VAULT_HSM_SLOT
 VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
