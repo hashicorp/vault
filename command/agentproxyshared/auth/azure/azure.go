@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	az "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -101,20 +103,11 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 	authenticateFromEnvironmentRaw, ok := conf.Config["authenticate_from_environment"]
 	if ok {
-		a.authenticateFromEnvironment, ok = authenticateFromEnvironmentRaw.(bool)
-		if !ok {
-			authFromEnvString, ok := authenticateFromEnvironmentRaw.(string)
-			if !ok {
-				return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
-			}
-			if authFromEnvString == "true" {
-				a.authenticateFromEnvironment = true
-			} else if authFromEnvString == "false" {
-				a.authenticateFromEnvironment = false
-			} else {
-				return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
-			}
+		authenticateFromEnvironment, err := parseutil.ParseBool(authenticateFromEnvironmentRaw)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert 'authenticate_from_environment' config value to bool: %w", err)
 		}
+		a.authenticateFromEnvironment = authenticateFromEnvironment
 	}
 
 	switch {
