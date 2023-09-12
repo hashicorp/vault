@@ -961,7 +961,7 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 
 // encrypt is used to encrypt a value
 func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain []byte) ([]byte, error) {
-	// Allocate the output buffer with room for tern, version byte,
+	// Allocate the output buffer with room for term, version byte,
 	// nonce, GCM tag and the plaintext
 
 	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()

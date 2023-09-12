@@ -56,7 +56,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     };
   });
 
-  test('it should render tab page header and config cta', async function (assert) {
+  test('it should render tab page header, config cta and mount config', async function (assert) {
     await this.renderComponent();
     assert.dom('.title svg').hasClass('flight-icon-kubernetes', 'Kubernetes icon renders in title');
     assert.dom('.title').hasText('kubernetes-test', 'Mount path renders in title');
@@ -64,6 +64,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
       .dom('[data-test-toolbar-config-action]')
       .hasText('Configure Kubernetes', 'Toolbar action has correct text');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
+    assert.dom('[data-test-mount-config]').exists('Mount config renders');
   });
 
   test('it should render message for inferred configuration', async function (assert) {

@@ -7,31 +7,38 @@
 import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { alias } from '@ember/object/computed';
-import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
 export default class SecretDeleteMenu extends Component {
   @service router;
-  @service store;
+  @service flashMessages;
 
-  @maybeQueryRecord(
-    'capabilities',
-    (context) => {
-      if (!context.args.model || context.args.mode === 'create') {
-        return;
-      }
-      const { backend, id } = context.args.model;
-      const path = `${backend}/${id}`;
-      return {
-        id: path,
-      };
-    },
-    'model',
-    'model.id',
-    'mode'
-  )
-  secretDataPath;
-  @alias('secretDataPath.canDelete') canDeleteSecretData;
+  get canUndeleteVersion() {
+    return this.args.modelForData.canUndeleteVersion;
+  }
+  get canDestroyVersion() {
+    return this.args.modelForData.canDestroyVersion;
+  }
+  get canDestroyAllVersions() {
+    return this.args.modelForData.canDestroyAllVersions;
+  }
+  get canDeleteSecretData() {
+    return this.args.modelForData.canDeleteSecretData;
+  }
+  get canSoftDeleteSecretData() {
+    return this.args.modelForData.canSoftDeleteSecretData;
+  }
+
+  get isLatestVersion() {
+    // must have metadata access.
+    const { model } = this.args;
+    if (!model) return false;
+    const latestVersion = model.currentVersion;
+    const selectedVersion = model.selectedVersion.version;
+    if (latestVersion !== selectedVersion) {
+      return false;
+    }
+    return true;
+  }
 
   @action
   handleDelete() {

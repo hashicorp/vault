@@ -33,15 +33,15 @@
       </h2>
     </OverviewCard>
   </div>
-  <div class="is-flex-align-start has-top-margin-l">
+  <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
     <AccountsCheckedOut
       @libraries={{@libraries}}
       @statuses={{@librariesStatus}}
       @showLibraryColumn={{true}}
+      @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.overview"}}
       class="is-flex-half"
     />
-
-    <div class="has-left-margin-l is-flex-half">
+    <div>
       <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
         <div class="has-top-margin-m is-flex">
           <SearchSelect

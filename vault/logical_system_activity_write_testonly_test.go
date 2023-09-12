@@ -216,6 +216,16 @@ func Test_multipleMonthsActivityClients_processMonth(t *testing.T) {
 			numMonths: 1,
 		},
 		{
+			name: "mount missing slash",
+			clients: &generation.Data{
+				Clients: &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{
+					Namespace: namespace.RootNamespaceID,
+					Mount:     "identity",
+				}}}},
+			},
+			numMonths: 1,
+		},
+		{
 			name: "specified namespace exists, mount empty",
 			clients: &generation.Data{
 				Clients: &generation.Data_All{All: &generation.Clients{Clients: []*generation.Client{{

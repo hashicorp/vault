@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -466,6 +467,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
@@ -533,41 +540,62 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	}
 
 	command := d.Get("command").(string)
-	if command == "" {
-		return logical.ErrorResponse("missing command value"), nil
+	ociImage := d.Get("oci_image").(string)
+	if command == "" && ociImage == "" {
+		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
-	if err = b.Core.CheckPluginPerms(command); err != nil {
-		return nil, err
+	if ociImage == "" {
+		if err = b.Core.CheckPluginPerms(command); err != nil {
+			return nil, err
+		}
+	}
+
+	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
 	parts := strings.Split(command, " ")
-	if len(parts) <= 0 {
+	if len(parts) == 0 && ociImage == "" {
 		return logical.ErrorResponse("missing command value"), nil
 	} else if len(parts) > 1 && len(args) > 0 {
 		return logical.ErrorResponse("must not specify args in command and args field"), nil
-	} else if len(parts) > 1 {
-		args = parts[1:]
+	} else if len(parts) >= 1 {
+		command = parts[0]
+		if len(parts) > 1 {
+			args = parts[1:]
+		}
 	}
 
 	env := d.Get("env").([]string)
 
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
-		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+		return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
 	}
 
 	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
-		Name:    pluginName,
-		Type:    pluginType,
-		Version: pluginVersion,
-		Command: parts[0],
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256Bytes,
+		Name:     pluginName,
+		Type:     pluginType,
+		Version:  pluginVersion,
+		OCIImage: ociImage,
+		Runtime:  pluginRuntime,
+		Command:  command,
+		Args:     args,
+		Env:      env,
+		Sha256:   sha256Bytes,
 	})
 	if err != nil {
 		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
@@ -613,14 +641,16 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, nil
 	}
 
-	command := ""
-	if !plugin.Builtin {
-		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+	command := plugin.Command
+	if !plugin.Builtin && plugin.OCIImage == "" {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, command)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	// plugin.Env has historically been omitted, and could conceivably have
+	// sensitive information in it.
 	data := map[string]interface{}{
 		"name":    plugin.Name,
 		"args":    plugin.Args,
@@ -633,6 +663,14 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	if plugin.Builtin {
 		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
 		data["deprecation_status"] = status.String()
+	}
+
+	if plugin.OCIImage != "" {
+		data["oci_image"] = plugin.OCIImage
+	}
+
+	if plugin.Runtime != "" {
+		data["runtime"] = plugin.Runtime
 	}
 
 	return &logical.Response{
@@ -796,6 +834,15 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	plugins, err := b.Core.pluginCatalog.ListPluginsWithRuntime(ctx, runtimeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(plugins) != 0 {
+		return logical.ErrorResponse("unable to delete %q runtime. Registered plugins=%v are referencing it.", runtimeName, plugins), nil
 	}
 
 	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
@@ -4981,14 +5028,15 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
 				Name:    sealWrapper.Name,
-				Healthy: sealWrapper.Healthy,
+				Healthy: sealWrapper.IsHealthy(),
 			}
-			if !sealWrapper.Healthy {
-				if !sealWrapper.LastSeenHealthy.IsZero() {
-					b.UnhealthySince = sealWrapper.LastSeenHealthy.String()
+			if !sealWrapper.IsHealthy() {
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
+				if !lastSeenHealthy.IsZero() {
+					b.UnhealthySince = lastSeenHealthy.String()
 				}
-				if uhMin.IsZero() || uhMin.After(sealWrapper.LastSeenHealthy) {
-					uhMin = sealWrapper.LastSeenHealthy
+				if uhMin.IsZero() || uhMin.After(lastSeenHealthy) {
+					uhMin = lastSeenHealthy
 				}
 			}
 			r.Backends = append(r.Backends, b)
@@ -5003,6 +5051,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 				Healthy: true,
 			},
 		}
+		r.Healthy = true
 	}
 	return &r, nil
 }
@@ -6077,8 +6126,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the
-command field. This should be HEX encoded.`,
+		`The SHA256 sum of the executable or container to be run.
+This should be HEX encoded.`,
 		"",
 	},
 	"plugin-catalog_command": {
@@ -6097,7 +6146,16 @@ Each entry is of the form "key=value".`,
 		"",
 	},
 	"plugin-catalog_version": {
-		"The semantic version of the plugin to use.",
+		"The semantic version of the plugin to use, or image tag if oci_image is provided.",
+		"",
+	},
+	"plugin-catalog_oci_image": {
+		`The name of the OCI image to be run, without the tag or SHA256.
+Must already be present on the machine.`,
+		"",
+	},
+	"plugin-catalog_runtime": {
+		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
 	"plugin-runtime-catalog": {
@@ -6134,15 +6192,15 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-runtime-catalog_cgroup-parent": {
-		"Optional parent cgroup for the container",
+		"Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
 		"",
 	},
 	"plugin-runtime-catalog_cpu-nanos": {
-		"The limit of runtime CPU in nanos",
+		"CPU limit to set per container in nanos. Defaults to no limit.",
 		"",
 	},
 	"plugin-runtime-catalog_memory-bytes": {
-		"The limit of runtime memory in bytes",
+		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {
