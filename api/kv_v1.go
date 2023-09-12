@@ -13,6 +13,8 @@ type KVv1 struct {
 	mountPath string
 }
 
+const Kvv1MountType = "kvv1"
+
 // Get returns a secret from the KV v1 secrets engine.
 func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	pathToRead := fmt.Sprintf("%s/%s", kv.mountPath, secretPath)
@@ -24,6 +26,8 @@ func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	if secret == nil {
 		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
+
+	secret.MountType = Kvv1MountType
 
 	return &KVSecret{
 		Data:            secret.Data,

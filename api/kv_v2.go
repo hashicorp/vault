@@ -20,6 +20,8 @@ type KVv2 struct {
 	mountPath string
 }
 
+const Kvv2MountType = "kvv2"
+
 // KVMetadata is the full metadata for a given KV v2 secret.
 type KVMetadata struct {
 	CASRequired        bool                   `mapstructure:"cas_required"`
@@ -122,6 +124,8 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 	if secret == nil {
 		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
+
+	secret.MountType = Kvv2MountType
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
 	if err != nil {
@@ -248,6 +252,8 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 	if err != nil {
 		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %w", err)
 	}
+
+	secret.MountType = Kvv2MountType
 
 	kvSecret := &KVSecret{
 		Data:            nil, // secret.Data in this case is the metadata
