@@ -494,7 +494,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 			// send a dummy token to kick off the server
 			execServerTokenCh <- "my-token"
 
-			// ensure the test app is running after 3 seconds
+			// ensure the test app is running after 500ms
 			var (
 				testAppAddr      = fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
 				testAppStartedCh = make(chan error)

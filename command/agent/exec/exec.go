@@ -70,7 +70,7 @@ type Server struct {
 	childProcessLock        sync.Mutex
 	childProcessStdout      io.WriteCloser
 	childProcessStderr      io.WriteCloser
-	childProcessCloseStdOut bool
+	childProcessCloseStdout bool
 	childProcessCloseStderr bool
 
 	// exit channel of the child process
