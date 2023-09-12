@@ -84,7 +84,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.addrWarning != "" && c.UI != nil {
 		if os.Getenv("VAULT_ADDR") == "" {
-			c.UI.Warn(wrapAtLength(c.addrWarning))
+			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
+				c.UI.Warn(wrapAtLength(c.addrWarning))
+			}
 		}
 	}
 
