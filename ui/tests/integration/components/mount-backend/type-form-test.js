@@ -73,10 +73,8 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     });
 
     test('it renders correct items for enterprise auth methods', async function (assert) {
-      await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
-      assert
-        .dom('[data-test-mount-type]')
-        .exists({ count: allAuthTypes.length }, 'Renders all secret engines');
+      await render(hbs`<MountBackend::TypeForm @mountType="auth" @setMountType={{this.setType}} />`);
+      assert.dom('[data-test-mount-type]').exists({ count: allAuthTypes.length }, 'Renders all auth methods');
     });
   });
 });
