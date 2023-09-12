@@ -65,7 +65,7 @@ export default class StoreService extends Store {
   //   size: the size of the page
   //   pageFilter: a string that will be used to do a fuzzy match against the
   //     results, this is done pre-pagination
-  lazyPaginatedQuery(modelType, query /*, options*/) {
+  lazyPaginatedQuery(modelType, query, adapterOptions) {
     const adapter = this.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
     const dataCache = this.getDataset(modelName, query);
@@ -80,7 +80,7 @@ export default class StoreService extends Store {
       return resolve(this.fetchPage(modelName, query));
     }
     return adapter
-      .query(this, { modelName }, query)
+      .query(this, { modelName }, query, null, adapterOptions)
       .then((response) => {
         const serializer = this.serializerFor(modelName);
         const datasetHelper = serializer.extractLazyPaginatedData;
