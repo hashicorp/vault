@@ -451,7 +451,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
   It's been a while since we've updated the transit engine
   keeping these tests to run locally the next time we touch that secret engine
   */
-  const keyTypes = [
+  const KEY_TYPE_COMBINATIONS = [
     {
       name: (uid) => `aes-${uid}`,
       type: 'aes128-gcm96',
@@ -537,7 +537,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     },
   ];
 
-  for (const key of keyTypes) {
+  for (const key of KEY_TYPE_COMBINATIONS) {
     test.skip(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
       const name = await this.generateTransitKey(key);
