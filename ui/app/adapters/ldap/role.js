@@ -39,7 +39,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
       const url = this.getURL(backend, this.pathForRoleType(roleType));
       try {
         const models = await this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-          return resp.data.keys.map((name) => ({ name, backend, type: roleType }));
+          return resp.data.keys.map((name) => ({ id: name, name, backend, type: roleType }));
         });
         roles.addObjects(models);
       } catch (error) {
@@ -66,8 +66,9 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
         this.flashMessages.info(`Error fetching roles from ${errorMessages.join(', ')}`);
       }
     }
-
-    return roles.sortBy('name');
+    // must return an object in this shape for lazyPaginatedQuery to function
+    // changing the responsePath or providing the extractLazyPaginatedData serializer method causes normalizeResponse to return data: [undefined]
+    return { data: { keys: roles.sortBy('name') } };
   }
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;
