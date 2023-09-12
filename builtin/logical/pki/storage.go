@@ -915,7 +915,91 @@ func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool
 	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
+func (sc *storageContext) _cleanupInternalCRLMapping(mapping *internalCRLConfigEntry, path string) error {
+	// Track which CRL IDs are presently referred to by issuers; any other CRL
+	// IDs are subject to cleanup.
+	//
+	// Unused IDs both need to be removed from this map (cleaning up the size
+	// of this storage entry) but also the full CRLs removed from disk.
+	presentMap := make(map[crlID]bool)
+	for _, id := range mapping.IssuerIDCRLMap {
+		presentMap[id] = true
+	}
+
+	// Identify which CRL IDs exist and are candidates for removal;
+	// theoretically these three maps should be in sync, but were added
+	// at different times.
+	toRemove := make(map[crlID]bool)
+	for id := range mapping.CRLNumberMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+	for id := range mapping.LastCompleteNumberMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+	for id := range mapping.CRLExpirationMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+
+	// Depending on which path we're writing this config to, we need to
+	// remove CRLs from the relevant folder too.
+	isLocal := path == storageLocalCRLConfig
+	baseCRLPath := "crls/"
+	if !isLocal {
+		baseCRLPath = "unified-crls/"
+	}
+
+	for id := range toRemove {
+		// Clean up space in this mapping...
+		delete(mapping.CRLNumberMap, id)
+		delete(mapping.LastCompleteNumberMap, id)
+		delete(mapping.CRLExpirationMap, id)
+
+		// And clean up space on disk from the fat CRL mapping.
+		crlPath := baseCRLPath + string(id)
+		deltaCRLPath := crlPath + "-delta"
+		if err := sc.Storage.Delete(sc.Context, crlPath); err != nil {
+			return fmt.Errorf("failed to delete unreferenced CRL %v: %w", id, err)
+		}
+		if err := sc.Storage.Delete(sc.Context, deltaCRLPath); err != nil {
+			return fmt.Errorf("failed to delete unreferenced delta CRL %v: %w", id, err)
+		}
+	}
+
+	// Lastly, some CRLs could've been partially removed from the map but
+	// not from disk. Check to see if we have any dangling CRLs and remove
+	// them too.
+	list, err := sc.Storage.List(sc.Context, baseCRLPath)
+	if err != nil {
+		return fmt.Errorf("failed listing all CRLs: %w", err)
+	}
+	for _, crl := range list {
+		if crl == "config" || strings.HasSuffix(crl, "/") {
+			continue
+		}
+
+		if presentMap[crlID(crl)] {
+			continue
+		}
+
+		if err := sc.Storage.Delete(sc.Context, baseCRLPath+"/"+crl); err != nil {
+			return fmt.Errorf("failed cleaning up orphaned CRL %v: %w", crl, err)
+		}
+	}
+
+	return nil
+}
+
 func (sc *storageContext) _setInternalCRLConfig(mapping *internalCRLConfigEntry, path string) error {
+	if err := sc._cleanupInternalCRLMapping(mapping, path); err != nil {
+		return fmt.Errorf("failed to clean up internal CRL mapping: %w", err)
+	}
+
 	json, err := logical.StorageEntryJSON(path, mapping)
 	if err != nil {
 		return err
