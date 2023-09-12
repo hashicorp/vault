@@ -74,7 +74,8 @@ delay) mode. The maximum allowed value is 10.
   snapshot size and high write throughput causing log truncation before a
   snapshot can be fully installed. If you need to use this to recover a cluster,
   consider reducing write throughput or the amount of data stored on Vault. The
-  default value is 10000 which is suitable for all normal workloads. This is not the same as `max_trailing_logs`.
+  default value is 10000 which is suitable for all normal workloads. The
+  `trailing_logs` metric is not the same as `max_trailing_logs`.
 
 - `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of Raft
   commit entries between snapshots that are saved to disk. This is a low-level
