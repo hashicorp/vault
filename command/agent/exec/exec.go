@@ -94,8 +94,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 	childProcessStdout := os.Stdout
 	childProcessStderr := os.Stderr
-	childProcessCloseStdout := false
-	childProcessCloseStderr := false
 
 	if cfg.AgentConfig.Exec != nil {
 		if cfg.AgentConfig.Exec.ChildProcessStdout != "" {
@@ -103,7 +101,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
 			}
-			childProcessCloseStdout = true
 		}
 
 		if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
@@ -111,19 +108,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
 			}
-			childProcessCloseStderr = true
 		}
 	}
 
 	server := Server{
-		logger:                  cfg.Logger,
-		config:                  cfg,
-		childProcessState:       childProcessStateNotStarted,
-		childProcessExitCh:      make(chan int),
-		childProcessStdout:      childProcessStdout,
-		childProcessStderr:      childProcessStderr,
-		childProcessCloseStdout: childProcessCloseStdout,
-		childProcessCloseStderr: childProcessCloseStderr,
+		logger:             cfg.Logger,
+		config:             cfg,
+		childProcessState:  childProcessStateNotStarted,
+		childProcessExitCh: make(chan int),
+		childProcessStdout: childProcessStdout,
+		childProcessStderr: childProcessStderr,
 	}
 
 	return &server, nil
@@ -375,10 +369,10 @@ func (s *Server) Close() {
 }
 
 func (s *Server) close() {
-	if s.childProcessCloseStdout {
+	if s.childProcessStdout != os.Stdout {
 		_ = s.childProcessStdout.Close()
 	}
-	if s.childProcessCloseStderr {
+	if s.childProcessStderr != os.Stderr {
 		_ = s.childProcessStderr.Close()
 	}
 }
