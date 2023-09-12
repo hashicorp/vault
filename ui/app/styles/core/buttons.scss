@@ -333,7 +333,8 @@ a.button.disabled {
   }
 }
 
-// Modification to HDS copy button component to match current UI
+// Styling to <Hds::Copy::Button> component to match existing UI Structure buttons
+// Will likely be removed/modified when all buttons are audited and replaced with HDS
 .hds-copy-button {
   &.icon-only {
     background: none;
