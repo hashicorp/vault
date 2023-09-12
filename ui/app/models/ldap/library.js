@@ -19,7 +19,11 @@ const formFields = ['name', 'service_account_names', 'ttl', 'max_ttl', 'disable_
 export default class LdapLibraryModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
-  @attr('string', { label: 'Library name' }) name;
+  @attr('string', {
+    label: 'Library name',
+    editDisabled: true,
+  })
+  name;
 
   @attr('string', {
     editType: 'stringArray',

@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -24,11 +25,13 @@ var (
 )
 
 type TestPlugin struct {
-	Name     string
-	Typ      consts.PluginType
-	Version  string
-	FileName string
-	Sha256   string
+	Name        string
+	Typ         consts.PluginType
+	Version     string
+	FileName    string
+	Sha256      string
+	Image       string
+	ImageSha256 string
 }
 
 func GetPlugin(t testing.T, typ consts.PluginType) (string, string, string, string) {
@@ -111,6 +114,7 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 		}
 		line = append(line, "-o", pluginPath, pluginMain)
 		cmd := exec.Command("go", line...)
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		cmd.Dir = dir
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -143,4 +147,28 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 		FileName: path.Base(pluginPath),
 		Sha256:   fmt.Sprintf("%x", sha.Sum(nil)),
 	}
+}
+
+func BuildPluginContainerImage(t testing.T, plugin TestPlugin, pluginDir string) (image string, sha256 string) {
+	t.Helper()
+	ref := plugin.Name
+	if plugin.Version != "" {
+		ref += ":" + strings.TrimPrefix(plugin.Version, "v")
+	} else {
+		ref += ":latest"
+	}
+	args := []string{"build", "--tag=" + ref, "--build-arg=plugin=" + plugin.FileName, "--file=vault/testdata/Dockerfile", pluginDir}
+	cmd := exec.Command("docker", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(fmt.Errorf("error running docker build %v output: %s", err, output))
+	}
+
+	cmd = exec.Command("docker", "images", ref, "--format={{ .ID }}", "--no-trunc")
+	id, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatal(fmt.Errorf("error running docker build %v output: %s", err, output))
+	}
+
+	return plugin.Name, strings.TrimSpace(strings.TrimPrefix(string(id), "sha256:"))
 }

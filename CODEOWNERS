@@ -22,6 +22,9 @@
 /builtin/logical/postgresql/  @hashicorp/vault-ecosystem-applications
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem-applications
 
+# Identity Integrations (OIDC, tokens)
+/vault/identity_store_oidc*   @hashicorp/vault-ecosystem-applications
+
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 

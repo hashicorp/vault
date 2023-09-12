@@ -9,6 +9,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { Response } from 'miragejs';
 
+const UTC_DATE = '1994-11-05T00:00:00.000Z';
+
 const EXAMPLE_KV_METADATA_GET_RESPONSE = {
   request_id: 'foobar',
   data: {
@@ -23,7 +25,7 @@ const EXAMPLE_KV_METADATA_GET_RESPONSE = {
     versions: {
       1: {
         created_time: 'created-time',
-        deletion_time: 'deletion-time',
+        deletion_time: UTC_DATE,
         destroyed: false,
       },
       2: { created_time: 'created-time', deletion_time: '', destroyed: false },
@@ -75,7 +77,7 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       versions: {
         1: {
           created_time: 'created-time',
-          deletion_time: 'deletion-time',
+          deletion_time: UTC_DATE,
           destroyed: false,
         },
         2: {

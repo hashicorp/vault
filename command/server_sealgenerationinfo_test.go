@@ -29,6 +29,7 @@ func TestMultiSealCases(t *testing.T) {
 		expectedSealGenInfo      *seal.SealGenerationInfo
 		isRewrapped              bool
 		hasPartiallyWrappedPaths bool
+		sealHaBetaEnabled        bool
 		isErrorExpected          bool
 		expectedErrorMsg         string
 	}{
@@ -53,6 +54,7 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			sealHaBetaEnabled: true,
 		},
 		// none_to_auto
 		{
@@ -75,6 +77,7 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			sealHaBetaEnabled: true,
 		},
 		// none_to_multi
 		{
@@ -92,8 +95,66 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 2,
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "cannot add more than one seal",
+			isErrorExpected:   true,
+			expectedErrorMsg:  "cannot add more than one seal",
+			sealHaBetaEnabled: true,
+		},
+		// none_to_multi_with_disabled_seals_with_beta
+		{
+			name:                "none_to_multi_with_disabled_seals_with_beta",
+			existingSealGenInfo: nil,
+			allSealKmsConfigs: []*configutil.KMS{
+				{
+					Type:     "pkcs11",
+					Name:     "autoSeal1",
+					Priority: 1,
+				},
+				{
+					Type:     "pkcs11",
+					Name:     "autoSeal2",
+					Priority: 2,
+					Disabled: true,
+				},
+			},
+			isErrorExpected:   true,
+			expectedErrorMsg:  "cannot add more than one seal",
+			sealHaBetaEnabled: true,
+		},
+		// none_to_multi_with_disabled_seals_no_beta
+		{
+			name:                "none_to_multi_with_disabled_seals_no_beta",
+			existingSealGenInfo: nil,
+			allSealKmsConfigs: []*configutil.KMS{
+				{
+					Type:     "pkcs11",
+					Name:     "autoSeal1",
+					Priority: 1,
+				},
+				{
+					Type:     "pkcs11",
+					Name:     "autoSeal2",
+					Priority: 2,
+					Disabled: true,
+				},
+			},
+			isErrorExpected:   false,
+			sealHaBetaEnabled: false,
+			expectedSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal2",
+						Priority: 2,
+						Disabled: true,
+					},
+				},
+			},
 		},
 		// shamir_to_auto
 		{
@@ -125,7 +186,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
-			isRewrapped: false,
+			isRewrapped:       false,
+			sealHaBetaEnabled: true,
 		},
 		// shamir_to_multi
 		{
@@ -152,9 +214,10 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 3,
 				},
 			},
-			isRewrapped:      false,
-			isErrorExpected:  true,
-			expectedErrorMsg: "cannot add more than one seal",
+			isRewrapped:       false,
+			sealHaBetaEnabled: true,
+			isErrorExpected:   true,
+			expectedErrorMsg:  "cannot add more than one seal",
 		},
 		// auto_to_shamir_no_common_seal
 		{
@@ -178,6 +241,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 			isErrorExpected:          true,
 			expectedErrorMsg:         "must have at least one seal in common with the old generation",
 		},
@@ -225,6 +289,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 		},
 		// auto_to_auto_no_common_seal
 		{
@@ -248,6 +313,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 			isErrorExpected:          true,
 			expectedErrorMsg:         "must have at least one seal in common with the old generation",
 		},
@@ -295,6 +361,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 		},
 		// auto_to_multi_add_one
 		{
@@ -338,6 +405,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 		},
 		// auto_to_multi_add_two
 		{
@@ -371,6 +439,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 			isErrorExpected:          true,
 			expectedErrorMsg:         "cannot add more than one seal",
 		},
@@ -411,6 +480,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 		},
 		// multi_to_auto_delete_two
 		{
@@ -444,6 +514,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 			isErrorExpected:          true,
 			expectedErrorMsg:         "cannot delete more than one seal",
 		},
@@ -513,6 +584,7 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
+			sealHaBetaEnabled:        true,
 		},
 	}
 
@@ -523,7 +595,7 @@ func TestMultiSealCases(t *testing.T) {
 			if tc.existingSealGenInfo != nil {
 				tc.existingSealGenInfo.SetRewrapped(tc.isRewrapped)
 			}
-			sealGenInfo, err := cmd.computeSealGenerationInfo(tc.existingSealGenInfo, tc.allSealKmsConfigs, tc.hasPartiallyWrappedPaths)
+			sealGenInfo, err := cmd.computeSealGenerationInfo(tc.existingSealGenInfo, tc.allSealKmsConfigs, tc.hasPartiallyWrappedPaths, tc.sealHaBetaEnabled)
 			switch {
 			case tc.isErrorExpected:
 				require.Error(t, err)

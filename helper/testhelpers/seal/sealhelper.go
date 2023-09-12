@@ -73,13 +73,7 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, err
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	access, err := seal.NewAccessFromSealWrappers(tss.Logger, 1, true, []seal.SealWrapper{
-		{
-			Wrapper:  transitSealWrapper,
-			Priority: 1,
-			Name:     "transit",
-		},
-	})
+	access, err := seal.NewAccessFromWrapper(tss.Logger, transitSealWrapper, vault.SealConfigTypeTransit.String())
 	if err != nil {
 		return nil, err
 	}

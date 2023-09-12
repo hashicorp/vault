@@ -59,6 +59,9 @@ export default SecretV2Model.extend(KeyMixin, {
   }),
   secretDataPath: lazyCapabilities(apiPath`${'engineId'}/data/${'id'}`, 'engineId', 'id'),
   secretMetadataPath: lazyCapabilities(apiPath`${'engineId'}/metadata/${'id'}`, 'engineId', 'id'),
+  secretUndeletePath: lazyCapabilities(apiPath`${'engineId'}/undelete/${'id'}`, 'engineId', 'id'),
+  secretDeletePath: lazyCapabilities(apiPath`${'engineId'}/delete/${'id'}`, 'engineId', 'id'),
+  secretDestroyPath: lazyCapabilities(apiPath`${'engineId'}/destroy/${'id'}`, 'engineId', 'id'),
 
   canListMetadata: alias('secretMetadataPath.canList'),
   canReadMetadata: alias('secretMetadataPath.canRead'),
@@ -67,4 +70,9 @@ export default SecretV2Model.extend(KeyMixin, {
   canReadSecretData: alias('secretDataPath.canRead'),
   canEditSecretData: alias('secretDataPath.canUpdate'),
   canDeleteSecretData: alias('secretDataPath.canDelete'),
+
+  canUndelete: alias('secretUndeletePath.canUpdate'),
+  canDestroyVersion: alias('secretDestroyPath.canUpdate'),
+  canDestroyAllVersions: alias('secretMetadataPath.canDelete'),
+  canSoftDeleteSecretData: alias('secretDeletePath.canUpdate'),
 });
