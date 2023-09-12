@@ -65,13 +65,11 @@ type Server struct {
 
 	logger hclog.Logger
 
-	childProcess            *child.Child
-	childProcessState       childProcessState
-	childProcessLock        sync.Mutex
-	childProcessStdout      io.WriteCloser
-	childProcessStderr      io.WriteCloser
-	childProcessCloseStdout bool
-	childProcessCloseStderr bool
+	childProcess       *child.Child
+	childProcessState  childProcessState
+	childProcessLock   sync.Mutex
+	childProcessStdout io.WriteCloser
+	childProcessStderr io.WriteCloser
 
 	// exit channel of the child process
 	childProcessExitCh chan int
