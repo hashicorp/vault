@@ -66,23 +66,6 @@ locals {
   vault_service_user = "vault"
 }
 
-resource "enos_remote_exec" "install_packages" {
-  for_each = {
-    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
-    if length(var.packages) > 0
-  }
-
-  content = templatefile("${path.module}/templates/install-packages.sh", {
-    packages = join(" ", var.packages)
-  })
-
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
-  }
-}
-
 resource "enos_bundle_install" "consul" {
   for_each = {
     for idx, host in var.target_hosts : idx => var.target_hosts[idx]
@@ -106,6 +89,26 @@ resource "enos_bundle_install" "vault" {
   release     = var.release == null ? var.release : merge({ product = "vault" }, var.release)
   artifactory = var.artifactory_release
   path        = var.local_artifact_path
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "install_packages" {
+  depends_on = [
+    enos_bundle_install.vault, // Don't race for the package manager locks with vault install
+  ]
+  for_each = {
+    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
+    if length(var.packages) > 0
+  }
+
+  content = templatefile("${path.module}/templates/install-packages.sh", {
+    packages = join(" ", var.packages)
+  })
 
   transport = {
     ssh = {
@@ -269,6 +272,7 @@ resource "enos_vault_unseal" "leader" {
 # user on all nodes, since logging will only happen on the leader.
 resource "enos_remote_exec" "create_audit_log_dir" {
   depends_on = [
+    enos_bundle_install.vault,
     enos_vault_unseal.leader,
   ]
   for_each = toset([
@@ -391,4 +395,12 @@ resource "enos_remote_exec" "vault_write_license" {
       host = var.target_hosts[each.value].public_ip
     }
   }
+}
+
+resource "enos_local_exec" "wait_for_install_packages" {
+  depends_on = [
+    enos_remote_exec.install_packages,
+  ]
+
+  inline = ["true"]
 }

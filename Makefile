@@ -296,34 +296,26 @@ ci-build:
 ci-build-ui:
 	@$(CURDIR)/scripts/ci-helper.sh build-ui
 
-.PHONY: ci-filter-matrix
-ci-filter-matrix:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
-
-.PHONY: ci-get-date
-ci-get-date:
-	@$(CURDIR)/scripts/ci-helper.sh date
-.PHONY: ci-get-matrix-group-id
-ci-get-matrix-group-id:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
-
-.PHONY: ci-get-revision
-ci-get-revision:
-	@$(CURDIR)/scripts/ci-helper.sh revision
-
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
-
-.PHONY: ci-get-version-package
-ci-get-version-package:
-	@$(CURDIR)/scripts/ci-helper.sh version-package
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
 
 .PHONY: ci-get-artifact-basename
 ci-get-artifact-basename:
 	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
 
-.PHONY: ci-bundle
-ci-bundle:
-	@$(CURDIR)/scripts/ci-helper.sh bundle
+.PHONY: ci-get-date
+ci-get-date:
+	@$(CURDIR)/scripts/ci-helper.sh date
 
+.PHONY: ci-get-revision
+ci-get-revision:
+	@$(CURDIR)/scripts/ci-helper.sh revision
+
+.PHONY: ci-get-version-package
+ci-get-version-package:
+	@$(CURDIR)/scripts/ci-helper.sh version-package
+
+.PHONY: ci-prepare-legal
+ci-prepare-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
