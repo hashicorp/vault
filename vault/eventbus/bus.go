@@ -370,3 +370,8 @@ func (node *asyncChanNode) Type() eventlogger.NodeType {
 func addSubscriptions(delta int64) {
 	metrics.SetGauge([]string{"events", "subscriptions"}, float32(subscriptions.Add(delta)))
 }
+
+// SubscriptionsCount is only exposed for testing purposes.
+func SubscriptionsCount() int64 {
+	return subscriptions.Load()
+}

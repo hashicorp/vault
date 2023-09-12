@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,9 +25,27 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/stretchr/testify/assert"
 	"nhooyr.io/websocket"
 )
+
+// waitForSubscriber returns a channel that returns a value when a
+// change in the subscriber count is detected.
+// This should be called at the beginning of a test, since it relies on
+// knowing the initial number of subscribers.
+// It is *NOT* safe to use with two tests running in parallel.
+func waitForSubscriber() <-chan bool {
+	notifyCh := make(chan bool)
+	subscribers := eventbus.SubscriptionsCount()
+
+	go func() {
+		for subscribers != eventbus.SubscriptionsCount() {
+		}
+		notifyCh <- true
+	}()
+	return notifyCh
+}
 
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
@@ -46,38 +63,30 @@ func TestEventsSubscribe(t *testing.T) {
 		}
 	}
 
-	stop := atomic.Bool{}
-
 	const eventType = "abc"
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// send some events
-	go func() {
-		for !stop.Load() {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
-			}
-			pluginInfo := &logical.EventPluginInfo{
-				MountPath: "secret",
-			}
-			err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
-				Id:        id,
-				Metadata:  nil,
-				EntityIds: nil,
-				Note:      "testing",
-			})
-			if err != nil {
-				core.Logger().Info("Error sending event, exiting sender", "error", err)
-			}
-			time.Sleep(100 * time.Millisecond)
+	sendEvents := func() error {
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
 		}
-	}()
-
-	t.Cleanup(func() {
-		stop.Store(true)
-	})
+		pluginInfo := &logical.EventPluginInfo{
+			MountPath: "secret",
+		}
+		err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			Id:        id,
+			Metadata:  nil,
+			EntityIds: nil,
+			Note:      "testing",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
@@ -86,6 +95,7 @@ func TestEventsSubscribe(t *testing.T) {
 	}{{true}, {false}}
 
 	for _, testCase := range testCases {
+		newSubscriber := waitForSubscriber()
 		location := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
 		conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
 			HTTPHeader: http.Header{"x-vault-token": []string{token}},
@@ -96,7 +106,13 @@ func TestEventsSubscribe(t *testing.T) {
 		t.Cleanup(func() {
 			conn.Close(websocket.StatusNormalClosure, "")
 		})
+		// wait for the subscription to start
+		<-newSubscriber
 
+		err = sendEvents()
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, msg, err := conn.Read(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -147,28 +163,26 @@ func TestBexprFilters(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	newSubscriber := waitForSubscriber()
 
-	// send duplicates to help avoid flaky tests in CI
-	sendEvents := func(ctx context.Context, eventTypes ...string) {
-		for i := 0; i < 10; i++ {
-			time.Sleep(10 * time.Millisecond)
-			for _, eventType := range eventTypes {
-				pluginInfo := &logical.EventPluginInfo{
-					MountPath: "secret",
-				}
-				ns := namespace.RootNamespace
-				id := eventType
-				err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
-					Id:        id,
-					Metadata:  nil,
-					EntityIds: nil,
-					Note:      "testing",
-				})
-				if err != nil {
-					return
-				}
+	sendEvents := func(ctx context.Context, eventTypes ...string) error {
+		for _, eventType := range eventTypes {
+			pluginInfo := &logical.EventPluginInfo{
+				MountPath: "secret",
+			}
+			ns := namespace.RootNamespace
+			id := eventType
+			err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+				Id:        id,
+				Metadata:  nil,
+				EntityIds: nil,
+				Note:      "testing",
+			})
+			if err != nil {
+				return err
 			}
 		}
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -185,7 +199,13 @@ func TestBexprFilters(t *testing.T) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	go sendEvents(ctx, "abc", "def", "xyz")
+	// wait for the subscription to start before sending events
+	<-newSubscriber
+
+	err = sendEvents(ctx, "abc", "def", "xyz")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// read until we time out
 	seen := map[string]bool{}
 	done := false
