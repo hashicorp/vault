@@ -55,6 +55,7 @@ func (sub *eventSubscriber) handleEventsSubscribeWebsocket() (websocket.StatusCo
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
 	}
 	defer cancel()
+	logger.Debug("WebSocket is subscribed to messages", "namespaces", sub.namespacePatterns, "event_types", sub.pattern, "bexpr_filter", sub.bexprFilter)
 
 	for {
 		select {
