@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds mount configuration details to Kubernetes secrets engine configuration view
+```

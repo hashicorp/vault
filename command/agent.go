@@ -729,13 +729,17 @@ func (c *AgentCommand) Run(args []string) int {
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
 
-		es := exec.NewServer(&exec.ServerConfig{
+		es, err := exec.NewServer(&exec.ServerConfig{
 			AgentConfig: c.config,
 			Namespace:   templateNamespace,
 			Logger:      c.logger.Named("exec.server"),
 			LogLevel:    c.logger.GetLevel(),
 			LogWriter:   c.logWriter,
 		})
+		if err != nil {
+			c.logger.Error("could not create exec server", "error", err)
+			return 1
+		}
 
 		g.Add(func() error {
 			return ah.Run(ctx, method)
@@ -800,6 +804,7 @@ func (c *AgentCommand) Run(args []string) int {
 				leaseCache.SetShuttingDown(true)
 			}
 			cancelFunc()
+			es.Close()
 		})
 
 	}

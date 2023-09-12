@@ -42,10 +42,6 @@ scenario "ui" {
     ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
   }
 
-  step "get_local_metadata" {
-    module = module.get_local_metadata
-  }
-
   step "build_vault" {
     module = module.build_local
 

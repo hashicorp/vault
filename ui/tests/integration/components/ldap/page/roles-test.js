@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import sinon from 'sinon';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -34,6 +35,12 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     }
     this.backend = this.store.peekRecord('secret-engine', 'ldap-test');
     this.roles = this.store.peekAll('ldap/role');
+    this.roles.meta = {
+      currentPage: 1,
+      pageSize: 10,
+      filteredTotal: this.roles.length,
+      total: this.roles.length,
+    };
     this.promptConfig = false;
 
     this.renderComponent = () => {
@@ -43,6 +50,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
           @backendModel={{this.backend}}
           @roles={{this.roles}}
           @breadcrumbs={{this.breadcrumbs}}
+          @pageFilter={{this.pageFilter}}
         />`,
         { owner: this.engine }
       );
@@ -109,19 +117,24 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   });
 
   test('it should filter roles', async function (assert) {
+    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+
+    this.roles.meta.filteredTotal = 0;
+    this.pageFilter = 'foo';
+
     await this.renderComponent();
 
-    await fillIn('[data-test-filter-input]', 'foo');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('There are no roles matching "foo"', 'Filter message renders');
 
-    await fillIn('[data-test-filter-input]', 'static');
-    assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'List is filtered with correct results');
+    await fillIn('[data-test-filter-input]', 'bar');
 
-    await fillIn('[data-test-filter-input]', '');
-    assert
-      .dom('[data-test-list-item-content]')
-      .exists({ count: 2 }, 'All roles are displayed when filter is cleared');
+    assert.true(
+      transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles', {
+        queryParams: { pageFilter: 'bar' },
+      }),
+      'Transition called with correct query params on filter change'
+    );
   });
 });

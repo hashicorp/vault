@@ -66,7 +66,7 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 func (d *autoSeal) Healthy() bool {
 	d.hcLock.RLock()
 	defer d.hcLock.RUnlock()
-	return d.allSealsHealthy
+	return d.Access.AllSealWrappersHealthy()
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -470,6 +470,8 @@ func (d *autoSeal) StartHealthCheck() {
 			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
 
+			d.logger.Trace("performing a seal health check")
+
 			allHealthy := true
 			allUnhealthy := true
 			for _, sealWrapper := range d.Access.GetAllSealWrappersByPriority() {
@@ -480,7 +482,7 @@ func (d *autoSeal) StartHealthCheck() {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
 					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration,
-						float32(time.Since(sealWrapper.LastSeenHealthy).Milliseconds()), mLabels)
+						float32(time.Since(sealWrapper.LastSeenHealthy()).Milliseconds()), mLabels)
 					allHealthy = false
 				} else {
 					// Seal wrapper is healthy
@@ -488,7 +490,7 @@ func (d *autoSeal) StartHealthCheck() {
 						d.logger.Debug("seal wrapper health test passed", "seal_name", sealWrapper.Name)
 					} else {
 						d.logger.Info("seal wrapper is now healthy again", "downtime", "seal_name", sealWrapper.Name,
-							now.Sub(sealWrapper.LastSeenHealthy).String())
+							now.Sub(sealWrapper.LastSeenHealthy()).String())
 					}
 					allUnhealthy = false
 				}
