@@ -62,3 +62,22 @@ func TestAzureAuthMethod_BadConfig(t *testing.T) {
 		t.Fatal("Expected error, got none.")
 	}
 }
+
+func TestAzureAuthMethod_BadAuthFromEnvironment(t *testing.T) {
+	config := &auth.AuthConfig{
+		Logger:    hclog.NewNullLogger(),
+		MountPath: "auth-test",
+		Config: map[string]interface{}{
+			"resource":                      "test",
+			"client_id":                     "test",
+			"role":                          "test",
+			"scope":                         "test",
+			"authenticate_from_environment": "bad_value",
+		},
+	}
+
+	_, err := NewAzureAuthMethod(config)
+	if err == nil {
+		t.Fatal("Expected error, got none.")
+	}
+}
