@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -226,6 +227,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	m.months[month.GetMonthsAgo()].generationParameters = month
 	add := func(c []*generation.Client, segmentIndex *int) error {
 		for _, clients := range c {
+			mountAccessor := defaultMountAccessorRootNS
 
 			if clients.Namespace == "" {
 				clients.Namespace = namespace.RootNamespaceID
@@ -234,34 +236,41 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				clients.ClientType = entityActivityType
 			}
 
-			// verify that the namespace exists
-			ns, err := core.NamespaceByID(ctx, clients.Namespace)
-			if err != nil {
-				return err
+			if clients.Namespace != namespace.RootNamespaceID && !strings.HasSuffix(clients.Namespace, "/") {
+				clients.Namespace += "/"
 			}
+			// verify that the namespace exists
+			ns := core.namespaceByPath(clients.Namespace)
+			if ns.ID == namespace.RootNamespaceID && clients.Namespace != namespace.RootNamespaceID {
+				return fmt.Errorf("unable to find namespace %s", clients.Namespace)
+			}
+			clients.Namespace = ns.ID
 
 			// verify that the mount exists
 			if clients.Mount != "" {
+				if !strings.HasSuffix(clients.Mount, "/") {
+					clients.Mount += "/"
+				}
 				nctx := namespace.ContextWithNamespace(ctx, ns)
 				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
 				if mountEntry == nil {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
+				mountAccessor = mountEntry.Accessor
 			}
 
-			mountAccessor := defaultMountAccessorRootNS
 			if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
 				// if we're not using the root namespace, find a mount on the namespace that we are using
 				found := false
 				for _, mount := range mounts {
-					if mount.NamespaceID == clients.Namespace {
+					if mount.NamespaceID == ns.ID {
 						mountAccessor = mount.Accessor
 						found = true
 						break
 					}
 				}
 				if !found {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
 			}
 
@@ -325,7 +334,7 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := timeutil.StartOfMonth(time.Now().UTC())
+	now := time.Now().UTC()
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
@@ -337,8 +346,8 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if writePQ || writeDistinctClients {
 		pqOpts.byNamespace = make(map[string]*processByNamespace)
 		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now)
-		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
+		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
+		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
 		pqOpts.activePeriodStart = m.earliestTimestamp(now)
 	}
 
@@ -382,7 +391,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			}
 		}
 
-		if writePQ || writeDistinctClients {
+		if (writePQ || writeDistinctClients) && i > 0 {
 			reader := newProtoSegmentReader(segments)
 			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
 			if err != nil {
@@ -402,12 +411,13 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if err != nil {
 		return nil, err
 	}
+	wg.Wait()
 	return paths, nil
 }
 
-func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
 	for i, month := range m.months {
-		if month.generationParameters != nil {
+		if month.generationParameters != nil && (i != 0 || includeCurrentMonth) {
 			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 		}
 	}

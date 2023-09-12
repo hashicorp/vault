@@ -61,13 +61,21 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
-      assert.expect(19);
+      assert.expect(21);
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
 
+      await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
+      assert
+        .dom(PAGE.list.overviewButton)
+        .hasText('View list', 'shows list and not secret because search is a directory');
+      await click(PAGE.list.overviewButton);
+      assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
+
+      await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
       await click(PAGE.list.overviewButton);
 
@@ -237,7 +245,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert
         .dom(PAGE.detail.deleteModal)
         .hasText(
-          'Delete metadata? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
+          'Delete metadata and secret data? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
         );
     });
   });
@@ -358,7 +366,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
 
     test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
-      assert.expect(32);
+      assert.expect(34);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-delete-secret';

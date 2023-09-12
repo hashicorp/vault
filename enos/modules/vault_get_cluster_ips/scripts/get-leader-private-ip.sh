@@ -18,7 +18,7 @@ retries=5
 while :; do
     # Find the leader private IP address
     leader_private_ip=$($binpath status -format json | jq '.leader_address | rtrimstr(":8200") | ltrimstr("http://")')
-    match_ip=$(echo $instance_ips |jq -r --argjson ip $leader_private_ip 'map(select(. == $ip))')
+    match_ip=$(echo "$instance_ips" |jq -r --argjson ip "$leader_private_ip" 'map(select(. == $ip))')
 
     if [[ "$leader_private_ip" != 'null' ]] && [[ "$match_ip" != '[]' ]]; then
         echo "$leader_private_ip" | sed 's/\"//g'

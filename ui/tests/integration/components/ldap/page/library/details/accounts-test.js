@@ -77,8 +77,7 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     assert.dom('[data-test-checked-out-card]').exists('Accounts checked out card renders');
 
     assert
-      .dom('[data-test-cli-command]')
+      .dom('[data-test-code-snippet] code')
       .hasText('vault lease renew ad/library/test-library/check-out/:lease_id', 'Renew cli command renders');
-    assert.dom(`[data-test-cli-command-copy]`).exists('Renew cli command copy button renders');
   });
 });

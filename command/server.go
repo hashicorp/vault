@@ -132,6 +132,7 @@ type ServerCommand struct {
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
+	flagDevTLSSANs         []string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -214,7 +215,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:   "recovery",
 		Target: &c.flagRecovery,
-		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
+		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions. " +
 			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
@@ -254,6 +255,18 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "",
 		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
 			"specified. If left unset, files are generated in a temporary directory.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "dev-tls-san",
+		Target:  &c.flagDevTLSSANs,
+		Default: nil,
+		Usage: "Additional Subject Alternative Name (as a DNS name or IP address) " +
+			"to generate the certificate with if `-dev-tls` is specified. The " +
+			"certificate will always use localhost, localhost4, localhost6, " +
+			"localhost.localdomain, and the host name as alternate DNS names, " +
+			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
+			"multiple times to specify multiple SANs.",
 	})
 
 	f.StringVar(&StringVar{
@@ -569,7 +582,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %v", err))
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
 	}
 	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
@@ -977,7 +990,17 @@ func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
 				return nil, nil, certDir, err
 			}
 		}
-		config, err = server.DevTLSConfig(devStorageType, certDir)
+		extraSANs := c.flagDevTLSSANs
+		host, _, err := net.SplitHostPort(c.flagDevListenAddr)
+		if err == nil {
+			// 127.0.0.1 is the default, and already included in the SANs.
+			// Empty host means listen on all interfaces, but users should use the
+			// -dev-tls-san flag to get the right SANs in that case.
+			if host != "" && host != "127.0.0.1" {
+				extraSANs = append(extraSANs, host)
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir, extraSANs)
 
 		f = func() {
 			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
@@ -1153,6 +1176,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	for _, experiment := range config.Experiments {
+		if experiments.IsUnused(experiment) {
+			c.UI.Warn(fmt.Sprintf("WARNING! Experiment %s is no longer used", experiment))
+		}
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1238,7 +1267,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %v", err))
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
 	}
 	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
@@ -2576,8 +2605,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	recordSealConfigError := func(err error) {
 		sealConfigError = errors.Join(sealConfigError, err)
 	}
-	enabledSealWrappers := make([]vaultseal.SealWrapper, 0)
-	disabledSealWrappers := make([]vaultseal.SealWrapper, 0)
+	enabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
+	disabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
 	allSealKmsConfigs := make([]*configutil.KMS, 0)
 
 	type infoKeysAndMap struct {
@@ -2619,13 +2648,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			wrapper = aeadwrapper.NewShamirWrapper()
 		}
 
-		sealWrapper := vaultseal.SealWrapper{
-			Wrapper:        wrapper,
-			Priority:       configSeal.Priority,
-			Name:           configSeal.Name,
-			SealConfigType: configSeal.Type,
-			Disabled:       configSeal.Disabled,
-		}
+		sealWrapper := vaultseal.NewSealWrapper(
+			wrapper,
+			configSeal.Priority,
+			configSeal.Name,
+			configSeal.Type,
+			configSeal.Disabled,
+		)
 
 		if configSeal.Disabled {
 			disabledSealWrappers = append(disabledSealWrappers, sealWrapper)
@@ -2643,20 +2672,21 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Set the info keys, this modifies the function arguments `info` and `infoKeys`
 	// TODO(SEALHA): Why are we doing this? What is its use?
-	appendWrapperInfoKeys := func(prefix string, sealWrappers []vaultseal.SealWrapper) {
-		if len(sealWrappers) > 0 {
-			useName := false
-			if len(sealWrappers) > 1 {
-				useName = true
+	appendWrapperInfoKeys := func(prefix string, sealWrappers []*vaultseal.SealWrapper) {
+		if len(sealWrappers) == 0 {
+			return
+		}
+		useName := false
+		if len(sealWrappers) > 1 {
+			useName = true
+		}
+		for _, sealWrapper := range sealWrappers {
+			if useName {
+				prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
 			}
-			for _, sealWrapper := range sealWrappers {
-				if useName {
-					prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
-				}
-				for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
-					infoKeys = append(infoKeys, prefix+k)
-					info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
-				}
+			for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
+				infoKeys = append(infoKeys, prefix+k)
+				info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
 			}
 		}
 	}
@@ -2666,7 +2696,12 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
 
-	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
+	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
+	if err != nil {
+		return nil, err
+	}
+
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, sealHaBetaEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -2674,17 +2709,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create the Seals
 
-	containsShamir := func(sealWrappers []vaultseal.SealWrapper) bool {
+	containsShamir := func(sealWrappers []*vaultseal.SealWrapper) bool {
 		for _, si := range sealWrappers {
 			if vault.SealConfigTypeShamir.IsSameAs(si.SealConfigType) {
 				return true
 			}
 		}
 		return false
-	}
-	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
-	if err != nil {
-		return nil, err
 	}
 
 	var barrierSeal vault.Seal
@@ -2736,7 +2767,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool, sealHaBetaEnabled bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2754,9 +2785,11 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Seals:      sealConfigs,
 	}
 
-	err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
-	if err != nil {
-		return nil, err
+	if sealHaBetaEnabled {
+		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return newSealGenInfo, nil
@@ -2975,6 +3008,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
+		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,

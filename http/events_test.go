@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -33,10 +33,7 @@ import (
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
 func TestEventsSubscribe(t *testing.T) {
-	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -52,6 +49,8 @@ func TestEventsSubscribe(t *testing.T) {
 	stop := atomic.Bool{}
 
 	const eventType = "abc"
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// send some events
 	go func() {
@@ -63,7 +62,7 @@ func TestEventsSubscribe(t *testing.T) {
 			pluginInfo := &logical.EventPluginInfo{
 				MountPath: "secret",
 			}
-			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
 				EntityIds: nil,
@@ -80,7 +79,6 @@ func TestEventsSubscribe(t *testing.T) {
 		stop.Store(true)
 	})
 
-	ctx := context.Background()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
 	testCases := []struct {
@@ -88,8 +86,8 @@ func TestEventsSubscribe(t *testing.T) {
 	}{{true}, {false}}
 
 	for _, testCase := range testCases {
-		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=%v", wsAddr, eventType, testCase.json)
-		conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+		location := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
+		conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
 			HTTPHeader: http.Header{"x-vault-token": []string{token}},
 		})
 		if err != nil {
@@ -135,12 +133,9 @@ func TestEventsSubscribe(t *testing.T) {
 	}
 }
 
-// TestEventsSubscribeNamespaces tests the websocket endpoint for subscribing to events in multiple namespaces.
-func TestEventsSubscribeNamespaces(t *testing.T) {
-	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
+// TestBexprFilters tests that go-bexpr filters are used to filter events.
+func TestBexprFilters(t *testing.T) {
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -153,116 +148,68 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 		}
 	}
 
-	stop := atomic.Bool{}
-
-	const eventType = "abc"
-
-	namespaces := []string{
-		"",
-		"ns1",
-		"ns2",
-		"ns1/ns13",
-		"ns1/ns13/ns134",
-	}
-
-	// send some events with the specified namespaces
-	sendEvents := func() {
-		pluginInfo := &logical.EventPluginInfo{
-			MountPath: "secret",
-		}
-		for i := range namespaces {
-			var ns *namespace.Namespace
-			if namespaces[i] == "" {
-				ns = namespace.RootNamespace
-			} else {
-				ns = &namespace.Namespace{
-					ID:             namespaces[i],
-					Path:           namespaces[i],
-					CustomMetadata: nil,
+	// send duplicates to help avoid flaky tests in CI
+	sendEvents := func(ctx context.Context, eventTypes ...string) {
+		for i := 0; i < 10; i++ {
+			time.Sleep(10 * time.Millisecond)
+			for _, eventType := range eventTypes {
+				pluginInfo := &logical.EventPluginInfo{
+					MountPath: "secret",
+				}
+				ns := namespace.RootNamespace
+				id := eventType
+				err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+					Id:        id,
+					Metadata:  nil,
+					EntityIds: nil,
+					Note:      "testing",
+				})
+				if err != nil {
+					return
 				}
 			}
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
-			}
-			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
-				Id:        id,
-				Metadata:  nil,
-				EntityIds: nil,
-				Note:      "testing",
-			})
-			if err != nil {
-				core.Logger().Info("Error sending event, exiting sender", "error", err)
-			}
 		}
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	t.Cleanup(func() {
-		stop.Store(true)
-	})
-
-	ctx := context.Background()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
+	bexprFilter := url.QueryEscape("event_type == abc")
 
-	testCases := []struct {
-		name           string
-		namespaces     []string
-		expectedEvents int
-	}{
-		{"invalid", []string{"something"}, 1},
-		{"simple wildcard", []string{"ns*"}, 5},
-		{"two namespaces", []string{"ns1/ns13", "ns1/other"}, 2},
-		{"no namespace", []string{""}, 1},
-		{"all wildcard", []string{"*"}, 5},
-		{"mixed wildcard", []string{"ns1/ns13*", "ns2"}, 4},
-		{"overlapping wildcard", []string{"ns*", "ns1"}, 5},
+	location := fmt.Sprintf("%s/v1/sys/events/subscribe/*?json=true&filter=%s", wsAddr, bexprFilter)
+	conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
+		HTTPHeader: http.Header{"x-vault-token": []string{token}},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			extra := ""
-			for _, ns := range testCase.namespaces {
-				extra += "&namespaces=" + ns
-			}
-			url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=true%v", wsAddr, eventType, extra)
-			conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
-				HTTPHeader: http.Header{"x-vault-token": []string{token}},
-			})
+	go sendEvents(ctx, "abc", "def", "xyz")
+	// read until we time out
+	seen := map[string]bool{}
+	done := false
+	for !done {
+		done = func() bool {
+			readCtx, readCancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer readCancel()
+			_, msg, err := conn.Read(readCtx)
 			if err != nil {
-				t.Fatal(err)
+				return true
 			}
-			t.Cleanup(func() {
-				conn.Close(websocket.StatusNormalClosure, "")
-			})
-			sendEvents()
-			// CI is sometimes slow, so this timeout is high initially
-			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-			defer cancel()
-			gotEvents := 0
-			for {
-				_, msg, err := conn.Read(ctx)
-				if err != nil {
-					break
-				}
-				event := map[string]interface{}{}
-				err = json.Unmarshal(msg, &event)
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Log(string(msg))
-				gotEvents += 1
-
-				// if we got as many as we expect, shorten the test so we don't waste time,
-				// but still allow time for "extra" events to come in and make us fail
-				if gotEvents == testCase.expectedEvents {
-					ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Millisecond)
-					t.Cleanup(cancel2)
-					ctx = ctx2
-				}
+			event := map[string]interface{}{}
+			err = json.Unmarshal(msg, &event)
+			if err != nil {
+				t.Error(err)
+				return true
 			}
-			assert.Equal(t, testCase.expectedEvents, gotEvents)
-		})
+			seen[event["id"].(string)] = true
+			return false
+		}()
 	}
+	// we should only get the "abc" messages
+	assert.Len(t, seen, 1)
+	assert.Contains(t, seen, "abc")
 }
 
 func TestNamespacePrepend(t *testing.T) {
@@ -350,7 +297,8 @@ func TestEventsSubscribeAuth(t *testing.T) {
 		nonPrivilegedToken = secret.Auth.ClientToken
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
 	// Get a 403 with no token.
@@ -385,7 +333,6 @@ func TestCanForwardEventConnections(t *testing.T) {
 		t.Fatal(err)
 	}
 	testCluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
 		AuditBackends: map[string]audit.Factory{
 			"nop": corehelpers.NoopAuditFactory(nil),
 		},

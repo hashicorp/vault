@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 
@@ -83,6 +83,44 @@ module('Acceptance | auth backend list', function (hooks) {
 
     const supportManaged = supportedManagedAuthBackends();
     const backends = supportedAuthBackends();
+    for (const backend of backends) {
+      const { type } = backend;
+      const path = `auth-list-${type}-${uid}`;
+      if (type !== 'token') {
+        await enablePage.enable(type, path);
+      }
+      await settled();
+      await visit('/vault/access');
+
+      // all auth methods should be linkable
+      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
+      if (!supportManaged.includes(type)) {
+        assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+        assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+      } else {
+        let expectedTabs = 2;
+        if (type == 'ldap' || type === 'okta') {
+          expectedTabs = 3;
+        }
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+        // cleanup method
+        await runCmd(deleteAuthCmd(path));
+      }
+    }
+  });
+
+  test('enterprise: auth methods are linkable and link to correct view', async function (assert) {
+    assert.expect(19);
+    const uid = uuidv4();
+    await visit('/vault/access');
+
+    const supportManaged = supportedManagedAuthBackends();
+    const backends = allSupportedAuthBackends();
     for (const backend of backends) {
       const { type } = backend;
       const path = `auth-list-${type}-${uid}`;
