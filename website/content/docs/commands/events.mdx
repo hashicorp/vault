@@ -93,12 +93,14 @@ exclude specific operations. For example:
 
 <EnterpriseAlert product="vault" />
 
-- `-namespaces` `(string)` - Additional child namespaces to subscribe to. Can
-  be repeated to add more namespace patterns. The namespace of the request is
-  automatically prepended, so specifying `ns2` when the request is in the `ns1`
-  namespace will result in subscribing to `ns1/ns2` (in addition to `ns1`).
-  Patterns can include `*` characters to indicate wildcards. The default is to
-  subscribe only to the request's namespace.
+- `-namespaces` `(string)` - Additional **child** namespaces for the
+  subscription. Repeat the flag to add additional namespace patterns to the
+  subscription request. Vault automatically prepends the issuing namespace for
+  the request to the provided namespace. For example, if you include
+  `-namespaces=ns2` on a request made in the `ns1` namespace, Vault will attempt
+  to subscribe you to events under the `ns1/ns2` and `ns1` namespaces. You can
+  use the `*` character to include wildcards in the namespace pattern. By
+  default, Vault will only subscribe to events in the requesting namespace.
 
   -> Note: A root token, or a token associated with entities and groups with
      the appropriate policies, must be used for the event subscription
