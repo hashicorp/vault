@@ -29,7 +29,6 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
-// selectors
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 const consoleComponent = create(consoleClass);
