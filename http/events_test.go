@@ -25,29 +25,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/eventbus"
 	"github.com/stretchr/testify/assert"
 	"nhooyr.io/websocket"
 )
-
-// waitForSubscriber returns a channel that returns a value when a
-// change in the subscriber count is detected.
-// This should be called at the beginning of a test, since it relies on
-// knowing the initial number of subscribers.
-// It is *NOT* safe to use with two tests running in parallel.
-func waitForSubscriber() <-chan bool {
-	notifyCh := make(chan struct{})
-	subscribers := eventbus.SubscriptionsCount()
-
-	go func() {
-		// busy wait
-		for subscribers == eventbus.SubscriptionsCount() {
-			time.Sleep(1 * time.Millisecond)
-		}
-		notifyCh <- true
-	}()
-	return notifyCh
-}
 
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
@@ -97,7 +77,6 @@ func TestEventsSubscribe(t *testing.T) {
 	}{{true}, {false}}
 
 	for _, testCase := range testCases {
-		newSubscriber := waitForSubscriber()
 		location := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
 		conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
 			HTTPHeader: http.Header{"x-vault-token": []string{token}},
@@ -108,8 +87,6 @@ func TestEventsSubscribe(t *testing.T) {
 		t.Cleanup(func() {
 			conn.Close(websocket.StatusNormalClosure, "")
 		})
-		// wait for the subscription to start
-		<-newSubscriber
 
 		err = sendEvents()
 		if err != nil {
@@ -165,8 +142,6 @@ func TestBexprFilters(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	newSubscriber := waitForSubscriber()
-
 	sendEvents := func(ctx context.Context, eventTypes ...string) error {
 		for _, eventType := range eventTypes {
 			pluginInfo := &logical.EventPluginInfo{
@@ -200,9 +175,6 @@ func TestBexprFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
-
-	// wait for the subscription to start before sending events
-	<-newSubscriber
 
 	err = sendEvents(ctx, "abc", "def", "xyz")
 	if err != nil {
