@@ -23,7 +23,7 @@
     {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
       <div
         class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-xs grid-align-items-start"
-        data-test-dr-perf-replication
+        data-test-type="dr-perf"
       >
         <Dashboard::ReplicationStateText
           @title="DR primary"
@@ -50,7 +50,7 @@
 
       <div
         class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
-        data-test-dr-replication
+        data-test-type="dr"
       >
         <Dashboard::ReplicationStateText
           @title="state"

@@ -243,7 +243,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'pki');
-      await fillIn(SELECTORS.quickActionsCard.actionSelect, 'Issue certificate');
+      await fillIn(SELECTORS.selectEl, 'Issue certificate');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
 
@@ -255,7 +255,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
 
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'pki');
-      await fillIn(SELECTORS.quickActionsCard.actionSelect, 'View certificate');
+      await fillIn(SELECTORS.selectEl, 'View certificate');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Certificate serial number');
       assert.dom(SELECTORS.actionButton('View certificate')).exists({ count: 1 });
@@ -269,7 +269,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
 
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'pki');
-      await fillIn(SELECTORS.quickActionsCard.actionSelect, 'View issuer');
+      await fillIn(SELECTORS.selectEl, 'View issuer');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Issuer');
       assert.dom(SELECTORS.actionButton('View issuer')).exists({ count: 1 });
@@ -306,7 +306,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'database');
-      await fillIn(SELECTORS.quickActionsCard.actionSelect, 'Generate credentials for database');
+      await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
       assert.dom(SELECTORS.actionButton('Generate credentials')).exists({ count: 1 });
@@ -321,7 +321,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv');
-      await fillIn(SELECTORS.quickActionsCard.actionSelect, 'Find KV secrets');
+      await fillIn(SELECTORS.selectEl, 'Find KV secrets');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
       assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
@@ -401,22 +401,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
         'details dashboard is shown'
       );
       await visit('/vault/dashboard');
-      assert
-        .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary'))
-        .hasText('DR primary');
-      assert
-        .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'DR primary'))
-        .hasText('not set up');
-      assert.dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
-      assert
-        .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
-        .hasText('Performance primary');
-      assert
-        .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'Performance primary'))
-        .hasText('running');
-      assert
-        .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
-        .exists();
+      assert.dom(SELECTORS.title('DR primary')).hasText('DR primary');
+      assert.dom(SELECTORS.tooltipTitle('DR primary')).hasText('not set up');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
+      assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
+      assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
     });
   });
 });

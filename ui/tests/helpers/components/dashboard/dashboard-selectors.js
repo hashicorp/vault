@@ -8,18 +8,16 @@ export const SELECTORS = {
   tableRow: (name) => `[data-test-dashboard-table="${name}"] tr`,
   searchSelect: (name) => `[data-test-search-select="${name}"]`,
   actionButton: (action) => `[data-test-button="${action}"]`,
+  title: (name) => `[data-test-title="${name}"]`,
   subtitle: (name) => `[data-test-card-subtitle="${name}"]`,
-  replicationCard: {
-    getReplicationTitle: (type, name) => `[data-test-${type}-replication] [data-test-title="${name}"]`,
-    getStateTooltipTitle: (type, name) =>
-      `[data-test-${type}-replication] [data-test-tooltip-title="${name}"]`,
-    getStateTooltipIcon: (type, name, icon) =>
-      `[data-test-${type}-replication] [data-test-tooltip-title="${name}"] [data-test-icon="${icon}"]`,
-    drOnlyStateSubText: '[data-test-dr-replication] [data-test-subtext="state"]',
-    knownSecondariesLabel: '[data-test-stat-text="known secondaries"] .stat-label',
-    knownSecondariesSubtext: '[data-test-stat-text="known secondaries"] .stat-text',
-    knownSecondariesValue: '[data-test-stat-text="known secondaries"] .stat-value',
-  },
+  subtext: (name) => `[data-test-subtext="${name}"]`,
+  tooltipTitle: (name) => `[data-test-tooltip-title="${name}"]`,
+  tooltipIcon: (type, name, icon) =>
+    `[data-test-type="${type}"] [data-test-tooltip-title="${name}"] [data-test-icon="${icon}"]`,
+  statLabel: (name) => `[data-test-stat-text=${name}] .stat-label`,
+  statText: (name) => `[data-test-stat-text=${name}] .stat-text`,
+  statValue: (name) => `[data-test-stat-text=${name}] .stat-value`,
+  selectEl: 'select',
   quickActionsCard: {
     actionSelect: '[data-test-select="action-select"]',
   },
