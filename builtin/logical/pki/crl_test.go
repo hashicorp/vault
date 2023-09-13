@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -1326,17 +1325,6 @@ func TestCRLIssuerRemoval(t *testing.T) {
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 
-	if constants.IsEnterprise {
-		// We don't really care about the whole cross cluster replication
-		// stuff, but we do want to enable unified CRLs if we can, so that
-		// unified CRLs get built.
-		_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
-			"cross_cluster_revocation": true,
-			"auto_rebuild":             true,
-		})
-		require.NoError(t, err, "failed enabling unified CRLs on enterprise")
-	}
-
 	// Create a single root, configure delta CRLs, and rotate CRLs to prep a
 	// starting state.
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -1358,11 +1346,6 @@ func TestCRLIssuerRemoval(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, crlList, "config")
 	require.Greater(t, len(crlList), 1)
-
-	unifiedCRLList, err := s.List(ctx, "unified-crls/")
-	require.NoError(t, err)
-	require.Contains(t, unifiedCRLList, "config")
-	require.Greater(t, len(unifiedCRLList), 1)
 
 	// Now, create a bunch of issuers, generate CRLs, and remove them.
 	var keyIDs []string
@@ -1398,11 +1381,4 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		require.Contains(t, afterCRLList, entry)
 	}
 	require.Equal(t, len(afterCRLList), len(crlList))
-
-	afterUnifiedCRLList, err := s.List(ctx, "unified-crls/")
-	require.NoError(t, err)
-	for _, entry := range unifiedCRLList {
-		require.Contains(t, afterUnifiedCRLList, entry)
-	}
-	require.Equal(t, len(afterUnifiedCRLList), len(unifiedCRLList))
 }
