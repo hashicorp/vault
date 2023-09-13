@@ -18,7 +18,9 @@ export const SELECTORS = {
   statText: (name) => `[data-test-stat-text=${name}] .stat-text`,
   statValue: (name) => `[data-test-stat-text=${name}] .stat-value`,
   selectEl: 'select',
-  quickActionsCard: {
-    actionSelect: '[data-test-select="action-select"]',
+  secretsEnginesCard: {
+    secretEngineAccessorRow: (engineId) => `[data-test-secrets-engines-row=${engineId}] [data-test-accessor]`,
+    secretEngineDescription: (engineId) =>
+      `[data-test-secrets-engines-row=${engineId}] [data-test-description]`,
   },
 };

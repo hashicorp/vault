@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import SECRET_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/secrets-engines-card', function (hooks) {
@@ -119,14 +118,14 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
       assert.dom(SELECTORS.tableRow('Secrets engines')).exists({ count: 5 });
 
       this.secretsEngines.slice(0, 5).forEach((engine) => {
-        assert.dom(SECRET_ENGINE_SELECTORS.getSecretEngineAccessor(engine.id)).hasText(engine.accessor);
+        assert.dom(SELECTORS.secretsEnginesCard.secretEngineAccessorRow(engine.id)).hasText(engine.accessor);
         if (engine.description) {
           assert
-            .dom(SECRET_ENGINE_SELECTORS.getSecretEngineDescription(engine.id))
+            .dom(SELECTORS.secretsEnginesCard.secretEngineDescription(engine.id))
             .hasText(engine.description);
         } else {
           assert
-            .dom(SECRET_ENGINE_SELECTORS.getSecretEngineDescription(engine.id))
+            .dom(SELECTORS.secretsEnginesCard.secretEngineDescription(engine.id))
             .doesNotExist(engine.description);
         }
       });
