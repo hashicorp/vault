@@ -1,6 +1,9 @@
-{{! template-lint-disable no-inline-styles}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<div class="confirm-wrapper {{if this.openTrigger 'confirm-height'}}">
+<div class="confirm-wrapper">
   <div class="confirm {{if this.openTrigger 'show-confirm'}}" ...attributes>
     {{yield
       (hash
