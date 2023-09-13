@@ -1,0 +1,3 @@
+```release-note:improvement
+api: added new API field, `mount_type`, returning `kvv1` and `kvv2` respectively for successful GETs for those mounts.
+```
