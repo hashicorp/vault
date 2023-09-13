@@ -54,7 +54,7 @@ export default class SecretCreateOrUpdate extends Component {
   @service store;
 
   @action
-  setup(elem, [secretData, model, mode]) {
+  setup(elem, [secretData, mode]) {
     this.codemirrorString = secretData.toJSONString();
     this.validationMessages = {
       path: '',
@@ -62,14 +62,6 @@ export default class SecretCreateOrUpdate extends Component {
     // for validation, return array of path names already assigned
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
-    } else {
-      // TODO should be able to remove the secret-v2 model
-      const adapter = this.store.adapterFor('secret-v2');
-      const type = { modelName: 'secret-v2' };
-      const query = { backend: model.backend };
-      adapter.query(this.store, type, query).then((result) => {
-        this.secretPaths = result.data.keys;
-      });
     }
     this.checkRows();
 
@@ -88,12 +80,6 @@ export default class SecretCreateOrUpdate extends Component {
       this.pathHasWhiteSpace(value);
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
-        : set(this.validationMessages, name, '');
-    }
-    // check duplicate on path
-    if (name === 'path' && value) {
-      this.secretPaths?.includes(value)
-        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
     const values = Object.values(this.validationMessages);
@@ -118,6 +104,7 @@ export default class SecretCreateOrUpdate extends Component {
   persistKey(successCallback) {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
+
     let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
