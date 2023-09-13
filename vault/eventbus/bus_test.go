@@ -626,3 +626,30 @@ func TestBexpr(t *testing.T) {
 		})
 	}
 }
+
+// TestPipelineCleanedUp ensures pipelines are properly cleaned up after
+// subscriptions are closed.
+func TestPipelineCleanedUp(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eventType := logical.EventType("someType")
+	bus.Start()
+
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
+		cancel()
+		t.Fatal()
+	}
+
+	cancel()
+
+	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
+		t.Fatal()
+	}
+}
