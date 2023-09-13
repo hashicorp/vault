@@ -9,7 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import timestamp from 'core/utils/timestamp';
-import SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
+import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/replication-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -45,14 +45,20 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
+    assert.dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
+      .exists();
+    assert
+      .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
       .hasText('Performance primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'Performance primary'))
+      .hasText('running');
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
+      .exists();
   });
   test('it should display replication information if both dr and performance replication are enabled as features and only dr is setup', async function (assert) {
     this.replication = {
@@ -74,21 +80,27 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
+    assert.dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
+      .exists();
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
       .hasClass('has-text-success');
 
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
       .hasText('Performance primary');
 
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('not set up');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
+      .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'Performance primary'))
+      .hasText('not set up');
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
+      .exists();
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
       .hasClass('has-text-danger');
   });
 
@@ -113,14 +125,20 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr', 'state')).hasText('state');
-    assert.dom(SELECTORS.drOnlyStateSubText).hasText('The current operating state of the cluster.');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr', 'state')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr', 'state', 'check-circle')).exists();
-    assert.dom(SELECTORS.getStateTooltipIcon('dr', 'state', 'check-circle')).hasClass('has-text-success');
-    assert.dom(SELECTORS.knownSecondariesLabel).hasText('known secondaries');
-    assert.dom(SELECTORS.knownSecondariesSubtext).hasText('Number of secondaries connected to this primary.');
-    assert.dom(SELECTORS.knownSecondariesValue).hasText('1');
+    assert.dom(SELECTORS.replicationCard.getReplicationTitle('dr', 'state')).hasText('state');
+    assert
+      .dom(SELECTORS.replicationCard.drOnlyStateSubText)
+      .hasText('The current operating state of the cluster.');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipTitle('dr', 'state')).hasText('running');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipIcon('dr', 'state', 'check-circle')).exists();
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr', 'state', 'check-circle'))
+      .hasClass('has-text-success');
+    assert.dom(SELECTORS.replicationCard.knownSecondariesLabel).hasText('known secondaries');
+    assert
+      .dom(SELECTORS.replicationCard.knownSecondariesSubtext)
+      .hasText('Number of secondaries connected to this primary.');
+    assert.dom(SELECTORS.replicationCard.knownSecondariesValue).hasText('1');
   });
 
   test('it should show correct icons if dr and performance replication is idle or shutdown states', async function (assert) {
@@ -144,20 +162,24 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('idle');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-square')).exists();
+    assert.dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('idle');
+    assert.dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'x-square')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-square'))
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'x-square'))
       .hasClass('has-text-danger');
 
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
       .hasText('Performance primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('shutdown');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
+      .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'Performance primary'))
+      .hasText('shutdown');
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
+      .exists();
+    assert
+      .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
       .hasClass('has-text-danger');
   });
 
@@ -181,9 +203,9 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert.dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
       .hasText('Performance primary');
 
     this.replication = {
@@ -206,7 +228,7 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
             `
     );
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance secondary'))
+      .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance secondary'))
       .hasText('Performance secondary');
   });
 
@@ -228,11 +250,11 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom(SELECTORS.replicationEmptyState).exists();
-    assert.dom(SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
+    assert.dom(SELECTORS.emptyState('replication')).exists();
+    assert.dom(SELECTORS.emptyStateTitle('replication')).hasText('Replication not set up');
     assert
-      .dom(SELECTORS.replicationEmptyStateMessage)
+      .dom(SELECTORS.emptyStateMessage('replication'))
       .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
-    assert.dom(SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
+    assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
   });
 });

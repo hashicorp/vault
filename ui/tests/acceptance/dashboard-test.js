@@ -32,7 +32,6 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 // selectors
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
-import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 const consoleComponent = create(consoleClass);
@@ -381,12 +380,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
+      assert.dom(SELECTORS.emptyState('replication')).exists();
+      assert.dom(SELECTORS.emptyStateTitle('replication')).hasText('Replication not set up');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateMessage)
+        .dom(SELECTORS.emptyStateMessage('replication'))
         .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
+      assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
@@ -404,22 +403,20 @@ module('Acceptance | landing page dashboard', function (hooks) {
       );
       await visit('/vault/dashboard');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
+        .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'DR primary'))
         .hasText('DR primary');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary'))
+        .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'DR primary'))
         .hasText('not set up');
+      assert.dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle'))
-        .exists();
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+        .dom(SELECTORS.replicationCard.getReplicationTitle('dr-perf', 'Performance primary'))
         .hasText('Performance primary');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary'))
+        .dom(SELECTORS.replicationCard.getStateTooltipTitle('dr-perf', 'Performance primary'))
         .hasText('running');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
+        .dom(SELECTORS.replicationCard.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
         .exists();
     });
   });
