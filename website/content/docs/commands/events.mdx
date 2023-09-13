@@ -74,14 +74,15 @@ flags](/vault/docs/commands) included on all commands.
 	- `data_path`: the API path that can be used to access the data of the secret related to the event, e.g., `secret/data/foo`
 	- `namespace`: the path of the namespace that created the event, e.g., `ns1/`
 
-  By default, the filter will be empty and will match all events that the
-  request has access to for the given event types specified in the request.
+The filter string is empty by default. Unfiltered subscription requests match to
+all events that the requestor has access to for the target event type. When the
+filter string is not empty, Vault applies the filter conditions after the policy
+checks to narrow the events provided in the response.
 
-  A filter could be as simple as `data_path == secret/data/foo` to specify that
-  only events that refer to the `data_path` of `secret/data/foo` should be sent
-  via the WebSocket.
-
-  A filter can also be more complex, for example:
+Filters can be straightforward path matches like `data_path == secret/data/foo`,
+which specifies that Vault should pass return events that refer to the
+`secret/data/foo` secret to the WebSocket. Or more complex statements that
+exclude specific operations. For example:
   ```
   data_path == secret/data/foo and operation != write
   ```
