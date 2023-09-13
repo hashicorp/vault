@@ -44,8 +44,7 @@ Subscribe to all `kv-v2/data-write` events:
 $ vault events subscribe kv-v2/data-write
 ```
 
-Subscribe to all non-`data-write` KV events for the secret `secret/data/foo` in
-the current namespace as well as namespace `ns1`:
+Subscribe to all KV events in the current and `ns1` namespaces for the secret `secret/data/foo` that do not involve writing data:
 
 ```shell-session
 $ vault events subscribe -namespaces=ns1 -filter='data_path == secret/data/foo and operation != "data-write"' 'kv*'
