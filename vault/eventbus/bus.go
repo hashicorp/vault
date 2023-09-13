@@ -185,10 +185,6 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		return nil, err
 	}
 	formatterNodeID := eventlogger.NodeID(formatterID)
-	err = broker.RegisterNode(formatterNodeID, cloudEventsFormatterFilter)
-	if err != nil {
-		return nil, err
-	}
 
 	if logger == nil {
 		logger = hclog.Default().Named("events")
@@ -213,6 +209,11 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = bus.broker.RegisterNode(bus.formatterNodeID, cloudEventsFormatterFilter)
 	if err != nil {
 		return nil, nil, err
 	}
