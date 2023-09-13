@@ -5,7 +5,7 @@
 
 {{! template-lint-disable no-inline-styles}}
 
-<div class="confirm-wrapper" style={{sanitized-html this.style}}>
+<div class="confirm-wrapper {{if this.openTrigger 'confirm-height'}}">
   <div class="confirm {{if this.openTrigger 'show-confirm'}}" ...attributes>
     {{yield
       (hash
