@@ -39,6 +39,9 @@ const (
 	// TokenType - Bucket/type for auto-auth tokens
 	TokenType = "token"
 
+	// StaticSecretType - Bucket/type for static secrets
+	StaticSecretType = "static-secret"
+
 	// LeaseType - v2 Bucket/type for auth AND secret leases.
 	//
 	// This bucket stores keys in the same order they were created using
