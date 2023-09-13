@@ -48,7 +48,7 @@
       </div>
 
       {{#if (or (not this.model.requestEntity) this.currentUserIsRequesting)}}
-        <div class="message is-list is-highlight" tabindex="-1" data-test-accessor-callout>
+        <div class="message is-highlight" data-test-accessor-callout>
           <Hds::Copy::Button
             @text="Copy"
             @isIconOnly={{true}}
@@ -95,7 +95,7 @@
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
       <div>
-        <Hds::Copy::Snippet @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
+        <Hds::Copy::Snippet data-test-token-value @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
       </div>
     </div>
   {{/if}}
