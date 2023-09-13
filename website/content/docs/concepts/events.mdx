@@ -158,9 +158,11 @@ To subscribe to an event, you must have the following policy grants:
    }
    ```
 
-1. For events related to secrets, the `list` and `subscribe` capabilities must be granted on the *path of the secret*,
-   and must contain a `subscribe_event_types` entry with the events the subscriber will be allowed to use.
-   For example, to receive events related to the KV secrets engine path, `secret/my-data`, a policy could be:
+1. `list` and `subscribe` capabilities on the *path of the secret* for events
+    related to secrets. The policy must also provide a `subscribe_event_types`
+    entry with the specific events subscribers are allowed to use. For example,
+    to receive events related to the KV secrets engine path,
+     `secret/my-data`, a valid policy would be:
 
    ```hcl
    path "secret/my-data" {
