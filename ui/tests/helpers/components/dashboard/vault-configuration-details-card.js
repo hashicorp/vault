@@ -4,7 +4,6 @@
  */
 
 const SELECTORS = {
-  cardTitle: '[data-test-configuration-details-title]',
   apiAddr: '[data-test-vault-config-details="api_addr"]',
   defaultLeaseTtl: '[data-test-vault-config-details="default_lease_ttl"]',
   maxLeaseTtl: '[data-test-vault-config-details="max_lease_ttl"]',

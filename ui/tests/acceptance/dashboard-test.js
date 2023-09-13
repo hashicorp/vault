@@ -30,7 +30,6 @@ import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
 // selectors
-import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
@@ -54,7 +53,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     const versionName = version.version;
     const versionNameEnd = version.isEnterprise ? versionName.indexOf('+') : versionName.length;
     assert
-      .dom('[data-test-dashboard-version-header]')
+      .dom(SELECTORS.cardHeader('Vault version'))
       .hasText(`Vault v${versionName.slice(0, versionNameEnd)} root`);
   });
 
@@ -67,7 +66,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await mountSecrets.enable('pki', 'pki');
       await settled();
       await visit('/vault/dashboard');
-      assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
+      assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
@@ -184,7 +183,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       }));
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
+      assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('2 days');
