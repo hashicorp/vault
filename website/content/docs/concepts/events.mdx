@@ -179,9 +179,10 @@ To subscribe to an event, you must have the following policy grants:
 
 </Highlight>
 
-Policies are continuously evaluated for the WebSocket subscription while it is running.
-These checks are cached for a short period of time for performance reasons, so it is possible that
-events may be sent for a few minutes after a token has been revoked or a policy has been deleted.
+Vault continuously evaluates policies for WebSocket subscriptions and
+caches the results for a short period of time to improve performance.
+As a result, events **may** still be sent for a few minutes after a token is
+revoked or a policy is deleted.
 
 ## Supported versions
 
