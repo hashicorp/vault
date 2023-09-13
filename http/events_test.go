@@ -36,7 +36,7 @@ import (
 // knowing the initial number of subscribers.
 // It is *NOT* safe to use with two tests running in parallel.
 func waitForSubscriber() <-chan bool {
-	notifyCh := make(chan bool)
+	notifyCh := make(chan struct{})
 	subscribers := eventbus.SubscriptionsCount()
 
 	go func() {
