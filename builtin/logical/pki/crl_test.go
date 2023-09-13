@@ -1332,6 +1332,7 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		// unified CRLs get built.
 		_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 			"cross_cluster_revocation": true,
+			"auto_rebuild":             true,
 		})
 		require.NoError(t, err, "failed enabling unified CRLs on enterprise")
 	}
