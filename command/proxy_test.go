@@ -581,8 +581,8 @@ vault {
 	wg.Wait()
 }
 
-// TestProxy_Cache_DynamicSecret Tests that the cache successfully caches a dynamic secret
-// going through the Proxy,
+// TestProxy_Cache_DynamicSecret tests that the cache successfully caches a dynamic secret
+// going through the Proxy, and that a subsequent request will be served from the cache.
 func TestProxy_Cache_DynamicSecret(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
