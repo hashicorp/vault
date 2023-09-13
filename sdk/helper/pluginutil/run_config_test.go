@@ -432,11 +432,16 @@ func (m *mockRunnerUtil) MlockEnabled() bool {
 	return args.Bool(0)
 }
 
+func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
+	return "1234", nil
+}
+
 func TestContainerConfig(t *testing.T) {
 	dummySHA, err := hex.DecodeString("abc123")
 	if err != nil {
 		t.Fatal(err)
 	}
+	myPID := strconv.Itoa(os.Getpid())
 	for name, tc := range map[string]struct {
 		rc       runConfig
 		expected plugincontainer.Config
@@ -460,8 +465,11 @@ func TestContainerConfig(t *testing.T) {
 						MagicCookieKey:   "magic_cookie_key",
 						MagicCookieValue: "magic_cookie_value",
 					},
-					Logger:   hclog.NewNullLogger(),
-					AutoMTLS: true,
+					Logger:     hclog.NewNullLogger(),
+					AutoMTLS:   true,
+					Name:       "some-plugin",
+					PluginType: consts.PluginTypeCredential,
+					Version:    "v0.1.0",
 				},
 			},
 			expected: plugincontainer.Config{
@@ -477,7 +485,11 @@ func TestContainerConfig(t *testing.T) {
 					fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 				},
 				Labels: map[string]string{
-					"managed-by": "hashicorp.com/vault",
+					labelVaultPID:           myPID,
+					labelVaultClusterID:     "1234",
+					labelVaultPluginName:    "some-plugin",
+					labelVaultPluginType:    "auth",
+					labelVaultPluginVersion: "v0.1.0",
 				},
 				Runtime:  consts.DefaultContainerPluginOCIRuntime,
 				GroupAdd: os.Getgid(),
@@ -505,8 +517,11 @@ func TestContainerConfig(t *testing.T) {
 						MagicCookieKey:   "magic_cookie_key",
 						MagicCookieValue: "magic_cookie_value",
 					},
-					Logger:   hclog.NewNullLogger(),
-					AutoMTLS: true,
+					Logger:     hclog.NewNullLogger(),
+					AutoMTLS:   true,
+					Name:       "some-plugin",
+					PluginType: consts.PluginTypeCredential,
+					Version:    "v0.1.0",
 				},
 			},
 			expected: plugincontainer.Config{
@@ -519,7 +534,11 @@ func TestContainerConfig(t *testing.T) {
 					fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 				},
 				Labels: map[string]string{
-					"managed-by": "hashicorp.com/vault",
+					labelVaultPID:           myPID,
+					labelVaultClusterID:     "1234",
+					labelVaultPluginName:    "some-plugin",
+					labelVaultPluginType:    "auth",
+					labelVaultPluginVersion: "v0.1.0",
 				},
 				Runtime:      "some-oci-runtime",
 				GroupAdd:     os.Getgid(),
@@ -540,7 +559,8 @@ func TestContainerConfig(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cfg := tc.rc.containerConfig(cmd.Env)
+			cfg, err := tc.rc.containerConfig(context.Background(), cmd.Env)
+			require.NoError(t, err)
 			require.Equal(t, tc.expected, *cfg)
 		})
 	}

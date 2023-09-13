@@ -3,9 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div data-test-code-snippet class="code-snippet-container" ...attributes>
-  <code class="text-grey-lightest">
-    {{@codeBlock}}
-  </code>
-  <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} class="hds-copy-button code-snippet" />
+<div
+  class="has-padding-s has-background-gray-900 border-radius-4 is-flex-between is-flex-center"
+  data-test-code-snippet
+  ...attributes
+>
+  <code class="has-text-white is-size-7">{{@codeBlock}}</code>
+  <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} />
 </div>

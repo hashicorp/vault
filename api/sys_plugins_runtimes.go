@@ -64,8 +64,8 @@ type RegisterPluginRuntimeInput struct {
 
 	OCIRuntime   string `json:"oci_runtime,omitempty"`
 	CgroupParent string `json:"cgroup_parent,omitempty"`
-	CPU          int64  `json:"cpu,omitempty"`
-	Memory       int64  `json:"memory,omitempty"`
+	CPU          int64  `json:"cpu_nanos,omitempty"`
+	Memory       int64  `json:"memory_bytes,omitempty"`
 }
 
 // RegisterPluginRuntime registers the plugin with the given information.
