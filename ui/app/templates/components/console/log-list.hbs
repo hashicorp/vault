@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="console-ui-output has-copy-button">
+<div class="console-ui-output has-text-grey">
   <pre>
     Keys
     {{#each this.list as |item|}}
@@ -11,5 +11,10 @@
 
     {{/each}}
   </pre>
-  <HoverCopyButton @copyValue={{multi-line-join this.list}} />
+  <Hds::Copy::Button
+    @text="Copy"
+    @isIconOnly={{true}}
+    @textToCopy={{multi-line-join this.list}}
+    class="top-right-absolute"
+  />
 </div>
