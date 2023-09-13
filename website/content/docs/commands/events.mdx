@@ -14,11 +14,10 @@ its own unless it encounters an unexpected error. Similar to `tail -f` in the
 Unix world, you must terminate the process from the command line to end the
 `events` command.
 
-The desired event types (sometimes called "topics") must be specified, which
-may be a glob pattern (with `*` treated as a wildcard).
-
-The output will be JSON objects serialized using the default protobuf JSON
-serialization format, with one line per event received.
+Specify the desired event types (also called "topics") as a glob pattern. To match
+against multiple events, use `*` as a wildcard. The command returns serialized
+JSON objects in the default protobuf JSON serialization format with one line per
+event received.
 
 Note that this command is designed to run indefinitely. It is similar to
 `tail -f` in the Unix world. This command will not exit on its own unless it
