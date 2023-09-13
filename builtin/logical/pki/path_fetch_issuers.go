@@ -930,6 +930,14 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		response.AddWarning(msg)
 	}
 
+	// Finally, we need to rebuild both the local and the unified CRLs. This
+	// will free up any now unnecessary space used in both the CRL config
+	// and for the underlying CRL.
+	err = b.crlBuilder.rebuild(sc, true)
+	if err != nil {
+		return nil, err
+	}
+
 	return response, nil
 }
 
