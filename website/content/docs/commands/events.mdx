@@ -102,8 +102,12 @@ exclude specific operations. For example:
   use the `*` character to include wildcards in the namespace pattern. By
   default, Vault will only subscribe to events in the requesting namespace.
 
-  -> Note: A root token, or a token associated with entities and groups with
-     the appropriate policies, must be used for the event subscription
-     request to be able to subscribe to multiple namespaces. See
-     [this tutorial](/vault/tutorials/enterprise/namespaces) for an example
-     setup.
+<Note>
+
+  To subscribe to events across multiple namespaces, you must provide a root
+  token or a token associated with appropriate policies across all the targeted
+  namespaces. Refer to the
+  [Secure multi-tenancy with namespaces](/vault/tutorials/enterprise/namespaces)
+  tutorial for configuring your Vault instance appropriately.
+
+</Note>
