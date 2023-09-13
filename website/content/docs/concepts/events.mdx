@@ -148,7 +148,7 @@ $ vault events subscribe kv-v2/data-write
 
 To subscribe to an event, you must have the following policy grants:
 
-1. the `read` capability on the `/v1/sys/events/subscribe/{eventType}` path, where `{eventType}` is the event type that will be
+1. `read` capability on `/v1/sys/events/subscribe/{eventType}`, where `{eventType}` is the event type that will be
    subscribed to. The path may contain wildcards.
 
    An example blanket policy is:
