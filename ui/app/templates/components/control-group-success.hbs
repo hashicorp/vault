@@ -16,8 +16,8 @@
   </div>
 {{else}}
   {{#if this.unwrapData}}
-    <div class="control-group-success {{if this.unwrapData 'is-editor'}}">
-      <div class="has-copy-button">
+    <div class="control-group-success is-editor">
+      <div class="is-relative">
         <JsonEditor
           data-test-json-viewer
           @showToolbar={{false}}
@@ -27,7 +27,12 @@
           @gutters={{false}}
           @theme="hashi-read-only auto-height"
         />
-        <HoverCopyButton @copyValue={{stringify this.unwrapData}} />
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{stringify this.unwrapData}}
+          class="hds-copy-button icon-only top-right-absolute"
+        />
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">

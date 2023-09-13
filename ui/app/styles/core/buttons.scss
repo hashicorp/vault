@@ -333,7 +333,8 @@ a.button.disabled {
   }
 }
 
-// Modification to HDS copy button component to match current UI
+// Styling to <Hds::Copy::Button> component to match existing UI Structure buttons
+// Will likely be removed/modified when all buttons are audited and replaced with HDS
 .hds-copy-button {
   &.icon-only {
     background: none;
@@ -345,27 +346,6 @@ a.button.disabled {
 
   &.white-icon svg {
     color: $white;
-  }
-
-  &.hidden-icon svg {
-    color: transparent;
-  }
-
-  &.size-7 div {
-    font-size: $size-7;
-  }
-
-  &.code-snippet {
-    background: none;
-    border: none;
-    box-shadow: none;
-    min-width: auto;
-    padding: $size-11 $size-8;
-    color: $ui-gray-300;
-
-    svg {
-      color: $ui-gray-300;
-    }
   }
 
   &.is-primary {
@@ -395,9 +375,25 @@ a.button.disabled {
     min-width: 6rem;
   }
 
-  &.hover-button {
-    min-width: $spacing-xl;
-    border-radius: 0;
-    box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
+  &.code-snippet {
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-width: auto;
+    padding: $size-11 $size-8;
+    color: $ui-gray-300;
+
+    svg {
+      color: $ui-gray-300;
+    }
+  }
+
+  &.in-dropdown {
+    div {
+      font-size: $size-7;
+    }
+    svg {
+      color: transparent;
+    }
   }
 }
