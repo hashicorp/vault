@@ -20,9 +20,6 @@ export default Route.extend({
   pathHelp: service('path-help'),
   router: service(),
 
-  // By default assume user doesn't have permissions
-  noMetadataPermissions: true,
-
   queryParams: {
     page: {
       refreshModel: true,
@@ -99,9 +96,9 @@ export default Route.extend({
       aws: 'role-aws',
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: secretEngine.modelTypeForKV,
+      kv: 'secret',
       keymgmt: `keymgmt/${tab || 'key'}`,
-      generic: secretEngine.modelTypeForKV,
+      generic: 'secret',
     };
     return types[type];
   },
@@ -123,17 +120,12 @@ export default Route.extend({
           pageFilter: params.pageFilter,
         })
         .then((model) => {
-          this.set('noMetadataPermissions', false);
           this.set('has404', false);
           return model;
         })
         .catch((err) => {
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
-            this.set('noMetadataPermissions', false);
-            return [];
-          } else if (err.httpStatus === 403 && backendModel.isV2KV) {
-            this.set('noMetadataPermissions', true);
             return [];
           } else {
             // else we're throwing and dealing with this in the error action
@@ -150,7 +142,6 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const backendModel = this.store.peekRecord('secret-engine', backend);
     const has404 = this.has404;
-    const noMetadataPermissions = this.noMetadataPermissions;
     // only clear store cache if this is a new model
     if (secret !== controller.get('baseKey.id')) {
       this.store.clearAllDatasets();
@@ -159,7 +150,6 @@ export default Route.extend({
     controller.setProperties({
       model,
       has404,
-      noMetadataPermissions,
       backend,
       backendModel,
       baseKey: { id: secret },
