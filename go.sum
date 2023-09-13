@@ -2124,8 +2124,8 @@ github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0 h1:DgJ9v3sWQlvyvpmCU/YAFdmGgLi6t8PHQ+O9UeYIuCg=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0/go.mod h1:UQa534XDQsSwwR4MYhOGnkF2gEao9zVABySBTfjAq08=
-github.com/hashicorp/vault-plugin-auth-azure v0.16.1 h1:6zJ2j/sfeyxEAaxDVano2v/oydSy+yVPiRUfwPWr2Fc=
-github.com/hashicorp/vault-plugin-auth-azure v0.16.1/go.mod h1:W0Z5JnhQII42Ip22RFZ0pL01WCwIgrNroheUg4FCzxI=
+github.com/hashicorp/vault-plugin-auth-azure v0.16.2 h1:ikzhUkiZ6QZ/mhoKNBVTJCzeaC9mEhXCqZ/7Z1Zoajg=
+github.com/hashicorp/vault-plugin-auth-azure v0.16.2/go.mod h1:W0Z5JnhQII42Ip22RFZ0pL01WCwIgrNroheUg4FCzxI=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1 h1:6StAr5tltpySNgyUwWC8czm9ZqkO7NIZfcRmxxtFwQ8=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1/go.mod h1:xXs4I5yLxbQ5VHcpvSxkRhShCTXd8Zyrni8qnFrfQ4Y=
 github.com/hashicorp/vault-plugin-auth-cf v0.15.1 h1:gtHOfVU4KDs1URlSCbIoio4eNXbSC+TXgtm/QWVBCU8=
