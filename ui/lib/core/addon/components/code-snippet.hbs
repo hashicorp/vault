@@ -9,15 +9,5 @@
   ...attributes
 >
   <code class="has-text-white is-size-7">{{@codeBlock}}</code>
-  {{! replace with Hds::Copy::Button }}
-  {{!-- <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} class="hds-copy-button code-snippet" /> --}}
-  <CopyButton
-    class="button is-compact is-transparent has-text-grey-light"
-    @clipboardText={{or @clipboardCode @codeBlock}}
-    @buttonType="button"
-    @success={{action (set-flash-message "Code copied!")}}
-  >
-    Copy
-    <Icon @name="clipboard-copy" aria-label="Copy" />
-  </CopyButton>
+  <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} />
 </div>
