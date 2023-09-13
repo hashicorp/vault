@@ -911,7 +911,8 @@ func testBackendEntDiffNamespaceRevocation(t *testing.T) {
 	// Create new Token in default namespace with new ACL
 	cToken, _, err := client.ACL().TokenCreate(
 		&consulapi.ACLToken{
-			Policies: []*consulapi.ACLLink{{ID: pol.ID}}}, nil)
+			Policies: []*consulapi.ACLLink{{ID: pol.ID}},
+		}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1001,7 +1002,6 @@ func testBackendEntDiffNamespaceRevocation(t *testing.T) {
 	if err == nil {
 		t.Fatal("err: expected error")
 	}
-
 }
 
 func testBackendEntNamespace(t *testing.T) {
