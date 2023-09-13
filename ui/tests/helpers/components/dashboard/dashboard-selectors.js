@@ -23,4 +23,7 @@ export const SELECTORS = {
     secretEngineDescription: (engineId) =>
       `[data-test-secrets-engines-row=${engineId}] [data-test-description]`,
   },
+  vaultConfigurationCard: {
+    configDetailsField: (name) => `data-test-vault-config-details=${name}`,
+  },
 };

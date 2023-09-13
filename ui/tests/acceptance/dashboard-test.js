@@ -30,7 +30,6 @@ import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
 // selectors
-import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 const consoleComponent = create(consoleClass);
@@ -182,13 +181,15 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('2 days');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Enabled');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.logFormat).hasText('None');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.logLevel).hasText('debug');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.storageType).hasText('raft');
+      assert
+        .dom(SELECTORS.vaultConfigurationCard.configDetailsField('api_addr'))
+        .hasText('http://127.0.0.1:8200');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Enabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
     });
     test('shows the tls disabled if it is disabled', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => {
@@ -202,7 +203,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       });
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Disabled');
     });
     test('shows the tls disabled if there is no tlsDisabled returned from server', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => {
@@ -217,7 +218,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       });
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Disabled');
     });
   });
 
