@@ -67,7 +67,7 @@ static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vau
 * **Event System**: Add subscribe capability and subscribe_event_types to policies for events. [[GH-22474](https://github.com/hashicorp/vault/pull/22474)]
 * **Certificate Issuance External Policy Service (CIEPS)**: Allow highly-customizable operator control of certificate validation and generation through the PKI Secrets Engine.
 * **Agent auto-auth**: support ldap auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
-* core (enterprise): Seal High Availability Beta: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
+* **Seal High Availability Beta (enterprise)**: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
 * **Secrets Sync (enterprise)**: Add the ability to synchronize KVv2 secret with external secrets manager solutions.```
 * ui: Add support for SAML login flow
 
