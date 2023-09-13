@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, visit, click, fillIn } from '@ember/test-helpers';
+import { currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +13,8 @@ import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import authPage from 'vault/tests/pages/auth';
-import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 import { create } from 'ember-cli-page-object';
 
@@ -70,11 +71,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       .dom(PAGE.list.item('foo'))
       .exists('lists secret created under kv1 engine as secret in the kv2 list view');
 
-    await click(PAGE.list.createSecret);
-    await fillIn(FORM.inputByAttr('path'), 'bar');
-    await fillIn(FORM.keyInput(), 'key');
-    await fillIn(FORM.maskedValueInput(), 'value');
-    await click(FORM.saveBtn);
+    await writeSecret(path, 'bar', 'key', 'value');
     await visit(`/vault/secrets/${path}/kv/list`);
 
     ['foo', 'bar'].forEach((secret) => {
