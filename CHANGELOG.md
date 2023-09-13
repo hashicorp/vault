@@ -69,7 +69,7 @@ static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vau
 * **Agent auto-auth**: support ldap auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
 * **Seal High Availability Beta (enterprise)**: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
 * **Secrets Sync (enterprise)**: Add the ability to synchronize KVv2 secret with external secrets manager solutions.```
-* ui: Add support for SAML login flow
+* **SAML Auth Login**: Add UI support for SAML login flow
 
 IMPROVEMENTS:
 
