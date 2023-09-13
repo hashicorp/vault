@@ -14,15 +14,10 @@ its own unless it encounters an unexpected error. Similar to `tail -f` in the
 Unix world, you must terminate the process from the command line to end the
 `events` command.
 
-Specify the desired event types (also called "topics") as a glob pattern. To match
-against multiple events, use `*` as a wildcard. The command returns serialized
-JSON objects in the default protobuf JSON serialization format with one line per
-event received.
-
-Note that this command is designed to run indefinitely. It is similar to
-`tail -f` in the Unix world. This command will not exit on its own unless it
-encounters an unexpected error. As a user, you must terminate this process
-yourself to shut it down.
+Specify the desired event types (also called "topics") as a glob pattern. To
+match against multiple events, use `*` as a wildcard. The command returns
+serialized JSON objects in the default protobuf JSON serialization format with
+one line per event received.
 
 ## Examples
 
@@ -74,18 +69,18 @@ flags](/vault/docs/commands) included on all commands.
 	- `data_path`: the API path that can be used to access the data of the secret related to the event, e.g., `secret/data/foo`
 	- `namespace`: the path of the namespace that created the event, e.g., `ns1/`
 
-The filter string is empty by default. Unfiltered subscription requests match to
-all events that the requestor has access to for the target event type. When the
-filter string is not empty, Vault applies the filter conditions after the policy
-checks to narrow the events provided in the response.
+    The filter string is empty by default. Unfiltered subscription requests match to
+    all events that the requestor has access to for the target event type. When the
+    filter string is not empty, Vault applies the filter conditions after the policy
+    checks to narrow the events provided in the response.
 
-Filters can be straightforward path matches like `data_path == secret/data/foo`,
-which specifies that Vault should pass return events that refer to the
-`secret/data/foo` secret to the WebSocket. Or more complex statements that
-exclude specific operations. For example:
-  ```
-  data_path == secret/data/foo and operation != write
-  ```
+    Filters can be straightforward path matches like
+    `data_path == secret/data/foo`, which specifies that Vault should pass
+    return events that refer to the `secret/data/foo` secret to the WebSocket.
+    Or more complex statements that exclude specific operations. For example:
+      ```
+      data_path == secret/data/foo and operation != write
+      ```
 
 
 ### Enterprise options
@@ -102,11 +97,9 @@ exclude specific operations. For example:
   default, Vault will only subscribe to events in the requesting namespace.
 
 <Note>
-
   To subscribe to events across multiple namespaces, you must provide a root
   token or a token associated with appropriate policies across all the targeted
-  namespaces. Refer to the
-  [Secure multi-tenancy with namespaces](/vault/tutorials/enterprise/namespaces)
-  tutorial for configuring your Vault instance appropriately.
-
+  namespaces. Refer to
+  the <a href="/vault/tutorials/enterprise/namespaces">Secure multi-tenancy with
+  namespaces</a>tutorial for configuring your Vault instance appropriately.
 </Note>

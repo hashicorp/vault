@@ -8,8 +8,6 @@ description: >-
 
 # Events
 
-TODO: test all commands
-
 <Important title="Beta functionality is stable but possibly incomplete">
   Vault delivers events on a best-effort basis. We do not provide delivery
   guarantees for beta functionality.
@@ -172,11 +170,9 @@ To subscribe to an event, you must have the following policy grants:
    ```
 
 <Highlight title="Event payload for secrets is subject to change">
-
-  If the policy for the path of the secret **also** contains the `read`
-  capability, future versions of the events functionality may include the
+  If the policy for the path of the secret <strong>also</strong> contains
+  the <code>read</code> capability, future versions of the events functionality may include the
   contents of the secret in the event payload.
-
 </Highlight>
 
 Vault continuously evaluates policies for WebSocket subscriptions and
@@ -185,7 +181,6 @@ As a result, events **may** still be sent for a few minutes after a token is
 revoked or a policy is deleted.
 
 ## Supported versions
-
 
 Version | Support
 ------- | -------
@@ -202,9 +197,3 @@ configuration or from the command line with the `-experiments` flag. For example
 ```shell-session
 $ vault server -experiment events.alpha1
 ```
-
-| Vault Version | Support                                     |
-| ------------- | ------------------------------------------- |
-| <= 1.12       | Not supported                               |
-| 1.13–1.14     | Supported (with `events.alpha1` experiment) |
-| 1.15+         | Supported                                   |
