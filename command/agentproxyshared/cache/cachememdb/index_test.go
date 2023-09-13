@@ -17,6 +17,7 @@ func TestSerializeDeserialize(t *testing.T) {
 	testIndex := &Index{
 		ID:            "testid",
 		Token:         "testtoken",
+		Tokens:        []string{"token1", "token2"},
 		TokenParent:   "parent token",
 		TokenAccessor: "test accessor",
 		Namespace:     "test namespace",

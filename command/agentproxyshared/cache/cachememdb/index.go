@@ -22,6 +22,12 @@ type Index struct {
 	// Required: true, Unique: true
 	Token string
 
+	// Tokens is a list of tokens that can access this cached response,
+	// which is used for static secret caching, and enabling multiple
+	// tokens to be able to access the same cache entry for static secrets.
+	// Required: false, Unique: false
+	Tokens []string
+
 	// TokenParent is the parent token of the token held by this index
 	// Required: false, Unique: false
 	TokenParent string
