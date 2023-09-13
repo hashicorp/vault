@@ -1318,3 +1318,67 @@ func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical
 	require.False(t, resp.IsError(), "crl error response: %v", resp)
 	return resp
 }
+
+func TestCRLIssuerRemoval(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	b, s := createBackendWithStorage(t)
+
+	// Create a single root, configure delta CRLs, and rotate CRLs to prep a
+	// starting state.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		"enable_delta": true,
+		"auto_rebuild": true,
+	})
+	require.NoError(t, err)
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// List items in storage under both CRL paths so we know what is there in
+	// the "good" state.
+	crlList, err := s.List(ctx, "crls/")
+	require.NoError(t, err)
+	require.Contains(t, crlList, "config")
+	require.Greater(t, len(crlList), 1)
+
+	// Now, create a bunch of issuers, generate CRLs, and remove them.
+	var keyIDs []string
+	var issuerIDs []string
+	for i := 1; i <= 25; i++ {
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": fmt.Sprintf("Root X%v", i),
+			"key_type":    "ec",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		key := string(resp.Data["key_id"].(keyID))
+		keyIDs = append(keyIDs, key)
+		issuer := string(resp.Data["issuer_id"].(issuerID))
+		issuerIDs = append(issuerIDs, issuer)
+	}
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	for _, issuer := range issuerIDs {
+		_, err := CBDelete(b, s, "issuer/"+issuer)
+		require.NoError(t, err)
+	}
+	for _, key := range keyIDs {
+		_, err := CBDelete(b, s, "key/"+key)
+		require.NoError(t, err)
+	}
+
+	// Finally list storage entries again to ensure they are cleaned up.
+	afterCRLList, err := s.List(ctx, "crls/")
+	require.NoError(t, err)
+	for _, entry := range crlList {
+		require.Contains(t, afterCRLList, entry)
+	}
+	require.Equal(t, len(afterCRLList), len(crlList))
+}
