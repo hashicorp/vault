@@ -171,8 +171,13 @@ To subscribe to an event, you must have the following policy grants:
    }
    ```
 
--> Note: if the policy for the *path of the secret* also contains the `read` capability, we **may** include
-   the contents of the secret in the event payload in a future version of Vault.
+<Highlight title="Event payload for secrets is subject to change">
+
+  If the policy for the path of the secret **also** contains the `read`
+  capability, future versions of the events functionality may include the
+  contents of the secret in the event payload.
+
+</Highlight>
 
 Policies are continuously evaluated for the WebSocket subscription while it is running.
 These checks are cached for a short period of time for performance reasons, so it is possible that
