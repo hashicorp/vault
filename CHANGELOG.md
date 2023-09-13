@@ -68,7 +68,7 @@ static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vau
 * Certificate Issuance External Policy Service (CIEPS): Allow highly-customizable operator control of certificate validation and generation through the PKI Secrets Engine.
 * auto-auth: support ldap auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
 * core (enterprise): Seal High Availability Beta: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
-* secrets sync (enterprise): Add the ability to synchronize KVv2 secret with external secrets manager solutions.
+* **Secrets Sync (enterprise)**: Add the ability to synchronize KVv2 secret with external secrets manager solutions.```
 * ui: Add support for SAML login flow
 
 IMPROVEMENTS:
