@@ -14,9 +14,9 @@ export const SELECTORS = {
   tooltipTitle: (name) => `[data-test-tooltip-title="${name}"]`,
   tooltipIcon: (type, name, icon) =>
     `[data-test-type="${type}"] [data-test-tooltip-title="${name}"] [data-test-icon="${icon}"]`,
-  statLabel: (name) => `[data-test-stat-text=${name}] .stat-label`,
-  statText: (name) => `[data-test-stat-text=${name}] .stat-text`,
-  statValue: (name) => `[data-test-stat-text=${name}] .stat-value`,
+  statLabel: (name) => `[data-test-stat-text="${name}"] .stat-label`,
+  statText: (name) => `[data-test-stat-text="${name}"] .stat-text`,
+  statValue: (name) => `[data-test-stat-text="${name}"] .stat-value`,
   selectEl: 'select',
   secretsEnginesCard: {
     secretEngineAccessorRow: (engineId) => `[data-test-secrets-engines-row=${engineId}] [data-test-accessor]`,
