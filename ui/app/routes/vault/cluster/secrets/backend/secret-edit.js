@@ -33,9 +33,7 @@ export default Route.extend(UnloadModelRoute, {
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const backendType = backendModel.engineType;
     let path;
-    if (backendModel.isV2KV) {
-      path = `${backend}/data/${secret}`;
-    } else if (backendType === 'transit') {
+    if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;

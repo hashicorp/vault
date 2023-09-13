@@ -15,7 +15,6 @@
  *  @showAdvancedMode=true
  *  @modelForData={{@modelForData}}
  *  @secretData={{@secretData}}
- *  @canCreateSecretMetadata=false
  *  @buttonDisabled={{this.saving}}
  * />
  * ```
@@ -24,7 +23,6 @@
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
  * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
  * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
  */
 
@@ -130,9 +128,6 @@ export default class SecretCreateOrUpdate extends Component {
     return secretData
       .save()
       .then(() => {
-        if (!this.args.canReadSecretData && secret.selectedVersion) {
-          delete secret.selectedVersion.secretData;
-        }
         if (!secretData.isError) {
           this.saveComplete(successCallback, key);
         }

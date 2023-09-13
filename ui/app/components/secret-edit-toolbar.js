@@ -16,7 +16,7 @@
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
  * @modelForData={{this.modelForData}}
- * @canUpdateSecretData={{canUpdateSecretData}}
+ * @canUpdateSecret={{canUpdateSecret}}
  * @editActions={{hash
     toggleAdvanced=(action "toggleAdvanced")
     refresh=(action "refresh")
@@ -30,7 +30,7 @@
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvancedMode - used for JSON toggle
  * @param {object} modelForData - a modified version of the model with secret data
- * @param {boolean} canUpdateSecretData - permissions to hide/show edit secret button.
+ * @param {boolean} canUpdateSecret - permissions to hide/show edit secret button.
  * @param {object} editActions - actions passed from parent to child
  */
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */

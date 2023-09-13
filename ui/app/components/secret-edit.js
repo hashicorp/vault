@@ -40,69 +40,38 @@ export default class SecretEdit extends Component {
   // fired on did-insert from render modifier
   @action
   createKvData(elem, [model]) {
-    if (this.isV2) {
-      // pre-fill secret data from selected version
-      model.secretData = model.belongsTo('selectedVersion').value().secretData;
-    }
     this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
     this.codemirrorString = this.secretData.toJSONString();
   }
-
+  // TODO move this to the secret model
   @maybeQueryRecord(
     'capabilities',
     (context) => {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      const backend = context.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      const backend = context.args.model.backend;
       const id = context.args.model.id;
-      const path = context.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      const path = `${backend}/${id}`;
       return {
         id: path,
       };
     },
-    'isV2',
     'model',
     'model.id',
     'mode'
   )
   checkSecretCapabilities;
-  @alias('checkSecretCapabilities.canUpdate') canUpdateSecretData;
-  @alias('checkSecretCapabilities.canRead') canReadSecretData;
-
-  @maybeQueryRecord(
-    'capabilities',
-    (context) => {
-      if (!context.args.model || !context.isV2) {
-        return;
-      }
-      const backend = context.args.model.backend;
-      const id = context.args.model.id;
-      const path = `${backend}/metadata/${id}`;
-      return {
-        id: path,
-      };
-    },
-    'isV2',
-    'model',
-    'model.id',
-    'mode'
-  )
-  checkMetadataCapabilities;
-  @alias('checkMetadataCapabilities.canDelete') canDeleteSecretMetadata;
-  @alias('checkMetadataCapabilities.canUpdate') canUpdateSecretMetadata;
-  @alias('checkMetadataCapabilities.canRead') canReadSecretMetadata;
+  @alias('checkSecretCapabilities.canUpdate') canUpdateSecret;
+  @alias('checkSecretCapabilities.canRead') canReadSecret;
 
   @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
   @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
-  get isV2() {
-    return !!this.args.model?.selectedVersion;
-  }
   get modelForData() {
     const { model } = this.args;
     if (!model) return null;
-    return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
+    return model;
   }
 
   get basicModeDisabled() {
@@ -125,12 +94,8 @@ export default class SecretEdit extends Component {
     if (!this.args.model) {
       return false;
     }
-    // if the version couldn't be read from the server
-    if (this.isV2 && this.modelForData.failedServerRead) {
-      return true;
-    }
     // if the model couldn't be read from the server
-    if (!this.isV2 && this.args.model.failedServerRead) {
+    if (this.args.model.failedServerRead) {
       return true;
     }
     return false;
