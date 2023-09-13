@@ -270,6 +270,10 @@ default, foobar, zoobar
 
 It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
 
+## User lockout
+
+@include 'user-lockout.mdx'
+
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
