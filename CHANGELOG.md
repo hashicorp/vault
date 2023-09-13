@@ -64,7 +64,7 @@ static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vau
 * **Plugin Containers**: Vault supports registering, managing, and running plugins inside a container on Linux. [[GH-22712](https://github.com/hashicorp/vault/pull/22712)]
 * **SAML Auth Method (enterprise)**: Enable users to authenticate with Vault using their identity in a SAML Identity Provider.
 * **UI LDAP secrets engine**: Add LDAP secrets engine to the UI. [[GH-20790](https://github.com/hashicorp/vault/pull/20790)]
-* Add subscribe capability and subscribe_event_types to policies for events. [[GH-22474](https://github.com/hashicorp/vault/pull/22474)]
+* **Event System**: Add subscribe capability and subscribe_event_types to policies for events. [[GH-22474](https://github.com/hashicorp/vault/pull/22474)]
 * **Certificate Issuance External Policy Service (CIEPS)**: Allow highly-customizable operator control of certificate validation and generation through the PKI Secrets Engine.
 * auto-auth: support ldap auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
 * core (enterprise): Seal High Availability Beta: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
