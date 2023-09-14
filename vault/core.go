@@ -3606,7 +3606,7 @@ func (c *Core) startLockoutLogger() {
 	ctx, cancelFunc := context.WithCancel(c.activeContext)
 	c.lockoutLoggerCancel = cancelFunc
 
-	//Perform first check
+	// Perform first check
 	// Check for lockout entries
 	lockedUserCount, err := c.runLockedUserEntryUpdates(ctx)
 	if err != nil {
@@ -3621,7 +3621,7 @@ func (c *Core) startLockoutLogger() {
 		return
 	}
 
-	//Start lockout watcher
+	// Start lockout watcher
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		for {
