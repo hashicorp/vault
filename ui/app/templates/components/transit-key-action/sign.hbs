@@ -137,7 +137,6 @@
           @isIconOnly={{true}}
           @textToCopy={{@signature}}
           class="hds-copy-button transparent-background"
-          data-test-button="modal-copy"
         />
       </div>
     </div>
@@ -147,7 +146,6 @@
       @text="Copy & Close"
       @textToCopy={{@signature}}
       class="hds-copy-button is-primary"
-      data-test-button="modal-copy-close"
       {{on "click" (fn @toggleModal "Signature copied!")}}
     />
   </footer>

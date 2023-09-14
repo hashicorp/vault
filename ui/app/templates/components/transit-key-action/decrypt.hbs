@@ -68,7 +68,6 @@
             @isIconOnly={{true}}
             @textToCopy={{@plaintext}}
             class="hds-copy-button transparent-background"
-            data-test-button="modal-copy"
           />
         </div>
         <p class="help">Plaintext is base64 encoded</p>
@@ -79,7 +78,6 @@
         @text="Copy & Close"
         @textToCopy={{@plaintext}}
         class="hds-copy-button is-primary"
-        data-test-button="modal-copy-close"
         {{on "click" (fn @toggleModal "Plaintext copied!")}}
       />
     </footer>

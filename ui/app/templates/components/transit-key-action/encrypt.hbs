@@ -86,7 +86,6 @@
           @isIconOnly={{true}}
           @textToCopy={{@ciphertext}}
           class="hds-copy-button transparent-background"
-          data-test-button="modal-copy"
         />
       </div>
     </div>
@@ -96,7 +95,6 @@
       @text="Copy & Close"
       @textToCopy={{@ciphertext}}
       class="hds-copy-button is-primary"
-      data-test-button="modal-copy-close"
       {{on "click" (fn @toggleModal "Ciphertext copied!")}}
     />
   </footer>

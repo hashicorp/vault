@@ -87,7 +87,6 @@
             @isIconOnly={{true}}
             @textToCopy={{@plaintext}}
             class="hds-copy-button transparent-background"
-            data-test-button="modal-copy"
           />
         </div>
         <p class="help has-bottom-margin-m">Plaintext is base64 encoded</p>
@@ -100,22 +99,11 @@
             @isIconOnly={{true}}
             @textToCopy={{@ciphertext}}
             class="hds-copy-button transparent-background"
-            data-test-button="modal-copy"
           />
         </div>
         <div class="is-flex-align-baseline has-gap-xxs">
-          <Hds::Copy::Button
-            @text="Copy Plaintext"
-            @textToCopy={{@plaintext}}
-            class="hds-copy-button is-primary"
-            data-test-button="modal-copy-close"
-          />
-          <Hds::Copy::Button
-            @text="Copy Ciphertext"
-            @textToCopy={{@ciphertext}}
-            class="hds-copy-button is-primary"
-            data-test-button="modal-copy-close"
-          />
+          <Hds::Copy::Button @text="Copy Plaintext" @textToCopy={{@plaintext}} class="hds-copy-button is-primary" />
+          <Hds::Copy::Button @text="Copy Ciphertext" @textToCopy={{@ciphertext}} class="hds-copy-button is-primary" />
           <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
         </div>
       {{else}}
@@ -128,7 +116,6 @@
             @isIconOnly={{true}}
             @textToCopy={{@ciphertext}}
             class="hds-copy-button transparent-background"
-            data-test-button="modal-copy"
           />
         </div>
         <Hds::Copy::Button
