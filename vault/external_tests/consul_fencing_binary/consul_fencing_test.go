@@ -70,17 +70,17 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 
 	// Start two background workers that will cause writes to Consul in the
 	// background. KV v2 relies on a single active node for correctness.
-	// Specifically it's patch operation does a read-modify-write under a
+	// Specifically its patch operation does a read-modify-write under a
 	// key-specific lock which is correct for concurrent writes to one process,
 	// but which by nature of our storage API is not going to be atomic if another
 	// active node is also writing the same KV. It's made worse because the cache
 	// backend means the active node will not actually read from Consul after the
-	// initial read and will be modifying it's own in-memory version and writing
+	// initial read and will be modifying its own in-memory version and writing
 	// that back. So we should be able to detect multiple active nodes writing
 	// reliably with the following setup:
 	//  1. Two separate "client" goroutines each connected to different Vault
 	//     servers.
-	//  2. Both write to the same kv-v2 key, each one modifies only it's own set
+	//  2. Both write to the same kv-v2 key, each one modifies only its own set
 	//     of subkeys c1-X or c2-X.
 	//  3. Each request adds the next sequential X value for that client. We use a
 	//     Patch operation so we don't need to read the version or use CAS. On an
@@ -88,7 +88,7 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	//  4. In a correct system with a single active node despite a partition, we
 	//     expect a complete set of consecutive X values for both clients (i.e.
 	//     no writes lost). If an old leader is still allowed to write to Consul
-	//     then it will continue to patch against it's own last-known version from
+	//     then it will continue to patch against its own last-known version from
 	//     cache and so will overwrite any concurrent updates from the other
 	//     client and we should see that as lost updates at the end.
 	var wg sync.WaitGroup
