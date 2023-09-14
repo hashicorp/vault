@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/azure: Added note that environment variables take precedence over API config.
+```
