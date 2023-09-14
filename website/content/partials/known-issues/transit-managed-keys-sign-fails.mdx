@@ -1,0 +1,16 @@
+### Transit Sign API calls with managed keys fail
+
+#### Affected versions
+
+- 1.14.0+ up to 1.14.3 inclusively.
+
+#### Issue
+
+The Transit sign API call responds with an error "requested version for signing does not contain a private part" when
+a Transit sign request uses a managed key.
+
+<Note>Signing APIs are not affected with non-managed key, key types</Note>
+
+#### Workaround
+
+None at this time
