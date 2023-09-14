@@ -94,7 +94,6 @@ IMPROVEMENTS:
 * core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy [[GH-22304](https://github.com/hashicorp/vault/pull/22304)]
 * core: remove unnecessary *BarrierView field from backendEntry struct [[GH-20933](https://github.com/hashicorp/vault/pull/20933)]
 * core: use Go stdlib functionalities instead of explicit byte/string conversions [[GH-21854](https://github.com/hashicorp/vault/pull/21854)]
-* docs: Clarify when a entity is created [[GH-22233](https://github.com/hashicorp/vault/pull/22233)]
 * eventbus: updated go-eventlogger library to allow removal of nodes referenced by pipelines (used for subscriptions) [[GH-21623](https://github.com/hashicorp/vault/pull/21623)]
 * events: Allow subscriptions to multiple namespaces [[GH-22540](https://github.com/hashicorp/vault/pull/22540)]
 * events: Enabled by default [[GH-22815](https://github.com/hashicorp/vault/pull/22815)]
