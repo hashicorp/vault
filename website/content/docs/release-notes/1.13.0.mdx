@@ -65,7 +65,8 @@ Some of these enhancements and changes in this release include the following:
   outside the namespace where it authenticated, and reduce the number of Agents
   you need to run.
 - **User Lockout:** Vault now supports configuration to lock out users when they
-  have consecutive failed login attempts.
+  have consecutive failed login attempts. This feature is **enabled by default**
+  in 1.13 for the userpass, ldap, and approle auth methods.
 - **Event System (Alpha):** Vault has a new experimental event system. Events
   are currently only generated on writes to the KV secrets engine, but external
   plugins can also be updated to start generating events.
