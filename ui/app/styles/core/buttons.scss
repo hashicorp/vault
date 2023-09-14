@@ -14,10 +14,9 @@
   display: inline-block;
   font-size: $size-8;
   font-weight: $font-weight-semibold;
-  height: 2.5rem;
-  line-height: 1.6;
+  min-height: 2.25rem;
   min-width: 6rem;
-  padding: $size-10 $size-8;
+  padding: 0.5625rem 0.9375rem;
   position: relative;
   text-align: center;
   text-decoration: none;
@@ -333,32 +332,37 @@ a.button.disabled {
   }
 }
 
-// Styling to <Hds::Copy::Button> component to match existing UI Structure buttons
-// Will likely be removed/modified when all buttons are audited and replaced with HDS
+// Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
-  &.transparent-background {
-    background: none;
-    border: none;
-    box-shadow: none;
-    min-width: $spacing-l;
-    padding: 0;
-  }
+  font-weight: $font-weight-semibold;
+  box-shadow: $box-shadow-low;
+  border-radius: $radius;
 
   &.white-icon svg {
     color: $white;
   }
 
+  &.grey-icon svg {
+    color: $ui-gray-300;
+  }
+
+  &.icon-only {
+    margin-right: $spacing-xxs;
+    margin-left: $spacing-xxs;
+  }
+
+  &.transparent {
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
   &.primary {
     background-color: $blue;
-    box-shadow: $box-shadow-low;
-    border-radius: $radius;
     border-color: darken($blue, 2%);
     color: $white;
     font-weight: $font-weight-bold;
     text-shadow: 0 1px 1px rgba($black, 0.25);
-    height: 2.5rem;
-    min-width: 6rem;
-
     svg {
       color: $white;
     }
@@ -366,26 +370,7 @@ a.button.disabled {
 
   &.secondary {
     background-color: $grey-lightest;
-    box-shadow: $box-shadow-low;
-    border-radius: $radius;
     border: 1px solid $grey-light;
-    color: $ui-gray-800;
-    font-weight: $font-weight-semibold;
-    height: 2.5rem;
-    min-width: 6rem;
-  }
-
-  &.code-snippet {
-    background: none;
-    border: none;
-    box-shadow: none;
-    min-width: auto;
-    padding: $size-11 $size-8;
-    color: $ui-gray-300;
-
-    svg {
-      color: $ui-gray-300;
-    }
   }
 
   &.in-dropdown {
