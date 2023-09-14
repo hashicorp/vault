@@ -11,12 +11,12 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/fatih/structs v1.1.0
-	github.com/go-ldap/ldap/v3 v3.4.5
+	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-test/deep v1.1.0
 	github.com/golang/protobuf v1.5.3
 	github.com/golang/snappy v0.0.4
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap/ldap v0.0.0-20230907231022-8e71bfc048ed
+	github.com/hashicorp/cap/ldap v0.0.0-20230914221201-c4eecc7e31f7
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-hclog v1.5.0
