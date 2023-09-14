@@ -2,14 +2,19 @@
 
 #### Affected versions
 
-- 1.14.0+ up to 1.14.3 inclusively.
+- 1.14.0+ up to 1.14.3 inclusively
 
 #### Issue
 
-The Transit sign API call responds with an error "requested version for signing does not contain a private part" when
-a Transit sign request uses a managed key.
+Vault responds to Transit sign API calls with the following error when the request uses a managed key:
+`requested version for signing does not contain a private part`
 
-<Note>Signing APIs are not affected with transit native keys</Note>
+<Note>
+The issue does not affect signing with the following key types:
+
+- Transit native keys
+
+</Note>
 
 #### Workaround
 

@@ -3,13 +3,19 @@
 #### Affected versions
 
 - 1.13.1+ up to 1.13.7 inclusively
-- 1.14.0+ up to 1.14.3 inclusively.
+- 1.14.0+ up to 1.14.3 inclusively
 
 #### Issue
 
-Vault will panic when a Transit encryption API call is backed by a Cloud KMS managed key (Azure, GCP, AWS).
+Vault panics when it receives a Transit encryption API call that is backed by a Cloud KMS managed key (Azure, GCP, AWS).
 
-<Note>Encryption and decryption APIs are not affected with PKCS#11 managed keys and transit native keys</Note>
+<Note>
+The issue does not affect encryption and decryption with the following key types:
+
+- PKCS#11 managed keys
+- Transit native keys
+
+</Note>
 
 #### Workaround
 
