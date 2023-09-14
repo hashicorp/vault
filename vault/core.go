@@ -655,6 +655,8 @@ type Core struct {
 
 	updateLockedUserEntriesCancel context.CancelFunc
 
+	lockoutLoggerCancel context.CancelFunc
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -3815,6 +3817,60 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
+func (c *Core) startLockoutLogger() {
+	// Are we already running a logger
+	if c.lockoutLoggerCancel != nil {
+		return
+	}
+
+	ctx, cancelFunc := context.WithCancel(c.activeContext)
+	c.lockoutLoggerCancel = cancelFunc
+
+	//Perform first check
+	// Check for lockout entries
+	lockedUserCount, err := c.runLockedUserEntryUpdates(ctx)
+	if err != nil {
+		c.Logger().Error("error starting lockout logger:", err)
+		return
+	}
+
+	if lockedUserCount > 0 {
+		c.Logger().Warn("user lockout(s) in effect")
+	} else {
+		// We shouldn't end up here
+		return
+	}
+
+	//Start lockout watcher
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for {
+			select {
+			case <-ticker.C:
+				// Check for lockout entries
+				lockedUserCount, err := c.runLockedUserEntryUpdates(ctx)
+				if err != nil {
+					c.Logger().Error("error getting locked user count:", err)
+					return
+				}
+
+				if lockedUserCount > 0 {
+					c.Logger().Warn("user lockout(s) in effect")
+					break
+				}
+				c.Logger().Info("user lockout(s) cleared")
+				ticker.Stop()
+				c.lockoutLoggerCancel = nil
+				return
+			case <-ctx.Done():
+				ticker.Stop()
+				c.lockoutLoggerCancel = nil
+				return
+			}
+		}
+	}()
+}
+
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
@@ -3825,7 +3881,7 @@ func (c *Core) updateLockedUserEntries() {
 	var updateLockedUserEntriesCtx context.Context
 	updateLockedUserEntriesCtx, c.updateLockedUserEntriesCancel = context.WithCancel(c.activeContext)
 
-	if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+	if _, err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
 		c.Logger().Error("failed to run locked user entry updates", "error", err)
 	}
 
@@ -3837,17 +3893,16 @@ func (c *Core) updateLockedUserEntries() {
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+				if _, err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
 					c.Logger().Error("failed to run locked user entry updates", "error", err)
 				}
 			}
 		}
 	}()
-	return
 }
 
 // runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
-func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
+func (c *Core) runLockedUserEntryUpdates(ctx context.Context) (int, error) {
 	// check environment variable to see if user lockout workflow is disabled
 	var disableUserLockout bool
 	if disableUserLockoutEnv := os.Getenv(consts.VaultDisableUserLockout); disableUserLockoutEnv != "" {
@@ -3858,13 +3913,13 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		}
 	}
 	if disableUserLockout {
-		return nil
+		return 0, nil
 	}
 
 	// get the list of namespaces of locked users from locked users path in storage
 	nsIDs, err := c.barrier.List(ctx, coreLockedUsersPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	totalLockedUsersCount := 0
@@ -3872,7 +3927,7 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 		// get the list of mount accessors of locked users for each namespace
 		mountAccessors, err := c.barrier.List(ctx, coreLockedUsersPath+nsID)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		// update the entries for locked users for each mount accessor
@@ -3884,7 +3939,7 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 			mountAccessor := strings.TrimSuffix(mountAccessorPath, "/")
 			lockedAliasesCount, err := c.runLockedUserEntryUpdatesForMountAccessor(ctx, mountAccessor, coreLockedUsersPath+nsID+mountAccessorPath)
 			if err != nil {
-				return err
+				return 0, err
 			}
 			totalLockedUsersCount = totalLockedUsersCount + lockedAliasesCount
 		}
@@ -3892,7 +3947,7 @@ func (c *Core) runLockedUserEntryUpdates(ctx context.Context) error {
 
 	// emit locked user count metrics
 	metrics.SetGaugeWithLabels([]string{"core", "locked_users"}, float32(totalLockedUsersCount), nil)
-	return nil
+	return totalLockedUsersCount, nil
 }
 
 // runLockedUserEntryUpdatesForMountAccessor updates the storage entry for each locked user (alias name)
