@@ -1415,6 +1415,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
+			c.startLockoutLogger()
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
