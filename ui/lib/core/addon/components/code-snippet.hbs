@@ -9,5 +9,10 @@
   ...attributes
 >
   <code class="has-text-white is-size-7">{{@codeBlock}}</code>
-  <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} />
+  <Hds::Copy::Button
+    class="hds-copy-button code-snippet"
+    @text="Copy"
+    @textToCopy={{or @clipboardCode @codeBlock}}
+    @isIconOnly={{@isIconOnly}}
+  />
 </div>

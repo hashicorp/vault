@@ -42,18 +42,11 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/encode/" this.cliCommand) as |copyEncodeCommand|}}
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <code>vault write {{this.model.backend}}/encode/{{this.cliCommand}}</code>
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{copyEncodeCommand}}
-          class="hds-copy-button transparent-background"
-        />
+        <CodeSnippet @codeBlock={{copyEncodeCommand}} @isIconOnly={{true}} />
       {{/let}}
     </div>
   </div>
-  <div>
+  <div class="has-top-margin-s">
     <h2 class="title is-6">Decode</h2>
     <div class="has-bottom-margin-s">
       <span class="helper-text has-text-grey">
@@ -63,14 +56,7 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/decode/" this.cliCommand) as |copyDecodeCommand|}}
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <code>vault write {{this.model.backend}}/decode/{{this.cliCommand}}</code>
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{copyDecodeCommand}}
-          class="hds-copy-button transparent-background"
-        />
+        <CodeSnippet @codeBlock={{copyDecodeCommand}} @isIconOnly={{true}} />
       {{/let}}
     </div>
   </div>
