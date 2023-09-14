@@ -2,49 +2,48 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
-<div class="field">
-  <div class="control is-expanded">
-    <label class="is-label">
-      {{#if this.label}}
-        {{this.label}}
-      {{/if}}
-    </label>
-    <div class="file is-fullwidth">
-      <div class="file-label" aria-label="Choose a file">
-        <input id="file-input" class="file-input" type="file" onchange={{action "pickedFile"}} data-test-file-input />
-        <label for="file-input" class="file-cta button">
-          <Icon @name="upload" class="has-light-grey-text" />
-          Choose a file…
-        </label>
-        <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
-          {{or this.filename "No file chosen"}}
-        </span>
-        {{#if this.filename}}
-          <button
-            type="button"
-            class="file-delete-button"
-            aria-label="Clear file selection"
-            {{action "clearFile"}}
-            data-test-text-clear
-          >
-            <Icon @name="x-circle" />
-          </button>
-        {{/if}}
+<div class="box is-fullwidth is-marginless is-shadowless">
+  <div class="field">
+    <div class="control is-expanded">
+      <label class="is-label">
+        {{@label}}
+      </label>
+      <div class="file is-fullwidth">
+        <div class="file-label" aria-label="Choose a file">
+          <input id="file-input" class="file-input" type="file" {{on "change" this.pickedFile}} data-test-file-input />
+          <label for="file-input" class="file-cta button">
+            <Icon @name="upload" class="has-light-grey-text" />
+            Choose a file…
+          </label>
+          <span class="file-name has-text-grey-dark" data-test-text-file-input-label={{true}}>
+            {{or this.filename "No file chosen"}}
+          </span>
+          {{#if this.filename}}
+            <button
+              type="button"
+              class="file-delete-button"
+              aria-label="Clear file selection"
+              {{on "click" this.fileChange}}
+              data-test-text-clear
+            >
+              <Icon @name="x-circle" />
+            </button>
+          {{/if}}
+        </div>
       </div>
     </div>
+    {{#if this.filename}}
+      <p class="help has-text-grey">
+        This file is
+        {{this.fileSize}}
+        and was created on
+        {{date-format this.fileLastModified "MMM dd, yyyy hh:mm:ss a"}}.
+      </p>
+    {{/if}}
+    {{#if @fileHelpText}}
+      <p class="help has-text-grey">
+        {{@fileHelpText}}
+      </p>
+    {{/if}}
   </div>
-  {{#if this.filename}}
-    <p class="help has-text-grey">
-      This file is
-      {{this.fileSize}}
-      and was created on
-      {{date-format this.fileLastModified "MMM dd, yyyy hh:mm:ss a"}}.
-    </p>
-  {{/if}}
-  {{#if @fileHelpText}}
-    <p class="help has-text-grey">
-      {{@fileHelpText}}
-    </p>
-  {{/if}}
 </div>
