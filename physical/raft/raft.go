@@ -2147,19 +2147,6 @@ func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBac
 	return c, nil
 }
 
-func parseConfigKey[T bool | time.Duration | int](cfg map[string]string, key string, defaultVal T, parseFunc func(string) (T, error)) (T, error) {
-	if valRaw, ok := cfg[key]; ok {
-		val, err := parseFunc(valRaw)
-		if err != nil {
-			return defaultVal, fmt.Errorf("%s does not parse: %w", key, err)
-		}
-
-		return val, nil
-	}
-
-	return defaultVal, nil
-}
-
 // boltOptions returns a bolt.Options struct, suitable for passing to
 // bolt.Open(), pre-configured with all of our preferred defaults.
 func boltOptions(path string) *bolt.Options {
