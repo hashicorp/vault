@@ -69,7 +69,6 @@ export default SecretV2Model.extend(KeyMixin, {
 
   canReadSecretData: alias('secretDataPath.canRead'),
   canEditSecretData: alias('secretDataPath.canUpdate'),
-  canDeleteSecretData: alias('secretDataPath.canDelete'),
 
   canUndelete: alias('secretUndeletePath.canUpdate'),
   canDestroyVersion: alias('secretDestroyPath.canUpdate'),
