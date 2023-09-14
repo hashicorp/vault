@@ -145,6 +145,26 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await click('[data-test-auth-submit]');
   });
 
+  test('it should render API error when it comes from data block', async function (assert) {
+    this.server.put('/auth/saml/token', () => {
+      return new Response(
+        403,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({
+          data: { error: 'request is forbidden' },
+        })
+      );
+    });
+
+    // select saml auth type
+    await waitUntil(() => find('[data-test-select="auth-method"]'));
+    await fillIn('[data-test-select="auth-method"]', 'saml');
+    await click('[data-test-auth-submit]');
+    assert
+      .dom('[data-test-message-error-description]')
+      .hasText('request is forbidden', 'Shows error response from data');
+  });
+
   test('it should populate saml auth method on logout', async function (assert) {
     authPage.logout();
     // select from dropdown
