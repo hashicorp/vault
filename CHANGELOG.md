@@ -54,7 +54,7 @@ which will have access to some system backend paths that were previously only ac
 
 FEATURES:
 
-* ** Merkle Tree Corruption Detection (enterprise) **: Add a new endpoint to check merkle tree corruption.
+* **Merkle Tree Corruption Detection (enterprise)**: Add a new endpoint to check merkle tree corruption.
 * **Copyable KV v2 paths in UI**: KV v2 secret paths are copyable for use in CLI commands or API calls [[GH-22551](https://github.com/hashicorp/vault/pull/22551)]
 * **Dashboard UI**: Dashboard is now available in the UI as the new landing page. [[GH-21057](https://github.com/hashicorp/vault/pull/21057)]
 * **Database Static Role Advanced TTL Management**: Adds the ability to rotate
@@ -132,12 +132,9 @@ IMPROVEMENTS:
 * ui: update detail views that render ttl durations to display full unit instead of letter (i.e. 'days' instead of 'd') [[GH-20697](https://github.com/hashicorp/vault/pull/20697)]
 * ui: update unseal and DR operation token flow components [[GH-21871](https://github.com/hashicorp/vault/pull/21871)]
 * ui: upgrade Ember to 4.12 [[GH-22122](https://github.com/hashicorp/vault/pull/22122)]
-* website/docs: Fix link formatting in Vault lambda extension docs [[GH-22396](https://github.com/hashicorp/vault/pull/22396)]
-* website/docs: Updating operator step-down docs to include info about possible failed requests during leader step down. [[GH-21495](https://github.com/hashicorp/vault/pull/21495)]
 
 BUG FIXES:
 
-* Doc: Expanded the description of "What is Vault?" to align with CSA team's content. [[GH-12684](https://github.com/hashicorp/vault/pull/12684)]
 * activity (enterprise): Fix misattribution of entities to no or child namespace auth methods [[GH-18809](https://github.com/hashicorp/vault/pull/18809)]
 * agent: Environment variable VAULT_CACERT_BYTES now works for Vault Agent templates. [[GH-22322](https://github.com/hashicorp/vault/pull/22322)]
 * agent: Fix "generate-config" command documentation URL [[GH-21466](https://github.com/hashicorp/vault/pull/21466)]
