@@ -52,6 +52,8 @@ var (
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
 
+	ErrNoApplicablePolicies = errors.New("no applicable policies")
+
 	egpDebugLogging bool
 
 	// if this returns an error, the request should be blocked and the error
@@ -115,36 +117,97 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			return nil, nil, err
 		}
 
-		policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+		policiesByNS, err := c.filterGroupPoliciesByNS(ctx, tokenNS, groupPolicies)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		// Filter and add the policies to the resultant set
-		for nsID, nsPolicies := range groupPolicies {
-			ns, err := NamespaceByID(ctx, nsID, c)
-			if err != nil {
-				return nil, nil, err
-			}
-			if ns == nil {
-				return nil, nil, namespace.ErrNoNamespace
-			}
-			// If we're only applying policies to namespaces within the same
-			// hierarchy, then skip any policies not found in the same
-			// hierarchy
-			if policyApplicationMode == groupPolicyApplicationModeWithinNamespaceHierarchy {
-				if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
-					continue
-				}
-			}
-			nsPolicies = strutil.RemoveDuplicates(nsPolicies, false)
-			if len(nsPolicies) != 0 {
-				policies[nsID] = append(policies[nsID], nsPolicies...)
-			}
+		for nsID, pss := range policiesByNS {
+			policies[nsID] = append(policies[nsID], pss...)
 		}
 	}
 
 	return entity, policies, err
+}
+
+// filterGroupPoliciesByNS takes a context, token namespace, and a map of
+// namespace IDs to slices of group policy names and returns a similar map,
+// but filtered down to the policies that should apply to the token based on the
+// relationship between the namespace of the token and the namespace of the
+// policy.
+func (c *Core) filterGroupPoliciesByNS(ctx context.Context, tokenNS *namespace.Namespace, groupPolicies map[string][]string) (map[string][]string, error) {
+	policies := make(map[string][]string)
+
+	policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for nsID, nsPolicies := range groupPolicies {
+		filteredPolicies, err := c.getApplicableGroupPolicies(ctx, tokenNS, nsID, nsPolicies, policyApplicationMode)
+		if err != nil && err != ErrNoApplicablePolicies {
+			return nil, err
+		}
+		filteredPolicies = strutil.RemoveDuplicates(filteredPolicies, false)
+		if len(filteredPolicies) != 0 {
+			policies[nsID] = append(policies[nsID], filteredPolicies...)
+		}
+	}
+
+	return policies, nil
+}
+
+// getApplicableGroupPolicies returns a slice of group policies that should
+// apply to the token based on the group policy application mode,
+// and the relationship between the token namespace and the group namespace.
+func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespace.Namespace, nsID string, nsPolicies []string, policyApplicationMode string) ([]string, error) {
+	policyNS, err := NamespaceByID(ctx, nsID, c)
+	if err != nil {
+		return nil, err
+	}
+	if policyNS == nil {
+		return nil, namespace.ErrNoNamespace
+	}
+
+	var filteredPolicies []string
+
+	if tokenNS.Path == policyNS.Path {
+		// Same namespace - add all and continue
+		for _, policyName := range nsPolicies {
+			filteredPolicies = append(filteredPolicies, policyName)
+		}
+		return filteredPolicies, nil
+	}
+
+	for _, policyName := range nsPolicies {
+		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		if err != nil || t == nil {
+			return nil, fmt.Errorf("failed to look up type of policy: %w", err)
+		}
+
+		switch *t {
+		case PolicyTypeRGP:
+			if tokenNS.HasParent(policyNS) {
+				filteredPolicies = append(filteredPolicies, policyName)
+			}
+		case PolicyTypeACL:
+			if policyApplicationMode != groupPolicyApplicationModeWithinNamespaceHierarchy {
+				// Group policy application mode isn't set to enforce
+				// the namespace hierarchy, so apply all the ACLs,
+				// regardless of their namespaces.
+				filteredPolicies = append(filteredPolicies, policyName)
+				continue
+			}
+			if policyNS.HasParent(tokenNS) {
+				filteredPolicies = append(filteredPolicies, policyName)
+			}
+		default:
+			return nil, fmt.Errorf("unexpected policy type: %v", t)
+		}
+	}
+	if len(filteredPolicies) == 0 {
+		return nil, ErrNoApplicablePolicies
+	}
+	return filteredPolicies, nil
 }
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
