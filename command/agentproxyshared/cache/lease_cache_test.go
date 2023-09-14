@@ -92,9 +92,6 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 }
 
 func TestCache_ComputeIndexID(t *testing.T) {
-	type args struct {
-		req *http.Request
-	}
 	tests := []struct {
 		name    string
 		req     *SendRequest
@@ -145,6 +142,35 @@ func TestCache_ComputeIndexID(t *testing.T) {
 	}
 }
 
+// TestCache_ComputeStaticSecretIndexID ensures that
+// computeStaticSecretCacheIndex works correctly. If this test breaks, then our
+// hashing algorithm has changed, and we risk breaking backwards compatibility.
+func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/foo/bar",
+			},
+		},
+	}
+
+	index := computeStaticSecretCacheIndex(req)
+	expectedIndex := "252ce3d0fae37436cd62e89ef379c2f5c2ee10789036b4691278688c75836d35"
+	require.Equal(t, index, expectedIndex)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+		},
+	}
+
+	// We expect that computeStaticSecretCacheIndex will trim the /v1
+	index2 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, index2, expectedIndex)
+}
+
 func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
 		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
@@ -176,7 +202,7 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	}
 
 	lc := testNewLeaseCache(t, responses)
-	// Register an token so that the token and lease requests are cached
+	// Register a token so that the token and lease requests are cached
 	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
 
 	// Make a request. A response with a new token is returned to the lease

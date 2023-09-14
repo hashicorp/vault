@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -234,7 +233,9 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 	if token != "" {
 		// This is a static secret check. We need to ensure that this token
 		// has previously demonstrated access to this static secret.
-		if !slices.Contains(index.Tokens, token) {
+		// We could check the capabilities cache here, but since these
+		// indexes should be in sync, this saves us an extra cache get.
+		if _, ok := index.Tokens[token]; !ok {
 			// We don't have access to this static secret, so
 			// we do not return the cached response.
 			return nil, nil
@@ -587,7 +588,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// The index already exists, so all we need to do is add our token
 	// to the index's allowed token list, then re-store it
 	if indexFromCache != nil {
-		indexFromCache.Tokens = append(indexFromCache.Tokens, req.Token)
+		indexFromCache.Tokens[req.Token] = struct{}{}
 
 		return c.storeStaticSecretIndex(ctx, req, indexFromCache)
 	}
@@ -609,8 +610,8 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
 
-	// Set the index's tokens
-	index.Tokens = []string{req.Token}
+	// Initialize the token map and add this token to it.
+	index.Tokens = map[string]struct{}{req.Token: {}}
 
 	// Set the index type
 	index.Type = cacheboltdb.StaticSecretType
@@ -627,11 +628,57 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	// TODO: We need to also update the cache for the token's permission capabilities.
-	// TODO: for this we'll need: req.Token, req.URL.Path
-	// TODO: we need to build a NEW index, with a hash of the token as the ID
+	capabilitiesIndex, err := c.retrieveOrCreateTokenCapabilitiesEntry(req.Token)
+	if err != nil {
+		c.logger.Error("failed to cache the proxied response", "error", err)
+		return err
+	}
+
+	// /sys/capabilities accepts both requests that look like foo/bar
+	// and /foo/bar but not /v1/foo/bar.
+	// We trim the /v1 from the start of the URL to get the /foo/bar form.
+	path := strings.TrimPrefix(req.Request.URL.Path, "/v1")
+
+	// Extra caution -- avoid potential nil
+	if capabilitiesIndex.Capabilities == nil {
+		capabilitiesIndex.Capabilities = make(map[string]struct{})
+	}
+
+	// update the index with the new capability:
+	capabilitiesIndex.Capabilities[path] = struct{}{}
+
+	err = c.Set(ctx, capabilitiesIndex)
+	if err != nil {
+		c.logger.Error("failed to cache the proxied response", "error", err)
+		return err
+	}
 
 	return nil
+}
+
+// retrieveOrCreateTokenCapabilitiesEntry will either retrieve the token
+// capabilities entry from the cache, or create a new, empty one.
+func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.Index, error) {
+	// The index ID is a hash of the token.
+	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, indexId)
+	if err != nil {
+		return nil, err
+	}
+
+	if indexFromCache != nil {
+		return indexFromCache, nil
+	}
+
+	// Build the index to cache based on the response received
+	index := &cachememdb.Index{
+		ID:           indexId,
+		Token:        token,
+		Type:         cacheboltdb.TokenCapabilitiesType,
+		Capabilities: make(map[string]struct{}),
+	}
+
+	return index, nil
 }
 
 func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
@@ -771,7 +818,14 @@ func computeIndexID(req *SendRequest) (string, error) {
 // the X-Vault-Token header) to remain agnostic to which token is being
 // used in the request. We care only about the path.
 func computeStaticSecretCacheIndex(req *SendRequest) string {
-	return hex.EncodeToString(cryptoutil.Blake2b256Hash(req.Request.URL.Path))
+	// /sys/capabilities accepts both requests that look like foo/bar
+	// and /foo/bar but not /v1/foo/bar.
+	// We trim the /v1 from the start of the URL to get the /foo/bar form.
+	// This means that we can use the paths we retrieve from the
+	// /sys/capabilities endpoint to access this index
+	// without having to re-add the /v1
+	path := strings.TrimPrefix(req.Request.URL.Path, "/v1")
+	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
 }
 
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.

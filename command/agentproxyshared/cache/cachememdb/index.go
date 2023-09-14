@@ -22,11 +22,12 @@ type Index struct {
 	// Required: true, Unique: true
 	Token string
 
-	// Tokens is a list of tokens that can access this cached response,
+	// Tokens is a set of tokens that can access this cached response,
 	// which is used for static secret caching, and enabling multiple
 	// tokens to be able to access the same cache entry for static secrets.
+	// Implemented as a map so that all values are unique.
 	// Required: false, Unique: false
-	Tokens []string
+	Tokens map[string]struct{}
 
 	// TokenParent is the parent token of the token held by this index
 	// Required: false, Unique: false
@@ -75,8 +76,13 @@ type Index struct {
 	// LastRenewed is the timestamp of last renewal
 	LastRenewed time.Time
 
-	// Type is the index type (token, auth-lease, secret-lease)
+	// Type is the index type (token, auth-lease, secret-lease, static-secret, token-capabilities)
 	Type string
+
+	// Capabilities is a set of known capabilities for the given token. Used only for
+	// token-capabilities type cache entries.
+	// Implemented as a map for uniqueness.
+	Capabilities map[string]struct{}
 }
 
 type IndexName uint32

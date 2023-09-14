@@ -56,6 +56,8 @@ func TestCacheMemDB_Get(t *testing.T) {
 		TokenAccessor: "test_accessor",
 		Lease:         "test_lease",
 		Response:      []byte("hello world"),
+		Capabilities:  map[string]struct{}{},
+		Tokens:        map[string]struct{}{},
 	}
 
 	if err := cache.Set(in); err != nil {
@@ -169,22 +171,22 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 	}{
 		{
 			"by_request_path",
-			"request_path",
+			IndexNameRequestPath,
 			[]interface{}{"test_ns/", "/v1/request/path"},
 		},
 		{
 			"by_lease",
-			"lease",
+			IndexNameLease,
 			[]interface{}{"path/to/test_lease"},
 		},
 		{
 			"by_token_parent",
-			"token_parent",
+			IndexNameTokenParent,
 			[]interface{}{"test_token_parent"},
 		},
 		{
 			"by_lease_token",
-			"lease_token",
+			IndexNameLeaseToken,
 			[]interface{}{"test_lease_token"},
 		},
 	}
