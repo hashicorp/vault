@@ -129,16 +129,7 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Signature</h2>
-      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="signature">{{@signature}}</code>
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{@signature}}
-          class="hds-copy-button transparent-background"
-        />
-      </div>
+      <Hds::Copy::Snippet @textToCopy={{@signature}} @color="secondary" data-test-encrypted-value="signature" />
     </div>
   </section>
   <footer class="modal-card-foot">

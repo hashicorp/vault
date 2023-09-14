@@ -69,18 +69,26 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Wrapped Key</h2>
-      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-      <div class="copy-text level">
-        <code data-test-encrypted-value="export" class="level-left">
-          {{if this.wrapTTL @wrappedToken (stringify @keys)}}
-        </code>
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-          class="hds-copy-button transparent-background"
+      {{#if this.wrapTTL}}
+        <Hds::Copy::Snippet
+          class="has-bottom-margin-m"
+          @textToCopy={{@wrappedToken}}
+          @color="secondary"
+          data-test-encrypted-value="export"
         />
-      </div>
+      {{else}}
+        <div class="copy-text level is-relative">
+          <pre data-test-encrypted-value="export" class="level-left">
+            {{stringify @keys}}
+          </pre>
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{stringify @keys}}
+            class="hds-copy-button transparent-background top-right-absolute"
+          />
+        </div>
+      {{/if}}
     </div>
   </section>
   <footer class="modal-card-foot">

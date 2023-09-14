@@ -59,18 +59,9 @@
   <Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
     <section class="modal-card-body">
       <div class="box is-shadowless is-fullwidth is-sideless">
-        <h2 class="title is-6">Plaintext</h2>
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <div class="copy-text level">
-          <code class="level-left" data-test-encrypted-value="plaintext">{{@plaintext}}</code>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{@plaintext}}
-            class="hds-copy-button transparent-background"
-          />
-        </div>
-        <p class="help">Plaintext is base64 encoded</p>
+        <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+        <p class="sub-text">Plaintext is base64 encoded</p>
+        <Hds::Copy::Snippet @textToCopy={{@plaintext}} @color="secondary" data-test-encrypted-value="plaintext" />
       </div>
     </section>
     <footer class="modal-card-foot">

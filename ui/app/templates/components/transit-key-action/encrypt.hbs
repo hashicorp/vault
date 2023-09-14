@@ -78,16 +78,7 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Ciphertext</h2>
-      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{@ciphertext}}
-          class="hds-copy-button transparent-background"
-        />
-      </div>
+      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" data-test-encrypted-value="ciphertext" />
     </div>
   </section>
   <footer class="modal-card-foot">

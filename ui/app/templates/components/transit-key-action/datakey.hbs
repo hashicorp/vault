@@ -78,51 +78,22 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       {{#if (eq @param "plaintext")}}
-        <h2 class="title is-6">Plaintext</h2>
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <div class="copy-text level">
-          <code class="level-left">{{@plaintext}}</code>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{@plaintext}}
-            class="hds-copy-button transparent-background"
-          />
-        </div>
-        <p class="help has-bottom-margin-m">Plaintext is base64 encoded</p>
-        <h2 class="title is-6">Ciphertext</h2>
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <div class="copy-text level">
-          <code class="level-left">{{@ciphertext}}</code>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{@ciphertext}}
-            class="hds-copy-button transparent-background"
-          />
-        </div>
-        <div class="is-flex-align-baseline has-gap-xxs">
-          <Hds::Copy::Button @text="Copy Plaintext" @textToCopy={{@plaintext}} class="hds-copy-button is-primary" />
-          <Hds::Copy::Button @text="Copy Ciphertext" @textToCopy={{@ciphertext}} class="hds-copy-button is-primary" />
-          <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
-        </div>
+        <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+        <p class="sub-text">Plaintext is base64 encoded</p>
+        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@plaintext}} @color="secondary" />
+
+        <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
+        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@ciphertext}} @color="secondary" />
+
+        <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
+
       {{else}}
         <h2 class="title is-6">Ciphertext</h2>
-        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
-        <div class="copy-text level">
-          <code class="level-left">{{@ciphertext}}</code>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{@ciphertext}}
-            class="hds-copy-button transparent-background"
-          />
-        </div>
+        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@ciphertext}} @color="secondary" />
         <Hds::Copy::Button
           @text="Copy & Close"
           @textToCopy={{@ciphertext}}
           class="hds-copy-button is-primary has-top-margin-m"
-          data-test-button="modal-copy-close"
           {{on "click" (fn @toggleModal "Ciphertext copied!")}}
         />
       {{/if}}
