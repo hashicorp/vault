@@ -125,10 +125,10 @@ export default RESTAdapter.extend({
       set(returnVal, 'path', requestData.url);
       // Most of the time when the Vault API returns an error, the payload looks like:
       // { errors: ['some error message']}
-      // But sometimes (eg errorResponseWithStatusCode) it looks like this:
+      // But sometimes (eg RespondWithStatusCode) it looks like this:
       // { data: { error: 'some error message' } }
       if (payload?.data?.error && !payload.errors) {
-        // Normalize the errors from errorResponseWithStatusCode
+        // Normalize the errors from RespondWithStatusCode
         set(returnVal, 'errors', [payload.data.error]);
       }
     }
