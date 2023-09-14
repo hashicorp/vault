@@ -320,31 +320,31 @@ func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
 		{
 			"zero",
 			"0s",
-			"30s",
+			defaultRaftLogVerificationInterval.String(),
 			false,
 		},
 		{
 			"one",
 			"1s",
-			"30s",
+			defaultRaftLogVerificationInterval.String(),
 			false,
 		},
 		{
 			"nothing",
 			"",
-			"30s",
+			defaultRaftLogVerificationInterval.String(),
 			false,
 		},
 		{
-			"30",
-			"30s",
-			"30s",
+			"default",
+			"60s",
+			defaultRaftLogVerificationInterval.String(),
 			false,
 		},
 		{
-			"more than 30",
-			"45s",
-			"45s",
+			"more than the default",
+			"75s",
+			"75s",
 			false,
 		},
 		{
@@ -386,7 +386,7 @@ func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if parsedExpectedInterval != rb.RaftLogVerificationInterval() {
+			if parsedExpectedInterval != rb.verificationInterval() {
 				t.Fatal("expected intervals to match but they didn't")
 			}
 		})

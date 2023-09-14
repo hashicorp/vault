@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -71,11 +70,13 @@ var (
 	// This is used to reduce disk I/O for the recently committed entries.
 	raftLogCacheSize = 512
 
-	raftState              = "raft/"
-	raftWalDir             = "raft-wal/"
-	peersFileName          = "peers.json"
-	restoreOpDelayDuration = 5 * time.Second
-	defaultMaxEntrySize    = uint64(2 * raftchunking.ChunkSize)
+	raftState                          = "raft/"
+	raftWalDir                         = "wal/"
+	peersFileName                      = "peers.json"
+	restoreOpDelayDuration             = 5 * time.Second
+	defaultMaxEntrySize                = uint64(2 * raftchunking.ChunkSize)
+	defaultRaftLogVerificationInterval = 60 * time.Second
+	minimumRaftLogVerificationInterval = 10 * time.Second
 
 	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in raft backend")
 )
@@ -252,6 +253,23 @@ type LeaderJoinInfo struct {
 	TLSConfig *tls.Config `json:"-"`
 }
 
+type RaftBackendConfig struct {
+	Path                        string
+	NodeId                      string
+	ApplyDelay                  time.Duration
+	RaftWal                     bool
+	RaftLogVerifierEnabled      bool
+	RaftLogVerificationInterval time.Duration
+	SnapshotDelay               time.Duration
+	MaxEntrySize                uint64
+	AutopilotReconcileInterval  time.Duration
+	AutopilotUpdateInterval     time.Duration
+	AutopilotUpgradeVersion     string
+	AutopilotRedundancyZone     string
+	RaftNonVoter                bool
+	RetryJoin                   string
+}
+
 // JoinConfig returns a list of information about possible leader nodes that
 // this node can join as a follower
 func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
@@ -322,113 +340,55 @@ func EnsurePath(path string, dir bool) error {
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	path := os.Getenv(EnvVaultRaftPath)
-	if path == "" {
-		pathFromConfig, ok := conf["path"]
-		if !ok {
-			return nil, fmt.Errorf("'path' must be set")
-		}
-		path = pathFromConfig
-	}
-
-	var localID string
-	{
-		// Determine the local node ID from the environment.
-		if raftNodeID := os.Getenv(EnvVaultRaftNodeID); raftNodeID != "" {
-			localID = raftNodeID
-		}
-
-		// If not set in the environment check the configuration file.
-		if len(localID) == 0 {
-			localID = conf["node_id"]
-		}
-
-		// If not set in the config check the "node-id" file.
-		if len(localID) == 0 {
-			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
-			switch {
-			case err == nil:
-				if len(localIDRaw) > 0 {
-					localID = string(localIDRaw)
-				}
-			case os.IsNotExist(err):
-			default:
-				return nil, err
-			}
-		}
-
-		// If all of the above fails generate a UUID and persist it to the
-		// "node-id" file.
-		if len(localID) == 0 {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, err
-			}
-
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
-				return nil, err
-			}
-
-			localID = id
-		}
+	// parse the incoming map into a proper config struct
+	backendConfig, err := parseRaftBackendConfig(conf, logger)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
 
 	// Create the FSM.
-	fsm, err := NewFSM(path, localID, logger.Named("fsm"))
+	fsm, err := NewFSM(backendConfig.Path, backendConfig.NodeId, logger.Named("fsm"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create fsm: %v", err)
 	}
 
-	if delayRaw, ok := conf["apply_delay"]; ok {
-		delay, err := parseutil.ParseDurationSecond(delayRaw)
-		if err != nil {
-			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
-		}
+	if backendConfig.ApplyDelay > 0 {
 		fsm.applyCallback = func() {
-			time.Sleep(delay)
+			time.Sleep(backendConfig.ApplyDelay)
 		}
 	}
 
 	// Build an all in-memory setup for dev mode, otherwise prepare a full
 	// disk-based setup.
-	var log raft.LogStore
-	var stable raft.StableStore
-	var snap raft.SnapshotStore
+	var logStore raft.LogStore
+	var stableStore raft.StableStore
+	var snapStore raft.SnapshotStore
 
 	var devMode bool
 	if devMode {
 		store := raft.NewInmemStore()
-		stable = store
-		log = store
-		snap = raft.NewInmemSnapshotStore()
+		stableStore = store
+		logStore = store
+		snapStore = raft.NewInmemSnapshotStore()
 	} else {
 		// Create the base raft path.
-		raftBasePath := filepath.Join(path, raftState)
+		raftBasePath := filepath.Join(backendConfig.Path, raftState)
 		if err := EnsurePath(raftBasePath, true); err != nil {
 			return nil, err
 		}
 		dbPath := filepath.Join(raftBasePath, "raft.db")
-
-		// Check if they're opting in to raft-wal storage
-		useRaftWal := false
-		if walRaw, ok := conf[raftWalConfigKey]; ok {
-			useRaftWal, err = strconv.ParseBool(walRaw)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftWalConfigKey, walRaw, err)
-			}
-		}
 
 		// If the existing raft db exists from a previous use of BoltDB, warn about this and continue to use BoltDB
 		raftDbExists, err := fileExists(dbPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
 		}
-		if useRaftWal && raftDbExists {
+		if backendConfig.RaftWal && raftDbExists {
 			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
-			useRaftWal = false
+			backendConfig.RaftWal = false
 		}
 
-		if useRaftWal {
+		if backendConfig.RaftWal {
 			raftWalPath := filepath.Join(raftBasePath, raftWalDir)
 			if err := EnsurePath(raftWalPath, true); err != nil {
 				return nil, err
@@ -440,8 +400,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, fmt.Errorf("fail to open write-ahead-log: %w", err)
 			}
 
-			stable = wal
-			log = wal
+			stableStore = wal
+			logStore = wal
 		} else {
 			// use the traditional BoltDB setup
 			opts := boltOptions(dbPath)
@@ -455,8 +415,8 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			stable = store
-			log = store
+			stableStore = store
+			logStore = store
 		}
 
 		// Create the snapshot store.
@@ -464,124 +424,26 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		if err != nil {
 			return nil, err
 		}
-		snap = snapshots
-	}
-
-	var raftLogVerifierEnabled bool
-	raftLogVerificationInterval := 30 * time.Second
-
-	if rlveRaw, ok := conf["raft_log_verifier_enabled"]; ok {
-		rlve, err := strconv.ParseBool(rlveRaw)
-		if err != nil {
-			return nil, fmt.Errorf("raft_log_verifier_enabled does not parse as a boolean: %w", err)
-		}
-		raftLogVerifierEnabled = rlve
-
-		if rlviRaw, ok := conf["raft_log_verification_interval"]; ok {
-			rlvi, err := parseutil.ParseDurationSecond(rlviRaw)
-			if err != nil {
-				return nil, fmt.Errorf("raft_log_verification_interval does not parse as a duration: %w", err)
-			}
-
-			// Make sure our interval is capped to a reasonable value, so e.g. people don't use 0s or 1s
-			// TODO: I'm not 100% clear how much work verification does, so I'm making a guess here that we should
-			//  cap at 30s. Is that reasonable? If not, what's a better minimum value to use here?
-			if rlvi >= raftLogVerificationInterval {
-				raftLogVerificationInterval = rlvi
-			} else {
-				logger.Warn("raft_log_verification_interval is less than 30s. Using default of 30s instead")
-			}
-		}
+		snapStore = snapshots
 	}
 
 	// Hook up the verifier if it's enabled
-	if raftLogVerifierEnabled {
+	if backendConfig.RaftLogVerifierEnabled {
 		mc := walmetrics.NewGoMetricsCollector([]string{"raft", "logstore", "verifier"}, nil, nil)
 		reportFn := makeLogVerifyReportFn(logger.Named("raft.logstore.verifier"))
-		v := verifier.NewLogStore(log, isLogVerifyCheckpoint, reportFn, mc)
-		log = v
+		v := verifier.NewLogStore(logStore, isLogVerifyCheckpoint, reportFn, mc)
+		logStore = v
 	}
 
 	// Wrap the store in a LogCache to improve performance.
-	cacheStore, err := raft.NewLogCache(raftLogCacheSize, log)
+	cacheStore, err := raft.NewLogCache(raftLogCacheSize, logStore)
 	if err != nil {
 		return nil, err
 	}
-	log = cacheStore
+	logStore = cacheStore
 
-	if delayRaw, ok := conf["snapshot_delay"]; ok {
-		delay, err := parseutil.ParseDurationSecond(delayRaw)
-		if err != nil {
-			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
-		}
-		snap = newSnapshotStoreDelay(snap, delay, logger)
-	}
-
-	maxEntrySize := defaultMaxEntrySize
-	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
-		i, err := strconv.Atoi(maxEntrySizeCfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
-		}
-
-		maxEntrySize = uint64(i)
-	}
-
-	var reconcileInterval time.Duration
-	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
-		interval, err := parseutil.ParseDurationSecond(interval)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
-		}
-		reconcileInterval = interval
-	}
-
-	var updateInterval time.Duration
-	if interval := conf["autopilot_update_interval"]; interval != "" {
-		interval, err := parseutil.ParseDurationSecond(interval)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
-		}
-		updateInterval = interval
-	}
-
-	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
-	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
-
-	if reconcileInterval != 0 {
-		effectiveReconcileInterval = reconcileInterval
-	}
-	if updateInterval != 0 {
-		effectiveUpdateInterval = updateInterval
-	}
-
-	if effectiveReconcileInterval < effectiveUpdateInterval {
-		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
-	}
-
-	var upgradeVersion string
-	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
-		upgradeVersion = uv
-		_, err := goversion.NewVersion(upgradeVersion)
-		if err != nil {
-			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
-		}
-	}
-
-	var nonVoter bool
-	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
-		// Consistent with handling of other raft boolean env vars
-		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
-		nonVoter = true
-	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
-		nonVoter, err = strconv.ParseBool(v)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
-		}
-	}
-
-	if nonVoter && conf["retry_join"] == "" {
-		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
+	if backendConfig.SnapshotDelay > 0 {
+		snapStore = newSnapshotStoreDelay(snapStore, backendConfig.SnapshotDelay, logger)
 	}
 
 	return &RaftBackend{
@@ -589,22 +451,22 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		fsm:                         fsm,
 		raftInitCh:                  make(chan struct{}),
 		conf:                        conf,
-		logStore:                    log,
-		stableStore:                 stable,
-		snapStore:                   snap,
-		dataDir:                     path,
-		localID:                     localID,
+		logStore:                    logStore,
+		stableStore:                 stableStore,
+		snapStore:                   snapStore,
+		dataDir:                     backendConfig.Path,
+		localID:                     backendConfig.NodeId,
 		permitPool:                  physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:                maxEntrySize,
+		maxEntrySize:                backendConfig.MaxEntrySize,
 		followerHeartbeatTicker:     time.NewTicker(time.Second),
-		autopilotReconcileInterval:  reconcileInterval,
-		autopilotUpdateInterval:     updateInterval,
-		redundancyZone:              conf["autopilot_redundancy_zone"],
-		nonVoter:                    nonVoter,
-		upgradeVersion:              upgradeVersion,
+		autopilotReconcileInterval:  backendConfig.AutopilotReconcileInterval,
+		autopilotUpdateInterval:     backendConfig.AutopilotUpdateInterval,
+		redundancyZone:              backendConfig.AutopilotRedundancyZone,
+		nonVoter:                    backendConfig.RaftNonVoter,
+		upgradeVersion:              backendConfig.AutopilotUpgradeVersion,
 		failGetInTxn:                new(uint32),
-		raftLogVerifierEnabled:      raftLogVerifierEnabled,
-		raftLogVerificationInterval: raftLogVerificationInterval,
+		raftLogVerifierEnabled:      backendConfig.RaftLogVerifierEnabled,
+		raftLogVerificationInterval: backendConfig.RaftLogVerificationInterval,
 	}, nil
 }
 
@@ -695,14 +557,14 @@ func (b *RaftBackend) EffectiveVersion() string {
 	return version.GetVersion().Version
 }
 
-func (b *RaftBackend) RaftLogVerificationInterval() time.Duration {
+func (b *RaftBackend) verificationInterval() time.Duration {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
 	return b.raftLogVerificationInterval
 }
 
-func (b *RaftBackend) RaftLogVerifierEnabled() bool {
+func (b *RaftBackend) verifierEnabled() bool {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -724,12 +586,12 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 // RunRaftWalVerifier runs a raft log store verifier in the background, if configured to do so.
 // This periodically writes out special raft logs to verify that the log store is not corrupting data.
 func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
-	if !b.RaftLogVerifierEnabled() {
+	if !b.verifierEnabled() {
 		return
 	}
 
 	go func() {
-		ticker := time.NewTicker(b.RaftLogVerificationInterval())
+		ticker := time.NewTicker(b.verificationInterval())
 		defer ticker.Stop()
 
 		logger := b.logger.Named("raft-wal-verifier")
@@ -2117,6 +1979,185 @@ func fileExists(name string) (bool, error) {
 	// We hit some other error trying to stat the file which leaves us in an
 	// unknown state so we can't proceed.
 	return false, err
+}
+
+func parseRaftBackendConfig(conf map[string]string, logger log.Logger) (*RaftBackendConfig, error) {
+	c := &RaftBackendConfig{}
+
+	c.Path = conf["path"]
+	envPath := os.Getenv(EnvVaultRaftPath)
+	if envPath != "" {
+		c.Path = envPath
+	}
+
+	if c.Path == "" {
+		return nil, fmt.Errorf("'path' must be set")
+	}
+
+	c.NodeId = conf["node_id"]
+	envNodeId := os.Getenv(EnvVaultRaftNodeID)
+	if envNodeId != "" {
+		c.NodeId = envNodeId
+	}
+
+	if c.NodeId == "" {
+		localIDRaw, err := os.ReadFile(filepath.Join(c.Path, "node-id"))
+		if err == nil && len(localIDRaw) > 0 {
+			c.NodeId = string(localIDRaw)
+		}
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		if c.NodeId == "" {
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, err
+			}
+
+			if err = os.WriteFile(filepath.Join(c.Path, "node-id"), []byte(id), 0o600); err != nil {
+				return nil, err
+			}
+
+			c.NodeId = id
+		}
+	}
+
+	if delayRaw, ok := conf["apply_delay"]; ok {
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
+		}
+
+		c.ApplyDelay = delay
+	}
+
+	if walRaw, ok := conf[raftWalConfigKey]; ok {
+		useRaftWal, err := strconv.ParseBool(walRaw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftWalConfigKey, walRaw, err)
+		}
+
+		c.RaftWal = useRaftWal
+	}
+
+	if rlveRaw, ok := conf["raft_log_verifier_enabled"]; ok {
+		rlve, err := strconv.ParseBool(rlveRaw)
+		if err != nil {
+			return nil, fmt.Errorf("raft_log_verifier_enabled does not parse as a boolean: %w", err)
+		}
+		c.RaftLogVerifierEnabled = rlve
+
+		c.RaftLogVerificationInterval = defaultRaftLogVerificationInterval
+		if rlviRaw, ok := conf["raft_log_verification_interval"]; ok {
+			rlvi, err := parseutil.ParseDurationSecond(rlviRaw)
+			if err != nil {
+				return nil, fmt.Errorf("raft_log_verification_interval does not parse as a duration: %w", err)
+			}
+
+			// Make sure our interval is capped to a reasonable value, so e.g. people don't use 0s or 1s
+			if rlvi >= minimumRaftLogVerificationInterval {
+				c.RaftLogVerificationInterval = rlvi
+			} else {
+				logger.Warn("raft_log_verification_interval is less than the minimum allowed, using default instead",
+					"given", rlveRaw,
+					"minimum", minimumRaftLogVerificationInterval,
+					"default", defaultRaftLogVerificationInterval)
+			}
+		}
+	}
+
+	if delayRaw, ok := conf["snapshot_delay"]; ok {
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
+		}
+		c.SnapshotDelay = delay
+	}
+
+	c.MaxEntrySize = defaultMaxEntrySize
+	if maxEntrySizeCfg := conf["max_entry_size"]; len(maxEntrySizeCfg) != 0 {
+		i, err := strconv.Atoi(maxEntrySizeCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse 'max_entry_size': %w", err)
+		}
+
+		c.MaxEntrySize = uint64(i)
+	}
+
+	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
+		interval, err := parseutil.ParseDurationSecond(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
+		}
+		c.AutopilotReconcileInterval = interval
+	}
+
+	if interval := conf["autopilot_update_interval"]; interval != "" {
+		interval, err := parseutil.ParseDurationSecond(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
+		}
+		c.AutopilotUpdateInterval = interval
+	}
+
+	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
+	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
+
+	if c.AutopilotReconcileInterval != 0 {
+		effectiveReconcileInterval = c.AutopilotReconcileInterval
+	}
+	if c.AutopilotUpdateInterval != 0 {
+		effectiveUpdateInterval = c.AutopilotUpdateInterval
+	}
+
+	if effectiveReconcileInterval < effectiveUpdateInterval {
+		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
+	}
+
+	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
+		_, err := goversion.NewVersion(uv)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
+		}
+
+		c.AutopilotUpgradeVersion = uv
+	}
+
+	c.RaftNonVoter = false
+	if v := os.Getenv(EnvVaultRaftNonVoter); v != "" {
+		// Consistent with handling of other raft boolean env vars
+		// VAULT_RAFT_AUTOPILOT_DISABLE and VAULT_RAFT_FREELIST_SYNC
+		c.RaftNonVoter = true
+	} else if v, ok := conf[raftNonVoterConfigKey]; ok {
+		nonVoter, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %s config value %q as a boolean: %w", raftNonVoterConfigKey, v, err)
+		}
+
+		c.RaftNonVoter = nonVoter
+	}
+
+	if c.RaftNonVoter && conf["retry_join"] == "" {
+		return nil, fmt.Errorf("setting %s to true is only valid if at least one retry_join stanza is specified", raftNonVoterConfigKey)
+	}
+
+	c.AutopilotRedundancyZone = conf["autopilot_redundancy_zone"]
+
+	return c, nil
+}
+
+func parseConfigKey[T bool | time.Duration | int](cfg map[string]string, key string, defaultVal T, parseFunc func(string) (T, error)) (T, error) {
+	if valRaw, ok := cfg[key]; ok {
+		val, err := parseFunc(valRaw)
+		if err != nil {
+			return defaultVal, fmt.Errorf("%s does not parse: %w", key, err)
+		}
+
+		return val, nil
+	}
+
+	return defaultVal, nil
 }
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
