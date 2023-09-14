@@ -342,8 +342,12 @@ a.button.disabled {
     color: $white;
   }
 
-  &.grey-icon svg {
+  &.icon-grey-300 svg {
     color: $ui-gray-300;
+  }
+
+  &.icon-grey-500 svg {
+    color: $ui-gray-500;
   }
 
   &.icon-only {

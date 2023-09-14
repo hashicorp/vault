@@ -5,5 +5,10 @@
 
 <div class="console-ui-output has-text-grey">
   <pre>{{this.columns}}</pre>
-  <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @textToCopy={{this.columns}} class="top-right-absolute" />
+  <Hds::Copy::Button
+    @text="Copy"
+    @isIconOnly={{true}}
+    @textToCopy={{this.columns}}
+    class="transparent icon-grey-500 top-right-absolute"
+  />
 </div>
