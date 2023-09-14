@@ -2,7 +2,7 @@
   <h3 class="title is-4">Quick actions</h3>
   {{#if this.filteredSecretEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
-      <h4 class="title is-marginless is-6">Secrets engines</h4>
+      <h4 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h4>
       <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV
         version 2, and PKI.</p>
       <SearchSelect
@@ -18,12 +18,12 @@
         @passObject={{true}}
         @objectKeys={{array "type" "version"}}
         class="is-marginless"
-        data-test-secrets-engines-select
+        data-test-search-select="secrets-engines"
       />
     </div>
 
     {{#if this.selectedEngine}}
-      <h4 class="title is-6">Action</h4>
+      <h4 class="title is-6" data-test-card-subtitle="secrets-engines">Action</h4>
       <Select
         @name="action-select"
         @options={{this.actionOptions}}
@@ -34,7 +34,7 @@
       />
 
       {{#if this.searchSelectParams.model}}
-        <h4 class="title is-6" data-test-search-select-params-title>{{this.searchSelectParams.title}}</h4>
+        <h4 class="title is-6" data-test-card-subtitle="param">{{this.searchSelectParams.title}}</h4>
 
         <SearchSelect
           class="is-flex-grow-1"
@@ -50,7 +50,7 @@
           @objectKeys={{this.searchSelectParams.objectKeys}}
           @passObject={{true}}
           @shouldRenderName={{this.searchSelectParams.nameKey}}
-          data-test-param-select
+          data-test-search-select="params"
         />
 
         <div>
@@ -69,7 +69,7 @@
       <EmptyState
         @title="No mount selected"
         @message="Select a mount above to get started."
-        data-test-no-mount-selected-empty
+        data-test-empty-state="no-mount-selected"
       />
     {{/if}}
   {{else}}
