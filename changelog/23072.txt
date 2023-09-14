@@ -1,0 +1,3 @@
+```release-note:security
+auth/approle: This removes the possiblity of enumerating through role_ids to discover valid roles. Normalization of the returned error message for both a correct `role_id` and incorrect `secret_id`, and incorrect `role_id` and incorrect `secret_id`.
+```
