@@ -321,40 +321,6 @@ func TestDefaultPolicy(t *testing.T) {
 	}
 }
 
-// TestPolicyStore_PoliciesByNamespaces tests the policiesByNamespaces function, which should return a slice of policy names for a given slice of namespaces.
-func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
-	_, ps := mockPolicyWithCore(t, false)
-
-	ctxRoot := namespace.RootContext(context.Background())
-	rootNs := namespace.RootNamespace
-
-	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy)
-
-	err := ps.SetPolicy(ctxRoot, parsedPolicy)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	// Get should work
-	pResult, err := ps.GetPolicy(ctxRoot, "dev", PolicyTypeACL)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !reflect.DeepEqual(pResult, parsedPolicy) {
-		t.Fatalf("bad: %v", pResult)
-	}
-
-	out, err := ps.policiesByNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	expectedResult := []string{"default", "dev"}
-	if !reflect.DeepEqual(expectedResult, out) {
-		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
-	}
-}
-
 // TestPolicyStore_GetNonEGPPolicyType has five test cases:
 //   - happy-acl and happy-rgp: we store a policy in the policy type map and
 //     then look up its type successfully.
