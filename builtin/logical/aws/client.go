@@ -43,6 +43,8 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string, lo
 		case clientType == "sts" && config.STSEndpoint != "":
 			endpoint = *aws.String(config.STSEndpoint)
 			credsConfig.Region = config.Region
+		default:
+			credsConfig.Region = config.Region
 		}
 		if credsConfig.Region == "" {
 			credsConfig.Region = os.Getenv("AWS_REGION")
