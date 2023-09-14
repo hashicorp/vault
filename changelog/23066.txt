@@ -1,3 +1,3 @@
 ```release-note:bug
-ui: Fix issue confirm dropdown is being cut off
+ui: Fix the issue where confirm delete dropdown is being cut off
 ```
