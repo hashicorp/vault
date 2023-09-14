@@ -108,15 +108,8 @@ export default class SecretEngineModel extends Model {
   deleteVersionAfter;
 
   /* GETTERS */
-  get modelTypeForKV() {
-    const engineType = this.engineType;
-    if ((engineType === 'kv' || engineType === 'generic') && this.version === 2) {
-      return 'secret-v2';
-    }
-    return 'secret';
-  }
   get isV2KV() {
-    return this.modelTypeForKV === 'secret-v2';
+    return this.engineType === 'kv' && this.version === 2;
   }
 
   get attrs() {

@@ -94,7 +94,6 @@ export default Route.extend({
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
-      // secret or secret-v2
       cubbyhole: 'secret',
       kv: 'secret',
       keymgmt: `keymgmt/${tab || 'key'}`,

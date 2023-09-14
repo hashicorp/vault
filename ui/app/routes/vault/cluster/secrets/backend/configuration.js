@@ -26,7 +26,6 @@ export default Route.extend({
         backend.set('maxVersions', backend.maxVersions ? backend.maxVersions : 'Not set');
       } else {
         // remove the default values from the model if they don't have read access otherwise it will display the defaults even if they've been set (because they error on returning config data)
-        // normally would catch the config error in the secret-v2 adapter, but I need the functions to proceed, not stop. So we remove the values here.
         backend.set('casRequired', null);
         backend.set('deleteVersionAfter', null);
         backend.set('maxVersions', null);
