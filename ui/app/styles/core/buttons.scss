@@ -348,7 +348,7 @@ a.button.disabled {
     color: $white;
   }
 
-  &.is-primary {
+  &.primary {
     background-color: $blue;
     box-shadow: $box-shadow-low;
     border-radius: $radius;
@@ -364,7 +364,7 @@ a.button.disabled {
     }
   }
 
-  &.is-secondary {
+  &.secondary {
     background-color: $grey-lightest;
     box-shadow: $box-shadow-low;
     border-radius: $radius;

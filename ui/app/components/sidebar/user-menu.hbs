@@ -45,7 +45,7 @@
                   @textToCopy={{this.auth.currentToken}}
                   @isFullWidth={{true}}
                   class="hds-copy-button in-dropdown link is-flex-start"
-                  {{on "click" (action (set-flash-message "Token copied!"))}}
+                  {{on "click" (fn (set-flash-message "Token copied!"))}}
                 />
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
