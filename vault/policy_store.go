@@ -448,6 +448,32 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	return nil
 }
 
+// GetNonEGPPolicyType returns a policy's type.
+// It will return an error if the policy doesn't exist in the store or isn't
+// an ACL or a Sentinel Role Governing Policy (RGP).
+//
+// Note: Sentinel Endpoint Governing Policies (EGPs) are not stored within the
+// policyTypeMap. We sometimes need to distinguish between ACLs and RGPs due to
+// them both being token policies, but the logic related to EGPs is separate
+// enough that it is never necessary to look up their type.
+func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyType, error) {
+	sanitizedName := ps.sanitizeName(name)
+	index := path.Join(nsID, sanitizedName)
+
+	pt, ok := ps.policyTypeMap.Load(index)
+	if !ok {
+		// Doesn't exist
+		return nil, fmt.Errorf("policy does not exist in type map: %v", index)
+	}
+
+	policyType, ok := pt.(PolicyType)
+	if !ok {
+		return nil, fmt.Errorf("unknown policy type for: %v", index)
+	}
+
+	return &policyType, nil
+}
+
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType PolicyType) (*Policy, error) {
 	return ps.switchedGetPolicy(ctx, name, policyType, true)
