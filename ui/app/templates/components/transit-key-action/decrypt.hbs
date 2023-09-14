@@ -65,12 +65,7 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <Hds::Copy::Button
-        @text="Copy & Close"
-        @textToCopy={{@plaintext}}
-        class="hds-copy-button is-primary"
-        {{on "click" (fn @toggleModal "Plaintext copied!")}}
-      />
+      <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
     </footer>
   </Modal>
 {{/if}}

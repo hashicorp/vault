@@ -81,22 +81,12 @@
         <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
         <p class="sub-text">Plaintext is base64 encoded</p>
         <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@plaintext}} @color="secondary" />
-
-        <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
-        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@ciphertext}} @color="secondary" />
-
-        <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
-
-      {{else}}
-        <h2 class="title is-6">Ciphertext</h2>
-        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@ciphertext}} @color="secondary" />
-        <Hds::Copy::Button
-          @text="Copy & Close"
-          @textToCopy={{@ciphertext}}
-          class="hds-copy-button is-primary has-top-margin-m"
-          {{on "click" (fn @toggleModal "Ciphertext copied!")}}
-        />
       {{/if}}
+      <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
+      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" />
     </div>
   </section>
+  <footer class="modal-card-foot">
+    <button type="button" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
+  </footer>
 </Modal>
