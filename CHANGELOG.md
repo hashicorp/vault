@@ -69,7 +69,6 @@ static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vau
 * **Agent auto-auth**: support ldap auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
 * **Seal High Availability Beta (enterprise)**: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
 * **Secrets Sync (enterprise)**: Add the ability to synchronize KVv2 secret with external secrets manager solutions.```
-* **SAML Auth Login**: Add UI support for SAML login flow
 
 IMPROVEMENTS:
 
@@ -93,7 +92,6 @@ IMPROVEMENTS:
 * core: Log rollback manager failures during unmount, remount to prevent replication failures on secondary clusters. [[GH-22235](https://github.com/hashicorp/vault/pull/22235)]
 * core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
 * core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy [[GH-22304](https://github.com/hashicorp/vault/pull/22304)]
-* core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy
 * core: remove unnecessary *BarrierView field from backendEntry struct [[GH-20933](https://github.com/hashicorp/vault/pull/20933)]
 * core: use Go stdlib functionalities instead of explicit byte/string conversions [[GH-21854](https://github.com/hashicorp/vault/pull/21854)]
 * docs: Clarify when a entity is created [[GH-22233](https://github.com/hashicorp/vault/pull/22233)]
