@@ -109,7 +109,7 @@ export default class SecretEngineModel extends Model {
 
   /* GETTERS */
   get isV2KV() {
-    return (this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic'));
+    return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
   }
 
   get attrs() {
