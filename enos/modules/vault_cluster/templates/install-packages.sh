@@ -44,5 +44,5 @@ if [ -f /etc/debian_version ]; then
   retry 5 sudo apt install -y "$${packages[@]}"
 else
   cd /tmp
-  retry 7 sudo yum -y install "$${packages[@]}"
+  retry 7 sudo yum -y install $${packages[@]}
 fi

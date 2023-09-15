@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
  * @module KvSecretPaths is used to display copyable secret paths for KV v2 for CLI and API use.
@@ -37,7 +38,7 @@ export default class KvSecretPaths extends Component {
     return [
       {
         label: 'API path',
-        snippet: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
+        snippet: namespace ? `/v1/${encodePath(namespace)}/${data}` : `/v1/${data}`,
         text: 'Use this path when referring to this secret in the API.',
       },
       {
@@ -47,7 +48,7 @@ export default class KvSecretPaths extends Component {
       },
       {
         label: 'API path for metadata',
-        snippet: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
+        snippet: namespace ? `/v1/${encodePath(namespace)}/${metadata}` : `/v1/${metadata}`,
         text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
       },
     ];

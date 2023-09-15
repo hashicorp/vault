@@ -46,9 +46,15 @@ export default class KvSecretsListRoute extends Route {
       });
   }
 
+  getPathToSecret(pathParam) {
+    if (!pathParam) return '';
+    // links and routing assumes pathToParam includes trailing slash
+    return pathIsDirectory(pathParam) ? normalizePath(pathParam) : normalizePath(`${pathParam}/`);
+  }
+
   model(params) {
     const { pageFilter, path_to_secret } = params;
-    const pathToSecret = path_to_secret ? normalizePath(path_to_secret) : '';
+    const pathToSecret = this.getPathToSecret(path_to_secret);
     const backend = this.secretMountPath.currentPath;
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     return hash({
