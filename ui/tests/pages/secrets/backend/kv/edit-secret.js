@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// TODO kv engine cleanup. There are some selectors that may not be used anymore.
-
 import { Base } from '../create';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
