@@ -1,3 +1,0 @@
-```release-note:improvement
-database/elasticsearch: Added documentation for static roles.
-```
