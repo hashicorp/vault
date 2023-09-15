@@ -5,6 +5,7 @@ package cache
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
@@ -41,10 +44,11 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		t.Fatal(err)
 	}
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     NewMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            NewMockProxier(responses),
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -61,10 +65,11 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	}
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     &mockDelayProxier{cacheable, delay},
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            &mockDelayProxier{cacheable, delay},
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -80,11 +85,12 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 	require.NoError(t, err)
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     NewMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		Storage:     storage,
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            NewMockProxier(responses),
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Storage:            storage,
+		CacheStaticSecrets: true,
 	})
 	require.NoError(t, err)
 
@@ -270,6 +276,123 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 		t.Fatal(err)
 	}
 	if diff := deep.Equal(resp.Response.StatusCode, responses[1].Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+}
+
+func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
+	request := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/secrets/foo/bar",
+			},
+		},
+		Token: "token",
+	}
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+	}
+	index := &cachememdb.Index{
+		Type:        cacheboltdb.StaticSecretType,
+		RequestPath: request.Request.URL.Path,
+		Token:       "token",
+		ID:          computeStaticSecretCacheIndex(request),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// We expect two entries to be stored by this:
+	// 1. The actual static secret
+	// 2. The capabilities index
+	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	if err != nil {
+		return
+	}
+
+	indexFromDB, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	if err != nil {
+		return
+	}
+
+	require.Equal(t, "token", indexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
+	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
+
+	capabilitiesIndexFromDB, err := lc.db.Get(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	if err != nil {
+		return
+	}
+
+	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"/secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
+}
+
+func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// Register a token
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	// Make a request. A response with a new token is returned to the lease
+	// cache and that will be cached.
+	urlPath := "http://example.com/v1/sample/api"
+	sendReq := &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
+	}
+	resp, err := lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Send the same request again to get the cached response
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, responses[0].Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Modify the request a little to ensure the second response is
+	// returned to the lease cache.
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Make the same request again and ensure that the same response is returned
+	// again.
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 }
@@ -799,6 +922,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		// 204 No content gets special handling - avoid.
 		newTestSendResponse(250, `{"auth": {"client_token": "testtoken3", "renewable": true, "orphan": true, "lease_duration": 600}}`),
 		newTestSendResponse(251, `{"lease_id": "secret3-lease", "renewable": true, "data": {"number": "three"}, "lease_duration": 600}`),
+		newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)

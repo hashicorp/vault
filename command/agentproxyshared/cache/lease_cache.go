@@ -435,8 +435,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	// TODO: if secret.MountType == "kvv1" || secret.MountType == "kvv2"
-	if c.cacheStaticSecrets && secret != nil {
+	if c.cacheStaticSecrets && secret.MountType == "kv" {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		err := c.cacheStaticSecret(ctx, req, resp, index)
