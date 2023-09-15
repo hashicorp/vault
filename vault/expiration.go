@@ -18,10 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/locking"
@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -83,6 +84,8 @@ const (
 	MaxIrrevocableLeasesToReturn = 10000
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
+
+	leaseExpirationEventType = logical.EventType("core/lease-expiration")
 )
 
 type pendingInfo struct {
@@ -325,6 +328,14 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 	return numWorkers
 }
 
+// alsoSendEvent returns an ExpireLeaseStrategy that sends an expiration event after executing the given ExpireLeaseStrategy.
+func alsoSendEvent(e ExpireLeaseStrategy) ExpireLeaseStrategy {
+	return func(ctx context.Context, m *ExpirationManager, leaseID string, namespace *namespace.Namespace) {
+		e(ctx, m, leaseID, namespace)
+		go m.sendExpirationEvent(leaseID)
+	}
+}
+
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
@@ -360,7 +371,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          e,
+		expireFunc:          alsoSendEvent(e),
 
 		jobManager:      jobManager,
 		revokeRetryBase: c.expirationRevokeRetryBase,
@@ -1806,6 +1817,52 @@ func (m *ExpirationManager) deleteLockForLease(id string) {
 	m.lockPerLease.Delete(id)
 }
 
+func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
+	lep, ok := func() (any, bool) {
+		m.pendingLock.Lock()
+		defer m.pendingLock.Unlock()
+		return m.pending.Load(leaseID)
+	}()
+	if !ok {
+		return
+	}
+	le := lep.(pendingInfo).cachedLeaseInfo
+	data := &logical.EventData{}
+	id := fmt.Sprintf("expire/%s/%d", leaseID, le.ExpireTime.Unix())
+	ns := namespace.RootNamespace
+	if le.namespace != nil {
+		ns = le.namespace
+	}
+	data.Id = id
+	data.EntityIds = []string{leaseID}
+	structMap := map[string]interface{}{
+		"id":                leaseID,
+		"path":              le.Path,
+		"expire_time":       le.ExpireTime.Format(time.RFC3339),
+		"last_renewal_time": le.LastRenewalTime.Format(time.RFC3339),
+		"version":           strconv.Itoa(le.Version),
+		"login_role":        le.LoginRole,
+		"client_token_type": le.ClientTokenType.String(),
+		"namespace":         ns.Path,
+	}
+
+	metadata, err := structpb.NewStruct(structMap)
+	if err != nil {
+		m.logger.Warn("Error creating expiration event metadata", err)
+		return
+	}
+	data.Metadata = metadata
+	err = m.core.Events().SendEventInternal(context.Background(),
+		ns,
+		nil,
+		leaseExpirationEventType,
+		data,
+	)
+	if err != nil {
+		m.logger.Warn("Error sending event", "err", err)
+	}
+}
+
 // updatePending is used to update a pending invocation for a lease
 func (m *ExpirationManager) updatePending(le *leaseEntry) {
 	m.pendingLock.Lock()
@@ -1825,7 +1882,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 	if le.ExpireTime.IsZero() && le.nonexpiringToken() {
 		// Store this in the nonexpiring map instead of pending.
 		// There does not appear to be any cases where a token that had
-		// a nonzero can be can be assigned a zero TTL, but that can be
+		// a nonzero can be assigned a zero TTL, but that can be
 		// handled by the next check
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.nonexpiring.Store(le.LeaseID, pending)
