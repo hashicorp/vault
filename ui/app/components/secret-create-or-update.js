@@ -19,7 +19,7 @@
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
- * @param {object} model - the route model, comes from secret-v2 ember record
+ * @param {object} model - the route model
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
  * @param {object} secretData - class that is created in secret-edit
