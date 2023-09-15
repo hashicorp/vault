@@ -31,6 +31,7 @@ const CA_FIELDS = [
   'allowedUsers',
   'allowedUsersTemplate',
   'allowedDomains',
+  'allowedDomainsTemplate',
   'ttl',
   'maxTtl',
   'allowedCriticalOptions',
@@ -81,6 +82,10 @@ export default Model.extend({
   allowedDomains: attr('string', {
     helpText:
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
+  }),
+  allowedDomainsTemplate: attr('boolean', {
+    helpText:
+      'Specifies that Allowed domains can be set using identity template policies. Non-templated domains are also permitted.',
   }),
   cidrList: attr('string', {
     helpText: 'List of CIDR blocks for which this role is applicable',
