@@ -72,7 +72,8 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   snapshot size and high write throughput causing log truncation before a
   snapshot can be fully installed. If you need to use this to recover a cluster,
   consider reducing write throughput or the amount of data stored on Vault. The
-  default value is 10000 which is suitable for all normal workloads.
+  default value is 10000 which is suitable for all normal workloads. The
+  `trailing_logs` metric is not the same as `max_trailing_logs`.
 
 - `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of Raft
   commit entries between snapshots that are saved to disk. This is a low-level
@@ -83,6 +84,13 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   larger and the space in the `raft.db` file can't be reclaimed till the next
   snapshot. Servers may take longer to recover from crashes or failover if this
   is increased significantly as more logs will need to be replayed.
+
+- `snapshot_interval` `(integer: 120 seconds)` - The snapshot interval
+   controls how often Raft checks whether a snapshot operation is
+   required. Raft randomly staggers snapshots between the configured
+   interval and twice the configured interval to keep the entire cluster
+   from performing a snapshot at once. The default snapshot interval is
+   120 seconds.
 
 - `retry_join` `(list: [])` - There can be one or more
   [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
