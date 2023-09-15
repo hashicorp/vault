@@ -15,6 +15,10 @@ globals {
     "ubuntu" = var.ubuntu_distro_version
   }
   packages = ["jq"]
+  distro_packages = {
+    ubuntu = ["netcat"]
+    rhel   = ["nc"]
+  }
   sample_attributes = {
     aws_region = ["us-east-1", "us-west-2"]
   }
