@@ -74,7 +74,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           @refreshModel={{this.refreshModel}} />
       `
     );
-    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.emptyState('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
@@ -102,7 +102,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       `
     );
 
-    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
@@ -132,7 +132,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @refreshModel={{this.refreshModel}} />`
     );
 
-    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
@@ -158,7 +158,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       />`
     );
 
-    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
@@ -190,7 +190,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         @refreshModel={{this.refreshModel}} />`
     );
 
-    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom('[data-test-badge-namespace]').exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();

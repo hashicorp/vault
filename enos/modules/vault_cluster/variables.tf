@@ -96,8 +96,8 @@ variable "consul_release" {
   }
 }
 
-variable "enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+variable "enable_audit_devices" {
+  description = "If true every audit device will be enabled"
   type        = bool
   default     = true
 }
