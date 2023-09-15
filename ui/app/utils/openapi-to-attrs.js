@@ -35,7 +35,7 @@ export const expandOpenApiProps = function (props) {
 
     editType = editType || type;
 
-    if (format === 'seconds') {
+    if (format === 'seconds' || format === 'duration') {
       editType = 'ttl';
     } else if (items) {
       editType = items.type + capitalize(type);
