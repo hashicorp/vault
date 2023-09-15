@@ -991,7 +991,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// Updating in-flight request data with client/entity ID
 	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok && req.ClientID != "" {
-		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID, false)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -1408,7 +1408,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Updating in-flight request data with client/entity ID
 	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok && req.ClientID != "" {
-		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID, true)
 	}
 
 	if ctErr != nil {

@@ -3785,6 +3785,7 @@ type InFlightReqData struct {
 	ReqPath          string    `json:"request_path"`
 	Method           string    `json:"request_method"`
 	ClientID         string    `json:"client_id"`
+	Login            bool      `json:"login"`
 }
 
 func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
@@ -3821,7 +3822,7 @@ func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
 
 // UpdateInFlightReqData updates the data for a specific reqID with
 // the clientID
-func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
+func (c *Core) UpdateInFlightReqData(reqID, clientID string, login bool) {
 	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
 	if !ok {
 		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
@@ -3831,6 +3832,7 @@ func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
 	// there is only one writer to this map, so skip checking for errors
 	reqData := v.(InFlightReqData)
 	reqData.ClientID = clientID
+	reqData.Login = login
 	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
 }
 
@@ -3851,6 +3853,15 @@ func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
 		"client_id", reqData.ClientID,
 		"client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath,
 		"request_method", reqData.Method)
+
+	if statusCode < 200 || statusCode >= 300 {
+		key := []string{"core", "handle_request", "errors"}
+		if reqData.Login {
+			key = []string{"core", "handle_login_request", "errors"}
+		}
+
+		metrics.IncrCounterWithLabels(key, 1, nil)
+	}
 }
 
 func (c *Core) ReloadLogRequestsLevel() {
