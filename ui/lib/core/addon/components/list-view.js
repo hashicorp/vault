@@ -5,7 +5,6 @@
 
 import Component from '@glimmer/component';
 import { pluralize } from 'ember-inflector';
-import { inject as service } from '@ember/service';
 
 /**
  * @module ListView
@@ -13,7 +12,7 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <ListView @items={{model}} @itemNoun="role" as |list|>
+ * <ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
  *   {{#if list.empty}}
  *     <list.empty @title="No roles here" />
  *   {{else}}
@@ -27,7 +26,7 @@ import { inject as service } from '@ember/service';
  * @param {array} [items=null] - An Ember array of items (objects) to render as a list. Because it's an Ember array it has properties like length an meta on it.
  * @param {string} [itemNoun=item] - A noun to use in the empty state of message and title.
  * @param {string} [message=null] - The message to display within the banner.
- * @param {boolean} [showPagination=false] - To show HDS pagination or not. If true, will show pagination even if only one item in the list.
+ * @param {string} [paginationRouteName=''] - The link used in the ListPagination component. Also used to conditionally show pagination or not.
  * @yields {object} Yields the current item in the loop.
  * @yields If there are no objects in items, then `empty` will be yielded - this is an instance of
  * the EmptyState component.
@@ -37,8 +36,6 @@ import { inject as service } from '@ember/service';
  *
  */
 export default class ListView extends Component {
-  @service router;
-
   get itemNoun() {
     return this.args.itemNoun || 'item';
   }

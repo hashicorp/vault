@@ -10,11 +10,11 @@
     {{else}}
       {{yield}}
     {{/each}}
-    {{#if @showPagination}}
+    {{#if @paginationRouteName}}
       <Hds::Pagination::Numbered
         @currentPage={{@items.meta.currentPage}}
         @currentPageSize={{@items.meta.pageSize}}
-        @route={{this.router.currentRoute.name}}
+        @route={{@paginationRouteName}}
         @showSizeSelector={{false}}
         @totalItems={{@items.meta.total}}
         @queryFunction={{this.paginationQueryParams}}

@@ -52,7 +52,12 @@
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{this.model}} @itemNoun={{this.itemType}} @showPagination={{true}} as |list|>
+<ListView
+  @items={{this.model}}
+  @itemNoun={{this.itemType}}
+  @paginationRouteName="vault.cluster.access.method.item.list"
+  as |list|
+>
   {{#if list.empty}}
     <list.empty
       @title="No {{pluralize this.itemType}} yet"

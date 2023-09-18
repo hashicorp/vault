@@ -20,7 +20,7 @@
     </ToolbarActions>
   </Toolbar>
 
-  <ListView @items={{this.model}} @itemNoun="namespace" @showPagination={{true}} as |list|>
+  <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
     {{#if list.empty}}
       <list.empty>
         <LinkTo @route="vault.cluster.access.namespaces.create">
