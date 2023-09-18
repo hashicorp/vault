@@ -2231,6 +2231,8 @@ func (c *Core) LocalGetUserFailedLoginInfo(ctx context.Context, userKey FailedLo
 // LocalUpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
 func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
 	c.userFailedLoginInfoLock.Lock()
+	defer c.userFailedLoginInfoLock.Unlock()
+
 	switch deleteEntry {
 	case false:
 		// update entry in the map
@@ -2273,7 +2275,6 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 		// delete the entry from the map, if no key exists it is no-op
 		delete(c.userFailedLoginInfo, userKey)
 	}
-	c.userFailedLoginInfoLock.Unlock()
 	return nil
 }
 
