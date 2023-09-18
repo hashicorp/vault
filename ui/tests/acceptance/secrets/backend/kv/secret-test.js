@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// TODO kv engine cleanup - this should only be testing kv1 eventually...
 import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';

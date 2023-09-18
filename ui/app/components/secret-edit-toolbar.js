@@ -43,6 +43,7 @@ import { waitFor } from '@ember/test-waiters';
 
 export default class SecretEditToolbar extends Component {
   @service store;
+  @service router;
   @service flashMessages;
 
   @tracked wrappedData = null;
@@ -50,6 +51,13 @@ export default class SecretEditToolbar extends Component {
   @action
   clearWrappedData() {
     this.wrappedData = null;
+  }
+
+  @action
+  handleDelete() {
+    this.args.model.destroyRecord().then(() => {
+      this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+    });
   }
 
   @task
