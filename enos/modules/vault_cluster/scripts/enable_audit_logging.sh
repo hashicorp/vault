@@ -1,14 +1,10 @@
-#!/bin/env sh
+#!/bin/env bash
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
-
-
 set -eux
 
-LOG_DIR="$(dirname "$LOG_FILE_PATH")"
-
-# Run nc to listen to port 9090
-nc -l 9090 &
+# Run nc to listen to port 9090 for the socket audit log
+nohup nc -l 9090 &>/dev/null </dev/null &
 
 $VAULT_BIN_PATH audit enable file file_path="$LOG_FILE_PATH"
 $VAULT_BIN_PATH audit enable syslog tag="vault" facility="AUTH"
