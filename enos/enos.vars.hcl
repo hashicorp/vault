@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 # artifactory_username is the username to use when testing an artifact stored in artfactory.
 # artifactory_username = "yourname@hashicorp.com"
@@ -87,9 +87,12 @@
 # date to match"
 # vault_build_date = "2023-07-07T14:06:37Z" // make ci-get-date for example
 
-# vault_enable_file_audit_device sets whether or not to enable the 'file' audit device. It true it
-# will be enabled at the path /var/log/vault_audit.log
-# vault_enable_file_audit_device = true
+# vault_enable_audit_devices sets whether or not to enable every audit device. It true
+# a file audit device will be enabled at the path /var/log/vault_audit.log, the syslog
+# audit device will be enabled, and a socket audit device connecting to 127.0.0.1:9090
+# will be enabled. The netcat program is run in listening mode to provide an endpoint
+# that the socket audit device can connect to.
+# vault_enable_audit_devices = true
 
 # vault_install_dir is the directory where the vault binary will be installed on
 # the remote machines.
