@@ -6,6 +6,8 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/cap/ldap"
@@ -15,6 +17,12 @@ import (
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+	// note: this image isn't supported on arm64 architecture in CI.
+	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
 		// has been merged.
