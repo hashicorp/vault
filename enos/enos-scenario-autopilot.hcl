@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 scenario "autopilot" {
   matrix {
     arch            = ["amd64", "arm64"]
@@ -112,15 +115,15 @@ scenario "autopilot" {
       cluster_name          = step.create_vault_cluster_targets.cluster_name
       install_dir           = local.vault_install_dir
       license               = matrix.edition != "oss" ? step.read_license.license : null
-      packages              = global.packages
+      packages              = concat(global.packages, global.distro_packages[matrix.distro])
       release               = var.vault_autopilot_initial_release
       storage_backend       = "raft"
       storage_backend_addl_config = {
         autopilot_upgrade_version = var.vault_autopilot_initial_release.version
       }
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = matrix.seal
-      enable_file_audit_device = var.vault_enable_file_audit_device
+      target_hosts         = step.create_vault_cluster_targets.hosts
+      unseal_method        = matrix.seal
+      enable_audit_devices = var.vault_enable_audit_devices
     }
   }
 
@@ -213,7 +216,7 @@ scenario "autopilot" {
       license                     = matrix.edition != "oss" ? step.read_license.license : null
       local_artifact_path         = local.artifact_path
       manage_service              = local.manage_service
-      packages                    = global.packages
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"
@@ -221,7 +224,7 @@ scenario "autopilot" {
       storage_node_prefix         = "upgrade_node"
       target_hosts                = step.create_vault_cluster_upgrade_targets.hosts
       unseal_method               = matrix.seal
-      enable_file_audit_device    = var.vault_enable_file_audit_device
+      enable_audit_devices        = var.vault_enable_audit_devices
     }
   }
 

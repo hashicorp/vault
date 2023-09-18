@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 // The replication scenario configures performance replication between two Vault clusters and verifies
 // known_primary_cluster_addrs are updated on secondary Vault cluster with the IP addresses of replaced
 // nodes on primary Vault cluster
@@ -236,15 +239,15 @@ scenario "replication" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
-      local_artifact_path      = local.artifact_path
-      manage_service           = local.manage_service
-      packages                 = global.packages
-      storage_backend          = matrix.primary_backend
-      target_hosts             = step.create_primary_cluster_targets.hosts
-      unseal_method            = matrix.primary_seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      local_artifact_path  = local.artifact_path
+      manage_service       = local.manage_service
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      storage_backend      = matrix.primary_backend
+      target_hosts         = step.create_primary_cluster_targets.hosts
+      unseal_method        = matrix.primary_seal
     }
   }
 
@@ -293,15 +296,15 @@ scenario "replication" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
-      local_artifact_path      = local.artifact_path
-      manage_service           = local.manage_service
-      packages                 = global.packages
-      storage_backend          = matrix.secondary_backend
-      target_hosts             = step.create_secondary_cluster_targets.hosts
-      unseal_method            = matrix.secondary_seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      local_artifact_path  = local.artifact_path
+      manage_service       = local.manage_service
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      storage_backend      = matrix.secondary_backend
+      target_hosts         = step.create_secondary_cluster_targets.hosts
+      unseal_method        = matrix.secondary_seal
     }
   }
 
@@ -535,20 +538,20 @@ scenario "replication" {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      force_unseal             = matrix.primary_seal == "shamir"
-      initialize_cluster       = false
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
-      local_artifact_path      = local.artifact_path
-      manage_service           = local.manage_service
-      packages                 = global.packages
-      root_token               = step.create_primary_cluster.root_token
-      shamir_unseal_keys       = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : null
-      storage_backend          = matrix.primary_backend
-      storage_node_prefix      = "newprimary_node"
-      target_hosts             = step.create_primary_cluster_additional_targets.hosts
-      unseal_method            = matrix.primary_seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      force_unseal         = matrix.primary_seal == "shamir"
+      initialize_cluster   = false
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      local_artifact_path  = local.artifact_path
+      manage_service       = local.manage_service
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      root_token           = step.create_primary_cluster.root_token
+      shamir_unseal_keys   = matrix.primary_seal == "shamir" ? step.create_primary_cluster.unseal_keys_hex : null
+      storage_backend      = matrix.primary_backend
+      storage_node_prefix  = "newprimary_node"
+      target_hosts         = step.create_primary_cluster_additional_targets.hosts
+      unseal_method        = matrix.primary_seal
     }
   }
 
