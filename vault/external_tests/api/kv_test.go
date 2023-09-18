@@ -30,23 +30,6 @@ func TestKVV1Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	//// We use raw requests so we can check the headers for cache hit/miss.
-	//req := client.NewRequest(http.MethodGet, "/v1/secret/my-secret")
-	//resp1, err := client.RawRequest(req)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//
-	//resp1Map := map[string]interface{}{}
-	//body, err := io.ReadAll(resp1.Body)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-	//err = json.Unmarshal(body, &resp1Map)
-	//if err != nil {
-	//	t.Fatal(err)
-	//}
-
 	data, err := client.KVv1(v1MountPath).Get(context.Background(), secretPath)
 	if err != nil {
 		t.Fatal(err)
