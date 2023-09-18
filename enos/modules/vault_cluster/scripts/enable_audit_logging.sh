@@ -27,7 +27,9 @@ until nc -zv 127.0.0.1 9090 &> /dev/null < /dev/null; do
   fi
 done
 
+sleep 1
+
 # Enable the auditors.
 $VAULT_BIN_PATH audit enable file file_path="$LOG_FILE_PATH"
 $VAULT_BIN_PATH audit enable syslog tag="vault" facility="AUTH"
-$VAULT_BIN_PATH audit enable socket address="127.0.0.1:9090"
+$VAULT_BIN_PATH audit enable socket address="127.0.0.1:9090" || true
