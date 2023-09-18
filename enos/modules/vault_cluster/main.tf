@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     # We need to specify the provider source in each module until we publish it
@@ -15,7 +18,7 @@ locals {
   audit_device_file_path = "/var/log/vault/vault_audit.log"
   bin_path               = "${var.install_dir}/vault"
   consul_bin_path        = "${var.consul_install_dir}/consul"
-  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
+  enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
   // In order to get Terraform to plan we have to use collections with keys
   // that are known at plan time. In order for our module to work our var.target_hosts
   // must be a map with known keys at plan time. Here we're creating locals
@@ -277,7 +280,7 @@ resource "enos_remote_exec" "create_audit_log_dir" {
   ]
   for_each = toset([
     for idx, host in toset(local.instances) : idx
-    if var.enable_file_audit_device
+    if var.enable_audit_devices
   ])
 
   environment = {
@@ -294,14 +297,14 @@ resource "enos_remote_exec" "create_audit_log_dir" {
   }
 }
 
-resource "enos_remote_exec" "enable_file_audit_device" {
+resource "enos_remote_exec" "enable_audit_devices" {
   depends_on = [
     enos_remote_exec.create_audit_log_dir,
     enos_vault_unseal.leader,
   ]
   for_each = toset([
     for idx in local.leader : idx
-    if local.enable_audit_device
+    if local.enable_audit_devices
   ])
 
   environment = {

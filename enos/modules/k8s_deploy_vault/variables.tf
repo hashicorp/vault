@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "context_name" {
   type        = string
   description = "The name of the k8s context for Vault"

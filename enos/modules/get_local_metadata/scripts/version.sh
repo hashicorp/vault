@@ -1,9 +1,8 @@
 #!/bin/env bash
-
-set -eu -o pipefail
-
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
+
+set -euo pipefail
 
 # Get the full version information
 # this is only needed for local enos builds in order to get the default version from version_base.go
