@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 set -ex -o pipefail
 
@@ -38,8 +41,8 @@ if [ -f /etc/debian_version ]; then
 
   cd /tmp
   retry 5 sudo apt update
-  retry 5 sudo apt install -y "$${packages[@]}"
+  retry 5 sudo apt install -y $${packages[@]}
 else
   cd /tmp
-  retry 7 sudo yum -y install "$${packages[@]}"
+  retry 7 sudo yum -y install $${packages[@]}
 fi

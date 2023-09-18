@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 scenario "agent" {
   matrix {
     arch            = ["amd64", "arm64"]
@@ -33,11 +36,6 @@ scenario "agent" {
       ubuntu = provider.enos.ubuntu
     }
     install_artifactory_artifact = local.bundle_path == null
-  }
-
-  step "get_local_metadata" {
-    skip_step = matrix.artifact_source != "local"
-    module    = module.get_local_metadata
   }
 
   step "build_vault" {
@@ -111,17 +109,17 @@ scenario "agent" {
     }
 
     variables {
-      artifactory_release      = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn    = step.create_vpc.kms_key_arn
-      cluster_name             = step.create_vault_cluster_targets.cluster_name
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = var.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path      = local.bundle_path
-      packages                 = global.packages
-      storage_backend          = "raft"
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = "shamir"
+      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_vault_cluster_targets.cluster_name
+      enable_audit_devices  = var.vault_enable_audit_devices
+      install_dir           = var.vault_install_dir
+      license               = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path   = local.bundle_path
+      packages              = concat(global.packages, global.distro_packages[matrix.distro])
+      storage_backend       = "raft"
+      target_hosts          = step.create_vault_cluster_targets.hosts
+      unseal_method         = "shamir"
     }
   }
 
