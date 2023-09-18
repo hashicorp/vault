@@ -57,7 +57,8 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
         const model = this.controller.get(modelPath);
         // we only want to complete rollback if the model is dirty and not saving
         if (model && model.hasDirtyAttributes && !model.isSaving) {
-          model.rollbackAttributes();
+          const method = model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+          model[method]();
         }
       }
 
