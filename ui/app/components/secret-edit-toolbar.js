@@ -56,7 +56,7 @@ export default class SecretEditToolbar extends Component {
   @action
   handleDelete() {
     this.args.model.destroyRecord().then(() => {
-      return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+      this.router.transitionTo('vault.cluster.secrets.backend.list-root');
     });
   }
 
