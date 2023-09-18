@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 output "ui_test_stderr" {
   value = var.ui_run_tests ? enos_local_exec.test_ui[0].stderr : "No std out tests where not run"
