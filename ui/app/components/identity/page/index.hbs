@@ -1,0 +1,163 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{titleize (pluralize @identityType)}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs" aria-label="tabs">
+    <ul>
+      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize @identityType}}>
+        {{capitalize (pluralize @identityType)}}
+      </LinkTo>
+      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize @identityType}}>
+        Aliases
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+<Toolbar>
+  {{#if @model.meta.total}}
+    <ToolbarFilters>
+      <Identity::LookupInput @type={{@identityType}} />
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    {{#if (eq @identityType "entity")}}
+      <ToolbarLink
+        @route={{"vault.cluster.access.identity.merge"}}
+        @model={{pluralize @identityType}}
+        data-test-entity-merge-link={{true}}
+      >
+        Merge
+        {{pluralize @identityType}}
+      </ToolbarLink>
+    {{/if}}
+    <ToolbarLink
+      @route="vault.cluster.access.identity.create"
+      @model={{pluralize @identityType}}
+      @type="add"
+      data-test-entity-create-link={{true}}
+    >
+      Create
+      {{@identityType}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @model.meta.total}}
+  {{#each @model as |item|}}
+    <LinkedBlock
+      @params={{array "vault.cluster.access.identity.show" item.id "details"}}
+      class="list-item-row"
+      data-test-identity-row
+    >
+      <div class="columns is-mobile">
+        <div class="column is-7-tablet is-10-mobile">
+          <LinkTo
+            @route="vault.cluster.access.identity.show"
+            @models={{array item.id "details"}}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-identity-link={{true}}
+          >
+            <Icon @name="user" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold">{{item.name}}</span>
+          </LinkTo>
+          <div class="has-text-grey is-size-8">
+            {{item.id}}
+          </div>
+        </div>
+        <div class="column is-3 is-hidden-mobile">
+          {{#if item.aliases.length}}
+            {{pluralize item.aliases.length "alias"}}
+          {{/if}}
+        </div>
+        <div class="column has-text-right">
+          <PopupMenu @name="identity-item" @onOpen={{fn this.reloadRecord item}}>
+            <Confirm as |c|>
+              <nav class="menu" aria-label="menu">
+                <ul class="menu-list">
+                  <li class="action">
+                    <LinkTo @route="vault.cluster.access.identity.show" @models={{array item.id "details"}}>
+                      Details
+                    </LinkTo>
+                  </li>
+                  {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
+                    <li class="action">
+                      <button disabled type="button" class="link button is-loading is-transparent">
+                        loading
+                      </button>
+                    </li>
+                  {{else}}
+                    {{#if item.canAddAlias}}
+                      <li class="action">
+                        <LinkTo
+                          @route="vault.cluster.access.identity.aliases.add"
+                          @models={{array (pluralize @identityType) item.id}}
+                        >
+                          Create alias
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if item.canEdit}}
+                      <li class="action">
+                        <LinkTo @route="vault.cluster.access.identity.edit" @model={{item.id}}>
+                          Edit
+                        </LinkTo>
+                      </li>
+                      <li class="action">
+                        {{#if item.disabled}}
+                          <button type="button" {{fn this.toggleDisabled item}} class="link">
+                            Enable
+                          </button>
+                        {{else if (eq @identityType "entity")}}
+                          <c.Message
+                            @id="{{item.id}}-disable"
+                            @triggerText="Disable"
+                            @message="Associated tokens will not be revoked, but cannot be used"
+                            @title="Disable this?"
+                            @confirmButtonText="Disable"
+                            @onConfirm={{fn this.toggleDisabled item}}
+                            data-test-engine-disable="true"
+                          />
+                        {{/if}}
+                      </li>
+                    {{/if}}
+                    {{#if item.canDelete}}
+                      <li class="action">
+                        <c.Message @id={{item.id}} @onConfirm={{fn this.delete item}} data-test-item-delete="true" />
+                      </li>
+                    {{/if}}
+                  {{/if}}
+                </ul>
+              </nav>
+            </Confirm>
+          </PopupMenu>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+  {{#if (gt @model.meta.lastPage 1)}}
+    <ListPagination
+      @page={{@model.meta.currentPage}}
+      @lastPage={{@model.meta.lastPage}}
+      @link="vault.cluster.access.identity.index"
+    />
+  {{/if}}
+{{else}}
+  <EmptyState
+    @title="No {{pluralize @identityType}} yet"
+    @message="A list of {{pluralize
+      @identityType
+    }} in this namespace will be listed here. Create your first {{@identityType}} to get started."
+  >
+    <LinkTo @route="vault.cluster.access.identity.create" @model={{pluralize @identityType}} class="link">
+      Create
+      {{@identityType}}
+    </LinkTo>
+    <DocLink @path="/vault/tutorials/auth-methods/identity">
+      Learn more
+    </DocLink>
+  </EmptyState>
+{{/if}}
