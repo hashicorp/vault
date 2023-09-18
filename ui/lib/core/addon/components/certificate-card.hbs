@@ -20,15 +20,13 @@
       {{@data}}
     </code>
   </div>
-  <div class="is-flex has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
-    <CopyButton
+  <div class="is-flex-center has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@data}}
+      class="transparent is-paddingless"
       data-test-copy-button
-      class="button is-transparent is-flex-v-centered"
-      @clipboardText={{@data}}
-      @buttonType="button"
-      @success={{action (set-flash-message "Certificate copied")}}
-    >
-      <Icon @name="clipboard-copy" aria-label="Copy" />
-    </CopyButton>
+    />
   </div>
 </Hds::Card::Container>
