@@ -125,8 +125,6 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
-	secret.MountType = Kvv2MountType
-
 	kvSecret, err := extractDataAndVersionMetadata(secret)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
@@ -252,8 +250,6 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 	if err != nil {
 		return nil, fmt.Errorf("secret was written successfully, but unable to view version metadata from response: %w", err)
 	}
-
-	secret.MountType = Kvv2MountType
 
 	kvSecret := &KVSecret{
 		Data:            nil, // secret.Data in this case is the metadata

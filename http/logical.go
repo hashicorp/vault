@@ -430,6 +430,7 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 					CreationPath:    resp.WrapInfo.CreationPath,
 					WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 				},
+				MountType: resp.MountType,
 			}
 		} else {
 			httpResp = logical.LogicalResponseToHTTPResponse(resp)

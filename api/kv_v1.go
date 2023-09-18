@@ -27,8 +27,6 @@ func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
-	secret.MountType = Kvv1MountType
-
 	return &KVSecret{
 		Data:            secret.Data,
 		VersionMetadata: nil,

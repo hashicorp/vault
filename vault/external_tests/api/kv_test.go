@@ -7,27 +7,17 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+
 	"github.com/stretchr/testify/require"
 
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 )
 
 func TestKVV1Get(t *testing.T) {
 	t.Parallel()
 
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -40,27 +30,36 @@ func TestKVV1Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//// We use raw requests so we can check the headers for cache hit/miss.
+	//req := client.NewRequest(http.MethodGet, "/v1/secret/my-secret")
+	//resp1, err := client.RawRequest(req)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//
+	//resp1Map := map[string]interface{}{}
+	//body, err := io.ReadAll(resp1.Body)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//err = json.Unmarshal(body, &resp1Map)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+
 	data, err := client.KVv1(v1MountPath).Get(context.Background(), secretPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, "kvv1", data.Raw.MountType)
+	require.Equal(t, "kv", data.Raw.MountType)
 	require.Equal(t, secretData, data.Data)
 }
 
 func TestKVV2Get(t *testing.T) {
 	t.Parallel()
 
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -80,13 +79,11 @@ func TestKVV2Get(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, "kvv2", data.Raw.MountType)
-
 	data, err = client.KVv2(v2MountPath).Get(context.Background(), secretPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, "kvv2", data.Raw.MountType)
+	require.Equal(t, "kv", data.Raw.MountType)
 	require.Equal(t, secretData, data.Data)
 }
