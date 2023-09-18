@@ -10,11 +10,14 @@
     {{else}}
       {{yield}}
     {{/each}}
-    {{#if this.showPagination}}
-      <ListPagination
-        @page={{@items.meta.currentPage}}
-        @lastPage={{@items.meta.lastPage}}
-        @link={{@paginationRouteName}}
+    {{#if @showPagination}}
+      <Hds::Pagination::Numbered
+        @currentPage={{@items.meta.currentPage}}
+        @currentPageSize={{@items.meta.pageSize}}
+        @route={{this.router.currentRoute.name}}
+        @showSizeSelector={{false}}
+        @totalItems={{@items.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
         data-test-list-view-pagination
       />
     {{/if}}

@@ -111,7 +111,6 @@ Router.map(function () {
         this.route('control-groups-configure', { path: '/control-groups/configure' });
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
         this.route('namespaces', function () {
-          this.route('index', { path: '/' });
           this.route('create');
         });
         this.route('oidc', function () {
