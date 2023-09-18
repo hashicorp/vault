@@ -20,8 +20,6 @@ type KVv2 struct {
 	mountPath string
 }
 
-const Kvv2MountType = "kvv2"
-
 // KVMetadata is the full metadata for a given KV v2 secret.
 type KVMetadata struct {
 	CASRequired        bool                   `mapstructure:"cas_required"`
