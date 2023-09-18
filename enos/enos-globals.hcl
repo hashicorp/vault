@@ -20,7 +20,9 @@ globals {
     rhel   = ["nc"]
   }
   sample_attributes = {
-    aws_region = ["us-east-1", "us-west-2"]
+    # aws_region = ["us-east-1", "us-west-2"]
+    # NOTE(9/18/23): use more expensive regions temporarily until AWS network outage is resolved.
+    aws_region = ["us-east-2", "us-west-1"]
   }
   tags = merge({
     "Project Name" : var.project_name
