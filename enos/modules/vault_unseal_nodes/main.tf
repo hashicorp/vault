@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 # This module unseals the replication secondary follower nodes
 terraform {
   required_providers {
