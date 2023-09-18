@@ -4,7 +4,7 @@
 ~}}
 
 {{#if (and this.showWarning (is-after (now interval=1000) @expirationDate))}}
-  <Hds::Alert @type="page" @color="critical" as |A|>
+  <Hds::Alert @type="page" @color="critical" data-test-token-expired-banner as |A|>
     <A.Title>Error</A.Title>
     <A.Description>
       Your auth token expired on
@@ -15,6 +15,28 @@
 {{else}}
   <section class="section">
     <div class="container is-widescreen">
+      {{#if (and this.showWarning @allowingExpiration this.canDismiss)}}
+        <Hds::Alert
+          @type="page"
+          @color="warning"
+          @onDismiss={{fn (mut this.canDismiss) false}}
+          data-test-token-expiring-banner
+          as |A|
+        >
+          <A.Description>
+            We've stopped auto-renewing your token due to inactivity. It will expire in
+            {{date-from-now @expirationDate}}
+            on
+            {{date-format @expirationDate "MMMM do yyyy, h:mm:ss a"}}.
+          </A.Description>
+          <A.Link::Standalone
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            @text="Reauthenticate"
+            @route="vault.cluster.logout"
+          />
+        </Hds::Alert>
+      {{/if}}
       {{yield}}
     </div>
   </section>

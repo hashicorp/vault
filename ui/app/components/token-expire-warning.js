@@ -5,9 +5,11 @@
 
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
 export default class TokenExpireWarning extends Component {
   @service router;
+  @tracked canDismiss = true;
 
   get showWarning() {
     const currentRoute = this.router.currentRouteName;
