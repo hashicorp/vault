@@ -11,8 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -478,6 +476,7 @@ func (d *autoSeal) StartHealthCheck() {
 				mLabels := []metrics.Label{{Name: "seal_wrapper_name", Value: sealWrapper.Name}}
 
 				wasHealthy := sealWrapper.IsHealthy()
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
 				if err := sealWrapper.CheckHealth(ctx, now); err != nil {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
@@ -489,8 +488,8 @@ func (d *autoSeal) StartHealthCheck() {
 					if wasHealthy {
 						d.logger.Debug("seal wrapper health test passed", "seal_name", sealWrapper.Name)
 					} else {
-						d.logger.Info("seal wrapper is now healthy again", "downtime", "seal_name", sealWrapper.Name,
-							now.Sub(sealWrapper.LastSeenHealthy()).String())
+						d.logger.Info("seal wrapper is now healthy again", "seal_name", sealWrapper.Name, "downtime",
+							now.Sub(lastSeenHealthy).String())
 					}
 					allUnhealthy = false
 				}
