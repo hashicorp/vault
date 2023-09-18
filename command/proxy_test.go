@@ -819,6 +819,167 @@ log_level = "trace"
 	wg.Wait()
 }
 
+// TestProxy_Cache_StaticSecretInvalidation Tests that the cache successfully caches a static secret
+// going through the Proxy, and that it gets invalidated by a POST.
+func TestProxy_Cache_StaticSecretInvalidation(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	cacheConfig := `
+cache {
+	cache_static_secrets = true
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+log_level = "trace"
+`, serverClient.Address(), cacheConfig, listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	secretData2 := map[string]interface{}{
+		"bar": "baz",
+	}
+
+	// Create kvv1 secret
+	err = serverClient.KVv1("secret").Put(context.Background(), "my-secret", secretData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We use raw requests so we can check the headers for cache hit/miss.
+	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
+	resp1, err := proxyClient.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cacheValue := resp1.Header.Get("X-Cache")
+	require.Equal(t, "MISS", cacheValue)
+
+	// Update the secret using the proxy client
+	err = proxyClient.KVv1("secret").Put(context.Background(), "my-secret", secretData2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp2, err := proxyClient.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cacheValue = resp2.Header.Get("X-Cache")
+	// This should miss too, as we just updated it
+	require.Equal(t, "MISS", cacheValue)
+
+	resp3, err := proxyClient.RawRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cacheValue = resp3.Header.Get("X-Cache")
+	// This should hit, as the third request should get the cached value
+	require.Equal(t, "HIT", cacheValue)
+
+	// Lastly, we check to make sure the actual data we received is
+	// as we expect. It's a little more awkward because of raw requests,
+	// but we make do.
+	resp1Map := map[string]interface{}{}
+	body, err := io.ReadAll(resp1.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(body, &resp1Map)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp1MapData := resp1Map["data"]
+	require.Equal(t, secretData, resp1MapData)
+
+	resp2Map := map[string]interface{}{}
+	body, err = io.ReadAll(resp2.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(body, &resp2Map)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp2MapData := resp2Map["data"]
+	require.Equal(t, secretData2, resp2MapData)
+
+	resp3Map := map[string]interface{}{}
+	body, err = io.ReadAll(resp3.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(body, &resp3Map)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp3MapData := resp2Map["data"]
+	require.Equal(t, secretData2, resp3MapData)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestProxy_ApiProxy_Retry Tests the retry functionalities of Vault Proxy's API Proxy
 func TestProxy_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
