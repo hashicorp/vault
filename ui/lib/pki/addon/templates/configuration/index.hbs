@@ -17,6 +17,13 @@
     @hasConfig={{this.model.hasConfig}}
   />
 {{else}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @route="configuration.create" data-test-configure-pki-button>
+        Configure
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
