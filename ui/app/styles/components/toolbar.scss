@@ -132,16 +132,3 @@ a.disabled.toolbar-link {
   margin: 0 $spacing-xs;
   width: 0;
 }
-
-// TODO kv engine cleanup
-.version-diff-toolbar {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-s;
-
-  .diff-status {
-    display: flex;
-    direction: rtl;
-    align-items: center;
-  }
-}
