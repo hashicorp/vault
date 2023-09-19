@@ -11,7 +11,7 @@ export default Route.extend(UnloadModel, {
   store: service(),
 
   queryParams: {
-    page: {
+    currentPage: {
       refreshModel: true,
     },
   },
@@ -30,7 +30,7 @@ export default Route.extend(UnloadModel, {
       return this.store
         .lazyPaginatedQuery('namespace', {
           responsePath: 'data.keys',
-          page: Number(params?.page) || 1,
+          page: Number(params?.currentPage) || 1,
         })
         .then((model) => {
           return model;

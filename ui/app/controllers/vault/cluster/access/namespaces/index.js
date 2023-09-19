@@ -7,6 +7,7 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
 export default Controller.extend({
+  queryParams: ['currentPage'],
   namespaceService: service('namespace'),
   accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
   currentNamespace: alias('namespaceService.path'),

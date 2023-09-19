@@ -54,4 +54,13 @@ export default class ListView extends Component {
     const items = pluralize(this.itemNoun);
     return `Your ${items} will be listed here. Add your first ${this.itemNoun} to get started.`;
   }
+
+  // callback from HDS pagination to set the queryParams currentPage
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        currentPage: page,
+      };
+    };
+  }
 }
