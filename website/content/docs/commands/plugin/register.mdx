@@ -44,14 +44,25 @@ flags](/vault/docs/commands) included on all commands.
 
 ### Command options
 
-- `-sha256` `(string: <required>)` - Checksum (SHA256) of the plugin binary.
+- `-sha256` `(string: <required>)` - SHA256 of the plugin binary or the oci_image
+  provided. This is required for all plugins.
 
-- `-args` `(string: "")` - List of arguments to pass to the binary plugin during
-  each invocation. Specify multiple arguments with commas.
+- `-args` `([]string: [])` - Argument to pass to the plugin when starting. This
+  flag can be specified multiple times to specify multiple args.
 
-- `-command` `(string: "")` - Name of the command to run to invoke the binary.
-  By default, this is the name of the plugin.
+- `-command` `(string: "")` - Command to spawn the plugin. This defaults to the
+  name of the plugin if both oci_image and command are unspecified.
 
-- `-version` `(string: "")` - Semantic version of the plugin to run from
-  the catalog. If unspecified, refers to the unversioned plugin registered with
-  the same name and type, or the built-in plugin, in that order of precedence.
+- `-env` `([]string: [])` - Environment variables to set for the plugin when
+  starting. This flag can be specified multiple times to specify multiple
+  environment variables.
+
+- `-oci_image` `(string: "")` - OCI image to run. If specified, setting command,
+  args, and env will update the container's entrypoint, args, and environment
+  variables (append-only) respectively.
+
+- `-runtime` `(string: "")` - Vault plugin runtime to use if -oci_image is
+  specified.
+
+- `-version` `(string: "")` - Semantic version of the plugin. Used as the tag
+  when specifying oci_image, but with any leading 'v' trimmed.
