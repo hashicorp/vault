@@ -1818,25 +1818,23 @@ func (m *ExpirationManager) deleteLockForLease(id string) {
 }
 
 func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
-	lep, ok := func() (any, bool) {
-		m.pendingLock.Lock()
-		defer m.pendingLock.Unlock()
-		return m.pending.Load(leaseID)
-	}()
-	if !ok {
+	le, err := m.loadEntry(context.Background(), leaseID)
+	if err != nil {
+		m.logger.Warn("Error fetching lease information", "error", err)
 		return
 	}
-	le := lep.(pendingInfo).cachedLeaseInfo
+	m.logger.Info("lease event", "le", le, "auth", le.Auth)
 	data := &logical.EventData{}
-	id := fmt.Sprintf("expire/%s/%d", leaseID, le.ExpireTime.Unix())
+	id := fmt.Sprintf("expire/%s/%d", le.Auth.EntityID, le.ExpireTime.Unix())
 	ns := namespace.RootNamespace
 	if le.namespace != nil {
 		ns = le.namespace
 	}
 	data.Id = id
-	data.EntityIds = []string{leaseID}
+	data.EntityIds = []string{le.ClientToken}
 	structMap := map[string]interface{}{
-		"id":                leaseID,
+		"token_entity_id":   le.Auth.EntityID,
+		"token_accessor":    le.Auth.Accessor,
 		"path":              le.Path,
 		"expire_time":       le.ExpireTime.Format(time.RFC3339),
 		"last_renewal_time": le.LastRenewalTime.Format(time.RFC3339),
