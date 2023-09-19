@@ -4759,6 +4759,46 @@ func TestHandlePoliciesPasswordList(t *testing.T) {
 				},
 			},
 		},
+		"list path/to/policy": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy"},
+				},
+			},
+		},
+		"policy ending with /": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy/"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy/"},
+				},
+			},
+		},
 		"storage failure": {
 			storage: new(logical.InmemStorage).FailList(true),
 

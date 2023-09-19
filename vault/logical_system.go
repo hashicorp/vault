@@ -3210,7 +3210,7 @@ const (
 )
 
 // handlePoliciesPasswordList returns the list of password policies
-func (b *SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
+func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "password_policy/")
 	if err != nil {
 		return nil, err
