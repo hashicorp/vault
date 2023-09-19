@@ -842,6 +842,112 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 }
 
+func TestBackend_StaticRole_Updates_RotationSchedule(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	data := map[string]interface{}{
+		"name":                "plugin-role-test-updates",
+		"db_name":             "mockv5",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_schedule":   "0 0 */2 * * *",
+		"rotation_window":     "1h",
+	}
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Read the role
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	rotation := resp.Data["rotation_schedule"].(string)
+	window := resp.Data["rotation_window"].(float64)
+
+	// update rotation_schedule and window
+	updateData := map[string]interface{}{
+		"name":              "plugin-role-test-updates",
+		"db_name":           "mockv5",
+		"username":          dbUser,
+		"rotation_schedule": "0 0 */1 * * *",
+		"rotation_window":   "2h",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      updateData,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// re-read the role
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	newRotation := resp.Data["rotation_schedule"].(string)
+	if newRotation == rotation {
+		t.Fatalf("expected change in rotation, but got old value:  %#v", newRotation)
+	}
+	newWindow := resp.Data["rotation_window"].(float64)
+	if newWindow == window {
+		t.Fatalf("expected change in rotation_window, but got old value:  %#v", newWindow)
+	}
+
+	// verify that rotation_schedule is only required when creating
+	updateData = map[string]interface{}{
+		"name":                "plugin-role-test-updates",
+		"db_name":             "mockv5",
+		"username":            dbUser,
+		"rotation_statements": testRoleStaticUpdateRotation,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      updateData,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+}
+
 func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()

@@ -10,13 +10,15 @@ import (
 	"strings"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/cap/ldap"
+
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
-	// Skipping on ARM, as this image can't run on ARM architecture
+	// note: this image isn't supported on arm64 architecture in CI.
+	// but if you're running on Apple Silicon, feel free to comment out the code below locally.
 	if strings.Contains(runtime.GOARCH, "arm") {
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
 	}
@@ -48,19 +50,16 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)
 		cfg.Url = connURL
-		logger := hclog.New(nil)
-		client := ldaputil.Client{
-			LDAP:   ldaputil.NewLDAP(),
-			Logger: logger,
-		}
 
-		conn, err := client.DialLDAP(cfg)
+		client, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg))
 		if err != nil {
 			return nil, err
 		}
-		defer conn.Close()
 
-		if _, err := client.GetUserBindDN(cfg, conn, "Philip J. Fry"); err != nil {
+		defer client.Close(ctx)
+
+		_, err = client.Authenticate(ctx, "Philip J. Fry", "fry")
+		if err != nil {
 			return nil, err
 		}
 

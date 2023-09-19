@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -46,38 +45,30 @@ func TestEventsSubscribe(t *testing.T) {
 		}
 	}
 
-	stop := atomic.Bool{}
-
 	const eventType = "abc"
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// send some events
-	go func() {
-		for !stop.Load() {
-			id, err := uuid.GenerateUUID()
-			if err != nil {
-				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
-			}
-			pluginInfo := &logical.EventPluginInfo{
-				MountPath: "secret",
-			}
-			err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
-				Id:        id,
-				Metadata:  nil,
-				EntityIds: nil,
-				Note:      "testing",
-			})
-			if err != nil {
-				core.Logger().Info("Error sending event, exiting sender", "error", err)
-			}
-			time.Sleep(100 * time.Millisecond)
+	sendEvents := func() error {
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
 		}
-	}()
-
-	t.Cleanup(func() {
-		stop.Store(true)
-	})
+		pluginInfo := &logical.EventPluginInfo{
+			MountPath: "secret",
+		}
+		err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			Id:        id,
+			Metadata:  nil,
+			EntityIds: nil,
+			Note:      "testing",
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
@@ -97,6 +88,10 @@ func TestEventsSubscribe(t *testing.T) {
 			conn.Close(websocket.StatusNormalClosure, "")
 		})
 
+		err = sendEvents()
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, msg, err := conn.Read(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -147,28 +142,24 @@ func TestBexprFilters(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-
-	// send duplicates to help avoid flaky tests in CI
-	sendEvents := func(ctx context.Context, eventTypes ...string) {
-		for i := 0; i < 10; i++ {
-			time.Sleep(10 * time.Millisecond)
-			for _, eventType := range eventTypes {
-				pluginInfo := &logical.EventPluginInfo{
-					MountPath: "secret",
-				}
-				ns := namespace.RootNamespace
-				id := eventType
-				err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
-					Id:        id,
-					Metadata:  nil,
-					EntityIds: nil,
-					Note:      "testing",
-				})
-				if err != nil {
-					return
-				}
+	sendEvents := func(ctx context.Context, eventTypes ...string) error {
+		for _, eventType := range eventTypes {
+			pluginInfo := &logical.EventPluginInfo{
+				MountPath: "secret",
+			}
+			ns := namespace.RootNamespace
+			id := eventType
+			err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+				Id:        id,
+				Metadata:  nil,
+				EntityIds: nil,
+				Note:      "testing",
+			})
+			if err != nil {
+				return err
 			}
 		}
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -185,7 +176,10 @@ func TestBexprFilters(t *testing.T) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	go sendEvents(ctx, "abc", "def", "xyz")
+	err = sendEvents(ctx, "abc", "def", "xyz")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// read until we time out
 	seen := map[string]bool{}
 	done := false
