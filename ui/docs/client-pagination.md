@@ -28,7 +28,7 @@ export default class ExampleRoute extends Route {
   model(params) {
     const { page, pageFilter, secret } = params;
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return this.store.lazyPaginatedQuery('secret-v2', {
+    return this.store.lazyPaginatedQuery('secret', {
       backend,
       id: secret,
       size,
@@ -55,7 +55,7 @@ When using the `lazyPaginatedQuery` method, the full response is cached in a [tr
 
 ```
 lazyCaches = new Map({
-  "secret-v2": <Map>,
+  "secret": <Map>,
   "kmip": <Map>,
   "namespace": <Map>,
 })
@@ -65,7 +65,7 @@ Within each top-level modelType, we need to separate cached responses based on t
 
 ```
 lazyCaches = new Map({
-  "secret-v2": {
+  "secret": {
     "{ backend: 'secret', id: '' }: <CachedData>,
     "{ backend: 'secret', id: 'app/' }: <CachedData>,
     "{ backend: 'kv2', id: '' }: <CachedData>,
@@ -78,7 +78,7 @@ The cached data at the given key is an object with `response` and `dataset` keys
 
 ```
 lazyCaches = new Map({
-  "secret-v2": {
+  "secret": {
     "{ backend: 'secret', id: 'app/' }: {
       dataset: ['some', 'nested', 'secrets'],
       response: {

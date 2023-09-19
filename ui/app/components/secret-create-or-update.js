@@ -14,19 +14,15 @@
  *  @model={{model}}
  *  @showAdvancedMode=true
  *  @modelForData={{@modelForData}}
- *  @isV2=true
  *  @secretData={{@secretData}}
- *  @canCreateSecretMetadata=false
  *  @buttonDisabled={{this.saving}}
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
- * @param {object} model - the route model, comes from secret-v2 ember record
+ * @param {object} model - the route model
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
  * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
- * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
  * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
  */
 
@@ -58,7 +54,7 @@ export default class SecretCreateOrUpdate extends Component {
   @service store;
 
   @action
-  setup(elem, [secretData, model, mode]) {
+  setup(elem, [secretData, mode]) {
     this.codemirrorString = secretData.toJSONString();
     this.validationMessages = {
       path: '',
@@ -66,13 +62,6 @@ export default class SecretCreateOrUpdate extends Component {
     // for validation, return array of path names already assigned
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
-    } else {
-      const adapter = this.store.adapterFor('secret-v2');
-      const type = { modelName: 'secret-v2' };
-      const query = { backend: model.backend };
-      adapter.query(this.store, type, query).then((result) => {
-        this.secretPaths = result.data.keys;
-      });
     }
     this.checkRows();
 
@@ -91,12 +80,6 @@ export default class SecretCreateOrUpdate extends Component {
       this.pathHasWhiteSpace(value);
       !value
         ? set(this.validationMessages, name, `${name} can't be blank.`)
-        : set(this.validationMessages, name, '');
-    }
-    // check duplicate on path
-    if (name === 'path' && value) {
-      this.secretPaths?.includes(value)
-        ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
     const values = Object.values(this.validationMessages);
@@ -121,45 +104,19 @@ export default class SecretCreateOrUpdate extends Component {
   persistKey(successCallback) {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
-    const isV2 = this.args.isV2;
+
     let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
-    const changed = secret.changedAttributes();
-    const changedKeys = Object.keys(changed);
 
     return secretData
       .save()
       .then(() => {
-        if (!this.args.canReadSecretData && secret.selectedVersion) {
-          delete secret.selectedVersion.secretData;
-        }
         if (!secretData.isError) {
-          if (isV2) {
-            secret.set('id', key);
-          }
-          // this secret.save() saves to the metadata endpoint. Only saved if metadata has been added
-          // and if the currentVersion attr changed that's because we added it (only happens if they don't have read access to metadata on mode = update which does not allow you to change metadata)
-          if (isV2 && changedKeys.length > 0 && changedKeys[0] !== 'currentVersion') {
-            // save secret metadata
-            secret
-              .save()
-              .then(() => {
-                this.saveComplete(successCallback, key);
-              })
-              .catch((e) => {
-                // when mode is not create the metadata error is handled in secret-edit-metadata
-                if (this.args.mode === 'create') {
-                  this.error = e.errors.join(' ');
-                }
-                return;
-              });
-          } else {
-            this.saveComplete(successCallback, key);
-          }
+          this.saveComplete(successCallback, key);
         }
       })
       .catch((error) => {
@@ -176,21 +133,6 @@ export default class SecretCreateOrUpdate extends Component {
   }
   transitionToRoute() {
     return this.router.transitionTo(...arguments);
-  }
-
-  get isCreateNewVersionFromOldVersion() {
-    const model = this.args.model;
-    if (!model) {
-      return false;
-    }
-    if (
-      !model.failedServerRead &&
-      !model.selectedVersion?.failedServerRead &&
-      model.selectedVersion?.version !== model.currentVersion
-    ) {
-      return true;
-    }
-    return false;
   }
 
   @(task(function* (name, value) {
