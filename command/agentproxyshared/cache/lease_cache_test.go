@@ -177,6 +177,61 @@ func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
 	require.Equal(t, index2, expectedIndex)
 }
 
+// TestCache_ComputeStaticSecretIndexIDNamespaces ensures that
+// computeStaticSecretCacheIndex correctly identifies that a request
+// with a namespace header and a request specifying the namespace in the path
+// are equivalent.
+func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	index := computeStaticSecretCacheIndex(req)
+	expectedIndex := "1abebf4b6da931de3aeca2a7b8bb349c47d8b8c09b7167d790988a991e6b18a3"
+	require.Equal(t, expectedIndex, index)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/ns1/foo/bar",
+			},
+		},
+	}
+
+	// We expect that computeStaticSecretCacheIndex will compute the same index
+	index2 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index2)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/ns1/foo/bar",
+			},
+		},
+	}
+
+	// We expect that computeStaticSecretCacheIndex will compute the same index
+	index3 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index3)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	index4 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index4)
+}
+
 func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
 		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
@@ -332,6 +387,9 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
 	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
 	responses := []*SendResponse{
+		response,
+		response,
+		response,
 		response,
 	}
 

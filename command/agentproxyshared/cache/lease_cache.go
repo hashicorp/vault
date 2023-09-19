@@ -824,6 +824,18 @@ func computeStaticSecretCacheIndex(req *SendRequest) string {
 	// /sys/capabilities endpoint to access this index
 	// without having to re-add the /v1
 	path := strings.TrimPrefix(req.Request.URL.Path, "/v1")
+	// Also, we have to ensure that if a namespace header was included, that
+	// it gets added to the path. We need to identify the same secret irrespective
+	// of if it's specified via header or not.
+	if header := req.Request.Header; header != nil {
+		if ns := header.Get(api.NamespaceHeaderName); ns != "" {
+			ns = strings.TrimSuffix(ns, "/")
+			if !strings.HasPrefix(ns, "/") {
+				ns = "/" + ns
+			}
+			path = ns + path
+		}
+	}
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
 }
 
