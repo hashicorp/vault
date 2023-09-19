@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { click } from '@ember/test-helpers';
+import { click, fillIn } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
 
 module('Acceptance | ldap | roles', function (hooks) {
@@ -76,5 +76,15 @@ module('Acceptance | ldap | roles', function (hooks) {
     await click('[data-test-breadcrumb="dynamic-role"]');
     await click('[data-test-edit]');
     assert.true(isURL('roles/dynamic/dynamic-role/edit'), 'Transitions to edit route from toolbar link');
+  });
+
+  test('it should clear roles page filter value on route exit', async function (assert) {
+    await fillIn('[data-test-filter-input]', 'foo');
+    assert
+      .dom('[data-test-filter-input]')
+      .hasValue('foo', 'Roles page filter value set after model refresh and rerender');
+    await click('[data-test-tab="libraries"]');
+    await click('[data-test-tab="roles"]');
+    assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');
   });
 });

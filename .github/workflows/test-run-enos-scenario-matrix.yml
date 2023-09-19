@@ -29,11 +29,15 @@ on:
       ssh-key-name:
         type: string
         default: ${{ github.event.repository.name }}-ci-ssh-key
-      vault-version:
-        required: true
+      vault-edition:
+        required: false
         type: string
+        default: oss
       # The Git commit SHA used as the revision when building vault
       vault-revision:
+        required: true
+        type: string
+      vault-version:
         required: true
         type: string
 
@@ -43,6 +47,7 @@ jobs:
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       sample: ${{ steps.metadata.outputs.sample }}
+      vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
@@ -56,6 +61,14 @@ jobs:
           sample="$(enos scenario sample observe ${{ inputs.sample-name }} --chdir ./enos --min 1 --max ${{ inputs.sample-max }} --seed "$(date +%s%N)" --format json | jq -c ".observation.elements")"
           echo "sample=$sample"
           echo "sample=$sample" >> "$GITHUB_OUTPUT"
+          if [[ "${{ inputs.vault-edition }}" == "oss" ]]; then
+            echo "vault-version=${{ inputs.vault-version }}" >> "$GITHUB_OUTPUT"
+          else
+            # shellcheck disable=2001
+            vault_version="$(sed 's/+ent/+${{ inputs.vault-edition }}/g' <<< '${{ inputs.vault-version }}')"
+            echo "vault-version=$vault_version"
+            echo "vault-version=$vault_version" >> "$GITHUB_OUTPUT"
+          fi
 
   # Run the Enos test scenario(s)
   run:
@@ -78,7 +91,7 @@ jobs:
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
       ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
-      ENOS_VAR_vault_product_version: ${{ inputs.vault-version }}
+      ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data

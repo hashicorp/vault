@@ -142,8 +142,8 @@ variable "vault_build_date" {
   default     = ""
 }
 
-variable "vault_enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+variable "vault_enable_audit_devices" {
+  description = "If true every audit device will be enabled"
   type        = bool
   default     = true
 }

@@ -47,11 +47,6 @@ export default class KeymgmtKeyEdit extends Component {
     return this.args.mode === 'create';
   }
 
-  @action
-  toggleModal(bool) {
-    this.isDeleteModalOpen = bool;
-  }
-
   @task
   @waitFor
   *saveKey(evt) {
