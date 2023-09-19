@@ -375,22 +375,15 @@ listener "tcp" {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var output string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		code := cmd.Run([]string{"-config", configPath})
 		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
-	}()
-
-	// defer agent shutdown
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
 	}()
 
 	select {
@@ -398,6 +391,15 @@ listener "tcp" {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
 	}
+
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+		if output != "" {
+			t.Fatalf("got a non-zero exit status: %s", output)
+		}
+	}()
 
 	//----------------------------------------------------
 	// Perform the tests
@@ -2612,22 +2614,15 @@ listener "tcp" {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var output string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		code := cmd.Run([]string{"-config", configPath})
 		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
-	}()
-
-	// defer agent shutdown
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
 	}()
 
 	select {
@@ -2635,6 +2630,15 @@ listener "tcp" {
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
+
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+		if output != "" {
+			t.Fatalf("got a non-zero exit status: %s", output)
+		}
+	}()
 
 	conf := api.DefaultConfig()
 	conf.Address = "http://" + listenAddr
@@ -2910,20 +2914,14 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	ui, cmd := testAgentCommand(t, logger)
 
+	var output string
 	wg.Add(1)
 	args := []string{"-config", configFile.Name()}
 	go func() {
 		if code := cmd.Run(args); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
-	}()
-
-	// defer agent shutdown
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
 	}()
 
 	testCertificateName := func(cn string) error {
@@ -2985,6 +2983,14 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
+
+	// Shut down
+	cmd.ShutdownCh <- struct{}{}
+	wg.Wait()
+
+	if output != "" {
+		t.Fatalf("got a non-zero exit status: %s", output)
+	}
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
@@ -3028,20 +3034,14 @@ vault {
 
 	cmd.startedCh = make(chan struct{})
 
+	var output string
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		if code := cmd.Run([]string{"-config", configPath}); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
-	}()
-
-	// defer agent shutdown
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
 	}()
 
 	select {
@@ -3056,6 +3056,13 @@ vault {
 	case <-cmd.reloadedCh:
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+
+	if output != "" {
+		t.Fatalf("got a non-zero exit status: %s", output)
 	}
 }
 

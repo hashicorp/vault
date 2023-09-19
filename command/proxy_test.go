@@ -1171,20 +1171,14 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	ui, cmd := testProxyCommand(t, logger)
 
+	var output string
 	wg.Add(1)
 	args := []string{"-config", configFile.Name()}
 	go func() {
 		if code := cmd.Run(args); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
-	}()
-
-	defer func() {
-		// Shut down
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
 	}()
 
 	testCertificateName := func(cn string) error {
@@ -1245,5 +1239,13 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
+	}
+
+	// Shut down
+	cmd.ShutdownCh <- struct{}{}
+	wg.Wait()
+
+	if output != "" {
+		t.Fatalf("got a non-zero exit status: %s", output)
 	}
 }
