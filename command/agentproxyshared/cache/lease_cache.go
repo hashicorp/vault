@@ -568,6 +568,15 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 }
 
 func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, resp *SendResponse, index *cachememdb.Index) error {
+	// We must hold a lock for the index while it's being updated.
+	// We prepend "index/" to this lock so that it's distinct to the lock
+	// being held for inflight requests.
+	// We keep the two locking mechanisms distinct, so that it's only writes
+	// that have to be serial.
+	lock := locksutil.LockForKey(c.idLocks, "index/"+index.ID)
+	lock.Lock()
+	defer lock.Unlock()
+
 	// If a cached version of this secret exists, we now have access, so
 	// we don't need to re-cache, just update index.Tokens
 	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, index.ID)
