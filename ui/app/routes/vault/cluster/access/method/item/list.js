@@ -22,13 +22,13 @@ export default Route.extend(ListRoute, {
 
   model() {
     const { type, authMethodPath, itemType } = this.getMethodAndModelInfo();
-    const { page, pageFilter } = this.paramsFor(this.routeName);
+    const { currentPage, pageFilter } = this.paramsFor(this.routeName);
     const modelType = `generated-${singularize(itemType)}-${type}`;
 
     return this.store
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',
-        page: page,
+        page: currentPage,
         pageFilter: pageFilter,
         type: itemType,
         id: authMethodPath,

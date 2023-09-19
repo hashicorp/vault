@@ -7,7 +7,7 @@ import Mixin from '@ember/object/mixin';
 
 export default Mixin.create({
   queryParams: {
-    page: {
+    currentPage: {
       refreshModel: true,
     },
     pageFilter: {
@@ -20,7 +20,7 @@ export default Mixin.create({
     this._super(...arguments);
     controller.setProperties({
       filter: pageFilter || '',
-      page: resolvedModel?.meta?.currentPage || 1,
+      currentPage: resolvedModel?.meta?.currentPage || 1,
     });
   },
 

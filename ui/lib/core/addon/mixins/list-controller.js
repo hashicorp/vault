@@ -10,11 +10,11 @@ import commonPrefix from 'core/utils/common-prefix';
 
 export default Mixin.create({
   queryParams: {
-    page: 'page',
+    currentPage: 'currentPage',
     pageFilter: 'pageFilter',
   },
 
-  page: 1,
+  currentPage: 1,
   pageFilter: null,
   filter: null,
   filterFocused: false,
