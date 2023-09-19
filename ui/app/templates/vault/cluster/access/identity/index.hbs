@@ -97,11 +97,14 @@
     </LinkedBlock>
   {{/each}}
 
-  <ListPagination
+  <Hds::Pagination::Numbered
     @currentPage={{this.model.meta.currentPage}}
     @currentPageSize={{this.model.meta.pageSize}}
     @route="vault.cluster.access.identity.index"
+    @showSizeSelector={{false}}
     @totalItems={{this.model.meta.total}}
+    @queryFunction={{this.paginationQueryParams}}
+    data-test-pagination
   />
 
 {{else}}
