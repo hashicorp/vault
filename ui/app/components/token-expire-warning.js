@@ -13,8 +13,6 @@ export default class TokenExpireWarning extends Component {
   @service auth;
   @service router;
   @tracked canDismiss = true;
-  @tracked isRenewing = false;
-  @tracked renewError = '';
 
   handleRenew() {
     return new Promise((resolve) => {
