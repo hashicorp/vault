@@ -96,13 +96,14 @@
       </div>
     </LinkedBlock>
   {{/each}}
-  {{#if (gt this.model.meta.lastPage 1)}}
-    <ListPagination
-      @page={{this.model.meta.currentPage}}
-      @lastPage={{this.model.meta.lastPage}}
-      @link="vault.cluster.access.identity.index"
-    />
-  {{/if}}
+
+  <ListPagination
+    @currentPage={{this.model.meta.currentPage}}
+    @currentPageSize={{this.model.meta.pageSize}}
+    @route="vault.cluster.access.identity.index"
+    @totalItems={{this.model.meta.total}}
+  />
+
 {{else}}
   <EmptyState
     @title="No {{pluralize this.identityType}} yet"
