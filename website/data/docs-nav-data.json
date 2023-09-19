@@ -1477,6 +1477,45 @@
     ]
   },
   {
+    "title": "Secrets Sync",
+    "badge": {
+      "text": "ENT",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "sync",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "AWS Secrets Manager",
+        "path": "sync/awssm"
+      },
+      {
+        "title": "Azure Key Vault",
+        "path": "sync/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "sync/gcpsm"
+      },
+      {
+        "title": "GitHub",
+        "path": "sync/github"
+      },
+      {
+        "title": "Vercel Project",
+        "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
     "title": "Auth Methods",
     "routes": [
       {

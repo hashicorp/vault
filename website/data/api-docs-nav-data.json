@@ -703,6 +703,15 @@
         ]
       },
       {
+        "title": "<code>/sys/sync</code>",
+        "path": "system/secrets-sync",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/tools</code>",
         "path": "system/tools"
       },
