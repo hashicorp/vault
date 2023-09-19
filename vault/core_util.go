@@ -76,6 +76,8 @@ func (c *Core) UndoLogsEnabled() bool            { return false }
 func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
 func (c *Core) PersistUndoLogs() error           { return nil }
 
+func (c *Core) ReindexInProgress() bool { return false }
+
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}
 
