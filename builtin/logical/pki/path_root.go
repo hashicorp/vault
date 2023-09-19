@@ -121,6 +121,7 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	// explicitly versus deleting everything.
 	resp := &logical.Response{}
 	resp.AddWarning("DELETE /root deletes all keys and issuers; prefer the new DELETE /key/:key_ref and DELETE /issuer/:issuer_ref for finer granularity, unless removal of all keys and issuers is desired.")
+	go logical.SendEvent(ctx, b, "pki/ca-delete-root")
 	return resp, nil
 }
 
@@ -321,6 +322,23 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	resp = addWarnings(resp, warnings)
 
+	// send event
+	go func() {
+		metadata := []string{
+			logical.EventMetadataDataPath, fmt.Sprintf("issuer/%s/json", string(myIssuer.ID)),
+			logical.EventMetadataOperation, "ca-generate-root",
+			"format", format,
+		}
+		metadata = append(metadata, logical.MakeMetadataPairs(req.Data, "common_name")...)
+		metadata = append(metadata, logical.MakeMetadataPairs(resp.Data,
+			"serial_number", "issuer_id", "issuer_name", "key_id",
+			"key_name", "certificate", "expiration")...)
+		err := logical.SendEvent(ctx, b, "pki/ca-generate-root", metadata...)
+		if err != nil {
+			b.Logger().Warn("Error sending event", "error", err)
+		}
+	}()
+
 	return resp, nil
 }
 
@@ -430,7 +448,29 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	}
 	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
+	// send event
+	go func() {
+		metadata := []string{
+			logical.EventMetadataOperation, "issuer-sign-intermediate",
+			logical.EventMetadataDataPath, fmt.Sprintf("cert/%s", normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)),
+			"format", format,
+			"issuer_ref", issuerName,
+		}
+		metadata = append(metadata, logical.MakeMetadataPairs(resp.Data,
+			"expiration", "serial_number", "certificate", "issuing_ca", "ca_chain")...)
+		metadata = append(metadata, caInfoBundleToKeys(signingBundle, "issuer_")...)
+		err := logical.SendEvent(ctx, b, "pki/issuer-sign-intermediate", metadata...)
+		if err != nil {
+			b.Logger().Warn("Error sending event", "error", err)
+		}
+	}()
 	return resp, nil
+}
+
+func caInfoBundleToKeys(bundle *certutil.CAInfoBundle, prefix string) []string {
+	return []string{
+		prefix + "serial_number", serialFromBigInt(bundle.Certificate.SerialNumber),
+	}
 }
 
 func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
@@ -599,6 +639,21 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		Type:  "CERTIFICATE",
 		Bytes: newCert,
 	})
+
+	// send event
+	go func() {
+		metadata := []string{
+			logical.EventMetadataOperation, "issuer-sign-self-issued",
+			"issuer_ref", issuerName,
+			"certificate", strings.TrimSpace(string(pemCert)),
+			"issuing_ca", signingCB.Certificate,
+		}
+		metadata = append(metadata, caInfoBundleToKeys(signingBundle, "issuer_")...)
+		err := logical.SendEvent(ctx, b, "pki/issuer-sign-self-issued", metadata...)
+		if err != nil {
+			b.Logger().Warn("Error sending event", "error", err)
+		}
+	}()
 
 	return &logical.Response{
 		Data: map[string]interface{}{

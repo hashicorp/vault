@@ -5,6 +5,7 @@ package logical
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-uuid"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -66,6 +67,23 @@ func SendEvent(ctx context.Context, sender EventSender, eventType string, metada
 		ev.Metadata.Fields[extraMetadataArgument] = structpb.NewStringValue(metadataPairs[len(metadataPairs)-1])
 	}
 	return sender.SendEvent(ctx, EventType(eventType), ev)
+}
+
+// MakeMetadataPairs is a helper method to extract key–value pairs from a map (e.g., a logical.Response.Data).
+// It coerces each value to a string. If a key is not present in the map, then it will not be present in the
+// return value. The return value is a slice with an even number of strings, suitable to be passed to
+// SendEvent.
+func MakeMetadataPairs(resp map[string]interface{}, keys ...string) []string {
+	pairs := make([]string, 0, len(keys)*2)
+	for _, key := range keys {
+		value, ok := resp[key]
+		if !ok {
+			continue
+		}
+		pairs = append(pairs, key)
+		pairs = append(pairs, fmt.Sprintf("%v", value))
+	}
+	return pairs
 }
 
 // EventReceivedBexpr is used for evaluating boolean expressions with go-bexpr.
