@@ -18,6 +18,15 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   tab: '',
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
   filterIsFolder: computed('filter', function () {
     return !!keyIsFolder(this.filter);
   }),
