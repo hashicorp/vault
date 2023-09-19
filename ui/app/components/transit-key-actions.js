@@ -214,13 +214,6 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach((param) => this.set(param, null));
     },
 
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
-      this.toggleProperty('isModalActive');
-    },
-
     doSubmit(data, options = {}, maybeEvent) {
       const event = options.type === 'submit' ? options : maybeEvent;
       if (event) {
