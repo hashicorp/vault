@@ -387,17 +387,17 @@ listener "tcp" {
 		wg.Done()
 	}()
 
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Fatalf("timeout")
-	}
-
 	// defer agent shutdown
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
 	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
 
 	//----------------------------------------------------
 	// Perform the tests
@@ -2624,17 +2624,17 @@ listener "tcp" {
 		wg.Done()
 	}()
 
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
-	}
-
 	// defer agent shutdown
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
 	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
 
 	conf := api.DefaultConfig()
 	conf.Address = "http://" + listenAddr
@@ -2920,6 +2920,12 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 		wg.Done()
 	}()
 
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
 	testCertificateName := func(cn string) error {
 		conn, err := tls.Dial("tcp", "127.0.0.1:8100", &tls.Config{
 			RootCAs: certPool,
@@ -2979,11 +2985,6 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
-
-	// Shut down
-	cmd.ShutdownCh <- struct{}{}
-
-	wg.Wait()
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
@@ -3037,6 +3038,12 @@ vault {
 		wg.Done()
 	}()
 
+	// defer agent shutdown
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
 	select {
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
@@ -3050,9 +3057,6 @@ vault {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
 	}
-
-	close(cmd.ShutdownCh)
-	wg.Wait()
 }
 
 // Get a randomly assigned port and then free it again before returning it.
