@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Ember from 'ember';
 import { resolve } from 'rsvp';
@@ -15,8 +14,8 @@ import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
+  router: service(),
   pathHelp: service('path-help'),
-  wizard: service(),
 
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
@@ -33,9 +32,7 @@ export default Route.extend(UnloadModelRoute, {
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const backendType = backendModel.engineType;
     let path;
-    if (backendModel.isV2KV) {
-      path = `${backend}/data/${secret}`;
-    } else if (backendType === 'transit') {
+    if (backendType === 'transit') {
       path = backend + '/keys/' + secret;
     } else if (backendType === 'ssh' || backendType === 'aws') {
       path = backend + '/roles/' + secret;
@@ -84,9 +81,9 @@ export default Route.extend(UnloadModelRoute, {
       const mode = this.routeName.split('.').pop();
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
-          return this.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
+          return this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
-          return this.transitionTo('vault.cluster.secrets.backend.list-root');
+          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
         }
       }
     });
@@ -95,7 +92,7 @@ export default Route.extend(UnloadModelRoute, {
   buildModel(secret, queryParams) {
     const backend = this.enginePathParam();
     const modelType = this.modelType(backend, secret, { queryParams });
-    if (['secret', 'secret-v2'].includes(modelType)) {
+    if (modelType === 'secret') {
       return resolve();
     }
     return this.pathHelp.getNewModel(modelType, backend);
@@ -111,95 +108,11 @@ export default Route.extend(UnloadModelRoute, {
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
       cubbyhole: 'secret',
-      kv: backendModel.modelTypeForKV,
+      kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
-      generic: backendModel.modelTypeForKV,
+      generic: 'secret',
     };
     return types[type];
-  },
-
-  getTargetVersion(currentVersion, paramsVersion) {
-    if (currentVersion) {
-      // we have the secret metadata, so we can read the currentVersion but give priority to any
-      // version passed in via the url
-      return parseInt(paramsVersion || currentVersion, 10);
-    } else {
-      // we've got a stub model because don't have read access on the metadata endpoint
-      return paramsVersion ? parseInt(paramsVersion, 10) : null;
-    }
-  },
-
-  async fetchV2Models(capabilities, secretModel, params) {
-    const backend = this.enginePathParam();
-    const backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
-    const targetVersion = this.getTargetVersion(secretModel.currentVersion, params.version);
-
-    // if we have the metadata, a list of versions are part of the payload
-    const version = secretModel.versions && secretModel.versions.findBy('version', targetVersion);
-    // if it didn't fail the server read, and the version is not attached to the metadata,
-    // this should 404
-    if (!version && secretModel.failedServerRead !== true) {
-      const error = new AdapterError();
-      set(error, 'httpStatus', 404);
-      throw error;
-    }
-    // manually set the related model
-    secretModel.set('engine', backendModel);
-
-    secretModel.set(
-      'selectedVersion',
-      await this.fetchV2VersionModel(capabilities, secretModel, version, targetVersion)
-    );
-    return secretModel;
-  },
-
-  async fetchV2VersionModel(capabilities, secretModel, version, targetVersion) {
-    const secret = this.secretParam();
-    const backend = this.enginePathParam();
-
-    // v2 versions have a composite ID, we generated one here if we need to manually set it
-    // after a failed fetch later;
-    const versionId = targetVersion ? [backend, secret, targetVersion] : [backend, secret];
-
-    let versionModel;
-    try {
-      if (secretModel.failedServerRead) {
-        // we couldn't read metadata, so we want to directly fetch the version
-        versionModel = await this.store.findRecord('secret-v2-version', JSON.stringify(versionId), {
-          reload: true,
-        });
-      } else {
-        // we may have previously errored, so roll it back here
-        version.rollbackAttributes();
-        // if metadata read was successful, the version we have is only a partial model
-        // trigger reload to fetch the whole version model
-        versionModel = await version.reload();
-      }
-    } catch (error) {
-      // cannot read the data endpoint but still allow them to see show page to access metadata if they have permissions
-      if (error.httpStatus === 403) {
-        // versionModel is then a partial model from the metadata (if we have read there), or
-        // we need to create one on the client
-        if (version) {
-          version.set('failedServerRead', true);
-          versionModel = version;
-        } else {
-          this.store.push({
-            data: {
-              type: 'secret-v2-version',
-              id: JSON.stringify(versionId),
-              attributes: {
-                failedServerRead: true,
-              },
-            },
-          });
-          versionModel = this.store.peekRecord('secret-v2-version', JSON.stringify(versionId));
-        }
-      } else {
-        throw error;
-      }
-    }
-    return versionModel;
   },
 
   handleSecretModelError(capabilities, secretId, modelType, error) {
@@ -207,8 +120,6 @@ export default Route.extend(UnloadModelRoute, {
     if (!capabilities.get('canUpdate') && modelType === 'secret') {
       throw error;
     }
-    // don't have access to the metadata for v2 or the secret for v1,
-    // so we make a stub model and mark it as `failedServerRead`
     this.store.push({
       data: {
         id: secretId,
@@ -222,16 +133,7 @@ export default Route.extend(UnloadModelRoute, {
     return secretModel;
   },
 
-  // wizard will pause unless we manually continue it
-  updateWizard(params) {
-    // verify that keymgmt tutorial is in progress
-    if (params.itemType === 'provider' && this.wizard.nextStep === 'displayProvider') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
-  },
-
   async model(params, { to: { queryParams } }) {
-    this.updateWizard(params);
     let secret = this.secretParam();
     const backend = this.enginePathParam();
     const modelType = this.modelType(backend, secret, { queryParams });
@@ -251,9 +153,9 @@ export default Route.extend(UnloadModelRoute, {
     try {
       secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
     } catch (err) {
-      // we've failed the read request, but if it's a kv-type backend, we want to
+      // we've failed the read request, but if it's a kv-v1 type backend, we want to
       // do additional checks of the capabilities
-      if (err.httpStatus === 403 && (modelType === 'secret-v2' || modelType === 'secret')) {
+      if (err.httpStatus === 403 && modelType === 'secret') {
         await capabilities;
         secretModel = this.handleSecretModelError(capabilities, secret, modelType, err);
       } else {
@@ -261,11 +163,7 @@ export default Route.extend(UnloadModelRoute, {
       }
     }
     await capabilities;
-    if (modelType === 'secret-v2') {
-      // after the the base model fetch, kv-v2 has a second associated
-      // version model that contains the secret data
-      secretModel = await this.fetchV2Models(capabilities, secretModel, params);
-    }
+
     return {
       secret: secretModel,
       capabilities,
@@ -320,32 +218,20 @@ export default Route.extend(UnloadModelRoute, {
       if (!model.hasDirtyAttributes || model.isDeleted) {
         return true;
       }
-      // TODO kv engine cleanup: below is KV v2 logic, remove with engine work
-      const version = model.get('selectedVersion');
+
       const changed = model.changedAttributes();
       const changedKeys = Object.keys(changed);
 
-      // when you don't have read access on metadata we add currentVersion to the model
-      // this makes it look like you have unsaved changes and prompts a browser warning
-      // here we are specifically ignoring it.
-      if (mode === 'edit' && changedKeys.length && changedKeys[0] === 'currentVersion') {
-        version && version.rollbackAttributes();
-        return true;
-      }
       // until we have time to move `backend` on a v1 model to a relationship,
       // it's going to dirty the model state, so we need to look for it
       // and explicity ignore it here
-      if (
-        (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
-        (mode !== 'show' && version && version.hasDirtyAttributes)
-      ) {
+      if (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') {
         if (
           Ember.testing ||
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
         ) {
-          version && version.rollbackAttributes();
           model && model.rollbackAttributes();
           this.unloadModel();
           return true;

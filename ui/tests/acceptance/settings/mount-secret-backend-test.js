@@ -188,7 +188,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await configPage.visit({ backend: enginePath });
     await settled();
-    assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
