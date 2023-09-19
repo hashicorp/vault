@@ -869,7 +869,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
