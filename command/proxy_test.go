@@ -1181,6 +1181,12 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 		wg.Done()
 	}()
 
+	defer func() {
+		// Shut down
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
 	testCertificateName := func(cn string) error {
 		conn, err := tls.Dial("tcp", "127.0.0.1:8100", &tls.Config{
 			RootCAs: certPool,
@@ -1240,9 +1246,4 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
-
-	// Shut down
-	cmd.ShutdownCh <- struct{}{}
-
-	wg.Wait()
 }
