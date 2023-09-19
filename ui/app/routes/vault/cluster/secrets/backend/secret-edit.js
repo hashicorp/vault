@@ -8,11 +8,10 @@ import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
-export default Route.extend(UnloadModelRoute, {
+export default Route.extend({
   store: service(),
   router: service(),
   pathHelp: service('path-help'),
@@ -233,7 +232,6 @@ export default Route.extend(UnloadModelRoute, {
           )
         ) {
           model && model.rollbackAttributes();
-          this.unloadModel();
           return true;
         } else {
           transition.abort();
