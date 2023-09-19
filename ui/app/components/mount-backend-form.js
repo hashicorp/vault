@@ -39,7 +39,7 @@ export default class MountBackendForm extends Component {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
     if (noTeardown && this.args?.mountModel) {
-      this.args.mountModel.rollbackAttributes();
+      this.args.mountModel.unloadRecord();
     }
     super.willDestroy(...arguments);
   }
