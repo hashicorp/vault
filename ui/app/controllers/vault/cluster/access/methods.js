@@ -16,9 +16,9 @@ export default class VaultClusterAccessMethodsController extends Controller {
   @tracked selectedAuthType = null;
   @tracked selectedAuthName = null;
 
-  queryParams = ['page, pageFilter'];
+  queryParams = ['currentPage, pageFilter'];
 
-  page = 1;
+  currentPage = 1;
   pageFilter = null;
   filter = null;
 

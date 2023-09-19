@@ -25,7 +25,7 @@ export default Route.extend(ListRoute, {
         scope,
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
-        page: params.page,
+        page: params?.currentPage || 1,
         pageFilter: params.pageFilter,
       })
       .catch((err) => {

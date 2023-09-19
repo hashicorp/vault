@@ -23,7 +23,7 @@ export default Route.extend(ListRoute, {
         backend: this.secretMountPath.currentPath,
         scope: this.scope(),
         responsePath: 'data.keys',
-        page: params.page,
+        page: params?.currentPage || 1,
         pageFilter: params.pageFilter,
       })
       .catch((err) => {

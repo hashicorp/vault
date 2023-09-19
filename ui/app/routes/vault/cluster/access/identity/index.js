@@ -16,7 +16,7 @@ export default Route.extend(ListRoute, {
     return this.store
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',
-        page: params.page,
+        page: params?.currentPage || 1,
         pageFilter: params.pageFilter,
       })
       .catch((err) => {
