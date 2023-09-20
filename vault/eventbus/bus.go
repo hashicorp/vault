@@ -127,7 +127,6 @@ func (bus *EventBus) SendEventInternal(ctx context.Context, ns *namespace.Namesp
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
-	bus.logger.Debug("Sending event", "event", eventReceived)
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
