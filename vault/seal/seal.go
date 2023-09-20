@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -62,10 +63,16 @@ type SealGenerationInfo struct {
 func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
 	previousShamirConfigured := false
+	existingSealNameAndType := "[]"
+	configuredSealNameAndType := sealNameAndTypeAsStr(sgi.Seals)
+
 	if existingSgi != nil {
+		existingSealNameAndType = sealNameAndTypeAsStr(existingSgi.Seals)
 		if sgi.Generation == existingSgi.Generation {
-			if !cmp.Equal(sgi.Seals, existingSgi.Seals) {
-				return errors.New("existing seal generation is the same, but the configured seals are different")
+			if !haveMatchingSeals(sgi.Seals, existingSgi.Seals) {
+				return fmt.Errorf("existing seal generation is the same, but the configured seals are different\n"+
+					"Existing seals: %v\n"+
+					"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 			}
 			return nil
 		}
@@ -98,35 +105,104 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 	numSealsToDelete := existingSealsLen - len(sgi.Seals)
 	switch {
 	case numSealsToAdd > 1:
-		return errors.New("cannot add more than one seal")
+		return fmt.Errorf("cannot add more than one seal\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 
 	case numSealsToDelete > 1:
-		return errors.New("cannot delete more than one seal")
+		return fmt.Errorf("cannot delete more than one seal\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 
 	case !previousShamirConfigured && existingSgi != nil && !haveCommonSeal(existingSgi.Seals, sgi.Seals):
 		// With a previously configured shamir seal, we are either going from [shamir]->[auto] or [shamir]->[another shamir],
 		// in which case we cannot have a common seal because shamir seals cannot be set to disabled, they can only be deleted.
-		return errors.New("must have at least one seal in common with the old generation")
+		return fmt.Errorf("must have at least one seal in common with the old generation\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 	}
 	return nil
 }
 
-func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) (result bool) {
+func sealNameAndTypeAsStr(seals []*configutil.KMS) string {
+	info := []string{}
+	for _, seal := range seals {
+		info = append(info, fmt.Sprintf("Name: %s Type: %s", seal.Name, seal.Type))
+	}
+	return fmt.Sprintf("[%s]", strings.Join(info, ", "))
+}
+
+// haveMatchingSeals verifies that we have the corresponding matching seals by name and type, config and other
+// properties are ignored in the comparison
+func haveMatchingSeals(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) bool {
+	if len(existingSealKmsConfigs) != len(newSealKmsConfigs) {
+		return false
+	}
+
+	for _, existingSealKmsConfig := range existingSealKmsConfigs {
+		found := false
+		for _, newSealKmsConfig := range newSealKmsConfigs {
+			if cmp.Equal(existingSealKmsConfig, newSealKmsConfig, compareKMSConfigByNameAndType()) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// haveCommonSeal verifies that we have at least one matching seal across
+// the inputs by name and type, config and other properties are ignored in
+// the comparison
+func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) bool {
 	for _, existingSealKmsConfig := range existingSealKmsConfigs {
 		for _, newSealKmsConfig := range newSealKmsConfigs {
-			// Clone the existing seal config and set 'Disabled' and 'Priority' fields same as the
-			// new seal config, because there might be a case where a seal might be disabled in
-			// current config, but might be stored as enabled previously, and this still needs to
-			// be considered as a common seal.
-			clonedSgi := existingSealKmsConfig.Clone()
-			clonedSgi.Disabled = newSealKmsConfig.Disabled
-			clonedSgi.Priority = newSealKmsConfig.Priority
-			if cmp.Equal(clonedSgi, newSealKmsConfig.Clone()) {
+			// Technically we might be matching the "wrong" seal if the old seal was renamed to
+			// "transit-disabled" and we have a new seal named transit. There isn't any way for
+			// us to properly distinguish between them
+			if cmp.Equal(existingSealKmsConfig, newSealKmsConfig, compareKMSConfigByNameAndType()) {
 				return true
 			}
 		}
 	}
+
+	// We might have renamed a disabled seal that was previously used so attempt to match by
+	// removing the "-disabled" suffix
+	for _, seal := range findRenamedDisabledSeals(newSealKmsConfigs) {
+		clonedSeal := seal.Clone()
+		clonedSeal.Name = strings.TrimSuffix(clonedSeal.Name, configutil.KmsRenameDisabledSuffix)
+
+		for _, existingSealKmsConfig := range existingSealKmsConfigs {
+			if cmp.Equal(existingSealKmsConfig, clonedSeal, compareKMSConfigByNameAndType()) {
+				return true
+			}
+		}
+	}
+
 	return false
+}
+
+func findRenamedDisabledSeals(configs []*configutil.KMS) []*configutil.KMS {
+	diabledSeals := []*configutil.KMS{}
+	for _, seal := range configs {
+		if seal.Disabled && strings.HasSuffix(seal.Name, configutil.KmsRenameDisabledSuffix) {
+			diabledSeals = append(diabledSeals, seal)
+		}
+	}
+	return diabledSeals
+}
+
+func compareKMSConfigByNameAndType() cmp.Option {
+	// We only match based on name and type to avoid configuration changes such
+	// as a Vault token change in the config map from eliminating the match and
+	// preventing startup on a matching seal.
+	return cmp.Comparer(func(a, b *configutil.KMS) bool {
+		return a.Name == b.Name && a.Type == b.Type
+	})
 }
 
 // SetRewrapped updates the SealGenerationInfo's rewrapped status to the provided value.
