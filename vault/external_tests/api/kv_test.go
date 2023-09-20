@@ -86,7 +86,7 @@ func TestKVV2Get_RequestForwarding(t *testing.T) {
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	client = cluster.Cores[0].Client
+	client := cluster.Cores[0].Client
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbys := testhelpers.DeriveStandbyCores(t, cluster)
 	standby := standbys[0].Client
