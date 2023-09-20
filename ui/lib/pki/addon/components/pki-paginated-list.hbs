@@ -1,32 +1,19 @@
 <Toolbar>
-  {{#if @list.meta.total}}
-    <ToolbarFilters>
-      {{#if (and @hasConfig @list.meta.total)}}
-        <FilterInput
-          @placeholder={{@filterPlaceholder}}
-          @value={{this.pageFilter}}
-          @wait={{500}}
-          @autofocus={{true}}
-          @onInput={{this.onFilterChange}}
-        />
-      {{/if}}
-    </ToolbarFilters>
-    <ToolbarActions>
-      {{yield to="actions"}}
-    </ToolbarActions>
-  {{/if}}
+  <ToolbarActions>
+    {{yield to="actions"}}
+  </ToolbarActions>
 </Toolbar>
 
 {{#if @hasConfig}}
   {{#if @list.meta.total}}
+    {{yield to="description"}}
     {{yield @list to="list"}}
-
     <Hds::Pagination::Numbered
       @currentPage={{@list.meta.currentPage}}
       @currentPageSize={{@list.meta.pageSize}}
       @route={{@listRoute}}
       @showSizeSelector={{false}}
-      @totalItems={{@list.meta.filteredTotal}}
+      @totalItems={{@list.meta.total}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />
