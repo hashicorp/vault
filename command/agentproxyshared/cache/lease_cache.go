@@ -209,8 +209,9 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 	var token string
 	if req != nil {
 		token = req.Token
-		if req.Request.Method != http.MethodGet {
-			// This isn't a GET, so we should short-circuit and invalidate the cache
+		// HEAD and OPTIONS are included as future-proofing, since neither of those modify the resource either.
+		if req.Request.Method != http.MethodGet && req.Request.Method != http.MethodHead && req.Request.Method != http.MethodOptions {
+			// This must be an update to the resource, so we should short-circuit and invalidate the cache
 			// as we know the cache is now stale.
 			c.logger.Debug("evicting index from cache, as non-GET received", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
 			err := c.db.Evict(cachememdb.IndexNameID, id)
@@ -568,21 +569,18 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 }
 
 func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, resp *SendResponse, index *cachememdb.Index) error {
-	// We must hold a lock for the index while it's being updated.
-	// We prepend "index/" to this lock so that it's distinct to the lock
-	// being held for inflight requests.
-	// We keep the two locking mechanisms distinct, so that it's only writes
-	// that have to be serial.
-	lock := locksutil.LockForKey(c.idLocks, "index/"+index.ID)
-	lock.Lock()
-	defer lock.Unlock()
-
 	// If a cached version of this secret exists, we now have access, so
 	// we don't need to re-cache, just update index.Tokens
 	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, index.ID)
 	if err != nil {
 		return err
 	}
+
+	// We must hold a lock for the index while it's being updated.
+	// We keep the two locking mechanisms distinct, so that it's only writes
+	// that have to be serial.
+	index.IndexLock.Lock()
+	defer index.IndexLock.Unlock()
 
 	// The index already exists, so all we need to do is add our token
 	// to the index's allowed token list, then re-store it

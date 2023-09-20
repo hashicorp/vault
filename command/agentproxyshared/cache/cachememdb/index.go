@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -77,6 +78,10 @@ type Index struct {
 
 	// Type is the index type (token, auth-lease, secret-lease)
 	Type string
+
+	// IndexLock is a lock held for some indexes to prevent data
+	// races upon update.
+	IndexLock *sync.Mutex
 }
 
 type IndexName uint32
