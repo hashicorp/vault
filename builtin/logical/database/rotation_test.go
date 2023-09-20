@@ -269,7 +269,7 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 
 	b.schedule = &TestSchedule{}
 
-	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainerRunner(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	t.Cleanup(cleanup)
 
 	// create the database user
