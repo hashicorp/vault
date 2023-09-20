@@ -34,6 +34,11 @@ const (
 	StoredKeysSupportedShamirRoot
 )
 
+var (
+	ErrUnconfiguredWrapper = errors.New("unconfigured wrapper")
+	ErrNoHealthySeals      = errors.New("no healthy seals!")
+)
+
 func (s StoredKeysSupport) String() string {
 	switch s {
 	case StoredKeysNotSupported:
@@ -204,8 +209,11 @@ type Access interface {
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 
-	// GetAllSealWrappersByPriority returns all the SealWrapper for all the seal wrappers, including disabled ones.
+	// GetConfiguredSealWrappersByPriority returns all the SealWrappers including disabled and unconfigured wrappers.
 	GetAllSealWrappersByPriority() []*SealWrapper
+
+	// GetConfiguredSealWrappersByPriority returns all the configured SealWrappers for all the seal wrappers, including disabled ones.
+	GetConfiguredSealWrappersByPriority() []*SealWrapper
 
 	// GetEnabledSealWrappersByPriority returns the SealWrapper for the enabled seal wrappers.
 	GetEnabledSealWrappersByPriority() []*SealWrapper
@@ -274,46 +282,60 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 // The SealWrapper created uses the seal config type as the name, has priority set to 1 and the
 // disabled flag set to false.
 func NewAccessFromWrapper(logger hclog.Logger, wrapper wrapping.Wrapper, sealConfigType string) (Access, error) {
-	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false)
+	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false, true)
 
 	return NewAccessFromSealWrappers(logger, 1, true, []*SealWrapper{sealWrapper})
 }
 
 func (a *access) GetAllSealWrappersByPriority() []*SealWrapper {
-	return a.filterSealWrappers(enabledAndDisabled, healthyAndUnhealthy)
+	return a.filterSealWrappers(allWrappers)
+}
+
+func (a *access) GetConfiguredSealWrappersByPriority() []*SealWrapper {
+	return a.filterSealWrappers(configuredWrappers, allWrappers)
 }
 
 func (a *access) GetEnabledSealWrappersByPriority() []*SealWrapper {
-	return a.filterSealWrappers(enabledOnly, healthyAndUnhealthy)
+	return a.filterSealWrappers(configuredWrappers, enabledWrappers)
 }
 
 func (a *access) AllSealWrappersHealthy() bool {
-	return len(a.wrappersByPriority) == len(a.filterSealWrappers(enabledAndDisabled, healthyOnly))
+	return len(a.wrappersByPriority) == len(a.filterSealWrappers(configuredWrappers, healthyWrappers))
 }
 
-type (
-	enabledFilter bool
-	healthyFilter bool
-)
+type sealWrapperFilter func(*SealWrapper) bool
 
-const (
-	enabledOnly         = enabledFilter(true)
-	enabledAndDisabled  = !enabledOnly
-	healthyOnly         = healthyFilter(true)
-	healthyAndUnhealthy = !healthyOnly
-)
+func allWrappers(wrapper *SealWrapper) bool {
+	return true
+}
 
-func (a *access) filterSealWrappers(enabled enabledFilter, healthy healthyFilter) []*SealWrapper {
-	ret := make([]*SealWrapper, 0, len(a.wrappersByPriority))
-	for _, sw := range a.wrappersByPriority {
-		switch {
-		case enabled == enabledOnly && sw.Disabled:
-			continue
-		case healthy == healthyOnly && !sw.IsHealthy():
-			continue
-		default:
-			ret = append(ret, sw)
+func healthyWrappers(wrapper *SealWrapper) bool {
+	return wrapper.IsHealthy()
+}
+
+func enabledWrappers(wrapper *SealWrapper) bool {
+	return !wrapper.Disabled
+}
+
+func configuredWrappers(wrapper *SealWrapper) bool {
+	return wrapper.Configured
+}
+
+// Returns a slice of wrappers who satisfy all filters
+func (a *access) filterSealWrappers(filters ...sealWrapperFilter) []*SealWrapper {
+	return filterSealWrappers(a.wrappersByPriority, filters...)
+}
+
+func filterSealWrappers(wrappers []*SealWrapper, filters ...sealWrapperFilter) []*SealWrapper {
+	ret := make([]*SealWrapper, 0, len(wrappers))
+outer:
+	for _, sw := range wrappers {
+		for _, f := range filters {
+			if !f(sw) {
+				continue outer
+			}
 		}
+		ret = append(ret, sw)
 	}
 	return ret
 }
@@ -336,7 +358,7 @@ func (a *access) GetEnabledWrappers() []wrapping.Wrapper {
 
 func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 	var keyIds []string
-	for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
+	for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
 		if initWrapper, ok := sealWrapper.Wrapper.(wrapping.InitFinalizer); ok {
 			if err := initWrapper.Init(ctx, options...); err != nil {
 				return err
@@ -390,11 +412,12 @@ const (
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
 func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error) {
 	// Note that we do not encrypt with disabled wrappers. Disabled wrappers are only used to decrypt.
-	enabledWrappersByPriority := a.filterSealWrappers(enabledOnly, healthyOnly)
-	if len(enabledWrappersByPriority) == 0 {
+	candidateWrappers := a.filterSealWrappers(enabledWrappers, healthyWrappers)
+	if len(candidateWrappers) == 0 {
 		// If all seals are unhealthy, try any way since a seal may have recovered
-		enabledWrappersByPriority = a.filterSealWrappers(enabledOnly, healthyAndUnhealthy)
+		candidateWrappers = a.filterSealWrappers(enabledWrappers)
 	}
+	enabledWrappersByPriority := filterSealWrappers(candidateWrappers, configuredWrappers)
 
 	type result struct {
 		name       string
@@ -474,6 +497,13 @@ GATHER_RESULTS:
 		a.keyIdSet.set(ret)
 	}
 
+	// Add errors for unconfigured wrappers
+	for _, sw := range candidateWrappers {
+		if !sw.Configured {
+			errs[sw.Name] = ErrUnconfiguredWrapper
+		}
+	}
+
 	return ret, errs
 }
 
@@ -520,10 +550,13 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		return nil, false, err
 	}
 
-	wrappersByPriority := a.filterSealWrappers(enabledAndDisabled, healthyOnly)
+	wrappersByPriority := a.filterSealWrappers(configuredWrappers, healthyWrappers)
 	if len(wrappersByPriority) == 0 {
 		// If all seals are unhealthy, try any way since a seal may have recovered
-		wrappersByPriority = a.filterSealWrappers(enabledAndDisabled, healthyAndUnhealthy)
+		wrappersByPriority = a.filterSealWrappers(configuredWrappers)
+	}
+	if len(wrappersByPriority) == 0 {
+		return nil, false, ErrNoHealthySeals
 	}
 
 	type result struct {
@@ -534,23 +567,45 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}
 	resultCh := make(chan *result)
 
-	decrypt := func(sealWrapper *SealWrapper) {
-		pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfoMap, options)
+	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
 		resultCh <- &result{
-			name:   sealWrapper.Name,
-			pt:     pt,
+			name:   name,
+			pt:     plaintext,
 			oldKey: oldKey,
 			err:    err,
 		}
 	}
 
+	decrypt := func(sealWrapper *SealWrapper) {
+		pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfoMap, options)
+		reportResult(sealWrapper.Name, pt, oldKey, err)
+	}
+
 	// Start goroutines to decrypt the value
-	for i, sealWrapper := range wrappersByPriority {
+
+	first := wrappersByPriority[0]
+	// First, if we only have one slot, try matching by keyId
+	if len(blobInfoMap) == 1 {
+	outer:
+		for k := range blobInfoMap {
+			for _, sealWrapper := range wrappersByPriority {
+				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
+				if err != nil {
+					reportResult(sealWrapper.Name, nil, false, err)
+					continue
+				}
+				if keyId == k {
+					first = sealWrapper
+					break outer
+				}
+			}
+		}
+	}
+
+	go decrypt(first)
+	for _, sealWrapper := range wrappersByPriority {
 		sealWrapper := sealWrapper
-		if i == 0 {
-			// start the highest priority wrapper right away
-			go decrypt(sealWrapper)
-		} else {
+		if sealWrapper != first {
 			timer := time.AfterFunc(wrapperDecryptHighPriorityHeadStart, func() {
 				decrypt(sealWrapper)
 			})
@@ -667,7 +722,7 @@ func JoinSealWrapErrors(msg string, errorMap map[string]error) error {
 func (a *access) Finalize(ctx context.Context, options ...wrapping.Option) error {
 	var errs []error
 
-	for _, w := range a.GetAllSealWrappersByPriority() {
+	for _, w := range a.GetConfiguredSealWrappersByPriority() {
 		if finalizeWrapper, ok := w.Wrapper.(wrapping.InitFinalizer); ok {
 			if err := finalizeWrapper.Finalize(ctx, options...); err != nil {
 				errs = append(errs, err)

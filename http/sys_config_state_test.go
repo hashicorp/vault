@@ -190,6 +190,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"warnings":       nil,
 				"auth":           nil,
 				"data":           configResp,
+				"mount_type":     "system",
 			}
 
 			testResponseBody(t, resp, &actual)
