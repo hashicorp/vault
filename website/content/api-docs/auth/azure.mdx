@@ -41,6 +41,10 @@ virtual machine.
   This value can also be provided with the `AZURE_CLIENT_ID` environment variable.
 - `client_secret` `(string: '')` - The client secret for credentials to query the Azure APIs.
   This value can also be provided with the `AZURE_CLIENT_SECRET` environment variable.
+- `max_retries` `(int: 3)` - The maximum number of attempts a failed operation will be 
+  retried before producing an error.
+- `max_retry_delay` `(string: '60s')` - The maximum delay, in seconds, allowed before retrying an operation.
+- `retry_delay` `(string: '4s')` - The initial amount of delay, in seconds, to use before retrying an operation. Increases exponentially.
 
 ### Sample payload
 
