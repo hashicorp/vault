@@ -136,7 +136,7 @@ registration time by using the `-command`, `-args`, and `-env` flags for
 
 Once Vault has a suitable container runtime available, the remaining steps are
 very similar to registering and using other external plugins. The config setting
-for [`plugin_directory`](/docs/configuration#plugin_directory) is not required
+for [`plugin_directory`](/vault/docs/configuration#plugin_directory) is not required
 for containerized plugins, but any plugin containers must already be available
 locally when mounted.
 
@@ -175,7 +175,7 @@ locally when mounted.
 Like any other external plugin, Vault will automatically manage the lifecycle
 of plugin containers. If they are killed out of band, Vault will restart it
 before servicing any requests that need to be handled by it. Vault will also
-[multiplex](/docs/plugins/plugin-architecture#plugin-multiplexing) multiple
+[multiplex](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) multiple
 mounts to be serviced by the same container if the plugin supports multiplexing.
 
 Vault labels each plugin container with a standard set of metadata to help
@@ -186,7 +186,7 @@ process ID, and the plugin's name, type, and version.
 
 Users who require more control over plugin containers can use the new "plugin
 runtime" APIs for finer grained settings. See the CLI documentation for
-[`vault plugin runtime`](/docs/commands/plugin/runtime) for more details.
+[`vault plugin runtime`](/vault/docs/commands/plugin/runtime) for more details.
 
 ## Supported configurations
 
