@@ -22,10 +22,12 @@ export default class PkiCertificatesIndexRoute extends Route {
 
   async fetchCertificates(params) {
     try {
+      const page = Number(params.page) || 1;
       return await this.store.lazyPaginatedQuery('pki/certificate/base', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
-        page: Number(params.page) || 1,
+        page,
+        skipCache: page === 1,
       });
     } catch (e) {
       if (e.httpStatus === 404) {

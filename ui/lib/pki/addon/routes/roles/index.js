@@ -21,10 +21,12 @@ export default class PkiRolesIndexRoute extends Route {
 
   async fetchRoles(params) {
     try {
+      const page = Number(params.page) || 1;
       return await this.store.lazyPaginatedQuery('pki/role', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
-        page: Number(params.page) || 1,
+        page,
+        skipCache: page === 1,
       });
     } catch (e) {
       if (e.httpStatus === 404) {

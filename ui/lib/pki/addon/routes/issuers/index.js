@@ -11,11 +11,13 @@ export default class PkiIssuersListRoute extends Route {
   @service secretMountPath;
 
   model(params) {
+    const page = Number(params.page) || 1;
     return this.store
       .lazyPaginatedQuery('pki/issuer', {
         backend: this.secretMountPath.currentPath,
         responsePath: 'data.keys',
-        page: Number(params.page) || 1,
+        page,
+        skipCache: page === 1,
         isListView: true,
       })
       .then((issuersModel) => {

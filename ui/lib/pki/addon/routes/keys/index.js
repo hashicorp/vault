@@ -21,6 +21,7 @@ export default class PkiKeysIndexRoute extends Route {
   };
 
   model(params) {
+    const page = Number(params.page) || 1;
     return hash({
       hasConfig: this.shouldPromptConfig,
       parentModel: this.modelFor('keys'),
@@ -28,7 +29,8 @@ export default class PkiKeysIndexRoute extends Route {
         .lazyPaginatedQuery('pki/key', {
           backend: this.secretMountPath.currentPath,
           responsePath: 'data.keys',
-          page: Number(params.page) || 1,
+          page,
+          skipCache: page === 1,
         })
         .catch((err) => {
           if (err.httpStatus === 404) {
