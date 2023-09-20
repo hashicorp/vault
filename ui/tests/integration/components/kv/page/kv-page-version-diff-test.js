@@ -21,30 +21,67 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
   hooks.beforeEach(async function () {
     this.backend = 'kv-engine';
     this.path = 'my-secret';
+    this.breadcrumbs = [{ label: 'version history', route: 'secret.metadata.versions' }, { label: 'diff' }];
+
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     const metadata = this.server.create('kv-metadatum');
     metadata.id = kvMetadataPath(this.backend, this.path);
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...metadata,
-    });
-
-    // compare version 4
+    this.store.pushPayload('kv/metadata', { modelName: 'kv/metadata', ...metadata });
+    this.metadata = this.store.peekRecord('kv/metadata', metadata.id);
+    // push current secret version record into the store to assert only one request is made
     const dataId = kvDataPath(this.backend, this.path, 4);
     this.store.pushPayload('kv/data', {
       modelName: 'kv/data',
       id: dataId,
       secret_data: { foo: 'bar' },
-      deletion_time: '',
-      destroyed: false,
-      version: 4,
+      version: this.metadata.currentVersion,
     });
+  });
 
-    this.metadata = this.store.peekRecord('kv/metadata', metadata.id);
-    this.currentVersion = this.store.peekRecord('kv/data', dataId);
-    this.breadcrumbs = [{ label: 'version history', route: 'secret.metadata.versions' }, { label: 'diff' }];
+  test('it renders empty states when current version is deleted or destroyed', async function (assert) {
+    assert.expect(4);
+    this.server.get(`/${this.backend}/data/${this.path}`, () => {});
+    const { currentVersion } = this.metadata;
+
+    // destroyed
+    this.metadata.versions[currentVersion].destroyed = true;
+    await render(
+      hbs`
+       <Page::Secret::Metadata::VersionDiff
+        @metadata={{this.metadata}} 
+        @path={{this.path}}
+        @backend={{this.backend}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been destroyed`);
+    assert
+      .dom(PAGE.emptyStateMessage)
+      .hasText('The current version of this secret has been destroyed. Select another version to compare.');
+
+    // deleted
+    this.metadata.versions[currentVersion].destroyed = false;
+    this.metadata.versions[currentVersion].deletion_time = '2023-07-25T00:36:19.950545Z';
+    await render(
+      hbs`
+       <Page::Secret::Metadata::VersionDiff
+        @metadata={{this.metadata}} 
+        @path={{this.path}}
+        @backend={{this.backend}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    assert.dom(PAGE.emptyStateTitle).hasText(`Version ${currentVersion} has been deleted`);
+    assert
+      .dom(PAGE.emptyStateMessage)
+      .hasText('The current version of this secret has been deleted. Select another version to compare.');
   });
 
   test('it renders compared data of the two versions and shows icons for deleted, destroyed and current', async function (assert) {
