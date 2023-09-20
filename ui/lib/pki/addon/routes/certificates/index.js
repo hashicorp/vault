@@ -14,23 +14,37 @@ export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  async fetchCertificates() {
+  queryParams = {
+    pageFilter: {
+      refreshModel: true,
+    },
+    currentPage: {
+      refreshModel: true,
+    },
+  };
+
+  async fetchCertificates(params) {
     try {
-      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+      return await this.store.lazyPaginatedQuery('pki/certificate/base', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page: Number(params.currentPage) || 1,
+        pageFilter: params.pageFilter,
+      });
     } catch (e) {
       if (e.httpStatus === 404) {
         return { parentModel: this.modelFor('certificates') };
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 
-  model() {
+  model(params) {
     return hash({
       hasConfig: this.shouldPromptConfig,
-      certificates: this.fetchCertificates(),
+      certificates: this.fetchCertificates(params),
       parentModel: this.modelFor('certificates'),
+      pageFilter: params.pageFilter,
     });
   }
 
@@ -40,5 +54,12 @@ export default class PkiCertificatesIndexRoute extends Route {
 
     if (certificates?.length) controller.notConfiguredMessage = getCliMessage('certificates');
     else controller.notConfiguredMessage = getCliMessage();
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('pageFilter', undefined);
+      controller.set('currentPage', undefined);
+    }
   }
 }
