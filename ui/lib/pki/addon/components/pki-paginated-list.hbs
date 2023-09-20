@@ -1,0 +1,35 @@
+<Toolbar>
+  {{#if @list.meta.total}}
+    <ToolbarFilters>
+      {{#if (and @hasConfig @list.meta.total)}}
+        <FilterInput
+          @placeholder={{@filterPlaceholder}}
+          @value={{this.pageFilter}}
+          @wait={{500}}
+          @autofocus={{true}}
+          @onInput={{this.onFilterChange}}
+        />
+      {{/if}}
+    </ToolbarFilters>
+  {{/if}}
+</Toolbar>
+
+{{#if @hasConfig}}
+  {{#if @list.meta.total}}
+    {{yield @list to="list"}}
+
+    <Hds::Pagination::Numbered
+      @currentPage={{@list.meta.currentPage}}
+      @currentPageSize={{@list.meta.pageSize}}
+      @route={{@listRoute}}
+      @showSizeSelector={{false}}
+      @totalItems={{@list.meta.filteredTotal}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  {{else}}
+    {{yield to="empty"}}
+  {{/if}}
+{{else}}
+  {{yield to="configure"}}
+{{/if}}
