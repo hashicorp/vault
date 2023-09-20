@@ -90,6 +90,7 @@ func TestKVV2Get_RequestForwarding(t *testing.T) {
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbys := testhelpers.DeriveStandbyCores(t, cluster)
 	standby := standbys[0].Client
+	testhelpers.EnsureCoresUnsealed(t, cluster)
 
 	// mount the KVv2 backend
 	err := client.Sys().Mount(v2MountPath, &api.MountInput{
