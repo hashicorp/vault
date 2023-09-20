@@ -6,6 +6,8 @@ description: The `/sys/rekey` endpoints are used to rekey the unseal keys for Va
 
 # `/sys/rekey`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
 On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
