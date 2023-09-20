@@ -155,8 +155,9 @@ func haveMatchingSeals(existingSealKmsConfigs, newSealKmsConfigs []*configutil.K
 	return true
 }
 
-// haveCommonSeal that we have at least one matching seal across the inputs by name and type, config and other
-// properties are ignored in the comparison
+// haveCommonSeal verifies that we have at least one matching seal across
+// the inputs by name and type, config and other properties are ignored in
+// the comparison
 func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) bool {
 	for _, existingSealKmsConfig := range existingSealKmsConfigs {
 		for _, newSealKmsConfig := range newSealKmsConfigs {
