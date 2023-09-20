@@ -12,8 +12,6 @@ token which can be used for all future requests.
 
 ## List auth methods
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint lists all enabled auth methods.
 
 | Method | Path        |
@@ -83,7 +81,6 @@ $ curl \
 
 ## Enable auth method
 
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
@@ -186,7 +183,6 @@ $ curl \
 
 ## Read auth method configuration
 
-@include 'alerts/restricted-admin.mdx'
 
 This endpoints returns the configuration of the auth method at the given path.
 
@@ -237,7 +233,6 @@ $ curl \
 
 ## Disable auth method
 
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint disables the auth method at the given auth path.
 
@@ -264,7 +259,6 @@ $ curl \
 
 ## Read auth method tuning
 
-@include 'alerts/restricted-admin.mdx'
 
 - This endpoint reads the given auth path's configuration. This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
@@ -303,7 +297,6 @@ $ curl \
 
 ## Tune auth method
 
-@include 'alerts/restricted-admin.mdx'
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality
