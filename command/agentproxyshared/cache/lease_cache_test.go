@@ -230,6 +230,30 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 
 	index4 := computeStaticSecretCacheIndex(req)
 	require.Equal(t, expectedIndex, index4)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1/"}},
+		},
+	}
+
+	index5 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index5)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1/"}},
+		},
+	}
+
+	index6 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index6)
 }
 
 func TestLeaseCache_EmptyToken(t *testing.T) {
@@ -335,6 +359,9 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	}
 }
 
+// TestLeaseCache_StoreCacheableStaticSecret tests that cacheStaticSecret works
+// as expected, creating the two expected cache entries, and also ensures
+// that we can evict the cache entry with the cache clear API afterwards.
 func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	request := &SendRequest{
 		Request: &http.Request{
@@ -351,6 +378,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	index := &cachememdb.Index{
 		Type:        cacheboltdb.StaticSecretType,
 		RequestPath: request.Request.URL.Path,
+		Namespace:   "root/",
 		Token:       "token",
 		ID:          computeStaticSecretCacheIndex(request),
 	}
@@ -373,6 +401,8 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	require.Equal(t, "token", indexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
 	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
+	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
+	require.Equal(t, "root/", indexFromDB.Namespace)
 
 	capabilitiesIndexFromDB, err := lc.db.Get(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
 	if err != nil {
@@ -382,6 +412,84 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"/secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
+
+	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
+		Type:        "request_path",
+		RequestPath: request.Request.URL.Path,
+	})
+	require.NoError(t, err)
+
+	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	require.NoError(t, err)
+	require.Nil(t, expectedClearedIndex)
+}
+
+// TestLeaseCache_StaticSecret_CacheClear_All tests that static secrets are
+// stored correctly, as well as removed from the cache by a cache clear with
+// "all" specified as the type.
+func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
+	request := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/secrets/foo/bar",
+			},
+		},
+		Token: "token",
+	}
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+	}
+	index := &cachememdb.Index{
+		Type:        cacheboltdb.StaticSecretType,
+		RequestPath: request.Request.URL.Path,
+		Namespace:   "root/",
+		Token:       "token",
+		ID:          computeStaticSecretCacheIndex(request),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// We expect two entries to be stored by this:
+	// 1. The actual static secret
+	// 2. The capabilities index
+	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	if err != nil {
+		return
+	}
+
+	indexFromDB, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	if err != nil {
+		return
+	}
+
+	require.Equal(t, "token", indexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
+	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
+	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
+	require.Equal(t, "root/", indexFromDB.Namespace)
+
+	capabilitiesIndexFromDB, err := lc.db.Get(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	if err != nil {
+		return
+	}
+
+	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"/secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
+
+	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
+		Type: "all",
+	})
+	require.NoError(t, err)
+
+	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	require.NoError(t, err)
+	require.Nil(t, expectedClearedIndex)
+
+	expectedClearedIndex, err = lc.db.Get(cachememdb.IndexNameID, capabilitiesIndexFromDB.ID)
+	require.NoError(t, err)
+	require.Nil(t, expectedClearedIndex)
 }
 
 func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {

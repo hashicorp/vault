@@ -908,6 +908,8 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			in.Namespace = "root/"
 		}
 
+		c.logger.Info("Violet -- looking up cache entries")
+
 		// Find all the cached entries which has the given request path and
 		// cancel the contexts of all the respective lifetime watchers
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
@@ -915,9 +917,19 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			return err
 		}
 		for _, index := range indexes {
-			if index.RenewCtxInfo != nil {
-				if index.RenewCtxInfo.CancelFunc != nil {
-					index.RenewCtxInfo.CancelFunc()
+			c.logger.Info("Violet: ", index.RequestPath)
+			// If it's a static secret, we must remove directly, as there
+			// is no renew func to cancel.
+			if index.Type == cacheboltdb.StaticSecretType {
+				err = c.db.Evict(cachememdb.IndexNameID, index.ID)
+				if err != nil {
+					return err
+				}
+			} else {
+				if index.RenewCtxInfo != nil {
+					if index.RenewCtxInfo.CancelFunc != nil {
+						index.RenewCtxInfo.CancelFunc()
+					}
 				}
 			}
 		}
