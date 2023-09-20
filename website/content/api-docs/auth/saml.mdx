@@ -1,0 +1,427 @@
+---
+layout: api
+page_title: SAML - Auth Methods - HTTP API
+description: |-
+  This is the API documentation for the Vault SAML auth method.
+---
+
+# SAML Auth Method (API)
+
+<EnterpriseAlert />
+
+This is the API documentation for the Vault SAML auth method. To learn more about the
+usage and operation, see the [Vault SAML auth method documentation](/vault/docs/auth/saml).
+
+This documentation assumes the SAML auth method is mounted at the `/auth/saml` path in
+Vault. Since it is possible to enable auth methods at any location, please update your
+API calls accordingly.
+
+## Create or Update Configuration
+
+Configures the auth method with a SAML Identity Provider.
+
+| Method     | Path                |
+|:-----------| :------------------ |
+| `POST/PUT` | `/auth/saml/config` |
+
+### Parameters
+
+- `idp_metadata_url` `(string, <required>)` - The metadata URL of the Identity Provider.
+  Mutually exclusive with `idp_sso_url`, `idp_issuer` and `idp_cert`. Must be a
+  well-formatted URL.
+- `idp_sso_url` `(string, <required if idp_metadata_url is not set>)` - The SSO URL of the
+  Identity Provider. Mutually exclusive with `idp_metadata_url`. Must be a
+  well-formatted URL.
+- `idp_entity_id` `(string, <required if idp_metadata_url is not set>)` - The entity ID of
+  the Identity Provider. Mutually exclusive with `idp_metadata_url`.
+- `idp_cert` `(string, <required if idp_metadata_url is not set>)` - The PEM-encoded
+  certificate of the Identity Provider used to verify response and assertion signatures.
+  Mutually exclusive with `idp_metadata_url`.
+- `entity_id` `(string, <required>)` - The entity ID of this authentication method as a SAML
+  Service Provider. Must match entity ID configured for the application in the SAML Identity
+  Provider.
+- `acs_urls` `(list, <required>)` - The Assertion Consumer Service URLs to which the responses
+  from the Identity Provider will be sent. Must be well-formatted URLs. A warning will be
+  provided if any of the given URLs are not TLS protected.
+- `default_role` `(string, <optional>)` - The role to use if no role is provided during login.
+  If not set, a role is required during login.
+
+### Sample Payload
+
+```json
+{
+  "acs_urls": "https://my.vault/v1/auth/saml/callback",
+  "default_role": "admin",
+  "entity_id": "https://my.vault/v1/auth/saml",
+  "idp_metadata_url": "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request PUT \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/config
+```
+
+## Read Configuration
+
+Reads the auth method configuration.
+
+| Method  | Path                |
+| :------ | :------------------ |
+| `GET`   | `/auth/saml/config` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/config
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "09c907d2-2dbe-8a5c-ca97-fad83195738b",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "acs_urls": [
+      "https://my.vault/v1/auth/saml/callback"
+    ],
+    "default_role": "admin",
+    "entity_id": "https://my.vault/v1/auth/saml",
+    "idp_metadata_url": "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+  },
+  "warnings": null
+}
+```
+
+## Create or Update Role
+
+Configures a role in the auth method. Roles define specific constraints required for
+authentication and properties of resulting Vault tokens.
+
+| Method     | Path                     |
+|:-----------|:-------------------------|
+| `POST/PUT` | `/auth/saml/role/:name`  |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the role to create. This parameter is
+  specified as part of the URL.
+- `bound_subjects` `(string: <optional>)` - The subject to assert is the subject of the SAML
+- authentication. The subject in the SAML Response's Assertion needs to match one of the
+  configured values.
+- `bound_subjects_type` `(string: <optional>)` - The type of matching assertion to perform
+  on `bound_subject`. If `string`, requires a direct string match. If `glob`, allows for
+  wildcard matching using the `*` character.
+- `bound_attributes` `(map: <optional>)` - Mapping of attribute names to values to assert
+  exist in the SAML Response's Assertion. The expected value may be a single string or a
+  comma-separated list of strings.
+- `bound_attributes_type` `(string: <optional>)` - The type of matching assertion to perform
+  on `bound_attributes` key-value pairs. If `string`, requires a direct string match in
+  values. If `glob`, allows for wildcard matching using the `*` character in values.
+- `groups_attribute` `(string: <optional>)` - The attribute used to identify the groups
+  the user is a member of. Used for Vault Identity group alias names.
+
+@include 'tokenfields.mdx'
+
+### Sample Payload
+
+```json
+{
+  "bound_attributes": "group=admin",
+  "bound_subjects": "*@hashicorp.com",
+  "bound_subjects_type": "glob",
+  "token_policies": "writer",
+  "ttl": "1h"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request PUT \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/role/admin
+```
+
+## Read Role
+
+Reads a configured role.
+
+| Method | Path                    |
+| :----- |:------------------------|
+| `GET`  | `/auth/saml/role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the role to read. This parameter is
+  specified as part of the URL.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/auth/saml/role/admin
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "3148ca9a-286e-a0a4-5a4b-31b6abb63d37",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "bound_attributes": {
+      "group": [
+        "admin"
+      ]
+    },
+    "bound_attributes_type": "string",
+    "bound_subjects": [
+      "*@hashicorp.com"
+    ],
+    "bound_subjects_type": "glob",
+    "groups_attribute": "",
+    "token_bound_cidrs": [],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 0,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [
+      "writer"
+    ],
+    "token_ttl": 0,
+    "token_type": "default"
+  },
+  "warnings": null
+}
+```
+
+## List Roles
+
+Lists all the configured roles.
+
+| Method | Path              |
+| :----- | :---------------- |
+| `LIST` | `/auth/saml/role` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/auth/saml/role?list=true
+```
+
+### Sample Response
+
+```json
+[
+  "admin",
+  "operations"
+]
+```
+
+## Delete Role
+
+Deletes a configured role.
+
+| Method   | Path                    |
+| :------- | :---------------------- |
+| `DELETE` | `/auth/saml/role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the role to delete. This parameter is
+  specified as part of the URL.
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/auth/saml/role/admin
+```
+
+## Obtain SSO Service URL
+
+Starts a login flow by providing a SAML Single Sign-On (SSO) Service URL for the
+configured Identity Provider. The returned `token_poll_id` can be used to obtain
+the Vault token after the user is authenticated with the Identity Provider and the
+SAML Response has passed validation. This API is unauthenticated.
+
+| Method  | Path                         |
+|:--------|:-----------------------------|
+| `POST`  | `/auth/saml/sso_service_url` |
+
+### Parameters
+
+- `role` `(string, <optional>)` - The name of the role against which the login is being
+  attempted. Defaults to the configured `default_role` if not provided.
+- `client_challenge` `(string, <required>)` - The client challenge value. Must be the
+  output of a base64-encoded, sha256 digest of the `client_verifier` eventually provided
+  to the [Token API](/vault/api-docs/auth/saml#obtain-vault-token). Must be at least 44
+  bytes in length.
+- `client_type` `(string, <required>)` - The type of the requesting client. The response
+  from the Assertion Consumer Service [Callback API](/vault/api-docs/auth/saml#assertion-consumer-service-callback)
+  will differ based on the provided type. If `cli`, an HTML success page will be returned
+  in the response. If `browser`, a blank HTML page will be returned in the response.
+- `acs_url` `(string, <required>)` - The URL where the Identity Provider will send its
+  SAML Response. Must be in the set of configured [`acs_urls`](/vault/api-docs/auth/saml#acs_urls).
+
+### Sample Payload
+
+```json
+{
+  "acs_url": "https://my.vault/v1/auth/saml/callback",
+  "client_challenge": "Z6+7owP80d1aHTha1kdixtT99JkvmG4TPSgbvDwZ70A=",
+  "client_type": "cli",
+  "role": "admin"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/sso_service_url
+```
+
+### Sample Response
+
+```json
+{
+  "sso_service_url": "https://example.okta.com/app/abc123eb9xnIfzlaf697/id/sso/saml?RelayState=...&SAMLRequest=...",
+  "token_poll_id": "ee442348-159b-df10-4c59-63050069df4d"
+}
+```
+
+## Assertion Consumer Service Callback
+
+The Assertion Consumer Service URL of the auth method. Completes the round trip from
+the Identity Provider and performs validations on the SAML Response. This API is
+unauthenticated.
+
+| Method  | Path                  |
+|:--------|:----------------------|
+| `POST`  | `/auth/saml/callback` |
+
+### Parameters
+
+- `RelayState` `(string, <required>)` - The RelayState that has round tripped through
+  the Identity Provider via the original SAML Authentication Request.
+- `SAMLResponse` `(string, <required>)` - The signed SAML Response from the Identity
+  Provider.
+
+### Sample Payload
+
+```json
+{
+  "RelayState": "0afe62a9-7b83-a182-0650-c749badfb900",
+  "SAMLResponse": "..."
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/callback
+```
+
+## Obtain Vault Token
+
+Completes the login flow by returning a Vault token. This API is unauthenticated.
+
+| Method  | Path               |
+|:--------|:-------------------|
+| `POST`  | `/auth/saml/token` |
+
+### Parameters
+
+- `client_verifier` `(string, <required>)` - The value which produced the `client_challenge`
+  provided to the [SSO Service URL API](/vault/api-docs/auth/saml#obtain-sso-service-url)
+  at the start of the authentication flow. Its base64-encoded, sha256 digest must match the
+  `client_challenge` value.
+- `token_poll_id` `(string, <required>)` - The `token_poll_id` value returned from the
+  [SSO Service URL API](/vault/api-docs/auth/saml#obtain-sso-service-url) at the start of
+  the authentication flow.
+
+### Sample Payload
+
+```json
+{
+  "client_verifier": "59634224-5869-6002-e0b1-35370b8f6b82",
+  "token_poll_id": "ee442348-159b-df10-4c59-63050069df4d"
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/saml/token
+```
+
+### Sample Response
+
+```json
+{
+  "request_id": "b16f7cf9-0970-2e64-69d6-f00d055e93c4",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "hvs.CAES...",
+    "accessor": "Rl4gU4amxzBFpFBJixv8xJBK",
+    "policies": [
+      "default",
+      "writer"
+    ],
+    "token_policies": [
+      "default",
+      "writer"
+    ],
+    "identity_policies": null,
+    "metadata": {
+      "role": "admin"
+    },
+    "orphan": true,
+    "entity_id": "afd74442-6c48-3d2f-9449-689ce050ba88",
+    "lease_duration": 3600,
+    "renewable": true,
+    "mfa_requirement": null
+  }
+}
+```
