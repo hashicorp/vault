@@ -23,6 +23,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -85,7 +86,10 @@ const (
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
 
-	leaseExpirationEventType = logical.EventType("core/lease-expiration")
+	leaseCreateEventType = logical.EventType("core/lease-create")
+	leaseRevokeEventType = logical.EventType("core/lease-revoke")
+	leaseExpireEventType = logical.EventType("core/lease-expire")
+	leaseRenewEventType  = logical.EventType("core/lease-renew")
 )
 
 type pendingInfo struct {
@@ -328,14 +332,6 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 	return numWorkers
 }
 
-// alsoSendEvent returns an ExpireLeaseStrategy that sends an expiration event after executing the given ExpireLeaseStrategy.
-func alsoSendEvent(e ExpireLeaseStrategy) ExpireLeaseStrategy {
-	return func(ctx context.Context, m *ExpirationManager, leaseID string, namespace *namespace.Namespace) {
-		e(ctx, m, leaseID, namespace)
-		go m.sendExpirationEvent(leaseID)
-	}
-}
-
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
@@ -371,7 +367,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          alsoSendEvent(e),
+		expireFunc:          e,
 
 		jobManager:      jobManager,
 		revokeRetryBase: c.expirationRevokeRetryBase,
@@ -1071,6 +1067,9 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
 	}
+	if !skipToken {
+		go m.sendEvent(leaseRevokeEventType, le)
+	}
 	return nil
 }
 
@@ -1313,6 +1312,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	// Update the expiration time
 	m.updatePending(le)
 
+	go m.sendEvent(leaseRenewEventType, le)
+
 	// Return the response
 	return resp, nil
 }
@@ -1430,6 +1431,8 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 	m.updatePending(le)
+
+	go m.sendEvent(leaseRenewEventType, le)
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1567,6 +1570,8 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 	// microseconds. This provides a nicer UX.
 	resp.Secret.TTL = le.ExpireTime.Sub(time.Now()).Round(time.Second)
 
+	go m.sendEvent(leaseCreateEventType, le)
+
 	// Done
 	return le.LeaseID, nil
 }
@@ -1650,6 +1655,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		te.ExternalID = tok
 	}
 
+	go m.sendEvent(leaseCreateEventType, &le)
 	return nil
 }
 
@@ -1817,15 +1823,22 @@ func (m *ExpirationManager) deleteLockForLease(id string) {
 	m.lockPerLease.Delete(id)
 }
 
-func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
+func (m *ExpirationManager) sendEventByID(eventType logical.EventType, leaseID string) {
 	le, err := m.loadEntry(context.Background(), leaseID)
 	if err != nil {
 		m.logger.Warn("Error fetching lease information", "error", err)
 		return
 	}
-	m.logger.Info("lease event", "le", le, "auth", le.Auth)
+	m.sendEvent(eventType, le)
+}
+
+func (m *ExpirationManager) sendEvent(eventType logical.EventType, le *leaseEntry) {
 	data := &logical.EventData{}
-	id := fmt.Sprintf("expire/%s/%d", le.Auth.EntityID, le.ExpireTime.Unix())
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		m.logger.Warn("Error creating uuid", "error", err)
+		return
+	}
 	ns := namespace.RootNamespace
 	if le.namespace != nil {
 		ns = le.namespace
@@ -1833,8 +1846,6 @@ func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
 	data.Id = id
 	data.EntityIds = []string{le.ClientToken}
 	structMap := map[string]interface{}{
-		"token_entity_id":   le.Auth.EntityID,
-		"token_accessor":    le.Auth.Accessor,
 		"path":              le.Path,
 		"expire_time":       le.ExpireTime.Format(time.RFC3339),
 		"last_renewal_time": le.LastRenewalTime.Format(time.RFC3339),
@@ -1843,6 +1854,11 @@ func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
 		"client_token_type": le.ClientTokenType.String(),
 		"namespace":         ns.Path,
 	}
+	if le.Auth != nil {
+		data.EntityIds = append(data.EntityIds, le.Auth.EntityID)
+		structMap["token_entity_id"] = le.Auth.EntityID
+		structMap["token_accessor"] = le.Auth.Accessor
+	}
 
 	metadata, err := structpb.NewStruct(structMap)
 	if err != nil {
@@ -1850,12 +1866,7 @@ func (m *ExpirationManager) sendExpirationEvent(leaseID string) {
 		return
 	}
 	data.Metadata = metadata
-	err = m.core.Events().SendEventInternal(context.Background(),
-		ns,
-		nil,
-		leaseExpirationEventType,
-		data,
-	)
+	err = m.core.Events().SendEventInternal(context.Background(), ns, nil, eventType, data)
 	if err != nil {
 		m.logger.Warn("Error sending event", "err", err)
 	}

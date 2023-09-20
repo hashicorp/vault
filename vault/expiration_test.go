@@ -331,28 +331,6 @@ func TestExpiration_TotalLeaseCount_WithRoles(t *testing.T) {
 	// Quotas and internal lease count tracker are coupled, so this is a proxy
 	// for testing the total lease count quota
 	c, _, _ := TestCoreUnsealed(t)
-
-	// count events
-	events, cancel, err := c.Events().Subscribe(context.Background(), namespace.RootNamespace, string(leaseExpirationEventType), "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cancel()
-	eventsCount := atomic.Int32{}
-
-	eventCtx, cancelEvent := context.WithCancel(context.Background())
-	defer cancelEvent()
-	go func() {
-		for {
-			select {
-			case <-eventCtx.Done():
-				return
-			case <-events:
-				eventsCount.Add(1)
-			}
-		}
-	}()
-
 	exp := c.expiration
 
 	expectedCount := 0
@@ -446,26 +424,32 @@ func TestExpiration_TotalLeaseCount_WithRoles(t *testing.T) {
 	}
 }
 
-// TestExpiration_EmitsEvents tests that lease expirations emit events
+// TestExpiration_EmitsEvents tests that lease creation and revocation emits events
 func TestExpiration_EmitsEvents(t *testing.T) {
 	// Quotas and internal lease count tracker are coupled, so this is a proxy
 	// for testing the total lease count quota
 	c, _, _ := TestCoreUnsealed(t)
 
+	exp := c.expiration
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// count events
-	events, cancel, err := c.Events().Subscribe(context.Background(), namespace.RootNamespace, string(leaseExpirationEventType), "")
+	events, cancel, err := c.Events().Subscribe(context.Background(), namespace.RootNamespace, "core/lease-*", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel()
 	eventsCount := atomic.Int32{}
 
-	eventCtx, cancelEvent := context.WithCancel(context.Background())
-	defer cancelEvent()
+	timeout := time.NewTimer(30 * time.Second)
+	defer timeout.Stop()
 	go func() {
 		for {
 			select {
-			case <-eventCtx.Done():
+			case <-timeout.C:
 				return
 			case <-events:
 				eventsCount.Add(1)
@@ -473,96 +457,37 @@ func TestExpiration_EmitsEvents(t *testing.T) {
 		}
 	}()
 
-	exp := c.expiration
-
-	expectedCount := 0
-	otherNS := &namespace.Namespace{
-		ID:   "nsid",
-		Path: "foo/bar",
-	}
-	for i := 0; i < 50; i++ {
-		le := &leaseEntry{
-			LeaseID:    "lease" + fmt.Sprintf("%d", i),
-			Path:       "foo/bar/" + fmt.Sprintf("%d", i),
-			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
-			namespace:  namespace.RootNamespace,
-			IssueTime:  time.Now(),
-			ExpireTime: time.Now().Add(1 * time.Second),
-		}
-
-		otherNSle := &leaseEntry{
-			LeaseID:    "lease" + fmt.Sprintf("%d", i) + "/blah.nsid",
-			Path:       "foo/bar/" + fmt.Sprintf("%d", i) + "/blah.nsid",
-			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
-			namespace:  otherNS,
-			IssueTime:  time.Now(),
-			ExpireTime: time.Now().Add(1 * time.Second),
-		}
-
-		exp.pendingLock.Lock()
-		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
-			exp.pendingLock.Unlock()
-			t.Fatalf("error persisting irrevocable entry: %v", err)
-		}
-		exp.updatePendingInternal(le)
-		expectedCount++
-
-		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
-			exp.pendingLock.Unlock()
-			t.Fatalf("error persisting irrevocable entry: %v", err)
-		}
-		exp.updatePendingInternal(otherNSle)
-		expectedCount++
-		exp.pendingLock.Unlock()
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL: 10 * time.Millisecond,
+		},
 	}
 
-	// add some irrevocable leases to each count to ensure they are counted too
-	// note: irrevocable leases almost certainly have an expire time set in the
-	// past, but for this exercise it should be fine to set it to whatever
-	for i := 50; i < 60; i++ {
-		le := &leaseEntry{
-			LeaseID:    "lease" + fmt.Sprintf("%d", i+1),
-			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1),
-			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
-			namespace:  namespace.RootNamespace,
-			IssueTime:  time.Now(),
-			ExpireTime: time.Now(),
-			RevokeErr:  "some err message",
-		}
-
-		otherNSle := &leaseEntry{
-			LeaseID:    "lease" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
-			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
-			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
-			namespace:  otherNS,
-			IssueTime:  time.Now(),
-			ExpireTime: time.Now(),
-			RevokeErr:  "some err message",
-		}
-
-		exp.pendingLock.Lock()
-		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
-			exp.pendingLock.Unlock()
-			t.Fatalf("error persisting irrevocable entry: %v", err)
-		}
-		exp.updatePendingInternal(le)
-		expectedCount++
-
-		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
-			exp.pendingLock.Unlock()
-			t.Fatalf("error persisting irrevocable entry: %v", err)
-		}
-		exp.updatePendingInternal(otherNSle)
-		expectedCount++
-		exp.pendingLock.Unlock()
+	te := &logical.TokenEntry{
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
-	exp.pendingLock.RLock()
-	count := exp.leaseCount
-	exp.pendingLock.RUnlock()
-
-	if count != expectedCount {
-		t.Errorf("bad lease count. expected %d, got %d", expectedCount, count)
+	// lease create + revoke events
+	expectedEvents := int32(2)
+	check := time.NewTicker(100 * time.Millisecond)
+	defer check.Stop()
+	for {
+		select {
+		case <-timeout.C:
+			if expectedEvents != eventsCount.Load() {
+				t.Fatalf("Timed out waiting for events, got %d expected %d", eventsCount.Load(), expectedEvents)
+			}
+		case <-check.C:
+			if expectedEvents == eventsCount.Load() {
+				return
+			}
+		}
 	}
 }
 
