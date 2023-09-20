@@ -124,15 +124,10 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
     );
     assert.dom(PAGE.diff.deleted).hasText(`hello"world"`);
     assert.dom(PAGE.diff.added).hasText(`foo"bar"`);
-    assert.dom(left).hasText('Version 4', 'shows the current version for the left side default version.');
-    assert
-      .dom(right)
-      .hasText(
-        'Version 1',
-        'shows the first version that is not deleted or destroyed for the right version on init.'
-      );
+    assert.dom(right).hasText('Version 4', 'shows the current version for the left side default version.');
+    assert.dom(left).hasText('Version 1', 'shows the latest active version on init.');
 
-    await click(right);
+    await click(left);
 
     for (const num in this.metadata.versions) {
       const data = this.metadata.versions[num];

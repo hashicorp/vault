@@ -35,20 +35,20 @@ export default class KvSecretMetadataVersionDiff extends Component {
   constructor() {
     super(...arguments);
 
-    // initialize with current version data on the left
-    this.leftVersion = this.args.metadata.currentVersion;
+    // initialize with most recently (before current), active version on left
     const olderVersions = this.args.metadata.sortedVersions.slice(1);
-    const latestActive = olderVersions.find((v) => !v.destroyed && !v.isSecretDeleted);
-    // initialize with most recently, active version data on right
-    this.rightVersion = Number(latestActive?.version);
+    const recentlyActive = olderVersions.find((v) => !v.destroyed && !v.isSecretDeleted);
+    this.leftVersion = Number(recentlyActive?.version);
+    this.rightVersion = this.args.metadata.currentVersion;
 
+    // this diff is from older to newer (current) secret data
     this.createVisualDiff();
   }
 
   // diffs with an inactive version only happens on initialization if the current version is inactive
   get deactivatedState() {
     const { currentVersion, currentSecret } = this.args.metadata;
-    return this.leftVersion === currentVersion && currentSecret.isDeactivated ? currentSecret.state : '';
+    return this.rightVersion === currentVersion && currentSecret.isDeactivated ? currentSecret.state : '';
   }
 
   @action
@@ -62,12 +62,12 @@ export default class KvSecretMetadataVersionDiff extends Component {
     const leftSecretData = await this.fetchSecretData(this.leftVersion);
     const rightSecretData = await this.fetchSecretData(this.rightVersion);
     const diffpatcher = jsondiffpatch.create({});
-    const delta = diffpatcher.diff(rightSecretData, leftSecretData);
+    const delta = diffpatcher.diff(leftSecretData, rightSecretData);
 
     this.statesMatch = !delta;
     this.visualDiff = delta
-      ? jsondiffpatch.formatters.html.format(delta, rightSecretData)
-      : JSON.stringify(leftSecretData, undefined, 2);
+      ? jsondiffpatch.formatters.html.format(delta, leftSecretData)
+      : JSON.stringify(rightSecretData, undefined, 2);
   }
 
   async fetchSecretData(version) {
