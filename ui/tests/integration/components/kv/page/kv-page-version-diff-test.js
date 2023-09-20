@@ -19,9 +19,40 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.backend = 'kv-engine';
+    this.path = 'my-secret';
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.server.get(`/kv-engine/data/my-secret?version=1`, () => {
+
+    const metadata = this.server.create('kv-metadatum');
+    metadata.id = kvMetadataPath(this.backend, this.path);
+    this.store.pushPayload('kv/metadata', {
+      modelName: 'kv/metadata',
+      ...metadata,
+    });
+
+    // compare version 4
+    const dataId = kvDataPath(this.backend, this.path, 4);
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: dataId,
+      secret_data: { foo: 'bar' },
+      deletion_time: '',
+      destroyed: false,
+      version: 4,
+    });
+
+    this.metadata = this.store.peekRecord('kv/metadata', metadata.id);
+    this.currentVersion = this.store.peekRecord('kv/data', dataId);
+    this.breadcrumbs = [{ label: 'version history', route: 'secret.metadata.versions' }, { label: 'diff' }];
+  });
+
+  test('it renders compared data of the two versions and shows icons for deleted, destroyed and current', async function (assert) {
+    assert.expect(14);
+    this.server.get(`/${this.backend}/data/${this.path}`, (schema, req) => {
+      assert.ok('request made to the fetch version 1 data.');
+      // request should not be made for version 4 (current version) because that record already exists in the store
+      assert.strictEqual(req.queryParams.version, '1', 'request includes version param');
       return {
         request_id: 'foobar',
         data: {
@@ -37,53 +68,25 @@ module('Integration | Component | kv | Page::Secret::Metadata::VersionDiff', fun
       };
     });
 
-    const metadata = this.server.create('kv-metadatum');
-    metadata.id = kvMetadataPath(this.backend, this.secret);
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...metadata,
-    });
-
-    this.backend = 'kv-engine';
-    this.secret = 'my-secret';
-    this.metadata = this.store.peekRecord('kv/metadata', metadata.id);
-    this.breadcrumbs = [{ label: 'version history', route: 'secret.metadata.versions' }, { label: 'diff' }];
-
-    // compare version 4
-    const dataId = kvDataPath(this.backend, this.secret, 4);
-    this.store.pushPayload('kv/data', {
-      modelName: 'kv/data',
-      id: dataId,
-      secret_data: { foo: 'bar' },
-      created_time: '2023-07-20T02:12:17.379762Z',
-      custom_metadata: null,
-      deletion_time: '',
-      destroyed: false,
-      version: 4,
-    });
-  });
-
-  test('it renders compared data of the two versions and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(12);
-
     await render(
       hbs`
        <Page::Secret::Metadata::VersionDiff
         @metadata={{this.metadata}} 
-        @path={{this.secret}}
+        @path={{this.path}}
         @backend={{this.backend}}
         @breadcrumbs={{this.breadcrumbs}}
       />
       `,
       { owner: this.engine }
     );
+
     const [left, right] = findAll(PAGE.detail.versionDropdown);
     assert.dom(PAGE.diff.visualDiff).hasText(
-      `{ \"foo\": \"bar\" }`, // eslint-disable-line no-useless-escape
+      `foo\"bar\"hello\"world\"`, // eslint-disable-line no-useless-escape
       'correctly pull in the data from version 4 and compared to version 1.'
     );
-    assert.dom(PAGE.diff.deleted).hasText(`foo"bar"`);
-    assert.dom(PAGE.diff.added).hasText(`foo3"bar3"`);
+    assert.dom(PAGE.diff.deleted).hasText(`hello"world"`);
+    assert.dom(PAGE.diff.added).hasText(`foo"bar"`);
     assert.dom(left).hasText('Version 4', 'shows the current version for the left side default version.');
     assert
       .dom(right)
