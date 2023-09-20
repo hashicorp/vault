@@ -1,0 +1,151 @@
+---
+layout: docs
+page_title: IRSA Auth on EKS
+description: >-
+  Vault supports using an IRSA-enabled service account on EKS for auto-unseal and auth.
+---
+
+# IRSA Auth on EKS
+
+An AWS IAM role may be associated with a Kubernetes service account, such that a Pod using that service account can use the service account's token to acquire AWS IAM credentials. Once this association is configured, and a Pod launches using a service account annotated with `eks.amazonaws.com/role-arn: <ROLE ARN>`, EKS will add two environment variables to the Pod that allow for fetching credentials using [sts:AssumeRoleWithWebIdentity](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html). See the AWS guide "[IAM roles for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html)" for more details.
+
+## OIDC Provider and Service Account
+
+The first step to establishing the IRSA association is to add an OIDC provider to EKS. The process for updating an existing EKS cluster is described in "[Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html)". 
+
+You may also do this during cluster creation with the `--enable-oidc` option to `eksctl`, or by setting the [`enable_irsa` option](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest#input_enable_irsa) in the Terraform EKS module.
+
+Once an OIDC provider is provisioned, create a k8s service account with an IAM role bound to that service account using either `eksctl` or terraform:
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```console
+eksctl create iamserviceaccount \
+    --name <IAM_SERVICEACCOUNT> \
+    --namespace <NAMESPACE> \
+    --cluster <EKS_NAME> \
+    --role-name <NEW_IAM_ROLE_NAME> \
+    --attach-policy-arn <IAM_POLICY_ARN> \
+    --approve \
+    --override-existing-serviceaccounts
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+...
+module "iam_assumable_role" {
+  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                        = "5.20.0"
+  create_role                    = true
+  role_name                      = "<NEW_IAM_ROLE_NAME>"
+  provider_url                   = replace(module.eks.cluster_oidc_issuer_url, "https://", "")
+  role_policy_arns               = ["<IAM_POLICY_ARN>"]
+  oidc_subjects_with_wildcards   = ["system:serviceaccount:<NAMESPACE>:<IAM_SERVICEACCOUNT>"]
+  oidc_fully_qualified_audiences = ["sts.amazonaws.com"]
+}
+
+resource "kubernetes_service_account" "irsa_assumable" {
+  metadata {
+    name      = "<IAM_SERVICEACCOUNT>"
+    namespace = "<NAMESPACE>"
+    annotations = {
+      "eks.amazonaws.com/role-arn" : "<IAM_ROLE>",
+    }
+  }
+}
+...
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+Where `<IAM_POLICY_ARN>` includes the permissions `kms:Encrypt`, `kms:Decrypt`, and `kms:DescribeKey` as described in the [awskms seal docs](vault/docs/configuration/seal/awskms#awskms-seal).
+
+The resulting `<NEW_IAM_ROLE_NAME>` will be configured with trust relationships restricting it to the k8s service account `<IAM_SERVICEACCOUNT>` in the `<NAMESPACE>` namespace. This service account will have an annotation of the form:
+
+  ```
+  eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/<NEW_IAM_ROLE_NAME>
+  ```
+
+This annotation is processed by a controller in EKS which adds two environment variables to the pod: `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE`. These can be used by Vault's auto-unseal to assume the role's credentials and use them to interact with KMS.
+
+## Auto-unseal with Vault Server
+
+To use this with vault-helm, set the service account name and awskms seal config in the chart override values.
+
+Example `my-values.yaml`:
+
+```yaml
+server:
+  ha:
+    enabled: true
+    raft:
+      config: |
+        ui = false
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path    = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
+
+        seal "awskms" {
+          region     = "us-west-2"
+          kms_key_id = "alias/my-vault-key"
+        }
+
+      enabled: true
+      setNodeId: true
+
+  serviceAccount:
+    ## the service account was already created by terraform
+    ## or the `eksctl create iamserviceaccount` command
+    create: false
+    name: <IAM_SERVICEACCOUNT>
+```
+
+Then install the chart in the default namespace and proceed with init and raft join:
+
+```console
+helm install vault hashicorp/vault -f my-values.yaml
+
+kubectl exec -ti vault-0 -- vault operator init
+kubectl exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+kubectl exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
+...
+```
+
+## Auto-auth with Vault Agent
+
+You may also use an IRSA service account for auto-auth with Vault Agent.
+
+Using the IAM role created above, and AWS auth enabled at `auth/aws`, setup Vault's auth method accordingly:
+
+```console
+vault write auth/aws/role/dev-role-iam \
+  auth_type=iam \
+  bound_iam_principal_arn="arn:aws:iam::123456789012:role/<NEW_IAM_ROLE_NAME>" \
+  policies=internal-app ttl=24h
+```
+
+Deploy a Kubernetes pod that includes these auth annotations:
+
+```yaml
+  annotations:
+    vault.hashicorp.com/role: "dev-role-iam"
+    vault.hashicorp.com/auth-type: "aws"
+    vault.hashicorp.com/auth-path: "auth/aws"
+    vault.hashicorp.com/auth-config-type: "iam"
+```
+
+## Vault Secrets Operator auth

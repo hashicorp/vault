@@ -1804,6 +1804,10 @@
           {
             "title": "Running Vault",
             "path": "platform/aws/run"
+          },
+          {
+            "title": "IRSA auth on EKS",
+            "path": "platform/aws/eks-irsa-auth"
           }
         ]
       },
