@@ -6,5 +6,5 @@
 import Controller from '@ember/controller';
 
 export default class PkiCertificatesController extends Controller {
-  queryParams = ['pageFilter', 'currentPage'];
+  queryParams = ['page'];
 }

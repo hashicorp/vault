@@ -14,17 +14,29 @@ export default class PkiKeysIndexRoute extends Route {
   @service secretMountPath;
   @service store;
 
-  model() {
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
+
+  model(params) {
     return hash({
       hasConfig: this.shouldPromptConfig,
       parentModel: this.modelFor('keys'),
-      keyModels: this.store.query('pki/key', { backend: this.secretMountPath.currentPath }).catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      }),
+      keyModels: this.store
+        .lazyPaginatedQuery('pki/key', {
+          backend: this.secretMountPath.currentPath,
+          responsePath: 'data.keys',
+          page: Number(params.page) || 1,
+        })
+        .catch((err) => {
+          if (err.httpStatus === 404) {
+            return [];
+          } else {
+            throw err;
+          }
+        }),
     });
   }
 
@@ -36,5 +48,11 @@ export default class PkiKeysIndexRoute extends Route {
       { label: 'keys', route: 'keys.index' },
     ];
     controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

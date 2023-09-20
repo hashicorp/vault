@@ -1,0 +1,25 @@
+import Component from '@glimmer/component';
+
+/**
+ * @module AuthForm
+ * The `PkiPaginatedList` is used to handle a list page layout with lazyPagination response.
+ * It is specific to PKI so we can make certain assumptions about routing.
+ * The toolbar has no filtering since users can go directly to an item from the overview page.
+ *
+ * @example ```js
+ * <PkiPaginatedList @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}} @listRoute="roles.index">
+ *   <:
+ * </PkiPaginatedList>
+ * ```
+ */
+
+interface Args {
+  list: unknown[];
+  hasConfig: boolean;
+  listRoute: string;
+}
+export default class PkiPaginatedListComponent extends Component<Args> {
+  get paginationQueryParams() {
+    return (page: number) => ({ page });
+  }
+}

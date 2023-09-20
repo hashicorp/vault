@@ -5,13 +5,7 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<PkiPaginatedList
-  @listRoute="certificates.index"
-  @list={{this.model.certificates}}
-  @hasConfig={{this.model.hasConfig}}
-  @pageFilter={{this.model.pageFilter}}
-  @filterPlaceholder="Search certificates"
->
+<PkiPaginatedList @listRoute="certificates.index" @list={{this.model.certificates}} @hasConfig={{this.model.hasConfig}}>
   <:list as |certs|>
     {{#each certs as |pkiCertificate|}}
       <LinkedBlock

@@ -5,6 +5,6 @@
 
 import Controller from '@ember/controller';
 
-export default class PkiRolesController extends Controller {
+export default class PkiKeysController extends Controller {
   queryParams = ['page'];
 }

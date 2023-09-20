@@ -5,13 +5,7 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-<PkiPaginatedList
-  @listRoute="roles.index"
-  @list={{this.model.roles}}
-  @hasConfig={{this.model.hasConfig}}
-  @pageFilter={{this.model.pageFilter}}
-  @filterPlaceholder="Search roles"
->
+<PkiPaginatedList @listRoute="roles.index" @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}}>
   <:actions>
     {{#if this.model.hasConfig}}
       <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
