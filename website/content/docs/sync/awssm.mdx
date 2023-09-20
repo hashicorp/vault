@@ -5,3 +5,66 @@ description: The AWS Secrets Manager destination syncs secrets from Vault to AWS
 ---
 
 # AWS Secrets Manager
+
+The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
+an external AWS account. When configured, Vault will manage the selected secrets by storing them
+in Secrets Manager for use with AWS systems, update their values when changed, and remove them when
+the secret gets deleted from Vault. 
+
+## Setup
+
+The use of this sync destination requires some prerequesite setup before beginning. Either an IAM User
+or an IAM role must be configured in AWS for which access credentials will be generated. Those creds
+are what the sync destination requires to be configured in Vault.
+
+1. Store any KV secret into Vault, like so:
+	```shell-session
+	vault kv put secret/foo mypass=bar
+	```
+	Output:
+	```
+	=== Secret Path ===
+	secret/data/foo
+
+	======= Metadata =======
+	Key                Value
+	---                -----
+	created_time       2023-09-19T13:17:23.395109Z
+	custom_metadata    <nil>
+	deletion_time      n/a
+	destroyed          false
+	version            1
+	```
+
+1.	Configure the sync destination with credentials to use for access to your AWS account:
+
+	```shell-session
+	vault write sys/sync/destinations/aws-sm/my-awssm-1 \
+	access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
+	secret_access_key='R4nm063hgMVo4BTT5xOs5nHLeLXA6lar7ZJ3Nt0i' \
+	region='us-east-1'
+	```
+	Output:
+	```text
+	Key                   Value
+	---                   -----
+	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
+	name                  my-awssm-1
+	type                  aws-sm
+	```
+
+1.	Set a secret to be associated with the configured secret destination:
+	```shell-session
+	vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
+	mount='secret' \
+	secret_name='foo'
+	```
+	Output:
+	```
+	Key                   Value
+	---                   -----
+	associated_secrets    map[kv_37993f8a/foo:map[accessor:kv_37993f8a secret_name:foo sync_status:SYNCED updated_at:2023-09-19T13:17:35.085581-05:00]]
+	store_name            aws1
+	store_type            aws-sm
+	```
+
