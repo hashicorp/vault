@@ -6210,6 +6210,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 				Wrapper:        aeadwrapper.NewShamirWrapper(),
 				SealConfigType: wrapping.WrapperTypeShamir.String(),
 				Priority:       1,
+				Configured:     true,
 			},
 		},
 	))
