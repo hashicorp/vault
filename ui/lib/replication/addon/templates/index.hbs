@@ -1,26 +1,25 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if this.model.replicationIsInitializing}}
-      <nav class="navbar"></nav>
+    {{#if (eq this.model.mode "unsupported")}}
+      <nav aria-label="unsupported-nav" class="navbar"></nav>
+      <PageHeader as |p|>
+        <p.levelLeft>
+          <h1 class="title is-3 has-text-grey" data-test-replication-title>
+            Replication unsupported
+          </h1>
+        </p.levelLeft>
+      </PageHeader>
+      <EmptyState @title="The current cluster configuration does not support replication" />
+    {{else if this.model.replicationIsInitializing}}
+      <nav aria-label="loading-nav" class="navbar"></nav>
       <LayoutLoading />
     {{else}}
-      {{#if (eq this.model.mode "unsupported")}}
-        <PageHeader as |p|>
-          <p.levelLeft>
-            <h1 class="title is-3 has-text-grey">
-              Replication unsupported
-            </h1>
-          </p.levelLeft>
-        </PageHeader>
-        <EmptyState @title="The current cluster configuration does not support replication" />
-      {{else}}
-        <ReplicationSummary
-          @cluster={{this.model}}
-          @showModeSummary={{true}}
-          @onEnable={{action "onEnable"}}
-          @onDisable={{action "onDisable"}}
-        />
-      {{/if}}
+      <ReplicationSummary
+        @cluster={{this.model}}
+        @showModeSummary={{true}}
+        @onEnable={{action "onEnable"}}
+        @onDisable={{action "onDisable"}}
+      />
     {{/if}}
   </div>
 </section>
