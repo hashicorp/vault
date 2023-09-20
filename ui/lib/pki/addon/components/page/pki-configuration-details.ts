@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type Store from '@ember-data/store';
+import type Store from 'vault/services/store';
 import type VersionService from 'vault/services/version';
 
 interface Args {
@@ -35,6 +35,7 @@ export default class PkiConfigurationDetails extends Component<Args> {
       await issuerAdapter.deleteAllIssuers(this.args.backend);
       this.flashMessages.success('Successfully deleted all issuers and keys');
       this.showDeleteAllIssuers = false;
+      this.store.clearDataset('pki/issuer');
       this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
     } catch (error) {
       this.showDeleteAllIssuers = false;

@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 export default class PkiIssuersListRoute extends Route {
   @service store;
@@ -38,7 +37,6 @@ export default class PkiIssuersListRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
     ];
-    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 
   resetController(controller, isExiting) {
