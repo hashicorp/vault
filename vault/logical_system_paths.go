@@ -482,7 +482,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "decode",
+						OperationVerb:   "decode",
+						OperationSuffix: "token",
 					},
 					Summary: "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
@@ -2224,6 +2225,21 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 }
 
 func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
+	handler := &framework.PathOperation{
+		Callback: b.handlePluginRuntimeCatalogList,
+		Responses: map[int][]framework.Response{
+			http.StatusOK: {{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"runtimes": {
+						Type:        framework.TypeSlice,
+						Description: "List of all plugin runtimes in the catalog",
+						Required:    true,
+					},
+				},
+			}},
+		},
+	}
 	return []*framework.Path{
 		{
 			Pattern: "plugins/runtimes/catalog/?$",
@@ -2235,21 +2251,8 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handlePluginRuntimeCatalogList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"runtimes": {
-									Type:        framework.TypeSlice,
-									Description: "List of all plugin runtimes in the catalog",
-									Required:    true,
-								},
-							},
-						}},
-					},
-				},
+				logical.ReadOperation: handler,
+				logical.ListOperation: handler,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),

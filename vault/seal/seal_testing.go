@@ -57,6 +57,7 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 			fmt.Sprintf("%s-%d", opts.Name, i+1),
 			wrapperType.String(),
 			false,
+			true,
 		)
 	}
 
@@ -88,6 +89,7 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
 			fmt.Sprintf("%s-%d", opts.Name, i+1),
 			wrapperType.String(),
 			false,
+			true,
 		)
 		funcs[i] = w.SetError
 	}
