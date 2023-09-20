@@ -12,8 +12,6 @@ Refer to the [user lockout](/vault/docs/concepts/user-lockout) overview for more
 
 ## List locked users
 
-@include 'alerts/restricted-admin.mdx'
-
 The list endpoint returns information on the users currently locked by Vault.
 
 The response will include all child namespaces of the namespace in which the
@@ -195,7 +193,6 @@ $ curl \
 
 ## Unlock user
 
-@include 'alerts/restricted-admin.mdx'
 
 The unlock user endpoint frees a locked user with the provided `mount_accessor` and `alias_identifier` in the given namespace.
 The unlock command is idempotent. Calls to the endpoint succeed even if the user matching the provided `mount_accessor` and `alias_identifier` is not currently locked.
