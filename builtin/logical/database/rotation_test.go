@@ -246,6 +246,9 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	}
 }
 
+// TestBackend_StaticRole_Rotation_Schedule_ErrorRecover tests that failed
+// rotations can successfully recover and that they do not occur outside of a
+// rotation window.
 func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 	cluster, sys := getClusterPostgresDB(t)
 	t.Cleanup(cluster.Cleanup)
