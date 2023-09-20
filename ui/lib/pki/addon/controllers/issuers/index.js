@@ -9,6 +9,8 @@ import { next } from '@ember/runloop';
 import { getOwner } from '@ember/application';
 
 export default class PkiIssuerIndexController extends Controller {
+  queryParams = ['page'];
+
   get mountPoint() {
     return getOwner(this).mountPoint;
   }
