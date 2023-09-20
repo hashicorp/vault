@@ -108,22 +108,22 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
 
     assert.dom(PAGE.edit.toggleDiff).isDisabled('Diff toggle is disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
-    assert.dom(PAGE.edit.visualDiff).doesNotExist('Does not show visual diff');
+    assert.dom(PAGE.versions.visualDiff).doesNotExist('Does not show visual diff');
 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
 
     assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
-    assert.dom(PAGE.edit.visualDiff).doesNotExist('Does not show visual diff');
+    assert.dom(PAGE.versions.visualDiff).doesNotExist('Does not show visual diff');
     await click(PAGE.edit.toggleDiff);
-    assert.dom(PAGE.edit.visualDiff).exists('Shows visual diff');
+    assert.dom(PAGE.versions.visualDiff).exists('Shows visual diff');
     assert.dom(PAGE.edit.added).hasText(`foo2"bar2"`);
 
     await click(FORM.toggleJson);
     codemirror().setValue('{ "foo3": "bar3" }');
 
-    assert.dom(PAGE.edit.visualDiff).exists('Visual diff updates');
+    assert.dom(PAGE.versions.visualDiff).exists('Visual diff updates');
     assert.dom(PAGE.edit.deleted).hasText(`foo"bar"`);
     assert.dom(PAGE.edit.added).hasText(`foo3"bar3"`);
   });

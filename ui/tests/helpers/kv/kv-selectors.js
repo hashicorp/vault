@@ -53,7 +53,6 @@ export const PAGE = {
   edit: {
     toggleDiff: '[data-test-toggle-input="Show diff"',
     toggleDiffDescription: '[data-test-diff-description]',
-    visualDiff: '[data-test-visual-diff]',
     added: `.jsondiffpatch-added`,
     deleted: `.jsondiffpatch-deleted`,
   },
@@ -73,9 +72,9 @@ export const PAGE = {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
     linkedBlock: (version) =>
       version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
-    button: (version) => `[data-test-version-button="${version}"]`,
     versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
     createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
+    visualDiff: '[data-test-visual-diff]',
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
