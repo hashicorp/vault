@@ -86,17 +86,16 @@
 >
   <section class="modal-card-body">
     <div class="is-flex-between is-flex-center has-bottom-margin-s">
-      <p data-test-modal-copy>
+      <p data-test-modal-text>
         Example of a JSON template for scopes:
       </p>
-      <CopyButton
-        class="button is-transparent"
-        @clipboardText={{this.exampleTemplate}}
-        @buttonType="button"
-        @success={{fn (set-flash-message "Example template copied!")}}
-      >
-        <Icon @name="clipboard-copy" aria-label="Copy" />
-      </CopyButton>
+      <Hds::Copy::Button
+        @text="Copy"
+        @isIconOnly={{true}}
+        @textToCopy={{this.exampleTemplate}}
+        class="transparent"
+        data-test-copy-button
+      />
     </div>
     {{! code-mirror modifier does not render value initially in wormhole until focus event fires }}
     {{! wait until the Modal is rendered and then show the JsonEditor }}

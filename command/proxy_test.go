@@ -1466,12 +1466,13 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	ui, cmd := testProxyCommand(t, logger)
 
+	var output string
+	var code int
 	wg.Add(1)
 	args := []string{"-config", configFile.Name()}
 	go func() {
-		if code := cmd.Run(args); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+		if code = cmd.Run(args); code != 0 {
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
 	}()
@@ -1538,6 +1539,9 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 
 	// Shut down
 	cmd.ShutdownCh <- struct{}{}
-
 	wg.Wait()
+
+	if code != 0 {
+		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+	}
 }

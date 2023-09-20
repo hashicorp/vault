@@ -12,12 +12,11 @@
  * <SecretEditToolbar
  * @mode={{mode}}
  * @model={{this.model}}
- * @isV2={{isV2}}
  * @isWriteWithoutRead={{isWriteWithoutRead}}
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
  * @modelForData={{this.modelForData}}
- * @canUpdateSecretData={{canUpdateSecretData}}
+ * @canUpdateSecret={{canUpdateSecret}}
  * @editActions={{hash
     toggleAdvanced=(action "toggleAdvanced")
     refresh=(action "refresh")
@@ -27,12 +26,11 @@
 
  * @param {string} mode - show, create, edit. The view.
  * @param {object} model - the model passed from the parent secret-edit
- * @param {boolean} isV2 - KV type
  * @param {boolean} isWriteWithoutRead - boolean describing permissions
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvancedMode - used for JSON toggle
  * @param {object} modelForData - a modified version of the model with secret data
- * @param {boolean} canUpdateSecretData - permissions that show the create new version button or not.
+ * @param {boolean} canUpdateSecret - permissions to hide/show edit secret button.
  * @param {object} editActions - actions passed from parent to child
  */
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
@@ -45,6 +43,7 @@ import { waitFor } from '@ember/test-waiters';
 
 export default class SecretEditToolbar extends Component {
   @service store;
+  @service router;
   @service flashMessages;
 
   @tracked wrappedData = null;
@@ -52,6 +51,13 @@ export default class SecretEditToolbar extends Component {
   @action
   clearWrappedData() {
     this.wrappedData = null;
+  }
+
+  @action
+  handleDelete() {
+    this.args.model.destroyRecord().then(() => {
+      this.router.transitionTo('vault.cluster.secrets.backend.list-root');
+    });
   }
 
   @task
@@ -62,9 +68,7 @@ export default class SecretEditToolbar extends Component {
     const wrapTTL = { wrapTTL: 1800 };
 
     try {
-      const resp = yield this.args.isV2
-        ? this.store.adapterFor('secret-v2-version').queryRecord(id, wrapTTL)
-        : this.store.adapterFor('secret').queryRecord(null, null, { backend, id, ...wrapTTL });
+      const resp = yield this.store.adapterFor('secret').queryRecord(null, null, { backend, id, ...wrapTTL });
       this.wrappedData = resp.wrap_info.token;
       this.flashMessages.success('Secret successfully wrapped!');
     } catch (e) {
