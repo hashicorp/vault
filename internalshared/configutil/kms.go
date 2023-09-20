@@ -44,6 +44,8 @@ type EntropyMode int
 const (
 	EntropyUnknown EntropyMode = iota
 	EntropyAugmentation
+
+	KmsRenameDisabledSuffix = "-disabled"
 )
 
 type Entropy struct {
@@ -133,7 +135,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		name := strings.ToLower(key)
 		// ensure that seals of the same type will have unique names for seal migration
 		if disabled {
-			name += "-disabled"
+			name += KmsRenameDisabledSuffix
 		}
 		if v, ok := m["name"]; ok {
 			name, ok = v.(string)

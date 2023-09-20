@@ -2784,6 +2784,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
+		// This forces a seal re-wrap on all config changes, that doesn't seem right
 		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
 			return existingSealGenInfo, nil
 		}
