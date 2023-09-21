@@ -597,6 +597,10 @@
         "path": "system/plugins-catalog"
       },
       {
+        "title": "<code>/sys/plugins/runtimes/catalog</code>",
+        "path": "system/plugins-runtimes-catalog"
+      },
+      {
         "title": "<code>/sys/policy</code>",
         "path": "system/policy"
       },
