@@ -26,6 +26,9 @@ type SealWrapper struct {
 	// Disabled indicates, when true indicates that this wrapper should only be used for decryption.
 	Disabled bool
 
+	// Configured indicates the wrapper was successfully configured at initialization
+	Configured bool
+
 	// hcLock protects lastHealthy, lastSeenHealthy, and healthy.
 	// Do not modify those fields directly, use setHealth instead.
 	// Do not access these fields directly, use getHealth instead.
@@ -35,16 +38,21 @@ type SealWrapper struct {
 	healthy         bool
 }
 
-func NewSealWrapper(wrapper wrapping.Wrapper, priority int, name string, sealConfigType string, disabled bool) *SealWrapper {
+func NewSealWrapper(wrapper wrapping.Wrapper, priority int, name string, sealConfigType string, disabled bool, configured bool) *SealWrapper {
 	ret := &SealWrapper{
 		Wrapper:        wrapper,
 		Priority:       priority,
 		Name:           name,
 		SealConfigType: sealConfigType,
 		Disabled:       disabled,
+		Configured:     configured,
 	}
 
-	setHealth(ret, true, time.Now(), ret.lastHealthCheck)
+	if configured {
+		setHealth(ret, true, time.Now(), ret.lastHealthCheck)
+	} else {
+		setHealth(ret, false, time.Now(), ret.lastHealthCheck)
+	}
 
 	return ret
 }

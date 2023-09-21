@@ -127,7 +127,7 @@ func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 }
 
 func TestWriteConfig_HelpfulErrorMessageWhenBuiltinOverridden(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
