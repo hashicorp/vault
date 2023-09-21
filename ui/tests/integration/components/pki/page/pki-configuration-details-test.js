@@ -49,7 +49,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
   });
 
   test('shows the correct information on cluster config', async function (assert) {
-    await render(hbs`<Page::PkiConfigurationDetails @cluster={{this.cluster}} />,`, {
+    await render(hbs`<Page::PkiConfigurationDetails @cluster={{this.cluster}} @hasConfig={{true}} />,`, {
       owner: this.engine,
     });
     assert
@@ -59,9 +59,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
   });
 
   test('shows the correct information on global urls section', async function (assert) {
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
 
     assert
       .dom(SELECTORS.rowLabel('Issuing certificates'))
@@ -70,9 +71,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .dom(SELECTORS.rowValue('Issuing certificates'))
       .hasText('example.com', 'issuing certificate value renders');
     this.urls.issuingCertificates = null;
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
     assert
       .dom(SELECTORS.rowValue('Issuing certificates'))
       .hasText('None', 'issuing certificate value renders None if none is configured');
@@ -85,9 +87,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
   });
 
   test('shows the correct information on crl section', async function (assert) {
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
 
     assert.dom(SELECTORS.rowLabel('CRL building')).hasText('CRL building', 'crl expiry row label renders');
     assert.dom(SELECTORS.rowValue('CRL building')).hasText('Enabled', 'enabled renders');
@@ -110,9 +113,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     // check falsy aut_rebuild and _enable_delta hides duration values
     this.crl.autoRebuild = false;
     this.crl.enableDelta = false;
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
     assert.dom(SELECTORS.rowValue('Auto-rebuild')).hasText('Off', 'it renders falsy auto build');
     assert.dom(SELECTORS.rowIcon('Auto-rebuild', 'x-square'));
     assert
@@ -129,9 +133,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.crl.enableDelta = true;
     this.crl.disable = true;
     this.crl.ocspDisable = true;
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
     assert.dom(SELECTORS.rowValue('CRL building')).hasText('Disabled', 'disabled renders');
     assert.dom(SELECTORS.rowValue('Expiry')).doesNotExist();
     assert
@@ -147,9 +152,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
   test('it renders enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
     assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).hasText('Yes');
     assert.dom(SELECTORS.rowIcon('Cross-cluster revocation', 'check-circle'));
     assert.dom(SELECTORS.rowValue('Unified CRL')).hasText('Yes');
@@ -161,9 +167,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
   test('it does not render enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1';
-    await render(hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} />,`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
+      { owner: this.engine }
+    );
     assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Unified CRL')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).doesNotExist();

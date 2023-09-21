@@ -89,9 +89,9 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         <:empty>
           No items found
         </:empty>
-        <:configuration>
+        <:configure>
           Not configured
-        </:configuration>
+        </:configure>
       </PkiPaginatedList>
     `,
       { owner: this.engine }
@@ -126,9 +126,9 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
         <:empty>
           No items found
         </:empty>
-        <:configuration>
+        <:configure>
           Not configured
-        </:configuration>
+        </:configure>
       </PkiPaginatedList>
     `,
       { owner: this.engine }
