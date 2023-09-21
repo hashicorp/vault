@@ -45,7 +45,8 @@ export default class KvSecretMetadataVersionDiff extends Component {
     this.createVisualDiff();
   }
 
-  // diffs with an inactive version only happens on initialization if the current version is inactive
+  // this can only be true on initialization if the current version is inactive
+  // selecting a deleted/destroyed version is otherwise disabled
   get deactivatedState() {
     const { currentVersion, currentSecret } = this.args.metadata;
     return this.rightVersion === currentVersion && currentSecret.isDeactivated ? currentSecret.state : '';
