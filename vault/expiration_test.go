@@ -437,7 +437,8 @@ func TestExpiration_EmitsEvents(t *testing.T) {
 	}
 
 	// count events
-	events, cancel, err := c.Events().Subscribe(context.Background(), namespace.RootNamespace, "core/lease-*", "")
+	events, cancel, err := c.Events().Subscribe(context.Background(), namespace.RootNamespace, "core/lease-*",
+		fmt.Sprintf("event_type == \"%s\" or event_type == \"%s\"", leaseCreateEventType, leaseRevokeEventType))
 	if err != nil {
 		t.Fatal(err)
 	}

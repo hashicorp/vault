@@ -95,11 +95,14 @@ func (x *EventReceived) BexprDatum() any {
 		}
 	}
 
-	return &EventReceivedBexpr{
-		EventType:         x.EventType,
-		Operation:         operation,
-		SourcePluginMount: x.PluginInfo.MountPath,
-		DataPath:          dataPath,
-		Namespace:         x.Namespace,
+	ev := &EventReceivedBexpr{
+		EventType: x.EventType,
+		Operation: operation,
+		DataPath:  dataPath,
+		Namespace: x.Namespace,
 	}
+	if x.PluginInfo != nil {
+		ev.SourcePluginMount = x.PluginInfo.MountPath
+	}
+	return ev
 }

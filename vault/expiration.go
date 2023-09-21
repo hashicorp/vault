@@ -88,7 +88,6 @@ const (
 
 	leaseCreateEventType = logical.EventType("core/lease-create")
 	leaseRevokeEventType = logical.EventType("core/lease-revoke")
-	leaseExpireEventType = logical.EventType("core/lease-expire")
 	leaseRenewEventType  = logical.EventType("core/lease-renew")
 )
 
