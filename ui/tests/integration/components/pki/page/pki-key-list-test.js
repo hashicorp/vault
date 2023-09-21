@@ -54,7 +54,6 @@ module('Integration | Component | pki key list page', function (hooks) {
           @mountPoint="vault.cluster.secrets.backend.pki"
           @canImportKey={{true}}
           @canGenerateKey={{true}}
-          @hasConfig={{true}}
         />,
       `,
       { owner: this.engine }
@@ -77,7 +76,6 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{true}}
           @canRead={{true}}
           @canEdit={{true}}
-          @hasConfig={{true}}
         />,
       `,
       { owner: this.engine }
@@ -104,7 +102,6 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{false}}
           @canRead={{false}}
           @canEdit={{false}}
-          @hasConfig={{true}}
         />,
       `,
       { owner: this.engine }

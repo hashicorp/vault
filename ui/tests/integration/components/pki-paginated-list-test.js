@@ -45,7 +45,7 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
   });
 
   test('it renders correctly with a list', async function (assert) {
-    this.set('hasConfig', true);
+    this.set('hasConfig', null);
     await render(
       hbs`
       <PkiPaginatedList @list={{this.list}} @hasConfig={{this.hasConfig}}>
@@ -65,8 +65,8 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
       { owner: this.engine }
     );
 
+    assert.dom(this.element).doesNotContainText('Not configured', 'defaults to has config if not boolean');
     assert.dom(this.element).doesNotContainText('No items found', 'does not render empty state');
-    assert.dom(this.element).doesNotContainText('Not configured', 'does not show configuration prompt');
     assert.dom('[data-test-item]').exists({ count: 2 }, 'lists the items');
     assert.dom('[data-test-item="724862ff-6438-bad0-b598-77a6c7f4e934"]').hasText('test-key');
     assert.dom('[data-test-item="9fdddf12-9ce3-0268-6b34-dc1553b00175"]').hasText('another-key');

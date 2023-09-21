@@ -8,18 +8,26 @@ import Component from '@glimmer/component';
  *
  * @example ```js
  * <PkiPaginatedList @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}} @listRoute="roles.index">
- *   <:
+ *   <:list as |items|>
+ *     {{#each items as |item}}
+ *       <div>for each thing</div>
+ *     {{/each}}
+ *   </:list>
  * </PkiPaginatedList>
  * ```
  */
 
 interface Args {
   list: unknown[];
-  hasConfig: boolean;
   listRoute: string;
+  hasConfig?: boolean;
 }
 export default class PkiPaginatedListComponent extends Component<Args> {
   get paginationQueryParams() {
     return (page: number) => ({ page });
+  }
+  get hasConfig() {
+    if (typeof this.args.hasConfig === 'boolean') return this.args.hasConfig;
+    return true;
   }
 }

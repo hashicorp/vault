@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PkiPaginatedList @listRoute="issuers.index" @list={{@issuers}} @hasConfig={{true}}>
+<PkiPaginatedList @listRoute="issuers.index" @list={{@issuers}}>
   <:actions>
     <ToolbarLink @route="issuers.import" data-test-generate-issuer="import">
       Import
