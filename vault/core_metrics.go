@@ -79,12 +79,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 0, nil)
 			}
 
-			if c.ReindexInProgress() {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_in_progress"}, 1, nil)
-			} else {
-				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_in_progress"}, 0, nil)
-			}
-
 			// Refresh the standby gauge, on all nodes
 			if haState != consts.Active {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
@@ -120,6 +114,17 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
+			}
+
+			if haState == consts.Active {
+				reindexState := c.ReindexStage()
+				if reindexState != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, float32(*reindexState), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, 0, nil)
+				}
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, float32(c.BuildProgress()), nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, float32(c.BuildTotal()), nil)
 			}
 
 			// If we're using a raft backend, emit raft metrics
