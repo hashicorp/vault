@@ -234,15 +234,18 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the correct actions and links associated with pki', async function (assert) {
-      await mountSecrets.enable('pki', 'pki');
+      const backend = 'pki-dashboard';
+      await mountSecrets.enable('pki', backend);
       await runCommands([
-        `write pki/roles/some-role \
+        `write ${backend}/roles/some-role \
       issuer_ref="default" \
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
-      await runCommands([`write pki/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
+      await runCommands([
+        `write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
+      ]);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
@@ -281,7 +284,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd('pki'));
+      await consoleComponent.runCommands(deleteEngineCmd(backend));
     });
 
     const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
