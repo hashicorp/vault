@@ -123,8 +123,8 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				} else {
 					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, 0, nil)
 				}
-				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, float32(c.BuildProgress()), nil)
-				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, float32(c.BuildTotal()), nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, float32(*c.BuildProgress()), nil)
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, float32(*c.BuildTotal()), nil)
 			}
 
 			// If we're using a raft backend, emit raft metrics
