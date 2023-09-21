@@ -2224,6 +2224,11 @@
         "path": "release-notes"
       },
       {
+        "title": "1.15.0",
+        "path": "release-notes/1.15.0",
+        "hidden": true
+      },
+      {
         "title": "1.14.0",
         "path": "release-notes/1.14.0"
       },
