@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add filtering by auth type and auth name to the Authentication Method list view.
+```

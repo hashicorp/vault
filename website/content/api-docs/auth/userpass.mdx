@@ -6,17 +6,17 @@ description: |-
   auth method.
 ---
 
-# Userpass Auth Method (HTTP API)
+# Userpass auth method (HTTP API)
 
 This is the API documentation for the Vault Username & Password auth method. For
 general information about the usage and operation of the Username and Password method, please
-see the [Vault Userpass method documentation](/docs/auth/userpass).
+see the [Vault Userpass method documentation](/vault/docs/auth/userpass).
 
 This documentation assumes the Username & Password method is mounted at the `/auth/userpass`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Create/Update User
+## Create/Update user
 
 Create a new user or update an existing user. This path honors the distinction between the `create` and `update` capabilities inside ACL policies.
 
@@ -32,7 +32,7 @@ Create a new user or update an existing user. This path honors the distinction b
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -42,7 +42,7 @@ Create a new user or update an existing user. This path honors the distinction b
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -52,7 +52,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
-## Read User
+## Read user
 
 Reads the properties of an existing username.
 
@@ -60,7 +60,7 @@ Reads the properties of an existing username.
 | :----- | :------------------------------- |
 | `GET`  | `/auth/userpass/users/:username` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -68,7 +68,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -99,7 +99,7 @@ $ curl \
 }
 ```
 
-## Delete User
+## Delete user
 
 This endpoint deletes the user from the method.
 
@@ -111,7 +111,7 @@ This endpoint deletes the user from the method.
 
 - `username` `(string: <required>)` - The username for the user.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -120,7 +120,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh
 ```
 
-## Update Password on User
+## Update password on user
 
 Update password for an existing user.
 
@@ -133,7 +133,7 @@ Update password for an existing user.
 - `username` `(string: <required>)` – The username for the user.
 - `password` `(string: <required>)` - The password for the user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -141,7 +141,7 @@ Update password for an existing user.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -151,7 +151,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh/password
 ```
 
-## Update Policies on User
+## Update policies on user
 
 Update policies for an existing user.
 
@@ -166,7 +166,7 @@ Update policies for an existing user.
   policies to encode onto generated tokens. Depending on the auth method, this
   list may be supplemented by user/group/other values.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -174,7 +174,7 @@ Update policies for an existing user.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -184,7 +184,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users/mitchellh/policies
 ```
 
-## List Users
+## List users
 
 List available userpass users.
 
@@ -192,7 +192,7 @@ List available userpass users.
 | :----- | :--------------------- |
 | `LIST` | `/auth/userpass/users` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -201,7 +201,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -224,7 +224,7 @@ Login with the username and password.
 - `username` `(string: <required>)` – The username for the user.
 - `password` `(string: <required>)` - The password for the user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -232,7 +232,7 @@ Login with the username and password.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -241,7 +241,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/login/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

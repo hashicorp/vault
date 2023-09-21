@@ -1,0 +1,3 @@
+```release-note:bug
+command/server: Fix incorrect paths in generated config for `-dev-tls` flag on Windows 
+```

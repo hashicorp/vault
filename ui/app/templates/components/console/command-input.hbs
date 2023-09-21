@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="console-ui-input" data-test-component="console/command-input">
   {{#if this.isRunning}}
     <div class="control console-spinner is-loading"></div>
@@ -5,7 +10,7 @@
     <Chevron />
   {{/if}}
   <input onkeyup={{action "handleKeyUp"}} value={{this.value}} autocomplete="off" spellcheck="false" />
-  <ToolTip @horizontalPosition="auto-right" @verticalPosition={{if this.isFullscreen "above" "below"}} as |d|>
+  <ToolTip @horizontalPosition="auto-right" @verticalPosition="above" as |d|>
     <d.Trigger>
       <button
         type="button"

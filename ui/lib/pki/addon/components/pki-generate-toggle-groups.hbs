@@ -1,0 +1,62 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each-in this.groups as |group fields|}}
+  <ToggleButton
+    @isOpen={{eq this.showGroup group}}
+    @openLabel={{concat "Hide " group}}
+    @closedLabel={{group}}
+    @onClick={{fn this.toggleGroup group}}
+    class="is-block"
+    data-test-toggle-group={{group}}
+  />
+  {{#if (eq this.showGroup group)}}
+    <div class="box is-marginless" data-test-group={{group}}>
+      {{#if (eq group "Key parameters")}}
+        <p class="has-bottom-margin-m" data-test-toggle-group-description>
+          {{#if (eq @model.type "internal")}}
+            This certificate type is internal. This means that the private key will not be returned and cannot be retrieved
+            later. Below, you will name the key and define its type and key bits.
+          {{else if (eq @model.type "kms")}}
+            This certificate type is kms, meaning managed keys will be used. Below, you will name the key and tell Vault
+            where to find it in your KMS or HSM.
+            <DocLink @path="/vault/docs/enterprise/managed-keys">Learn more about managed keys.</DocLink>
+          {{else if (eq @model.type "exported")}}
+            This certificate type is exported. This means the private key will be returned in the response. Below, you will
+            name the key and define its type and key bits.
+          {{else if (eq @model.type "existing")}}
+            You chose to use an existing key. This means that we’ll use the key reference to create the CSR or root. Please
+            provide the reference to the key.
+          {{else}}
+            Please choose a type to see key parameter options.
+          {{/if}}
+        </p>
+        {{#if this.keyParamFields}}
+          <PkiKeyParameters @model={{@model}} @fields={{this.keyParamFields}} @modelValidations={{@modelValidations}} />
+        {{/if}}
+      {{else}}
+        <p class="has-bottom-margin-m" data-test-toggle-group-description>
+          {{#if (eq group "Subject Alternative Name (SAN) Options")}}
+            SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names,
+            etc.) to be protected by a single certificate.
+          {{else if (eq group "Additional subject fields")}}
+            These fields provide more information about the client to which the certificate belongs.
+          {{/if}}
+        </p>
+        {{#each fields as |fieldName|}}
+          {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+            <FormField
+              data-test-field
+              @attr={{attr}}
+              @model={{@model}}
+              @showHelpText={{false}}
+              @modelValidations={{@modelValidations}}
+            />
+          {{/let}}
+        {{/each}}
+      {{/if}}
+    </div>
+  {{/if}}
+{{/each-in}}

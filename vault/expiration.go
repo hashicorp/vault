@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -139,7 +142,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *locking.DeadlockRWMutex
+	coreStateLock     locking.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
@@ -237,8 +240,8 @@ func (r *revocationJob) OnFailure(err error) {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 
 	r.m.pendingLock.Lock()
-	defer r.m.pendingLock.Unlock()
 	pendingRaw, ok := r.m.pending.Load(r.leaseID)
+	r.m.pendingLock.Unlock()
 	if !ok {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
@@ -266,7 +269,9 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
+		r.m.pendingLock.Lock()
 		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
+		r.m.pendingLock.Unlock()
 		return
 	} else {
 		r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err,
@@ -274,7 +279,9 @@ func (r *revocationJob) OnFailure(err error) {
 	}
 
 	pending.timer.Reset(newTimer)
+	r.m.pendingLock.Lock()
 	r.m.pending.Store(r.leaseID, pending)
+	r.m.pendingLock.Unlock()
 }
 
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
@@ -325,8 +332,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
 
-	c.AddLogger(managerLogger)
-
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -350,7 +355,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 
@@ -385,7 +390,6 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
-	c.AddLogger(expLogger)
 	mgr := NewExpirationManager(c, view, e, expLogger)
 	c.expiration = mgr
 
@@ -541,7 +545,6 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
-	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")

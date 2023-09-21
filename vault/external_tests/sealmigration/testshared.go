@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package sealmigration
 
 import (
@@ -841,7 +844,7 @@ func joinRaftFollowers(t *testing.T, cluster *vault.TestCluster, useStoredKeys b
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 

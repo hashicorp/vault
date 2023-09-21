@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
@@ -31,14 +34,12 @@ variable "vault_root_token" {
 
 variable "vault_autopilot_upgrade_version" {
   type        = string
-  description = "The directory where the Vault binary will be installed"
-  default     = null
+  description = "The Vault upgraded version"
 }
 
 variable "vault_autopilot_upgrade_status" {
   type        = string
-  description = "The directory where the Vault binary will be installed"
-  default     = null
+  description = "The autopilot upgrade expected status"
 }
 
 locals {

@@ -1,65 +1,71 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
-      Create role
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-{{#if this.model.roleModel.length}}
-  {{#each this.model.roleModel as |pkiRole|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="user" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{pkiRole.id}}
-            </span>
+<PkiPageHeader @backend={{this.model.parentModel}} />
+
+{{#if this.model.hasConfig}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
+        Create role
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
+  {{#if this.model.roles.length}}
+    {{#each this.model.roles as |pkiRole|}}
+      <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="user" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{pkiRole.id}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    <li>
+                      <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
           </div>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
+      </LinkedBlock>
+    {{/each}}
+  {{else}}
+    <EmptyState @title="No roles yet">
+      <div>
+        <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
+        <div class="has-top-margin-m">
+          <LinkTo @route="roles.create">
+            Create role
+          </LinkTo>
         </div>
       </div>
-    </LinkedBlock>
-  {{/each}}
+    </EmptyState>
+  {{/if}}
 {{else}}
-  <EmptyState @title="No roles yet">
-    <div>
-      <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
-      <div class="has-top-margin-m">
-        <LinkTo @route="roles.create">
-          Create role
-        </LinkTo>
-      </div>
-    </div>
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
   </EmptyState>
 {{/if}}

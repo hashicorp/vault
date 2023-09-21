@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -90,12 +92,12 @@ func (c *PluginListCommand) Run(args []string) int {
 		return 1
 	}
 
-	pluginType := consts.PluginTypeUnknown
+	pluginType := api.PluginTypeUnknown
 	if len(args) > 0 {
 		pluginTypeStr := strings.TrimSpace(args[0])
 		if pluginTypeStr != "" {
 			var err error
-			pluginType, err = consts.ParsePluginType(pluginTypeStr)
+			pluginType, err = api.ParsePluginType(pluginTypeStr)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error parsing type: %s", err))
 				return 2
@@ -139,10 +141,10 @@ func (c *PluginListCommand) Run(args []string) int {
 	}
 }
 
-func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, pluginType consts.PluginType) []string {
+func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, pluginType api.PluginType) []string {
 	var out []string
 	switch pluginType {
-	case consts.PluginTypeUnknown:
+	case api.PluginTypeUnknown:
 		out = []string{"Name | Type | Version"}
 		for _, plugin := range plugins.Details {
 			out = append(out, fmt.Sprintf("%s | %s | %s", plugin.Name, plugin.Type, plugin.Version))
@@ -158,9 +160,9 @@ func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, plu
 }
 
 func (c *PluginListCommand) detailedResponse(plugins *api.ListPluginsResponse) []string {
-	out := []string{"Name | Type | Version | Deprecation Status"}
+	out := []string{"Name | Type | Version | Container | Deprecation Status"}
 	for _, plugin := range plugins.Details {
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s", plugin.Name, plugin.Type, plugin.Version, plugin.DeprecationStatus))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %v | %s", plugin.Name, plugin.Type, plugin.Version, plugin.OCIImage != "", plugin.DeprecationStatus))
 	}
 
 	return out

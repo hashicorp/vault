@@ -1,0 +1,285 @@
+---
+layout: docs
+page_title: "1.14.0 release notes"
+description: |-
+  Key updates for  Vault 1.14.0
+---
+
+# Vault 1.14.0 release notes
+
+**GA date:** June 21, 2023
+
+@include 'release-notes/intro.mdx'
+
+## Known issues and breaking changes
+
+Version | Issue 
+------- | ------------------------------------------------------------
+1.14.0+ | [Users limited by control groups can only access issuer detail from PKI overview page](/vault/docs/upgrading/upgrade-to-1.14.x#ui-pki-control-groups)
+All     | [API calls to update-primary may lead to data loss](/vault/docs/upgrading/upgrade-to-1.14.x#update-primary-data-loss)
+1.14.0+ | [AWS static roles ignore changes to rotation period](/vault/docs/upgrading/upgrade-to-1.14.x#aws-static-role-rotation)
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault Secrets Operator for Kubernetes
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Directly connect Vault secrets into Pods as native Kubernetes Secrets
+      without modifying your application code.
+      <br /><br />
+      Learn more: <a href="/vault/docs/platform/k8s/vso">Vault Secrets Operator</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowspan={2} style={{verticalAlign: 'middle'}}>
+      Terraform
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use LDAP authentication from the unified LDAP engine to Terraform Vault
+      Provider.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/ldap">LDAP Secrets Engine</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Support for additional PKI issuers and keys endpoints.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/pki">PKI Secrets Engine</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+## Core updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  
+  <tr>
+    <td rowspan={2} style={{verticalAlign: 'middle'}}>
+      Public Key Infrastructure (PKI)
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use ACME to automate certificate lifecycle management for private PKI
+      needs with standard ACME clients like Certbot and k8s cert-manager.
+      Request certificates from a Vault server without needing to know Vault
+      APIs or authentication mechanisms.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/api-docs/secret/pki#acme-certificate-issuance">PKI Secrets Engine API: ACME</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the improved PKI web UI to manage your PKI instance with intuitive
+      configuration and reasonable defaults for workflows, metadata, issuer
+      info, mount and tidy configuration, cross signing, multi-issuers etc.and
+      includes.   
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/api-docs/secret/pki#acme-certificate-issuance">PKI Secrets Engine</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Security patches
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Various security improvements to remediate low severity and informational
+      findings from a 3rd party security audit.
+      <br /><br />
+      Learn more: <a href="/vault/docs/internals/security">Vault security model</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowspan={2} style={{verticalAlign: 'middle'}}>
+      Vault Agent
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Fetch secrets directly into your application as environment variables.
+      <br /><br />
+      Learn more: <a href="/vault/docs/agent-and-proxy/agent/process-supervisor">Process Supervisor Mode</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use a new subcommand and daemon, Vault Proxy, to access the proxy
+      functionality of Vault Agent. Vault Proxy will handle Vault Agent proxy
+      functionality going forward to simplify use case decisions for users.
+      <br /><br />
+      Learn more: <a href="/vault/docs/agent-and-proxy/proxy">Vault Proxy</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowspan={3} style={{verticalAlign: 'middle'}}>
+      Plugin support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Capture plugin metadata in the Vault audit log.
+      <br /><br />
+      Learn more: <a href="/vault/docs/audit/syslog">Syslog audit device</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use X509 Authentication and Terraform Vault Provider in the MongoDB Atlas
+      Database Secrets Engine.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/secrets/databases/mongodbatlas">MongoDB Atlas Database Secrets Engine</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Dependency updates and more robust multiplexing for secrets and
+      authentication plugins.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/plugins/plugin-development#serving-a-plugin-with-multiplexing">
+        Serving a plugin with multiplexing (Plugin Development)
+      </a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowspan={2} style={{verticalAlign: 'middle'}}>
+      AWS support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Monitoring and performance enhancements for the Vault Lambda extension.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/platform/aws/lambda-extension">Vault Lambda Extension guide</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use static roles for IAM users in the AWS Secrets Engine.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/aws">AWS Secrets Engine</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault GUI
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Streamlined and aligned navigation with HCP Vault UI.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration/ui">Vault UI</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Transit
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      <b>Contributed by the Vault community</b>. Support for public-key only Transit
+      keys and BYOK-secured export of key material.
+      <br /><br />
+      Learn more: <a href="/vault/api-docs/secret/transit">Transit Secrets Engine</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault replication
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Stability improvements based on customer feedback for Vault 1.13. See the 
+      <a href="https://raw.githubusercontent.com/hashicorp/vault/main/CHANGELOG.md">
+        Vault changelog
+      </a>
+      for a full list of bug fixes.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/internals/replication">Replication overview</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      License utilization reporting
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Enables automatic license utilization reporting for you and HashiCorp to
+      ensure transparent, accurate billing.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/enterprise/license/utilization-reporting">Automated License utilization reporting</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.14 | Retired in 1.14
+------------------ | ---------------
+Vault Agent API proxy support | [Duplicative Docker Images](https://hub.docker.com/_/vault)
+
+@include 'release-notes/deprecation-note.mdx'

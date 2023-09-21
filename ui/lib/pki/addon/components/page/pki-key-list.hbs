@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if @canImportKey}}
@@ -23,12 +28,12 @@
         <div class="level-left">
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline" data-test-key-id>
-              {{pkiKey.id}}
+            <span class="has-text-weight-semibold is-underline" data-test-key={{if pkiKey.keyName "name" "id"}}>
+              {{or pkiKey.keyName pkiKey.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               {{#if pkiKey.keyName}}
-                <span class="tag has-text-grey-dark" data-test-key-name>{{pkiKey.keyName}}</span>
+                <span class="tag has-text-grey-dark" data-test-key="id">{{pkiKey.id}}</span>
               {{/if}}
             </div>
           </div>

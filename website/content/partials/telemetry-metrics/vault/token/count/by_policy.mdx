@@ -1,0 +1,8 @@
+### vault.token.count.by_policy ((#vault-token-count-by_policy))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | number  | Total number of service tokens with a particular policy attached
+
+Vault organizes the token count by cluster, namespace, and policy. Tokens with
+more than one policy attached appear in the gauge for each associated policy.

@@ -1,323 +1,184 @@
 ---
 layout: docs
-page_title: Client Count
-description: Counting the number of clients accessing Vault.
+page_title: Clients and entities
+description: |-
+  Technical overview covering the concept of clients, entities, and entity IDs
+  in Vault 
 ---
 
-# What is a Client?
+# Clients and entities
 
-Before we dive into understanding the approach used to [count the number of clients](#client-count) accessing Vault, we need to first understand what clients represent.
-Clients basically represent anything that has authenticated to Vault to do _something_. **Users** are people who log into the cluster to manage policies, set up dynamic secret rotation, and more. So every user that logs into the Vault is considered a **client**. Whereas every application, service, or any other machine-based system that authenticates to Vault is also considered a **client**.
+Anything that connects and authenticates to Vault to accomplish a task is a
+**client**. For example, a user logging into a cluster to manage policies or a
+machine-based system (application or cloud service) requesting a database token
+are both considered clients.
 
 ![Vault Client Workflows](https://www.datocms-assets.com/2885/1617325020-valult-client-workflows.png)
 
-There are three main ways clients are assigned an identity:
-
-1. **External Identity Management Platform or SSO:** Active Directory, LDAP, OIDC, JWT, GitHub, Username/password, etc.
-2. **Platform or server-based identities:** Kubernetes, AWS, GCP, Azure, PKI, Cloud Foundry, etc.
-3. **Self Identity:** AppRole, tokens (without an associated auth path or role)
-
-![Vault Client Types](https://www.datocms-assets.com/2885/1617325030-vault-clients.png)
-
-There can be many different types of clients that authenticate and communicate with Vault using one of the above identities, including:
-
-1. **[Human users](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#human-authentication):** GitHub ID, username/password, LDAP, Active Directory, Kerberos, JWT/ OIDC claims, OKTA
-2. **Applications or Microservices:** 2-Factor Authentication methods such as AppRole, or by LDAP, Active Directory, or based on the platform’s identity, such as credentials from AWS, Azure, GCP, AliCloud, OCI, Kubernetes, Cloud Foundry, etc.
-3. **[Servers and Platforms](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#machine-programmatic-authentication):** VMs, Containers, Pods (Identified by LDAP, Active Directory service accounts, AWS, Azure, GCP, AliCloud, OCI, Kubernetes, TLS Certs
-4. **Orchestrators:** Nomad, Terraform, Ansible, or Continuous Integration Continuous Delivery (CI/CD) Pipelines where each pipeline usually identified by 2FA
-5. **[Vault Agents](/docs/agent/autoauth):** acting on behalf of a app/microservice, typically identified by App role, Cloud credentials, Kubernetes, TLS Certs
-6. **Tokens**: which are not tied to any identities at all. **_These should be used sparingly._**
-   Hashicorp recommends always associating tokens to an entity alias and token role.
-
-## How do Clients work in Vault?
-
-When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
-
-## But wait, there’s more...
-
-Want to take full advantage of the Vault identity system and how clients are counted? The Vault identity system also has [Entity Aliases](/api-docs/secret/identity/entity-alias) and [Identity Groups](/api-docs/secret/identity/group-alias).
-
-![Vault Identity Entities and Aliases](https://www.datocms-assets.com/2885/1617325026-vault-clients-identity-entity-aliases.png)
-
-### Entity Aliases
-
-Entity Aliases enable users or services to authenticate with more than one method and are associated with the same policy to share resources and count as unique entities.
-
-### Identity Groups
-
-Identity Groups within Vault leverage entities, in that Vault enables teams to create and manage logical groupings of entities. **Identity Groups** that can be based on organizations or teams within companies and can be used to assign policies and metadata, making user management dramatically simpler, especially for automating workflows by using Identity Groups to quickly and easily grant access to secrets and functionality within Vault.
-
-For more on managing access with identity, entities, and more, check out [Identity-based Security and Low-trust Networks](https://www.hashicorp.com/identity-based-security-and-low-trust-networks) and the HashiCorp Learn tutorial [Identity: Entities and Groups | Vault](https://learn.hashicorp.com/tutorials/vault/identity)
-
-## How does Vault avoid counting the same entity twice?
-
-Using the identity system allows for Vault to make sure that entities aren’t counted more than once. Once you determine the identity and authentication method to be used for each, human, application, platform, and CI/CD pipeline, upon authentication for the first time in a billing period, Vault instantiates a unique entity. For example, say you have an application “AppX” that needs to get a secret from Vault using the AppRole method. Since AppX has an associated entity within Vault with associated policies, Vault knows every time that AppX is authenticating and authorizing, so AppX is only counted once.
-
-## Non-entity Tokens
-
-If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
-
-### Differences between a direct entity and a non-entity token
-
-While the definition of clients appears to be simple on the surface, there are many nuances involved in the computation of clients. As mentioned, clients are unique applications, services, and/or users that authenticate to a Vault cluster. When anything authenticates to Vault, it is associated with a unique identity entity within the [Vault Identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies, and each entity is created or verified during authorization.
-
-One thing to note is that Vault clients are a combination of active identities as well as non-entity tokens. Identity entities are unique users, and when identities authenticate to Vault, corresponding tokens are generated. However, there are some situations in which tokens are generated without corresponding identities (e.g., when using the token auth method to create a token for someone else whose identity is unknown). As such, these non-entity tokens also represent users, and are counted towards the overall client aggregates. Here are some situations in which non-entity tokens get created within Vault.
-
-- Tokens within Vault are the core method for authentication. You can use Tokens to authenticate directly, or use the [auth methods](/docs/concepts/auth) to dynamically generate tokens based on external identities.
-- There are scenarios where tokens are created outside of the identity system without an associated entity. For this reason, unique identity entities alone cannot always add up to the total unique authentications made to Vault over a stipulated time period.
-- In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
-- There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/docs/concepts/client-count/#what-is-a-client) documentation.
-
-## Considerations for Namespaces
-
-Since namespaces represent logical isolations within a single Vault cluster for administrative purposes, consideration must be made on how Vault clients are determined in this context.
-
-1. If a client authenticates to Vault in a parent or root namespaces, it is considered the same client in all child namespaces. This is obvious as it is within the same logical isolation.
-2. However if a client authenticates to Vault in two separate namespaces, because of logical isolation they are not considered as the same client. As an example, `/namespaceA/ldap/auth/login/bob` is not related to `/namespaceB/ldap/auth/login/bob`. If the intent is that “Bob” is the same client, authenticate into two namespaces:
-   1. Move the auth to the parent workspace and any auth to child namespaces would be considered as the same client
-   2. Place that auth in the root namespace to be considered as 1 client in all namespaces.
-
-See also the guide [Secure Multi-Tenancy with Namespaces | Vault](https://learn.hashicorp.com/tutorials/vault/namespaces).
-
-## Authentication Methods and how they’re counted in Vault
-
-Below is a list of supported authentication methods within Vault. You can also set up custom auth methods with secure plugins.
-
-Each authentication method has a unique identifier to determine unique identity, similar to a driver license number, that uniquely determines an identity with a driver’s license.
-
-How does this relate to Vault clients? As outlined above, and as an example, if you chose to identify a microservice by AppRole auth method, then assign a role id for that microservice. A role id is the microservice’s username and identity. You should not have different microservices use the same role id. Different microservices should use different role ids. However if microservices (or multiple VMs, or containers), are exact copies using the same role id, they will all have the same identity. This is the appropriate security posture to mitigate any risk, and an operator can easily approve or deny access to secrets for that one role id, without affecting other services. It is important as you choose an identity for each human, app, service, platform, server and pipeline, that you pay attention to the name below that makes each method unique and be given an identity.
-
-| **Auth method**                                                                                  | **Name reported by auth method**                                                   |
-| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| **[AliCloud](https://www.vaultproject.io/docs/auth/alicloud)**                                   | Principal ID                                                                       |
-| **[AppRole](/api-docs/auth/approle#create-update-approle)**           | Role ID                                                                            |
-| **[AWS IAM](https://www.vaultproject.io/docs/auth/aws#iam-auth-method)**                         | Configurable via iam_alias to one of: Role ID (default), IAM unique ID, Full ARN   |
-| **[AWS EC2](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method)**                         | Configurable via ec2_alias to one of: Role ID (default), EC2 instance ID, AMI ID   |
-| **[Azure](/api-docs/auth/azure#create-role)**                         | Subject (from JWT claim)                                                           |
-| **[Cloud Foundry](https://www.vaultproject.io/docs/auth/cf)**                                    | App ID                                                                             |
-| **[GitHub](https://www.vaultproject.io/docs/auth/github)**                                       | User login name associated with token                                              |
-| **[Google Cloud](/api-docs/auth/gcp#create-role)**                    | Configurable via iam_alias to one of: Role ID (default), Service account unique ID |
-| **[JWT/OIDC](/api-docs/auth/jwt#create-role)**                        | Configurable via user_claim to one of the presented claims (no default value)      |
-| **[Kerberos](https://www.vaultproject.io/docs/auth/kerberos)**                                   | Username                                                                           |
-| **[Kubernetes](/api-docs/auth/kubernetes#create-role)**               | Service account UID                                                                |
-| **[LDAP](https://www.vaultproject.io/docs/auth/ldap)**                                           | Username                                                                           |
-| **[OCI](/api-docs/auth/oci#create-role)**                             | Rolename                                                                           |
-| **[Okta](/api-docs/auth/okta#register-user)**                         | Username                                                                           |
-| **[RADIUS](https://www.vaultproject.io/docs/auth/radius)**                                       | Username                                                                           |
-| **[TLS Certificate](/api-docs/auth/cert#create-ca-certificate-role)** | Subject CommonName                                                                 |
-| **[Token](https://www.vaultproject.io/docs/auth/token)**                                         | entity_alias, if provided (Note: please ensure that entity_alias is always used)   |
-| **[Username/Password](/api-docs/auth/userpass#create-update-user)**   | Username                                                                           |
-
-## Considerations with CI/CD
-
-**Orchestrators and Continuous Integration Continuous Delivery (CI/CD) Pipelines** such as Nomad, Terraform, Ansible and the like, along with CI/CD tools such as Jenkins, Bamboo, Azure Devops, GitLab and GitHub Ops, and the like, can be used to authenticate to and request secrets from Vault during infrastructure or application/ service deployment. While the discussion below focuses on CI/CD, it is also applicable to orchestrators.
-
-A CI/CD workflow can encompass many pipelines. Let us consider your options:
-
-1. **Master CI/CD identity**: Would the overall CI/CD orchestrator be given a master identity (e.g. app role, token with an entity alias), authenticate to Vault, and receive all secrets for all pipelines and all applications/infrastructure to be deployed?
-2. **Pipeline Identity**: Or would every CI/CD pipeline be given an identity (e.g. app role, token with an entity alias), authenticate to Vault once and retrieve all the secrets for each application/ infrastructure to be deployed??
-3. **Pipeline and App/ Service/ Infra identity**: Or would every CI/CD pipeline be given an identity (e.g. app role, token with an entity alias), authenticate to Vault once and then give each application/ service/ infrastructure deployed, workflow its own identity, which upon bootstrap, in turn, authenticates to Vault on its own to retrieve a secret?
-
-From a threat model and security assessment perspective, **_option 3_** above, where the pipeline does not have access to any secret, but allows applications, services or infrastructure to get its own secrets upon bootstrapping, is the most secure approach. With **_options 1_** and **_2_**, there is a risk that if someone gets access to your CI/CD workflow **_(option 1)_**, or your pipelines **_(option 2)_**, they would gain access to every or some of the secrets used by your apps and services. Using the [principle of least privilege](https://learn.hashicorp.com/tutorials/vault/pattern-centralized-secrets?in=vault/recommended-patterns#the-principle-of-least-privilege-polp), where you only want to give access to secrets where necessary, there should be little or no gap between your secrets distribution and when it is accessed. Therefore one should avoid inadvertently giving your orchestrator and CI/CD tool god-like privileges where it potentially can access every secret for every app, service or infrastructure you deploy.
-
-If someone goes wrong in **_option 1_** and you revoke access, all pipelines are affected. If something goes wrong in **_option 2_** and you revoke access to a pipeline, only that pipeline is affected, and you limit your security risk blast radius. If something goes wrong in **_option 3_** you can just revoke an app or service without affecting everything else. Please carefully consider your security options as you manage security in a dynamic world.
-
-From a Vault client perspective, **_option 1_** is one client, the Master CI/CD identity; **_option 2_** is one client for the Master CI/CD identity, and one client for each pipeline; **_option 3_** is one client for the Master CI/CD identity, one client for each pipeline, and one for each app, service deployed.
-
-### Onboarding Clients - Putting it all together
-
-The guide: [“Onboarding Applications to Vault Using Terraform: A Practical Guide“](https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide) is an example on how to build an automated HashiCorp Vault onboarding system with Terraform to accommodate Vault client using naming standards, ACL policy templates, namespaces, pre-created application entities, and workflows driven by VCS and CI/CD.
-
-## Client Count
-
-The number of active clients using a Vault cluster is the total of:
-
-- active entities: identity entities that create a token via a login
-- active non-entity tokens: clients associated with tokens created via a method
-  that is not associated with an entity
-
-Prior to Vault 1.6, this metric could only be measured from the audit log, using the
-[`vault-auditor`](https://learn.hashicorp.com/tutorials/vault/usage-metrics#vault-auditor-tool) tool. Starting with Vault 1.6, the number of clients per month, or for
-a contiguous sequence of months, can be measured by Vault itself.
-
-As of Vault 1.9, the total client count should always be measured using Vault itself. The
-metrics shown by the Vault UI are the source of truth for this data.
-
-Please refer to [Vault Usage Metrics](https://learn.hashicorp.com/tutorials/vault/usage-metrics) for a
-step-by-step tutorial and description of how to use the UI.
-
-## Measuring clients
-
-Each time a token is used, Vault checks to see whether it belongs to an identity entity
-that has already been active in the current month. New entities are added to a log in Vault storage
-periodically. Tokens without entities are tracked separately and added to the "non_entity_tokens" count.
-Please see the 'Tracking non-entity tokens' subsection below for a detailed explanation of how such
-tokens are tracked by Vault.
-
-At the end of each month, Vault creates precomputed reports listing the number of active entities,
-per namespace, in each time period within a configurable retention period. This process deduplicates
-entities by ID, so that if an entity is active within every calendar month, it still only counts as
-one client for the entire year.
-
-There are no client count metrics available until after the first calendar month finishes.
-
-The client counts sum activity from all nodes in a cluster, including batch tokens created by performance
-standby nodes. Performance secondary clusters have their own client population, and their own client metrics;
-Vault does not aggregate or deduplicate clients across clusters. However, the logs and precomputed
-reports are included in DR replication.
-
-### Costs of measurement
-
-Each active entity in the log consumes a few bytes of storage. Vault limits the number of identity
-entities it records per month (to 656,000) as a safety measure to prevent unbounded storage growth. However,
-typical storage costs should be much less. 1000 monthly active entities will require about 1.5 MiB of storage
-capacity over the default 24-month retention period. A smaller amount of additional storage is used for
-precomputed reports for all valid start/end pairs of months.
-
-### Disabling measurement
-
-To avoid this potentially unwanted storage usage, the client count feature can be disabled via the UI or API.
-By default, the client count is disabled on open source builds, and enabled on Enterprise binaries. The CLI command
-to change its state is:
-
-```shell-session
-# To enable
-$ vault write sys/internal/counters/config enabled=enable
-
-# To disable
-$ vault write sys/internal/counters/config enabled=disable
-```
-
-If you disable the client counter, then all complete months and all precomputed reports will remain in storage
-until their normal expiration time. This allows queries to be run on older data, even if no new data is being collected.
-
-Vault does not report across a disable/enable cycle of the client count. All subsequent reports will start at the
-time that the feature is enabled.
-
-## Understanding non-entity tokens
-
-A token without an entity can be created in any of the following ways:
-
-- A root token creates a token via `auth/token/create`.
-- Any other token without an entity creates a child token via `auth/token/create` or a token role.
-- An orphan token is created via `auth/token/create-orphan`; such a token does not inherit the entity of its creator.
-- A token is created using a token role that specifies `orphan=true`.
-- An auth method would normally create an entity, but is not allowed to do so, such as:
-  - A batch token is created on a performance standby node.
-  - A service token is created on a performance secondary replica, using a local mount.
-
-The `entity_id` field will be empty, or show as `n/a`, for any token that is classified as a non-entity token:
-
-```shell-session
-$ vault token lookup
-Key                 Value
----                 -----
-entity_id           n/a
-```
-
-To reduce the number of non-entity tokens in use, consider switching to an authentication method such as
-[AppRole](/docs/auth/approle) instead of handing out directly-created tokens. Ensure that entities and
-[entity aliases](/api-docs/secret/identity/entity-alias) exist for all login methods used to create batch tokens.
-
-### Tracking non-entity tokens
-
-As of Vault 1.9, non-entity tokens are tracked as unique clients based on the policies the token
-has access to and the namespace in which it was created. Non-entity tokens that are assigned
-the same set of policies and are created in the same namespace will be tracked as the same client.
-Conversely, if two non-entity tokens have a different policy set or are created in different namespaces,
-they will be tracked as two separate clients.
-
-Please note that before the release of Vault 1.9, non-entity tokens were each tracked separately. That is
-to say, two non-entity tokens would always be counted as two separate clients.
-
-## Auditing clients
-
-As of Vault 1.9, the Vault Audit Log contains a `client_id` field in the request. The `client_id` field
-contains an Entity ID for requests that are made with tokens with entities, or a unique client ID for
-non-entity tokens.
-
-Consumers of the audit log will be able to distinguish between these two types of client IDs by comparing
-the value in the `client_id` with the value of the `entity_id` in the `Auth` section of the response. If
-the two values are the same, then the `client_id` is an `entity_id`. If not, then the `client_id` was
-generated from the use of a non-entity token.
-
-An empty `client_id` field in a request means that Vault did not track a client for that
-request; this can happen if the request is unauthenticated, or made with a root token or wrapped token.
-
-## API and Permissions
-
-Please see [Client Count API](/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
-"internal" so its behavior or format may change without warning. The UI is the preferred means of interacting with the
-client count feature.
-
-For the UI to be able to use the client count feature, it needs `read` permission to the following paths:
-
-- `sys/internal/counters/activity`
-- `sys/internal/counters/config`
-
-For the UI to be able to modify the configuration settings, it additionally needs `update` permission to
-`sys/internal/counters/config`.
-
-## New Clients For Current Month
-
-The billing period for the activity log API can be specified to include the current month 
-for the end date. For more information, please refer to the 
-[the internal counters API docs](/api-docs/system/internal-counters.mdx) documentation.
-
-When the end date is the current month, the `new_clients` counts will be an approximation of the  
-number of new clients for the month, and not an exact value. Note that the `new_clients` counts for the rest 
-of the months will be accurate. 
-
-### Why An Approximation?
-
-The `new_clients` counts for the current month is an approximation to improve API 
-performance and make the UI usable. To give an exact value for the current month's
-new clients, client IDs need to be de-duplicated with the previous months' client IDs, 
-which is a time and i/o intensive process. 
-
-### Approximation Details And Accuracy Testing Results
-
-The `new_clients` approximation is calculated by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
-to approximate the cardinality of the total number of clients within the billing period, and the cardinality 
-of the total number of clients within the billing period not including the current month. The returned value 
-is the difference between these two numbers.
-
-The hyperloglog library used for the cardinality estimate is [axiomhq](https://github.com/axiomhq/hyperloglog),
-with fourteen registers and the use of sparse representations, when applicable. Some accurate estimates can be found 
-in this library's [README](https://github.com/axiomhq/hyperloglog#readme). These are accuracy results
-for the cardinality of the multiset, which is the total number of clients within a billing period. The accuracy 
-estimate for the number of new clients can be far lower, depending on the discrepancy between the number of 
-clients in the current month and the number of clients in the billing period. 
-
-If we call the number of clients for the current month C and the number of clients in the billing period B, we 
-have found that in general, if C << B, the approximation can be imprecise, and the further the difference between
-C and B grows, the more imprecise the approximation will be. Furthermore, the closer C is to 0, the more imprecise
-the approximation can be. Also, the more months in the billing period, the less accurate the approximation can be. 
-
-The maximum observed error rate ((found new clients)/(expected new clients)) with testing for 10,000 clients and under
-was 30%, with most cases yielding an error rate of 5-10%. 
-
-A table with a few randomly selected values for C and B are listed below for the purposes of predictive analysis.
-
-| Current Month Clients      | Total Months' Clients | Accuracy     |
-| :---                       |    :----:             |        ---:  |
-|           7                |         10            |      100%    |
-|           20               |         600           |      100%    |
-|           20               |         1000          |      100%    |
-|           20               |         6000          |      90%     |
-|           20               |         10000         |      90%     |
-|           200              |         600           |      100%    |
-|           200              |         10000         |      93%     |
-|           400              |         6000          |      95%     |
-|           2000             |         10000         |      96%     |
-
-Some multi-month (over 2 months) and multi-segment tests are below: 
-
-| Current Month Clients      | Total Months' Clients | Accuracy     |
-| :---                       |    :----:             |        ---:  |
-|           20               |         15            |      100%    |
-|           20               |         100           |      100%    |
-|           20               |         1000          |      100%    |
-|           20               |         10000         |      70%     |
-|           200              |         10000         |      94%     |
-|           2000             |         10000         |      98%     |
+While there are many different potential clients, the most common are:
+
+1. **Human users** interacting directly with Vault.
+1. **Applications and microservices**.
+1. **Servers and platforms** like VMs, Docker containers, or Kubernetes pods.
+1. **Orchestrators** like Nomad, Terraform, Ansible, ACME, and other continuous
+   integration / continuous delivery (CI/CD) pipelines.
+1. **Vault agents and proxies** that act on behalf of an application or
+   microservice.
+
+## Identity and entity assignment
+
+Authorized clients can connect to Vault with a variety of authentication methods.
+
+Authorization source       | AuthN method
+-------------------------- | ---------------------------------
+Externally managed or SSO  | Active Directory, LDAP, OIDC, JWT, GitHub, username+password
+Platform- or server-based  | Kubernetes, AWS, GCP, Azure, Cert, Cloud Foundry
+Self                       | AppRole, tokens with no associated authN path or role
+
+![Vault client types](https://www.datocms-assets.com/2885/1617325030-vault-clients.png)
+
+When a client authenticates, Vault assigns a unique identifier
+(**client entity**) in the [Vault identity system](/vault/docs/secrets/identity)
+based on the authentication method used or a previously assigned alias.
+**Entity aliases** let clients authenticate with multiple methods but still be
+associated with a single policy, share resources, and count as the same entity,
+regardless of the authentication method used for a particular session.
+
+## Standard entity assignments
+
+@include "authn-names.mdx"
+
+Each authentication method has a unique ID string that corresponds to a client
+entity used for telemetry. For example, a microservice authenticating with
+AppRole takes the associated role ID as the entity. If you are running at scale
+and have multiple copies of the microservices using the same role id, the full
+set of instances will share the same identifier.
+
+As a result, it is critical that you configure different clients
+(microservices, humans, applications, services, platforms, servers, or pipelines)
+in a way that results in distinct clients having unique identifiers. For example,
+the role IDs should be different **between** two microservices, MicroserviceA and
+MicroServiceB, even if the **specific instances** of MicroServiceA and
+MicroServiceB share a common role ID.
+
+## Entity assignment with ACME
+
+Vault treats all ACME connections that authenticate under the same certificate
+identifier (domain) as the same **certificate entity** for client count
+calculations.
+
+For example:
+
+- Authentication requests from two ACME clients living on different servers that
+  request the same set of certificate identifiers are assigned to the same
+  certificate entity.
+- Multiple requests for the same certificate identifier from a single ACME
+  client are assigned to the same certificate entity.
+- Two authentication requests from a single ACME client for different
+  certificate identifiers are assigned to separate certificate entities.
+
+## Entity assignment with namespaces
+
+A namespace represents a isolated, logical space within a single Vault
+cluster and is typically used for administrative purposes.
+
+When a client authenticates **within a given namespace**, Vault assigns the same
+client entity to activities within any child namespaces because the namespaces
+exist within the same larger scope.
+
+When a client authenticates **across namespace boundaries**, Vault treats the
+single client as two distinct entities because the client is operating
+across different scopes with different policy assignments and resources.
+
+For example:
+
+- Different requests under parent and child namespaces from a single client
+  authenticated under the **parent** namespace are assigned **the same entity
+  ID**. All the client activities occur **within** the boundaries of the
+  namespace referenced in the original authentication request.
+- Different requests under parent and child namespaces from a single client
+  authenticated under the **child** namespace are assigned **different entity
+  IDs**. Some of the client activities occur **outside** the boundaries of the
+  namespace referenced in the original authentication request.
+- Requests by the same client to two different namespaces, NAMESPACE<sub>A</sub>
+  and NAMESPACE<sub>B</sub> are assigned **different entity IDs**.
+
+## Entity assignment with non-entity tokens
+
+Vault uses tokens as the core method for authentication. You can use tokens to
+authenticate directly, or use token [auth methods](/vault/docs/concepts/auth)
+to dynamically generate tokens based on external identities.
+
+When clients authenticate with the [token auth method](/vault/docs/auth/token)
+**without** a client identity, the result is a **non-entity token**. For example,
+a service might use the token authentication method to create a token for a user
+whose explicit identity is unknown. 
+
+Ultimately, non-entity tokens trace back to a particular client or purpose so
+Vault assigns unique entity IDs to non-entity tokens based on a combination of
+the:
+
+- assigned entity alias name (if present),
+- associated policies, and
+- namespace under which the token was created.
+
+In **rare** cases, tokens may be created outside of the Vault identity system
+**without** an associated entity or identity. Vault treats every unaffiliated
+token as a unique client for production usage. We strongly discourage the use of
+unaffiliated tokens and recommend that you always associate a token with an
+entity alias and token role.
+
+<Note title="Behavior change in Vault 1.9+">
+  As of Vault 1.9, all non-entity tokens with the same namespace and policy
+  assignments are treated as the same client entity. Prior to Vault 1.9, every
+  non-entity token was treated as a unique client entity, which drastically
+  inflated telemetry around client count.
+
+  If you are using Vault 1.8 or earlier, and need to address client count
+  inflation without upgrading, we recommend creating a
+  [token role](/vault/api-docs/auth/token#create-update-token-role) with
+  allowable entity aliases and assigning all tokens to an appropriate
+  [role and entity alias name](/vault/api-docs/auth/token#create-token) before
+  using them.
+</Note>
+
+@include "content-footer-title.mdx"
+
+<Tabs>
+
+<Tab heading="Related concepts">
+<ul>
+  <li>
+    <a href="/vault/docs/concepts/client-count/counting">Client count calculation</a>
+  </li>
+  <li>
+    <a href="/vault/docs/concepts/client-count/faq">Client count FAQ</a>
+  </li>
+  <li>
+    <a href="/vault/docs/secrets/pki/best-practices/cicd-pipelines">Best practices for CI/CD pipelines</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Related tutorials">
+<ul>
+  <li>
+    <a href="/vault/tutorials/auth-methods/identity">Identity: Entities and Groups</a>
+  </li>
+  <li>
+    <a href="/vault/tutorials/enterprise/namespaces">Secure Multi-Tenancy with Namespaces</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Other resources">
+<ul>
+  <li>
+    Article: <a href="https://www.hashicorp.com/identity-based-security-and-low-trust-networks">
+      Identity-based Security and Low-trust Networks
+    </a>
+  </li>
+</ul>
+</Tab>
+
+</Tabs>

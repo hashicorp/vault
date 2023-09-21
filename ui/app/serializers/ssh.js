@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';

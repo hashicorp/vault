@@ -1,0 +1,3 @@
+```release-note:improvement
+core: add `detect_deadlocks` config to optionally detect core state deadlocks
+```

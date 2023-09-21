@@ -1,12 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-  <D.Trigger
-    data-test-popup-menu-trigger="true"
-    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-    @htmlTag="button"
-  >
-    {{@startTimeDisplay}}
+  <D.Trigger data-test-calendar-widget-trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button">
+    {{date-format this.startDate "MMM yyyy"}}
     -
-    {{@endTimeDisplay}}
+    {{date-format this.endDate "MMM yyyy"}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
   <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
@@ -17,10 +18,22 @@
       <ul class="menu-list">
         <li class="action">
           <button
+            data-test-current-month
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            name="currentMonth"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current month
+          </button>
+        </li>
+        <li class="action">
+          <button
             data-test-current-billing-period
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
-            {{on "click" (fn this.selectCurrentBillingPeriod D)}}
+            name="reset"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
           >
             Current billing period
           </button>
@@ -65,7 +78,7 @@
             {{this.displayYear}}
           </p>
           <button
-            data-test-future-year
+            data-test-next-year
             type="button"
             class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
             disabled={{this.disableFutureYear}}
@@ -93,15 +106,15 @@
           {{/if}}
         </div>
         <div class="calendar-widget-grid calendar-widget">
-          {{#each this.widgetMonths as |m|}}
+          {{#each this.widgetMonths as |month|}}
             <button
-              data-test-calendar-month={{m.month}}
+              data-test-calendar-month={{month.name}}
               type="button"
-              class="is-month-list {{if m.readonly 'is-readOnly'}} {{if (eq m.id this.selectedMonthId) 'is-selected-month'}}"
-              id={{m.id}}
-              {{on "click" (fn this.selectEndMonth m.id D)}}
+              class="is-month-list {{if month.readonly 'is-readOnly'}}"
+              id={{month.index}}
+              {{on "click" (fn this.selectMonth month D.actions)}}
             >
-              {{m.month}}
+              {{month.name}}
             </button>
           {{/each}}
         </div>

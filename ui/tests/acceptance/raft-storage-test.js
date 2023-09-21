@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | raft storage', function (hooks) {
   setupApplicationTest(hooks);
@@ -16,9 +20,6 @@ module('Acceptance | raft storage', function (hooks) {
     );
     this.server.get('/sys/license/features', () => ({}));
     await authPage.login();
-  });
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('it should render correct number of raft peers', async function (assert) {

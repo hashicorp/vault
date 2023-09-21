@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
@@ -273,4 +278,162 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl, ns)
+}
+
+func TestDefaultPolicy(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, defaultPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		op            logical.Operation
+		path          string
+		expectAllowed bool
+	}{
+		"lookup self":            {logical.ReadOperation, "auth/token/lookup-self", true},
+		"renew self":             {logical.UpdateOperation, "auth/token/renew-self", true},
+		"revoke self":            {logical.UpdateOperation, "auth/token/revoke-self", true},
+		"check own capabilities": {logical.UpdateOperation, "sys/capabilities-self", true},
+
+		"read arbitrary path":     {logical.ReadOperation, "foo/bar", false},
+		"login at arbitrary path": {logical.UpdateOperation, "auth/foo", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := new(logical.Request)
+			request.Operation = tc.op
+			request.Path = tc.path
+
+			result := acl.AllowOperation(ctx, request, false)
+			if result.RootPrivs {
+				t.Fatal("unexpected root")
+			}
+			if tc.expectAllowed != result.Allowed {
+				t.Fatalf("Expected %v, got %v", tc.expectAllowed, result.Allowed)
+			}
+		})
+	}
+}
+
+// TestPolicyStore_PoliciesByNamespaces tests the policiesByNamespaces function, which should return a slice of policy names for a given slice of namespaces.
+func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
+	_, ps := mockPolicyWithCore(t, false)
+
+	ctxRoot := namespace.RootContext(context.Background())
+	rootNs := namespace.RootNamespace
+
+	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy)
+
+	err := ps.SetPolicy(ctxRoot, parsedPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Get should work
+	pResult, err := ps.GetPolicy(ctxRoot, "dev", PolicyTypeACL)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(pResult, parsedPolicy) {
+		t.Fatalf("bad: %v", pResult)
+	}
+
+	out, err := ps.policiesByNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expectedResult := []string{"default", "dev"}
+	if !reflect.DeepEqual(expectedResult, out) {
+		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
+	}
+}
+
+// TestPolicyStore_GetNonEGPPolicyType has five test cases:
+//   - happy-acl and happy-rgp: we store a policy in the policy type map and
+//     then look up its type successfully.
+//   - not-in-map-acl and not-in-map-rgp: ensure that GetNonEGPPolicyType fails
+//     returning a nil and an error when the policy doesn't exist in the map.
+//   - unknown-policy-type: ensures that GetNonEGPPolicyType fails returning a nil
+//     and an error when the policy type in the type map is a value that
+//     does not map to a PolicyType.
+func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		policyStoreKey       string
+		policyStoreValue     any
+		paramNamespace       string
+		paramPolicyName      string
+		paramPolicyType      PolicyType
+		isErrorExpected      bool
+		expectedErrorMessage string
+	}{
+		"happy-acl": {
+			policyStoreKey:   "1AbcD/policy1",
+			policyStoreValue: PolicyTypeACL,
+			paramNamespace:   "1AbcD",
+			paramPolicyName:  "policy1",
+			paramPolicyType:  PolicyTypeACL,
+		},
+		"happy-rgp": {
+			policyStoreKey:   "1AbcD/policy1",
+			policyStoreValue: PolicyTypeRGP,
+			paramNamespace:   "1AbcD",
+			paramPolicyName:  "policy1",
+			paramPolicyType:  PolicyTypeRGP,
+		},
+		"not-in-map-acl": {
+			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreValue:     PolicyTypeACL,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+		},
+		"not-in-map-rgp": {
+			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreValue:     PolicyTypeRGP,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+		},
+		"unknown-policy-type": {
+			policyStoreKey:       "1AbcD/policy1",
+			policyStoreValue:     7,
+			paramNamespace:       "1AbcD",
+			paramPolicyName:      "policy1",
+			isErrorExpected:      true,
+			expectedErrorMessage: "unknown policy type for: 1AbcD/policy1",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, ps := mockPolicyWithCore(t, false)
+			ps.policyTypeMap.Store(tc.policyStoreKey, tc.policyStoreValue)
+			got, err := ps.GetNonEGPPolicyType(tc.paramNamespace, tc.paramPolicyName)
+			if tc.isErrorExpected {
+				require.Error(t, err)
+				require.Nil(t, got)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+
+			}
+			if !tc.isErrorExpected {
+				require.NoError(t, err)
+				require.NotNil(t, got)
+				require.Equal(t, tc.paramPolicyType, *got)
+			}
+		})
+	}
 }

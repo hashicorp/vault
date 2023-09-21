@@ -1,1 +1,27 @@
-route: issuers.issuer.details
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-pki-issuer-page-title>
+      <Icon @name="file-text" @size="24" class="has-text-grey-light" />
+      View Issuer Certificate
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Page::PkiIssuerDetails
+  @issuer={{this.model.issuer}}
+  @pem={{this.model.pem}}
+  @der={{this.model.der}}
+  @isRotatable={{this.model.isRotatable}}
+  @canRotate={{this.model.issuer.canRotateIssuer}}
+  @canCrossSign={{this.model.issuer.canCrossSign}}
+  @canSignIntermediate={{this.model.issuer.canSignIntermediate}}
+  @canConfigure={{this.model.issuer.canConfigure}}
+/>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -7,19 +10,21 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/helper/ocsp"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 
-	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-multierror"
 	glob "github.com/ryanuber/go-glob"
 )
 
@@ -32,6 +37,10 @@ type ParsedCert struct {
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationVerb:   "login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -39,15 +48,27 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
+			logical.UpdateOperation:         b.loginPathWrapper(b.pathLogin),
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
-			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
+			logical.ResolveRoleOperation:    b.loginPathWrapper(b.pathLoginResolveRole),
 		},
+	}
+}
+
+func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		// Make sure that the CRLs have been loaded before processing a login request,
+		// they might have been nil'd by an invalidate func call.
+		if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+		return wrappedOp(ctx, req, data)
 	}
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
+
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
@@ -88,13 +109,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 	if b.configUpdated.Load() {
 		b.updatedConfig(config)
-	}
-
-	if b.crls == nil {
-		// Probably invalidated due to replication, but we need these to proceed
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
 	}
 
 	var matched *ParsedCert
@@ -171,12 +185,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 	if b.configUpdated.Load() {
 		b.updatedConfig(config)
-	}
-
-	if b.crls == nil {
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
 	}
 
 	if !config.DisableBinding {
@@ -265,6 +273,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
+	var retErr error
 	if len(trustedNonCAs) != 0 {
 		for _, trustedNonCA := range trustedNonCAs {
 			tCert := trustedNonCA.Certificates[0]
@@ -272,9 +281,19 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
 				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
-				if err != nil {
-					return nil, nil, err
+
+				// matchesConstraints returns an error when OCSP verification fails,
+				// but some other path might still give us success. Add to the
+				// retErr multierror, but avoid duplicates. This way, if we reach a
+				// failure later, we can give additional context.
+				//
+				// XXX: If matchesConstraints is updated to generate additional,
+				// immediately fatal errors, we likely need to extend it to return
+				// another boolean (fatality) or other detection scheme.
+				if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+					retErr = multierror.Append(retErr, err)
 				}
+
 				if matches {
 					return trustedNonCA, nil, nil
 				}
@@ -285,23 +304,36 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// If no trusted chain was found, client is not authenticated
 	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
+		if retErr == nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("invalid certificate or no client certificate supplied; additionally got errors during verification: %v", retErr)), nil
+		}
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
 	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
-	matches := make([]*ParsedCert, 0)
 	for _, trust := range trusted { // For each ParsedCert in the config
 		for _, tCert := range trust.Certificates { // For each certificate in the entry
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
 					if tCert.Equal(cCert) { // ParsedCert intersects with matched chain
 						match, err := b.matchesConstraints(ctx, clientCert, chain, trust, verifyConf) // validate client cert + matched chain against the config
-						if err != nil {
-							return nil, nil, err
+
+						// See note above.
+						if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+							retErr = multierror.Append(retErr, err)
 						}
-						if match {
-							// Add the match to the list
-							matches = append(matches, trust)
+
+						// Return the first matching entry (for backwards
+						// compatibility, we continue to just pick the first
+						// one if we have multiple matches).
+						//
+						// Here, we return directly: this means that any
+						// future OCSP errors would be ignored; in the future,
+						// if these become fatal, we could revisit this
+						// choice and choose the first match after evaluating
+						// all possible candidates.
+						if match && err == nil {
+							return trust, nil, nil
 						}
 					}
 				}
@@ -309,13 +341,11 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	// Fail on no matches
-	if len(matches) == 0 {
-		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	if retErr != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("no chain matching all constraints could be found for this login certificate; additionally got errors during verification: %v", retErr)), nil
 	}
 
-	// Return the first matching entry (for backwards compatibility, we continue to just pick one if multiple match)
-	return matches[0], nil, nil
+	return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
 }
 
 func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
@@ -478,17 +508,42 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
 	// and drop the tag bytes. And get the number of bytes from the tag.
 	clientExtMap := make(map[string]string, len(clientCert.Extensions))
+	hexExtMap := make(map[string]string, len(clientCert.Extensions))
+
 	for _, ext := range clientCert.Extensions {
 		var parsedValue string
-		asn1.Unmarshal(ext.Value, &parsedValue)
-		clientExtMap[ext.Id.String()] = parsedValue
+		_, err := asn1.Unmarshal(ext.Value, &parsedValue)
+		if err != nil {
+			clientExtMap[ext.Id.String()] = ""
+		} else {
+			clientExtMap[ext.Id.String()] = parsedValue
+		}
+
+		hexExtMap[ext.Id.String()] = hex.EncodeToString(ext.Value)
 	}
-	// If any of the required extensions don'log match the constraint fails
+
+	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
-		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
-		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+		if len(reqExt) != 2 {
 			return false
+		}
+
+		if reqExt[0] == "hex" {
+			reqHexExt := strings.SplitN(reqExt[1], ":", 2)
+			if len(reqHexExt) != 2 {
+				return false
+			}
+
+			clientExtValue, clientExtValueOk := hexExtMap[reqHexExt[0]]
+			if !clientExtValueOk || !glob.Glob(strings.ToLower(reqHexExt[1]), clientExtValue) {
+				return false
+			}
+		} else {
+			clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
+			if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+				return false
+			}
 		}
 	}
 	return true
@@ -602,6 +657,12 @@ func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certi
 	defer b.ocspClientMutex.RUnlock()
 	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
 	if err != nil {
+		// We want to preserve error messages when they have additional,
+		// potentially useful information. Just having a revoked cert
+		// isn't additionally useful.
+		if !strings.Contains(err.Error(), "has been revoked") {
+			return false, err
+		}
 		return false, nil
 	}
 	return true, nil

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -14,12 +17,10 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -32,6 +33,29 @@ import (
 	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
 )
+
+func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"database": Factory,
+		},
+		BuiltinRegistry: builtinplugins.Registry,
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
+
+	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
+
+	return cluster, sys
+}
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	coreConfig := &vault.CoreConfig{
@@ -51,27 +75,8 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Postgres", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Mongo", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlas", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
 
 	return cluster, sys
-}
-
-func TestBackend_PluginMain_Postgres(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	dbType, err := postgresql.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize postgres: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
 }
 
 func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
@@ -80,48 +85,6 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 	}
 
 	v5.ServeMultiplex(postgresql.New)
-}
-
-func TestBackend_PluginMain_Mongo(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodb.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodb: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodb.New)
-}
-
-func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodbatlas.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodbatlas.New)
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -180,7 +143,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -367,7 +330,7 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_BadConnectionString(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -416,7 +379,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -623,7 +586,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_connectionCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -808,7 +771,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1061,7 +1024,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_allowedRoles(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1258,7 +1221,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 }
 
 func TestBackend_RotateRootCredentials(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1359,7 +1322,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 }
 
 func TestBackend_ConnectionURL_redacted(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()

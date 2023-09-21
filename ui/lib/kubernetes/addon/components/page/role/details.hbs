@@ -1,0 +1,69 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      {{@model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.canDelete}}
+      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
+        Delete role
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @model.canGenerateCreds}}
+      <ToolbarLink @route="roles.role.credentials" data-test-generate-credentials>
+        Generate credentials
+      </ToolbarLink>
+    {{/if}}
+    {{#if @model.canEdit}}
+      <ToolbarLink @route="roles.role.edit" data-test-edit>
+        Edit role
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#each @model.filteredFormFields as |field|}}
+  {{#let (get @model field.name) as |value|}}
+    <InfoTableRow
+      data-test-filtered-field
+      @label={{field.options.label}}
+      @value={{if (eq field.options.editType "ttl") (format-duration value) value}}
+    />
+  {{/let}}
+{{/each}}
+
+{{#if @model.generatedRoleRules}}
+  <div class="has-top-margin-xl" data-test-generated-role-rules>
+    <h2 class="title is-4">Generated role rules</h2>
+    <JsonEditor
+      @title="Role rules"
+      @value={{@model.generatedRoleRules}}
+      @mode="ruby"
+      @readOnly={{true}}
+      @showToolbar={{true}}
+      @theme="hashi auto-height"
+    />
+  </div>
+{{/if}}
+
+{{#each this.extraFields as |field|}}
+  <div class="has-top-margin-xl" data-test-extra-fields={{field.label}}>
+    <h2 class="title is-4 is-marginless">{{field.label}}</h2>
+    {{#each-in (get @model field.key) as |key value|}}
+      <InfoTableRow @label={{key}} @value={{value}} />
+    {{/each-in}}
+  </div>
+{{/each}}

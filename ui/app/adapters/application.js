@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import RESTAdapter from '@ember-data/adapter/rest';
 import { inject as service } from '@ember/service';
@@ -114,10 +119,18 @@ export default RESTAdapter.extend({
 
   handleResponse(status, headers, payload, requestData) {
     const returnVal = this._super(...arguments);
-    // ember data errors don't have the status code, so we add it here
     if (returnVal instanceof AdapterError) {
+      // ember data errors don't have the status code, so we add it here
       set(returnVal, 'httpStatus', status);
       set(returnVal, 'path', requestData.url);
+      // Most of the time when the Vault API returns an error, the payload looks like:
+      // { errors: ['some error message']}
+      // But sometimes (eg RespondWithStatusCode) it looks like this:
+      // { data: { error: 'some error message' } }
+      if (payload?.data?.error && !payload.errors) {
+        // Normalize the errors from RespondWithStatusCode
+        set(returnVal, 'errors', [payload.data.error]);
+      }
     }
     return returnVal;
   },

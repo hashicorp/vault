@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package userpass
 
 import (
@@ -16,6 +19,12 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login/" + framework.GenericNameRegex("username"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -39,7 +48,7 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username := d.Get("username").(string)
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}

@@ -10,18 +10,18 @@ description: |-
 # `/sys/storage/raft/autopilot`
 
 The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot
-with Vault's [Integrated Storage backend](/docs/internals/integrated-storage).
-Refer to the [Integrated Storage Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot?in=vault/raft) tutorial to learn how to manage raft clusters using autopilot.
+with Vault's [Integrated Storage backend](/vault/docs/internals/integrated-storage).
+Refer to the [Integrated Storage Autopilot](/vault/tutorials/raft/raft-autopilot) tutorial to learn how to manage raft clusters using autopilot.
 
-## Get Cluster State
+## Get cluster state
 
-This endpoint is used to retrieve the raft cluster state. See the [docs page](/docs/commands/operator/raft#autopilot-state) for a description of the output.
+This endpoint is used to retrieve the raft cluster state. See the [docs page](/vault/docs/commands/operator/raft#autopilot-state) for a description of the output.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
 | `GET`  | `/sys/storage/raft/autopilot/state` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -29,7 +29,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/state
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -82,11 +82,11 @@ $ curl \
 }
 ```
 
-### Enterprise Only
+### Enterprise only
 Vault Enterprise will include additional output in its API response to indicate the current state of redundancy zones,
 automated upgrade progress (if any), and optimistic failure tolerance.
 
-#### Sample Response (Enterprise)
+#### Sample response (Enterprise)
 ```json
 {
   "failure_tolerance": 0,
@@ -159,7 +159,7 @@ automated upgrade progress (if any), and optimistic failure tolerance.
 }
 ```
 
-## Get Configuration
+## Get configuration
 
 This endpoint is used to get the configuration of the autopilot subsystem of Integrated Storage.
 
@@ -167,7 +167,7 @@ This endpoint is used to get the configuration of the autopilot subsystem of Int
 | :----- | :------------------------------------------ |
 | `GET`  | `/sys/storage/raft/autopilot/configuration` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -175,7 +175,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/configuration
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -191,7 +191,7 @@ $ curl \
 
 Note that in the above sample response, `disable_upgrade_migration` is an Enterprise-only field.
 
-## Set Configuration
+## Set configuration
 
 This endpoint is used to modify the configuration of the autopilot subsystem of Integrated Storage.
 
@@ -210,7 +210,8 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 - `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
   a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is `true`.
+  takes effect only when `cleanup_dead_servers` is `true`. This can not be set to a value
+  smaller than 1m.
 
 - `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy.
@@ -225,7 +226,7 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 - `disable_upgrade_migration` `(bool: false)` - Disables automatically upgrading Vault using
   autopilot. (Enterprise-only)
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -235,7 +236,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/autopilot/configuration
 ```
 
-### Sample Payload
+### Sample payload
 
 ```json
 {

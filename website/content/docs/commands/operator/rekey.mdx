@@ -21,7 +21,7 @@ An unseal key may be provided directly on the command line as an argument to the
 command. If key is specified as "-", the command will read from stdin. If a TTY
 is available, the command will prompt for text.
 
-Please see the [rotating and rekeying](https://learn.hashicorp.com/tutorials/vault/rekeying-and-rotating) for
+Please see the [rotating and rekeying](/vault/tutorials/operations/rekeying-and-rotating) for
 step-by-step instructions.
 
 ## Examples
@@ -106,15 +106,15 @@ $ vault operator rekey -verify -nonce="..."
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-cancel` `(bool: false)` - Reset the rekeying progress. This will discard any submitted unseal keys
   or configuration. The default is false.
@@ -143,13 +143,13 @@ flags](/docs/commands) included on all commands.
   providing an unseal key. The default is false.
 
 - `-target` `(string: "barrier")` - Target for rekeying. "recovery" only applies
-  when HSM support is enabled or using [Auto Unseal](/docs/concepts/seal#auto-unseal).
+  when HSM support is enabled or using [Auto Unseal](/vault/docs/concepts/seal#auto-unseal).
 
 - `-verify` `(bool: false)` - Indicate during the phase `-init` that the
   verification process is activated for the rekey. Along with `-nonce` option
   it indicates that the nonce given is for the verification process.
 
-### Backup Options
+### Backup options
 
 - `-backup` `(bool: false)` - Store a backup of the current PGP encrypted unseal
   keys in Vault's core. The encrypted values can be recovered in the event of

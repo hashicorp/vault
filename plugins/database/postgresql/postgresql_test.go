@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package postgresql
 
 import (
@@ -9,13 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/stretchr/testify/require"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
@@ -88,6 +95,184 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+}
+
+// Ensures we can successfully initialize and connect to a CloudSQL database
+// Requires the following:
+// - GOOGLE_APPLICATION_CREDENTIALS either JSON or path to file
+// - CONNECTION_URL to a valid Postgres instance on Google CloudSQL
+func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	type testCase struct {
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
+	}
+
+	tests := map[string]testCase{
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"default credentials": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      connutil.AuthTypeGCPIAM,
+				},
+				VerifyConnection: true,
+			},
+		},
+		"JSON credentials": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       connURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+			defer dbtesting.AssertClose(t, db)
+
+			_, err := dbtesting.VerifyInitialize(t, db, test.req)
+
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), test.expectedError) {
+					t.Fatalf("expected error %s, got %s", test.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
+			}
+		})
+	}
+}
+
+// TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
+// an error is returned if an invalid "password_authentication" is provided.
+func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+	db := new()
+
+	ctx := context.Background()
+
+	t.Run("invalid-password-authentication", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url":          dsnConnURL,
+			"password_authentication": "invalid-password-authentication",
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_, err := db.Initialize(ctx, req)
+		assert.EqualError(t, err, "'invalid-password-authentication' is not a valid password authentication type")
+	})
+
+	t.Run("default-is-none", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url": dsnConnURL,
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_ = dbtesting.AssertInitialize(t, db, req)
+		assert.Equal(t, passwordAuthenticationPassword, db.passwordAuthentication)
+	})
+}
+
+// TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
+// When sending an encrypted password, the raw password should still successfully authenticate the user.
+func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	resp := dbtesting.AssertInitialize(t, db, req)
+	assert.Equal(t, string(passwordAuthenticationSCRAMSHA256), resp.Config["password_authentication"])
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	ctx := context.Background()
+	newUserRequest := dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			},
+		},
+		Password:   "somesecurepassword",
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResponse, err := db.NewUser(ctx, newUserRequest)
+
+	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
 }
 
 func TestPostgreSQL_NewUser(t *testing.T) {
@@ -588,6 +773,19 @@ func TestDeleteUser(t *testing.T) {
 			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
 			credsAssertion: assertCredsExistAfter(100 * time.Millisecond),
 		},
+		"multiline": {
+			revokeStmts: []string{`
+				DO $$ BEGIN
+					REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
+					REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
+					REVOKE USAGE ON SCHEMA public FROM "{{username}}";
+					DROP ROLE IF EXISTS "{{username}}";
+				END $$;
+				`},
+			expectErr: false,
+			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
@@ -976,6 +1174,86 @@ func TestNewUser_CustomUsername(t *testing.T) {
 						  PASSWORD '{{password}}'
 						  VALID UNTIL '{{expiration}}';
 						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "myReally-S3curePassword",
+				Expiration: time.Now().Add(1 * time.Hour),
+			}
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			newUserResp, err := db.NewUser(ctx, newUserReq)
+			require.NoError(t, err)
+
+			require.Regexp(t, test.expectedRegex, newUserResp.Username)
+		})
+	}
+}
+
+func TestNewUser_CloudGCP(t *testing.T) {
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	type testCase struct {
+		usernameTemplate string
+		newUserData      dbplugin.UsernameMetadata
+		expectedRegex    string
+	}
+
+	tests := map[string]testCase{
+		"default template": {
+			usernameTemplate: "",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"unique template": {
+			usernameTemplate: "foo-bar",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foo-bar$",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       connURL,
+					"username_template":    test.usernameTemplate,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+				},
+				VerifyConnection: true,
+			}
+
+			db := new()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			_, err := db.Initialize(ctx, initReq)
+			require.NoError(t, err)
+
+			newUserReq := dbplugin.NewUserRequest{
+				UsernameConfig: test.newUserData,
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
 					},
 				},
 				Password:   "myReally-S3curePassword",

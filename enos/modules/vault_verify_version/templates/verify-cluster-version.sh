@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 # Verify the Vault "version" includes the correct base version, build date,
 # revision SHA, and edition metadata.
@@ -20,12 +23,7 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_ADDR='http://127.0.0.1:8200'
 export VAULT_TOKEN='${vault_token}'
 
-# Build date was added in 1.11
-if [[ "$(echo "$version" |awk -F'.' '{print $2}')" -ge 11 ]]; then
-  version_expected="Vault v$version ($sha), built $build_date"
-else
-  version_expected="Vault v$version ($sha)"
-fi
+version_expected="Vault v$version ($sha), built $build_date"
 
 case "$edition" in
   *oss) ;;

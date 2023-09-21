@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // usage:
 //
 // import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';

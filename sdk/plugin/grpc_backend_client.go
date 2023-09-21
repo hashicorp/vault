@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -22,7 +25,7 @@ var (
 )
 
 // Validate backendGRPCPluginClient satisfies the logical.Backend interface
-var _ logical.Backend = &backendGRPCPluginClient{}
+var _ logical.Backend = (*backendGRPCPluginClient)(nil)
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
@@ -124,10 +127,11 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	}
 
 	return &logical.Paths{
-		Root:            reply.Paths.Root,
-		Unauthenticated: reply.Paths.Unauthenticated,
-		LocalStorage:    reply.Paths.LocalStorage,
-		SealWrapStorage: reply.Paths.SealWrapStorage,
+		Root:                  reply.Paths.Root,
+		Unauthenticated:       reply.Paths.Unauthenticated,
+		LocalStorage:          reply.Paths.LocalStorage,
+		SealWrapStorage:       reply.Paths.SealWrapStorage,
+		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
 	}
 }
 
@@ -179,17 +183,21 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	defer close(quitCh)
 	defer cancel()
 
-	b.client.Cleanup(ctx, &pb.Empty{})
-
-	// This will block until Setup has run the function to create a new server
-	// in b.server. If we stop here before it has a chance to actually start
-	// listening, when it starts listening it will immediately error out and
-	// exit, which is fine. Overall this ensures that we do not miss stopping
-	// the server if it ends up being created after Cleanup is called.
-	<-b.cleanupCh
+	// Only wait on graceful cleanup if we can establish communication with the
+	// plugin, otherwise b.cleanupCh may never get closed.
+	if _, err := b.client.Cleanup(ctx, &pb.Empty{}); status.Code(err) != codes.Unavailable {
+		// This will block until Setup has run the function to create a new server
+		// in b.server. If we stop here before it has a chance to actually start
+		// listening, when it starts listening it will immediately error out and
+		// exit, which is fine. Overall this ensures that we do not miss stopping
+		// the server if it ends up being created after Cleanup is called.
+		select {
+		case <-b.cleanupCh:
+		}
+	}
 	server := b.server.Load()
-	if server != nil {
-		server.(*grpc.Server).GracefulStop()
+	if grpcServer, ok := server.(*grpc.Server); ok && grpcServer != nil {
+		grpcServer.GracefulStop()
 	}
 }
 
@@ -227,6 +235,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: sysViewImpl,
 	}
 
+	events := &GRPCEventsServer{
+		impl: config.EventsSender,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -235,6 +247,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		s := grpc.NewServer(opts...)
 		pb.RegisterSystemViewServer(s, sysView)
 		pb.RegisterStorageServer(s, storage)
+		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s

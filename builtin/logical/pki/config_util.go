@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -101,7 +104,7 @@ func (sc *storageContext) changeDefaultIssuerTimestamps(oldDefault issuerID, new
 		}
 	}
 
-	// Fetch and update the localCRLConfigEntry (3&4).
+	// Fetch and update the internalCRLConfigEntry (3&4).
 	cfg, err := sc.getLocalCRLConfig()
 	if err != nil {
 		return fmt.Errorf("unable to update local CRL config's modification time: error fetching local CRL config: %w", err)

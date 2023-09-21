@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .replication {
   .toolbar {
     border-top: 0px;
@@ -5,5 +10,10 @@
 
   .helper-text {
     font-weight: normal;
+  }
+
+  .float-right {
+    margin: $spacing-s 0 $spacing-l 0;
+    float: right;
   }
 }

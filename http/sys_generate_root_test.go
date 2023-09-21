@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -12,8 +15,10 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -224,9 +229,11 @@ func enableNoopAudit(t *testing.T, token string, core *vault.Core) {
 
 func testCoreUnsealedWithAudit(t *testing.T, records **[][]byte) (*vault.Core, [][]byte, string) {
 	conf := &vault.CoreConfig{
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"noop": corehelpers.NoopAuditFactory(records),
+		},
 	}
-	vault.AddNoopAudit(conf, records)
 	core, keys, token := vault.TestCoreUnsealedWithConfig(t, conf)
 	return core, keys, token
 }
@@ -240,6 +247,8 @@ func testServerWithAudit(t *testing.T, records **[][]byte) (net.Listener, string
 }
 
 func TestSysGenerateRoot_badKey(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	var records *[][]byte
 	ln, addr, token, _ := testServerWithAudit(t, &records)
 	defer ln.Close()

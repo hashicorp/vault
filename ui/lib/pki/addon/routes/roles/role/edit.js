@@ -1,23 +1,45 @@
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
-import PkiRolesIndexRoute from '../index';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-@withConfirmLeave()
-export default class PkiRoleEditRoute extends PkiRolesIndexRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { hash } from 'rsvp';
+
+@withConfirmLeave('model.role', ['model.issuers'])
+export default class PkiRoleEditRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   model() {
     const { role } = this.paramsFor('roles/role');
-    return this.store.queryRecord('pki/role', {
-      backend: this.secretMountPath.currentPath,
-      id: role,
+    const backend = this.secretMountPath.currentPath;
+
+    return hash({
+      role: this.store.queryRecord('pki/role', {
+        backend,
+        id: role,
+      }),
+      issuers: this.store.query('pki/issuer', { backend }).catch((err) => {
+        if (err.httpStatus === 404) {
+          return [];
+        } else {
+          throw err;
+        }
+      }),
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const { id } = resolvedModel;
-    const backend = this.secretMountPath.currentPath || 'pki';
+    const {
+      role: { id },
+    } = resolvedModel;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'roles', route: 'roles.index' },
       { label: id, route: 'roles.role.details' },
       { label: 'edit' },

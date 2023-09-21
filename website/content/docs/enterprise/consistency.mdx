@@ -4,7 +4,9 @@ page_title: Vault Enterprise Eventual Consistency
 description: Vault Enterprise Consistency Model
 ---
 
-# Vault Eventual Consistency
+# Vault eventual consistency
+
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 When running in a cluster, Vault has an eventual consistency model.
 Only one node (the leader) can write to Vault's storage.
@@ -15,7 +17,7 @@ standbys with Integrated Storage, or when using performance replication,
 there are some sequences of operations that don't always yield read-after-write
 consistency.
 
-## Performance Standby Nodes
+## Performance standby nodes
 
 When using the Integrated Storage backend without performance standbys, only
 a single Vault node (the active node) handles requests. Requests sent to
@@ -87,9 +89,9 @@ node completes the request anyway, returning a warning in the response.
 
 This mitigation option still exists in Vault 1.7, though now there is a
 configuration option to adjust the wait time:
-[best_effort_wal_wait_duration](/docs/configuration/replication).
+[best_effort_wal_wait_duration](/vault/docs/configuration/replication).
 
-## Vault 1.7 Mitigations
+## Vault 1.7 mitigations
 
 There are now a variety of other mitigations available:
 
@@ -97,15 +99,15 @@ There are now a variety of other mitigations available:
 - per-request option to conditionally forward the request to the active node
   if it would otherwise result in a stale read
 - per-request option to fail requests if they might result in a stale read
-- Vault Agent configuration to do the above for proxied requests
+- Vault Proxy configuration to do the above for proxied requests
 
 The remainder of this document describes the tradeoffs of these mitigations and
 how to use them.
 
 Note that any headers requesting forwarding are disabled by default, and must
-be enabled using [allow_forwarding_via_header](/docs/configuration/replication).
+be enabled using [allow_forwarding_via_header](/vault/docs/configuration/replication).
 
-### Unconditional Forwarding (Performance standbys only)
+### Unconditional forwarding (Performance standbys only)
 
 The simplest solution to never experience stale reads from a performance standby
 is to provide the following HTTP header in the request:
@@ -120,7 +122,7 @@ makes sense to use selectively.
 
 This mitigation will not help with stale reads relating to performance replication.
 
-### Conditional Forwarding (Performance standbys only)
+### Conditional forwarding (Performance standbys only)
 
 As of Vault Enterprise 1.7, all requests that modify storage now return a new
 HTTP response header:
@@ -173,26 +175,26 @@ methods for propagating the X-Vault-Index response header into the request
 header of subsequent requests. Those not using the Vault Go API will want
 to build equivalent functionality into their client library.
 
-### Vault Agent and consistency headers
+### Vault proxy and consistency headers
 
-When configured, the [Vault Agent API Proxy](/docs/agent/apiproxy) will proxy incoming requests to Vault. There is
-Agent configuration available in the `api_proxy` stanza that allows making use
+When configured, the [Vault API Proxy](/vault/docs/agent-and-proxy/proxy/apiproxy) will proxy incoming requests to Vault. There is
+Proxy configuration available in the `api_proxy` stanza that allows making use
 of some of the above mitigations without modifying clients.
 
-By setting `enforce_consistency="always"`, Agent will always provide
+By setting `enforce_consistency="always"`, Proxy will always provide
 the `X-Vault-Index` consistency header. The value it uses for the header
-will be based on the responses that have passed through the Agent previously.
+will be based on the responses that have passed through the Proxy previously.
 
 The option `when_inconsistent` controls how stale reads are prevented:
 
 - `"fail"` means that when a `412` response is seen, it is returned to the client
-- `"retry"` means that `412` responses will be retried automatically by Agent,
+- `"retry"` means that `412` responses will be retried automatically by Proxy,
   so the client doesn't have to deal with them
-- `"forward"` makes Agent provide the
+- `"forward"` makes Proxy provide the
   `X-Vault-Inconsistent: forward-active-node` header as described above under
   Conditional Forwarding
 
-## Vault 1.10 Mitigations
+## Vault 1.10 mitigations
 
 In Vault 1.10, the token format has changed, where service tokens now employ server side consistency.
 This means that by default, requests made
@@ -202,11 +204,11 @@ a 412 status code. The Vault Go API automatically retries when receiving 412s, s
 unless there is a considerable replication delay, users will experience
 read-after-write consistency.
 
-The replication option [allow_forwarding_via_token](/docs/configuration/replication)
+The replication option [allow_forwarding_via_token](/vault/docs/configuration/replication)
 can be used to enforce requests that would have returned 412s in the
 aforementioned way will be forwarded instead to the active node.
 
-Refer to the [Server Side Consistent Token FAQ](/docs/faq/ssct) for details.
+Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.
 
 ## Client API helpers
 

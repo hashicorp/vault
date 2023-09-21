@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,11 +16,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq this.mode "create")}}
-        Create an SSH role
+        Create an SSH Role
       {{else if (eq this.mode "edit")}}
-        Edit SSH role
+        Edit SSH Role
       {{else}}
-        SSH role
+        SSH Role
         <code>{{this.model.id}}</code>
       {{/if}}
     </h1>

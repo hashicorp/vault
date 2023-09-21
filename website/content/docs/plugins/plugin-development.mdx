@@ -4,7 +4,7 @@ page_title: Plugin Development
 description: Learn about Vault plugin development.
 ---
 
-# Plugin Development
+# Plugin development
 
 ~> Advanced topic! Plugin development is a highly advanced topic in Vault, and
 is not required knowledge for day-to-day usage. If you don't plan on writing any
@@ -31,9 +31,9 @@ backend running the plugin.
 ~> Note: Plugins should be prepared to handle multiple concurrent requests
 from Vault.
 
-## Serving A Plugin
+## Serving a plugin
 
-### Serving A Plugin with Multiplexing
+### Serving a plugin with multiplexing
 
 ~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
 
@@ -75,7 +75,7 @@ func main() {
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
 
-## Plugin Backwards Compatibility with Vault
+## Plugin backwards compatibility with Vault
 
 Let's take a closer look at a snippet from the above main package.
 
@@ -88,39 +88,52 @@ Let's take a closer look at a snippet from the above main package.
 
 The call to `plugin.ServeMultiplex` ensures that the plugin will use
 Vault's [plugin
-multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
+multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
 However, this plugin will not be multiplexed if it is run by a version of Vault
 that does not support multiplexing. Vault will simply fall back to a plugin
 version that it can run. Additionally, we set the `TLSProviderFunc` to ensure
 that our plugin is backwards compatible with versions of Vault that do not
 support automatic mutual TLS for secure [plugin
-communication](/docs/plugins/plugin-architecture#plugin-communication). If you
+communication](/vault/docs/plugins/plugin-architecture#plugin-communication). If you
 are certain your plugin does not need backwards compatibility, this field can
 be omitted.
 
-[api_addr]: /docs/configuration#api_addr
+[api_addr]: /vault/docs/configuration#api_addr
 
-## Building a Plugin from Source
+## Leveraging plugin versioning
+
+@include 'plugin-versioning.mdx'
+
+Auth and secrets plugins based on `framework.Backend` from the SDK should set the
+[`RunningVersion`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/framework/backend.go#L95-L96)
+variable, and the framework will implement the version interface.
+
+Database plugins have a smaller API than `framework.Backend` exposes, and should
+instead implement the
+[`PluginVersioner`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/logical/logical.go#L150-L154)
+interface directly.
+
+## Building a plugin from source
 
 To build a plugin from source, first navigate to the location holding the
 desired plugin version. Next, run `go build` to obtain a new binary for the
 plugin. Finally,
-[register](/docs/plugins/plugin-architecture#plugin-registration) the
+[register](/vault/docs/plugins/plugin-architecture#plugin-registration) the
 plugin and enable it.
 
-## Plugin Development - Resources
+## Plugin development - resources
 
 For more information on how to register and enable your plugin, refer to the
-[Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends)
+[Building Plugin Backends](/vault/tutorials/app-integration/plugin-backends)
 tutorial.
 
 Other HashiCorp plugin development resources:
 
 * [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
-* [Custom Secrets Engines](https://learn.hashicorp.com/collections/vault/custom-secrets-engine)
+* [Custom Secrets Engines](/vault/tutorials/custom-secrets-engine)
 
-### Plugin Development - Resources - Community
+### Plugin development - resources - community
 
-See the [Plugin Portal](/docs/plugins/plugin-portal#community) to find
-Community plugin examples/guides developed by community members. HashiCorp does
-not validate these for correctness.
+See the [Vault Integrations](/vault/integrations) page to find Community
+plugin examples/guides developed by community members. HashiCorp does not
+validate these for correctness.

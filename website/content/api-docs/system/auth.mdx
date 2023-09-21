@@ -10,7 +10,7 @@ The `/sys/auth` endpoint is used to list, create, update, and delete auth
 methods. Auth methods convert user or machine-supplied information into a
 token which can be used for all future requests.
 
-## List Auth Methods
+## List auth methods
 
 This endpoint lists all enabled auth methods.
 
@@ -18,7 +18,7 @@ This endpoint lists all enabled auth methods.
 | :----- | :---------- |
 | `GET`  | `/sys/auth` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,7 +26,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -79,7 +79,7 @@ $ curl \
 }
 ```
 
-## Enable Auth Method
+## Enable auth method
 
 This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
@@ -127,10 +127,10 @@ For example, enable the "foo" auth method will make it accessible at
     in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
     with the default `""` being equivalent to `"hidden"`.
 
-  - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+  - `passthrough_request_headers` `(array: [])` - List of headers to allow
     and pass from the request to the plugin.
 
-  - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+  - `allowed_response_headers` `(array: [])` - List of headers to allow,
     allowing a plugin to include them in the response.
 
   - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
@@ -143,13 +143,13 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
-  Local auth mounts also generate entities for tokens issued. The entity will 
-  be replicated across clusters and the aliases generated on the local auth 
-  mount will be local to the cluster. If the goal of marking an auth method 
-  as `local` was to comply with GDPR guidelines, then care must be taken to not 
-  set the data pertaining to local auth mount or local auth mount aliases in the 
-  metadata of the associated entity. Metadata related to local auth mount aliases 
-  can be stored as `custom_metadata` on the alias itself which will also be 
+  Local auth mounts also generate entities for tokens issued. The entity will
+  be replicated across clusters and the aliases generated on the local auth
+  mount will be local to the cluster. If the goal of marking an auth method
+  as `local` was to comply with GDPR guidelines, then care must be taken to not
+  set the data pertaining to local auth mount or local auth mount aliases in the
+  metadata of the associated entity. Metadata related to local auth mount aliases
+  can be stored as `custom_metadata` on the alias itself which will also be
   retained locally to the cluster.
 
   ~> ** Warning:** Remember, policies when using replication secondaries are
@@ -161,7 +161,7 @@ relevant functionality is only supported in Vault Enterprise:
 - `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
   values stored by the mount to be wrapped by the seal's encryption capability.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -170,7 +170,7 @@ relevant functionality is only supported in Vault Enterprise:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -180,7 +180,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Read Auth Method configuration
+## Read auth method configuration
 
 This endpoints returns the configuration of the auth method at the given path.
 
@@ -188,7 +188,7 @@ This endpoints returns the configuration of the auth method at the given path.
 | :----- | :---------------- |
 | `GET`  | `/sys/auth/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -196,7 +196,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -229,7 +229,7 @@ $ curl \
 ```
 
 
-## Disable Auth Method
+## Disable auth method
 
 This endpoint disables the auth method at the given auth path.
 
@@ -245,7 +245,7 @@ This endpoint disables the auth method at the given auth path.
 - `path` `(string: <required>)` – Specifies the path to disable. This is part of
   the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -254,9 +254,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Read Auth Method Tuning
+## Read auth method tuning
 
-This endpoint reads the given auth path's configuration. _This endpoint requires
+- This endpoint reads the given auth path's configuration. This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
 without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
@@ -271,7 +271,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
 - `path` `(string: <required>)` – Specifies the path in which to tune.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -279,7 +279,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -291,7 +291,7 @@ $ curl \
 }
 ```
 
-## Tune Auth Method
+## Tune auth method
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality
@@ -325,10 +325,10 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
   with the default `""` being equivalent to `"hidden"`.
 
-- `passthrough_request_headers` `(array: [])` - List of headers to whitelist
+- `passthrough_request_headers` `(array: [])` - List of headers to allow
   and pass from the request to the plugin.
 
-- `allowed_response_headers` `(array: [])` - List of headers to whitelist,
+- `allowed_response_headers` `(array: [])` - List of headers to allow,
   allowing a plugin to include them in the response.
 
 - `token_type` `(string: "")` – Specifies the type of tokens that should be
@@ -346,17 +346,37 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
   to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
-### Sample Payload
+- `user_lockout_config` `(map<string|string>: nil)` – Specifies the user lockout configuration
+  for the mount. User lockout feature was added in Vault 1.13. These are the possible values:
+
+  - `lockout_threshold` `(string: "")` - Specifies the number of failed login attempts after
+    which the user is locked out, specified as a string like "15".
+
+  - `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out,
+    specified as a string duration like "5s" or "30m".
+
+  - `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is
+    reset with no failed login attempts, specified as a string duration like "5s" or "30m".
+
+  - `lockout_disable` `(bool: false)` - Disables the user lockout feature for this mount
+     if set to true.
+
+### Sample payload
 
 ```json
 {
   "default_lease_ttl": 1800,
   "max_lease_ttl": 86400,
-  "audit_non_hmac_request_keys": ["client_nonce"]
+  "audit_non_hmac_request_keys": ["client_nonce"],
+  "user_lockout_config":{
+    "lockout_threshold":"20",
+    "lockout_duration":"5m",
+    "lockout_counter_reset":"5m"
+  }
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

@@ -5,10 +5,9 @@ description: |-
   Vault Enterprise clusters can have hot standby nodes for scalability and resiliency.
 ---
 
-# Redundancy Zones
+# Redundancy zones
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-configured to use Integrated Storage.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Vault Enterprise Redundancy Zones provide both read scaling and resiliency benefits by enabling
 the deployment of non-voting nodes alongside voting nodes on a per availability zone basis.
@@ -36,4 +35,4 @@ ensure that Vault is never moving from a more healthy state to a less healthy st
 wait to begin leadership transfer until it can ensure that there will be as much redundancy on the
 new Vault version as there was on the old Vault version.
 
-The status of redundancy zones can be monitored by consulting the [Autopilot state API endpoint](/api-docs/system/storage/raftautopilot#get-cluster-state).
+The status of redundancy zones can be monitored by consulting the [Autopilot state API endpoint](/vault/api-docs/system/storage/raftautopilot#get-cluster-state).

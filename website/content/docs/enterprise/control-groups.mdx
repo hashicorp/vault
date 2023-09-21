@@ -4,9 +4,9 @@ page_title: Vault Enterprise Control Groups
 description: Vault Enterprise has support for Control Group Authorization.
 ---
 
-# Vault Enterprise Control Groups
+# Vault Enterprise control groups
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Vault Enterprise has support for Control Group Authorization. Control Groups
 add additional authorization factors to be required before satisfying a request.
@@ -17,7 +17,7 @@ accessor of the response wrapping token can be passed to the authorizers
 required by the control group policy. Once all authorizations are satisfied,
 the wrapping token can be used to unwrap and process the original request.
 
-## Control Group Factors
+## Control group factors
 
 Control Groups can verify the following factors:
 
@@ -39,12 +39,12 @@ the path `secret/foo` cannot specify a control group factor with `list` as a con
 
 Please see the following section for example ACL Policies.
 
-## Control Groups In ACL Policies
+## Control groups in ACL policies
 
 Control Group requirements on paths are specified as `control_group` along
 with other ACL parameters.
 
-### Sample ACL Policies
+### Sample ACL policies
 
 ```
 path "secret/foo" {
@@ -168,13 +168,13 @@ one superuser approval and one admin approval. `List` will require no extra appr
 from any of the control group factors, and a token with this policy will not be required
 to go through the control group workflow in order to execute a read operation against `kv/*`.
 
-## Control Groups in Sentinel
+## Control groups in sentinel
 
 Control Groups are also supported in Sentinel policies using the `controlgroup`
-import. See [Sentinel Documentation](/docs/enterprise/sentinel) for more
+import. See [Sentinel Documentation](/vault/docs/enterprise/sentinel) for more
 details on available properties.
 
-### Sample Sentinel Policy
+### Sample sentinel policy
 
 ```
 import "time"
@@ -206,10 +206,10 @@ happened in the last hour.
 
 ## Tutorial
 
-Refer to the [Control Groups](https://learn.hashicorp.com/vault/identity-access-management/iam-control-groups)
+Refer to the [Control Groups](/vault/tutorials/enterprise/control-groups)
 tutorial to learn how to implement dual controller authorization within your policies.
 
 ## API
 
 Control Groups can be managed over the HTTP API. Please see
-[Control Groups API](/api-docs/system/control-group) for more details.
+[Control Groups API](/vault/api-docs/system/control-group) for more details.

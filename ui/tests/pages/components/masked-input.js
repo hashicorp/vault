@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { clickable, isPresent } from 'ember-cli-page-object';
 
 export default {
   textareaIsPresent: isPresent('[data-test-textarea]'),
   copyButtonIsPresent: isPresent('[data-test-copy-button]'),
-  toggleMasked: clickable('[data-test-button]'),
+  downloadButtonIsPresent: isPresent('[data-test-download-button]'),
+  toggleMasked: clickable('[data-test-button="toggle-masked"]'),
+  copyValue: clickable('[data-test-copy-button]'),
 };

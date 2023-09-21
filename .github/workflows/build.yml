@@ -1,60 +1,111 @@
----
 name: build
 
 on:
   workflow_dispatch:
   pull_request:
+    # The default types for pull_request are [ opened, synchronize, reopened ].
+    # This is insufficient for our needs, since we're skipping stuff on PRs in
+    # draft mode.  By adding the ready_for_review type, when a draft pr is marked
+    # ready, we run everything, including the stuff we'd have skipped up until now.
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches:
       - main
       - release/**
 
-env:
-  PKG_NAME: vault
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-build
+  cancel-in-progress: true
 
 jobs:
+  # verify-changes determines if the changes are only for docs (website)
+  verify-changes:
+    uses: ./.github/workflows/verify_changes.yml
+
   product-metadata:
+    # do not run build and test steps for docs changes
+    # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+    # we conditionally skip the build and tests for docs(website) changes
+    if: |
+      github.event.pull_request.draft == false &&
+      needs.verify-changes.outputs.is_docs_change == 'false'
     runs-on: ubuntu-latest
+    needs: verify-changes
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
-      go-version: ${{ steps.get-metadata.outputs.go-version }}
-      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
       package-name: ${{ steps.get-metadata.outputs.package-name }}
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
-      vault-version: ${{ steps.get-metadata.outputs.vault-version }}
-      vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
+      vault-version: ${{ steps.set-product-version.outputs.product-version }}
+      vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Ensure Go modules are cached
+        uses: ./.github/actions/set-up-go
+        id: set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-restore: true # don't download them on a cache hit
+      - name: Set Product version
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v1
       - name: Get metadata
         id: get-metadata
         env:
-          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
-          # test group. It should be set to the highest test_group used in the
-          # enos-run-matrices.
-          MATRIX_MAX_TEST_GROUPS: 5
+          VAULT_VERSION: ${{ steps.set-product-version.outputs.product-version }}
         run: |
-          echo "build-date=$(make ci-get-date)" >> $GITHUB_OUTPUT
-          echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> $GITHUB_OUTPUT
-          echo "package-name=${{ env.PKG_NAME }}" >> $GITHUB_OUTPUT
-          echo "vault-base-version=$(make ci-get-version-base)" >> $GITHUB_OUTPUT
-          echo "vault-revision=$(make ci-get-revision)" >> $GITHUB_OUTPUT
-          echo "vault-version=$(make ci-get-version)" >> $GITHUB_OUTPUT
+          # shellcheck disable=SC2129
+          echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
+          echo "package-name=vault" >> "$GITHUB_OUTPUT"
+          echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
+          echo "vault-version-package=$(make ci-get-version-package)" >> "$GITHUB_OUTPUT"
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
         with:
-          version: ${{ steps.get-metadata.outputs.vault-version }}
+          version: ${{ steps.set-product-version.outputs.product-version }}
           product: ${{ steps.get-metadata.outputs.package-name }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
           if-no-files-found: error
 
+  build-ui:
+    name: UI
+    runs-on: custom-linux-xl-vault-latest
+    outputs:
+      cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Get UI hash
+        id: ui-hash
+        run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" >> "$GITHUB_OUTPUT"
+      - name: Set up UI asset cache
+        id: cache-ui-assets
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          enableCrossOsArchive: true
+          lookup-only: true
+          path: http/web_ui
+          # Only restore the UI asset cache if we haven't modified anything in the ui directory.
+          # Never do a partial restore of the web_ui if we don't get a cache hit.
+          key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
+        name: Set up node and yarn
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+        with:
+          node-version-file: ui/package.json
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
+        name: Build UI
+        run: make ci-build-ui
+
   build-other:
-    name: Build Vault Other
-    needs: product-metadata
+    name: Other
+    needs:
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [freebsd, windows, netbsd, openbsd, solaris]
@@ -73,14 +124,16 @@ jobs:
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
       go-tags: ui
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
       package-name: ${{ needs.product-metadata.outputs.package-name }}
+      web-ui-cache-key: ${{ needs.build-ui.outputs.cache-key }}
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
   build-linux:
-    name: Build Vault Linux
-    needs: product-metadata
+    name: Linux
+    needs:
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [linux]
@@ -91,14 +144,16 @@ jobs:
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
       go-tags: ui
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
       package-name: ${{ needs.product-metadata.outputs.package-name }}
+      web-ui-cache-key: ${{ needs.build-ui.outputs.cache-key }}
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
   build-darwin:
-    name: Build Vault Darwin
-    needs: product-metadata
+    name: Darwin
+    needs:
+      - product-metadata
+      - build-ui
     strategy:
       matrix:
         goos: [darwin]
@@ -109,14 +164,14 @@ jobs:
       create-packages: false
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
-      go-tags: ui netcgo
-      go-version: ${{ needs.product-metadata.outputs.go-version }}
+      go-tags: ui
       package-name: ${{ needs.product-metadata.outputs.package-name }}
+      web-ui-cache-key: ${{ needs.build-ui.outputs.cache-key }}
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
   build-docker:
-    name: Build Vault Docker
+    name: Docker image
     needs:
       - product-metadata
       - build-linux
@@ -128,19 +183,19 @@ jobs:
       repo: ${{ github.event.repository.name }}
       version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ env.version }}
           target: default
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: vault_${{ env.version }}_linux_${{ matrix.arch }}.zip
           tags: |
             docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
             public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
 
   build-ubi:
-    name: Build Vault Red Hat UBI
+    name: UBI image
     needs:
       - product-metadata
       - build-linux
@@ -152,13 +207,14 @@ jobs:
       repo: ${{ github.event.repository.name }}
       version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/actions-docker-build@v1
         with:
           version: ${{ env.version }}
           target: ubi
           arch: ${{ matrix.arch }}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: vault_${{ env.version }}_linux_${{ matrix.arch }}.zip
+          # The redhat_tag differs on CE and ENT editions. Be mindful when resolving merge conflicts.
           redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
 
   test:
@@ -169,25 +225,36 @@ jobs:
     # access to hashicorp/vault repository. This is required as Github Actions
     # will not populate the required secrets for branches created by outside
     # contributors in order to protect the secrets integrity.
+    # This condition can be removed in future if enos workflow is updated to
+    # workflow_run event
     if: "! github.event.pull_request.head.repo.fork"
     needs:
       - product-metadata
       - build-linux
-    uses: ./.github/workflows/enos-run.yml
+    uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
     strategy:
       fail-fast: false
       matrix:
         include:
-          - matrix-file-name: build-github-oss-linux-amd64-zip
+          - sample-name: build_oss_linux_amd64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
+          - sample-name: build_oss_linux_arm64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
+          - sample-name: build_oss_linux_amd64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
+          - sample-name: build_oss_linux_arm64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
+          - sample-name: build_oss_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - matrix-file-name: build-github-oss-linux-arm64-zip
+          - sample-name: build_oss_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
-      matrix-file-name: ${{ matrix.matrix-file-name }}
-      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
-      vault-edition: oss
+      sample-max: 1
+      sample-name: ${{ matrix.sample-name }}
+      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
   test-docker-k8s:
@@ -198,6 +265,9 @@ jobs:
     # access to hashicorp/vault repository. This is required as Github Actions
     # will not populate the required secrets for branches created by outside
     # contributors in order to protect the secrets integrity.
+    # GHA secrets are only ready on workflow_run for public repo
+    # This condition can be removed in future if enos workflow is updated to
+    # workflow_run event
     if: "! github.event.pull_request.head.repo.fork"
     needs:
       - product-metadata
@@ -210,7 +280,39 @@ jobs:
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
+  report-build-failures:
+    name: Report Build Failures
+    needs:
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
+    if: (success() || failure()) && github.head_ref != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Build Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+          BUILD_OTHER: ${{ needs.build-other.result }}
+          BUILD_LINUX: ${{ needs.build-linux.result }}
+          BUILD_DARWIN: ${{ needs.build-darwin.result }}
+          BUILD_DOCKER: ${{ needs.build-docker.result }}
+          BUILD_UBI: ${{ needs.build-ubi.result }}
+          TEST: ${{ needs.test.result }}
+          TEST_DOCKER_K8S: ${{ needs.test-docker-k8s.result }}
+        run: ./.github/scripts/report_failed_builds.sh
+
   completed-successfully:
+    # We force a failure if any of the dependent jobs fail,
+    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
+    if: always()
     runs-on: ubuntu-latest
     needs:
       - build-other
@@ -221,4 +323,58 @@ jobs:
       - test
       - test-docker-k8s
     steps:
-      - run: echo "All build and test workflows have succeeded!"
+      - run: |
+          tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
+
+  notify-completed-successfully-failures-oss:
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - completed-successfully
+    steps:
+      - name: send-notification
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
+        # We intentionally aren't using the following here since it's from an internal repo
+        # uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          payload: |
+            {"text":"OSS build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-completed-successfully-failures-ent:
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ['self-hosted', 'linux', 'small']
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - completed-successfully
+    steps:
+      - id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - id: secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"Enterprise build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}

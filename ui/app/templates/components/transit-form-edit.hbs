@@ -1,4 +1,9 @@
-<form onsubmit={{@createOrUpdateKey}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form data-test-transit-edit-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
@@ -19,7 +24,7 @@
     <div class="field">
       <TtlPicker
         @initialValue={{or @key.autoRotatePeriod "30d"}}
-        @initialEnabled={{not (eq @key.autoRotatePeriod "0s")}}
+        @initialEnabled={{not (eq @key.autoRotatePeriod 0)}}
         @label="Auto-rotation period"
         @helperTextDisabled="Key will never be automatically rotated"
         @helperTextEnabled="Key will be automatically rotated every"

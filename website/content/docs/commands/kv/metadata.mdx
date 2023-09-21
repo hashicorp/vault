@@ -8,7 +8,7 @@ description: |-
 
 # kv metadata
 
-~> **NOTE:** This is a [K/V Version 2](/docs/secrets/kv/kv-v2) secrets
+~> **NOTE:** This is a [K/V Version 2](/vault/docs/secrets/kv/kv-v2) secrets
 engine command, and not available for Version 1.
 
 The `kv metadata` command has subcommands for interacting with the metadata and
@@ -130,13 +130,13 @@ set to a duration greater than the backend's, the backend's Delete-Version-After
 setting will be used. Any changes to the Delete-Version-After setting will only
 be applied to new versions.
 
-#### Output Options
+#### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-#### Subcommand Options
+#### Subcommand options
 
 - `-cas-required` `(bool: false)` - If true the key will require the cas
   parameter to be set on all write requests. If false, the backend’s
@@ -150,7 +150,7 @@ be applied to new versions.
   to a duration to specify the `deletion_time` for all new versions written to
   this key. If not set, the backend's `delete_version_after` will be used. If
   the value is greater than the backend's `delete_version_after`, the backend's
-  `delete_version_after` will be used. Accepts [duration format strings](/docs/concepts/duration-format).
+  `delete_version_after` will be used. Accepts [duration format strings](/vault/docs/concepts/duration-format).
 
 - `-custom-metadata` `(string: "")` - Specifies a key-value pair for the
   `custom_metadata` field. This can be specified multiple times to add multiple

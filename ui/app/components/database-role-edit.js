@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -9,17 +14,10 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
-  @service wizard;
   @service store;
 
   constructor() {
     super(...arguments);
-    if (
-      this.wizard.featureState === 'displayConnection' ||
-      this.wizard.featureState === 'displayRoleDatabase'
-    ) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
     if (this.args.initialKey) {
       this.args.model.database = [this.args.initialKey];
     }
@@ -64,7 +62,7 @@ export default class DatabaseRoleEdit extends Component {
   delete() {
     const secret = this.args.model;
     const backend = secret.backend;
-    secret
+    return secret
       .destroyRecord()
       .then(() => {
         try {
@@ -91,7 +89,7 @@ export default class DatabaseRoleEdit extends Component {
       const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
       roleSecret.set('path', path);
     }
-    roleSecret
+    return roleSecret
       .save()
       .then(() => {
         try {
@@ -112,7 +110,7 @@ export default class DatabaseRoleEdit extends Component {
   rotateRoleCred(id) {
     const backend = this.args.model?.backend;
     const adapter = this.store.adapterFor('database/credential');
-    adapter
+    return adapter
       .rotateRoleCredentials(backend, id)
       .then(() => {
         this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);

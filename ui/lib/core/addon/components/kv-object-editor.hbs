@@ -1,0 +1,84 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="field" ...attributes {{did-insert this.createKvData @value}}>
+  <FormFieldLabel
+    @label={{@label}}
+    @helpText={{@helpText}}
+    @subText={{@subText}}
+    class={{@labelClass}}
+    data-test-kv-label={{true}}
+  />
+  {{#if @validationError}}
+    <div>
+      <AlertInline @type="danger" @message={{@validationError}} @paddingTop={{true}} />
+    </div>
+  {{/if}}
+  {{#if this.kvData}}
+    {{#each this.kvData as |row index|}}
+      <div class="columns is-variable" data-test-kv-row>
+        <div class="column is-one-quarter">
+          <Input
+            data-test-kv-key={{index}}
+            @value={{row.name}}
+            placeholder={{this.placeholders.key}}
+            {{on "change" (fn this.updateRow row index)}}
+            class="input"
+          />
+        </div>
+        <div class="column">
+          {{#if (has-block)}}
+            {{yield row this.kvData}}
+          {{else if @isMasked}}
+            <MaskedInput
+              data-test-kv-value={{index}}
+              @name={{row.name}}
+              @onChange={{fn this.updateRow row index}}
+              @value={{row.value}}
+            />
+          {{else}}
+            <Textarea
+              data-test-kv-value={{index}}
+              name={{row.name}}
+              class="input {{if @validationError 'has-error-border'}}"
+              @value={{row.value}}
+              wrap="off"
+              placeholder={{this.placeholders.value}}
+              rows={{1}}
+              {{on "change" (fn this.updateRow row index)}}
+              {{on "keyup" this.handleKeyUp}}
+            />
+          {{/if}}
+        </div>
+        <div class="column is-narrow">
+          {{#if (eq this.kvData.length (inc index))}}
+            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{index}}>
+              Add
+            </button>
+          {{else}}
+            <button
+              class="button has-text-grey is-expanded is-icon"
+              type="button"
+              {{action "deleteRow" row index}}
+              aria-label="Delete row"
+              data-test-kv-delete-row={{index}}
+            >
+              <Icon @name="trash" />
+            </button>
+          {{/if}}
+        </div>
+      </div>
+    {{/each}}
+    {{#if this.hasDuplicateKeys}}
+      <Hds::Alert data-test-duplicate-keys-warning @type="inline" @color="warning" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>
+          More than one key shares the same name. Please be sure to have unique key names or some data may be lost when
+          saving.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+  {{/if}}
+</div>

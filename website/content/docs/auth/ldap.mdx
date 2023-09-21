@@ -6,7 +6,7 @@ description: |-
   credentials.
 ---
 
-# LDAP Auth Method
+# LDAP auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -18,7 +18,7 @@ in multiple places.
 The mapping of groups and users in LDAP to Vault policies is managed by using
 the `users/` and `groups/` paths.
 
-## A Note on Escaping
+## A note on escaping
 
 **It is up to the administrator** to provide properly escaped DNs. This
 includes the user DN, bind DN for search, and so on.
@@ -112,7 +112,11 @@ management tool.
 
 There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
 
-#### Binding - Authenticated Search
+`userfilter` works with both authenticated and anonymous _Search_.
+In order for `userfilter` to apply for authenticated searches, `binddn` and `bindpass` must be set.
+For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` must be set to false.
+
+#### Binding - authenticated search
 
 - `binddn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
 - `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
@@ -122,7 +126,7 @@ There are two alternate methods of resolving the user object used to authenticat
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
-#### Binding - Anonymous Search
+#### Binding - anonymous search
 
 - `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
 - `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
@@ -133,11 +137,15 @@ There are two alternate methods of resolving the user object used to authenticat
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
-#### Binding - User Principal Name (AD)
+#### Alias dereferencing
+
+- `dereference_aliases` (string, optional) - Control how aliases are dereferenced when performing the search. Possible values are: `never`, `finding`, `searching`, and `always`. `finding` will only dereference aliases during name resolution of the base. `searching` will dereference aliases after name resolution.
+
+#### Binding - user principal name (AD)
 
 - `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
 
-### Group Membership Resolution
+### Group membership resolution
 
 Once a user has been authenticated, the LDAP auth method must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
 
@@ -152,7 +160,7 @@ Use `vault path-help` for more details.
 ### Other
 
 - `username_as_alias` (bool, optional) - If set to true, forces the auth method to use the username passed by the user as the alias name.
-
+- `max_page_size` (int, optional) - If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.
 
 ## Examples:
 
@@ -230,7 +238,7 @@ $ vault write auth/ldap/config \
 ...
 ```
 
-## LDAP Group -> Policy Mapping
+## LDAP group -> policy mapping
 
 Next we want to create a mapping from an LDAP group to a Vault policy:
 
@@ -266,8 +274,12 @@ default, foobar, zoobar
 
 It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
 
+## User lockout
+
+@include 'user-lockout.mdx'
+
 ## API
 
 The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api-docs/auth/ldap) for more
+[LDAP auth method API](/vault/api-docs/auth/ldap) for more
 details.

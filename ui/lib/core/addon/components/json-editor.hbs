@@ -1,0 +1,65 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div ...attributes>
+  {{#if this.getShowToolbar}}
+    <div data-test-component="json-editor-toolbar">
+      <Toolbar>
+        <label class="has-text-weight-bold" data-test-component="json-editor-title">
+          {{@title}}
+          {{#if @subTitle}}
+            <span class="is-size-9 is-lowercase has-text-grey">({{@subTitle}})</span>
+          {{/if}}
+        </label>
+        <ToolbarActions>
+          {{yield}}
+          {{#if @example}}
+            <button
+              type="button"
+              class="toolbar-link"
+              disabled={{not @value}}
+              {{on "click" this.restoreExample}}
+              data-test-restore-example
+            >
+              Restore example
+              <Icon @name="reload" />
+            </button>
+          {{/if}}
+          <div class="toolbar-separator"></div>
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{@value}}
+            class="transparent"
+            data-test-copy-button
+          />
+        </ToolbarActions>
+      </Toolbar>
+    </div>
+  {{/if}}
+  <div
+    {{code-mirror
+      content=(or @value @example)
+      extraKeys=@extraKeys
+      gutters=@gutters
+      lineNumbers=(if @readOnly false true)
+      mode=@mode
+      readOnly=@readOnly
+      theme=@theme
+      viewportMarg=@viewportMargin
+      onSetup=this.onSetup
+      onUpdate=this.onUpdate
+      onFocus=this.onFocus
+    }}
+    class={{if @readOnly "readonly-codemirror"}}
+    data-test-component="code-mirror-modifier"
+  ></div>
+
+  {{#if @helpText}}
+    <div class="box is-shadowless is-fullwidth has-short-padding">
+      <p class="sub-text">{{@helpText}}</p>
+    </div>
+  {{/if}}
+</div>

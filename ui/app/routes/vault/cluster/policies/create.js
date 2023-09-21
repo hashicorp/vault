@@ -1,22 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 
-export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
+export default Route.extend(UnsavedModelRoute, {
   store: service(),
   version: service(),
-  wizard: service(),
 
   model() {
     const policyType = this.policyType();
-    if (
-      policyType === 'acl' &&
-      this.wizard.currentMachine === 'policies' &&
-      this.wizard.featureState === 'idle'
-    ) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
-    }
     if (!this.version.hasSentinel && policyType !== 'acl') {
       return this.transitionTo('vault.cluster.policies', policyType);
     }

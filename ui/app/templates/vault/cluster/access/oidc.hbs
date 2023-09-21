@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.header}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -6,7 +11,7 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <div class="box is-fullwidth is-sideless is-flex-between is-box-shadowless is-marginless" data-test-oidc-header>
+  <div class="box is-fullwidth is-sideless is-flex-between is-shadowless is-marginless" data-test-oidc-header>
     <p>
       Configure Vault to act as an OIDC identity provider, and offer
       {{"Vault’s"}}
@@ -15,9 +20,9 @@
         <br />
       {{/if}}
       methods and source of identity to any client applications.
-      <LearnLink @path="/tutorials/vault/oidc-identity-provider">
+      <DocLink @path="/vault/tutorials/auth-methods/oidc-identity-provider">
         Learn more
-      </LearnLink>
+      </DocLink>
     </p>
     {{#if this.isCta}}
       <button

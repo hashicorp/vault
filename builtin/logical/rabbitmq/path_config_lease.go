@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -12,6 +15,11 @@ import (
 func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
@@ -25,9 +33,21 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathLeaseRead,
-			logical.UpdateOperation: b.pathLeaseUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathLeaseRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "lease-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathLeaseUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "lease",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigLeaseHelpSyn,

@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/performance`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
-## Check Performance Status
+## Check performance status
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -21,14 +21,14 @@ This is an unauthenticated endpoint.
 | :----- | :------------------------------------ |
 | `GET`  | `/sys/replication/performance/status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/status
 ```
 
-### Sample Response from Primary
+### Sample response from primary
 
 The printed status of the replication environment. As an example, for a
 primary, it will look something like:
@@ -54,7 +54,7 @@ primary, it will look something like:
 }
 ```
 
-### Sample Response from Secondary
+### Sample response from secondary
 
 The printed status of the replication environment. As an example, for a
 secondary, it will look something like:
@@ -82,7 +82,7 @@ secondary, it will look something like:
 }
 ```
 
-## Enable Performance Primary Replication
+## Enable performance primary replication
 
 This endpoint enables replication in primary mode. This is used when replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
@@ -103,13 +103,13 @@ result in data loss!
   such as through a TCP-based load balancer. If not set, uses vault's configured
   cluster address.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {}
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -119,7 +119,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/enable
 ```
 
-## Demote Performance Primary
+## Demote performance primary
 
 This endpoint demotes a performance primary cluster to a performance secondary.
 This secondary cluster will not attempt to connect to a primary (see the update-primary call),
@@ -130,7 +130,7 @@ replication set without wiping local storage.
 | :----- | :-------------------------------------------- |
 | `POST` | `/sys/replication/performance/primary/demote` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -139,7 +139,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/demote
 ```
 
-## Disable Performance Primary
+## Disable performance primary
 
 This endpoint disables Performance Replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
@@ -152,7 +152,7 @@ they have connected before) will require a wipe of the underlying storage.
 | :----- | :--------------------------------------------- |
 | `POST` | `/sys/replication/performance/primary/disable` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -161,7 +161,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/disable
 ```
 
-## Generate Performance Secondary Token
+## Generate performance secondary token
 
 This endpoint generates a performance secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
@@ -184,7 +184,7 @@ identifier can later be used to revoke a secondary's access.
   public key, if using encryption rather than response wrapping to protect the
   secondary credentials. (Vault 1.3+)
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -192,7 +192,7 @@ identifier can later be used to revoke a secondary's access.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -202,7 +202,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/secondary-token
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -221,7 +221,7 @@ $ curl \
 }
 ```
 
-## Revoke Performance Secondary Token
+## Revoke performance secondary token
 
 This endpoint revokes a performance secondary's ability to connect to the
 performance primary cluster; the secondary will immediately be disconnected and
@@ -235,7 +235,7 @@ will not be allowed to connect again unless given a new activation token.
 
 - `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -243,7 +243,7 @@ will not be allowed to connect again unless given a new activation token.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -253,7 +253,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/revoke-secondary
 ```
 
-## Create Paths Filter
+## Create paths filter
 
 This endpoint is used to modify the mounts and namespaces that are filtered to a secondary.
 Filtering can be specified in allow mode or deny mode. In allow
@@ -266,14 +266,19 @@ selected secondary. In deny mode, the mount and namespace paths are excluded.
 
 ### Parameters
 
-- `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
+- `id` `(string: <required>)` – Specifies the unique performance secondary identifier. Note that this identifier is
+  not arbitrary. This should be the secondary cluster ID as reported by the `cluster_id` field of the [replication status](/vault/api-docs/system/replication#check-status) API
+  endpoint. If, for example, a new performance secondary token
+  [is created](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token), and used to call
+  [update-primary](/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary), then path filters will need
+  to be re-created via this API endpoint.
 
 - `mode` `(string: "allow")` – Specifies the filtering mode. Available values
   are "allow" and "deny".
 
 - `paths` `(array: [])` – The list of mount and namespace paths that are filtered.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -282,7 +287,7 @@ selected secondary. In deny mode, the mount and namespace paths are excluded.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -292,12 +297,12 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
 ```
 
-## Read Paths Filter
+## Read paths filter
 
 This endpoint is used to read the mode and the mount/namespace paths that are filtered
 for a secondary.
 
-| Method | Path                                                    |
+| Method | Path                                                    | |
 | :----- | :------------------------------------------------------ | ------------------ |
 | `GET`  | `/sys/replication/performance/primary/paths-filter/:id` | `200 (empty body)` |
 
@@ -305,7 +310,7 @@ for a secondary.
 
 - `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -313,7 +318,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -322,7 +327,7 @@ $ curl \
 }
 ```
 
-## Delete Paths Filter
+## Delete paths filter
 
 This endpoint is used to delete the mount and namespace filters for a secondary.
 
@@ -334,7 +339,7 @@ This endpoint is used to delete the mount and namespace filters for a secondary.
 
 - `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -343,12 +348,12 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/paths-filter/mySecondaryID
 ```
 
-## Read Dynamically Generated Filter (PRIMARY)
+## Read dynamically generated filter (PRIMARY)
 
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the primary.
 
-| Method | Path                                                      |
+| Method | Path                                                      | |
 | :----- | :-------------------------------------------------------- | ------------------ |
 | `GET`  | `/sys/replication/performance/primary/dynamic-filter/:id` | `200 (empty body)` |
 
@@ -356,7 +361,7 @@ filtered for a secondary on the primary.
 
 - `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -364,7 +369,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/primary/dynamic-filter/mySecondaryID
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -373,12 +378,12 @@ $ curl \
 }
 ```
 
-## Read Dynamically Generated Filter (SECONDARY)
+## Read dynamically generated filter (SECONDARY)
 
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the secondary.
 
-| Method | Path                                                        |
+| Method | Path                                                        | |
 | :----- | :---------------------------------------------------------- | ------------------ |
 | `GET`  | `/sys/replication/performance/secondary/dynamic-filter/:id` | `200 (empty body)` |
 
@@ -386,7 +391,7 @@ filtered for a secondary on the secondary.
 
 - `id` `(string: <required>)` – Specifies the unique performance secondary identifier.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -394,7 +399,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/dynamic-filter/mySecondaryID
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -403,7 +408,7 @@ $ curl \
 }
 ```
 
-## Fetch Performance Secondary Public Key
+## Fetch performance secondary public key
 
 (Vault 1.3+)
 
@@ -415,7 +420,7 @@ needing to make an API call to the primary during activation.
 | :----- | :----------------------------------------------------------- |
 | `POST` | `/sys/replication/performance/secondary/generate-public-key` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -424,7 +429,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/generate-public-key
 ```
 
-## Enable Performance Secondary
+## Enable performance secondary
 
 This endpoint enables Performance Replication on a secondary using a secondary activation
 token.
@@ -454,7 +459,7 @@ token.
   token from the primary. If this and ca_file are not given, defaults to system
   CA roots.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -462,7 +467,7 @@ token.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -472,7 +477,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/enable
 ```
 
-## Promote Performance Secondary
+## Promote performance secondary
 
 This endpoint promotes the performance secondary cluster to performance primary.
 For data safety and security reasons, new secondary tokens will need to be
@@ -493,13 +498,13 @@ primary at a time.
   certain safety checks. Caution: Forcing promotion could result in data loss if
   data isn't fully replicated.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {}
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -509,7 +514,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/promote
 ```
 
-## Disable Performance Secondary
+## Disable performance secondary
 
 This endpoint disables Performance Replication entirely on the cluster. The cluster will no
 longer be able to connect to the performance primary.
@@ -524,7 +529,7 @@ underlying storage.
 | :----- | :----------------------------------------------- |
 | `POST` | `/sys/replication/performance/secondary/disable` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -533,10 +538,22 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/performance/secondary/disable
 ```
 
-## Update Performance Secondary's Primary
+## Update performance secondary's primary
 
-This endpoint changes a performance secondary cluster's assigned primary cluster using a
-secondary activation token. This does not wipe all data in the cluster.
+The update endpoint changes the primary cluster assigned to a
+performance secondary cluster. Changing the primary cluster assignment
+does not wipe data in the secondary cluster.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**.
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+   During the update, cluster addresses are pinged one at a time via gRPC. The
+   first cluster to respond successfully is assigned as the new primary address.
+
+The two update methods are mutually exclusive. You may use one or the other,
+but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                                    |
 | :----- | :------------------------------------------------------ |
@@ -562,7 +579,13 @@ secondary activation token. This does not wipe all data in the cluster.
   PEM-format files that the secondary can use when unwrapping the token from the
   primary. If this and ca_file are not given, defaults to system CA roots.
 
-### Sample Payload
+- `update_primary_addrs` `array: []` – List of cluster addresses for potential
+  primary clusters. These addresses will be pinged in sequence, and if any of them
+  respond successfully, these will be recorded as the new primary addresses. This is
+  a lighter weight version of specifying a token and should result in less disruption
+  of replication.
+
+### Sample payload
 
 ```json
 {
@@ -570,7 +593,25 @@ secondary activation token. This does not wipe all data in the cluster.
 }
 ```
 
-### Sample Request
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "update_primary_addrs": ["10.0.0.2:8201"]
+}
+```
+
+### Sample request
 
 ```shell-session
 $ curl \

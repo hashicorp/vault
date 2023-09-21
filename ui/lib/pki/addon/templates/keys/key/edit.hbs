@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
@@ -5,7 +10,13 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-key-details-title>
       <Icon @name="certificate" @size="24" class="has-text-grey-light" />
-      Edit key
+      Edit Key
     </h1>
   </p.levelLeft>
 </PageHeader>
+
+<PkiKeyForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.keys.key.details" this.model.id}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.pki.keys.key.details" this.model.id}}
+/>

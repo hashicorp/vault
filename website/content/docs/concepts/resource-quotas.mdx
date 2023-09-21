@@ -4,7 +4,7 @@ page_title: Resource Quotas
 description: Providing measures against misbehaving applications and users overdrawing resources in Vault.
 ---
 
-# Resource Quotas
+# Resource quotas
 
 Every single interaction with Vault, whether to put secrets into the key/value
 store or to generate new pairs of database credentials for the MySQL database,
@@ -21,10 +21,10 @@ developers.
 Vault provides a feature, resource quotas, that allows Vault operators to specify
 limits on resources used in Vault. Specifically, Vault allows operators to create
 and configure API rate limits. Users of Vault Enterprise have a second option, alongside
-rate limits, [lease-count quotas](/docs/enterprise/lease-count-quotas), which can
+rate limits, [lease-count quotas](/vault/docs/enterprise/lease-count-quotas), which can
 limit the number of leases that can be in use at one time.
 
-## Rate Limit Quotas
+## Rate limit quotas
 
 Vault allows operators to create rate limit quotas which enforce API rate
 limiting using a [token bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm.
@@ -49,10 +49,10 @@ to a non-zero value, any client that hits a rate limit threshold will be blocked
 from all subsequent requests for a duration of `block_interval` seconds.
 
 Vault also allows the inspection of the state of rate limiting in a Vault node
-through various [metrics](/docs/internals/telemetry#Resource-Quota-Metrics) exposed
+through various [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics) exposed
 and through enabling optional audit logging.
 
-## Exempt Routes
+## Exempt routes
 
 By default, the following paths are exempt from rate limiting. However, Vault
 operators can override the set of paths that are exempt from all rate limit
@@ -69,10 +69,10 @@ resource quotas by updating the `rate_limit_exempt_paths` configuration field.
 ## Tutorial
 
 Refer to [Protecting Vault with Resource
-Quotas](https://learn.hashicorp.com/vault/security/resource-quotas) for a
+Quotas](/vault/tutorials/operations/resource-quotas) for a
 step-by-step tutorial.
 
 ## API
 
 Rate limit quotas can be managed over the HTTP API. Please see
-[Rate Limit Quotas API](/api-docs/system/rate-limit-quotas) for more details.
+[Rate Limit Quotas API](/vault/api-docs/system/rate-limit-quotas) for more details.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package kv
 
 import (
@@ -9,34 +12,14 @@ import (
 	"testing"
 	"time"
 
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{
@@ -119,27 +102,9 @@ func kvRequestWithRetry(t *testing.T, req func() (interface{}, error)) (interfac
 }
 
 func TestKV_Patch_Audit(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	if err := c.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
@@ -219,19 +184,9 @@ func TestKV_Patch_Audit(t *testing.T) {
 
 // Verifies that patching works by default with the root token
 func TestKV_Patch_RootToken(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0]
-	client := core.Client
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	// make sure this client is using the root token
 	client.SetToken(cluster.RootToken)

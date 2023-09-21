@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -13,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -21,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
-	"gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -181,6 +184,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "oidc/assignment/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "assignment",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -215,6 +222,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/assignment/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "assignments",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListAssignment,
@@ -225,6 +236,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/scope/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "scope",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -259,6 +274,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/scope/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "scopes",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListScope,
@@ -269,6 +288,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/client/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "client",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -323,6 +346,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/client/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "clients",
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListClient,
@@ -333,6 +360,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -371,6 +402,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "providers",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"allowed_client_id": {
 					Type: framework.TypeString,
@@ -389,7 +424,11 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/openid-configuration",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/openid-configuration",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider-open-id-configuration",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -405,7 +444,11 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/keys",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/keys",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "provider-public-keys",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -422,6 +465,9 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/authorize",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -431,52 +477,68 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
 					Required:    true,
+					Query:       true,
 				},
 				"scope": {
 					Type:        framework.TypeString,
 					Description: "A space-delimited, case-sensitive list of scopes to be requested. The 'openid' scope is required.",
 					Required:    true,
+					Query:       true,
 				},
 				"redirect_uri": {
 					Type:        framework.TypeString,
 					Description: "The redirection URI to which the response will be sent.",
 					Required:    true,
+					Query:       true,
 				},
 				"response_type": {
 					Type:        framework.TypeString,
 					Description: "The OIDC authentication flow to be used. The following response types are supported: 'code'",
 					Required:    true,
+					Query:       true,
 				},
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
+					Query:       true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
+					Query:       true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
 					Description: "The allowable elapsed time in seconds since the last time the end-user was actively authenticated.",
+					Query:       true,
 				},
 				"code_challenge": {
 					Type:        framework.TypeString,
 					Description: "The code challenge derived from the code verifier.",
+					Query:       true,
 				},
 				"code_challenge_method": {
 					Type:        framework.TypeString,
 					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
 					Default:     codeChallengeMethodPlain,
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:                    i.pathOIDCAuthorize,
+					Callback: i.pathOIDCAuthorize,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "authorize",
+					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    i.pathOIDCAuthorize,
+					Callback: i.pathOIDCAuthorize,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "authorize",
+						OperationSuffix: "with-parameters",
+					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,
 				},
@@ -486,6 +548,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/token",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+				OperationVerb:   "token",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -540,6 +606,9 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/userinfo",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc-provider",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -549,9 +618,15 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.pathOIDCUserInfo,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "user-info",
+					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.pathOIDCUserInfo,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "user-info2",
+					},
 				},
 			},
 			HelpSynopsis:    "Provides the OIDC UserInfo Endpoint.",

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { isBlank } from '@ember/utils';
 import { set } from '@ember/object';
 import RoleEdit from './role-edit';
@@ -8,7 +13,8 @@ export default RoleEdit.extend({
     createOrUpdate(type, event) {
       event.preventDefault();
 
-      const modelId = this.model.id;
+      // all of the attributes with fieldValue:'id' are called `name`
+      const modelId = this.model.id || this.model.name;
       // prevent from submitting if there's no key
       // maybe do something fancier later
       if (type === 'create' && isBlank(modelId)) {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -25,24 +28,20 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-sockaddr"
-
-	"golang.org/x/net/http2"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-
 	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -250,9 +249,6 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Enable PKI secret engine and Cert auth method
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -445,7 +441,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
@@ -476,9 +472,6 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 func TestBackend_MetadataBasedACLPolicy(t *testing.T) {
 	// Start cluster with cert auth method enabled
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -595,7 +588,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	var secret *api.Secret
 
@@ -1103,6 +1096,11 @@ func testFactory(t *testing.T) logical.Backend {
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
+	if err := b.Initialize(context.Background(), &logical.InitializationRequest{
+		Storage: storage,
+	}); err != nil {
+		t.Fatalf("error: %s", err)
+	}
 	return b
 }
 
@@ -1298,6 +1296,12 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000002*"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000001*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "2.5.29.17:"}, false),
+			testAccStepLogin(t, connState),
 			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
@@ -1954,6 +1958,27 @@ func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, poli
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("expected error but received nil")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepReadCertPolicy(t *testing.T, name string, expectError bool, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "certs/" + name,
+		ErrorOk:   expectError,
+		Data:      nil,
+		Check: func(resp *logical.Response) error {
+			if (resp == nil || len(resp.Data) == 0) && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			for key, expectedValue := range expected {
+				actualValue := resp.Data[key]
+				if expectedValue != actualValue {
+					return fmt.Errorf("Expected to get [%v]=[%v] but read [%v]=[%v] from server for certs/%v: %v", key, expectedValue, key, actualValue, name, resp)
+				}
 			}
 			return nil
 		},

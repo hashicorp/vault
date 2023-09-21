@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,9 +16,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq this.mode "create")}}
-        Create transformation
+        Create Transformation
       {{else if (eq this.mode "edit")}}
-        Edit transformation
+        Edit Transformation
       {{else}}
         Transformation
         <code>{{this.model.id}}</code>

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
 import Resolver from './resolver';
@@ -18,7 +23,6 @@ const Eng = Engine.extend({
       'router',
       'store',
       'version',
-      'wizard',
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],

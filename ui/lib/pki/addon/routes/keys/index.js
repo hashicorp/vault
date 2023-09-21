@@ -1,19 +1,22 @@
-import PkiOverviewRoute from '../overview';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
-export default class PkiKeysIndexRoute extends PkiOverviewRoute {
-  @service store;
-  @service secretMountPath;
-  @service pathHelp;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/key', this.secretMountPath.currentPath);
-  }
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-issuers';
+import { hash } from 'rsvp';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
+
+@withConfig()
+export default class PkiKeysIndexRoute extends Route {
+  @service secretMountPath;
+  @service store;
 
   model() {
     return hash({
-      hasConfig: this.hasConfig(),
+      hasConfig: this.shouldPromptConfig,
       parentModel: this.modelFor('keys'),
       keyModels: this.store.query('pki/key', { backend: this.secretMountPath.currentPath }).catch((err) => {
         if (err.httpStatus === 404) {
@@ -27,11 +30,11 @@ export default class PkiKeysIndexRoute extends PkiOverviewRoute {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const backend = this.secretMountPath.currentPath || 'pki';
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'keys', route: 'keys.index' },
     ];
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

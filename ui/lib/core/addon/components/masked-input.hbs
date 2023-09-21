@@ -1,0 +1,67 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div
+  class="masked-input {{if @displayOnly 'display-only'}} {{if @allowCopy 'allow-copy'}}"
+  data-test-masked-input
+  data-test-field
+  ...attributes
+>
+  {{#if @displayOnly}}
+    {{#if this.showValue}}
+      {{! Show minus icon if there is no value }}
+      {{#if (eq @value "")}}
+        <Icon class="masked-value" @name="minus" />
+      {{else}}
+        <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{/if}}
+    {{else}}
+      <pre class="masked-value display-only masked-font">***********</pre>
+    {{/if}}
+  {{else}}
+    <Textarea
+      id={{this.textareaId}}
+      name={{@name}}
+      @value={{@value}}
+      class="input masked-value {{unless this.showValue 'masked-font'}}"
+      rows={{1}}
+      wrap="off"
+      spellcheck="false"
+      {{on "change" this.onChange}}
+      {{on "keyup" (fn this.handleKeyUp @name)}}
+      data-test-textarea
+    />
+  {{/if}}
+  {{#if @allowCopy}}
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@value}}
+      class="transparent icon-only is-paddingless"
+      data-test-copy-button
+    />
+  {{/if}}
+  {{#if @allowDownload}}
+    <DownloadButton
+      class="button download-button"
+      @filename={{or @name "secret-value"}}
+      @data={{@value}}
+      @stringify={{true}}
+      aria-label="Download secret value"
+    >
+      <Icon @name="download" />
+    </DownloadButton>
+  {{/if}}
+  <button
+    onclick={{this.toggleMask}}
+    type="button"
+    aria-label={{if this.showValue "mask value" "show value"}}
+    title={{if this.showValue "mask value" "show value"}}
+    class="masked-input-toggle button"
+    data-test-button="toggle-masked"
+  >
+    <Icon @name={{if this.showValue "eye" "eye-off"}} />
+  </button>
+</div>

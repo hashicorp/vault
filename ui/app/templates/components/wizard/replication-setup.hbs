@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! template-lint-disable quotes }}
 <WizardContent @headerText="Replication" @glyph="tour">
   <WizardSection
@@ -11,15 +16,15 @@
       more interested in speed of access?
     </p>
 
-    <LearnLink @path="/vault/operations/ops-replication">
+    <DocLink @path="/vault/tutorials/enterprise/performance-replication">
       <Icon @name="learn-link" />
       Learn: Setting Up Performance Replication
-    </LearnLink>
+    </DocLink>
 
-    <LearnLink @path="/vault/operations/ops-disaster-recovery">
+    <DocLink @path="/vault/tutorials/enterprise/disaster-recovery">
       <Icon @name="learn-link" />
       Learn: Setting up Disaster Recovery
-    </LearnLink>
+    </DocLink>
 
   </WizardSection>
   <WizardSection @headerText="Cluster mode" @class="wizard-details">

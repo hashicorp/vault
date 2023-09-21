@@ -21,7 +21,7 @@ Use this command to list all existing key names at a specific path.
 List values under the key "my-app":
 
 ```shell-session
-$ vault kv list secret/my-app/
+$ vault kv list -mount=secret my-app/
 Keys
 ----
 admin_creds
@@ -33,10 +33,16 @@ release
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
 
-### Output Options
+### Output options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted.
+  If specified, the next argument will be interpreted as the secret path. If
+  this flag is not specified, the next argument will be interpreted as the
+  combined mount path and secret path, with /data/ automatically inserted for
+  KV v2 secrets.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the

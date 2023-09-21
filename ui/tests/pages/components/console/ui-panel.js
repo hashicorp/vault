@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { text, triggerable, clickable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 import { settled } from '@ember/test-helpers';
 
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 export default {
   toggle: clickable('[data-test-console-toggle]'),

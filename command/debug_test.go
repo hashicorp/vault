@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -531,6 +534,10 @@ func TestDebugCommand_NoConnection(t *testing.T) {
 
 	client, err := api.NewClient(nil)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.SetAddress(""); err != nil {
 		t.Fatal(err)
 	}
 

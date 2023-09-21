@@ -5,8 +5,9 @@ description: >-
   Managed Keys is a system in Vault that defers all private key operations to a third party system.
 ---
 
-# Managed Keys
+# Managed keys
 
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Within certain environments, customers want to leverage key management systems
 external to Vault, when handling, storing, and interacting with
@@ -17,11 +18,11 @@ To satisfy these requirements, Vault has a centralized abstraction called
 delegate these operations to a trusted external KMS.
 
 Minimally, a managed key consists of a named managed key entry managed by the
-[`sys/managed-key`](/api-docs/system/managed-keys) API.  Besides a name,
+[`sys/managed-key`](/vault/api-docs/system/managed-keys) API.  Besides a name,
 there are backend specific configurations to access the key in question.
 
 For PKCS#11 (HSM) backed managed keys, the managed key configuration must
-reference a [kms library stanza](/docs/configuration/kms-library) which points
+reference a [kms library stanza](/vault/docs/configuration/kms-library) which points
 to a PKCS#11 access library on the host machine.
 
 Note that a configured, named managed key corresponds to a single key within
@@ -34,24 +35,29 @@ Every configured Managed Key is bound to a given namespace, defaulting to the
 root namespace. Any secrets engine's mount path must exist within the same namespace
 as the Managed Key for which it intends to use.
 
-## Backend Support
+## Backend support
 
 Managed Keys were developed to support different types of external backends. At
 this time supported backends are PKCS#11, AWS KMS, Azure Key Vault, and Google
 Cloud KMS. Support for additional integrations may be added in the future.
 
-## Secret and Auth Engine Support
+## Secret and auth engine support
 
-The [PKI Secrets Engine](/api-docs/secret/pki#managed-keys) has been integrated
+The [PKI Secrets Engine](/vault/api-docs/secret/pki#managed-keys) has been integrated
 with Managed Keys to offer certificate generation, both root and intermediary
 PKI paths, leveraging private keys from an external trusted KMS.
+
+The [Transit Secrets Engine](/vault/api-docs/secret/transit#managed-keys) allows users
+to generate and verify cryptographic signatures with Managed Keys, and in some cases encrypt
+and decrypt data, or generate MACs and HMACs. These operations are performed on the KMS or HSM
+that hosts the Managed Key material.
 
 More engines may leverage managed keys in the future.
 
 ## API
 
 Managed Keys can be managed over the HTTP API. Please see
-[Managed Keys API](/api-docs/system/managed-keys) for more details.
+[Managed Keys API](/vault/api-docs/system/managed-keys) for more details.
 
 To configure PKI secrets engine with Managed Keys please see
-[PKI Secret API](/api-docs/secret/pki#managed-keys)
+[PKI Secret API](/vault/api-docs/secret/pki#managed-keys)

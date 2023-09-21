@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -24,12 +27,9 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -56,7 +56,19 @@ const (
 	HeaderIndex              = "X-Vault-Index"
 	HeaderForward            = "X-Vault-Forward"
 	HeaderInconsistent       = "X-Vault-Inconsistent"
-	TLSErrorString           = "This error usually means that the server is running with TLS disabled\n" +
+
+	// NamespaceHeaderName is the header set to specify which namespace the
+	// request is indented for.
+	NamespaceHeaderName = "X-Vault-Namespace"
+
+	// AuthHeaderName is the name of the header containing the token.
+	AuthHeaderName = "X-Vault-Token"
+
+	// RequestHeaderName is the name of the header used by the Agent for
+	// SSRF protection.
+	RequestHeaderName = "X-Vault-Request"
+
+	TLSErrorString = "This error usually means that the server is running with TLS disabled\n" +
 		"but the client is configured to use TLS. Please either enable TLS\n" +
 		"on the server or run the client with -address set to an address\n" +
 		"that uses the http protocol:\n\n" +
@@ -114,7 +126,11 @@ type Config struct {
 	// of three tries).
 	MaxRetries int
 
-	// Timeout is for setting custom timeout parameter in the HttpClient
+	// Timeout, given a non-negative value, will apply the request timeout
+	// to each request function unless an earlier deadline is passed to the
+	// request function through context.Context. Note that this timeout is
+	// not applicable to Logical().ReadRaw* (raw response) functions.
+	// Defaults to 60 seconds.
 	Timeout time.Duration
 
 	// If there is an error when creating the configuration, this will be the
@@ -169,6 +185,9 @@ type Config struct {
 	// CloneToken from parent.
 	CloneToken bool
 
+	// CloneTLSConfig from parent (tls.Config).
+	CloneTLSConfig bool
+
 	// ReadYourWrites ensures isolated read-after-write semantics by
 	// providing discovered cluster replication states in each request.
 	// The shared state is automatically propagated to all Client clones.
@@ -187,6 +206,7 @@ type Config struct {
 	// commands such as 'vault operator raft snapshot' as this redirects to the
 	// primary node.
 	DisableRedirects bool
+	clientTLSConfig  *tls.Config
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -273,7 +293,14 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+
+	transport, ok := c.HttpClient.Transport.(*http.Transport)
+	if !ok {
+		return fmt.Errorf(
+			"unsupported HTTPClient transport type %T", c.HttpClient.Transport)
+	}
+
+	clientTLSConfig := transport.TLSClientConfig
 
 	var clientCert tls.Certificate
 	foundClientCert := false
@@ -321,8 +348,15 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
+	c.clientTLSConfig = clientTLSConfig
 
 	return nil
+}
+
+func (c *Config) TLSConfig() *tls.Config {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	return c.clientTLSConfig.Clone()
 }
 
 // ConfigureTLS takes a set of TLS configurations and applies those to the
@@ -511,7 +545,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 			// be pointing to the protocol used in the application layer and not to
 			// the transport layer. Hence, setting the fields accordingly.
 			u.Scheme = "http"
-			u.Host = socket
+			u.Host = "localhost"
 			u.Path = ""
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
@@ -617,7 +651,7 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	// Add the VaultRequest SSRF protection header
-	client.headers[consts.RequestHeaderName] = []string{"true"}
+	client.headers[RequestHeaderName] = []string{"true"}
 
 	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.token = token
@@ -649,6 +683,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
+	newConfig.clientTLSConfig = c.config.clientTLSConfig
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -934,7 +969,7 @@ func (c *Client) setNamespace(namespace string) {
 		c.headers = make(http.Header)
 	}
 
-	c.headers.Set(consts.NamespaceHeaderName, namespace)
+	c.headers.Set(NamespaceHeaderName, namespace)
 }
 
 // ClearNamespace removes the namespace header if set.
@@ -942,7 +977,7 @@ func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 	if c.headers != nil {
-		c.headers.Del(consts.NamespaceHeaderName)
+		c.headers.Del(NamespaceHeaderName)
 	}
 }
 
@@ -954,7 +989,7 @@ func (c *Client) Namespace() string {
 	if c.headers == nil {
 		return ""
 	}
-	return c.headers.Get(consts.NamespaceHeaderName)
+	return c.headers.Get(NamespaceHeaderName)
 }
 
 // WithNamespace makes a shallow copy of Client, modifies it to use
@@ -963,7 +998,9 @@ func (c *Client) Namespace() string {
 func (c *Client) WithNamespace(namespace string) *Client {
 	c2 := *c
 	c2.modifyLock = sync.RWMutex{}
-	c2.headers = c.Headers()
+	c.modifyLock.RLock()
+	c2.headers = c.headersInternal()
+	c.modifyLock.RUnlock()
 	if namespace == "" {
 		c2.ClearNamespace()
 	} else {
@@ -1000,7 +1037,12 @@ func (c *Client) ClearToken() {
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
+	return c.headersInternal()
+}
 
+// headersInternal gets the current set of headers used for requests. Must be called
+// with the read modifyLock held.
+func (c *Client) headersInternal() http.Header {
 	if c.headers == nil {
 		return nil
 	}
@@ -1118,6 +1160,26 @@ func (c *Client) ReadYourWrites() bool {
 	return c.config.ReadYourWrites
 }
 
+// SetCloneTLSConfig from parent.
+func (c *Client) SetCloneTLSConfig(clone bool) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.CloneTLSConfig = clone
+}
+
+// CloneTLSConfig gets the configured CloneTLSConfig value.
+func (c *Client) CloneTLSConfig() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.CloneTLSConfig
+}
+
 // Clone creates a new client with the same configuration. Note that the same
 // underlying http.Client is used; modifying the client from more than one
 // goroutine at once may not be safe, so modify the client as needed and then
@@ -1128,24 +1190,28 @@ func (c *Client) ReadYourWrites() bool {
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(c.config.CloneHeaders)
 }
 
 // CloneWithHeaders creates a new client similar to Clone, with the difference
-// being that the  headers are always cloned
+// being that the headers are always cloned
 func (c *Client) CloneWithHeaders() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(true)
 }
 
 // clone creates a new client, with the headers being cloned based on the
-// passed in cloneheaders boolean
+// passed in cloneheaders boolean.
+// Must be called with the read lock and config read lock held.
 func (c *Client) clone(cloneHeaders bool) (*Client, error) {
-	c.modifyLock.RLock()
-	defer c.modifyLock.RUnlock()
-
 	config := c.config
-	config.modifyLock.RLock()
-	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
 		Address:        config.Address,
@@ -1164,13 +1230,18 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 		CloneToken:     config.CloneToken,
 		ReadYourWrites: config.ReadYourWrites,
 	}
+
+	if config.CloneTLSConfig {
+		newConfig.clientTLSConfig = config.clientTLSConfig
+	}
+
 	client, err := NewClient(newConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	if cloneHeaders {
-		client.SetHeaders(c.Headers().Clone())
+		client.SetHeaders(c.headersInternal().Clone())
 	}
 
 	if config.CloneToken {
@@ -1201,6 +1272,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	mfaCreds := c.mfaCreds
 	wrappingLookupFunc := c.wrappingLookupFunc
 	policyOverride := c.policyOverride
+	headers := c.headersInternal()
 	c.modifyLock.RUnlock()
 
 	host := addr.Host
@@ -1245,7 +1317,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
-	req.Headers = c.Headers()
+	req.Headers = headers
 	req.PolicyOverride = policyOverride
 
 	return req
@@ -1255,8 +1327,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: This method should not be used directly. Use higher level
-// methods instead.
+// Deprecated: RawRequest exists for historical compatibility and should not be
+// used directly. Use client.Logical().ReadRaw(...) or higher level methods
+// instead.
 func (c *Client) RawRequest(r *Request) (*Response, error) {
 	return c.RawRequestWithContext(context.Background(), r)
 }
@@ -1265,8 +1338,9 @@ func (c *Client) RawRequest(r *Request) (*Response, error) {
 // a Vault server not configured with this client. This is an advanced operation
 // that generally won't need to be called externally.
 //
-// Deprecated: This method should not be used directly. Use higher level
-// methods instead.
+// Deprecated: RawRequestWithContext exists for historical compatibility and
+// should not be used directly. Use client.Logical().ReadRawWithContext(...)
+// or higher level methods instead.
 func (c *Client) RawRequestWithContext(ctx context.Context, r *Request) (*Response, error) {
 	// Note: we purposefully do not call cancel manually. The reason is
 	// when canceled, the request.Body will EOF when reading due to the way
@@ -1288,7 +1362,7 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
-	ns := c.headers.Get(consts.NamespaceHeaderName)
+	ns := c.headers.Get(NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
@@ -1301,9 +1375,9 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	// e.g. calls using (*Client).WithNamespace
 	switch ns {
 	case "":
-		r.Headers.Del(consts.NamespaceHeaderName)
+		r.Headers.Del(NamespaceHeaderName)
 	default:
-		r.Headers.Set(consts.NamespaceHeaderName, ns)
+		r.Headers.Set(NamespaceHeaderName, ns)
 	}
 
 	for _, cb := range c.requestCallbacks {
@@ -1349,6 +1423,7 @@ START:
 		LastOutputPolicyError = &OutputPolicyError{
 			method: req.Method,
 			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+			params: req.URL.Query(),
 		}
 		return nil, LastOutputPolicyError
 	}
@@ -1456,8 +1531,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 			}
 		}
 		// explicitly set the namespace header to current client
-		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
-			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		if ns := c.headers.Get(NamespaceHeaderName); ns != "" {
+			r.Headers.Set(NamespaceHeaderName, ns)
 		}
 	}
 
@@ -1478,7 +1553,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	req.Host = r.URL.Host
 
 	if len(r.ClientToken) != 0 {
-		req.Header.Set(consts.AuthHeaderName, r.ClientToken)
+		req.Header.Set(AuthHeaderName, r.ClientToken)
 	}
 
 	if len(r.WrapTTL) != 0 {
@@ -1668,7 +1743,13 @@ func MergeReplicationStates(old []string, new string) []string {
 	return strutil.RemoveDuplicates(ret, false)
 }
 
-func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error) {
+type WALState struct {
+	ClusterID       string
+	LocalIndex      uint64
+	ReplicatedIndex uint64
+}
+
+func ParseReplicationState(raw string, hmacKey []byte) (*WALState, error) {
 	cooked, err := base64.StdEncoding.DecodeString(raw)
 	if err != nil {
 		return nil, err
@@ -1706,7 +1787,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 		return nil, fmt.Errorf("invalid replicated index in state header: %w", err)
 	}
 
-	return &logical.WALState{
+	return &WALState{
 		ClusterID:       pieces[1],
 		LocalIndex:      localIndex,
 		ReplicatedIndex: replicatedIndex,

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
@@ -5,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-key-form';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 module('Integration | Component | pki key form', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,6 +23,7 @@ module('Integration | Component | pki key form', function (hooks) {
     this.backend = 'pki-test';
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = this.backend;
+    this.onCancel = sinon.spy();
   });
 
   test('it should render fields and show validation messages', async function (assert) {
@@ -120,53 +127,4 @@ module('Integration | Component | pki key form', function (hooks) {
     await fillIn(SELECTORS.keyTypeInput, 'rsa');
     await click(SELECTORS.keyCreateButton);
   });
-
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(2);
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-    await render(
-      hbs`
-        <PkiKeyForm
-          @model={{this.model}}
-          @onCancel={{this.onCancel}}
-          @onSave={{this.onSave}}
-        />
-      `,
-      { owner: this.engine }
-    );
-
-    await click(SELECTORS.keyCancelButton);
-    assert.true(this.model.isDestroyed, 'new model is unloaded on cancel');
-
-    /* COMMENT IN WHEN EDIT IS COMPLETE
-      this.store.pushPayload('pki/key', {
-      modelName: this.modelName,
-      keyName: 'test-key',
-      type: 'exported',
-      keyId: 'some-key-id',
-      keyType: 'rsa',
-      keyBits: '2048',
-    };);
-      this.model = this.store.peekRecord('pki/key', this.data.keyId;
-
-      await render(
-        hbs`
-          <PkiKeyForm
-            @model={{this.model}}
-            @onCancel={{this.onCancel}}
-            @onSave={{this.onSave}}
-          />
-        `,
-        { owner: this.engine }
-      );
-
-      await fillIn(SELECTORS.keyNameInput, 'new-name');
-      await click(SELECTORS.keyCancelButton);
-      assert.strictEqual(this.model.keyName, undefined, 'Model attributes rolled back on cancel');
-  */
-  });
-
-  /* FUTURE TEST TODO:
-   * it should update key
-   */
 });

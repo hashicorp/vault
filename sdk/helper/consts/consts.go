@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 const (
@@ -36,4 +39,8 @@ const (
 	VaultEnableFilePermissionsCheckEnv = "VAULT_ENABLE_FILE_PERMISSIONS_CHECK"
 
 	VaultDisableUserLockout = "VAULT_DISABLE_USER_LOCKOUT"
+
+	PerformanceReplicationPathTarget = "performance"
+
+	DRReplicationPathTarget = "dr"
 )

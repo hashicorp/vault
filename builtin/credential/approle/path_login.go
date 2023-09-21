@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -15,6 +19,10 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAppRole,
+			OperationVerb:   "login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"role_id": {
 				Type:        framework.TypeString,
@@ -29,12 +37,33 @@ func pathLogin(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+				},
 			},
 			logical.AliasLookaheadOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdateAliasLookahead,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+				},
 			},
 			logical.ResolveRoleOperation: &framework.PathOperation{
 				Callback: b.pathLoginResolveRole,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"role": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
 			},
 		},
 		HelpSynopsis:    pathLoginHelpSys,

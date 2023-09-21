@@ -6,11 +6,11 @@ description: The `/sys/quotas/lease-count` endpoint is used to create, edit and 
 
 # `/sys/quotas/lease-count`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise Platform.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease count quotas.
 
-## Create or Update a Lease Count Quota
+## Create or update a lease count quota
 
 This endpoint is used to create a lease count quota with an identifier, `name`.
 A lease count quota must include a `max_leases` value with an optional `path`
@@ -49,8 +49,13 @@ millions of leases in an automated way, it is recommended to space out the creat
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
   requests to that mount that are made with the specified role. The request will fail if
   the auth mount does not have a concept of roles, or `path` is not an auth mount.
+- `inheritable` `(bool: false)` - If set to `true` on a quota where `path` is set to a namespace,
+   the same quota will be cumulatively applied to all child namespace. The `inheritable` parameter cannot be set to
+  `true` if the `path` does not specify a namespace. Only the quotas associated
+  with the root namespace are inheritable by default.
 
-### Sample Payload
+
+### Sample payload
 
 ```json
 {
@@ -59,7 +64,7 @@ millions of leases in an automated way, it is recommended to space out the creat
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -69,7 +74,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
 ```
 
-## Delete a Lease Count Quota
+## Delete a lease count quota
 
 A lease count quota can be deleted by `name`.
 
@@ -77,7 +82,7 @@ A lease count quota can be deleted by `name`.
 | :------- | :------------------------------ |
 | `DELETE` | `/sys/quotas/lease-count/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -86,7 +91,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
 ```
 
-## Get a Lease Count Quota
+## Get a lease count quota
 
 A lease count quota can be retrieved by `name`.
 
@@ -94,7 +99,7 @@ A lease count quota can be retrieved by `name`.
 | :----- | :------------------------------ |
 | `GET`  | `/sys/quotas/lease-count/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -103,7 +108,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/lease-count/global-lease-count-quota
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -122,7 +127,7 @@ $ curl \
 }
 ```
 
-## List Lease Count Quotas
+## List lease count quotas
 
 This endpoint returns a list of all the lease count quotas. A 404 response will
 be returned if no lease count quota has been created.
@@ -131,7 +136,7 @@ be returned if no lease count quota has been created.
 | :----- | :------------------------ |
 | `LIST` | `/sys/quotas/lease-count` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -140,7 +145,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/lease-count
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

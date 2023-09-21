@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.3.5 compared to 1.3.4. Please read it carefully.
 
-## AWS Auth Metadata
+## AWS auth metadata
 
 The metadata handling for AWS Auth logins has changed:
 
@@ -19,7 +19,7 @@ The default set of metadata fields has been changed to `account_id` and `auth_ty
 application relies on fields that were removed, they may be added back via the AWS Auth identity
 configuration endpoint (see example below).
 
-## Known Issues
+## Known issues
 
 The AWS metadata changes have caused an issue preventing renewal of tokens issued via AWS Auth.
 This has been fixed in Vault 1.3.6. The issue may be addressed in Vault 1.3.5 by configuring the

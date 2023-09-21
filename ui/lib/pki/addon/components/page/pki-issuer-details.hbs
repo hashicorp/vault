@@ -1,0 +1,192 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if (and @isRotatable @canRotate)}}
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on "click" (fn (mut this.showRotationModal) true)}}
+        data-test-pki-issuer-rotate-root
+      >
+        Rotate this root
+        <Icon @name="rotate-cw" />
+      </button>
+    {{/if}}
+    {{#if @canCrossSign}}
+      <ToolbarLink @route="issuers.issuer.cross-sign" @type="pen-tool" @model={{@issuer.id}} data-test-pki-issuer-cross-sign>
+        Cross-sign issuers
+      </ToolbarLink>
+    {{/if}}
+    {{#if @canSignIntermediate}}
+      <ToolbarLink @route="issuers.issuer.sign" @type="pen-tool" @issuer={{@issuer.id}} data-test-pki-issuer-sign-int>
+        Sign Intermediate
+      </ToolbarLink>
+    {{/if}}
+    <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+      <D.Trigger
+        data-test-popup-menu-trigger="true"
+        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
+        @htmlTag="button"
+        data-test-issuer-download
+      >
+        Download
+        <Chevron @direction="down" @isButton={{true}} />
+      </D.Trigger>
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="snapshots actions">
+          <ul class="menu-list">
+            {{#if @pem}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@pem}}
+                  @extension="pem"
+                  data-test-issuer-download-type="pem"
+                >
+                  PEM format
+                </DownloadButton>
+              </li>
+            {{/if}}
+            {{#if @der}}
+              {{! should never be null, but if it is we don't want to let users download an empty file }}
+              <li class="action">
+                <DownloadButton
+                  class="link"
+                  @filename={{@issuer.id}}
+                  @data={{@der}}
+                  @extension="der"
+                  data-test-issuer-download-type="der"
+                >
+                  DER format
+                </DownloadButton>
+              </li>
+            {{/if}}
+          </ul>
+        </nav>
+      </D.Content>
+    </BasicDropdown>
+
+    {{#if @canConfigure}}
+      <ToolbarLink @route="issuers.issuer.edit" @model={{@issuer.id}} data-test-pki-issuer-configure>
+        Configure
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @issuer.isDefault}}
+  <p class="has-top-margin-m">
+    This is your default issuer certificate. You will see it in your
+    <LinkTo @route="issuers.index">
+      list of Issuers.
+    </LinkTo>
+    You may also want to configure its usage and other behaviors.
+  </p>
+{{/if}}
+<main data-test-issuer-details>
+  {{#each @issuer.formFieldGroups as |fieldGroup|}}
+    {{#each-in fieldGroup as |group fields|}}
+      <div class="box is-sideless is-fullwidth is-shadowless" data-test-details-group={{group}}>
+        {{#if (not-eq group "default")}}
+          <h2 class="title is-5 has-margin-top" data-test-group-title>
+            {{group}}
+          </h2>
+        {{/if}}
+        {{#each fields as |attr|}}
+          {{#if attr.options.isCertificate}}
+            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+              <CertificateCard @data={{get @issuer attr.name}} />
+            </InfoTableRow>
+          {{else if (eq attr.name "keyId")}}
+            <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
+              {{#if @issuer.keyId}}
+                <LinkTo @route="keys.key.details" @model={{@issuer.keyId}}>{{@issuer.keyId}}</LinkTo>
+              {{else}}
+                <Icon @name="minus" />
+              {{/if}}
+            </InfoTableRow>
+          {{else}}
+            <InfoTableRow
+              @label={{or attr.options.label (humanize (dasherize attr.name))}}
+              @value={{get @issuer attr.name}}
+              @formatDate={{if attr.options.formatDate "MMM d yyyy HH:mm:ss a zzzz"}}
+              @alwaysRender={{true}}
+              @addCopyButton={{(eq attr.name "issuerId")}}
+            />
+          {{/if}}
+        {{/each}}
+        {{#if (eq group "default")}}
+          <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
+        {{/if}}
+      </div>
+    {{/each-in}}
+  {{/each}}
+</main>
+{{#if (or (eq @issuer.parsedCertificate.can_parse false) this.parsingErrors)}}
+  <Hds::Alert
+    data-test-parsing-error-alert-banner
+    @type="inline"
+    @color="neutral"
+    class="has-top-margin-m has-bottom-margin-s"
+    as |A|
+  >
+    <A.Title>There was an error parsing certificate metadata</A.Title>
+    <A.Description>
+      Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you
+      wish to cross-sign this issuer it must be done manually using the CLI.
+      {{#if this.parsingErrors}}
+        <p class="sub-text is-font-mono">Parsing error(s): {{this.parsingErrors}} </p>
+      {{/if}}
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{! ROOT ROTATION MODAL }}
+<Modal
+  @type="rotation"
+  @title="Rotate this root"
+  @onClose={{fn (mut this.showRotationModal) false}}
+  @isActive={{this.showRotationModal}}
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <h3 class="title is-5">Root rotation</h3>
+    <p class="has-text-grey has-bottom-padding-s">
+      Root rotation is an impactful process. Please be ready to ensure that the new root is properly distributed to
+      end-users’ trust stores. You can also do this manually by
+      <DocLink @path="/vault/docs/secrets/pki/rotation-primitives#suggested-root-rotation-procedure">
+        following our documentation.
+      </DocLink>
+    </p>
+    <h3 class="title is-5 has-top-bottom-margin">How root rotation will work</h3>
+    <p class="has-text-grey">
+      <ol class="has-left-margin-m has-bottom-margin-s">
+        <li>The new root will be generated using defaults from the old one that you can customize.</li>
+        <li>You will identify intermediates, which Vault will then cross-sign.</li>
+      </ol>
+      Then, you can begin re-issuing leaf certs and phase out the old root.
+    </p>
+    <div class="has-top-margin-l has-tall-padding">
+      <img src={{img-path "~/pki-rotate-root.png"}} alt="pki root rotation diagram" />
+    </div>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      type="button"
+      class="button is-primary"
+      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.rotate-root")}}
+      data-test-root-rotate-step-one
+    >
+      Generate new root
+    </button>
+    <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showRotationModal) false)}}>
+      Cancel
+    </button>
+  </footer>
+</Modal>

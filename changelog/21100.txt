@@ -1,0 +1,4 @@
+```release-note:bug
+replication (enterprise): Fix regression causing token creation against a role
+with a new entity alias to be incorrectly forwarded from perf standbys.
+```

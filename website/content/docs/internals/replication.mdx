@@ -4,7 +4,7 @@ page_title: Replication
 description: Learn about the details of multi-datacenter replication within Vault.
 ---
 
-# Replication (Vault Enterprise)
+# Replication (Vault enterprise)
 
 Vault Enterprise 0.7 adds support for multi-datacenter replication. Before
 using this feature, it is useful to understand the intended use cases, design
@@ -15,7 +15,7 @@ replication, focusing on high availability for global deployments. The
 trade-offs made in the design and implementation of replication reflect these
 high level goals.
 
-# Use Cases
+# Use cases
 
 Vault replication is based on a number of common use cases:
 
@@ -35,7 +35,7 @@ Vault replication is based on a number of common use cases:
   allows load to be distributed across additional servers to scale request
   throughput.
 
-# Design Goals
+# Design goals
 
 Based on the use cases for Vault Replication, we had a number of design goals
 for the implementation:
@@ -101,7 +101,7 @@ the work of TTL management between the clusters. The caveat is that clients
 will need to re-authenticate if they switch the Vault cluster they are
 communicating with.
 
-# Implementation Details
+# Implementation details
 
 It is important to understand the high-level architecture of replication to
 ensure the trade-offs are appropriate for your use case. The implementation
@@ -215,7 +215,7 @@ primary.
 version of Vault to an older version. When upgrading replicated clusters,
 ensure that upstream clusters are always on older version of Vault than
 downstream clusters. See
-[Upgrading Vault](/docs/upgrading#replication-installations) for an example.
+[Upgrading Vault](/vault/docs/upgrading#replication-installations) for an example.
 
 - **Read-After-Write Consistency**: All write requests are forwarded from
   secondaries to the primary cluster in order to avoid potential conflicts.
@@ -225,7 +225,7 @@ downstream clusters. See
   client making subsequent requests by stalling write requests until the write
   is replicated or a timeout is reached (2 seconds). If the timeout is reached,
   the client will receive a warning. Clients can also take steps to protect
-  against this, see [Consistency](/docs/enterprise/consistency#mitigations).
+  against this, see [Consistency](/vault/docs/enterprise/consistency#mitigations).
 
 - **Stale Reads**: Secondary clusters service reads based on their
   locally-replicated data. During normal operation updates from a primary are

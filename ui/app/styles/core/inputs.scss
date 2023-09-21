@@ -1,0 +1,85 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the styles for .input, .textarea and .input-hint.
+
+.input,
+.textarea {
+  align-items: center;
+  border-radius: $radius;
+  border: $base-border;
+  box-shadow: 0 4px 1px rgba($black, 0.06) inset;
+  color: $grey-dark;
+  display: inline-flex;
+  font-size: $size-6;
+  height: $size-2;
+  line-height: 1.5;
+  max-width: 100%;
+  padding-bottom: calc(0.375em - 1px);
+  padding-left: $size-8;
+  padding-right: $size-8;
+  padding-top: calc(0.375em - 1px);
+  width: 100%;
+
+  &:focus,
+  &:active,
+  &.is-active,
+  &:focus-visible {
+    outline: none;
+    background-color: $white;
+    border-color: $blue-500 !important;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
+  }
+
+  &:hover {
+    border-color: $ui-gray-300;
+  }
+
+  @include until($desktop) {
+    font-size: $size-6;
+  }
+
+  &::placeholder {
+    opacity: 0.5;
+  }
+}
+
+.input[disabled],
+.textarea[disabled] {
+  border-color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  cursor: not-allowed;
+
+  &:hover {
+    border-color: $grey-light;
+  }
+}
+
+.input[readonly],
+.textarea[readonly] {
+  border: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+// textarea specific css
+.textarea {
+  min-width: 100%;
+  padding-bottom: 0.625em;
+  padding-top: 0.625em;
+}
+
+.textarea:not([rows]) {
+  max-height: 600px;
+  min-height: 120px;
+}
+
+// custom input
+.input-hint {
+  padding: 0 $size-9;
+  font-size: $size-8;
+  color: $grey;
+}

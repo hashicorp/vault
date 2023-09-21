@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add filtering by engine type and engine name to the Secret Engine list view.
+```

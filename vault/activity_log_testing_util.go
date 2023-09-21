@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,12 +8,13 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // InjectActivityLogDataThisMonth populates the in-memory client store
@@ -29,7 +33,7 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 			ClientID:      fmt.Sprintf("testclientid-%d", i),
 			NamespaceID:   "root",
 			MountAccessor: fmt.Sprintf("testmountaccessor-%d", i),
-			Timestamp:     time.Now().Unix(),
+			Timestamp:     c.activityLog.clock.Now().Unix(),
 			NonEntity:     i%2 == 0,
 		}
 		c.activityLog.partialMonthClientTracker[er.ClientID] = er
@@ -42,7 +46,7 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 					ClientID:      fmt.Sprintf("ns-%d-testclientid-%d", j, i),
 					NamespaceID:   fmt.Sprintf("ns-%d", j),
 					MountAccessor: fmt.Sprintf("ns-%d-testmountaccessor-%d", j, i),
-					Timestamp:     time.Now().Unix(),
+					Timestamp:     c.activityLog.clock.Now().Unix(),
 					NonEntity:     i%2 == 0,
 				}
 				c.activityLog.partialMonthClientTracker[er.ClientID] = er
@@ -65,6 +69,16 @@ func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	}
 	c.activityLog.fragmentLock.RUnlock()
 	c.stateLock.RUnlock()
+
+	return out
+}
+
+func (c *Core) GetActiveClientsList() []*activity.EntityRecord {
+	out := []*activity.EntityRecord{}
+
+	for _, v := range c.GetActiveClients() {
+		out = append(out, v)
+	}
 
 	return out
 }
@@ -174,18 +188,14 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
-func ActiveEntitiesEqual(active map[string]*activity.EntityRecord, test []*activity.EntityRecord) bool {
-	if len(active) != len(test) {
-		return false
+func ActiveEntitiesEqual(active []*activity.EntityRecord, test []*activity.EntityRecord) error {
+	opts := []cmp.Option{protocmp.Transform(), cmpopts.SortSlices(func(x, y *activity.EntityRecord) bool {
+		return x.ClientID < y.ClientID
+	})}
+	if diff := cmp.Diff(active, test, opts...); len(diff) > 0 {
+		return fmt.Errorf("entity record mismatch: %v", diff)
 	}
-
-	for _, ent := range test {
-		if _, ok := active[ent.ClientID]; !ok {
-			return false
-		}
-	}
-
-	return true
+	return nil
 }
 
 // GetStartTimestamp returns the start timestamp on an activity log

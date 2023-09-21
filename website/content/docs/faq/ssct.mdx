@@ -4,12 +4,12 @@ page_title: Server Side Consistent Token FAQ
 description: An list of frequently asked questions about server side consistent tokens
 ---
 
-# Server Side Consistent Token FAQ
+# Server side consistent token FAQ
 
 This FAQ section contains frequently asked questions about the Server Side Consistent Token feature.
 
 - [Q: What is the Server Side Consistent Token feature?](#q-what-is-the-server-side-consistent-token-feature)
-- [Q: I have Vault OSS. How does this feature impact me?](#q-i-have-vault-oss-how-does-this-feature-impact-me)
+- [Q: I have Vault Community Edition. How does this feature impact me?](#q-i-have-vault-community-edition-how-does-this-feature-impact-me)
 - [Q: What token changes does the Server Side Consistent Tokens feature introduce?](#q-what-token-changes-does-the-server-side-consistent-tokens-feature-introduce)
 - [Q: Why are we changing the token?](#q-why-are-we-changing-the-token)
 - [Q: What type of tokens are impacted by this feature?](#q-what-type-of-tokens-are-impacted-by-this-feature)
@@ -19,27 +19,27 @@ This FAQ section contains frequently asked questions about the Server Side Consi
 - [Q: What are the main mitigation options that Vault offers to achieve consistency, and what are the differences between them?](#q-what-are-the-main-mitigation-options-that-vault-offers-to-achieve-consistency-and-what-are-the-differences-between-them)
 - [Q: Is this feature something I need with Consul Storage?](#q-is-this-feature-something-i-need-with-consul-storage)
 
-### Q: What is the Server Side Consistent Token feature?
+### Q: what is the server side consistent token feature?
 
 ~> **Note**: This features requires Vault Enterprise.
 
-Vault has an [eventual consistency](/docs/enterprise/consistency) model where only the leader can write to Vault's storage. When using performance standbys with Integrated Storage, there are sequences of operations that don't always yield read-after-write consistency, which may pose a challenge for some use cases.
+Vault has an [eventual consistency](/vault/docs/enterprise/consistency) model where only the leader can write to Vault's storage. When using performance standbys with Integrated Storage, there are sequences of operations that don't always yield read-after-write consistency, which may pose a challenge for some use cases.
 
 Several client-based mitigations were added in Vault version 1.7, which depended on some modifications to clients (provide the appropriate response header per request) so they can specify state. This may not be possible to do in some environments.
 
-To help with such cases, we’ve now added support for the Server Side Consistent Tokens feature in Vault version 1.10. See [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), and [Upgrade to 1.10](/docs/upgrading/upgrade-to-1.10.x).
+To help with such cases, we’ve now added support for the Server Side Consistent Tokens feature in Vault version 1.10. See [Replication](/vault/docs/configuration/replication), [Vault Eventual Consistency](/vault/docs/enterprise/consistency), and [Upgrade to 1.10](/vault/docs/upgrading/upgrade-to-1.10.x).
 This feature provides a way for Service tokens, returned from logins (or token create requests), to have the relevant minimum WAL state information embedded within the token itself. Clients can then use this token to authenticate subsequent requests. Thus, clients can obtain read-after-write consistency for the token without typically having to make changes to their code or architecture.
 If a performance standby does not have the state required to authenticate the token, it returns a 412 error to allow the client to retry. If client retry is not possible, there is a server config to allow for the consistency.
 
-### Q: I have Vault OSS. How does this feature impact me?
+### Q: i have Vault Community Edition. how does this feature impact me?
 
-For the sake of standardization between OSS and Enterprise, and due to the value of adding token prefixes in OSS for token scanning use cases, the token formats are changed across OSS and Enterprise starting Vault 1.10. However, since there are no performance standbys or replication in Vault OSS, the new Vault OSS token will always show the local index of the WAL as 0 to indicate there is nothing to wait for.
+For the sake of standardization between Community and Enterprise, and due to the value of adding token prefixes in Vault for token scanning use cases, the token formats are changed across all Vault versions starting Vault 1.10. However, since there are no performance standbys or replication in Vault Community Edition, the new Vault token will always show the local index of the WAL as 0 to indicate there is nothing to wait for.
 
-### Q: What token changes does the Server Side Consistent Tokens feature introduce?
+### Q: what token changes does the server side consistent tokens feature introduce?
 
 Server Side Consistent Tokens introduces the following key changes:
 
-- Token length : Server side consistent tokens are longer, being 95+ characters as opposed to 27+ characters. Since the token can be subject to change (see [Token](/docs/concepts/tokens)), we recommend that you plan for a maximum length of 255 bytes to future proof yourself if you have workflows that rely on the token size.
+- Token length : Server side consistent tokens are longer, being 95+ characters as opposed to 27+ characters. Since the token can be subject to change (see [Token](/vault/docs/concepts/tokens)), we recommend that you plan for a maximum length of 255 bytes to future proof yourself if you have workflows that rely on the token size.
 - By default, Vault 1.10 will use the new token prefixes and new token format.
 - Tokens don't visibly have a ".namespaceID" suffix
 - Token prefix: Token prefixes are being changed as follows:
@@ -50,48 +50,59 @@ Server Side Consistent Tokens introduces the following key changes:
 | Batch Tokens    | b.         | hvb.       |
 | Recovery Tokens | r.         | hvr.       |
 
-### Q: Why are we changing the token?
+### Q: why are we changing the token?
 
 To help with use cases that need read-after-write consistency, the Server Side Consistent Tokens feature provides a way for Service tokens, returned from logins (or token create requests), to embed the relevant information for Vault servers using Integrated Storage to know the minimum WAL index that includes the storage write for the token. This entails changes to the service token format.
 
 The token prefix is being updated to make it easier for static-analysis code scanning tools to scan for Vault tokens, for example, to identify Vault tokens that are accidentally stored in a version control system.
 
-### Q: What type of tokens are impacted by this feature?
+### Q: what type of tokens are impacted by this feature?
 
 With the exception of the prefix changes detailed above that apply to all token types, only Service tokens are impacted by the changes that are introduced by this feature. Other token types such as batch tokens, recovery tokens, or root service tokens are not impacted.
 
-### Q: Is there a new configuration that this feature introduces?
+### Q: is there a new configuration that this feature introduces?
 
 There is a new configuration in the replication section as follows:
 
-`replication { allow_forwarding_via_token = ["new_token"] } `
+```
+replication { 
+  allow_forwarding_via_token = "new_token"
+}
+```
+
 This configuration allows Vault clusters to be configured so that requests made to performance standbys that don’t yet have the most up-to-date WAL index are forwarded to the active node. Please note that there will be extra load on the active node with this type of configuration.
 
-### Q: Is there anything else I need to consider to achieve consistency, besides upgrading to Vault 1.10?
+### Q: is there anything else i need to consider to achieve consistency, besides upgrading to Vault 1.10?
 
 Yes, there are several considerations to keep in mind, and possibly things that may require you to take action, depending on your use case.
 
 - As stated earlier, if a performance standby does not have the state required to authenticate the token, it returns a 412 error allowing the client to retry.
 - Ensure that your clients can retry for the best experience.
-- Starting with Go api version [1.1.0](https://pkg.go.dev/github.com/hashicorp/vault/api@v1.1.0), the Go client library enables automatic retries for 412 errors. By default, retries=2, or use client method [SetMaxRetries](https://pkg.go.dev/github.com/hashicorp/vault/api#Client.SetMaxRetries). Or, you can use the Vault environment variable [VAULT_MAX_RETRIES](/docs/commands#vault_max_retries) to achieve the same result.
+- Starting with Go api version [1.1.0](https://pkg.go.dev/github.com/hashicorp/vault/api@v1.1.0), the Go client library enables automatic retries for 412 errors. By default, retries=2, or use client method [SetMaxRetries](https://pkg.go.dev/github.com/hashicorp/vault/api#Client.SetMaxRetries). Or, you can use the Vault environment variable [VAULT_MAX_RETRIES](/vault/docs/commands#vault_max_retries) to achieve the same result.
 - If you use a client library other than Go, you may still need to ensure that your client can handle 412 retries in order to achieve consistency.
-- If your client cannot retry, you can use the Vault server replication configuration `allow_forwarding_via_token = ["new_token"]` to allow for consistency. As stated earlier, this will incur extra load on the server due to forwarding of requests that don't have the up-to-date WAL-state to the server.
+- If your client cannot retry, you can use the Vault server replication configuration `allow_forwarding_via_token`  to allow for consistency. As stated earlier, this will incur extra load on the server due to forwarding of requests that don't have the up-to-date WAL-state to the server:
 
-~> **Note:** If you are generating root tokens or recovery tokens without using the Vault CLI, you will need to modify the OTP length used. refer [here](/docs/upgrading/upgrade-to-1.10.x) for details.
+```
+replication { 
+  allow_forwarding_via_token = "new_token"
+}
+```
 
-### Q: What do I need to be paying attention to if I rely on tokens for some of my workflows?
+~> **Note:** If you are generating root tokens or recovery tokens without using the Vault CLI, you will need to modify the OTP length used. refer [here](/vault/docs/upgrading/upgrade-to-1.10.x) for details.
 
-Our documentation on [tokens](/docs/concepts/tokens) clearly identifies that the token body itself is subject to change between versions and should not be relied on. We strongly recommend that you consider this while architecting your environment.
+### Q: what do i need to be paying attention to if i rely on tokens for some of my workflows?
 
-However, if you use scripting and tooling to help in the authentication process for Vault-dependent applications, it is important that you take time to understand the changes (see [Replication](/docs/configuration/replication), [Vault Eventual Consistency](/docs/enterprise/consistency), and [Upgrade to 1.10](/docs/upgrading/upgrade-to-1.10.x)), and test these changes in your specific dev environments before deploying this in production.
+Our documentation on [tokens](/vault/docs/concepts/tokens) clearly identifies that the token body itself is subject to change between versions and should not be relied on. We strongly recommend that you consider this while architecting your environment.
 
-If your workflow used the embedded NamespaceID suffix, you will need to perform a [token lookup](/docs/commands/token/lookup) because this is currently absent in the new tokens.
+However, if you use scripting and tooling to help in the authentication process for Vault-dependent applications, it is important that you take time to understand the changes (see [Replication](/vault/docs/configuration/replication), [Vault Eventual Consistency](/vault/docs/enterprise/consistency), and [Upgrade to 1.10](/vault/docs/upgrading/upgrade-to-1.10.x)), and test these changes in your specific dev environments before deploying this in production.
 
-### Q: What are the main mitigation options that Vault offers to achieve consistency, and what are the differences between them?
+If your workflow used the embedded NamespaceID suffix, you will need to perform a [token lookup](/vault/docs/commands/token/lookup) because this is currently absent in the new tokens.
+
+### Q: what are the main mitigation options that Vault offers to achieve consistency, and what are the differences between them?
 
 Vault offers the following options to achieve consistency:
 
-- [Client based mitigations](/docs/enterprise/consistency#vault-1-7-mitigations), which was added in Vault Release 1.7, depend on some modifications to clients to include per request header options to ‘always forward the request to the active node’ OR to ‘conditionally forward the request to the active node’ if it would otherwise result in a stale read OR to ‘fail requests’ with error 412 if they might result in a stale read.
+- [Client based mitigations](/vault/docs/enterprise/consistency#vault-1-7-mitigations), which was added in Vault Release 1.7, depend on some modifications to clients to include per request header options to ‘always forward the request to the active node’ OR to ‘conditionally forward the request to the active node’ if it would otherwise result in a stale read OR to ‘fail requests’ with error 412 if they might result in a stale read.
 - The Vault Agent can also be leveraged for proxied requests to achieve consistency via the above mitigations without client modifications
 - Server Side Consistent Tokens, added in Vault version 1.10, provide a more implicit way to achieve consistency, but only addresses consistency for new tokens.
 
@@ -111,6 +122,6 @@ Finally, when speaking of performance implications above, there are two kinds th
 - Using forwarding will impact horizontal scalability by placing additional load on the active node
 - No using forwarding will impact latency of client requests due to retrying until the state is consistency
 
-### Q: Is this feature something I need with Consul Storage?
+### Q: is this feature something i need with consul storage?
 
-Consul has a [default consistency model](https://developer.hashicorp.com/consul/api-docs/features/consistency) and this feature is not relevant with Consul storage.
+Consul has a [default consistency model](/consul/api-docs/features/consistency) and this feature is not relevant with Consul storage.

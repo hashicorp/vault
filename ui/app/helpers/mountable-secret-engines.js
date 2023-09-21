@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes',
+    engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
@@ -25,11 +30,6 @@ const ENTERPRISE_SECRET_ENGINES = [
 ];
 
 const MOUNTABLE_SECRET_ENGINES = [
-  {
-    displayName: 'Active Directory',
-    type: 'ad',
-    category: 'cloud',
-  },
   {
     displayName: 'AliCloud',
     type: 'alicloud',
@@ -72,6 +72,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    engineRoute: 'kv.list',
     category: 'generic',
   },
   {
@@ -82,6 +83,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
@@ -104,6 +106,20 @@ const MOUNTABLE_SECRET_ENGINES = [
     type: 'totp',
     category: 'generic',
   },
+  {
+    displayName: 'LDAP',
+    type: 'ldap',
+    engineRoute: 'ldap.overview',
+    category: 'generic',
+    glyph: 'folder-users',
+  },
+  {
+    displayName: 'Kubernetes',
+    type: 'kubernetes',
+    engineRoute: 'kubernetes.overview',
+    category: 'generic',
+    glyph: 'kubernetes-color',
+  },
 ];
 
 export function mountableEngines() {
@@ -112,6 +128,12 @@ export function mountableEngines() {
 
 export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
+}
+
+export function isAddonEngine(type, version) {
+  if (type === 'kv' && version === 1) return false;
+  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  return !!engineRoute;
 }
 
 export default buildHelper(mountableEngines);

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /* eslint-disable no-console */
 
@@ -45,9 +50,8 @@ const testHelper = require('./test-helper');
   try {
     const testArgs = ['test', '-c', 'testem.enos.js'];
 
-    if (process.env.TEST_FILTERS) {
-      const filters = JSON.parse(process.env.TEST_FILTERS).map((filter) => '-f=' + filter);
-      testArgs.push(...filters);
+    if (process.env.TEST_FILTER && process.env.TEST_FILTER.length > 0) {
+      testArgs.push('-f=' + process.env.TEST_FILTER);
     }
 
     await testHelper.run('ember', [...testArgs, ...process.argv.slice(2)], false);

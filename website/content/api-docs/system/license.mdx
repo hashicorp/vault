@@ -8,14 +8,14 @@ description: |-
 
 # `/sys/license/status`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 The `/sys/license/status` endpoint is used to view update the license used in
 Vault.
 
-## License Status
+## License status
 
-This endpoint returns information about licensing. See [license autoloading](/docs/enterprise/license/autoloading) for additional background.
+This endpoint returns information about licensing. See [license autoloading](/vault/docs/enterprise/license/autoloading) for additional background.
 
 In the response:
 
@@ -33,7 +33,7 @@ In the response:
 | :----- | :-------------------- |
 | `GET`  | `/sys/license/status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -41,7 +41,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/license/status
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

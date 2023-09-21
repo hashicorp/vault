@@ -1,3 +1,84 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+select {
+  width: 100%;
+  appearance: none;
+}
+
 .select select {
+  background-color: $ui-gray-050;
+  box-shadow: 0 3px 1px rgba($black, 0.12);
+  border: 1px solid $grey-light;
+  border-radius: $radius;
+  color: $grey-dark;
+  cursor: pointer;
+  display: block;
+  font-size: 1em;
+  height: 2.5rem;
+  max-width: 100%;
+  outline: none;
+  padding-bottom: calc(0.375em - 1px);
+  padding-left: $size-8;
+  padding-right: $size-8;
+  padding-top: calc(0.375em - 1px);
   text-rendering: auto !important;
+
+  @include until($desktop) {
+    font-size: 1rem;
+  }
+
+  &::placeholder {
+    opacity: 0.5;
+  }
+
+  &:active,
+  &:focus,
+  &:focus-visible,
+  &.is-active {
+    border-color: $blue-500;
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
+  }
+}
+
+.select select:not([multiple]) {
+  padding-right: $size-2;
+}
+
+.select select[disabled] {
+  border-color: $grey-light;
+  background-color: $ui-gray-100;
+  color: $ui-gray-500;
+  cursor: not-allowed;
+  user-select: none;
+  &:hover {
+    border-color: $grey-light;
+  }
+}
+
+.select {
+  display: inline-block;
+  height: 2.5rem;
+  max-width: 100%;
+  position: relative;
+  vertical-align: top;
+}
+
+.select::after {
+  content: svg-uri(
+    '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z" fill="currentColor"/></svg>'
+  );
+  border: 0;
+  display: block;
+  height: 24px;
+  margin: 0;
+  pointer-events: none;
+  position: absolute;
+  right: $spacing-xs;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  z-index: 4;
 }

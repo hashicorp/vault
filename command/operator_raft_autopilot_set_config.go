@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -23,6 +26,7 @@ type OperatorRaftAutopilotSetConfigCommand struct {
 	flagMinQuorum                      uint
 	flagServerStabilizationTime        time.Duration
 	flagDisableUpgradeMigration        BoolPtr
+	flagDRToken                        string
 }
 
 func (c *OperatorRaftAutopilotSetConfigCommand) Synopsis() string {
@@ -47,36 +51,52 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Flags() *FlagSets {
 	f.BoolPtrVar(&BoolPtrVar{
 		Name:   "cleanup-dead-servers",
 		Target: &c.flagCleanupDeadServers,
+		Usage:  "Controls whether to remove dead servers from the Raft peer list periodically or when a new server joins.",
 	})
 
 	f.DurationVar(&DurationVar{
 		Name:   "last-contact-threshold",
 		Target: &c.flagLastContactThreshold,
+		Usage:  "Limit on the amount of time a server can go without leader contact before being considered unhealthy.",
 	})
 
 	f.DurationVar(&DurationVar{
 		Name:   "dead-server-last-contact-threshold",
 		Target: &c.flagDeadServerLastContactThreshold,
+		Usage:  "Limit on the amount of time a server can go without leader contact before being considered failed. This takes effect only when cleanup_dead_servers is set.",
 	})
 
 	f.Uint64Var(&Uint64Var{
 		Name:   "max-trailing-logs",
 		Target: &c.flagMaxTrailingLogs,
+		Usage:  "Amount of entries in the Raft Log that a server can be behind before being considered unhealthy.",
 	})
 
 	f.UintVar(&UintVar{
 		Name:   "min-quorum",
 		Target: &c.flagMinQuorum,
+		Usage:  "Minimum number of servers allowed in a cluster before autopilot can prune dead servers. This should at least be 3.",
 	})
 
 	f.DurationVar(&DurationVar{
 		Name:   "server-stabilization-time",
 		Target: &c.flagServerStabilizationTime,
+		Usage:  "Minimum amount of time a server must be in a stable, healthy state before it can be added to the cluster.",
 	})
 
 	f.BoolPtrVar(&BoolPtrVar{
 		Name:   "disable-upgrade-migration",
 		Target: &c.flagDisableUpgradeMigration,
+		Usage:  "Whether or not to perform automated version upgrades.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
 	})
 
 	return set
@@ -133,6 +153,9 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 	}
 	if c.flagDisableUpgradeMigration.IsSet() {
 		data["disable_upgrade_migration"] = c.flagDisableUpgradeMigration.Get()
+	}
+	if c.flagDRToken != "" {
+		data["dr_operation_token"] = c.flagDRToken
 	}
 
 	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", data)

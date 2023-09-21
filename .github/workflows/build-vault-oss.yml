@@ -9,9 +9,6 @@ name: build_vault
 on:
   workflow_call:
     inputs:
-      bundle-path:
-        required: false
-        type: string
       cgo-enabled:
         type: string
         default: 0
@@ -26,49 +23,53 @@ on:
         type: string
       go-tags:
         type: string
-      go-version:
-        type: string
       package-name:
         type: string
         default: vault
       vault-version:
         type: string
         required: true
+      web-ui-cache-key:
+        type: string
+        required: true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: custom-linux-xl-vault-latest
     name: Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version: ${{ inputs.go-version }}
-      - name: Set up node and yarn
-        uses: actions/setup-node@v3
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Restore UI from cache
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
-          node-version: 14
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
-      - name: Build UI
-        run: make ci-build-ui
+          # Restore the UI asset from the UI build workflow. Never use a partial restore key.
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+          path: http/web_ui
+          key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
         env:
+          GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-          GO_TAGS: ${{ inputs.go-tags }}
-        run: make ci-build
+          VERSION: ${{ inputs.vault-version }}
+        run:
+            make ci-build
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> $GITHUB_ENV
+          VERSION: ${{ inputs.vault-version }}
+        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
       - name: Bundle Vault
         env:
           BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
         run: make ci-bundle
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: ${{ env.ARTIFACT_BASENAME }}.zip
           path: out/${{ env.ARTIFACT_BASENAME }}.zip
@@ -82,7 +83,7 @@ jobs:
           version: ${{ inputs.vault-version }}
           maintainer: HashiCorp
           homepage: https://github.com/hashicorp/vault
-          license: MPL-2.0
+          license: BUSL-1.1
           binary: dist/${{ inputs.package-name }}
           deb_depends: openssl
           rpm_depends: openssl
@@ -93,16 +94,16 @@ jobs:
       - if: ${{ inputs.create-packages }}
         name: Determine package file names
         run: |
-          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> $GITHUB_ENV
-          echo "DEB_PACKAGE=$(basename out/*.deb)" >> $GITHUB_ENV
+          echo "RPM_PACKAGE=$(basename out/*.rpm)" >> "$GITHUB_ENV"
+          echo "DEB_PACKAGE=$(basename out/*.deb)" >> "$GITHUB_ENV"
       - if: ${{ inputs.create-packages }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: ${{ env.RPM_PACKAGE }}
           path: out/${{ env.RPM_PACKAGE }}
           if-no-files-found: error
       - if: ${{ inputs.create-packages }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: ${{ env.DEB_PACKAGE }}
           path: out/${{ env.DEB_PACKAGE }}

@@ -1,46 +1,9 @@
-{{#if this.showSingleMonth}}
-  <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
-    <div class="chart-header has-bottom-margin-sm">
-      <h2 class="chart-title">Vault client counts</h2>
-      <p class="chart-description">
-        A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity clients.
-        The total client count number is an important consideration for Vault billing.
-      </p>
-    </div>
-    <div class="single-month-stats" data-test-new>
-      <div class="single-month-section-title">
-        <StatText
-          @label="New clients"
-          @subText="This is the number of clients which were created in Vault for the first time in the selected month."
-          @value={{this.showSingleMonth.new.total}}
-          @size="l"
-        />
-      </div>
-      <div class="single-month-breakdown-entity">
-        <StatText @label="Entity clients" @value={{this.showSingleMonth.new.entityClients}} @size="m" />
-      </div>
-      <div class="single-month-breakdown-nonentity">
-        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.new.nonEntityClients}} @size="m" />
-      </div>
-    </div>
-    <div class="single-month-stats" data-test-total>
-      <div class="single-month-section-title">
-        <StatText
-          @label="Total monthly clients"
-          @subText="This is the number of total clients which used Vault for the given month, both new and previous."
-          @value={{this.showSingleMonth.total.total}}
-          @size="l"
-        />
-      </div>
-      <div class="single-month-breakdown-entity">
-        <StatText @label="Entity clients" @value={{this.showSingleMonth.total.entityClients}} @size="m" />
-      </div>
-      <div class="single-month-breakdown-nonentity">
-        <StatText @label="Non-entity clients" @value={{this.showSingleMonth.total.nonEntityClients}} @size="m" />
-      </div>
-    </div>
-  </div>
-{{else}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (gt @byMonthActivityData.length 1)}}
   <div class="chart-wrapper stacked-charts" data-test-running-total="monthly-charts">
     <div class="single-chart-grid">
       <div class="chart-header has-bottom-margin-xl">
@@ -51,8 +14,8 @@
         </p>
       </div>
 
-      <div class={{concat (unless @lineChartData "chart-empty-state ") "chart-container-wide"}}>
-        <Clients::LineChart @dataset={{@lineChartData}} @upgradeData={{@upgradeData}} />
+      <div class={{concat (unless @byMonthActivityData "chart-empty-state ") "chart-container-wide"}}>
+        <Clients::LineChart @dataset={{@byMonthActivityData}} @upgradeData={{@upgradeData}} />
       </div>
 
       <div class="chart-subTitle">
@@ -77,11 +40,11 @@
     <div class="single-chart-grid">
       <div class={{concat (unless this.hasAverageNewClients "chart-empty-state ") "chart-container-wide"}}>
         <Clients::VerticalBarChart
-          @dataset={{if this.hasAverageNewClients @barChartData false}}
+          @dataset={{if this.hasAverageNewClients this.byMonthNewClients false}}
           @chartLegend={{@chartLegend}}
           @noDataTitle="No new clients"
           @noDataMessage={{concat
-            "There are no new clients for this "
+            "There is no new client data available for this "
             (if @selectedAuthMethod "auth method" "namespace")
             " in this date range"
           }}
@@ -95,33 +58,92 @@
         </p>
       </div>
 
-      <div class="data-details-top" data-test-running-new-entity>
-        <h3 class="data-details">Average new entity clients per month</h3>
-        <p class="data-details">
-          {{format-number this.entityClientData.averageNewClients}}
-        </p>
-      </div>
+      {{#if this.hasAverageNewClients}}
+        <div class="data-details-top" data-test-running-new-entity>
+          <h3 class="data-details">Average new entity clients per month</h3>
+          <p class="data-details">
+            {{format-number this.entityClientData.averageNewClients}}
+          </p>
+        </div>
 
-      <div class="data-details-bottom" data-test-running-new-nonentity>
-        <h3 class="data-details">Average new non-entity clients per month</h3>
-        <p class="data-details">
-          {{format-number this.nonEntityClientData.averageNewClients}}
-        </p>
-      </div>
+        <div class="data-details-bottom" data-test-running-new-nonentity>
+          <h3 class="data-details">Average new non-entity clients per month</h3>
+          <p class="data-details">
+            {{format-number this.nonEntityClientData.averageNewClients}}
+          </p>
+        </div>
+      {{/if}}
 
       <div class="timestamp" data-test-running-total-timestamp>
-        {{#if @timestamp}}
+        {{#if @responseTimestamp}}
           Updated
-          {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+          {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
         {{/if}}
       </div>
 
       {{#if this.hasAverageNewClients}}
         <div class="legend-right" data-test-running-total-legend>
-          <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-          <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+          <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+          <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
         </div>
       {{/if}}
     </div>
   </div>
+{{else}}
+  {{#if (and @isHistoricalMonth this.singleMonthData.new_clients.clients)}}
+    <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
+      <div class="chart-header has-bottom-margin-sm">
+        <h2 class="chart-title">Vault client counts</h2>
+        <p class="chart-description">
+          A client is any user or service that interacts with Vault. They are made up of entity clients and non-entity
+          clients. The total client count number is an important consideration for Vault billing.
+        </p>
+      </div>
+      <div class="single-month-stats" data-test-new>
+        <div class="single-month-section-title">
+          <StatText
+            @label="New clients"
+            @subText="This is the number of clients which were created in Vault for the first time in the selected month."
+            @value={{this.singleMonthData.new_clients.clients}}
+            @size="l"
+          />
+        </div>
+        <div class="single-month-breakdown-entity">
+          <StatText @label="Entity clients" @value={{this.singleMonthData.new_clients.entity_clients}} @size="m" />
+        </div>
+        <div class="single-month-breakdown-nonentity">
+          <StatText @label="Non-entity clients" @value={{this.singleMonthData.new_clients.non_entity_clients}} @size="m" />
+        </div>
+      </div>
+      <div class="single-month-stats" data-test-total>
+        <div class="single-month-section-title">
+          <StatText
+            @label="Total monthly clients"
+            @subText="This is the number of total clients which used Vault for the given month, both new and previous."
+            @value={{this.singleMonthData.clients}}
+            @size="l"
+          />
+        </div>
+        <div class="single-month-breakdown-entity">
+          <StatText @label="Entity clients" @value={{this.singleMonthData.entity_clients}} @size="m" />
+        </div>
+        <div class="single-month-breakdown-nonentity">
+          <StatText @label="Non-entity clients" @value={{this.singleMonthData.non_entity_clients}} @size="m" />
+        </div>
+      </div>
+    </div>
+  {{else}}
+    {{! This renders when either: 
+    -> viewing the current month and all namespaces (no filters)
+    -> filtering by a namespace with no month over month data
+    if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
+    <Clients::UsageStats
+      @title="Total usage"
+      @description="These totals are within this namespace and all its children. {{if
+        @isCurrentMonth
+        "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+      }}"
+      @totalUsageCounts={{@runningTotals}}
+    />
+  {{/if}}
 {{/if}}

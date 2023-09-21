@@ -1,0 +1,4 @@
+```release-note:improvement
+api: GET ... /sys/internal/counters/activity?current_billing_period=true now
+results in a response which contains the full billing period
+```

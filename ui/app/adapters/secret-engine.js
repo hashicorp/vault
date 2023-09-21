@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -29,15 +34,13 @@ export default ApplicationAdapter.extend({
     let mountModel, configModel;
     try {
       mountModel = await this.ajax(this.internalURL(query.path), 'GET');
-      // if kv2 then add the config data to the mountModel
-      // version comes in as a string
       if (mountModel?.data?.type === 'kv' && mountModel?.data?.options?.version === '2') {
         configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
         mountModel.data = { ...mountModel.data, ...configModel.data };
       }
     } catch (error) {
       // no path means this was an error on listing
-      if (!query.path) {
+      if (!query.path || !mountModel) {
         throw error;
       }
       // control groups will throw a 403 permission denied error. If this happens return the mountModel

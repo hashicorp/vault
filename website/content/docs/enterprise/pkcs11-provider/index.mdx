@@ -7,7 +7,12 @@ description: |-
   This requires the Enterprise ADP-KM license.
 ---
 
-# PKCS#11 Provider
+# PKCS#11 provider
+
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+
+-> **Note**: This feature is part of the [KMIP Secret Engine](/vault/docs/secrets/kmip), which requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+with the Advanced Data Protection Module.
 
 [PKCS#11](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
 is an open standard C API that provides a means to access cryptographic capabilities on a device.
@@ -15,9 +20,9 @@ For example, it is often used to access a Hardware Security Module (HSM) (like a
 
 Vault provides a PKCS#11 library (or provider) so that Vault can be used as an SSM (Software Security Module).
 This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
-The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
+The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/vault/docs/secrets/kmip) to provide cryptographic operations and object storage.
 
-## Platform Support
+## Platform support
 
 This library works with Vault Enterprise 1.11+ with the advanced data protection module in the license
 with the KMIP Secrets Engine.
@@ -29,10 +34,13 @@ with the KMIP Secrets Engine.
 | Linux            | x86-64       | RHEL 9 compatible | 2.34    |
 | macOS            | x86-64       | &mdash;           | &mdash; |
 
+_Note:_ `vault-pkcs11-provider` runs on _any_ glibc-based Linux distribution. The versions above are given in RHEL-compatible GLIBC versions; for your
+distro's glibc version, choose the `vault-pkcs11-provider` built against the same or older version as what your distro provides.
+
 The provider comes in the form of a shared C library, `libvault-pkcs11.so` (for Linux) or `libvault-pkcs11.dylib` (for macOS).
 It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider).
 
-## Quick Start
+## Quick start
 
 1. To use the provider, you will need access to a Vault Enterprise instance with the KMIP Secrets Engine.
 
@@ -51,7 +59,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
       server -dev -dev-root-token-id root -dev-listen-address 0.0.0.0:8200
     ```
 
-1. Configure the [KMIP Secrets Engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
+1. Configure the [KMIP Secrets Engine](/vault/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
 
     ~> **Note**: These commands will output the credentials in plaintext.
 
@@ -64,7 +72,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
     ```
 
     ~> **Important**: When configuring KMIP in production, you will probably need to set the
-    `server_hostnames` and `server_ips` [configuration parameters](/api-docs/secret/kmip#parameters),
+    `server_hostnames` and `server_ips` [configuration parameters](/vault/api-docs/secret/kmip#parameters),
     otherwise the TLS connection to the KMIP Secrets Engine will fail due to certification validation errors.
 
     This last line will generate a JSON file with the certificate, key, and CA certificate chain to connect
@@ -146,7 +154,7 @@ Most programs will use only one slot.
 - `tls_cert_path` (required): the location of the client TLS certificate used to authenticate to the KMIP engine.
 - `tls_key_path` (optional, defaults to the value of `tls_cert_path`): the location of the encrypted or unencrypted TLS key used to authenticate to the KMIP engine.
 - `ca_path` (required): the location of the CA bundle that will be used to verify the server's certificate.
-- `scope` (required): the [KMIP scope](/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
+- `scope` (required): the [KMIP scope](/vault/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
 - `cache` (optional, default `true`): if the provider uses a cache to improve the performance of `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
 - `emulate_hardware` (optional, default `false`): specifies if the provider should report that it is connected to a hardware device.
 
@@ -166,7 +174,7 @@ Environment variables can be also used to configure these parameters and more.
 - `VAULT_LOG_FILE`: the location of the file the provider will use for logging. Defaults to standard out.
 - `VAULT_EMULATE_HARDWARE`: whether or not the provider will report that it is backed by a hardware device.
 
-## Encrypted TLS Key Support
+## Encrypted TLS key support
 
 The TLS key returned by the KMIP engine is unencrypted by default.
 However, the PKCS#11 provider does support (limited) encryption options for the key using [RFC 1423](https://www.rfc-editor.org/rfc/rfc1423).
@@ -186,7 +194,7 @@ The password can be supplied to the provider in two ways:
 
 Note that only a single password can be supplied via the `VAULT_KMIP_KEY_PASSWORD`, so if multiple slots in the HCL file use encrypted TLS keys, they will need to be encrypted with the same password, or use the `C_Login` method to specify the password.
 
-## Error Handling
+## Error handling
 
 If an error occurs, the first place to check will be the `VAULT_LOG_FILE` for any relevant error messages.
 
@@ -209,58 +217,168 @@ The Vault PKCS#11 provider implements the following PKCS#11 provider profiles:
 - [Baseline](http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960548)
 - [Extended](http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960554)
 
-The following mechanisms are currently supported, as of Vault 1.12:
+The following key genration mechanisms are currently supported:
 
-| Name               | Mechanism Number |
-| ------------------ | ---------------- |
-| AES key generation | `0x1080`         |
-| AES-CBC            | `0x1082`         |
-| AES-CBC Pad        | `0x1085`         |
-| AES-CTR            | `0x1086`         |
-| AES-GCM            | `0x1087`         |
+| Name               | Mechanism Number |Provider Version|Vault Version|
+| ------------------ | ---------------- |----------------|-------------|
+| RSA-PKCS           | `0x0000`         | 0.2.0          | 1.13        |
+| AES key generation | `0x1080`         | 0.1.0          | 1.12        |
 
+
+The following encryption mechanisms are currently supported:
+
+| Name               | Mechanism Number |Provider Version|Vault Version|
+| ------------------ | ---------------- |----------------|-------------|
+| RSA-PKCS           | `0x0001`         | 0.2.0          | 1.13        |
+| RSA-PKCS-OAEP      | `0x0009`         | 0.2.0          | 1.13        |
+| AES-ECB            | `0x1081`         | 0.2.0          | 1.13        |
+| AES-CBC            | `0x1082`         | 0.1.0          | 1.12        |
+| AES-CBC Pad        | `0x1085`         | 0.1.0          | 1.12        |
+| AES-CTR            | `0x1086`         | 0.1.0          | 1.12        |
+| AES-GCM            | `0x1087`         | 0.1.0          | 1.12        |
+| AES-OFB            | `0x2104`         | 0.2.0          | 1.13        |
+| AES-CFB128         | `0x2107`         | 0.2.0          | 1.13        |
+
+The following signing mechanisms are currently supported:
+
+| Name               | Mechanism Number |Provider Version|Vault Version|
+| ------------------ | ---------------- |----------------|-------------|
+| RSA-PKCS           | `0x0001`         | 0.2.0          | 1.13        |
+| SHA256-RSA-PKCS    | `0x0040`         | 0.2.0          | 1.13        |
+| SHA384-RSA-PKCS    | `0x0041`         | 0.2.0          | 1.13        |
+| SHA512-RSA-PKCS    | `0x0042`         | 0.2.0          | 1.13        |
+| SHA224-RSA-PKCS    | `0x0046`         | 0.2.0          | 1.13        |
+| SHA512-224-HMAC    | `0x0049`         | 0.2.0          | 1.13        |
+| SHA512-256-HMAC    | `0x004D`         | 0.2.0          | 1.13        |
+| SHA256-HMAC        | `0x0251`         | 0.2.0          | 1.13        |
+| SHA224-HMAC        | `0x0256`         | 0.2.0          | 1.13        |
+| SHA384-HMAC        | `0x0261`         | 0.2.0          | 1.13        |
+| SHA512-HMAC        | `0x0271`         | 0.2.0          | 1.13        |
+
+
+<Tabs>
+<Tab heading="Supported PKCS#11 Functions (version 0.2)">
 Here is the list of supported and unsupported PKCS#11 functions:
 
 - Encryption and decryption
-  - [x]  `C_EncryptInit`
-  - [x]  `C_Encrypt`
+  - [X]  `C_EncryptInit`
+  - [X]  `C_Encrypt`
+  - [X]  `C_EncryptUpdate`
+  - [X]  `C_EncryptFinal`
+  - [X]  `C_DecryptInit`
+  - [X]  `C_Decrypt`
+  - [X]  `C_DecryptUpdate`
+  - [X]  `C_DecryptFinal`
+- Key management
+  - [X]  `C_GenerateKey`
+  - [X]  `C_GenerateKeyPair`
+  - [ ]  `C_WrapKey`
+  - [ ]  `C_UnwrapKey`
+  - [ ]  `C_DeriveKey`
+- Objects
+  - [X]  `C_CreateObject`
+  - [X]  `C_DestroyObject`
+  - [X]  `C_GetAttributeValue`
+  - [X]  `C_FindObjectsInit`
+  - [X]  `C_FindObjects`
+  - [X]  `C_FindObjectsFinal`
+  - [ ]  `C_SetAttributeValue`
+  - [ ]  `C_CopyObject`
+  - [ ]  `C_GetObjectSize`
+- Management
+  - [X]  `C_Initialize`
+  - [X]  `C_Finalize`
+  - [X]  `C_Login` (PIN is used as a passphrase for the TLS encryption key, if provided)
+  - [X]  `C_Logout`
+  - [X]  `C_GetInfo`
+  - [X]  `C_GetSlotList`
+  - [X]  `C_GetSlotInfo`
+  - [X]  `C_GetTokenInfo`
+  - [X]  `C_GetMechanismList`
+  - [X]  `C_GetMechanismInfo`
+  - [X]  `C_OpenSession`
+  - [X]  `C_CloseSession`
+  - [X]  `C_CloseAllSessions`
+  - [X]  `C_GetSessionInfo`
+  - [ ]  `C_InitToken`
+  - [ ]  `C_InitPIN`
+  - [ ]  `C_SetPIN`
+  - [ ]  `C_GetOperationState`
+  - [ ]  `C_SetOperationState`
+  - [ ]  `C_GetFunctionStatus`
+  - [ ]  `C_CancelFunction`
+  - [ ]  `C_WaitForSlotEvent`
+- Signing
+  - [X]  `C_SignInit`
+  - [X]  `C_Sign`
+  - [X]  `C_SignUpdate`
+  - [X]  `C_SignFinal`
+  - [ ]  `C_SignRecoverInit`
+  - [ ]  `C_SignRecover`
+  - [X]  `C_VerifyInit`
+  - [X]  `C_Verify`
+  - [X]  `C_VerifyUpdate`
+  - [X]  `C_VerifyFinal`
+  - [ ]  `C_VerifyRecoverInit`
+  - [ ]  `C_VerifyRecover`
+- Digests
+  - [ ]  `C_DigestInit`
+  - [ ]  `C_Digest`
+  - [ ]  `C_DigestUpdate`
+  - [ ]  `C_DigestKey`
+  - [ ]  `C_DigestFinal`
+  - [ ]  `C_DigestEncryptUpdate`
+  - [ ]  `C_DecryptDigestUpdate`
+  - [ ]  `C_SignEncryptUpdate`
+  - [ ]  `C_DecryptVerifyUpdate`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
+
+</Tab>
+<Tab heading="Supported PKCS#11 Functions (version 0.1)">
+Here is the list of supported and unsupported PKCS#11 functions:
+
+- Encryption and decryption
+  - [X]  `C_EncryptInit`
+  - [X]  `C_Encrypt`
   - [ ]  `C_EncryptUpdate`
   - [ ]  `C_EncryptFinal`
-  - [x]  `C_DecryptInit`
-  - [x]  `C_Decrypt`
+  - [X]  `C_DecryptInit`
+  - [X]  `C_Decrypt`
   - [ ]  `C_DecryptUpdate`
   - [ ]  `C_DecryptFinal`
 - Key management
-  - [x]  `C_GenerateKey`
+  - [X]  `C_GenerateKey`
   - [ ]  `C_GenerateKeyPair`
   - [ ]  `C_WrapKey`
   - [ ]  `C_UnwrapKey`
   - [ ]  `C_DeriveKey`
 - Objects
-  - [x]  `C_CreateObject`
-  - [x]  `C_DestroyObject`
-  - [x]  `C_GetAttributeValue`
-  - [x]  `C_FindObjectsInit`
-  - [x]  `C_FindObjects`
-  - [x]  `C_FindObjectsFinal`
+  - [X]  `C_CreateObject`
+  - [X]  `C_DestroyObject`
+  - [X]  `C_GetAttributeValue`
+  - [X]  `C_FindObjectsInit`
+  - [X]  `C_FindObjects`
+  - [X]  `C_FindObjectsFinal`
   - [ ]  `C_SetAttributeValue`
   - [ ]  `C_CopyObject`
   - [ ]  `C_GetObjectSize`
 - Management
-  - [x]  `C_Initialize`
-  - [x]  `C_Finalize`
-  - [x]  `C_Login` (PIN is used as a passphrase for the TLS encryption key, if provided)
-  - [x]  `C_Logout`
-  - [x]  `C_GetInfo`
-  - [x]  `C_GetSlotList`
-  - [x]  `C_GetSlotInfo`
-  - [x]  `C_GetTokenInfo`
-  - [x]  `C_GetMechanismList`
-  - [x]  `C_GetMechanismInfo`
-  - [x]  `C_OpenSession`
-  - [x]  `C_CloseSession`
-  - [x]  `C_CloseAllSessions`
-  - [x]  `C_GetSessionInfo`
+  - [X]  `C_Initialize`
+  - [X]  `C_Finalize`
+  - [X]  `C_Login` (PIN is used as a passphrase for the TLS encryption key, if provided)
+  - [X]  `C_Logout`
+  - [X]  `C_GetInfo`
+  - [X]  `C_GetSlotList`
+  - [X]  `C_GetSlotInfo`
+  - [X]  `C_GetTokenInfo`
+  - [X]  `C_GetMechanismList`
+  - [X]  `C_GetMechanismInfo`
+  - [X]  `C_OpenSession`
+  - [X]  `C_CloseSession`
+  - [X]  `C_CloseAllSessions`
+  - [X]  `C_GetSessionInfo`
   - [ ]  `C_InitToken`
   - [ ]  `C_InitPIN`
   - [ ]  `C_SetPIN`
@@ -292,11 +410,14 @@ Here is the list of supported and unsupported PKCS#11 functions:
   - [ ]  `C_DecryptDigestUpdate`
   - [ ]  `C_SignEncryptUpdate`
   - [ ]  `C_DecryptVerifyUpdate`
-- Random Number Generation
-  - [ ]  `C_SeedRandom`
-  - [ ]  `C_GenerateRandom`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
 
-## Limitations and Notes
+</Tab>
+</Tabs>
+
+## Limitations and notes
 
 Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some other limitations to be aware of:
 
@@ -306,3 +427,5 @@ Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some
   This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
   Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
 - The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
+- The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
+  and does **not** call Vault.

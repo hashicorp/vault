@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { settled, currentURL, currentRouteName, visit, waitUntil } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -8,9 +13,8 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import authPage from 'vault/tests/pages/auth';
-import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
-import listPage from 'vault/tests/pages/secrets/backend/list';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -111,12 +115,6 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     return this;
   };
 
-  const writeSecret = async function (backend, path, key, val) {
-    await listPage.visitRoot({ backend });
-    await listPage.create();
-    await editPage.createSecret(path, key, val);
-  };
-
   test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {
     await consoleComponent.runCommands([
       'write sys/mounts/kv-v2-mount type=kv-v2',
@@ -126,7 +124,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await settled();
     await setupControlGroup(this);
     await settled();
-    await visit('/vault/secrets/kv-v2-mount/show/foo');
+    await visit('/vault/secrets/kv-v2-mount/kv/foo/details');
 
     assert.ok(
       await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),

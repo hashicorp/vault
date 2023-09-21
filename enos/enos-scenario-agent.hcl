@@ -1,9 +1,24 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 scenario "agent" {
   matrix {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
     distro          = ["ubuntu", "rhel"]
     edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+
+    # Our local builder always creates bundles
+    exclude {
+      artifact_source = ["local"]
+      artifact_type   = ["package"]
+    }
+
+    # HSM and FIPS 140-2 are only supported on amd64
+    exclude {
+      arch    = ["arm64"]
+      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -15,78 +30,44 @@ scenario "agent" {
   ]
 
   locals {
-    build_tags = {
-      "oss"              = ["ui"]
-      "ent"              = ["ui", "enterprise", "ent"]
-      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
-      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
-    }
-    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    dependencies_to_install = ["jq"]
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
     install_artifactory_artifact = local.bundle_path == null
-    tags = merge({
-      "Project Name" : var.project_name
-      "Project" : "Enos",
-      "Environment" : "ci"
-    }, var.tags)
-    vault_instance_types = {
-      amd64 = "t3a.small"
-      arm64 = "t4g.small"
-    }
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-  }
-
-  step "get_local_metadata" {
-    skip_step = matrix.artifact_source != "local"
-    module    = module.get_local_metadata
   }
 
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
-      bundle_path           = local.bundle_path
-      goarch                = matrix.arch
-      goos                  = "linux"
-      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      vault_product_version = var.vault_product_version
-      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
-      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
-      revision              = var.vault_revision
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      bundle_path          = local.bundle_path
+      goarch               = matrix.arch
+      goos                 = "linux"
+      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version      = var.vault_product_version
+      artifact_type        = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
+      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      revision             = var.vault_revision
     }
   }
 
-  step "find_azs" {
-    module = module.az_finder
-
-    variables {
-      instance_type = [
-        var.backend_instance_type,
-        local.vault_instance_type
-      ]
-    }
+  step "ec2_info" {
+    module = module.ec2_info
   }
 
   step "create_vpc" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = distinct([matrix.arch, "amd64"])
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      common_tags = global.tags
     }
   }
 
@@ -95,32 +76,32 @@ scenario "agent" {
     module    = module.read_license
 
     variables {
-      file_name = local.vault_license_path
+      file_name = global.vault_license_path
     }
   }
 
-  step "create_backend_cluster" {
-    module     = "backend_raft"
+  step "create_vault_cluster_targets" {
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id        = step.create_vpc.ami_ids["ubuntu"]["amd64"]
-      common_tags   = local.tags
-      instance_type = var.backend_instance_type
-      kms_key_arn   = step.create_vpc.kms_key_arn
-      vpc_id        = step.create_vpc.vpc_id
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_tag_key       = global.vault_tag_key
+      common_tags           = global.tags
+      vpc_id                = step.create_vpc.vpc_id
     }
   }
 
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
-      step.create_backend_cluster,
       step.build_vault,
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -128,25 +109,23 @@ scenario "agent" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
-      dependencies_to_install   = local.dependencies_to_install
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = "raft"
-      unseal_method             = "shamir"
-      vault_local_artifact_path = local.bundle_path
-      vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
-      vault_license             = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                    = step.create_vpc.vpc_id
+      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_vault_cluster_targets.cluster_name
+      enable_audit_devices  = var.vault_enable_audit_devices
+      install_dir           = var.vault_install_dir
+      license               = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path   = local.bundle_path
+      packages              = concat(global.packages, global.distro_packages[matrix.distro])
+      storage_backend       = "raft"
+      target_hosts          = step.create_vault_cluster_targets.hosts
+      unseal_method         = "shamir"
     }
   }
 
   step "start_vault_agent" {
     module = "vault_agent"
     depends_on = [
-      step.create_backend_cluster,
       step.build_vault,
       step.create_vault_cluster,
     ]
@@ -156,8 +135,8 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances                  = step.create_vault_cluster.vault_instances
-      vault_root_token                 = step.create_vault_cluster.vault_root_token
+      vault_instances                  = step.create_vault_cluster_targets.hosts
+      vault_root_token                 = step.create_vault_cluster.root_token
       vault_agent_template_destination = "/tmp/agent_output.txt"
       vault_agent_template_contents    = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
     }
@@ -175,49 +154,69 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances                  = step.create_vault_cluster.vault_instances
+      vault_instances                  = step.create_vault_cluster_targets.hosts
       vault_agent_template_destination = "/tmp/agent_output.txt"
       vault_agent_expected_output      = "orphan=true display_name=approle"
     }
   }
 
-  output "vault_cluster_instance_ids" {
-    description = "The Vault cluster instance IDs"
-    value       = step.create_vault_cluster.instance_ids
+  output "awkms_unseal_key_arn" {
+    description = "The Vault cluster KMS key arn"
+    value       = step.create_vpc.kms_key_arn
   }
 
-  output "vault_cluster_pub_ips" {
-    description = "The Vault cluster public IPs"
-    value       = step.create_vault_cluster.instance_public_ips
+  output "cluster_name" {
+    description = "The Vault cluster name"
+    value       = step.create_vault_cluster.cluster_name
   }
 
-  output "vault_cluster_priv_ips" {
+  output "hosts" {
+    description = "The Vault cluster target hosts"
+    value       = step.create_vault_cluster.target_hosts
+  }
+
+  output "private_ips" {
     description = "The Vault cluster private IPs"
-    value       = step.create_vault_cluster.instance_private_ips
+    value       = step.create_vault_cluster.private_ips
   }
 
-  output "vault_cluster_key_id" {
-    description = "The Vault cluster Key ID"
-    value       = step.create_vault_cluster.key_id
+  output "public_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.create_vault_cluster.public_ips
   }
 
-  output "vault_cluster_root_token" {
+  output "root_token" {
     description = "The Vault cluster root token"
-    value       = step.create_vault_cluster.vault_root_token
+    value       = step.create_vault_cluster.root_token
   }
 
-  output "vault_cluster_unseal_keys_b64" {
+  output "recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.recovery_key_shares
+  }
+
+  output "recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.recovery_keys_b64
+  }
+
+  output "recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "unseal_keys_b64" {
     description = "The Vault cluster unseal keys"
-    value       = step.create_vault_cluster.vault_unseal_keys_b64
+    value       = step.create_vault_cluster.unseal_keys_b64
   }
 
-  output "vault_cluster_unseal_keys_hex" {
+  output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
-    value       = step.create_vault_cluster.vault_unseal_keys_hex
+    value       = step.create_vault_cluster.unseal_keys_hex
   }
 
-  output "vault_cluster_tag" {
-    description = "The Vault cluster tag"
-    value       = step.create_vault_cluster.vault_cluster_tag
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

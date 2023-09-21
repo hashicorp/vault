@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -18,19 +21,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixCert = "cert"
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
-		return nil, err
-	}
-	bConf, err := b.Config(ctx, conf.StorageView)
-	if err != nil {
-		return nil, err
-	}
-	if bConf != nil {
-		b.updatedConfig(bConf)
-	}
-	if err := b.lockThenpopulateCRLs(ctx, conf.StorageView); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -53,10 +48,11 @@ func Backend() *backend {
 			pathListCRLs(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:    b.pathLoginRenew,
-		Invalidate:   b.invalidate,
-		BackendType:  logical.TypeCredential,
-		PeriodicFunc: b.updateCRLs,
+		AuthRenew:      b.loginPathWrapper(b.pathLoginRenew),
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		InitializeFunc: b.initialize,
+		PeriodicFunc:   b.updateCRLs,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
@@ -72,6 +68,25 @@ type backend struct {
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
 	configUpdated   atomic.Bool
+}
+
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	bConf, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to load backend configuration: %v", err))
+		return err
+	}
+
+	if bConf != nil {
+		b.updatedConfig(bConf)
+	}
+
+	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
+		b.Logger().Error(fmt.Sprintf("failed to populate CRLs: %v", err))
+		return err
+	}
+
+	return nil
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -91,12 +106,12 @@ func (b *backend) initOCSPClient(cacheSize int) {
 	}, cacheSize)
 }
 
-func (b *backend) updatedConfig(config *config) error {
+func (b *backend) updatedConfig(config *config) {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
 	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated.Store(false)
-	return nil
+	return
 }
 
 func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {

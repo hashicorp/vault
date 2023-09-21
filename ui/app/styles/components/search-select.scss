@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .ember-power-select-dropdown {
   background: transparent;
   box-shadow: none;
@@ -71,8 +76,8 @@ div > .ember-power-select-options {
   }
 
   .ember-power-select-option[aria-current='true'] {
-    background-color: $menu-item-hover-background-color;
-    color: $menu-item-hover-color;
+    background-color: $ui-gray-050;
+    color: $ui-gray-900;
   }
 
   .ember-power-select-option--no-matches-message {

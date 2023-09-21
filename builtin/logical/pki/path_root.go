@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -12,6 +15,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -26,15 +30,34 @@ import (
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/generate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "root",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathCADeleteRoot,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -80,8 +103,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle.
+	// Delete legacy CA bundle and its backup, if any.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Delete(ctx, legacyCertBundleBackupPath); err != nil {
 		return nil, err
 	}
 
@@ -267,12 +294,15 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
+	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(sc, true)
+	warnings, err = b.crlBuilder.rebuild(sc, true)
 	if err != nil {
 		return nil, err
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
@@ -304,9 +334,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
+		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
 	role := &roleEntry{
@@ -386,6 +414,26 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	if err != nil {
+		return nil, err
+	}
+
+	key := "certs/" + normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)
+	certsCounted := b.certsCounted.Load()
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
+		Key:   key,
+		Value: parsedBundle.CertificateBytes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+	}
+	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
+
+	return resp, nil
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -455,23 +503,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
-
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)
-
 	return resp, nil
 }
 

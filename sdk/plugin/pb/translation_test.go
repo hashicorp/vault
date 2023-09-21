@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pb
 
 import (
@@ -262,6 +265,7 @@ func TestTranslation_Response(t *testing.T) {
 				CreationPath:    "test/foo",
 				SealWrap:        true,
 			},
+			MountType: "mountType",
 		},
 	}
 

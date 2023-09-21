@@ -4,15 +4,15 @@ page_title: Vault Interoperability Matrix
 description: Guide to viewing which partners Vault integrates with.
 ---
 
-# Vault Interoperability Matrix
+# Vault interoperability matrix
 
-Vault integrates with various appliances, platforms and applications for different use cases. Below are two tables indicating the partner’s product that has been verified to work with Vault for [Auto Unsealing](/docs/concepts/seal#auto-unseal) / [HSM Support](/docs/enterprise/hsm) and [External Key Management](/use-cases/key-management).
+Vault integrates with various appliances, platforms and applications for different use cases. Below are two tables indicating the partner’s product that has been verified to work with Vault for [Auto Unsealing](/vault/docs/concepts/seal#auto-unseal) / [HSM Support](/vault/docs/enterprise/hsm) and [External Key Management](https://www.vaultproject.io/use-cases/key-management).
 
 Auto Unseal and HSM Support was developed to aid in reducing the operational complexity of keeping the unseal key secure. This feature delegates the responsibility of securing the unseal key from users to a trusted device or service. At startup Vault will connect to the device or service implementing the seal and ask it to decrypt the root key Vault read from storage.
 
 Vault centrally manages and automates encryption keys across environments allowing customers to control their own encryption keys used in third party services or products.
 
-## Vault Seal and HSM Interoperability
+## Vault seal and HSM interoperability
 
 The below table shows the partner product and if the partner’s technology works with each individual seal component.
 
@@ -20,13 +20,14 @@ The below table shows the partner product and if the partner’s technology work
 | ----------------- | -------------------------------------- | ------------ | -------------------- | ------------ |-------------- | --------------------------- |
 | AliCloud          | AliCloud KMS                           | Yes          | No                   | Yes          | No            | 0.11.2                      |
 | Atos              | Trustway Proteccio HSM                 | Yes          | Yes                  | Yes          | No            | 1.9                         |
-| AWS               | AWS KMS                                | Yes          | No                   | Yes          | Yes           | 0.9                         |
+| AWS               | AWS KMS                                | Yes          | Yes                  | Yes          | Yes           | 0.9                         |
 | Crypto4a          | QxEDGE™️ HSP                            | Yes          | Yes                  | Yes          | Yes           | 1.9                         |
 | Entrust           | nShield HSM                            | Yes          | Yes                  | Yes          | Yes           | 1.3                         |
 | Fortanix          | FX2200 Series                          | Yes          | Yes                  | Yes          | No            | 0.10                        |
 | FutureX           | Vectera Plus, KMES Series 3            | Yes          | Yes                  | Yes          | Yes           | 1.5                         |
 | FutureX           | VirtuCrypt cloud HSM                   | Yes          | Yes                  | Yes          | Yes           | 1.5                         |
 | Google            | GCP Cloud KMS                          | Yes          | No                   | Yes          | Yes           | 0.9                         |
+| Marvell           | Cavium HSM                             | Yes          | Yes                  | Yes          | Yes           | 1.11                        |
 | Microsoft         | Azure Key Vault                        | Yes          | No                   | Yes          | Yes           | 0.10.2                      |
 | Oracle            | OCI KMS                                | Yes          | No                   | Yes          | No            | 1.2.3                       |
 | PrimeKey          | SignServer Hardware Appliance          | Yes          | Yes                  | Yes          | No            | 1.6                         |
@@ -38,50 +39,57 @@ The below table shows the partner product and if the partner’s technology work
 | Thales            | CipherTrust Manager                    | Yes          | Yes                  | Yes          | No            | 1.7                         |
 | Utimaco           | HSM                                    | Yes          | Yes                  | Yes          | Yes           | 1.4                         |
 | Yubico            | YubiHSM 2                              | Yes          | Yes                  | Yes          | No            | 1.5                         |
-<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated September 29, 2022</em></span>
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated May 03, 2023</em></span>
 
-## Vault as an External Key Management System (EKMS)
+## Vault as an external key management system (EKMS)
 
 Partners who integrate with Vault to have Vault store and/or manage encryption keys with their products
 
 ~> Note: HCP Vault Verified means that the integration has been verified to work with HCP Vault. All integrations have been verified with Vault self-managed.
 
 <span style={{fontSize:'12px'}}>
-Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a>; KMSE = <a href="/docs/secrets/key-management">Key Management Secrets Engine</a>; KMIP = <a href="/docs/secrets/kmip">KMIP Secrets Engine</a>; Transit = <a href="/docs/secrets/transit">Transit Secrets Engine</a>
+Vault Secrets Engine Key: EKM Provider = <a href="/docs/platform/mssql">Vault EKM provider for SQL server</a>; K/V = <a href="/docs/secrets/kv">K/V secrets engine</a>; KMSE = <a href="/docs/secrets/key-management">Key Management Secrets Engine</a>; KMIP = <a href="/docs/secrets/kmip">KMIP Secrets Engine</a>; PKCS#11 = <a href="/docs/enterprise/pkcs11-provider">PKCS#11 Provider</a>; Transit = <a href="/docs/secrets/transit">Transit Secrets Engine</a>
 </span>
 
-| Partner           | Product                | Vault Secrets Engine | Min. Vault Version Verified | HCP Vault Verified |
-| ----------------- | ---------------------- | -------------------- | --------------------------- | ------------------- |
-| AWS               | AWS KMS                | KMSE                 | 1.8                         | Yes                 |
-| Baffle            | Shield                 | K/V                  | 1.3                         | No                  |
-| Bloombase         | StoreSafe              | KMIP                 | 1.9                         | N/A                 |
-| Cockroach Labs    | Cockroach Cloud DB     | KMSE                 | 1.10                        | N/A                 |
-| Cockroach Labs    | Cockroach DB           | Transit              | 1.10                        | Yes                 |
-| Commvault Systems | CommVault              | KMIP                 | 1.9                         | N/A                 |
-| Cribl             | Cribl Stream           | K/V                  | 1.8                         | Yes                 |
-| DataStax          | DataStax Enterprise    | KMIP                 | 1.11                        | Yes                 |
-| Dell              | PowerMax               | KMIP                 | 1.12.1                      | N/A                 |
-| Garantir          | GaraSign               | Transit              | 1.5                         | Yes                 |
-| Google            | Google KMS             | KMSE                 | 1.9                         | N/A                 |
-| HPE               | Exmeral Data Fabric    | KMIP                 | 1.2                         | N/A                 |
-| Intel             | Key Broker Service     | KMIP                 | 1.11                        | N/A                 |
-| Micro Focus       | Connected Mx           | Transit              | 1.7                         | No                  |
-| Microsoft         | Azure Key Vault        | KMSE                 | 1.6                         | N/A                 |
-| MinIO             | Key Encryption Service | K/V                  | 1.11                        | No                  |
-| MongoDB           | Atlas                  | KMSE                 | 1.6                         | N/A                 |
-| MongoDB           | MongoDB Enterprise     | KMIP                 | 1.2                         | N/A                 |
-| MongoDB           | Client Libraries       | KMIP                 | 1.9                         | N/A                 |
-| NetApp            | ONTAP                  | KMIP                 | 1.2                         | N/A                 |
-| Nutanix           | AHV/AOS 6.5.1.6        | KMIP                 | 1.12                        | N/A                 |
-| Ondat             | Trousseau              | Transit              | 1.9                         | Yes                 |
-| Percona           | Server 8.0             | KMIP                 | 1.9                         | N/A                 |
-| Percona           | XtraBackup 8.0         | KMIP                 | 1.9                         | N/A                 |
-| Snowflake         | Snowflake              | KMSE                 | 1.6                         | N/A                 |
-| VMware            | vSphere 7.0, 8.0       | KMIP                 | 1.2                         | N/A                 |
-| VMware            | vSan 7.0, 8.0          | KMIP                 | 1.2                         | N/A                 |
-| Yugabyte          | Yugabyte Platform      | Transit              | 1.9                         | No                  |
-<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated November 30, 2022</em></span>
+| Partner           | Product                  | Vault Secrets Engine | Min. Vault Version Verified | HCP Vault Verified |
+| ----------------- | ------------------------ | -------------------- | --------------------------- | ------------------- |
+| AWS               | AWS KMS                  | KMSE                 | 1.8                         | Yes                 |
+| Baffle            | Shield                   | K/V                  | 1.3                         | No                  |
+| Bloombase         | StoreSafe                | KMIP                 | 1.9                         | N/A                 |
+| Cloudian          | HyperStore 7.5.1         | KMIP                 | 1.12                        | N/A                 |
+| Cockroach Labs    | Cockroach Cloud DB       | KMSE                 | 1.10                        | N/A                 |
+| Cockroach Labs    | Cockroach DB             | Transit              | 1.10                        | Yes                 |
+| Commvault Systems | CommVault                | KMIP                 | 1.9                         | N/A                 |
+| Cribl             | Cribl Stream             | K/V                  | 1.8                         | Yes                 |
+| DataStax          | DataStax Enterprise      | KMIP                 | 1.11                        | Yes                 |
+| Dell              | PowerMax                 | KMIP                 | 1.12.1                      | N/A                 |
+| EnterpriseDB      | Postgres Advanced Server | KMIP                 | 1.12.6                      | N/A                 |
+| Garantir          | GaraSign                 | Transit              | 1.5                         | Yes                 |
+| Google            | Google KMS               | KMSE                 | 1.9                         | N/A                 |
+| HPE               | Exmeral Data Fabric      | KMIP                 | 1.2                         | N/A                 |
+| Intel             | Key Broker Service       | KMIP                 | 1.11                        | N/A                 |
+| JumpWire          | JumpWire                 | K/V                  | 1.12                        | Yes                 |
+| Micro Focus       | Connected Mx             | Transit              | 1.7                         | No                  |
+| Microsoft         | Azure Key Vault          | KMSE                 | 1.6                         | N/A                 |
+| Microsoft         | MSSSQL                   | EKM Provider         | 1.9                         | No                  |
+| MinIO             | Key Encryption Service   | K/V                  | 1.11                        | No                  |
+| MongoDB           | Atlas                    | KMSE                 | 1.6                         | N/A                 |
+| MongoDB           | MongoDB Enterprise       | KMIP                 | 1.2                         | N/A                 |
+| MongoDB           | Client Libraries         | KMIP                 | 1.9                         | N/A                 |
+| NetApp            | ONTAP                    | KMIP                 | 1.2                         | N/A                 |
+| NetApp            | StorageGrid              | KMIP                 | 1.2                         | N/A                 |
+| Nutanix           | AHV/AOS 6.5.1.6          | KMIP                 | 1.12                        | N/A                 |
+| Ondat             | Trousseau                | Transit              | 1.9                         | Yes                 |
+| Oracle            | MySQL                    | KMIP                 | 1.2                         | N/A                 |
+| Oracle            | Oracle 19c               | PKCS#11              | 1.11                        | N/A                 |
+| Percona           | Server 8.0               | KMIP                 | 1.9                         | N/A                 |
+| Percona           | XtraBackup 8.0           | KMIP                 | 1.9                         | N/A                 |
+| Snowflake         | Snowflake                | KMSE                 | 1.6                         | N/A                 |
+| VMware            | vSphere 7.0, 8.0         | KMIP                 | 1.2                         | N/A                 |
+| VMware            | vSan 7.0, 8.0            | KMIP                 | 1.2                         | N/A                 |
+| Yugabyte          | Yugabyte Platform        | Transit              | 1.9                         | No                  |
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated August 25, 2023</em></span>
 
 Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) if there are any questions on the above tables. 
 
-Missing an integration? Join the [Vault Integration Program](/docs/partnerships) and get the integration listed.
+Missing an integration? Join the [Vault Integration Program](/vault/docs/partnerships) and get the integration listed.

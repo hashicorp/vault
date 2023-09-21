@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package builtinplugins
 
 import (
+	"context"
+
 	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	credAzure "github.com/hashicorp/vault-plugin-auth-azure"
 	credCentrify "github.com/hashicorp/vault-plugin-auth-centrify"
@@ -26,7 +31,6 @@ import (
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
 	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
-	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -36,14 +40,9 @@ import (
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
-	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
-	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
-	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
-	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalPki "github.com/hashicorp/vault/builtin/logical/pki"
-	logicalPostgres "github.com/hashicorp/vault/builtin/logical/postgresql"
 	logicalRabbit "github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	logicalSsh "github.com/hashicorp/vault/builtin/logical/ssh"
 	logicalTotp "github.com/hashicorp/vault/builtin/logical/totp"
@@ -56,6 +55,7 @@ import (
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
 	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	dbRedshift "github.com/hashicorp/vault/plugins/database/redshift"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -86,18 +86,31 @@ type logicalBackend struct {
 	consts.DeprecationStatus
 }
 
+type removedBackend struct {
+	*framework.Backend
+}
+
+func removedFactory(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	removedBackend := &removedBackend{}
+	removedBackend.Backend = &framework.Backend{}
+	return removedBackend, nil
+}
+
 func newRegistry() *registry {
 	reg := &registry{
 		credentialBackends: map[string]credentialBackend{
 			"alicloud": {Factory: credAliCloud.Factory},
 			"app-id": {
-				Factory:           credAppId.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
-			"approle":    {Factory: credAppRole.Factory},
-			"aws":        {Factory: credAws.Factory},
-			"azure":      {Factory: credAzure.Factory},
-			"centrify":   {Factory: credCentrify.Factory},
+			"approle": {Factory: credAppRole.Factory},
+			"aws":     {Factory: credAws.Factory},
+			"azure":   {Factory: credAzure.Factory},
+			"centrify": {
+				Factory:           credCentrify.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"cert":       {Factory: credCert.Factory},
 			"cf":         {Factory: credCF.Factory},
 			"gcp":        {Factory: credGcp.Factory},
@@ -139,13 +152,16 @@ func newRegistry() *registry {
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
-			"ad":       {Factory: logicalAd.Factory},
+			"ad": {
+				Factory:           logicalAd.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"alicloud": {Factory: logicalAlicloud.Factory},
 			"aws":      {Factory: logicalAws.Factory},
 			"azure":    {Factory: logicalAzure.Factory},
 			"cassandra": {
-				Factory:           logicalCass.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
 			"consul":     {Factory: logicalConsul.Factory},
 			"gcp":        {Factory: logicalGcp.Factory},
@@ -153,25 +169,27 @@ func newRegistry() *registry {
 			"kubernetes": {Factory: logicalKube.Factory},
 			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
-				Factory:           logicalMongo.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
+			// The mongodbatlas secrets engine is not the same as the database plugin equivalent
+			// (`mongodbatlas-database-plugin`), and thus will not be deprecated at this time.
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
-				Factory:           logicalMssql.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
 			"mysql": {
-				Factory:           logicalMysql.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
 			"openldap": {Factory: logicalLDAP.Factory},
 			"ldap":     {Factory: logicalLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
-				Factory:           logicalPostgres.Factory,
-				DeprecationStatus: consts.PendingRemoval,
+				Factory:           removedFactory,
+				DeprecationStatus: consts.Removed,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
 			"ssh":       {Factory: logicalSsh.Factory},
@@ -222,16 +240,16 @@ func (r *registry) Keys(pluginType consts.PluginType) []string {
 	var keys []string
 	switch pluginType {
 	case consts.PluginTypeDatabase:
-		for key := range r.databasePlugins {
-			keys = append(keys, key)
+		for key, backend := range r.databasePlugins {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeCredential:
-		for key := range r.credentialBackends {
-			keys = append(keys, key)
+		for key, backend := range r.credentialBackends {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	case consts.PluginTypeSecrets:
-		for key := range r.logicalBackends {
-			keys = append(keys, key)
+		for key, backend := range r.logicalBackends {
+			keys = appendIfNotRemoved(keys, key, backend.DeprecationStatus)
 		}
 	}
 	return keys
@@ -272,4 +290,11 @@ func toFunc(ifc interface{}) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		return ifc, nil
 	}
+}
+
+func appendIfNotRemoved(keys []string, name string, status consts.DeprecationStatus) []string {
+	if status != consts.Removed {
+		return append(keys, name)
+	}
+	return keys
 }

@@ -1,15 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ExternalLink from './external-link';
 
 /**
  * @module DocLink
- * `DocLink` components are used to render anchor links to relevant Vault documentation at vaultproject.io.
+ * `DocLink` components are used to render anchor links to relevant Vault documentation at developer.hashicorp.com.
  *
  * @example
  * ```js
-    <DocLink @path="/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
+    <DocLink @path="/vault/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
  * ```
  *
- * @param path="/"{String} - The path to documentation on vaultproject.io that the component should link to.
+ * @param {string} path="/" - The path to documentation on developer.hashicorp.com that the component should link to.
  *
  */
 export default class DocLinkComponent extends ExternalLink {

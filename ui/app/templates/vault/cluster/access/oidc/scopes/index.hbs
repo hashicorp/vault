@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @route="vault.cluster.access.oidc.scopes.create" @type="add" data-test-oidc-scope-create>
@@ -59,7 +64,7 @@
   <EmptyState @title="No scopes yet" data-test-oidc-scope-empty-state>
     <div>
       <p>Use scope to define identity information about the authenticated user.
-        <DocLink @path="/docs/concepts/oidc-provider#scopes">
+        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
           Learn more.
         </DocLink>
       </p>

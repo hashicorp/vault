@@ -1,6 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
+  primaryKey: 'name',
+
+  // Used for role-ssh
   extractLazyPaginatedData(payload) {
     if (payload.zero_address_roles) {
       payload.zero_address_roles.forEach((role) => {
@@ -11,7 +19,7 @@ export default ApplicationSerializer.extend({
     if (!payload.data.key_info) {
       return payload.data.keys.map((key) => {
         const model = {
-          id: key,
+          name: key,
         };
         if (payload.backend) {
           model.backend = payload.backend;
@@ -22,7 +30,7 @@ export default ApplicationSerializer.extend({
 
     const ret = payload.data.keys.map((key) => {
       const model = {
-        id: key,
+        name: key,
         key_type: payload.data.key_info[key].key_type,
         zero_address: payload.data.key_info[key].zero_address,
       };

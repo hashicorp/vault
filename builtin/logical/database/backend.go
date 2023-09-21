@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -12,7 +15,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -24,10 +29,11 @@ import (
 )
 
 const (
-	databaseConfigPath     = "config/"
-	databaseRolePath       = "role/"
-	databaseStaticRolePath = "static-role/"
-	minRootCredRollbackAge = 1 * time.Minute
+	operationPrefixDatabase = "database"
+	databaseConfigPath      = "config/"
+	databaseRolePath        = "role/"
+	databaseStaticRolePath  = "static-role/"
+	minRootCredRollbackAge  = 1 * time.Minute
 )
 
 type dbPluginInstance struct {
@@ -37,6 +43,10 @@ type dbPluginInstance struct {
 	id     string
 	name   string
 	closed bool
+}
+
+func (dbi *dbPluginInstance) ID() string {
+	return dbi.id
 }
 
 func (dbi *dbPluginInstance) Close() error {
@@ -59,7 +69,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	b.credRotationQueue = queue.New()
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+	go b.initQueue(b.queueCtx, conf)
 
 	// collect metrics on number of plugin instances
 	var err error
@@ -115,25 +125,19 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	}
 
 	b.logger = conf.Logger
-	b.connections = make(map[string]*dbPluginInstance)
+	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+	b.schedule = &schedule.DefaultSchedule{}
+
 	return &b
 }
 
 func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	// copy the map so we can release the lock
-	connMapCopy := func() map[string]*dbPluginInstance {
-		b.connLock.RLock()
-		defer b.connLock.RUnlock()
-		mapCopy := map[string]*dbPluginInstance{}
-		for k, v := range b.connections {
-			mapCopy[k] = v
-		}
-		return mapCopy
-	}()
+	connectionsCopy := b.connections.Values()
 	counts := map[string]int{}
-	for _, v := range connMapCopy {
+	for _, v := range connectionsCopy {
 		dbType, err := v.database.Type()
 		if err != nil {
 			// there's a chance this will already be closed since we don't hold the lock
@@ -152,10 +156,8 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 }
 
 type databaseBackend struct {
-	// connLock is used to synchronize access to the connections map
-	connLock sync.RWMutex
 	// connections holds configured database connections by config name
-	connections map[string]*dbPluginInstance
+	connections *syncmap.SyncMap[string, *dbPluginInstance]
 	logger      log.Logger
 
 	*framework.Backend
@@ -177,49 +179,8 @@ type databaseBackend struct {
 	// the running gauge collection process
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
-}
 
-func (b *databaseBackend) connGet(name string) *dbPluginInstance {
-	b.connLock.RLock()
-	defer b.connLock.RUnlock()
-	return b.connections[name]
-}
-
-func (b *databaseBackend) connPop(name string) *dbPluginInstance {
-	b.connLock.Lock()
-	defer b.connLock.Unlock()
-	dbi, ok := b.connections[name]
-	if ok {
-		delete(b.connections, name)
-	}
-	return dbi
-}
-
-func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
-	b.connLock.Lock()
-	defer b.connLock.Unlock()
-	dbi, ok := b.connections[name]
-	if ok && dbi.id == id {
-		delete(b.connections, name)
-		return dbi
-	}
-	return nil
-}
-
-func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPluginInstance {
-	b.connLock.Lock()
-	defer b.connLock.Unlock()
-	dbi := b.connections[name]
-	b.connections[name] = newDbi
-	return dbi
-}
-
-func (b *databaseBackend) connClear() map[string]*dbPluginInstance {
-	b.connLock.Lock()
-	defer b.connLock.Unlock()
-	old := b.connections
-	b.connections = make(map[string]*dbPluginInstance)
-	return old
+	schedule schedule.Scheduler
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {
@@ -326,7 +287,7 @@ func (b *databaseBackend) GetConnection(ctx context.Context, s logical.Storage, 
 }
 
 func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name string, config *DatabaseConfig) (*dbPluginInstance, error) {
-	dbi := b.connGet(name)
+	dbi := b.connections.Get(name)
 	if dbi != nil {
 		return dbi, nil
 	}
@@ -356,7 +317,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		id:       id,
 		name:     name,
 	}
-	oldConn := b.connPut(name, dbi)
+	oldConn := b.connections.Put(name, dbi)
 	if oldConn != nil {
 		err := oldConn.Close()
 		if err != nil {
@@ -369,7 +330,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 // ClearConnection closes the database connection and
 // removes it from the b.connections map.
 func (b *databaseBackend) ClearConnection(name string) error {
-	db := b.connPop(name)
+	db := b.connections.Pop(name)
 	if db != nil {
 		// Ignore error here since the database client is always killed
 		db.Close()
@@ -380,7 +341,7 @@ func (b *databaseBackend) ClearConnection(name string) error {
 // ClearConnectionId closes the database connection with a specific id and
 // removes it from the b.connections map.
 func (b *databaseBackend) ClearConnectionId(name, id string) error {
-	db := b.connPopIfEqual(name, id)
+	db := b.connections.PopIfEqual(name, id)
 	if db != nil {
 		// Ignore error here since the database client is always killed
 		db.Close()
@@ -399,7 +360,7 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 			db.Close()
 
 			// Delete the connection if it is still active.
-			b.connPopIfEqual(db.name, db.id)
+			b.connections.PopIfEqual(db.name, db.id)
 		}()
 	}
 }
@@ -412,7 +373,7 @@ func (b *databaseBackend) clean(_ context.Context) {
 		b.cancelQueueCtx()
 	}
 
-	connections := b.connClear()
+	connections := b.connections.Clear()
 	for _, db := range connections {
 		go db.Close()
 	}

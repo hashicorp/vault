@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -15,6 +19,7 @@ var (
 
 type OperatorRaftAutopilotGetConfigCommand struct {
 	*BaseCommand
+	flagDRToken string
 }
 
 func (c *OperatorRaftAutopilotGetConfigCommand) Synopsis() string {
@@ -33,6 +38,17 @@ Usage: vault operator raft autopilot get-config
 
 func (c *OperatorRaftAutopilotGetConfigCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
+	})
 
 	return set
 }
@@ -67,10 +83,12 @@ func (c *OperatorRaftAutopilotGetConfigCommand) Run(args []string) int {
 		return 2
 	}
 
-	config, err := client.Sys().RaftAutopilotConfiguration()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	var config *api.AutopilotConfig
+	switch {
+	case c.flagDRToken != "":
+		config, err = client.Sys().RaftAutopilotConfigurationWithDRToken(c.flagDRToken)
+	default:
+		config, err = client.Sys().RaftAutopilotConfiguration()
 	}
 
 	if config == nil {

@@ -1,0 +1,114 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* This helper includes styles relating to: font-size, font-family, font-alignment, text-transform, text-weight, font-style, text-decoration. */
+
+// font size helpers
+.is-size-4 {
+  font-size: $size-4 !important;
+}
+
+.is-size-5 {
+  font-size: $size-5 !important;
+}
+
+.is-size-6 {
+  font-size: $size-6 !important;
+}
+
+.is-size-7 {
+  font-size: $size-7 !important;
+}
+
+.is-size-8 {
+  font-size: $size-8 !important;
+}
+
+.is-size-9 {
+  font-size: $size-9 !important;
+}
+
+// Font weight
+.has-font-weight-normal {
+  font-weight: $font-weight-normal;
+}
+
+.has-text-weight-semibold {
+  font-weight: $font-weight-semibold !important;
+}
+
+.has-text-weight-bold {
+  font-weight: $font-weight-bold !important;
+}
+
+// Font family
+.is-font-mono {
+  font-family: $family-monospace;
+}
+
+.masked-font {
+  font-family: obscure, text-security-square;
+  letter-spacing: 2px;
+}
+
+// Text decoration
+.is-underline {
+  text-decoration: underline;
+}
+.is-no-underline {
+  text-decoration: none;
+}
+
+// Text transformations
+.is-lowercase {
+  text-transform: lowercase !important;
+}
+
+.is-uppercase {
+  text-transform: uppercase !important;
+}
+
+// Text alignment
+.has-text-right {
+  text-align: right !important;
+}
+
+.has-text-left {
+  text-align: left;
+}
+
+.has-text-centered {
+  text-align: center !important;
+}
+
+.has-line-height-1 {
+  line-height: 1;
+}
+
+// Text color or styling
+.is-help {
+  font-size: $size-8;
+  margin-top: $size-11;
+}
+
+.help {
+  display: block;
+  font-size: 0.85714rem;
+  margin-top: $size-11;
+}
+
+.sub-text {
+  color: $grey;
+  margin-bottom: $size-11;
+  font-size: $size-8;
+
+  strong {
+    color: inherit;
+  }
+}
+
+.opacity-060 {
+  opacity: 0.6;
+}

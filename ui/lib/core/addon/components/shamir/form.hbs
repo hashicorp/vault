@@ -1,0 +1,52 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form id="shamir" aria-label="shamir form" {{on "submit" (fn this.onSubmit this.key)}} ...attributes>
+  {{#if @errors}}
+    <div class="has-bottom-margin-m">
+      <MessageError @errors={{@errors}} />
+    </div>
+  {{/if}}
+  <div class="has-bottom-margin-m">
+    {{#if @otp}}
+      <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" data-test-otp-info as |A|>
+        <A.Title>Info</A.Title>
+        <A.Description class="has-bottom-margin-s">
+          Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save this, as
+          you will need it later to decode the Operation Token.
+        </A.Description>
+        <A.Description>
+          <h4 class="hds-alert__title hds-font-weight-semibold">
+            One Time Password (otp)
+          </h4>
+          <Hds::Copy::Snippet data-test-otp @textToCopy={{@otp}} @color="secondary" />
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+    {{#if (has-block)}}
+      {{yield}}
+    {{/if}}
+  </div>
+  <div class="field">
+    <label for="key" class="is-label" data-test-shamir-key-label>
+      {{this.inputLabel}}
+    </label>
+    <div class="control">
+      <Input class="input" @type="password" name="key" @value={{this.key}} autocomplete="off" data-test-shamir-key-input />
+    </div>
+  </div>
+  <div class="columns is-mobile">
+    <div class="column is-narrow">
+      <button type="submit" class="button is-primary" disabled={{this.loading}} data-test-shamir-submit>
+        {{this.buttonText}}
+      </button>
+    </div>
+    <div class="column is-flex-v-centered is-flex-end">
+      {{#if this.showProgress}}
+        <ShamirProgress @threshold={{@threshold}} @progress={{@progress}} />
+      {{/if}}
+    </div>
+  </div>
+</form>

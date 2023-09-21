@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .shamir-progress {
   .shamir-progress-progress {
     display: inline-block;
@@ -5,7 +10,7 @@
     margin-right: $size-8;
   }
   .progress {
-    box-shadow: 0 0 0 4px $progress-bar-background-color;
+    box-shadow: 0 0 0 4px $ui-gray-050;
     margin-top: $size-10;
     min-width: 90px;
   }

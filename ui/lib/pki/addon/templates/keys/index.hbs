@@ -1,14 +1,11 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
-{{#if this.model.hasConfig}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.parentModel}} />
+
+{{#if (or this.model.hasConfig this.model.keyModels)}}
   <Page::PkiKeyList
     @keyModels={{this.model.keyModels}}
     @mountPoint={{this.mountPoint}}
@@ -19,7 +16,7 @@
   />
 {{else}}
   <Toolbar />
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

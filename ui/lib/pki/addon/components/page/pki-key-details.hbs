@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if @canDelete}}
@@ -13,7 +18,12 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @key.privateKey}}
-      <DownloadButton class="toolbar-link" @filename={{this.model.name}} @data={{@key.privateKey}} @extension="pem">
+      <DownloadButton
+        class="toolbar-link"
+        @filename="{{@key.backend}}-{{or @key.keyName 'private-key'}}"
+        @data={{@key.privateKey}}
+        @extension="pem"
+      >
         Download private key
         <Chevron @isButton={{true}} />
       </DownloadButton>
@@ -29,22 +39,22 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#if @key.privateKey}}
     <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="This private key material will only be available once. Copy or download it now."
-      />
+      <Hds::Alert data-test-pki-key-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>This private key material will only be available once. Copy or download it now.</A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#each @key.formFields as |attr|}}
     <InfoTableRow
       @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
       @value={{get @key attr.name}}
+      @addCopyButton={{eq attr.name "keyId"}}
     />
   {{/each}}
   {{#if @key.privateKey}}
     <InfoTableRow @label="Private key">
-      <MaskedInput @value={{@key.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
+      <CertificateCard @data={{@key.privateKey}} />
     </InfoTableRow>
   {{/if}}
 </div>

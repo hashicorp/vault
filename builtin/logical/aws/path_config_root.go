@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -14,6 +17,11 @@ const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s
 func pathConfigRoot(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"access_key": {
 				Type:        framework.TypeString,
@@ -48,9 +56,20 @@ func pathConfigRoot(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRootRead,
-			logical.UpdateOperation: b.pathConfigRootWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "root-iam-credentials-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "root-iam-credentials",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigRootHelpSyn,

@@ -1,0 +1,735 @@
+---
+layout: docs
+page_title: "Telemetry reference: All metrics"
+description: >-
+  Full list of all telemetry values provided by Vault.
+---
+
+# All Vault telemetry metrics
+
+For completeness, we provide a full list of available metrics below in
+alphabetic order by name.
+
+## Full metric list
+
+@include 'telemetry-metrics/database/close.mdx'
+
+@include 'telemetry-metrics/database/close/error.mdx'
+
+@include 'telemetry-metrics/database/createuser.mdx'
+
+@include 'telemetry-metrics/database/createuser/error.mdx'
+
+@include 'telemetry-metrics/database/initialize.mdx'
+
+@include 'telemetry-metrics/database/initialize/error.mdx'
+
+@include 'telemetry-metrics/database/name/close.mdx'
+
+@include 'telemetry-metrics/database/name/close/error.mdx'
+
+@include 'telemetry-metrics/database/name/createuser.mdx'
+
+@include 'telemetry-metrics/database/name/createuser/error.mdx'
+
+@include 'telemetry-metrics/database/name/initialize.mdx'
+
+@include 'telemetry-metrics/database/name/initialize/error.mdx'
+
+@include 'telemetry-metrics/database/name/renewuser.mdx'
+
+@include 'telemetry-metrics/database/name/renewuser/error.mdx'
+
+@include 'telemetry-metrics/database/name/revokeuser.mdx'
+
+@include 'telemetry-metrics/database/name/revokeuser/error.mdx'
+
+@include 'telemetry-metrics/database/renewuser.mdx'
+
+@include 'telemetry-metrics/database/renewuser/error.mdx'
+
+@include 'telemetry-metrics/database/revokeuser.mdx'
+
+@include 'telemetry-metrics/database/revokeuser/error.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/cert_store_current_entry.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/cert_store_deleted_count.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/cert_store_total_entries_remaining.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/cert_store_total_entries.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/duration.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/failure.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_current_entry.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_deleted_count.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_total_entries_fixed_issuers.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_total_entries_incorrect_issuers.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_total_entries_remaining.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/revoked_cert_total_entries.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/start_time_epoch.mdx'
+
+@include 'telemetry-metrics/secrets/pki/tidy/success.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_request_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_request.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_response_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/device/log_response.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_request_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_request.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_response_failure.mdx'
+
+@include 'telemetry-metrics/vault/audit/log_response.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/failure_tolerance.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/healthy.mdx'
+
+@include 'telemetry-metrics/vault/autopilot/node/healthy.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/last/success/time.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/percent/maxspace/used.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/rotate/duration.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/save/duration.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/save/errors.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/snapshot/size.mdx'
+
+@include 'telemetry-metrics/vault/autosnapshots/total/snapshot/size.mdx'
+
+@include 'telemetry-metrics/vault/azure/delete.mdx'
+
+@include 'telemetry-metrics/vault/azure/get.mdx'
+
+@include 'telemetry-metrics/vault/azure/list.mdx'
+
+@include 'telemetry-metrics/vault/azure/put.mdx'
+
+@include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/get.mdx'
+
+@include 'telemetry-metrics/vault/barrier/list.mdx'
+
+@include 'telemetry-metrics/vault/barrier/put.mdx'
+
+@include 'telemetry-metrics/vault/cache/delete.mdx'
+
+@include 'telemetry-metrics/vault/cache/hit.mdx'
+
+@include 'telemetry-metrics/vault/cache/miss.mdx'
+
+@include 'telemetry-metrics/vault/cache/write.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/delete.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/get.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/list.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/put.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/delete.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/get.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/list.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/put.mdx'
+
+@include 'telemetry-metrics/vault/consul/delete.mdx'
+
+@include 'telemetry-metrics/vault/consul/get.mdx'
+
+@include 'telemetry-metrics/vault/consul/list.mdx'
+
+@include 'telemetry-metrics/vault/consul/put.mdx'
+
+@include 'telemetry-metrics/vault/consul/transaction.mdx'
+
+@include 'telemetry-metrics/vault/core/active.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/fragment_size.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/segment_write.mdx'
+
+@include 'telemetry-metrics/vault/core/check_token.mdx'
+
+@include 'telemetry-metrics/vault/core/fetch_acl_and_token.mdx'
+
+@include 'telemetry-metrics/vault/core/handle_login_request.mdx'
+
+@include 'telemetry-metrics/vault/core/handle_request.mdx'
+
+@include 'telemetry-metrics/vault/core/in_flight_requests.mdx'
+
+@include 'telemetry-metrics/vault/core/leadership_lost.mdx'
+
+@include 'telemetry-metrics/vault/core/leadership_setup_failed.mdx'
+
+@include 'telemetry-metrics/vault/core/license/expiration_time_epoch.mdx'
+
+@include 'telemetry-metrics/vault/core/locked_users.mdx'
+
+@include 'telemetry-metrics/vault/core/mount_table/num_entries.mdx'
+
+@include 'telemetry-metrics/vault/core/mount_table/size.mdx'
+
+@include 'telemetry-metrics/vault/core/performance_standby.mdx'
+
+@include 'telemetry-metrics/vault/core/post_unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/pre_seal.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/dr/primary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/dr/secondary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/performance/primary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/performance/secondary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/write_undo_logs.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_internal.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_with_request.mdx'
+
+@include 'telemetry-metrics/vault/core/step_down.mdx'
+
+@include 'telemetry-metrics/vault/core/unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/unsealed.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/delete.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/get.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/list.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/put.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/delete.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/get.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/list.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/put.mdx'
+
+@include 'telemetry-metrics/vault/etcd/delete.mdx'
+
+@include 'telemetry-metrics/vault/etcd/get.mdx'
+
+@include 'telemetry-metrics/vault/etcd/list.mdx'
+
+@include 'telemetry-metrics/vault/etcd/put.mdx'
+
+@include 'telemetry-metrics/vault/expire/fetch_lease_times_by_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/fetch_lease_times.mdx'
+
+@include 'telemetry-metrics/vault/expire/job_manager/queue_length.mdx'
+
+@include 'telemetry-metrics/vault/expire/job_manager/total_jobs.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration/error.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration/time_in_queue.mdx'
+
+@include 'telemetry-metrics/vault/expire/leases/by_expiration.mdx'
+
+@include 'telemetry-metrics/vault/expire/num_irrevocable_leases.mdx'
+
+@include 'telemetry-metrics/vault/expire/num_leases.mdx'
+
+@include 'telemetry-metrics/vault/expire/register_auth.mdx'
+
+@include 'telemetry-metrics/vault/expire/register.mdx'
+
+@include 'telemetry-metrics/vault/expire/renew_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/renew.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_by_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_force.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_prefix.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke.mdx'
+
+@include 'telemetry-metrics/vault/gcs/delete.mdx'
+
+@include 'telemetry-metrics/vault/gcs/get.mdx'
+
+@include 'telemetry-metrics/vault/gcs/list.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/lock.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/unlock.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/value.mdx'
+
+@include 'telemetry-metrics/vault/gcs/put.mdx'
+
+@include 'telemetry-metrics/vault/ha/rpc/client/echo.mdx'
+
+@include 'telemetry-metrics/vault/ha/rpc/client/echo/errors.mdx'
+
+@include 'telemetry-metrics/vault/ha/rpc/client/forward.mdx'
+
+@include 'telemetry-metrics/vault/ha/rpc/client/forward/errors.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/partial_month.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/alias/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/creation.mdx'
+
+@include 'telemetry-metrics/vault/identity/num_entities.mdx'
+
+@include 'telemetry-metrics/vault/identity/upsert_entity_txn.mdx'
+
+@include 'telemetry-metrics/vault/identity/upsert_group_txn.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/length.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/max_length.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/max_size.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/size.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/guard_found.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/missing_guard.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/scanned_entries.mdx'
+
+@include 'telemetry-metrics/vault/merkle/flushdirty.mdx'
+
+@include 'telemetry-metrics/vault/merkle/flushdirty/num_pages.mdx'
+
+@include 'telemetry-metrics/vault/merkle/flushdirty/outstanding_pages.mdx'
+
+@include 'telemetry-metrics/vault/merkle/savecheckpoint.mdx'
+
+@include 'telemetry-metrics/vault/merkle/savecheckpoint/num_dirty.mdx'
+
+@include 'telemetry-metrics/vault/metrics/collection.mdx'
+
+@include 'telemetry-metrics/vault/metrics/collection/error.mdx'
+
+@include 'telemetry-metrics/vault/metrics/collection/interval.mdx'
+
+@include 'telemetry-metrics/vault/mssql/delete.mdx'
+
+@include 'telemetry-metrics/vault/mssql/get.mdx'
+
+@include 'telemetry-metrics/vault/mssql/list.mdx'
+
+@include 'telemetry-metrics/vault/mssql/put.mdx'
+
+@include 'telemetry-metrics/vault/mysql/delete.mdx'
+
+@include 'telemetry-metrics/vault/mysql/get.mdx'
+
+@include 'telemetry-metrics/vault/mysql/list.mdx'
+
+@include 'telemetry-metrics/vault/mysql/put.mdx'
+
+@include 'telemetry-metrics/vault/policy/delete_policy.mdx'
+
+@include 'telemetry-metrics/vault/policy/get_policy.mdx'
+
+@include 'telemetry-metrics/vault/policy/list_policies.mdx'
+
+@include 'telemetry-metrics/vault/policy/set_policy.mdx'
+
+@include 'telemetry-metrics/vault/postgres/delete.mdx'
+
+@include 'telemetry-metrics/vault/postgres/get.mdx'
+
+@include 'telemetry-metrics/vault/postgres/list.mdx'
+
+@include 'telemetry-metrics/vault/postgres/put.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/counter.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/max.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/violation.mdx'
+
+@include 'telemetry-metrics/vault/quota/rate_limit/violation.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/cursor/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/allocated_bytes.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/free_pages.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/pending_pages.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/freelist/used_bytes.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/node/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/node/dereferences.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/page/bytes_allocated.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/page/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/rebalance/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/rebalance/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/spill/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/spill/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/split/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/transaction/currently_open_read_transactions.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/transaction/started_read_transactions.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/write/count.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/bolt/write/time.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/follower/applied_index_delta.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/follower/last_heartbeat_ms.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/applied_index.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/commit_index.mdx'
+
+@include 'telemetry-metrics/vault/raft_storage/stats/fsm_pending.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/delete.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/entry_size.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/get.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/list.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/put.mdx'
+
+@include 'telemetry-metrics/vault/raft-storage/transaction.mdx'
+
+@include 'telemetry-metrics/vault/raft/apply.mdx'
+
+@include 'telemetry-metrics/vault/raft/barrier.mdx'
+
+@include 'telemetry-metrics/vault/raft/candidate/electself.mdx'
+
+@include 'telemetry-metrics/vault/raft/commitnumlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/committime.mdx'
+
+@include 'telemetry-metrics/vault/raft/compactlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/apply.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/applybatch.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/applybatchnum.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/enqueue.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/restore.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/snapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/fsm/store_config.mdx'
+
+@include 'telemetry-metrics/vault/raft/get.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/dispatchlog.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/dispatchnumlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/leader/lastcontact.mdx'
+
+@include 'telemetry-metrics/vault/raft/list.mdx'
+
+@include 'telemetry-metrics/vault/raft/peers.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/appendentries/log.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/appendentries/rpc.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/heartbeat.mdx'
+
+@include 'telemetry-metrics/vault/raft/replication/installsnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/restore.mdx'
+
+@include 'telemetry-metrics/vault/raft/restoreusersnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries/processlogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/appendentries/storelogs.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/installsnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/processheartbeat.mdx'
+
+@include 'telemetry-metrics/vault/raft/rpc/requestvote.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/create.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/persist.mdx'
+
+@include 'telemetry-metrics/vault/raft/snapshot/takesnapshot.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/candidate.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/follower.mdx'
+
+@include 'telemetry-metrics/vault/raft/state/leader.mdx'
+
+@include 'telemetry-metrics/vault/raft/transition/heartbeat_timeout.mdx'
+
+@include 'telemetry-metrics/vault/raft/transition/leader_lease_timeout.mdx'
+
+@include 'telemetry-metrics/vault/raft/verify_leader.mdx'
+
+@include 'telemetry-metrics/vault/replication/fetchremotekeys.mdx'
+
+@include 'telemetry-metrics/vault/replication/fsm/last_remote_wal.mdx'
+
+@include 'telemetry-metrics/vault/replication/merkle/commit_index.mdx'
+
+@include 'telemetry-metrics/vault/replication/merklediff.mdx'
+
+@include 'telemetry-metrics/vault/replication/merklesync.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/conflicting_pages.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/create_token_register_auth_lease.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/fetch_keys.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/forward.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/guard_hash.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/persist_alias.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/register_auth.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/register_lease.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/save_mfa_response_auth.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/stream_wals.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/sub_page_hashes.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/sync_counter.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/upsert_group.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/client/wrap_in_cubbyhole.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/dr/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/dr/server/fetch_keys_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/auth_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/bootstrap_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/conflicting_pages_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/forwarding_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/guard_hash_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/persist_alias_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/persist_persona_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/save_mfa_response_auth.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/stream_wals_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/sub_page_hashes_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/sync_counter_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/server/upsert_group_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/standby/server/create_token_register_auth_lease_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/standby/server/echo.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/standby/server/register_auth_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/standby/server/register_lease_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/rpc/standby/server/wrap_token_request.mdx'
+
+@include 'telemetry-metrics/vault/replication/wal/gc.mdx'
+
+@include 'telemetry-metrics/vault/replication/wal/last_dr_wal.mdx'
+
+@include 'telemetry-metrics/vault/replication/wal/last_performance_wal.mdx'
+
+@include 'telemetry-metrics/vault/replication/wal/last_wal.mdx'
+
+@include 'telemetry-metrics/vault/rollback/attempt/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/rollback/attempt.mdx'
+
+@include 'telemetry-metrics/vault/rollback/inflight.mdx'
+
+@include 'telemetry-metrics/vault/rollback/queued.mdx'
+
+@include 'telemetry-metrics/vault/rollback/waiting.mdx'
+
+@include 'telemetry-metrics/vault/route/create/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/delete/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/list/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/read/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/rollback/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/rollback.mdx'
+
+@include 'telemetry-metrics/vault/runtime/alloc_bytes.mdx'
+
+@include 'telemetry-metrics/vault/runtime/free_count.mdx'
+
+@include 'telemetry-metrics/vault/runtime/gc_pause_ns.mdx'
+
+@include 'telemetry-metrics/vault/runtime/heap_objects.mdx'
+
+@include 'telemetry-metrics/vault/runtime/malloc_count.mdx'
+
+@include 'telemetry-metrics/vault/runtime/num_goroutines.mdx'
+
+@include 'telemetry-metrics/vault/runtime/sys_bytes.mdx'
+
+@include 'telemetry-metrics/vault/runtime/total_gc_pause_ns.mdx'
+
+@include 'telemetry-metrics/vault/runtime/total_gc_runs.mdx'
+
+@include 'telemetry-metrics/vault/s3/delete.mdx'
+
+@include 'telemetry-metrics/vault/s3/get.mdx'
+
+@include 'telemetry-metrics/vault/s3/list.mdx'
+
+@include 'telemetry-metrics/vault/s3/put.mdx'
+
+@include 'telemetry-metrics/vault/secret/kv/count.mdx'
+
+@include 'telemetry-metrics/vault/secret/lease/creation.mdx'
+
+@include 'telemetry-metrics/vault/spanner/delete.mdx'
+
+@include 'telemetry-metrics/vault/spanner/get.mdx'
+
+@include 'telemetry-metrics/vault/spanner/list.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/lock.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/unlock.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/value.mdx'
+
+@include 'telemetry-metrics/vault/spanner/put.mdx'
+
+@include 'telemetry-metrics/vault/swift/delete.mdx'
+
+@include 'telemetry-metrics/vault/swift/get.mdx'
+
+@include 'telemetry-metrics/vault/swift/list.mdx'
+
+@include 'telemetry-metrics/vault/swift/put.mdx'
+
+@include 'telemetry-metrics/vault/token/count.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_auth.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_policy.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_ttl.mdx'
+
+@include 'telemetry-metrics/vault/token/create_root.mdx'
+
+@include 'telemetry-metrics/vault/token/create.mdx'
+
+@include 'telemetry-metrics/vault/token/createaccessor.mdx'
+
+@include 'telemetry-metrics/vault/token/creation.mdx'
+
+@include 'telemetry-metrics/vault/token/lookup.mdx'
+
+@include 'telemetry-metrics/vault/token/revoke_tree.mdx'
+
+@include 'telemetry-metrics/vault/token/revoke.mdx'
+
+@include 'telemetry-metrics/vault/token/store.mdx'
+
+@include 'telemetry-metrics/vault/wal/deletewals.mdx'
+
+@include 'telemetry-metrics/vault/wal/flushready.mdx'
+
+@include 'telemetry-metrics/vault/wal/flushready/queue_len.mdx'
+
+@include 'telemetry-metrics/vault/wal/gc/deleted.mdx'
+
+@include 'telemetry-metrics/vault/wal/gc/total.mdx'
+
+@include 'telemetry-metrics/vault/wal/loadwal.mdx'
+
+@include 'telemetry-metrics/vault/wal/persistwals.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/delete.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/get.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/list.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/put.mdx'

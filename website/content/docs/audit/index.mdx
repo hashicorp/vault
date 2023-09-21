@@ -4,14 +4,39 @@ page_title: Audit Devices
 description: Audit devices are mountable devices that log requests and responses in Vault.
 ---
 
-# Audit Devices
+# Audit devices
 
 Audit devices are the components in Vault that collectively keep a detailed log of all
-requests and response to Vault. Because every operation with Vault is an API
-request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
-Vault, including errors.
+requests to Vault, and their responses. Because every operation with Vault is an API
+request/response, when using a single audit device, the audit log contains _every_ interaction with
+the Vault API, including errors - except for a few paths which do not go via the audit system.
 
-## Enabling Multiple Devices
+The non-audited paths are:
+
+    sys/init
+    sys/seal-status
+    sys/seal
+    sys/step-down
+    sys/unseal
+    sys/leader
+    sys/health
+    sys/rekey/init
+    sys/rekey/update
+    sys/rekey/verify
+    sys/rekey-recovery-key/init
+    sys/rekey-recovery-key/update
+    sys/rekey-recovery-key/verify
+    sys/storage/raft/bootstrap
+    sys/storage/raft/join
+    sys/internal/ui/feature-flags
+
+and also, if the relevant listener configuration settings allow unauthenticated access:
+
+    sys/metrics
+    sys/pprof/*
+    sys/in-flight-req
+
+## Enabling multiple devices
 
 When multiple audit devices are enabled, Vault will attempt to send the audit
 logs to all of them. This allows you to not only have redundant copies, but also
@@ -19,7 +44,7 @@ a way to check for data tampering in the logs themselves.
 
 Vault considers a request to be successful if it can log to *at least* one
 configured audit device (see: [Blocked Audit
-Devices](/docs/audit#blocked-audit-devices) section below).  Therefore in order
+Devices](/vault/docs/audit#blocked-audit-devices) section below).  Therefore in order
 to build a complete picture of all audited actions, use the aggregate/union of
 the logs from each audit device.
 
@@ -36,7 +61,7 @@ The line contains all of the information for any given request and response. By
 default, all the sensitive information is first hashed before logging in the
 audit logs.
 
-## Sensitive Information
+## Sensitive information
 
 The audit logs contain the full request and response objects for every
 interaction with Vault. The request and response can be matched utilizing a
@@ -49,17 +74,17 @@ HMAC'd. Other data types, like integers, booleans, and so on, are passed
 through in plaintext. We recommend that all sensitive data be provided as string values
 inside all JSON sent to Vault (i.e., that integer values are provided in quotes).
 
-While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](/docs/commands/secrets/enable) command, and then tune it afterward.
+While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](/vault/docs/commands/secrets/enable) command, and then tune it afterward.
 
 **see also**:
 
-[secrets tune](/docs/commands/secrets/tune)
+[secrets tune](/vault/docs/commands/secrets/tune)
 
-[auth enable](/docs/commands/auth/enable)
+[auth enable](/vault/docs/commands/auth/enable)
 
-[auth tune](/docs/commands/auth/tune)
+[auth tune](/vault/docs/commands/auth/tune)
 
-## Enabling/Disabling Audit Devices
+## Enabling/Disabling audit devices
 
 When a Vault server is first initialized, no auditing is enabled. Audit
 devices must be enabled by a root user using `vault audit enable`.
@@ -80,12 +105,16 @@ cluster by default, and to performance/DR secondaries for Vault Enterprise clust
 Before enabling an audit device, ensure that all nodes within the cluster(s)
 will be able to successfully log to the audit device to avoid Vault being
 blocked from serving requests.
-An audit device can be limited to only within the node's cluster with the [`local`](/api-docs/system/audit#local) parameter.
+An audit device can be limited to only within the node's cluster with the [`local`](/vault/api-docs/system/audit#local) parameter.
 
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
 
-## Blocked Audit Devices
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
+
+## Blocked audit devices
 
 Audit device logs are critically important and ignoring auditing failures opens an avenue for attack. Vault will not respond to requests when no enabled audit devices can record them.
 
@@ -99,9 +128,75 @@ In other words, Vault will not complete any requests until the blocked audit dev
 
 ## Tutorial
 
-Refer to [Blocked Audit Devices](https://learn.hashicorp.com/tutorials/vault/blocked-audit-devices) for a step-by-step tutorial.
+Refer to [Blocked Audit Devices](/vault/tutorials/monitoring/blocked-audit-devices) for a step-by-step tutorial.
 
 ## API
 
 Audit devices also have a full HTTP API. Please see the [Audit device API
-docs](/api-docs/system/audit) for more details.
+docs](/vault/api-docs/system/audit) for more details.
+
+## Common configuration options
+
+- `elide_list_responses` `(bool: false)` - See [Eliding list response
+  bodies](/vault/docs/audit#eliding-list-response-bodies) below.
+
+- `format` `(string: "json")` - Allows selecting the output format. Valid values
+  are `"json"` and `"jsonx"`, which formats the normal log entries as XML.
+
+- `hmac_accessor` `(bool: true)` - If enabled, enables the hashing of token
+  accessor.
+
+- `log_raw` `(bool: false)` - If enabled, logs the security sensitive
+  information without hashing, in the raw format.
+
+- `prefix` `(string: "")` - A customizable string prefix to write before the
+  actual log line.
+
+## Eliding list response bodies
+
+Some Vault responses can be very large. Primarily, this affects list operations -
+as Vault lacks pagination in its APIs, listing a very large collection can result
+in a response that is tens of megabytes long. Some audit backends are unable to
+process individual audit records of larger sizes.
+
+The contents of the response for a list operation is often not very interesting;
+most contain only a "keys" field, containing a list of IDs. Select API endpoints
+additionally return a "key_info" field, a map from ID to some additional
+information about the list entry - `identity/entity/id/` is an example of this.
+Even in this case, the response to a list operation is usually less-confidential
+or public information, for which having the full response in the audit logs is of
+lesser importance.
+
+The `elide_list_responses` audit option provides the flexibility to not write the
+full list response data from the audit log, to mitigate the creation of very long
+individual audit records.
+
+When enabled, it affects only audit records of `type=response` and
+`request.operation=list`. The values of `response.data.keys` and
+`response.data.key_info` will be replaced with a simple integer, recording how
+many entries were contained in the list (`keys`) or map (`key_info`) - therefore
+even with this feature enabled, it is still possible to see how many items were
+returned by a list operation.
+
+This extra processing only affects the response data fields `keys` and `key_info`,
+and only when they have the expected data types - in the event a list response
+contains data outside of the usual conventions that apply to Vault list responses,
+it will be left as is by this feature.
+
+Here is an example of an audit record that has been processed by this feature
+(formatted with extra whitespace, and with fields not relevant to the example
+omitted):
+```json
+{
+  "type": "response",
+  "request": {
+    "operation": "list"
+  },
+  "response": {
+    "data": {
+      "key_info": 4,
+      "keys": 4
+    }
+  }
+}
+```

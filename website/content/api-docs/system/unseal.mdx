@@ -8,7 +8,7 @@ description: The `/sys/unseal` endpoint is used to unseal the Vault.
 
 The `/sys/unseal` endpoint is used to unseal the Vault.
 
-## Submit Unseal Key
+## Submit unseal key
 
 This endpoint is used to enter a single root key share to progress the
 unsealing of the Vault. If the threshold number of root key shares is reached,
@@ -34,7 +34,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
   from shamir to autoseal or autoseal to shamir. Must be provided on all unseal
   key calls.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -42,7 +42,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -51,7 +51,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/unseal
 ```
 
-### Sample Response
+### Sample response
 
 The "t" parameter is the threshold, and "n" is the number of shares.
 
