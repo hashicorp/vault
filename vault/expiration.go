@@ -1854,6 +1854,18 @@ func (m *ExpirationManager) sendEvent(eventType logical.EventType, le *leaseEntr
 		"client_token_type": le.ClientTokenType.String(),
 		"namespace":         ns.Path,
 	}
+	if le.RevokeErr != "" {
+		structMap["revoke_err"] = le.RevokeErr
+	}
+	if !le.IssueTime.IsZero() {
+		structMap["issue_time"] = le.IssueTime.Format(time.RFC3339)
+	}
+	if !le.ExpireTime.IsZero() {
+		structMap["expire_time"] = le.ExpireTime.Format(time.RFC3339)
+	}
+	if !le.LastRenewalTime.IsZero() {
+		structMap["last_renewal_time"] = le.LastRenewalTime.Format(time.RFC3339)
+	}
 	if le.Auth != nil {
 		data.EntityIds = append(data.EntityIds, le.Auth.EntityID)
 		structMap["token_entity_id"] = le.Auth.EntityID
