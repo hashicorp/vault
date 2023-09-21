@@ -15,3 +15,9 @@ export const SELECTORS = {
   revocationTime: '[data-test-row-value="Revocation time"]',
   serialNumber: '[data-test-row-value="Serial number"]',
 };
+
+export const STANDARD_META = {
+  total: 2,
+  currentPage: 1,
+  pageSize: 100,
+};

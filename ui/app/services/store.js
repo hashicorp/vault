@@ -77,9 +77,12 @@ export default Store.extend({
   //   pageFilter: a string that will be used to do a fuzzy match against the
   //     results, this is done pre-pagination
   lazyPaginatedQuery(modelType, query /*, options*/) {
+    const skipCache = query.skipCache;
+    // We don't want skipCache to be part of the actual query key, so remove it
+    delete query.skipCache;
     const adapter = this.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
-    const dataCache = this.getDataset(modelName, query);
+    const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');

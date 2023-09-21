@@ -8,6 +8,8 @@ import { getOwner } from '@ember/application';
 import { action } from '@ember/object';
 
 export default class PkiCertificatesIndexController extends Controller {
+  queryParams = ['page'];
+
   get mountPoint() {
     return getOwner(this).mountPoint;
   }
