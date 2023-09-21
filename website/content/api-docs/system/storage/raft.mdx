@@ -9,6 +9,13 @@ description: |-
 
 # `/sys/storage/raft`
 
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/storage/raft` endpoints are used to manage Vault's Raft storage
+backend.
+
+## Join a raft cluster
+
 This endpoint joins a new server node to the Raft cluster. When using Shamir
 seal, as soon as the Vault server is brought up, this API should be invoked
 instead of `sys/init`. This API completes in 2 phases. Once this is invoked,
