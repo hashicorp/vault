@@ -869,7 +869,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
@@ -5027,7 +5027,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
+		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
 			b := SealBackendStatus{
 				Name:    sealWrapper.Name,
 				Healthy: sealWrapper.IsHealthy(),

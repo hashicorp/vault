@@ -6122,17 +6122,19 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	// List the plugin runtimes (untyped or all)
-	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	listExp := map[string]interface{}{
-		"runtimes": []map[string]any{readExp},
-	}
-	if !reflect.DeepEqual(resp.Data, listExp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
 	}
 
 	// Delete the plugin runtime
@@ -6156,8 +6158,8 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	// Read the plugin runtime (deleted)
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatal("expected a read error after the runtime was deleted")
+	if err != nil {
+		t.Fatal("expected a 404")
 	}
 	if resp != nil {
 		t.Fatalf("bad: %#v", resp)
@@ -6170,7 +6172,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	listExp = map[string]interface{}{}
+	listExp := map[string]interface{}{}
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}
@@ -6270,6 +6272,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 				Wrapper:        aeadwrapper.NewShamirWrapper(),
 				SealConfigType: wrapping.WrapperTypeShamir.String(),
 				Priority:       1,
+				Configured:     true,
 			},
 		},
 	))
