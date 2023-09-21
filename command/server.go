@@ -931,6 +931,10 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
+		if lnConfig.ChrootNamespace != "" {
+			props["chroot_namespace"] = lnConfig.ChrootNamespace
+		}
+
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
 			Config:   lnConfig,
