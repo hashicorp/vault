@@ -96,7 +96,7 @@ func TestMultiSealCases(t *testing.T) {
 				},
 			},
 			isErrorExpected:   true,
-			expectedErrorMsg:  "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single configured seal",
+			expectedErrorMsg:  "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 			sealHaBetaEnabled: true,
 		},
 		// none_to_multi_with_disabled_seals_with_beta
@@ -836,7 +836,7 @@ func TestMultiSealCases(t *testing.T) {
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
 			isErrorExpected:          true,
-			expectedErrorMsg:         "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single configured seal",
+			expectedErrorMsg:         "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 		},
 		// have partially wrapped paths
 		{
