@@ -4,7 +4,7 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if @hasConfig}}
+{{#if this.hasConfig}}
   {{#if @list.meta.total}}
     {{yield to="description"}}
     {{yield @list to="list"}}

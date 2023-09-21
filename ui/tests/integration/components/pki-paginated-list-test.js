@@ -133,8 +133,12 @@ module('Integration | Component | pki-paginated-list', function (hooks) {
     `,
       { owner: this.engine }
     );
-    assert.dom('[data-test-button]').hasText('Action', 'Renders actions in toolbar when list and config');
-    assert.dom(this.element).hasText('Description goes here', 'renders description when list and config');
+    assert
+      .dom('[data-test-button]')
+      .includesText('Action', 'Renders actions in toolbar when list and config');
+    assert
+      .dom(this.element)
+      .includesText('Description goes here', 'renders description when list and config');
     assert.dom('[data-test-pagination]').exists('shows pagination when list and config');
 
     this.set('model', this.emptyList);
