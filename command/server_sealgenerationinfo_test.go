@@ -116,23 +116,8 @@ func TestMultiSealCases(t *testing.T) {
 					Disabled: true,
 				},
 			},
-			expectedSealGenInfo: &seal.SealGenerationInfo{
-				Generation: 1,
-				Seals: []*configutil.KMS{
-					{
-						Type:     "pkcs11",
-						Name:     "autoSeal1",
-						Priority: 1,
-					},
-					{
-						Type:     "pkcs11",
-						Name:     "autoSeal2",
-						Priority: 2,
-						Disabled: true,
-					},
-				},
-			},
-			isErrorExpected:   false,
+			isErrorExpected:   true,
+			expectedErrorMsg:  "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 			sealHaBetaEnabled: true,
 		},
 		// none_to_multi_with_disabled_seals_no_beta
@@ -793,6 +778,7 @@ func TestMultiSealCases(t *testing.T) {
 			isErrorExpected:          false,
 		},
 		// migrate from non-beta single seal to multi seal, with one disabled, so perform an old style migration
+		// we do not support this use-case at this time so trap the error
 		{
 			name:                "none_to_multiple_seals_one_disabled",
 			existingSealGenInfo: nil,
@@ -812,7 +798,8 @@ func TestMultiSealCases(t *testing.T) {
 			},
 			isRewrapped:              true,
 			hasPartiallyWrappedPaths: false,
-			isErrorExpected:          false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 		},
 		// migrate from non-beta single seal to multi seal
 		{

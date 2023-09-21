@@ -63,20 +63,12 @@ type SealGenerationInfo struct {
 func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
 	numConfiguredSeals := len(sgi.Seals)
-
-	numConfiguredEnabledSeals := 0
-	for _, seal := range sgi.Seals {
-		if !seal.Disabled {
-			numConfiguredEnabledSeals++
-		}
-	}
-
 	configuredSealNameAndType := sealNameAndTypeAsStr(sgi.Seals)
 
 	// If no previous generation info exists, make sure we perform the initial migration/setup
 	// check for enabled configured seals to allow an old style seal migration configuration
 	if existingSgi == nil {
-		if numConfiguredEnabledSeals > 1 {
+		if numConfiguredSeals > 1 {
 			return fmt.Errorf("Initializing a cluster or enabling multi-seal on an existing "+
 				"cluster must occur with a single seal before adding additional seals\n"+
 				"Configured seals: %v", configuredSealNameAndType)
