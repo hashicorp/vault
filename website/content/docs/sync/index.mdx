@@ -5,3 +5,25 @@ description: Secrets sync allows you to safely sync Vault-managed secrets with e
 ---
 
 # Secrets Sync
+
+Secrets sync enables users to manage their secrets with Vault while syncing a subset of them into
+external secret store destinations.
+
+## Destinations
+
+Secrets can be synced into various external stores, called destinations. Destinations are configured
+separately for each type of external system is being used.
+
+## Assocations
+
+The secrets you choose to sync to a given destination is done so by using associations. Once a destination
+has been configured, you can assign secret associations to the destination by providing it with a secret's
+mount and name.
+
+
+## Sync Statuses
+
+There are several types of sync statuses which relay information about the outcome of the last sync
+operation to have occurred on that secret. 
+
+SYNCED...

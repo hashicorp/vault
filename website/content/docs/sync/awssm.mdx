@@ -7,19 +7,46 @@ description: The AWS Secrets Manager destination syncs secrets from Vault to AWS
 # AWS Secrets Manager
 
 The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
-an external AWS account. When configured, Vault will manage the selected secrets by storing them
-in Secrets Manager for use with AWS systems, update their values when changed, and remove them when
-the secret gets deleted from Vault. 
+an external AWS account. When configured, Vault will actively maintain the state of each externally-synced
+secret in realtime. This includes sending new secrets, updating existing secret values, and removing
+secrets when they either get dissocaited from the destination or deleted from Vault.  
 
 ## Setup
 
-The use of this sync destination requires some prerequesite setup before beginning. Either an IAM User
-or an IAM role must be configured in AWS for which access credentials will be generated. Those creds
-are what the sync destination requires to be configured in Vault.
+The use of this sync destination requires prerequesite setup before beginning to configure it. Either an IAM
+User or an IAM role must be set with the necessary policies in order for Vault to manage secrets in the
+external destination. It is this IAM User or IAM Role in AWS for which access credentials will be generated,
+then provided to Vault during configuration.
+
+The following is an example policy outlining the required permissions to use secrets syncing:
+```
+{
+	"Version": "2012-10-17",
+	"Statement": [
+	{
+		"Effect": "Allow",
+		"Action": [
+			"secretsmanager:Create*",
+			"secretsmanager:Put*",
+			"secretsmanager:Update*",
+			"secretsmanager:Delete*",
+			"secretsmanager:TagResource",
+			"secretsmanager:UntagResource"
+		],
+		"Resource": "*"
+	}
+	]
+}
+```
+
+## Usage
+
+When AWS credentials have been obtained, Vault can be configured to create an AWS destination, then
+begin to associate your secrets with this destination.
 
 1. Store any KV secret into Vault, like so:
 	```shell-session
-	vault kv put secret/foo mypass=bar
+	$ vault kv put secret/foo mypass=bar
 	```
 	Output:
 	```
@@ -36,10 +63,10 @@ are what the sync destination requires to be configured in Vault.
 	version            1
 	```
 
-1.	Configure the sync destination with credentials to use for access to your AWS account:
+1.	Configure the sync destination:
 
 	```shell-session
-	vault write sys/sync/destinations/aws-sm/my-awssm-1 \
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
 	access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
 	secret_access_key='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' \
 	region='us-east-1'
@@ -55,7 +82,7 @@ are what the sync destination requires to be configured in Vault.
 
 1.	Set a secret to be associated with the configured secret destination:
 	```shell-session
-	vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
 	mount='secret' \
 	secret_name='foo'
 	```
@@ -68,3 +95,10 @@ are what the sync destination requires to be configured in Vault.
 	store_type            aws-sm
 	```
 
+## Troubleshooting
+
+...
+
+## API
+
+The AWS Secrets Manager destination has a full HTTP API. Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
