@@ -24,13 +24,13 @@ require (
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.8
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.5.2-0.20230921152805-8dceed2a7fe4
+	github.com/hashicorp/go-plugin v1.5.2-0.20230921162425-bf6a95ecd63d
 	github.com/hashicorp/go-retryablehttp v0.7.1
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.1-0.20230921145658-d80b0397dd8c
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.1-0.20230921160737-687937f5c1d1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.2
 	github.com/hashicorp/go-sockaddr v1.0.2
