@@ -186,7 +186,7 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	// If we don't have a token, check the token helper
 	if token == "" {
-		helper, err := c.TokenHelper()
+		helper, err := c.TokenHelper(client.Address())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get token helper")
 		}
@@ -217,12 +217,12 @@ func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
 }
 
 // TokenHelper returns the token helper attached to the command.
-func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
+func (c *BaseCommand) TokenHelper(vaultAddr string) (token.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
 
-	helper, err := DefaultTokenHelper()
+	helper, err := DefaultTokenHelper(vaultAddr)
 	if err != nil {
 		return nil, err
 	}

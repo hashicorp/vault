@@ -21,8 +21,8 @@ import (
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
 // This helper should only be used for non-server CLI commands.
-func DefaultTokenHelper() (token.TokenHelper, error) {
-	return config.DefaultTokenHelper()
+func DefaultTokenHelper(vaultAddr string) (token.TokenHelper, error) {
+	return config.DefaultTokenHelper(vaultAddr)
 }
 
 // RawField extracts the raw field from the given data and returns it as a

@@ -28,7 +28,7 @@ func (p *Predict) Client() *api.Client {
 			client, _ := api.NewClient(nil)
 
 			if client.Token() == "" {
-				helper, err := DefaultTokenHelper()
+				helper, err := DefaultTokenHelper(client.Address())
 				if err != nil {
 					return
 				}

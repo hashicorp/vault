@@ -9,7 +9,7 @@ import (
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
 // This helper should only be used for non-server CLI commands.
-func DefaultTokenHelper() (token.TokenHelper, error) {
+func DefaultTokenHelper(vaultAddr string) (token.TokenHelper, error) {
 	config, err := LoadConfig("")
 	if err != nil {
 		return nil, err
@@ -24,5 +24,12 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &token.ExternalTokenHelper{BinaryPath: path}, nil
+
+	// If the user specifed the address to connect to on the command line instead
+	// of through an environment variable, we propagate the address to the token
+	// helper through an environment variable. Otherwise the token helper may
+	// read VAULT_ADDR and assume a different address than the one we are using.
+	env := []string{"VAULT_ADDR=" + vaultAddr}
+
+	return &token.ExternalTokenHelper{BinaryPath: path, Env: env}, nil
 }
