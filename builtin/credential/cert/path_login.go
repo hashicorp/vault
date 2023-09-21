@@ -163,7 +163,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		DisplayName: matched.Entry.DisplayName,
 		Metadata:    metadata,
 		Alias: &logical.Alias{
-			Name: clientCerts[0].Subject.CommonName,
+			Name: config.CertAlias,
 		},
 	}
 

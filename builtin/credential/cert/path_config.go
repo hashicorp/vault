@@ -7,11 +7,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const maxCacheSize = 100000
+const (
+	maxCacheSize                    = 100000
+	identityAliasCommonName         = "CommonName"
+	identityAliasOrganizationalUnit = "OrganizationalUnit"
+)
 
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
@@ -36,6 +41,11 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeInt,
 				Default:     100,
 				Description: `The size of the in memory OCSP response cache, shared by all configured certs`,
+			},
+			"cert_alias": {
+				Type:        framework.TypeString,
+				Default:     "CommonName",
+				Description: fmt.Sprintf("The auth cert auth entity alias to use. Valid values are %q, and %q. Defaults to %q", identityAliasCommonName, identityAliasOrganizationalUnit, identityAliasCommonName),
 			},
 		},
 
@@ -75,6 +85,14 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		}
 		config.OcspCacheSize = cacheSize
 	}
+	if certAliasRaw, ok := data.GetOk("cert_alias"); ok {
+		certAlias := certAliasRaw.(string)
+		allowedCertAliasValues := []string{identityAliasCommonName, identityAliasOrganizationalUnit}
+		if !strutil.StrListContains(allowedCertAliasValues, certAlias) {
+			return logical.ErrorResponse(fmt.Sprintf("cert_alias of %q not in set of allowed values: %v", certAlias, allowedCertAliasValues)), nil
+		}
+		config.CertAlias = certAlias
+	}
 	if err := b.storeConfig(ctx, req.Storage, config); err != nil {
 		return nil, err
 	}
@@ -91,6 +109,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		"disable_binding":                cfg.DisableBinding,
 		"enable_identity_alias_metadata": cfg.EnableIdentityAliasMetadata,
 		"ocsp_cache_size":                cfg.OcspCacheSize,
+		"cert_alias":                     cfg.CertAlias,
 	}
 
 	return &logical.Response{
@@ -111,12 +130,18 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 		if err := entry.DecodeJSON(&result); err != nil {
 			return nil, fmt.Errorf("error reading configuration: %w", err)
 		}
+
+		if result.CertAlias == "" {
+			result.CertAlias = identityAliasCommonName
+		}
 	}
+
 	return &result, nil
 }
 
 type config struct {
-	DisableBinding              bool `json:"disable_binding"`
-	EnableIdentityAliasMetadata bool `json:"enable_identity_alias_metadata"`
-	OcspCacheSize               int  `json:"ocsp_cache_size"`
+	DisableBinding              bool   `json:"disable_binding"`
+	EnableIdentityAliasMetadata bool   `json:"enable_identity_alias_metadata"`
+	OcspCacheSize               int    `json:"ocsp_cache_size"`
+	CertAlias                   string `json:"cert_alias"`
 }
