@@ -62,32 +62,53 @@ type SealGenerationInfo struct {
 // Validate is used to sanity check the seal generation info being created
 func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
-	previousShamirConfigured := false
-	existingSealNameAndType := "[]"
+	numConfiguredSeals := len(sgi.Seals)
+
+	numConfiguredEnabledSeals := 0
+	for _, seal := range sgi.Seals {
+		if !seal.Disabled {
+			numConfiguredEnabledSeals++
+		}
+	}
+
 	configuredSealNameAndType := sealNameAndTypeAsStr(sgi.Seals)
 
-	if existingSgi != nil {
-		existingSealNameAndType = sealNameAndTypeAsStr(existingSgi.Seals)
-		if sgi.Generation == existingSgi.Generation {
-			if !haveMatchingSeals(sgi.Seals, existingSgi.Seals) {
-				return fmt.Errorf("existing seal generation is the same, but the configured seals are different\n"+
-					"Existing seals: %v\n"+
-					"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
-			}
-			return nil
+	// If no previous generation info exists, make sure we perform the initial migration/setup
+	// check for enabled configured seals to allow an old style seal migration configuration
+	if existingSgi == nil {
+		if numConfiguredEnabledSeals > 1 {
+			return fmt.Errorf("Initializing a cluster or enabling multi-seal on an existing "+
+				"cluster must occur with a single seal before adding additional seals\n"+
+				"Configured seals: %v", configuredSealNameAndType)
 		}
 
-		existingSealsLen = len(existingSgi.Seals)
-		for _, sealKmsConfig := range existingSgi.Seals {
-			if sealKmsConfig.Type == wrapping.WrapperTypeShamir.String() {
-				previousShamirConfigured = true
-				break
-			}
-		}
+		// No point in comparing anything more as we don't have any information around the
+		// existing seal if any actually existed
+		return nil
+	}
 
-		if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
-			return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
+	existingSealNameAndType := sealNameAndTypeAsStr(existingSgi.Seals)
+	previousShamirConfigured := false
+
+	if sgi.Generation == existingSgi.Generation {
+		if !haveMatchingSeals(sgi.Seals, existingSgi.Seals) {
+			return fmt.Errorf("existing seal generation is the same, but the configured seals are different\n"+
+				"Existing seals: %v\n"+
+				"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 		}
+		return nil
+	}
+
+	existingSealsLen = len(existingSgi.Seals)
+	for _, sealKmsConfig := range existingSgi.Seals {
+		if sealKmsConfig.Type == wrapping.WrapperTypeShamir.String() {
+			previousShamirConfigured = true
+			break
+		}
+	}
+
+	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 
 	numSealsToAdd := 0
@@ -97,12 +118,12 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 	// be set disabled, so, the number of seals to add is always going to be the length
 	// of new seal configs.
 	if previousShamirConfigured {
-		numSealsToAdd = len(sgi.Seals)
+		numSealsToAdd = numConfiguredSeals
 	} else {
-		numSealsToAdd = len(sgi.Seals) - existingSealsLen
+		numSealsToAdd = numConfiguredSeals - existingSealsLen
 	}
 
-	numSealsToDelete := existingSealsLen - len(sgi.Seals)
+	numSealsToDelete := existingSealsLen - numConfiguredSeals
 	switch {
 	case numSealsToAdd > 1:
 		return fmt.Errorf("cannot add more than one seal\n"+
