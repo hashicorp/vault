@@ -7,9 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -789,31 +787,18 @@ log_level = "trace"
 	require.Equal(t, "HIT", cacheValue)
 
 	// Lastly, we check to make sure the actual data we received is
-	// as we expect. It's a little more awkward because of raw requests,
-	// but we make do.
-	resp1Map := map[string]interface{}{}
-	body, err := io.ReadAll(resp1.Body)
+	// as we expect. We must use ParseSecret due to the raw requests.
+	secret1, err := api.ParseSecret(resp1.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = json.Unmarshal(body, &resp1Map)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp1MapData := resp1Map["data"]
-	require.Equal(t, secretData, resp1MapData)
+	require.Equal(t, secretData, secret1.Data)
 
-	resp2Map := map[string]interface{}{}
-	body, err = io.ReadAll(resp2.Body)
+	secret2, err := api.ParseSecret(resp2.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = json.Unmarshal(body, &resp2Map)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp2MapData := resp2Map["data"]
-	require.Equal(t, resp1MapData, resp2MapData)
+	require.Equal(t, secret1.Data, secret2.Data)
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
@@ -938,43 +923,24 @@ log_level = "trace"
 	require.Equal(t, "HIT", cacheValue)
 
 	// Lastly, we check to make sure the actual data we received is
-	// as we expect. It's a little more awkward because of raw requests,
-	// but we make do.
-	resp1Map := map[string]interface{}{}
-	body, err := io.ReadAll(resp1.Body)
+	// as we expect. We must use ParseSecret due to the raw requests.
+	secret1, err := api.ParseSecret(resp1.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = json.Unmarshal(body, &resp1Map)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp1MapData := resp1Map["data"]
-	require.Equal(t, secretData, resp1MapData)
+	require.Equal(t, secretData, secret1.Data)
 
-	resp2Map := map[string]interface{}{}
-	body, err = io.ReadAll(resp2.Body)
+	secret2, err := api.ParseSecret(resp2.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = json.Unmarshal(body, &resp2Map)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp2MapData := resp2Map["data"]
-	require.Equal(t, secretData2, resp2MapData)
+	require.Equal(t, secretData2, secret2.Data)
 
-	resp3Map := map[string]interface{}{}
-	body, err = io.ReadAll(resp3.Body)
+	secret3, err := api.ParseSecret(resp3.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = json.Unmarshal(body, &resp3Map)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp3MapData := resp2Map["data"]
-	require.Equal(t, secretData2, resp3MapData)
+	require.Equal(t, secret2.Data, secret3.Data)
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
