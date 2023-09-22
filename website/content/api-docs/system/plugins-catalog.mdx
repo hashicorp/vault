@@ -70,19 +70,22 @@ $ curl \
             },
             ...
             {
-                "builtin": true,
-                "deprecation_status": "supported",
-                "name": "aws",
+                "builtin": false,
+                "name": "example-plugin",
                 "type": "secret",
-                "version": "v1.12.0+builtin.vault"
+                "oci_image": "example-secret-plugin-oci-image",
+                "runtime": "example-runtime",
+                "version": "v1.0.0"
             },
+            ...
         ],
         "secret": [
             "ad",
             "aws",
             "azure",
             "gcp",
-            "transit"
+            "transit",
+            "example-plugin",
         ]
     }
 }
@@ -182,7 +185,7 @@ supplied name.
 ```json
 {
   "sha256": "d150b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961a9",
-  "oci_image": "mysql-database-plugin-oci-image",
+  "oci_image": "example-secret-plugin-oci-image",
   "runtime": "example-runtime"
 }
 ```
@@ -236,8 +239,8 @@ $ curl \
     "args": [],
     "builtin": false,
     "runtime": "example-runtime",
-    "oci_image": "mysql-database-plugin-oci-image",
-    "command": "/mysql-database-plugin",
+    "oci_image": "example-secret-plugin-oci-image",
+    "command": "/example-secret-plugin",
     "name": "example-plugin",
     "sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek=",
     "version": "v1.0.0"
