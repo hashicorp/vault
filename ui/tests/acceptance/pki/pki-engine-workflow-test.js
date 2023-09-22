@@ -380,7 +380,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.issuersTab);
       assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');
-      assert.dom('[data-test-common-name="0"]').exists({ count: 1 }, 'displays cert common name tag');
+      assert.dom('[data-test-common-name="0"]').doesNotExist('does not display cert common name tag');
     });
 
     test('details view renders correct number of info items', async function (assert) {

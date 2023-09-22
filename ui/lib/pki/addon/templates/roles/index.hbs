@@ -9,17 +9,16 @@
   @isEngine={{true}}
 />
 
-{{#if this.model.hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
+<PkiPaginatedList @listRoute="roles.index" @list={{this.model.roles}} @hasConfig={{this.model.hasConfig}}>
+  <:actions>
+    {{#if this.model.hasConfig}}
       <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
         Create role
       </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-
-  {{#if this.model.roles.length}}
-    {{#each this.model.roles as |pkiRole|}}
+    {{/if}}
+  </:actions>
+  <:list as |roles|>
+    {{#each roles as |pkiRole|}}
       <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
         <div class="level is-mobile">
           <div class="level-left">
@@ -53,7 +52,8 @@
         </div>
       </LinkedBlock>
     {{/each}}
-  {{else}}
+  </:list>
+  <:empty>
     <EmptyState @title="No roles yet">
       <div>
         <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
@@ -64,12 +64,12 @@
         </div>
       </div>
     </EmptyState>
-  {{/if}}
-{{else}}
-  <Toolbar />
-  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
-{{/if}}
+  </:empty>
+  <:configure>
+    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+      <LinkTo @route="configuration.create">
+        Configure PKI
+      </LinkTo>
+    </EmptyState>
+  </:configure>
+</PkiPaginatedList>

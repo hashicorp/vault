@@ -1,5 +1,5 @@
 {{#if @model.serialNumber}}
-  <Page::PkiCertificateDetails @model={{@model}} @onRevoke={{this.cancel}} @onBack={{this.cancel}} />
+  <Page::PkiCertificateDetails @model={{@model}} @onBack={{this.cancel}} />
 {{else}}
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
