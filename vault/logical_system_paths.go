@@ -2247,7 +2247,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
-					Description: "Type of plugin runtimes to list (currently only supporting container).",
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
 				},
 			},
 
