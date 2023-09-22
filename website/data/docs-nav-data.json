@@ -309,6 +309,14 @@
             "path": "configuration/seal"
           },
           { "title": "High Availability (Beta)",
+           "badge": {
+              "text": "ENT",
+              "text": "ENT",
+              "type": "outlined",
+              "type": "outlined",
+              "color": "neutral"
+              "color": "neutral"
+            },
             "path": "configuration/seal/seal-ha"
           },
           {
