@@ -323,11 +323,11 @@ migration will not happen again on the peer nodes.
 be used in production deployments of Vault.
 
 Seal High Availability (Seal HA) allows the configuration of more than one auto 
-seal mechanism such that Vault can tolerate the loss of a seal service or device for
-a time.  With Seal HA Vault can also start up and unseal if one of the configured
-seals is still available (though Vault will remain in a degraded mode in this case).
-While seals are unavailable, seal wrapping and entropy augmentation can still
-occur using the remaining seals, and values produced while a seal is down will
+seal mechanism such that Vault can tolerate the temporary loss of a seal service 
+or device for a time.  With Seal HA Vault can also start up and unseal if one of the 
+configured seals is still available (though Vault will remain in a degraded mode in 
+this case). While seals are unavailable, seal wrapping and entropy augmentation can 
+still occur using the remaining seals, and values produced while a seal is down will
 be re-wrapped with all the seals when all seals become healthy again.
 
 When an operator configures an additional seal or removes a seal (one at a time)
