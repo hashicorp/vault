@@ -153,8 +153,8 @@ locally when mounted.
     ```shell-session
     $ vault plugin register \
         -sha256="$SHA256" \
-        -oci_image=PATH/TO/PLUGIN/IMAGE \
-      secret CONTAINER_NAME
+        -oci_image=hashicorp/vault-plugin-secrets-kv \
+      secret kv-container
     ```
 
 1. Enable the plugin:
