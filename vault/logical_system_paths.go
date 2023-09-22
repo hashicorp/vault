@@ -2244,6 +2244,13 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/runtimes/catalog/?$",
 
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
+
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "plugins-runtimes-catalog",
 				OperationVerb:   "list",
