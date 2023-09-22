@@ -308,6 +308,9 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
+          { "title": "High Availability (Beta)",
+            "path": "configuration/seal/seal-ha"
+          },
           {
             "title": "AliCloud KMS",
             "path": "configuration/seal/alicloudkms"
