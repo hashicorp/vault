@@ -560,8 +560,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	role.StaticAccount.Username = username
 
 	rotationPeriodSecondsRaw, rotationPeriodOk := data.GetOk("rotation_period")
-	rotationSchedule := data.Get("rotation_schedule").(string)
-	rotationScheduleOk := rotationSchedule != ""
+	rotationScheduleRaw, rotationScheduleOk := data.GetOk("rotation_schedule")
 	rotationWindowSecondsRaw, rotationWindowOk := data.GetOk("rotation_window")
 
 	if rotationScheduleOk && rotationPeriodOk {
@@ -591,6 +590,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	if rotationScheduleOk {
+		rotationSchedule := rotationScheduleRaw.(string)
 		parsedSchedule, err := b.schedule.Parse(rotationSchedule)
 		if err != nil {
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
@@ -683,15 +683,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
-	_, rotationPeriodChanged := data.Raw["rotation_period"]
-	_, rotationScheduleChanged := data.Raw["rotation_schedule"]
-	if rotationPeriodChanged {
+	if rotationPeriodOk {
 		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
 		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
-	} else if rotationScheduleChanged {
+	} else if rotationScheduleOk {
 		next := role.StaticAccount.Schedule.Next(lvr)
 		b.logger.Debug("init priority for Schedule", "lvr", lvr, "next", next)
-		item.Priority = role.StaticAccount.Schedule.Next(lvr).Unix()
+		item.Priority = next.Unix()
 	}
 
 	// Add their rotation to the queue
