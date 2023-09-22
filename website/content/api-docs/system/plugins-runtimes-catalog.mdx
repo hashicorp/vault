@@ -149,7 +149,8 @@ $ curl \
 
 ## Remove plugin runtime from catalog
 
-This endpoint removes the plugin runtime with the given type and name.
+This endpoint removes the plugin runtime with the given type and name. Note that
+the request will fail if any registered plugin references the plugin runtime.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
