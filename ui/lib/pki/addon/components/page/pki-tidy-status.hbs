@@ -67,6 +67,12 @@
     />
   {{/each}}
 
+  {{#if this.isEnterprise}}
+    {{#each this.crossClusterOperation.status as |attr|}}
+      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
+    {{/each}}
+  {{/if}}
+
   <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
     {{if (eq this.tidyState "Running") "Current" "Last"}}
     tidy settings
@@ -81,7 +87,7 @@
   {{/each}}
 
   {{#if this.isEnterprise}}
-    {{#each this.crossClusterOperation as |attr|}}
+    {{#each this.crossClusterOperation.config as |attr|}}
       <InfoTableRow
         @label={{humanize (dasherize attr)}}
         @value={{get @tidyStatus attr}}

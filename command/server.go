@@ -2623,6 +2623,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 	sealWrapperInfoKeysMap := make(map[string]infoKeysAndMap)
 
+	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
+	if err != nil {
+		return nil, err
+	}
+
 	configuredSeals := 0
 	for _, configSeal := range config.Seals {
 		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
@@ -2648,7 +2653,20 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			}
 			configuredSeals++
 		} else {
-			recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
+			if sealHaBetaEnabled {
+				recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
+			} else {
+				// It seems that we are checking for this particular error here is to distinguish between a
+				// mis-configured seal vs one that fails for another reason. Apparently the only other reason is
+				// a key not found error. It seems the intention is for the key not found error to be returned
+				// as a seal specific error later
+				if !errwrap.ContainsType(wrapperConfigError, new(logical.KeyNotFoundError)) {
+					return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
+				} else {
+					sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
+					recordSealConfigError(wrapperConfigError)
+				}
+			}
 		}
 
 		sealWrapper := vaultseal.NewSealWrapper(
@@ -2704,12 +2722,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
-
-	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
-	if err != nil {
-		return nil, err
-	}
-
 	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, sealHaBetaEnabled)
 	if err != nil {
 		return nil, err
