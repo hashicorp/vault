@@ -355,6 +355,18 @@ variable which enables it:
 Refer to the [configuration](/vault/docs/configuration/seal/seal-ha) section
 for details on configuring Seal HA.
 
+### Seal Re-Wrapping
+
+Whenever seal configuration changes, Vault must re-wrap all CSPs and seal
+wrapped values, to ensure each value has an entry encrypted by all configured
+seals.  Vault detects these configuration changes automatically, and triggers
+a re-wrap.  Re-wraps can take some time, depending on the number of
+seal wrapped values.  While re-wrapping is in progress, no configuration changes
+to the seals can be made.
+
+Progress of the re-wrap can be monitored using 
+the [`sys/sealwrap/rewrap`](/vault/api-docs/system/seal-rewrap) endpoint.
+
 ### Limitations and Known Issues
 
 As Seal HA is in beta, there are certain restrictions that may not be present in 

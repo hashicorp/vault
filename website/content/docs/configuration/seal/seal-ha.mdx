@@ -1,0 +1,77 @@
+---
+layout: docs
+page_title: Vault Transit - Seals - Configuration
+description: |-
+  The Transit seal configures Vault to use Vault's Transit Secret Engine as the
+  autoseal mechanism.
+---
+
+# Seal High Availability
+
+<Note title="Seal HA functionality requires Vault Enterprise">
+
+  Seal High Availability requires Vault Enterprise.
+
+</Note>
+
+-> **Warning:** This feature is available as a Beta for evaluation and should not 
+be used in production deployments of Vault.
+
+[Seal High Availability](/vault/docs/content/concepts/seal#Seal-High-Availability) 
+is the ability to configure more than one seal in order to have resilience against
+outage of a seal service or mechanism.   
+
+Using Seal HA involves configuring extra seals in Vault's server configuration file
+and restarting Vault, after having enabled the Seal HA beta feature by setting
+the environment variable:
+
+`SEAL_HA_BETA_ENABLED=true`
+
+Before using Seal HA, one must have upgraded to Vault 1.15 or higher, and started
+Vault without the feature.  Afterward, the feature may be enabled by adding
+a seal
+
+## Adding and Removing Seals
+
+Seal HA adds two new fields to the seal configuration stanza, `name`, and
+`priority`:
+
+```hcl
+seal [TYPE] {
+  name = "seal-name"
+  priority = "1"
+  # ...
+}
+```
+
+Name is optional, and if not specified is set to the type of the seal.  Names
+must be unique.  If using two seals of the same type name must be specified.
+Internally, name is used to disambiguate seal wrapped values in some cases,
+so renaming seals should be avoided if possible.
+
+Priority is mandatory if more than one seal is specified.  Priority tells Vault
+the order in which to try seals during unseal (least priority first), 
+in the case more than one seal can unwrap a seal wrapped value, the order
+in which to attempt decryption, and which order to attempt to source entropy
+for entropy augmentation.  This can be useful if your seals have different
+performance or cost characteristics.
+
+To add an additional seal, simply add another seal stanza, specifying priority
+and optionally name, and restart Vault.
+
+To remove a seal, remove the corresponding seal stanza and restart.  There must
+be at least one seal remaining.
+
+### Safety checks
+
+Vault will reject seal configuration changes in the following circumstances,
+as a safety mechanism:
+
+* The old seal configuration and new seal configuration do not share one seal
+in common.  This is necessary as there would be no seal capable of decrypting
+CSPs or seal wrapped values previously written.
+
+* Seal re-wrapping is in progress.  Vault must be in a clean, fully wrapped state
+on the previous configuration before attempting a configuration change.
+
+* More than one seal is being added or removed at a time.  

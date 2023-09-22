@@ -67,6 +67,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   decryption. This may also be supplied using the `VAULT_TRANSIT_SEAL_KEY_NAME`
   environment variable.
 
+- `key_id_prefix` `(string: "")`: An optional string to add to the key id
+  of values wrapped by this transit seal.  This can help disambiguate between
+  two transit seals.
+
 - `mount_path` `(string: <required>)`: The mount path to the transit secret engine.
   This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment
   variable.
