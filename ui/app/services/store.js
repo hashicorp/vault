@@ -4,7 +4,7 @@
  */
 
 import Store from '@ember-data/store';
-import { schedule } from '@ember/runloop';
+import { run, schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -65,10 +65,13 @@ export default class StoreService extends Store {
   //   size: the size of the page
   //   pageFilter: a string that will be used to do a fuzzy match against the
   //     results, this is done pre-pagination
-  lazyPaginatedQuery(modelType, query /*, options*/) {
+  lazyPaginatedQuery(modelType, query, adapterOptions) {
+    const skipCache = query.skipCache;
+    // We don't want skipCache to be part of the actual query key, so remove it
+    delete query.skipCache;
     const adapter = this.adapterFor(modelType);
     const modelName = normalizeModelName(modelType);
-    const dataCache = this.getDataset(modelName, query);
+    const dataCache = skipCache ? this.clearDataset(modelName) : this.getDataset(modelName, query);
     const responsePath = query.responsePath;
     assert('responsePath is required', responsePath);
     assert('page is required', typeof query.page === 'number');
@@ -80,7 +83,7 @@ export default class StoreService extends Store {
       return resolve(this.fetchPage(modelName, query));
     }
     return adapter
-      .query(this, { modelName }, query)
+      .query(this, { modelName }, query, null, adapterOptions)
       .then((response) => {
         const serializer = this.serializerFor(modelName);
         const datasetHelper = serializer.extractLazyPaginatedData;
@@ -100,7 +103,7 @@ export default class StoreService extends Store {
     let newData = dataset || [];
     if (filter) {
       newData = dataset.filter(function (item) {
-        const id = item.id || item;
+        const id = item.id || item.name || item;
         return id.toLowerCase().includes(filter.toLowerCase());
       });
     }
@@ -138,12 +141,22 @@ export default class StoreService extends Store {
     return resp;
   }
 
+  forceUnload(modelName) {
+    // Hack to get unloadAll to work correctly until we update to ember-data@4.12
+    // so that all the records are properly unloaded and we don't get ghost records
+    this.peekAll(modelName).length;
+    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
+    run(() => this.unloadAll(modelName));
+  }
+
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.unloadAll(modelName);
+    this.forceUnload(modelName);
+    // Hack to ensure the pushed records below all get in the store. remove with update to ember-data@4.12
+    this.peekAll(modelName).length;
     return new Promise((resolve) => {
-      // after the above unloadRecords are finished, push into store
+      // push subset of records into the store
       schedule('destroy', () => {
         this.push(
           this.serializerFor(modelName).normalizeResponse(
@@ -154,6 +167,8 @@ export default class StoreService extends Store {
             'query'
           )
         );
+        // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
+        this.peekAll(modelName).length;
         const model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);
         resolve(model);
@@ -188,6 +203,7 @@ export default class StoreService extends Store {
   clearAllDatasets() {
     this.clearDataset();
   }
+
   /**
    * this is designed to be a temporary workaround to an issue in the test environment after upgrading to Ember 4.12
    * when performing an unloadAll or unloadRecord for auth-method or secret-engine models within the app code an error breaks the tests

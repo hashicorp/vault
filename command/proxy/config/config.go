@@ -101,8 +101,9 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist      *agentproxyshared.PersistConfig `hcl:"persist"`
-	InProcDialer transportDialer                 `hcl:"-"`
+	Persist            *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer       transportDialer                 `hcl:"-"`
+	CacheStaticSecrets bool                            `hcl:"cache_static_secrets"`
 }
 
 // AutoAuth is the configured authentication method and sinks

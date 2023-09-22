@@ -113,7 +113,7 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it
 # has deprecated function, variable, constant or field
 deprecations: bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
@@ -128,13 +128,13 @@ tools/codechecker/.bin/codechecker:
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code violates
-# the check 
+# the check
 vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
-# piped to revgrep which will only return an error if new piece of code that is 
-# not on main violates the check 
+# piped to revgrep which will only return an error if new piece of code that is
+# not on main violates the check
 ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
@@ -279,7 +279,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker 
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
@@ -297,10 +297,6 @@ ci-build-ui:
 ci-bundle:
 	@$(CURDIR)/scripts/ci-helper.sh bundle
 
-.PHONY: ci-filter-matrix
-ci-filter-matrix:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
-
 .PHONY: ci-get-artifact-basename
 ci-get-artifact-basename:
 	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
@@ -309,45 +305,13 @@ ci-get-artifact-basename:
 ci-get-date:
 	@$(CURDIR)/scripts/ci-helper.sh date
 
-.PHONY: ci-get-matrix-group-id
-ci-get-matrix-group-id:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
-
 .PHONY: ci-get-revision
 ci-get-revision:
 	@$(CURDIR)/scripts/ci-helper.sh revision
 
-.PHONY: ci-get-version
-ci-get-version:
-	@$(CURDIR)/scripts/ci-helper.sh version
-
-.PHONY: ci-get-version-base
-ci-get-version-base:
-	@$(CURDIR)/scripts/ci-helper.sh version-base
-
-.PHONY: ci-get-version-major
-ci-get-version-major:
-	@$(CURDIR)/scripts/ci-helper.sh version-major
-
-.PHONY: ci-get-version-meta
-ci-get-version-meta:
-	@$(CURDIR)/scripts/ci-helper.sh version-meta
-
-.PHONY: ci-get-version-minor
-ci-get-version-minor:
-	@$(CURDIR)/scripts/ci-helper.sh version-minor
-
 .PHONY: ci-get-version-package
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
-
-.PHONY: ci-get-version-patch
-ci-get-version-patch:
-	@$(CURDIR)/scripts/ci-helper.sh version-patch
-
-.PHONY: ci-get-version-pre
-ci-get-version-pre:
-	@$(CURDIR)/scripts/ci-helper.sh version-pre
 
 .PHONY: ci-prepare-legal
 ci-prepare-legal:

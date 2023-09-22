@@ -22,10 +22,12 @@
       <h4 class="field-title has-bottom-padding-m is-fullwidth">
         {{concat "PGP Key " this.pgpKeyFile.filename}}
       </h4>
-      <div class="message is-list has-copy-button" tabindex="-1">
-        <HoverCopyButton @copyValue={{this.pgpKey}} />
-        <code class="is-word-break" data-test-pgp-key-copy>{{this.pgpKey}}</code>
-      </div>
+      <Hds::Copy::Snippet
+        class="has-bottom-margin-s"
+        @textToCopy={{this.pgpKey}}
+        @color="secondary"
+        data-test-pgp-key-copy
+      />
     </div>
     <div class="field is-grouped">
       <div class="control">

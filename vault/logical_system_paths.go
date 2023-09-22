@@ -482,7 +482,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "decode",
+						OperationVerb:   "decode",
+						OperationSuffix: "token",
 					},
 					Summary: "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
@@ -1862,6 +1863,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 			},
+			"oci_image": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+			},
+			"runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+			},
 			"command": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
@@ -1877,10 +1886,6 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			"version": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-			},
-			"oci_image": {
-				Type:        framework.TypeString,
-				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci_image"][0]),
 			},
 		},
 
@@ -1932,15 +1937,18 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 								Required:    true,
 							},
+							"oci_image": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+							},
+							"runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+							},
 							"command": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 								Required:    true,
-							},
-							"oci_image": {
-								Type:        framework.TypeString,
-								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci_image"][0]),
-								Required:    false,
 							},
 							"args": {
 								Type:        framework.TypeStringSlice,
@@ -2217,9 +2225,31 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 }
 
 func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
+	handler := &framework.PathOperation{
+		Callback: b.handlePluginRuntimeCatalogList,
+		Responses: map[int][]framework.Response{
+			http.StatusOK: {{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"runtimes": {
+						Type:        framework.TypeSlice,
+						Description: "List of all plugin runtimes in the catalog",
+						Required:    true,
+					},
+				},
+			}},
+		},
+	}
 	return []*framework.Path{
 		{
 			Pattern: "plugins/runtimes/catalog/?$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "plugins-runtimes-catalog",
@@ -2228,21 +2258,8 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handlePluginRuntimeCatalogList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"runtimes": {
-									Type:        framework.TypeSlice,
-									Description: "List of all plugin runtimes in the catalog",
-									Required:    true,
-								},
-							},
-						}},
-					},
-				},
+				logical.ReadOperation: handler,
+				logical.ListOperation: handler,
 			},
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),

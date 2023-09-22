@@ -18,7 +18,7 @@
   {{#if (has-permission "access" routeParams="methods")}}
     <Nav.Link
       @route="vault.cluster.access.methods"
-      @current-when="vault.cluster.access.methods vault.cluster.access.method"
+      @current-when="vault.cluster.access.methods vault.cluster.access.method vault.cluster.settings.auth"
       @text="Authentication Methods"
       data-test-sidebar-nav-link="Authentication Methods"
     />

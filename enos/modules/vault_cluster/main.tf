@@ -18,7 +18,7 @@ locals {
   audit_device_file_path = "/var/log/vault/vault_audit.log"
   bin_path               = "${var.install_dir}/vault"
   consul_bin_path        = "${var.consul_install_dir}/consul"
-  enable_audit_device    = var.enable_file_audit_device && var.initialize_cluster
+  enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
   // In order to get Terraform to plan we have to use collections with keys
   // that are known at plan time. In order for our module to work our var.target_hosts
   // must be a map with known keys at plan time. Here we're creating locals
@@ -69,23 +69,6 @@ locals {
   vault_service_user = "vault"
 }
 
-resource "enos_remote_exec" "install_packages" {
-  for_each = {
-    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
-    if length(var.packages) > 0
-  }
-
-  content = templatefile("${path.module}/templates/install-packages.sh", {
-    packages = join(" ", var.packages)
-  })
-
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
-  }
-}
-
 resource "enos_bundle_install" "consul" {
   for_each = {
     for idx, host in var.target_hosts : idx => var.target_hosts[idx]
@@ -109,6 +92,26 @@ resource "enos_bundle_install" "vault" {
   release     = var.release == null ? var.release : merge({ product = "vault" }, var.release)
   artifactory = var.artifactory_release
   path        = var.local_artifact_path
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "install_packages" {
+  depends_on = [
+    enos_bundle_install.vault, // Don't race for the package manager locks with vault install
+  ]
+  for_each = {
+    for idx, host in var.target_hosts : idx => var.target_hosts[idx]
+    if length(var.packages) > 0
+  }
+
+  content = templatefile("${path.module}/templates/install-packages.sh", {
+    packages = join(" ", var.packages)
+  })
 
   transport = {
     ssh = {
@@ -272,11 +275,12 @@ resource "enos_vault_unseal" "leader" {
 # user on all nodes, since logging will only happen on the leader.
 resource "enos_remote_exec" "create_audit_log_dir" {
   depends_on = [
+    enos_bundle_install.vault,
     enos_vault_unseal.leader,
   ]
   for_each = toset([
     for idx, host in toset(local.instances) : idx
-    if var.enable_file_audit_device
+    if var.enable_audit_devices
   ])
 
   environment = {
@@ -293,14 +297,14 @@ resource "enos_remote_exec" "create_audit_log_dir" {
   }
 }
 
-resource "enos_remote_exec" "enable_file_audit_device" {
+resource "enos_remote_exec" "enable_audit_devices" {
   depends_on = [
     enos_remote_exec.create_audit_log_dir,
     enos_vault_unseal.leader,
   ]
   for_each = toset([
     for idx in local.leader : idx
-    if local.enable_audit_device
+    if local.enable_audit_devices
   ])
 
   environment = {
@@ -394,4 +398,12 @@ resource "enos_remote_exec" "vault_write_license" {
       host = var.target_hosts[each.value].public_ip
     }
   }
+}
+
+resource "enos_local_exec" "wait_for_install_packages" {
+  depends_on = [
+    enos_remote_exec.install_packages,
+  ]
+
+  inline = ["true"]
 }

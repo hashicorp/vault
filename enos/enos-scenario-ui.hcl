@@ -42,10 +42,6 @@ scenario "ui" {
     ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
   }
 
-  step "get_local_metadata" {
-    module = module.get_local_metadata
-  }
-
   step "build_vault" {
     module = module.build_local
 
@@ -170,13 +166,14 @@ scenario "ui" {
         edition = var.backend_edition
         version = local.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
-      local_artifact_path      = local.bundle_path
-      storage_backend          = matrix.backend
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = local.seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      local_artifact_path  = local.bundle_path
+      packages             = global.distro_packages["ubuntu"]
+      storage_backend      = matrix.backend
+      target_hosts         = step.create_vault_cluster_targets.hosts
+      unseal_method        = local.seal
     }
   }
 

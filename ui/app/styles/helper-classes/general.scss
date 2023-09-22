@@ -10,10 +10,6 @@
   box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
 
-.has-bottom-shadow {
-  box-shadow: $box-shadow !important;
-}
-
 .is-shadowless {
   box-shadow: none !important;
 }
@@ -95,6 +91,12 @@
   -webkit-box-orient: vertical;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.text-overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // screen reader only

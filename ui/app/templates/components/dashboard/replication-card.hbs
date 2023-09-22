@@ -2,7 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m" data-test-card="replication">
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="replication">
 
   <div class="is-flex-between">
     <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
@@ -23,7 +23,7 @@
     {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
       <div
         class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-xs grid-align-items-start"
-        data-test-dr-perf-replication
+        data-test-type="dr-perf"
       >
         <Dashboard::ReplicationStateText
           @title="DR primary"
@@ -50,7 +50,7 @@
 
       <div
         class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
-        data-test-dr-replication
+        data-test-type="dr"
       >
         <Dashboard::ReplicationStateText
           @title="state"
@@ -79,7 +79,7 @@
       />
       <small class="has-left-margin-xs has-text-grey">
         Updated
-        {{date-format @updatedAt "MMM dd, yyyy hh:mm:SS"}}
+        {{date-format @updatedAt "MMM dd, yyyy hh:mm:ss"}}
       </small>
     </div>
   {{else}}
@@ -87,6 +87,7 @@
       @title="Replication not set up"
       @message="Data will be listed here. Enable a primary replication cluster to get started."
       class="has-top-margin-m"
+      data-test-empty-state="replication"
     >
       <div>
         <LinkTo @route="vault.cluster.replication">Enable replication</LinkTo>
