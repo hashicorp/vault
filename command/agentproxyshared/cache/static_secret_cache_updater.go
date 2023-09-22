@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
+
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/api"
@@ -56,6 +58,11 @@ type StaticSecretCacheUpdater struct {
 	logger     hclog.Logger
 }
 
+// streamStaticSecretEvents streams static secret events and updates
+// the cache when updates are notified. This method will return errors in cases
+// of failed updates, malformed events, and other.
+// For best results, the caller of this function should retry on error with backoff,
+// if it is desired for the cache to always remain up to date.
 func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Context) error {
 	var conn *websocket.Conn
 	for {
@@ -76,13 +83,14 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 
 	// before we check for events, update all of our cached
 	// kv secrets, in case we missed any events
+	// TODO: to be implemented in a future PR
 
 	for {
 		_, message, err := conn.Read(ctx)
 		if err != nil {
-			// handle error, assume that we could have lost events
-			// attempt to regain connection by repeating this
-			// code block until we no longer get an error
+			// The caller of this function should make the decision on if to retry. If it does, then
+			// the websocket connection will be retried, and we will check for missed events.
+			return fmt.Errorf("error when attempting to read from event stream, reopening websocket: %w", err)
 		}
 		messageMap := make(map[string]interface{})
 		err = json.Unmarshal(message, &messageMap)
@@ -102,29 +110,21 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 			return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 		}
 		modified, ok := metadata["modified"].(bool)
-		if !ok {
-			// This is an event we're not interested in, ignore it and
-			// carry on.
-			continue
-		}
-		if modified {
+		if ok && modified {
 			path, ok := metadata["path"].(string)
 			if !ok {
-				// This means we got sent a bad message
-				// TODO error here
+				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 			}
 			err := updater.updateStaticSecret(ctx, path)
 			if err != nil {
-				// This isn't good, maybe Vault is down or similar, but we cannot
-				// simply error out here or ignore this event.
-				// TODO decide what to do
+				// While we are kind of 'missing' an event this way, re-calling this function will
+				// result in the secret remaining up to date.
+				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 			}
-			// TODO: get the ID for the
-			// updater.leaseCache.db.Get()
-			// TODO Update the secret
-			// TODO if it's in our cache, then we need to update the index
-			// TODO we need a lease cache method for that
-			// lc.updateStaticSecret(secret, path)
+		} else {
+			// This is an event we're not interested in, ignore it and
+			// carry on.
+			continue
 		}
 	}
 
@@ -141,6 +141,14 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	// TODO: get the index using the path
 	// If it doesn't exist, return nil
 	// TODO: get the tokens from the lease cache entry, use them to get the secret
+	updater.leaseCache.db.Get(cachememdb.IndexNameID, path) // TODO: get the id from the path
+
+	// TODO: get the ID for the
+	// updater.leaseCache.db.Get()
+	// TODO Update the secret
+	// TODO if it's in our cache, then we need to update the index
+	// TODO we need a lease cache method for that
+	// lc.updateStaticSecret(secret, path)
 
 	secret, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
