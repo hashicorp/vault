@@ -5,3 +5,82 @@ description: The GitHub destination syncs secrets from Vault to GitHub.
 ---
 
 # GitHub
+
+The GitHub repository sync destination allows Vault to safely synchronize secrets as GitHub repository secrets.
+This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
+to connect directly with Vault. This guide walks you through the configuration process.
+
+## Setup
+
+To get started with syncing Vault secrets to your GitHub repository, you'll need an access token.
+Please view the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+to generate an access token. When creating your token, provide it access to the repository you want to manage secrets for,
+and allow "Read and Write" access to the repository secrets.
+
+## Usage
+
+When credentials for GitHub have been obtained, and it has access to manage secrets in your repository,
+Vault can be configured to create a GitHub destination, then begin to associate your secrets with this destination.
+
+1. Store any KV secret into Vault, like so:
+  ```shell-session
+  $ vault kv put secret/foo mypass=bar
+  ```
+
+  Output:
+  ```
+  === Secret Path ===
+  secret/data/foo
+
+  ======= Metadata =======
+  Key                Value
+  ---                -----
+  created_time       2023-09-21T20:52:47.723315Z
+  custom_metadata    <nil>
+  deletion_time      n/a
+  destroyed          false
+  version            1
+  ```
+
+1.	Configure the sync destination:
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-gh-1 \
+  access_token=$ACCESS_TOKEN \
+  repository_owner=$REPOSITORY_OWNER \
+  repository_name=$REPOSITORY_NAME
+  ```
+
+  Output:
+  ```text
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
+  name                  my-gh-1
+  type                  gh
+  ```
+
+1.	Set a secret to be associated with the configured secret destination:
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
+  mount='secret' \
+  secret_name='foo'
+  ```
+
+  Output:
+  ```
+  Key                   Value
+  ---                   -----
+  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
+  store_name            my-gh-1
+  store_type            gh
+  ```
+
+1. Navigate to your GitHub repository settings to confirm your secret was successfully created.
+
+Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
+counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
+or the association in Vault will delete the secret in GitHub as well.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
