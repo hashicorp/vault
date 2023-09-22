@@ -4,7 +4,7 @@ page_title: Google Cloud Platform Secret Manager - Secrets Sync Destination
 description: The Google Cloud Platform Secret Manager destination syncs secrets from Vault to GCP.
 ---
 
-# Google Cloud Platform Secret Manager Sync Destination
+# Google Cloud Platform Secret Manager sync destination
 
 The Google Cloud Platform Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
@@ -91,7 +91,7 @@ secretmanager.versions.get
 secretmanager.versions.list
 ```
 
-## Provision Service Account
+## Provision service account
 
 Vault needs to be configured with credentials to establish a trust relationship with your GCP project so it can managed
 Secret Manager secrets on your behalf. The IAM & Admin page in the Google Cloud console can be used to
