@@ -35,7 +35,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
+      
     `);
 
     assert.dom('[data-test-oidc-scope-title]').hasText('Create Scope', 'Form title renders');
@@ -87,7 +87,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
+      
     `);
 
     assert.dom('[data-test-oidc-scope-title]').hasText('Edit Scope', 'Form title renders');
@@ -122,7 +122,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
+      
     `);
 
     await click(SELECTORS.scopeCancelButton);
@@ -141,7 +141,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
     />
-    <div id="modal-wormhole"></div>
+    
   `);
 
     await fillIn('[data-test-input="description"]', 'changed description attribute');
@@ -174,7 +174,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
+      
     `);
 
     assert.dom('[data-test-modal-div]').doesNotHaveClass('is-active', 'Modal is hidden');
@@ -203,7 +203,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
+      
     `);
     await fillIn('[data-test-input="name"]', 'test-scope');
     await click(SELECTORS.scopeSaveButton);

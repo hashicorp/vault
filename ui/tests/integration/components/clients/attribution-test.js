@@ -46,7 +46,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution @chartLegend={{this.chartLegend}} />
     `);
 
@@ -59,7 +59,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders with data for namespaces', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
@@ -93,7 +93,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
     this.start = formatRFC3339(subMonths(this.mockNow, 1));
     this.end = formatRFC3339(subMonths(endOfMonth(this.mockNow), 1));
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
@@ -147,7 +147,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders single chart for current month', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
@@ -169,7 +169,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders single chart and correct text for for date range', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.totalClientAttribution}}
@@ -193,7 +193,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders with data for selected namespace auth methods for a date range', async function (assert) {
     this.set('selectedNamespace', 'second');
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}
@@ -225,7 +225,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
   test('it renders modal', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Attribution
         @chartLegend={{this.chartLegend}}
         @totalClientAttribution={{this.namespaceMountsData}}

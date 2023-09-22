@@ -74,7 +74,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @excludeOptions={{array "root"}}
       @subText="Some modal subtext"
     />
-    <div id="modal-wormhole"></div>
+    
   `);
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
     assert.dom('[data-test-modal-subtext]').hasText('Some modal subtext', 'renders modal text');
@@ -127,7 +127,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
+    
   `);
 
     await clickTrigger();
@@ -175,7 +175,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
+    
   `);
     await clickTrigger();
     await typeInSearch('acl-test-new');
@@ -228,7 +228,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
+    
   `);
 
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
@@ -266,7 +266,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
+    
   `);
     assert.dom('[data-test-component="string-list"]').exists('renders fallback component');
     assert.false(component.hasTrigger, 'does not render power select trigger');

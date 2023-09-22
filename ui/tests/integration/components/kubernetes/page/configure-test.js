@@ -199,7 +199,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await render(
       hbs`
-      <div id="modal-wormhole"></div>
+      
       <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
     `,
       { owner: this.engine }

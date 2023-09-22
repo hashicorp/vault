@@ -52,7 +52,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     const promise = waitForError();
     render(hbs`
       {{transit-key-actions}}
-      <div id="modal-wormhole"></div>
+      
     `);
     const err = await promise;
     assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
@@ -62,14 +62,14 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('key', { backend: 'transit', supportedActions: ['encrypt'] });
     await render(hbs`
       {{transit-key-actions selectedAction="encrypt" key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
     assert.dom('[data-test-transit-action="encrypt"]').exists({ count: 1 }, 'renders encrypt');
 
     this.set('key', { backend: 'transit', supportedActions: ['sign'] });
     await render(hbs`
       {{transit-key-actions selectedAction="sign" key=this.key}}
-      <div id="modal-wormhole"></div>`);
+      `);
     assert.dom('[data-test-transit-action="sign"]').exists({ count: 1 }, 'renders sign');
   });
 
@@ -78,7 +78,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('selectedAction', 'sign');
     await render(hbs`
       {{transit-key-actions selectedAction=this.selectedAction key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
     assert
       .dom('[data-test-signature-algorithm]')
@@ -108,7 +108,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('key', { backend: 'transit', id: 'akey', supportedActions: ['rotate'] });
     await render(hbs`
       {{transit-key-actions selectedAction="rotate" key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
 
     assert.dom('*').hasText('', 'renders an empty div');
@@ -128,7 +128,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
       {{transit-key-actions selectedAction=this.selectedAction key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
 
     find('#plaintext-control .CodeMirror').CodeMirror.setValue('plaintext');
@@ -180,7 +180,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
       {{transit-key-actions selectedAction="encrypt" key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
 
     findAll('.CodeMirror')[0].CodeMirror.setValue('plaintext');
@@ -211,7 +211,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
     await render(hbs`
       {{transit-key-actions selectedAction="encrypt" key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
 
     // await fillIn('#plaintext', 'plaintext');
@@ -243,7 +243,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     });
     await render(hbs`
       {{transit-key-actions key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
   };
 
@@ -323,7 +323,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     });
     await render(hbs`
       {{transit-key-actions key=this.key}}
-      <div id="modal-wormhole"></div>
+      
     `);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');

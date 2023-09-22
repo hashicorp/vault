@@ -1444,7 +1444,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewNonEntity = formatNumber([calculateAverage(NEW_ACTIVITY, 'non_entity_clients')]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
@@ -1515,7 +1515,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedTotalNonEntity = formatNumber([TOTAL_USAGE_COUNTS.non_entity_clients]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
@@ -1558,7 +1558,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewNonEntity = formatNumber([singleMonthNew.non_entity_clients]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}

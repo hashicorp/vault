@@ -14,7 +14,7 @@ import { capitalize } from '@ember/string';
 const renderComponent = () => {
   return render(hbs`
     <Sidebar::Frame @isVisible={{true}}>
-      <div id="modal-wormhole"></div>
+      
       <Sidebar::Nav::Tools />
     </Sidebar::Frame>
   `);

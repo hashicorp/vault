@@ -41,7 +41,7 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     this.renderComponent = () => {
       return render(
         hbs`
-          <div id="modal-wormhole"></div>
+          
           <Page::Library::Details::Accounts @library={{this.model}} @statuses={{this.statuses}} />
         `,
         {

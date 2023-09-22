@@ -64,7 +64,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel('disable');
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
@@ -123,7 +123,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel('enable', true, 24);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
 
@@ -162,7 +162,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.createModel();
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
+      
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
     await fillIn('[data-test-input="retentionMonths"]', 24);

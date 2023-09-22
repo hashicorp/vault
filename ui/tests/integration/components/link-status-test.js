@@ -22,7 +22,6 @@ module('Integration | Component | link-status', function (hooks) {
 
   test('it does not render banner when status is not present', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{undefined}} />
     `);
 
@@ -33,7 +32,6 @@ module('Integration | Component | link-status', function (hooks) {
     this.owner.lookup('service:version').set('version', '1.13.0');
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
@@ -42,7 +40,6 @@ module('Integration | Component | link-status', function (hooks) {
 
   test('it renders connected status', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
@@ -58,7 +55,6 @@ module('Integration | Component | link-status', function (hooks) {
   test('it should render error states', async function (assert) {
     // disconnected error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 1}} />
     `);
 
@@ -80,7 +76,6 @@ module('Integration | Component | link-status', function (hooks) {
 
     // connecting error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 3}} />
     `);
     assert
@@ -89,7 +84,6 @@ module('Integration | Component | link-status', function (hooks) {
 
     // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status="connecting" />
     `);
     assert.dom('[data-test-link-status-timestamp]').hasText('Not available', 'Timestamp placeholder renders');

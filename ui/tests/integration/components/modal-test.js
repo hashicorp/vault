@@ -18,9 +18,7 @@ module('Integration | Component | modal', function (hooks) {
   });
 
   test('it renders', async function (assert) {
-    await render(
-      hbs`<Modal @isActive={{true}} @onClose={{this.onClose}}></Modal><div id="modal-wormhole"></div>`
-    );
+    await render(hbs`<Modal @isActive={{true}} @onClose={{this.onClose}}></Modal>`);
 
     assert.dom(this.element).hasText('', 'renders without interior content');
     assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-active');
@@ -31,7 +29,6 @@ module('Integration | Component | modal', function (hooks) {
       <Modal @isActive={{true}} @showCloseButton={{true}} @onClose={{this.onClose}} >
         template block text
       </Modal>
-      <div id="modal-wormhole"></div>
     `);
 
     assert.dom(this.element).hasText('template block text', 'renders with interior content');
@@ -46,7 +43,6 @@ module('Integration | Component | modal', function (hooks) {
       <Modal @type="warning" @onClose={{this.onClose}}>
         template block text
       </Modal>
-      <div id="modal-wormhole"></div>
     `);
 
     assert.dom('.modal.is-highlight').exists('Modal exists with is-highlight class');

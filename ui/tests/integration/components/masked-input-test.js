@@ -51,7 +51,7 @@ module('Integration | Component | masked input', function (hooks) {
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowDownload={{true}} /> <div id="modal-wormhole"></div>
+    await render(hbs`<MaskedInput @allowDownload={{true}} /> 
 `);
     assert.ok(component.downloadIconIsPresent);
 
