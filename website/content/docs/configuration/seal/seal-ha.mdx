@@ -70,6 +70,9 @@ be at least one seal remaining.
 It is highly recommended to take a snapshot of your Vault storage before applying 
 any seal configuration change.
 
+Once Vault unseals with the new seal configuration, it will be available to process
+traffic even as re-wrapping proceeds.
+
 ### Safety checks
 
 Vault will reject seal configuration changes in the following circumstances,
