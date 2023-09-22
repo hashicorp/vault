@@ -1,0 +1,25 @@
+<Toolbar>
+  <ToolbarActions>
+    {{yield to="actions"}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#if this.hasConfig}}
+  {{#if @list.meta.total}}
+    {{yield to="description"}}
+    {{yield @list to="list"}}
+    <Hds::Pagination::Numbered
+      @currentPage={{@list.meta.currentPage}}
+      @currentPageSize={{@list.meta.pageSize}}
+      @route={{@listRoute}}
+      @showSizeSelector={{false}}
+      @totalItems={{@list.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  {{else}}
+    {{yield to="empty"}}
+  {{/if}}
+{{else}}
+  {{yield to="configure"}}
+{{/if}}
