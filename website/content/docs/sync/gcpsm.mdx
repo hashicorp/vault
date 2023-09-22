@@ -100,6 +100,8 @@ Secret Manager secrets on your behalf. The IAM & Admin page in the Google Cloud 
 You can equally use the [Terraform Google provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs#authentication-and-configuration)
 to provision a GCP Service Account with the appropriate policies.
 
+1. Copy-paste this HCL snippet into a `secrets-sync-setup.tf` file.
+
   ```hcl
   provider "google" {
       // See https://registry.terraform.io/providers/hashicorp/google/latest/docs#authentication-and-configuration to setup the Google Provider
@@ -158,3 +160,25 @@ to provision a GCP Service Account with the appropriate policies.
   }
   ```
 
+1. Execute a plan to validate the Terraform Google provider is properly configured.
+
+  ```shell-session
+  $ terraform init && terraform plan
+  (...)
+  Plan: 4 to add, 0 to change, 0 to destroy.
+  ```
+
+1. Execute an apply to provision the Service Account.
+
+  ```shell-session
+  $ terraform apply
+  (...)
+  Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+
+  Outputs:
+
+  sync_service_account_credentials_file = "/path/to/credentials/file/gcp-sm-sync-service-account-credentials.json"
+  ```
+
+The generated Service Account credentials file can then be used to configure the Vault GCP Secret Manager destination
+following the [setup](/vault/docs/sync/gcpsm#setup) steps.
