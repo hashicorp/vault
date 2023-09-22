@@ -1,0 +1,3 @@
+```release-note:improvement
+Upgrades [hashicorp/cap](https://github.com/hashicorp/cap) to `v0.4.0`
+```
