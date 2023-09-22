@@ -177,8 +177,8 @@ locally when mounted.
 ### Container lifecycle and metadata
 
 Like any other external plugin, Vault will automatically manage the lifecycle
-of plugin containers. If they are killed out of band, Vault will restart it
-before servicing any requests that need to be handled by it. Vault will also
+of plugin containers. If they are killed out of band, Vault will restart them
+before servicing any requests that need to be handled by them. Vault will also
 [multiplex](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) multiple
 mounts to be serviced by the same container if the plugin supports multiplexing.
 
