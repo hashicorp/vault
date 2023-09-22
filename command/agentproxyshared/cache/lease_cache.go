@@ -631,10 +631,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	// /sys/capabilities accepts both requests that look like foo/bar
-	// and /foo/bar but not /v1/foo/bar.
-	// We trim the /v1 from the start of the URL to get the /foo/bar form.
-	path := strings.TrimPrefix(req.Request.URL.Path, "/v1")
+	path := getStaticSecretPathFromRequest(req)
 
 	// Extra caution -- avoid potential nil
 	if capabilitiesIndex.Capabilities == nil {
@@ -810,30 +807,38 @@ func computeIndexID(req *SendRequest) (string, error) {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
-// computeStaticSecretCacheIndex results in a value that uniquely identifies a static
-// secret's cached ID. Notably, we intentionally ignore headers (for example,
-// the X-Vault-Token header) to remain agnostic to which token is being
-// used in the request. We care only about the path.
-func computeStaticSecretCacheIndex(req *SendRequest) string {
+// getStaticSecretPathFromRequest gets the corresponding path for a
+// request, taking into account intricies relating to /v1/ and namespaces
+// in the header.
+// Returns a path like foo/bar or ns1/foo/bar
+func getStaticSecretPathFromRequest(req *SendRequest) string {
 	// /sys/capabilities accepts both requests that look like foo/bar
 	// and /foo/bar but not /v1/foo/bar.
-	// We trim the /v1 from the start of the URL to get the /foo/bar form.
+	// We trim the /v1/ from the start of the URL to get the foo/bar form.
 	// This means that we can use the paths we retrieve from the
 	// /sys/capabilities endpoint to access this index
-	// without having to re-add the /v1
-	path := strings.TrimPrefix(req.Request.URL.Path, "/v1")
+	// without having to re-add the /v1/
+	path := strings.TrimPrefix(req.Request.URL.Path, "/v1/")
+	// Trim any leading slashes, as we never want those.
+	// This ensures /foo/bar gets turned to foo/bar
+	path = strings.TrimPrefix(path, "/")
 	// Also, we have to ensure that if a namespace header was included, that
 	// it gets added to the path. We need to identify the same secret irrespective
 	// of if it's specified via header or not.
 	if header := req.Request.Header; header != nil {
 		if ns := header.Get(api.NamespaceHeaderName); ns != "" {
-			ns = strings.TrimSuffix(ns, "/")
-			if !strings.HasPrefix(ns, "/") {
-				ns = "/" + ns
-			}
-			path = ns + path
+			path = namespace.Canonicalize(ns) + path
 		}
 	}
+	return path
+}
+
+// computeStaticSecretCacheIndex results in a value that uniquely identifies a static
+// secret's cached ID. Notably, we intentionally ignore headers (for example,
+// the X-Vault-Token header) to remain agnostic to which token is being
+// used in the request. We care only about the path.
+func computeStaticSecretCacheIndex(req *SendRequest) string {
+	path := getStaticSecretPathFromRequest(req)
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
 }
 
@@ -906,8 +911,6 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			in.Namespace = "root/"
 		}
 
-		c.logger.Info("Violet -- looking up cache entries")
-
 		// Find all the cached entries which has the given request path and
 		// cancel the contexts of all the respective lifetime watchers
 		indexes, err := c.db.GetByPrefix(cachememdb.IndexNameRequestPath, in.Namespace, in.RequestPath)
@@ -915,7 +918,6 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			return err
 		}
 		for _, index := range indexes {
-			c.logger.Info("Violet: ", index.RequestPath)
 			// If it's a static secret, we must remove directly, as there
 			// is no renew func to cancel.
 			if index.Type == cacheboltdb.StaticSecretType {

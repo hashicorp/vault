@@ -161,8 +161,8 @@ func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
 	}
 
 	index := computeStaticSecretCacheIndex(req)
-	expectedIndex := "252ce3d0fae37436cd62e89ef379c2f5c2ee10789036b4691278688c75836d35"
-	require.Equal(t, index, expectedIndex)
+	expectedIndex := "b117a962f19f17fa372c8681cadcd6fd370d28ee6e0a7012196b780bef601b53"
+	require.Equal(t, expectedIndex, index)
 
 	req = &SendRequest{
 		Request: &http.Request{
@@ -174,7 +174,73 @@ func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
 
 	// We expect that computeStaticSecretCacheIndex will trim the /v1
 	index2 := computeStaticSecretCacheIndex(req)
-	require.Equal(t, index2, expectedIndex)
+	require.Equal(t, expectedIndex, index2)
+}
+
+// Test_GetStaticSecretPathFromRequestNoNamespaces tests that getStaticSecretPathFromRequest
+// behaves as expected when no namespaces are involved.
+func Test_GetStaticSecretPathFromRequestNoNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+		},
+	}
+
+	path := getStaticSecretPathFromRequest(req)
+	require.Equal(t, "foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				// We don't expect paths like this, but it should still work as expected regardless.
+				Path: "foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "foo/bar", path)
+}
+
+// Test_GetStaticSecretPathFromRequestNamespaces tests that getStaticSecretPathFromRequest
+// behaves as expected when namespaces are involved.
+func Test_GetStaticSecretPathFromRequestNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	path := getStaticSecretPathFromRequest(req)
+	require.Equal(t, "ns1/foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/ns1/foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "ns1/foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				// We don't expect paths like this, but it should still work as expected regardless.
+				Path: "ns1/foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "ns1/foo/bar", path)
 }
 
 // TestCache_ComputeStaticSecretIndexIDNamespaces ensures that
@@ -185,20 +251,20 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 	req := &SendRequest{
 		Request: &http.Request{
 			URL: &url.URL{
-				Path: "/foo/bar",
+				Path: "foo/bar",
 			},
 			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
 		},
 	}
 
 	index := computeStaticSecretCacheIndex(req)
-	expectedIndex := "1abebf4b6da931de3aeca2a7b8bb349c47d8b8c09b7167d790988a991e6b18a3"
+	expectedIndex := "a4605679d269aa1bebac7079a471a33403413f388f63bf0da3c771b225857932"
 	require.Equal(t, expectedIndex, index)
 
 	req = &SendRequest{
 		Request: &http.Request{
 			URL: &url.URL{
-				Path: "/ns1/foo/bar",
+				Path: "ns1/foo/bar",
 			},
 		},
 	}
@@ -410,7 +476,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	}
 
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
-	require.Equal(t, map[string]struct{}{"/secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
 
 	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
@@ -475,7 +541,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 	}
 
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
-	require.Equal(t, map[string]struct{}{"/secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
 
 	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
