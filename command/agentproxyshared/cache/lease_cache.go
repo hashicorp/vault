@@ -807,10 +807,12 @@ func computeIndexID(req *SendRequest) (string, error) {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
-// getStaticSecretPathFromRequest gets the corresponding path for a
-// request, taking into account intricies relating to /v1/ and namespaces
+// getStaticSecretPathFromRequest gets the canonical path for a
+// request, taking into account intricacies relating to /v1/ and namespaces
 // in the header.
-// Returns a path like foo/bar or ns1/foo/bar
+// Returns a path like foo/bar or ns1/foo/bar.
+// We opt for this form as namespace.Canonicalize returns a namespace in the
+// form of "ns1/", so we keep consistent with path canonicalization.
 func getStaticSecretPathFromRequest(req *SendRequest) string {
 	// /sys/capabilities accepts both requests that look like foo/bar
 	// and /foo/bar but not /v1/foo/bar.
