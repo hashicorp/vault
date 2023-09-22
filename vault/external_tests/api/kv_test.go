@@ -28,7 +28,7 @@ func TestKVV1Get(t *testing.T) {
 	t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client = cluster.Cores[0].Client
+	client := cluster.Cores[0].Client
 
 	// (the test cluster has already mounted the KVv1 backend at "secret")
 	err := client.KVv1(v1MountPath).Put(context.Background(), secretPath, secretData)
@@ -50,7 +50,7 @@ func TestKVV2Get(t *testing.T) {
 	t.Parallel()
 
 	cluster := minimal.NewTestSoloCluster(t, nil)
-	client = cluster.Cores[0].Client
+	client := cluster.Cores[0].Client
 
 	// mount the KVv2 backend
 	err := client.Sys().Mount(v2MountPath, &api.MountInput{
