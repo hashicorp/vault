@@ -8,10 +8,13 @@ description: |-
 
 # plugin runtime deregister
 
-Deregister an existing plugin runtime in the catalog with the given name. If
-any registered plugin references the plugin runtime, an error is returned. If
-the plugin runtime does not exist, an error is returned. The `-type` flag
-currently only accepts "container".
+Deregister an existing plugin runtime in the catalog with the given name.
+Returns an error if a registered plugin references the named plugin runtime or
+the named runtime does not exist.
+
+<Note title="Limited -type flag support">
+  Support for runtime types is currently limited to `container`.
+</Note>
 
 ## Examples
 
@@ -27,5 +30,5 @@ Success! Deregistered plugin runtime: my-plugin-runtime
 The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included on all commands.
 
-- `-type` `(string: "")` - Plugin runtime type. Vault currently only supports
-  "container" runtime type.
+- `-type` `(string: <required>)` - Plugin runtime type. Vault currently only supports
+  `container` runtime type.
