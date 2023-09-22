@@ -34,6 +34,7 @@ import { assert } from '@ember/debug';
  * @param {function} [fetchData] - function that fetches data and returns download content
  * @param {string} [extension='txt'] - file extension, the download service uses this to determine the mimetype
  * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
+ * @param {callback} [onSuccess] - callback from parent to invoke if download is successful
  */
 
 export default class DownloadButton extends Component {
@@ -73,6 +74,9 @@ export default class DownloadButton extends Component {
     try {
       this.download.miscExtension(this.filename, this.content, this.extension);
       this.flashMessages.info(`Downloading ${this.filename}`);
+      if (this.args.onSuccess) {
+        this.args.onSuccess();
+      }
     } catch (error) {
       this.flashMessages.danger(errorMessage(error, 'There was a problem downloading. Please try again.'));
     }
