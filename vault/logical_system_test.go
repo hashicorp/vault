@@ -6188,6 +6188,11 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	listExp := map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+
 	// List the plugin runtimes of container type
 	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog?type=container")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -6195,7 +6200,6 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	listExp := map[string]interface{}{}
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}
