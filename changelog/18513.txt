@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: latest version of chrome does not automatically redirect back to the app after authentication unless triggered by the user, hence added a link to redirect back to the app.
+```

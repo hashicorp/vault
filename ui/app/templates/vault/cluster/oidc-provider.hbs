@@ -21,10 +21,10 @@
           @redirect={{this.model.consent.redirect}}
           @onSuccess={{this._handleSuccess}}
         />
-      {{else if this.redirect_uri}}
+      {{else if this.model.redirectUrl}}
         <VaultLogoSpinner />
-        <a href={{this.redirect_uri}} data-test-oidc-redirect>Click here to redirect back to app</a>
-      {{else}}
+        <p>If you are not automatically redirected,
+          <a href={{this.model.redirectUrl}} data-test-oidc-redirect>click here to go back to app.</a></p>
         <VaultLogoSpinner />
       {{/if}}
     </div>
