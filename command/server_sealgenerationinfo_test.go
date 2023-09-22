@@ -96,7 +96,7 @@ func TestMultiSealCases(t *testing.T) {
 				},
 			},
 			isErrorExpected:   true,
-			expectedErrorMsg:  "cannot add more than one seal",
+			expectedErrorMsg:  "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 			sealHaBetaEnabled: true,
 		},
 		// none_to_multi_with_disabled_seals_with_beta
@@ -117,7 +117,7 @@ func TestMultiSealCases(t *testing.T) {
 				},
 			},
 			isErrorExpected:   true,
-			expectedErrorMsg:  "cannot add more than one seal",
+			expectedErrorMsg:  "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
 			sealHaBetaEnabled: true,
 		},
 		// none_to_multi_with_disabled_seals_no_beta
@@ -599,7 +599,7 @@ func TestMultiSealCases(t *testing.T) {
 			switch {
 			case tc.isErrorExpected:
 				require.Error(t, err)
-				require.EqualError(t, err, tc.expectedErrorMsg)
+				require.ErrorContains(t, err, tc.expectedErrorMsg)
 				require.Nil(t, sealGenInfo)
 			default:
 				require.NoError(t, err)
@@ -726,6 +726,105 @@ func TestMultiSealCases(t *testing.T) {
 			isErrorExpected:          true,
 			expectedErrorMsg:         "cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes",
 		},
+		// single seal migration use-case
+		{
+			name: "single_seal_migration",
+			existingSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 2,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "transit",
+						Name:     "transit",
+						Priority: 1,
+					},
+				},
+			},
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "transit",
+						Name:     "transit-disabled",
+						Priority: 1,
+						Disabled: true,
+					},
+					{
+						Type:     "shamir",
+						Name:     "shamir",
+						Priority: 1,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          false,
+		},
+		// migrate from non-beta single seal to single seal
+		{
+			name:                "none_to_single_seal",
+			existingSealGenInfo: nil,
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "shamir",
+						Name:     "shamir",
+						Priority: 1,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          false,
+		},
+		// migrate from non-beta single seal to multi seal, with one disabled, so perform an old style migration
+		// we do not support this use-case at this time so trap the error
+		{
+			name:                "none_to_multiple_seals_one_disabled",
+			existingSealGenInfo: nil,
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type: "pkcs11",
+						Name: "autoSeal",
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal",
+						Disabled: true,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
+		},
+		// migrate from non-beta single seal to multi seal
+		{
+			name:                "none_to_multiple_seals",
+			existingSealGenInfo: nil,
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal2",
+						Priority: 2,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "Initializing a cluster or enabling multi-seal on an existing cluster must occur with a single seal before adding additional seals",
+		},
 		// have partially wrapped paths
 		{
 			name: "have_partially_wrapped_paths",
@@ -801,7 +900,7 @@ func TestMultiSealCases(t *testing.T) {
 			switch {
 			case tc.isErrorExpected:
 				require.Error(t, err)
-				require.EqualError(t, err, tc.expectedErrorMsg)
+				require.ErrorContains(t, err, tc.expectedErrorMsg)
 			default:
 				require.NoError(t, err)
 			}

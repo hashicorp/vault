@@ -34,6 +34,7 @@ func TestSysMounts(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -215,6 +216,7 @@ func TestSysMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -529,6 +531,7 @@ func TestSysRemount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"bar/": map[string]interface{}{
 				"description":             "foo",
@@ -742,6 +745,7 @@ func TestSysUnmount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -930,6 +934,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("2764800"),
@@ -968,6 +973,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1009,6 +1015,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -1248,6 +1255,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -1446,6 +1454,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("259196400"),
@@ -1484,6 +1493,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foobar",
 			"default_lease_ttl": json.Number("40"),
@@ -1581,6 +1591,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":                  "key/value secret storage",
 			"default_lease_ttl":            json.Number("2764800"),
@@ -1627,6 +1638,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1665,6 +1677,7 @@ func TestSysTuneMount_listingVisibility(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1702,6 +1715,7 @@ func TestSysTuneMount_listingVisibility(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":        "key/value secret storage",
 			"default_lease_ttl":  json.Number("2764800"),
@@ -1748,6 +1762,7 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":                 "key/value secret storage",
 			"default_lease_ttl":           json.Number("2764800"),
@@ -1787,6 +1802,7 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1831,6 +1847,7 @@ func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":          "key/value secret storage",
 			"default_lease_ttl":    json.Number("2764800"),
@@ -1870,6 +1887,7 @@ func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),

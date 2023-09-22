@@ -69,10 +69,10 @@ type asyncChanNode struct {
 	logger hclog.Logger
 
 	// used to close the connection
-	closeOnce  sync.Once
-	cancelFunc context.CancelFunc
-	pipelineID eventlogger.PipelineID
-	broker     *eventlogger.Broker
+	closeOnce      sync.Once
+	cancelFunc     context.CancelFunc
+	pipelineID     eventlogger.PipelineID
+	removePipeline func(ctx context.Context, t eventlogger.EventType, id eventlogger.PipelineID) (bool, error)
 }
 
 var (
@@ -127,7 +127,6 @@ func (bus *EventBus) SendEventInternal(ctx context.Context, ns *namespace.Namesp
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
-	bus.logger.Debug("Sending event", "event", eventReceived)
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
@@ -185,10 +184,6 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		return nil, err
 	}
 	formatterNodeID := eventlogger.NodeID(formatterID)
-	err = broker.RegisterNode(formatterNodeID, cloudEventsFormatterFilter)
-	if err != nil {
-		return nil, err
-	}
 
 	if logger == nil {
 		logger = hclog.Default().Named("events")
@@ -217,6 +212,11 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 		return nil, nil, err
 	}
 
+	err = bus.broker.RegisterNode(bus.formatterNodeID, cloudEventsFormatterFilter)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	filterNodeID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, err
@@ -237,7 +237,7 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger)
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -312,11 +312,12 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker) *asyncChanNode {
 	return &asyncChanNode{
-		ctx:    ctx,
-		ch:     make(chan *eventlogger.Event),
-		logger: logger,
+		ctx:            ctx,
+		ch:             make(chan *eventlogger.Event),
+		logger:         logger,
+		removePipeline: broker.RemovePipelineAndNodes,
 	}
 }
 
@@ -324,17 +325,15 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
 func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
-		if node.broker != nil {
-			isPipelineRemoved, err := node.broker.RemovePipelineAndNodes(ctx, eventTypeAll, node.pipelineID)
+		removed, err := node.removePipeline(ctx, eventTypeAll, node.pipelineID)
 
-			switch {
-			case err != nil && isPipelineRemoved:
-				msg := fmt.Sprintf("Error removing nodes referenced by pipeline %q", node.pipelineID)
-				node.logger.Warn(msg, err)
-			case err != nil:
-				msg := fmt.Sprintf("Error removing pipeline %q", node.pipelineID)
-				node.logger.Warn(msg, err)
-			}
+		switch {
+		case err != nil && removed:
+			msg := fmt.Sprintf("Error removing nodes referenced by pipeline %q", node.pipelineID)
+			node.logger.Warn(msg, err)
+		case err != nil:
+			msg := fmt.Sprintf("Error removing pipeline %q", node.pipelineID)
+			node.logger.Warn(msg, err)
 		}
 		addSubscriptions(-1)
 	})
