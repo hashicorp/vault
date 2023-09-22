@@ -674,6 +674,10 @@
         "path": "system/seal-status"
       },
       {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
+      },
+      {
         "title": "<code>/sys/sealwrap/rewrap</code>",
         "path": "system/sealwrap-rewrap"
       },
