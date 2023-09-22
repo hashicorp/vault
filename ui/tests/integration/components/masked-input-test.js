@@ -122,7 +122,7 @@ module('Integration | Component | masked input', function (hooks) {
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
     assert.ok(component.copyButtonIsPresent);
-    assert.ok(component.downloadButtonIsPresent);
+    assert.ok(component.downloadIconIsPresent);
     assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
 
     await component.toggleMasked();
