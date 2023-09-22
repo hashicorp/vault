@@ -80,3 +80,15 @@ CSPs or seal wrapped values previously written.
 on the previous configuration before attempting a configuration change.
 
 * More than one seal is being added or removed at a time.  
+
+### Interaction with Shamir Seals
+
+Seal HA is only supported with auto seal mechanisms.  To use Seal HA when
+running a Shamir seal, first use the traditional [seal
+migration](/vault/docs/concepts/seal#seal-migration) mechanism to migrate to
+an auto seal of your choice.  Afterwards you may follow the above
+instructions to add a second auto seal.
+
+Correspondingly, to migrate back to a shamir seal, first use the above
+instructions to move to a single auto seal, and use the traditional
+migration method to migrate back to a Shamir seal.
