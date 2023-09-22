@@ -19,6 +19,7 @@ external destination. It is this IAM User or IAM Role in AWS for which access cr
 then provided to Vault during configuration.
 
 The following is an example policy outlining the required permissions to use secrets syncing:
+
 ```
 {
 	"Version": "2012-10-17",
@@ -45,10 +46,15 @@ When AWS credentials have been obtained, Vault can be configured to create an AW
 begin to associate your secrets with this destination.
 
 1. Store any KV secret into Vault, like so:
+
 	```shell-session
 	$ vault kv put secret/foo mypass=bar
 	```
-	Output:
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
 	```
 	=== Secret Path ===
 	secret/data/foo
@@ -63,6 +69,8 @@ begin to associate your secrets with this destination.
 	version            1
 	```
 
+	</CodeBlockConfig>
+
 1.	Configure the sync destination:
 
 	```shell-session
@@ -71,7 +79,11 @@ begin to associate your secrets with this destination.
 	secret_access_key='R4nm063hgMVo4BTT5xOs5nHLeLXA6lar7ZJ3Nt0i' \
 	region='us-east-1'
 	```
-	Output:
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+	
 	```text
 	Key                   Value
 	---                   -----
@@ -80,13 +92,20 @@ begin to associate your secrets with this destination.
 	type                  aws-sm
 	```
 
+	</CodeBlockConfig>
+
 1.	Set a secret to be associated with the configured secret destination:
+
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
 	mount='secret' \
 	secret_name='foo'
 	```
-	Output:
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
 	```
 	Key                   Value
 	---                   -----
@@ -95,9 +114,17 @@ begin to associate your secrets with this destination.
 	store_type            aws-sm
 	```
 
+	</CodeBlockConfig>
+
 ## Troubleshooting
 
 ...
+
+
+## Tutorial
+
+Refer to the [Vault Enterprise Secrets Sync](/vault/tutorials/enterprise/secrets-sync)
+tutorial to learn how to configure the secrets sync between Vault and AWS Secrets Manager.
 
 ## API
 

@@ -6,7 +6,7 @@ description: The Google Cloud Platform Secret Manager destination syncs secrets 
 
 # Google Cloud Platform Secret Manager sync destination
 
-The Google Cloud Platform Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
+The Google Cloud Platform (GCP) Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
 to connect directly with Vault. This guide walks you through the configuration process.
 
@@ -36,12 +36,16 @@ to provision this Service Account via Terraform can be found below.
 
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine and create a secret.
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
   Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
 
+1. Create secrets you wish to sync with a target GCP Secret Manager.
+
+  ```shell-session
   $ vault kv put -mount=my-kv my-secret foo=bar
   ==== Secret Path ====
   my-kv/data/my-secret
@@ -56,16 +60,27 @@ to provision this Service Account via Terraform can be found below.
   version            1
   ```
 
-1. Create an association between your GCP SM destination and the secret to synchronize
+1. Create an association between your GCP Secret Manager destination and the secret to synchronize.
 
   ```shell-session
-  vault write sys/sync/destinations/aws-sm/my-dest/associations/set mount=my-kv secret_name=my-secret
+  $ vault write sys/sync/destinations/aws-sm/my-dest/associations/set \
+      mount=my-kv \
+      secret_name=my-secret
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   Key                   Value
   ---                   -----
   associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
   store_name            my-dest
   store_type            gcp-sm
   ```
+
+  </CodeBlockConfig>
 
 1. Navigate to the [Secret Manager](https://console.cloud.google.com/security/secret-manager) in the Google Cloud console
 to confirm your secret was successfully created in your GCP project.
