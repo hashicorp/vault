@@ -94,7 +94,6 @@ export default class VaultClusterOidcProviderRoute extends Route {
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
     const redirectUrl = this._buildUrl(baseUrl, { code, state });
-    this.redirect_uri = redirectUrl;
     if (!Ember.testing) {
       this.win.location.replace(redirectUrl);
     }
@@ -102,10 +101,10 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
   _handleError(errorResp, baseUrl) {
     const redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
-    if (Ember.testing) {
-      return { redirectUrl };
+    if (!Ember.testing) {
+      this.win.location.replace(redirectUrl);
     }
-    this.win.location.replace(redirectUrl);
+    return { redirectUrl };
   }
 
   /**
