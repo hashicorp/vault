@@ -55,6 +55,12 @@ in which to attempt decryption, and which order to attempt to source entropy
 for entropy augmentation.  This can be useful if your seals have different
 performance or cost characteristics.
 
+All configured, healthy seals are used to seal wrap values.  When seals are 
+unhealthy, Vault keeps track of values that could not be fully wrapped and
+will re-wrap them once seals become healthy again.  Disabled seals can still
+be used for decryption of wrapped values, but will be avoided when
+encrypting values.
+
 To add an additional seal, simply add another seal stanza, specifying priority
 and optionally name, and restart Vault.
 
