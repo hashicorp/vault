@@ -16,5 +16,12 @@ module.exports = {
     'require-input-label': 'off',
     'no-array-prototype-extensions': 'off',
   },
-  ignore: ['tests/**'],
+  overrides: [
+    {
+      files: ['**/*-test.js'],
+      rules: {
+        prettier: false,
+      },
+    },
+  ],
 };

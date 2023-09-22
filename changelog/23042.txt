@@ -1,0 +1,4 @@
+```release-note:bug
+events: Ensure subscription resources are cleaned up on close.
+```
+
