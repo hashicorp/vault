@@ -1,7 +1,160 @@
 ---
 layout: docs
-page_title: GCP Secret Manager - Secrets Sync Destination
-description: The GCP Secret Manager destination syncs secrets from Vault to GCP.
+page_title: Google Cloud Platform Secret Manager - Secrets Sync Destination
+description: The Google Cloud Platform Secret Manager destination syncs secrets from Vault to GCP.
 ---
 
-# GCP Secret Manager
+# Google Cloud Platform Secret Manager Sync Destination
+
+The Google Cloud Platform Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
+This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
+to connect directly with Vault. This guide walks you through the configuration process.
+
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create GCP Service Account credentials with access to the Secret Manager
+* Ability to create sync destinations and associations on your Vault server
+
+## Setup
+
+1. If you do not already have a Service Account, navigate to the IAM & Admin page in the Google Cloud console to
+[create a new Service Account](https://cloud.google.com/iam/docs/service-accounts-create) with the
+[necessary permissions](/vault/docs/sync/gcpsm#permissions). [Instructions](/vault/docs/sync/gcpsm#provision-service-account)
+to provision this Service Account via Terraform can be found below.
+
+1. Configure a sync destination with the Service Account json credentials created in the previous step. See docs for
+[alternative ways](/vault/docs/secrets/gcp#authentication) to pass in the `credentials` parameter.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gcp-sm/my-dest credentials=@path/to/credentials.json
+  Key                   Value
+  ---                   -----
+  connection_details    map[credentials:*****]
+  name                  my-dest
+  type                  gcp-sm
+  ```
+
+## Usage
+
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine and create a secret.
+
+  ```shell-session
+  $ vault secrets enable -path=my-kv kv-v2
+  Success! Enabled the kv-v2 secrets engine at: my-kv/
+
+  $ vault kv put -mount=my-kv my-secret foo=bar
+  ==== Secret Path ====
+  my-kv/data/my-secret
+
+  ======= Metadata =======
+  Key                Value
+  ---                -----
+  created_time       <timestamp>
+  custom_metadata    <nil>
+  deletion_time      n/a
+  destroyed          false
+  version            1
+  ```
+
+1. Create an association between your GCP SM destination and the secret to synchronize
+
+  ```shell-session
+  vault write sys/sync/destinations/aws-sm/my-dest/associations/set mount=my-kv secret_name=my-secret
+  Key                   Value
+  ---                   -----
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
+  store_name            my-dest
+  store_type            gcp-sm
+  ```
+
+1. Navigate to the [Secret Manager](https://console.cloud.google.com/security/secret-manager) in the Google Cloud console
+to confirm your secret was successfully created in your GCP project.
+
+Moving forward, any modification on the Vault secret will be propagated in near real time to its GCP Secret Manager
+counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
+or the association in Vault will delete the secret in your GCP project as well.
+
+## Permissions
+
+The credentials given to Vault must have the following permissions to synchronize secrets:
+
+```shell-session
+secretmanager.secrets.create
+secretmanager.secrets.delete
+secretmanager.secrets.get
+secretmanager.secrets.list
+secretmanager.secrets.update
+secretmanager.versions.access
+secretmanager.versions.add
+secretmanager.versions.destroy
+secretmanager.versions.get
+secretmanager.versions.list
+```
+
+## Provision Service Account
+
+Vault needs to be configured with credentials to establish a trust relationship with your GCP project so it can managed
+Secret Manager secrets on your behalf. The IAM & Admin page in the Google Cloud console can be used to
+[create a new Service Account](https://cloud.google.com/iam/docs/service-accounts-create) with access to the Secret Manager.
+
+You can equally use the [Terraform Google provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs#authentication-and-configuration)
+to provision a GCP Service Account with the appropriate policies.
+
+  ```hcl
+  provider "google" {
+      // See https://registry.terraform.io/providers/hashicorp/google/latest/docs#authentication-and-configuration to setup the Google Provider
+      // for options on how to configure this provider. The following parameters or environment
+      // variables are typically used.
+
+      // Parameters
+      // region = "" (Optional)
+      // project = ""
+      // credentials = ""
+
+      // Environment Variables
+      // GOOGLE_REGION (optional)
+      // GOOGLE_PROJECT
+      // GOOGLE_CREDENTIALS	(The path to a service account key file with the
+      //				        "Service Account Admin", "Service Account Key
+      //					    Admin", and "Security Admin" roles attached)
+  }
+
+  data "google_client_config" "config" {}
+
+  resource "google_service_account" "vault_secrets_sync_account" {
+    account_id  = "gcp-sm-vault-secrets-sync"
+    description = "service account for Vault Secrets Sync feature"
+  }
+
+  // Production environments should use a more restricted role.
+  // The built-in secret manager admin role is used as an example for simplicity.
+  data "google_iam_policy" "vault_secrets_sync_iam_policy" {
+    binding {
+      role = "roles/secretmanager.admin"
+      members = [
+        google_service_account.vault_secrets_sync_account.email,
+      ]
+    }
+  }
+
+  resource "google_project_iam_member" "vault_secrets_sync_iam_member" {
+    project = data.google_client_config.config.project
+    role    = "roles/secretmanager.admin"
+    member  = google_service_account.vault_secrets_sync_account.member
+  }
+
+  resource "google_service_account_key" "vault_secrets_sync_account_key" {
+    service_account_id = google_service_account.vault_secrets_sync_account.name
+    public_key_type    = "TYPE_X509_PEM_FILE"
+  }
+
+  resource "local_file" "vault_secrets_sync_credentials_file" {
+    content  = base64decode(google_service_account_key.vault_secrets_sync_account_key.private_key)
+    filename = "gcp-sm-sync-service-account-credentials.json"
+  }
+
+  output "vault_secrets_sync_credentials_file_path" {
+    value = abspath("${path.module}/${local_file.sync_service_account_credentials_file.filename}")
+  }
+  ```
+
