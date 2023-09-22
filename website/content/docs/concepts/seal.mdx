@@ -375,9 +375,9 @@ the generally available version of the feature:
 * Changing seal configurations requires a restart of Vault.
 * Vault must be configured for a single seal at the time of initialization.
 Extra seals can then be added.
-* Upon upgrading to Vault 1.15 or higher, Vault must start with Seal HA disabled
-to perform migrations.  Then the beta environment variable can be set and an
-extra seal added.
+* Upon upgrading to Vault 1.15 or higher, Vault must start with a
+conventional single seal and the beta flag enabled.  Afterward an additional seal 
+may be added.
 * Seals must be added or removed one at a time.
 * Only auto seals can be used in HA configurations.  Shamir and auto cannot
 be mixed.
