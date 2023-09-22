@@ -2242,7 +2242,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 	}
 	return []*framework.Path{
 		{
-			Pattern: "plugins/runtimes/catalog",
+			Pattern: "plugins/runtimes/catalog/?$",
 
 			Fields: map[string]*framework.FieldSchema{
 				"type": {

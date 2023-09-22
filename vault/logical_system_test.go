@@ -6139,7 +6139,8 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 
 	// List the plugin runtimes of container type
 	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
-		req = logical.TestRequest(t, op, "plugins/runtimes/catalog?type=container")
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		req.Data["type"] = "container"
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -6194,8 +6195,8 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	// List the plugin runtimes of container type
-	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog?type=container")
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	req.Data["type"] = "container"
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
