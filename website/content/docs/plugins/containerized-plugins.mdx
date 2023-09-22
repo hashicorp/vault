@@ -149,12 +149,12 @@ locally when mounted.
     SHA256="$(docker images --no-trunc --format="{{ .ID }}" hashicorp/vault-plugin-secrets-kv | cut -d: -f2)"
     ```
 
-1. Register a plugin, specifying your container image as `-oci_image`:
-    ```bash
-    vault plugin register \
+1. Register the plugin with `vault plugin register` and specify your container image with `-oci_image`:
+    ```shell-session
+    $ vault plugin register \
         -sha256="$SHA256" \
-        -oci_image=hashicorp/vault-plugin-secrets-kv \
-      secret kv-container
+        -oci_image=PATH/TO/PLUGIN/IMAGE \
+      secret CONTAINER_NAME
     ```
 
 1. Enable the plugin:
