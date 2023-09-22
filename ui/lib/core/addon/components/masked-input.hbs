@@ -78,6 +78,7 @@
       @data={{@value}}
       @stringify={{true}}
       aria-label="Download secret value"
+      {{on "click" (fn (mut this.modalOpen) false)}}
     >
       Download
     </DownloadButton>
