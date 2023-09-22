@@ -4,10 +4,16 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
+
+	"github.com/hashicorp/vault/helper/useragent"
 
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 
@@ -56,6 +62,35 @@ type StaticSecretCacheUpdater struct {
 	client     *api.Client
 	leaseCache *LeaseCache
 	logger     hclog.Logger
+}
+
+// StaticSecretCacheUpdaterConfig is the configuration for initializing a new
+// StaticSecretCacheUpdater.
+type StaticSecretCacheUpdaterConfig struct {
+	Client     *api.Client
+	LeaseCache *LeaseCache
+	Logger     hclog.Logger
+}
+
+// NewStaticSecretCacheUpdater creates a new instance of a StaticSecretCacheUpdater.
+func NewStaticSecretCacheUpdater(conf *StaticSecretCacheUpdaterConfig) (*StaticSecretCacheUpdater, error) {
+	if conf == nil {
+		return nil, errors.New("nil configuration provided")
+	}
+
+	if conf.LeaseCache == nil || conf.Logger == nil {
+		return nil, fmt.Errorf("missing configuration required params: %v", conf)
+	}
+
+	if conf.Client == nil {
+		return nil, fmt.Errorf("nil API client")
+	}
+
+	return &StaticSecretCacheUpdater{
+		client:     conf.Client,
+		leaseCache: conf.LeaseCache,
+		logger:     conf.Logger,
+	}, nil
 }
 
 // streamStaticSecretEvents streams static secret events and updates
@@ -138,27 +173,90 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		return err
 	}
 
-	// TODO: get the index using the path
-	// If it doesn't exist, return nil
-	// TODO: get the tokens from the lease cache entry, use them to get the secret
-	updater.leaseCache.db.Get(cachememdb.IndexNameID, path) // TODO: get the id from the path
-
-	// TODO: get the ID for the
-	// updater.leaseCache.db.Get()
-	// TODO Update the secret
-	// TODO if it's in our cache, then we need to update the index
-	// TODO we need a lease cache method for that
-	// lc.updateStaticSecret(secret, path)
-
-	secret, err := client.Logical().ReadWithContext(ctx, path)
+	// TODO: avoid using req here make a new method
+	// that takes path and returns index
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: path,
+			},
+		},
+	}
+	index, err := updater.leaseCache.db.Get(cachememdb.IndexNameID, computeStaticSecretCacheIndex(req))
 	if err != nil {
-		// This isn't good, maybe Vault is down or similar, but we cannot
-		// simply error out here or ignore this event.
-		// TODO decide what to do
+		return err
+	}
+	if index == nil {
+		// This event doesn't correspond to a secret in our cache
+		// so this is a no-op.
+		return nil
 	}
 
-	updater.logger.Info("Logging secret for debugging purposes", "secret", secret)
-	// TODO Update the secret
+	// We use a raw request so that we can store all the
+	// request information, just like we do in the Proxier Send methods.
+	request := client.NewRequest(http.MethodGet, path)
+	if request.Headers == nil {
+		request.Headers = make(http.Header)
+	}
+	request.Headers.Set("User-Agent", useragent.ProxyString())
+
+	var resp *api.Response
+	var tokensToRemove []string
+	for _, token := range index.Tokens {
+		client.SetToken(token)
+		resp, err = client.RawRequestWithContext(ctx, request)
+		if err != nil {
+			// We cannot access this secret with this token for whatever reason,
+			// so token for removal.
+			tokensToRemove = append(tokensToRemove, token)
+			continue
+		} else {
+			// We got our updated secret!
+			break
+		}
+	}
+
+	if resp != nil {
+		// We need to update the index, so first, hold the lock.
+		index.IndexLock.Lock()
+		defer index.IndexLock.Unlock()
+
+		// First, remove the tokens we noted couldn't access the secret from the token index
+		for _, token := range tokensToRemove {
+			// TODO, fix this once we get the map in this branch
+			delete(index.Tokens, token)
+		}
+
+		sendResponse, err := NewSendResponse(resp, nil)
+		if err != nil {
+			return err
+		}
+
+		// Serialize the response to store it in the cached index
+		var respBytes bytes.Buffer
+		err = sendResponse.Response.Write(&respBytes)
+		if err != nil {
+			updater.logger.Error("failed to serialize response", "error", err)
+			return err
+		}
+
+		// Set the index's Response
+		index.Response = respBytes.Bytes()
+
+		// Lastly, store the secret
+		updater.logger.Debug("storing response into the cache due to event update", "method", req.Request.Method, "path", req.Request.URL.Path)
+		err = updater.leaseCache.db.Set(index)
+		if err != nil {
+			return err
+		}
+	} else {
+		// No token could successfully update the secret, or secret was deleted.
+		// We should evict the cache instead of re-storing the secret.
+		err = updater.leaseCache.db.Evict(cachememdb.IndexNameID, computeStaticSecretCacheIndex(req))
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
