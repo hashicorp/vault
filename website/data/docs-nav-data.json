@@ -2417,7 +2417,16 @@
       },
       {
         "title": "Namespaces",
-        "path": "enterprise/namespaces"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/namespaces"
+          },
+          {
+            "title": "Create an administrative namespace",
+            "path": "enterprise/namespaces/create-admin-namespace"
+          }
+        ]
       },
       {
         "title": "Performance Standbys",
