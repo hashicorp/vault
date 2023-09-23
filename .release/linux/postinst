@@ -26,7 +26,7 @@ openssl req \
 
 # Update file permissions
 chown --recursive vault:vault /etc/vault.d
-chmod --recursive 444 /etc/vault.d
+chmod 444 /etc/vault.d/*
 chown --recursive vault:vault /opt/vault
 chmod 600 /opt/vault/tls/tls.crt /opt/vault/tls/tls.key
 chmod 700 /opt/vault/tls
