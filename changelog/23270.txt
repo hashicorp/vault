@@ -1,0 +1,3 @@
+```release-note:improvement
+.release/linux: make vault config files not writable for vaul service user
+```
