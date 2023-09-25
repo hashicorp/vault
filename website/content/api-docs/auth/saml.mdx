@@ -119,14 +119,14 @@ authentication and properties of resulting Vault tokens.
 
 - `name` `(string: <required>)` - URL parameter that provides the name of the role to create.
 - `bound_subjects` `(string: <optional>)` - The subject being asserted for SAML
-  authentication. One of the provided values must match the subject returned by
-  the SAML authentication service provider.
+  authentication. One of the provided values must match the subject returned in
+  the SAML assertion from the identity provider.
 - `bound_subjects_type` `(string: <optional>)` - The type of matching assertion to perform
   on `bound_subjects`. If `string`, requires a direct string match. If `glob`, allows for
   wildcard matching using the `*` character.
 - `bound_attributes` `(map: <optional>)` - Mapping of attribute names to values to assert
   exist in the SAML Response's Assertion. The expected value may be a single string or a
-  comma-separated list of strings. If multiple values are set for an attribute the user will be authenticated if the SAML response match one of the possible values. 
+  comma-separated list of strings. If multiple values are set for an attribute the user will be authenticated if the SAML response match one of the possible values.
 - `bound_attributes_type` `(string: <optional>)` - The type of matching assertion to perform
   on `bound_attributes` key-value pairs. If `string`, requires a direct string match in
   values. If `glob`, allows for wildcard matching using the `*` character in values.
