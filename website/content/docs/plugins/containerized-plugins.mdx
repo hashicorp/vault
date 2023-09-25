@@ -48,6 +48,7 @@ isolation between plugins, and between plugins and Vault.
 
 <Tabs>
 <Tab heading="Docker">
+
 ```bash
 sudo tee /etc/docker/daemon.json <<EOF
 {
@@ -63,8 +64,10 @@ sudo tee /etc/docker/daemon.json <<EOF
 EOF
 sudo systemctl reload docker
 ```
+
 </Tab>
 <Tab heading="Rootless Docker">
+
 ```bash
 mkdir -p ~/.config/docker
 tee ~/.config/docker/daemon.json  <<EOF
@@ -82,6 +85,7 @@ tee ~/.config/docker/daemon.json  <<EOF
 EOF
 systemctl --user restart docker
 ```
+
 </Tab>
 </Tabs>
 
