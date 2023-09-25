@@ -118,9 +118,9 @@ authentication and properties of resulting Vault tokens.
 ### Parameters
 
 - `name` `(string: <required>)` - URL parameter that provides the name of the role to create.
-- `bound_subjects` `(string: <optional>)` - The subject to assert is the subject of the SAML
-  authentication. The subject in the SAML Response's Assertion needs to match one of the
-  configured values.
+- `bound_subjects` `(string: <optional>)` - The subject being asserted for SAML
+  authentication. One of the provided values must match the subject returned by
+  the SAML authentication service provider.
 - `bound_subjects_type` `(string: <optional>)` - The type of matching assertion to perform
   on `bound_subjects`. If `string`, requires a direct string match. If `glob`, allows for
   wildcard matching using the `*` character.
