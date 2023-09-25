@@ -37,9 +37,9 @@ Configures the auth method with a SAML identity provider.
 - `idp_cert` `(string, <required if idp_metadata_url is not set>)` - The PEM-encoded
   certificate of the identity provider used to verify response and assertion signatures.
   Mutually exclusive with `idp_metadata_url`.
-- `entity_id` `(string, <required>)` - The entity ID of this authentication method as a SAML
-  Service Provider. Must match entity ID configured for the application in the SAML Identity
-  Provider.
+- `entity_id` `(string, <required>)` - The entity ID of the SAML authentication
+  service provider. Must match entity ID configured for the application in the
+  SAML identity provider.
 - `acs_urls` `(list, <required>)` - The Assertion Consumer Service URLs to which the responses
   from the Identity Provider will be sent. Must be well-formatted URLs. A warning will be
   provided if any of the given URLs are not TLS protected.
