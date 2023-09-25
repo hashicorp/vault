@@ -86,14 +86,13 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	// Extract Consul Namespace info from secret
-	var namespace string
+	var revokeWriteOptions *api.WriteOptions
 	namespaceRaw, ok := req.Data["consul_namespace"]
 	if ok {
-		namespace = namespaceRaw.(string)
-	}
-
-	revokeWriteOptions := &api.WriteOptions{
-		Namespace: namespace,
+		namespace := namespaceRaw.(string)
+		revokeWriteOptions = &api.WriteOptions{
+			Namespace: namespace,
+		}
 	}
 
 	switch version {
