@@ -35,7 +35,7 @@ Configures the auth method with a SAML identity provider.
 - `idp_entity_id` `(string, <required if idp_metadata_url is not set>)` - The entity ID of
   the identity provider. Mutually exclusive with `idp_metadata_url`.
 - `idp_cert` `(string, <required if idp_metadata_url is not set>)` - The PEM-encoded
-  certificate of the Identity Provider used to verify response and assertion signatures.
+  certificate of the identity provider used to verify response and assertion signatures.
   Mutually exclusive with `idp_metadata_url`.
 - `entity_id` `(string, <required>)` - The entity ID of this authentication method as a SAML
   Service Provider. Must match entity ID configured for the application in the SAML Identity
