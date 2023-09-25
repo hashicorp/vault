@@ -59,7 +59,7 @@ to provision this Service Account via Terraform can be found below.
 1. Create an association between your GCP SM destination and the secret to synchronize
 
   ```shell-session
-  vault write sys/sync/destinations/aws-sm/my-dest/associations/set mount=my-kv secret_name=my-secret
+  vault write sys/sync/destinations/gcp-sm/my-dest/associations/set mount=my-kv secret_name=my-secret
   Key                   Value
   ---                   -----
   associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
