@@ -40,9 +40,10 @@ Configures the auth method with a SAML identity provider.
 - `entity_id` `(string, <required>)` - The entity ID of the SAML authentication
   service provider. Must match entity ID configured for the application in the
   SAML identity provider.
-- `acs_urls` `(list, <required>)` - The Assertion Consumer Service URLs to which the responses
-  from the Identity Provider will be sent. Must be well-formatted URLs. A warning will be
-  provided if any of the given URLs are not TLS protected.
+- `acs_urls` `(list, <required>)` - The well-formated URLs of your Assertion
+  Consumer Service (ACS) that should receive a response from the identity
+  provider. Vault returns a security warning if any of the given URLs lack TLS
+  protection.
 - `default_role` `(string, <optional>)` - The role to use if no role is provided during login.
   If not set, a role is required during login.
 
