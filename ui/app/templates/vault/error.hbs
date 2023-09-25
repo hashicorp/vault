@@ -42,9 +42,21 @@
         <Chevron @direction="left" />
         Go home
       </ExternalLink>
-      <DocLink @path="/vault/api-docs#http-status-codes">
-        Learn more
-      </DocLink>
+      {{#if this.model.promptLogin}}
+        <LinkTo
+          @route="vault.cluster.logout"
+          @model={{this.clusterId}}
+          @query={{hash namespace=this.ns}}
+          class="is-no-underline is-flex-center has-text-semibold"
+        >
+          Reauthenticate
+          <Chevron @direction="right" />
+        </LinkTo>
+      {{else}}
+        <DocLink @path="/vault/api-docs#http-status-codes">
+          Learn about status codes
+        </DocLink>
+      {{/if}}
     </div>
   </div>
 </div>

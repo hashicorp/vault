@@ -7,12 +7,23 @@ import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
+import { assert } from '@ember/debug';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
-import getStorage from '../../lib/token-storage';
+import getStorage from 'vault/lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import {
+  AUTH,
+  INIT,
+  LOGOUT,
+  NS_OIDC_PROVIDER,
+  OIDC_CALLBACK,
+  OIDC_PROVIDER,
+  REDIRECT,
+  UNSEAL,
+} from 'vault/lib/route-paths';
 
 const POLL_INTERVAL_MS = 10000;
 
@@ -50,15 +61,27 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     return cluster ? cluster.get('id') : null;
   },
 
-  async beforeModel() {
+  async getPermissions(intendedRoute) {
+    // A 403 happens when the use doesn't have access to a given namespace
+    // since this check happens on the cluster level, we should silence the
+    // failure on routes where we want the route to continue after failure.
+    const throwOn403 =
+      this.version.isEnterprise &&
+      ![AUTH, LOGOUT, INIT, UNSEAL, REDIRECT, OIDC_CALLBACK, OIDC_PROVIDER, NS_OIDC_PROVIDER].includes(
+        intendedRoute
+      );
+    await this.permissions.getPaths.perform(throwOn403);
+  },
+
+  async beforeModel(transition) {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.get('currentTokenName');
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
-    if (managedRoot && this.version.isOSS) {
-      // eslint-disable-next-line no-console
-      console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
-    }
+    assert(
+      'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
+      !(managedRoot && this.version.isOSS)
+    );
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
@@ -79,7 +102,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (id) {
       this.auth.setCluster(id);
       if (this.auth.currentToken) {
-        await this.permissions.getPaths.perform();
+        await this.getPermissions(transition.to.name);
       }
       return this.version.fetchFeatures();
     } else {

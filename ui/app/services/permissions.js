@@ -68,7 +68,7 @@ export default Service.extend({
   auth: service(),
   namespace: service(),
 
-  getPaths: task(function* () {
+  getPaths: task(function* (throwOn403 = false) {
     if (this.paths) {
       return;
     }
@@ -78,6 +78,12 @@ export default Service.extend({
       this.setPaths(resp);
       return;
     } catch (err) {
+      if (throwOn403 && err.httpStatus === 403) {
+        // 403 on this endpoint means you are in the wrong namespace
+        err.message = 'Resultant ACL check failed. This might mean you are in the wrong namespace.';
+        err.promptLogin = true;
+        throw err;
+      }
       // If no policy can be found, default to showing all nav items.
       this.set('canViewAll', true);
     }
