@@ -144,7 +144,7 @@ that both the [`bound_subjects`](/vault/api-docs/auth/saml#bound_subjects) and
 values configured for the role. This can be used to restrict access to Vault for
 a subset of users in the SAML Identity Provider.
 
-For example, a role with `bound_subject=*@hashicorp.com` and
+For example, a role with `bound_subjects=*@hashicorp.com` and
 `bound_attributes=groups=support,engineering` will only authorize users whose subject has
 an `@hashicorp.com` suffix and that are in either the `support` or `engineering` group.
 
