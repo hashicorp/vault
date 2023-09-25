@@ -10,171 +10,153 @@ description: Running external plugins for Vault in containers.
   Beta functionality is stable but possibly incomplete and subject to change.
 </Important>
 
-If running on Linux, Vault can optionally run external plugins in containers.
-This provides increased levels of isolation between the plugin and Vault, as
-well as the plugin and other plugins, compared to the default behavior of
-running plugins as a sub-process with the same user and environment variables
-as Vault.
+By default, plugins run as subprocesses that share Vault's user and environment
+variables. Administrators managing Vault instances on Linux can choose to run
+external plugins in containers. Running plugins in containers increases the
+isolation between plugins, and between plugins and Vault.
 
-## Prerequisites
+## Before you start
 
-* Linux. Containerized plugin support is currently limited to Linux.
+- **Your Vault instance must be running on Linux**
 
-* Local Docker Engine API available to Vault. Vault uses the
-  [Docker SDK](https://pkg.go.dev/github.com/docker/docker) to manage containerized
-  plugins, which means it needs access to a Docker Engine API. This could be
-  backed by Docker, Podman, or any other Docker-compatible container engines.
-  Use the `DOCKER_HOST` environment variable to configure a custom address.
+- **Your environment must provide Vault local access to the Docker Engine API**.
+  Vault uses the [Docker SDK](https://pkg.go.dev/github.com/docker/docker) to
+  manage containerized plugins. You can provide API access through Docker,
+  Podman, or any other Docker-compatible container engines.
 
-* (Optional) gVisor installed and configured as a runtime. Vault uses gVisor's
-  runsc container runtime by default. However, it can also be configured to use
-  other runtimes such as Docker's default, runc. In addition to the
-  [official installation instructions](https://gvisor.dev/docs/user_guide/install/),
-  runsc requires an additional runtime argument to enable Unix domain socket
-  communication between Vault and the plugin: `--host-uds=all`.
-  For example, if using Docker, `daemon.json` will look like so:
+- **You must set the `DOCKER_HOST` environment variable to your local instance
+  of the Docker API if you want to use a custom address**.
 
-  ```json
-  {
-    "runtimes": {
-      "runsc": {
-        "path": "/usr/local/bin/runsc",
-        "runtimeArgs": [
-          "--host-uds=all"
-        ]
-      }
-    }
-  }
-  ```
+- **You must have a valid container runtime installed**. We recommend
+  [installing gVisor](https://gvisor.dev/docs/user_guide/install/) for your
+  container runtime as Vault uses the `runsc` runtime by default.
 
-* Any plugin container images must be pulled and already available locally.
+- **You must have all your plugin container images pulled and available locally**.
   Vault does not currently support pulling images as part of the plugin
   registration process.
 
-## Running containerized plugins
-
-### Installation
+## Installation
 
 1. Install a container engine, for example:
     * [Docker](https://docs.docker.com/engine/install/)
     * Or [rootless Docker](https://docs.docker.com/engine/security/rootless/)
 
-2. [Install runsc](https://gvisor.dev/docs/user_guide/install/)
+1. [Install `runsc`](https://gvisor.dev/docs/user_guide/install/)
 
-3. Configure runsc to allow Unix sockets between the host and plugin, updating
-   the runsc install location if you didn't use the default:
+1. Configure `runsc` to allow Unix sockets between the host and plugin and
+   update the `runsc` install location if needed:
 
-    a. Default Docker install:
-        ```bash
-        sudo tee /etc/docker/daemon.json <<EOF
-        {
-        "runtimes": {
-          "runsc": {
-            "path": "/usr/local/bin/runsc",
-              "runtimeArgs": [
-                "--host-uds=all"
-              ]
-            }
-          }
-        }
-        EOF
-        sudo systemctl reload docker
-        ```
-    
-    b. Rootless Docker install:
-        ```bash
-        mkdir -p ~/.config/docker
-        tee ~/.config/docker/daemon.json  <<EOF
-        {
-          "runtimes": {
-            "runsc": {
-              "path": "/usr/local/bin/runsc",
-              "runtimeArgs": [
-                "--host-uds=all"
-                "--ignore-cgroups"
-              ]
-            }
-          }
-        }
-        EOF
-        systemctl --user restart docker
-        ```
+<Tabs>
+<Tab heading="Docker">
+```shell-session
+$ sudo echo '{
+  "runtimes": {
+    "runsc": {
+      "path": "/usr/local/bin/runsc",
+      "runtimeArgs": [
+        "--host-uds=all"
+      ]
+    }
+  }
+}' >> /etc/docker/daemon.json ; sudo systemctl reload docker
+```
+</Tab>
+<Tab heading="Rootless Docker">
+```shell-session
+$ mkdir -p ~/.config/docker ; echo '{
+  "runtimes": {
+    "runsc": {
+      "path": "/usr/local/bin/runsc",
+      "runtimeArgs": [
+        "--host-uds=all"
+        "--ignore-cgroups"
+      ]
+    }
+  }
+}' >> ~/.config/docker/daemon.json ; systemctl --user restart docker
+```
+</Tab>
+</Tabs>
 
-### Building plugin container images
+## Building plugin container images
 
-To be compatible with running in a container, plugins must be built with at
-least v1.5.0 of [go-plugin](https://github.com/hashicorp/go-plugin). This can
-be pulled in directly via `go get github.com/hashicorp/go-plugin@latest`, or
-through the SDK from at least v0.10.0: `go get github.com/hashicorp/vault/sdk@latest`.
+You must build your plugins with v1.5.0+ of
+the HashiCorp [`go-plugin`](https://github.com/hashicorp/go-plugin) library to
+ensure they are compatible with containerization. Once built, your plugin
+container images must run as binaries within the container and behave the same
+as when run as a plain plugin process.
 
-Plugin container images should run a binary the same way it would be expected
-to run as a plain plugin process. For most plugins this simply means running
-the binary as the entrypoint. For example, for the KV plugin:
+1.  Update to the latest version of `go-plugin` by pulling it directly:
+    ```shell-session
+    $ go get github.com/hashicorp/go-plugin@latest
+    ```
+    or by updating your Vault SDK to version v0.10.0+:
+    ```shell-session
+    $ go get github.com/hashicorp/vault/sdk@latest
+    ```
 
 1. Build the binary
-    ```bash
+    ```shell-session
     git clone https://github.com/hashicorp/vault-plugin-secrets-kv.git
     cd vault-plugin-secrets-kv/
-    GOOS=linux go build -o kv cmd/vault-plugin-secrets-kv/main.go
+    CGO_ENABLED=0 GOOS=linux go build -o kv cmd/vault-plugin-secrets-kv/main.go
     ```
 
 1. Create the following `Dockerfile`:
-    ```Dockerfile
-    FROM gcr.io/distroless/static-debian12
+   ```Dockerfile
+   FROM gcr.io/distroless/static-debian12
 
-    COPY kv /bin/kv
+   COPY kv /bin/kv
 
-    ENTRYPOINT [ "/bin/kv" ]
-    ```
+   ENTRYPOINT [ "/bin/kv" ]
+   ```
 
 1. Build the image:
-    ```bash
-    docker build -t hashicorp/vault-plugin-secrets-kv .
-    ```
+   ```shell-session
+   docker build -t hashicorp/vault-plugin-secrets-kv .
+   ```
 
 The image entrypoint, command, and environment can be further configured at
 registration time by using the `-command`, `-args`, and `-env` flags for
 `vault plugin register`.
 
-### Registration
+## Registration
 
-Once Vault has a suitable container runtime available, the remaining steps are
-very similar to registering and using other external plugins. The config setting
-for [`plugin_directory`](/vault/docs/configuration#plugin_directory) is not required
-for containerized plugins, but any plugin containers must already be available
+Once you containerize the plugins, registering them with Vault is similar to
+registering any other external plugins as long as the containers are available
 locally when mounted.
 
 1. Store the SHA256 of the plugin image:
-    ```bash
-    SHA256="$(docker images --no-trunc --format="{{ .ID }}" hashicorp/vault-plugin-secrets-kv | cut -d: -f2)"
-    ```
+   ```shell-session
+   SHA256="$(docker images --no-trunc --format="{{ .ID }}" hashicorp/vault-plugin-secrets-kv | cut -d: -f2)"
+   ```
 
 1. Register the plugin with `vault plugin register` and specify your container image with `-oci_image`:
-    ```shell-session
-    $ vault plugin register \
-        -sha256="$SHA256" \
-        -oci_image=hashicorp/vault-plugin-secrets-kv \
-      secret kv-container
-    ```
+   ```shell-session
+   $ vault plugin register \
+       -sha256="$SHA256" \
+       -oci_image=hashicorp/vault-plugin-secrets-kv \
+     secret kv-container
+   ```
 
 1. Enable the plugin:
-    ```bash
-    vault secrets enable kv-container
-    ```
+   ```shell-session
+   vault secrets enable kv-container
+   ```
 
 1. You can now interact with it like any other plugin:
-    ```shell-session
-    $ vault kv put -mount=kv-container hello subject=containers
-    Success! Data written to: kv-container/hello
+   ```shell-session
+   $ vault kv put -mount=kv-container hello subject=containers
+   Success! Data written to: kv-container/hello
 
-    $ vault kv get -mount=kv-container hello
-    ===== Data =====
-    Key        Value
-    ---        -----
-    subject    containers
-    ```
+   $ vault kv get -mount=kv-container hello
+   ===== Data =====
+   Key        Value
+   ---        -----
+   subject    containers
+   ```
 
-### Container lifecycle and metadata
+## Container lifecycle and metadata
 
 Like any other external plugin, Vault will automatically manage the lifecycle
 of plugin containers. If they are killed out of band, Vault will restart them
@@ -197,10 +179,11 @@ runtime" APIs for finer grained settings. See the CLI documentation for
 Vault's containerized plugins are compatible with a variety of configurations.
 In particular, it has been tested with the following:
 
-* Docker and Podman
-* Default and rootless installations
-* OCI runtimes runsc and runc
-* Plugin container images with root and non-root users
+- Docker and Podman
+- Default and rootless installations
+- OCI runtimes runsc and runc
+- Plugin container images with root and non-root users
+- [Mlock](/vault/docs/configuration#disable_mlock) disabled or enabled
 
 Not all combinations work, and some have some limitations, listed below:
 
@@ -226,32 +209,32 @@ The steps are relatively similar to Docker.
     * [Podman](https://podman.io/docs/installation#installing-on-linux)
     * Or [rootless Podman](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)
 
-2. [Install runsc](https://gvisor.dev/docs/user_guide/install/)
+1. [Install `runsc`](https://gvisor.dev/docs/user_guide/install/)
 
-3. Create an executable script to configure OCI runtime flags:
+1. Create an executable script to configure OCI runtime flags:
 
     * Default Podman install:
-      ```bash
-      RUNSC_SCRIPT=/usr/local/bin/runsc.podman
-      sudo tee "${RUNSC_SCRIPT}" <<EOF
-      #!/bin/bash
-      /usr/local/bin/runsc --host-uds=all "$\@"
-      EOF
-      chmod a+x "${RUNSC_SCRIPT}"
-      ```
+    ```shell-session
+    RUNSC_SCRIPT=/usr/local/bin/runsc.podman
+    sudo tee "${RUNSC_SCRIPT}" <<EOF
+    #!/bin/bash
+    /usr/local/bin/runsc --host-uds=all "$\@"
+    EOF
+    chmod a+x "${RUNSC_SCRIPT}"
+    ```
 
     * Rootless Podman install:
-        ```bash
-        mkdir -p ~/local/bin
-        RUNSC_SCRIPT=~/local/bin/runsc.podman
-        tee "${RUNSC_SCRIPT}" <<EOF
-        #!/bin/bash
-        /usr/local/bin/runsc --host-uds=all --ignore-cgroups "\$@"
-        EOF
-        chmod u+x "${RUNSC_SCRIPT}"
-        ```
-
-4. Start the [Docker-compatible REST API](https://docs.podman.io/en/latest/_static/api.html):
-    ```bash
-    podman --runtime "${RUNSC_SCRIPT}" system service -t 0 &
+    ```shell-session
+    mkdir -p ~/local/bin
+    RUNSC_SCRIPT=~/local/bin/runsc.podman
+    tee "${RUNSC_SCRIPT}" <<EOF
+    #!/bin/bash
+    /usr/local/bin/runsc --host-uds=all --ignore-cgroups "\$@"
+    EOF
+    chmod u+x "${RUNSC_SCRIPT}"
     ```
+
+1. Start the [Docker-compatible REST API](https://docs.podman.io/en/latest/_static/api.html):
+   ```shell-session
+   podman --runtime "${RUNSC_SCRIPT}" system service -t 0 &
+   ```
