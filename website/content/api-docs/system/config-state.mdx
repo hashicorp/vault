@@ -6,6 +6,8 @@ description: The '/sys/config/state' endpoint is used to retrieve the configurat
 
 # `/sys/config/state`
 
+@include 'alerts/restricted-root.mdx'
+
 The endpoints under `sys/config/state` return Vault's configuration state.
 Currently, it only supports returning a sanitized version of the configuration.
 

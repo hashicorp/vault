@@ -23,25 +23,28 @@ interface Args {
 }
 
 interface TidyStatusParams {
-  safety_buffer: number;
-  tidy_cert_store: boolean;
-  tidy_revoked_certs: boolean;
+  // tidy banner
   state: string;
   error: string;
+  message: string;
+  // tidy status
   time_started: string | null;
   time_finished: string | null;
-  message: string;
   cert_store_deleted_count: number;
   revoked_cert_deleted_count: number;
   missing_issuer_cert_count: number;
+  revocation_queue_deleted_count: number; // enterprise only
+  cross_revoked_cert_deleted_count: number; // enterprise only
+  // tidy settings
+  tidy_cert_store: boolean;
+  tidy_revoked_certs: boolean;
   tidy_expired_issuers: boolean;
-  issuer_safety_buffer: string;
+  safety_buffer: number;
   tidy_move_legacy_ca_bundle: boolean;
-  tidy_revocation_queue: boolean;
-  revocation_queue_deleted_count: number;
-  tidy_cross_cluster_revoked_certs: boolean;
-  cross_revoked_cert_deleted_count: number;
-  revocation_queue_safety_buffer: string;
+  issuer_safety_buffer: string;
+  tidy_revocation_queue: boolean; // enterprise only
+  tidy_cross_cluster_revoked_certs: boolean; // enterprise only
+  revocation_queue_safety_buffer: string; // enterprise only
 }
 
 export default class PkiTidyStatusComponent extends Component<Args> {
@@ -57,16 +60,14 @@ export default class PkiTidyStatusComponent extends Component<Args> {
   tidyStatusGeneralFields = [
     'time_started',
     'time_finished',
-    'last_auto_tidy_finished',
     'cert_store_deleted_count',
+    'revoked_cert_deleted_count',
     'missing_issuer_cert_count',
-    'revocation_queue_deleted_count',
   ];
 
   tidyStatusConfigFields = [
     'tidy_cert_store',
-    'tidy_revocation_queue',
-    'tidy_cross_cluster_revoked_certs',
+    'tidy_revoked_certs',
     'safety_buffer',
     'pause_duration',
     'tidy_expired_issuers',
@@ -74,7 +75,11 @@ export default class PkiTidyStatusComponent extends Component<Args> {
     'issuer_safety_buffer',
   ];
 
-  crossClusterOperation = ['tidy_revocation_queue', 'revocation_queue_safety_buffer'];
+  // enterprise only
+  crossClusterOperation = {
+    status: ['revocation_queue_deleted_count', 'cross_revoked_cert_deleted_count'],
+    config: ['tidy_revocation_queue', 'tidy_cross_cluster_revoked_certs', 'revocation_queue_safety_buffer'],
+  };
 
   get isEnterprise() {
     return this.version.isEnterprise;

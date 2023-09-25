@@ -282,6 +282,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
+		delete(config.ConnectionDetails, "service_account_json")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),
