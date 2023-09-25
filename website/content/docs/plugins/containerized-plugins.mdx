@@ -48,8 +48,9 @@ isolation between plugins, and between plugins and Vault.
 
 <Tabs>
 <Tab heading="Docker">
-```shell-session
-$ sudo echo '{
+```bash
+sudo tee /etc/docker/daemon.json <<EOF
+{
   "runtimes": {
     "runsc": {
       "path": "/usr/local/bin/runsc",
@@ -58,12 +59,16 @@ $ sudo echo '{
       ]
     }
   }
-}' >> /etc/docker/daemon.json ; sudo systemctl reload docker
+}
+EOF
+sudo systemctl reload docker
 ```
 </Tab>
 <Tab heading="Rootless Docker">
-```shell-session
-$ mkdir -p ~/.config/docker ; echo '{
+```bash
+mkdir -p ~/.config/docker
+tee ~/.config/docker/daemon.json  <<EOF
+{
   "runtimes": {
     "runsc": {
       "path": "/usr/local/bin/runsc",
@@ -73,7 +78,9 @@ $ mkdir -p ~/.config/docker ; echo '{
       ]
     }
   }
-}' >> ~/.config/docker/daemon.json ; systemctl --user restart docker
+}
+EOF
+systemctl --user restart docker
 ```
 </Tab>
 </Tabs>
