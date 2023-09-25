@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	vaulthttp "github.com/hashicorp/vault/http"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/vault/api"
@@ -36,12 +38,47 @@ func testNewStaticSecretCacheUpdater(t *testing.T, client *api.Client) *StaticSe
 }
 
 // TestOpenWebSocketConnection tests that the openWebSocketConnection function
-// works as expected.
+// works as expected. This uses a TLS enabled (wss) WebSocket connection.
 func TestOpenWebSocketConnection(t *testing.T) {
 	// We need a valid cluster for the connection to succeed.
-	cluster := vault.NewTestCluster(t, nil, nil)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
 	client := cluster.Cores[0].Client
 
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	conn, err := updater.openWebSocketConnection(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.NotNil(t, conn)
+}
+
+// TestOpenWebSocketConnectionTestServer tests that the openWebSocketConnection function
+// works as expected using vaulthttp.TestServer. This server isn't TLS enabled, so tests
+// the ws path (as opposed to the wss) path.
+func TestOpenWebSocketConnectionTestServer(t *testing.T) {
+	// We need a valid cluster for the connection to succeed.
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
+	ln, addr := vaulthttp.TestServer(t, core)
+	defer ln.Close()
+
+	keys, rootToken := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	config := api.DefaultConfig()
+	config.Address = addr
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(rootToken)
 	updater := testNewStaticSecretCacheUpdater(t, client)
 
 	conn, err := updater.openWebSocketConnection(context.Background())
