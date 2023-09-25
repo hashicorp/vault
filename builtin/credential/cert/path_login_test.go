@@ -357,6 +357,79 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 	}
 }
 
+func TestCert_ConfigIdentity(t *testing.T) {
+	s := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = s
+	ctx := context.Background()
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	if err := b.Setup(ctx, config); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	if resp.Data["cert_alias"] != identityAliasCommonName {
+		t.Fatalf("bad: cert_alias; expected: %q, actual: %q", identityAliasCommonName, resp.Data["cert_alias"])
+	}
+
+	// Test invalid config update for cert_alias
+	data := map[string]interface{}{
+		"cert_alias": "bad_alias",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data:      data,
+		Storage:   s,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("received non-error response from invalid config request: %#v", resp)
+	}
+
+	// Test valid config update for cert_alias
+	data = map[string]interface{}{
+		"cert_alias": identityAliasOrganizationalUnit,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data:      data,
+		Storage:   s,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	if resp.Data["cert_alias"] != identityAliasOrganizationalUnit {
+		t.Fatalf("bad: cert_alias; expected: %q, actual: %q", identityAliasCommonName, resp.Data["cert_alias"])
+	}
+}
+
 func serialFromBigInt(serial *big.Int) string {
 	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }

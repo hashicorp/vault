@@ -130,12 +130,11 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 		if err := entry.DecodeJSON(&result); err != nil {
 			return nil, fmt.Errorf("error reading configuration: %w", err)
 		}
-
-		if result.CertAlias == "" {
-			result.CertAlias = identityAliasCommonName
-		}
 	}
 
+	if result.CertAlias == "" {
+		result.CertAlias = identityAliasCommonName
+	}
 	return &result, nil
 }
 

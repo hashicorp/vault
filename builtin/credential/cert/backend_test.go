@@ -1313,6 +1313,10 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, true),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}, true),
+			testAccStepSetAliasDefaultConfig(t, config{}, connState),
+			testAccStepReadAliasDefaultConfig(t, config{}, connState),
+			testAccStepSetAliasConfig(t, config{CertAlias: identityAliasOrganizationalUnit}, connState),
+			testAccStepReadAliasConfig(t, config{CertAlias: identityAliasOrganizationalUnit}, connState),
 		},
 	})
 }
@@ -1746,6 +1750,76 @@ func testAccStepReadConfig(t *testing.T, conf config, connState tls.ConnectionSt
 
 			if b != conf.EnableIdentityAliasMetadata {
 				t.Fatalf("bad: expected enable_identity_alias_metadata to be %t, got %t", conf.EnableIdentityAliasMetadata, b)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepSetAliasConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Data: map[string]interface{}{
+			"cert_alias": conf.CertAlias,
+		},
+	}
+}
+
+func testAccStepReadAliasConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			value, ok := resp.Data["cert_alias"]
+			if !ok {
+				t.Fatalf("cert_alias not found in response")
+			}
+
+			b, ok := value.(string)
+			if !ok {
+				t.Fatalf("bad: expected cert_alias to be a bool")
+			}
+
+			if b != conf.CertAlias {
+				t.Fatalf("bad: expected cert_alias to be %s, got %s", conf.CertAlias, b)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepSetAliasDefaultConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Data:      map[string]interface{}{},
+	}
+}
+
+func testAccStepReadAliasDefaultConfig(t *testing.T, conf config, connState tls.ConnectionState) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "config",
+		ConnState: &connState,
+		Check: func(resp *logical.Response) error {
+			value, ok := resp.Data["cert_alias"]
+			if !ok {
+				t.Fatalf("cert_alias not found in response")
+			}
+
+			b, ok := value.(string)
+			if !ok {
+				t.Fatalf("bad: expected cert_alias to be a bool")
+			}
+
+			if b != identityAliasCommonName {
+				t.Fatalf("bad: expected cert_alias to be %s, got %s", identityAliasCommonName, b)
 			}
 
 			return nil
