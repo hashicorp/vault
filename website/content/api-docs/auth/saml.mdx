@@ -276,8 +276,8 @@ SAML Response has passed validation. This API is unauthenticated.
 
 ### Parameters
 
-- `role` `(string, <optional>)` - The name of the role against which the login is being
-  attempted. Defaults to the configured `default_role` if not provided.
+- `role` `(string, <optional>)` - The role name to use for the login flow.
+  Defaults to the role configured with `default_role`.
 - `client_challenge` `(string, <required>)` - The client challenge value. Must be the
   output of a base64-encoded, sha256 digest of the `client_verifier` eventually provided
   to the [Token API](/vault/api-docs/auth/saml#obtain-vault-token). Must be at least 44
