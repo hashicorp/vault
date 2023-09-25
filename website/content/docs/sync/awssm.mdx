@@ -9,8 +9,8 @@ description: The AWS Secrets Manager destination syncs secrets from Vault to AWS
 The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
 an external AWS account. When configured, Vault will actively maintain the state of each externally-synced
 secret in near-realtime. This includes sending new secrets, updating existing secret values, and removing
-secrets when they either get dissocaited from the destination or deleted from Vault. This enables the
-ability to keep control of all your secrets localized while leveraging the benefits Secrets Manager.
+secrets when they either get dissociated from the destination or deleted from Vault. This enables the
+ability to keep control of all your secrets localized while leveraging the benefits of the AWS Secrets Manager.
 
 ## Setup
 
@@ -40,7 +40,7 @@ The following is an example policy outlining the required permissions to use sec
 
 ## Usage
 
-Once AWS credentials have been obtained, configured Vault with them to create an AWS destination. If
+Once AWS credentials have been obtained, configure Vault with them to create an AWS destination. If
 you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and create a secret.
 
 1. Mount the secret engine:
