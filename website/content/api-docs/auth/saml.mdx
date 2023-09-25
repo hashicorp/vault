@@ -122,7 +122,7 @@ authentication and properties of resulting Vault tokens.
   authentication. The subject in the SAML Response's Assertion needs to match one of the
   configured values.
 - `bound_subjects_type` `(string: <optional>)` - The type of matching assertion to perform
-  on `bound_subject`. If `string`, requires a direct string match. If `glob`, allows for
+  on `bound_subjects`. If `string`, requires a direct string match. If `glob`, allows for
   wildcard matching using the `*` character.
 - `bound_attributes` `(map: <optional>)` - Mapping of attribute names to values to assert
   exist in the SAML Response's Assertion. The expected value may be a single string or a
