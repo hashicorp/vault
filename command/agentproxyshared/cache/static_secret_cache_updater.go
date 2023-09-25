@@ -222,10 +222,10 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		defer index.IndexLock.Unlock()
 
 		// First, remove the tokens we noted couldn't access the secret from the token index
-		for _, token := range tokensToRemove {
-			// TODO, fix this once we get the map in this branch
-			delete(index.Tokens, token)
-		}
+		// TODO, uncomment this once we get the map in this branch
+		//for _, token := range tokensToRemove {
+		//	delete(index.Tokens, token)
+		//}
 
 		sendResponse, err := NewSendResponse(resp, nil)
 		if err != nil {
@@ -262,16 +262,62 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 }
 
 func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Context) (*websocket.Conn, error) {
-	wsLocation := fmt.Sprintf("ws://%s/v1/sys/events/subscribe/kv*?json=true", updater.client.Address())
-	updater.client.AddHeader("X-Vault-Token", updater.client.Token())
-	updater.client.AddHeader("X-Vault-Namespace", updater.client.Namespace())
-	conn, _, err := websocket.Dial(ctx, wsLocation, &websocket.DialOptions{
-		HTTPClient: updater.client.CloneConfig().HttpClient,
-		HTTPHeader: updater.client.Headers(),
-	})
+	// We parse this into a URL object to get the Vault address without
+	// a prepended https:// or similar.
+	vaultURL, err := url.Parse(updater.client.Address())
 	if err != nil {
-		return nil, fmt.Errorf("error returned when opening event stream web socket, ensure auto-auth token"+
-			" has correct permissions and Vault is version 1.16 or above: %w", err)
+		return nil, err
+	}
+	vaultHost := vaultURL.Host
+	// If we're using https, use wss, otherwise ws
+	scheme := "wss"
+	if vaultURL.Scheme == "http" {
+		scheme = "ws"
+	}
+
+	webSocketURL := url.URL{
+		Path:   "/v1/sys/events/subscribe/kv*",
+		Host:   vaultHost,
+		Scheme: scheme,
+	}
+	query := webSocketURL.Query()
+	query.Set("json", "true")
+	webSocketURL.RawQuery = query.Encode()
+
+	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())
+	updater.client.AddHeader(api.NamespaceHeaderName, updater.client.Namespace())
+
+	url := webSocketURL.String()
+
+	// We do a few attempts, to ensure we follow forwarding to the leader etc.
+	var conn *websocket.Conn
+	for attempt := 0; attempt < 10; attempt++ {
+		var resp *http.Response
+		conn, resp, err = websocket.Dial(ctx, url, &websocket.DialOptions{
+			HTTPClient: updater.client.CloneConfig().HttpClient,
+			HTTPHeader: updater.client.Headers(),
+		})
+		if err == nil {
+			break
+		}
+
+		switch {
+		case resp == nil:
+			break
+		case resp.StatusCode == http.StatusTemporaryRedirect:
+			url = resp.Header.Get("Location")
+			continue
+		case resp.StatusCode == http.StatusNotFound:
+			err = fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled: %w", err)
+			break
+		default:
+			break
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("error returned when opening event stream web socket to %s, ensure auto-auth token"+
+			" has correct permissions and Vault is version 1.16 or above: %w", webSocketURL.String(), err)
 	}
 	return conn, nil
 }
