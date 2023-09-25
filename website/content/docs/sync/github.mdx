@@ -10,6 +10,11 @@ The GitHub repository sync destination allows Vault to safely synchronize secret
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
 to connect directly with Vault. This guide walks you through the configuration process.
 
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
+* Ability to create sync destinations and associations on your Vault server
+
 ## Setup
 
 To get started with syncing Vault secrets to your GitHub repository, you'll need an access token.
@@ -80,6 +85,16 @@ Vault can be configured to create a GitHub destination, then begin to associate 
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
 counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
 or the association in Vault will delete the secret in GitHub as well.
+
+## Notes
+
+GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
+In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
+To extract out individual properties in a GitHub action workflow, consider using `jq`.
+
+When synced to GitHub:
+* Secret names with unsupported characters will be replaced by an "_".
+* Secret names are capitalized, and case-insensitive.
 
 ## API
 
