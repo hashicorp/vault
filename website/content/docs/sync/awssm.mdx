@@ -75,9 +75,9 @@ begin to associate your secrets with this destination.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
-	access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
-	secret_access_key='R4nm063hgMVo4BTT5xOs5nHLeLXA6lar7ZJ3Nt0i' \
-	region='us-east-1'
+		access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
+		secret_access_key='R4nm063hgMVo4BTT5xOs5nHLeLXA6lar7ZJ3Nt0i' \
+		region='us-east-1'
 	```
 
 	**Output:**
@@ -98,8 +98,8 @@ begin to associate your secrets with this destination.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
-	mount='secret' \
-	secret_name='foo'
+		mount='secret' \
+		secret_name='foo'
 	```
 
 	**Output:**
