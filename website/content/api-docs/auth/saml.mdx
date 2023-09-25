@@ -5,7 +5,7 @@ description: |-
   This is the API documentation for the Vault SAML auth method.
 ---
 
-# SAML Auth Method (API)
+# SAML auth method (API)
 
 <EnterpriseAlert />
 
@@ -16,7 +16,7 @@ This documentation assumes the SAML auth method is mounted at the `/auth/saml` p
 Vault. Since it is possible to enable auth methods at any location, please update your
 API calls accordingly.
 
-## Create or Update Configuration
+## Create or update configuration
 
 Configures the auth method with a SAML Identity Provider.
 
@@ -46,7 +46,7 @@ Configures the auth method with a SAML Identity Provider.
 - `default_role` `(string, <optional>)` - The role to use if no role is provided during login.
   If not set, a role is required during login.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -57,7 +57,7 @@ Configures the auth method with a SAML Identity Provider.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -67,7 +67,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/config
 ```
 
-## Read Configuration
+## Read configuration
 
 Reads the auth method configuration.
 
@@ -75,7 +75,7 @@ Reads the auth method configuration.
 | :------ | :------------------ |
 | `GET`   | `/auth/saml/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -85,7 +85,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -105,7 +105,7 @@ $ curl \
 }
 ```
 
-## Create or Update Role
+## Create or update role
 
 Configures a role in the auth method. Roles define specific constraints required for
 authentication and properties of resulting Vault tokens.
@@ -135,7 +135,7 @@ authentication and properties of resulting Vault tokens.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -147,7 +147,7 @@ authentication and properties of resulting Vault tokens.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -157,7 +157,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/role/admin
 ```
 
-## Read Role
+## Read role
 
 Reads a configured role.
 
@@ -170,7 +170,7 @@ Reads a configured role.
 - `name` `(string: <required>)` - The name of the role to read. This parameter is
   specified as part of the URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -179,7 +179,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/role/admin
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -215,7 +215,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the configured roles.
 
@@ -223,7 +223,7 @@ Lists all the configured roles.
 | :----- | :---------------- |
 | `LIST` | `/auth/saml/role` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -232,7 +232,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/role?list=true
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 [
@@ -254,7 +254,7 @@ Deletes a configured role.
 - `name` `(string: <required>)` - The name of the role to delete. This parameter is
   specified as part of the URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -263,7 +263,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/role/admin
 ```
 
-## Obtain SSO Service URL
+## Obtain SSO service URL
 
 Starts a login flow by providing a SAML Single Sign-On (SSO) Service URL for the
 configured Identity Provider. The returned `token_poll_id` can be used to obtain
@@ -289,7 +289,7 @@ SAML Response has passed validation. This API is unauthenticated.
 - `acs_url` `(string, <required>)` - The URL where the Identity Provider will send its
   SAML Response. Must be in the set of configured [`acs_urls`](/vault/api-docs/auth/saml#acs_urls).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -300,7 +300,7 @@ SAML Response has passed validation. This API is unauthenticated.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -310,7 +310,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/sso_service_url
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -319,7 +319,7 @@ $ curl \
 }
 ```
 
-## Assertion Consumer Service Callback
+## Assertion consumer service callback
 
 The Assertion Consumer Service URL of the auth method. Completes the round trip from
 the Identity Provider and performs validations on the SAML Response. This API is
@@ -336,7 +336,7 @@ unauthenticated.
 - `SAMLResponse` `(string, <required>)` - The signed SAML Response from the Identity
   Provider.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -345,7 +345,7 @@ unauthenticated.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -355,7 +355,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/callback
 ```
 
-## Obtain Vault Token
+## Obtain vault token
 
 Completes the login flow by returning a Vault token. This API is unauthenticated.
 
@@ -373,7 +373,7 @@ Completes the login flow by returning a Vault token. This API is unauthenticated
   [SSO Service URL API](/vault/api-docs/auth/saml#obtain-sso-service-url) at the start of
   the authentication flow.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -382,7 +382,7 @@ Completes the login flow by returning a Vault token. This API is unauthenticated
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -392,7 +392,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/saml/token
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

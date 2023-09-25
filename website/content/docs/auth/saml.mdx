@@ -6,7 +6,7 @@ description: |-
   identity in a SAML Identity Provider.
 ---
 
-# SAML Auth Method
+# SAML auth method
 
 <EnterpriseAlert />
 
@@ -103,7 +103,7 @@ management tool.
    For the complete list of configuration options, please see the
    [API documentation](/vault/api-docs/auth/saml).
 
-### Assertion Consumer Service URLs
+### Assertion consumer service URLs
 
 The [`acs_urls`](/vault/api-docs/auth/saml#acs_urls) configuration parameter determines
 where the SAML Response will be sent after users authenticate with the configured SAML
@@ -136,7 +136,7 @@ The Vault UI and CLI will automatically request the proper Assertion Consumer Se
 for the cluster they're configured to communicate with. This means that the entirety of the
 authentication flow will stay within the local cluster.
 
-### Bound Attributes
+### Bound attributes
 
 Once the user has been authenticated the authorization flow will validate
 that both the [`bound_subject`](/vault/api-docs/auth/saml#bound_subject) and
