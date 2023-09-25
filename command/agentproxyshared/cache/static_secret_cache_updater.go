@@ -262,8 +262,8 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 }
 
 func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Context) (*websocket.Conn, error) {
-	// We parse this into a URL object to get the Vault address without
-	// a prepended https:// or similar.
+	// We parse this into a URL object to get the specific host and scheme
+	// information without nasty string parsing.
 	vaultURL, err := url.Parse(updater.client.Address())
 	if err != nil {
 		return nil, err
@@ -287,15 +287,18 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())
 	updater.client.AddHeader(api.NamespaceHeaderName, updater.client.Namespace())
 
+	// Populate these now to avoid recreating them in the upcoming for loop.
+	headers := updater.client.Headers()
 	url := webSocketURL.String()
+	httpClient := updater.client.CloneConfig().HttpClient
 
-	// We do a few attempts, to ensure we follow forwarding to the leader etc.
+	// We do ten attempts, to ensure we follow forwarding to the leader.
 	var conn *websocket.Conn
 	for attempt := 0; attempt < 10; attempt++ {
 		var resp *http.Response
 		conn, resp, err = websocket.Dial(ctx, url, &websocket.DialOptions{
-			HTTPClient: updater.client.CloneConfig().HttpClient,
-			HTTPHeader: updater.client.Headers(),
+			HTTPClient: httpClient,
+			HTTPHeader: headers,
 		})
 		if err == nil {
 			break
@@ -307,9 +310,6 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 		case resp.StatusCode == http.StatusTemporaryRedirect:
 			url = resp.Header.Get("Location")
 			continue
-		case resp.StatusCode == http.StatusNotFound:
-			err = fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled: %w", err)
-			break
 		default:
 			break
 		}
@@ -317,7 +317,12 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 
 	if err != nil {
 		return nil, fmt.Errorf("error returned when opening event stream web socket to %s, ensure auto-auth token"+
-			" has correct permissions and Vault is version 1.16 or above: %w", webSocketURL.String(), err)
+			" has correct permissions and Vault is version 1.16 or above: %w", url, err)
 	}
+
+	if conn == nil {
+		return nil, errors.New(fmt.Sprintf("too many redirects as part of establishing web socket connection to %s", url))
+	}
+
 	return conn, nil
 }
