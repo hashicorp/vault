@@ -14,7 +14,9 @@
     <section class="modal-card-body">
       {{#if this.namespaceService.inRootNamespace}}
         You have logged in with a root token. As a security precaution, this root token will not be stored by your browser
-        and you will need to re-authenticate after the window is closed or refreshed.
+        and you will need to re-authenticate after the window is closed or refreshed. Click
+        <b>confirm</b>
+        to continue.
       {{else}}
         As a security precaution, you will be logged out and need to log in again to navigate to the
         <code>{{this.namespaceService.currentNamespacePath}}</code>

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add modal to warn users about the behavior when logging in with a root token.
+```
