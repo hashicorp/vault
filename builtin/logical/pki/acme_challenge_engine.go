@@ -6,6 +6,7 @@ package pki
 import (
 	"container/list"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -42,6 +43,7 @@ type ChallengeValidation struct {
 type ChallengeQueueEntry struct {
 	Identifier string
 	RetryAfter time.Time
+	NumRetries int // Track if we are spinning on a corrupted challenge
 }
 
 type ACMEChallengeEngine struct {
@@ -97,7 +99,7 @@ func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState, sc *storageCon
 		b.Logger().Error("failed loading existing ACME challenge validations:", "err", err)
 	}
 
-	for true {
+	for {
 		// err == nil on shutdown.
 		b.Logger().Debug("Starting ACME challenge validation engine")
 		err := ace._run(b, state)
@@ -206,7 +208,7 @@ func (ace *ACMEChallengeEngine) _run(b *backend, state *acmeState) error {
 			// could have a RetryAfter date we're not aware of (e.g., if the
 			// cluster restarted as we do not read the entries there).
 			channel := make(chan bool, 1)
-			go ace.VerifyChallenge(runnerSC, task.Identifier, channel, config)
+			go ace.VerifyChallenge(runnerSC, task.Identifier, task.NumRetries, channel, config)
 			finishedWorkersChannels = append(finishedWorkersChannels, channel)
 			startedWork = true
 		}
@@ -305,22 +307,49 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, finished chan bool, config *acmeConfigEntry) {
-	sc, _ /* cancel func */ := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
+func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, retries int, finished chan bool, config *acmeConfigEntry) {
+	sc, cancel := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
+	defer cancel()
 	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
 
 	if retry, retryAfter, err := ace._verifyChallenge(sc, id, config); err != nil {
+		if errors.Is(err, logical.ErrReadOnly) {
+			// If we get a storage read only error we should bail out as we
+			// are no longer running on the active node as all ACME writes
+			// are cluster local
+			finished <- true
+			sc.Backend.Logger().Warn("ACME validation thread stopping as an ErrReadOnly error was encountered")
+			return
+		}
+
 		// Because verification of this challenge failed, we need to retry
 		// it in the future. Log the error and re-add the item to the queue
 		// to try again later.
 		sc.Backend.Logger().Error(fmt.Sprintf("ACME validation failed for %v: %v", id, err))
 
 		if retry {
+			retries++
+
+			// This additional retry logic is here in case we start failing to decode entries within the
+			// data store, we would re-attempt them forever and never clean them up. We want to leverage
+			// the retry counts within the authorization/challenge objects first which is why we give ourselves
+			// twice the attempts here.
+			if retries > MaxRetryAttempts*2 {
+				sc.Backend.Logger().Warn("reached max error attempts within challenge queue: %v, giving up", id)
+				_, _, err = ace._verifyChallengeCleanup(sc, err, id)
+				if err != nil {
+					sc.Backend.Logger().Warn("Failed cleaning up challenge entry: %v", err)
+				}
+				finished <- true
+				return
+			}
+
 			ace.ValidationLock.Lock()
 			defer ace.ValidationLock.Unlock()
 			ace.Validations.PushBack(&ChallengeQueueEntry{
 				Identifier: id,
 				RetryAfter: retryAfter,
+				NumRetries: retries,
 			})
 
 			// Let the validator know there's a pending challenge.
@@ -343,23 +372,23 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 
 func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, config *acmeConfigEntry) (bool, time.Time, error) {
 	now := time.Now()
+	backoffTime := now.Add(5 * time.Second)
 	path := acmeValidationPrefix + id
 	challengeEntry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
-		return true, now, fmt.Errorf("error loading challenge %v: %w", id, err)
+		return true, backoffTime, fmt.Errorf("error loading challenge %v: %w", id, err)
 	}
 
 	if challengeEntry == nil {
 		// Something must've successfully cleaned up our storage entry from
 		// under us. Assume we don't need to rerun, else the client will
 		// trigger us to re-run.
-		err = nil
-		return ace._verifyChallengeCleanup(sc, err, id)
+		return ace._verifyChallengeCleanup(sc, nil, id)
 	}
 
 	var cv *ChallengeValidation
 	if err := challengeEntry.DecodeJSON(&cv); err != nil {
-		return true, now, fmt.Errorf("error decoding challenge %v: %w", id, err)
+		return true, backoffTime, fmt.Errorf("error decoding challenge %v: %w", id, err)
 	}
 
 	if now.Before(cv.RetryAfter) {
@@ -369,7 +398,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 	authzPath := getAuthorizationPath(cv.Account, cv.Authorization)
 	authz, err := loadAuthorizationAtPath(sc, authzPath)
 	if err != nil {
-		return true, now, fmt.Errorf("error loading authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
+		return true, backoffTime, fmt.Errorf("error loading authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
 	}
 
 	if authz.Status != ACMEAuthorizationPending {
@@ -523,16 +552,16 @@ func updateChallengeStatus(sc *storageContext, cv *ChallengeValidation, authzPat
 }
 
 func (ace *ACMEChallengeEngine) _verifyChallengeCleanup(sc *storageContext, err error, id string) (bool, time.Time, error) {
-	now := time.Now()
+	backoff := time.Now().Add(5 * time.Second)
 
 	// Remove our ChallengeValidation entry only.
 	if deleteErr := sc.Storage.Delete(sc.Context, acmeValidationPrefix+id); deleteErr != nil {
-		return true, now.Add(-1 * time.Second), fmt.Errorf("error deleting challenge %v (error prior to cleanup, if any: %v): %w", id, err, deleteErr)
+		return true, backoff, fmt.Errorf("error deleting challenge %v (error prior to cleanup, "+"if any: %v): %w", id, err, deleteErr)
 	}
 
 	if err != nil {
 		err = fmt.Errorf("removing challenge validation attempt and not retrying %v; previous error: %w", id, err)
 	}
 
-	return false, now, err
+	return false, backoff, err
 }
