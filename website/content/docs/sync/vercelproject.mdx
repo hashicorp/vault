@@ -102,7 +102,7 @@ Prerequisites:
   **Output:**
 
   <CodeBlockConfig hideClipboard>
-  
+
   ```plaintext
   Key                   Value
   ---                   -----
@@ -122,7 +122,7 @@ or the association in Vault will delete the secret on Vercel as well.
 
 <Note>
 
-Vercel environment variables only support single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
+Vercel Project environment variables only support single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
 In the example above, the value for secret "my-secret" will be synced to Vercel as the JSON string `{"foo":"bar"}`.
 
 </Note>
