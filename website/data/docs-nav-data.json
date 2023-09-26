@@ -308,6 +308,14 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
+          { "title": "High Availability (Beta)",
+           "badge": {
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "configuration/seal/seal-ha"
+          },
           {
             "title": "AliCloud KMS",
             "path": "configuration/seal/alicloudkms"
@@ -2473,7 +2481,16 @@
       },
       {
         "title": "Namespaces",
-        "path": "enterprise/namespaces"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/namespaces"
+          },
+          {
+            "title": "Create an administrative namespace",
+            "path": "enterprise/namespaces/create-admin-namespace"
+          }
+        ]
       },
       {
         "title": "Performance Standbys",

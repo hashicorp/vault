@@ -102,11 +102,12 @@
 {{else}}
   <EmptyState @title={{this.emptyTitle}} />
 {{/if}}
-{{#if (gt this.model.meta.lastPage 1)}}
-  <ListPagination
-    @page={{this.model.meta.currentPage}}
-    @lastPage={{this.model.meta.lastPage}}
-    @link={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
-    @models={{compact (array (if this.baseKey.id this.baseKey.id))}}
-  />
-{{/if}}
+
+<Hds::Pagination::Numbered
+  @currentPage={{this.model.meta.currentPage}}
+  @currentPageSize={{this.model.meta.pageSize}}
+  @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
+  @showSizeSelector={{false}}
+  @totalItems={{this.model.meta.total}}
+  @queryFunction={{this.paginationQueryParams}}
+/>

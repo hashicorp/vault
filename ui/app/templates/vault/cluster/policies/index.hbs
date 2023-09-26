@@ -151,13 +151,16 @@
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-    {{#if (gt this.model.meta.lastPage 1)}}
-      <ListPagination
-        @page={{this.model.meta.currentPage}}
-        @lastPage={{this.model.meta.lastPage}}
-        @link="vault.cluster.policies.index"
-      />
-    {{/if}}
+
+    <Hds::Pagination::Numbered
+      @currentPage={{this.model.meta.currentPage}}
+      @currentPageSize={{this.model.meta.pageSize}}
+      @route="vault.cluster.policies.index"
+      @showSizeSelector={{false}}
+      @totalItems={{this.model.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+    />
+
   {{else}}
     <EmptyState
       @title="No {{uppercase this.policyType}} policies yet"

@@ -405,7 +405,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test seal: %w", err).Error())
 			}
-			access.GetAllSealWrappersByPriority()[0].Name = existingConfig.Name
+			access.GetConfiguredSealWrappersByPriority()[0].Name = existingConfig.Name
 
 			testseal := NewDefaultSeal(access)
 			testseal.SetCore(c)

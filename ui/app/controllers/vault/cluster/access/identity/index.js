@@ -10,6 +10,15 @@ import ListController from 'core/mixins/list-controller';
 export default Controller.extend(ListController, {
   flashMessages: service(),
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
   actions: {
     delete(model) {
       const type = model.get('identityType');
