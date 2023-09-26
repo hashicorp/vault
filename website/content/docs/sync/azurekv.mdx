@@ -29,13 +29,16 @@ secrets when they either get dissociated from the destination or deleted from Va
 
   ```shell-session
   $ vault write sys/sync/stores/azure-kv/my-azure-1 \
-  key_vault_uri=$KEY_VAULT_URI \
-  client_id=$CLIENT_ID \
-  client_secret=$CLIENT_SECRET \
-  tenant_id=$TENANT_ID
+      key_vault_uri=$KEY_VAULT_URI \
+      client_id=$CLIENT_ID \
+      client_secret=$CLIENT_SECRET \
+      tenant_id=$TENANT_ID
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```text
   Key                   Value
   ---                   -----
@@ -44,14 +47,20 @@ secrets when they either get dissociated from the destination or deleted from Va
   type                  azure-kv
   ```
 
+  </CodeBlockConfig>
+
 ## Usage
 
-1. Store any KV secret into Vault, like so:
+1. Store your KV secret into Vault.
+
   ```shell-session
   $ vault kv put secret/foo mypass=bar
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```
 
   </CodeBlockConfig>
@@ -85,11 +94,14 @@ secrets when they either get dissociated from the destination or deleted from Va
 1. Set a secret to be associated with the configured secret destination:
   ```shell-session
   $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
-  mount='secret' \
-  secret_name='foo'
+      mount='secret' \
+      secret_name='foo'
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```
   Key                   Value
   ---                   -----
@@ -97,6 +109,8 @@ secrets when they either get dissociated from the destination or deleted from Va
   store_name            my-azure-1
   store_type            azure-kv
   ```
+
+  </CodeBlockConfig>
 
 1. Navigate to [Azure Key Vault](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2Fvaults) in the Azure portal
 to confirm your secret was successfully created.

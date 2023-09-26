@@ -26,12 +26,18 @@ Prerequisites:
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
-  access_token=<token> \
-  project_id=<project-id> \
-  deployment_environments=development \
-  deployment_environments=preview \
-  deployment_environments=production
+      access_token=<token> \
+      project_id=<project-id> \
+      deployment_environments=development \
+      deployment_environments=preview \
+      deployment_environments=production
+  ```
 
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   Key                   Value
   ---                   -----
   connection_details    map[access_token:***** deployment_environments:[development preview production] project_id:<project-id>]
@@ -39,13 +45,16 @@ Prerequisites:
   type                  vercel-project
   ```
 
+  </CodeBlockConfig>
+
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine and create a secret.
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
   Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
 
   </CodeBlockConfig>
 
@@ -73,10 +82,13 @@ Prerequisites:
   version            1
   ```
 
-1. Create an association between your Vercel Project destination and the secret to synchronize
+1. Create an association between your Vercel Project destination and the secret to synchronize.
 
   ```shell-session
-  vault write sys/sync/destinations/vercel-project/my-dest/associations/set mount=my-kv secret_name=my-secret
+  $ vault write sys/sync/destinations/vercel-project/my-dest/associations/set \
+      mount=my-kv \
+      secret_name=my-secret
+  ```
 
   **Output:**
 
@@ -89,6 +101,8 @@ Prerequisites:
   store_name            my-dest
   store_type            vercel-project
   ```
+
+  </CodeBlockConfig>
 
 1. Navigate to your project's settings under the `Environment Variables` section to confirm your secret was successfully
   created in your Vercel project.
