@@ -39,6 +39,10 @@ secrets when they either get dissociated from the destination or deleted from Va
 
   <CodeBlockConfig hideClipboard>
 
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```text
   Key                   Value
   ---                   -----
@@ -46,6 +50,8 @@ secrets when they either get dissociated from the destination or deleted from Va
   name                  my-azure-1
   type                  azure-kv
   ```
+
+  </CodeBlockConfig>
 
   </CodeBlockConfig>
 
@@ -97,6 +103,8 @@ secrets when they either get dissociated from the destination or deleted from Va
 
   ```shell-session
   $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
+      mount='secret' \
+      secret_name='foo'
       mount='secret' \
       secret_name='foo'
   ```

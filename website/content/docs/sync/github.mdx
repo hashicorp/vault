@@ -11,6 +11,7 @@ This is a low footprint option that enables your applications to benefit from Va
 to connect directly with Vault. This guide walks you through the configuration process.
 
 Prerequisites:
+
 * Ability to read or create KVv2 secrets
 * Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
 * Ability to create sync destinations and associations on your Vault server
@@ -95,6 +96,8 @@ Prerequisites:
   $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
       mount='secret' \
       secret_name='foo'
+      mount='secret' \
+      secret_name='foo'
   ```
 
   **Output:**
@@ -111,13 +114,15 @@ Prerequisites:
 
   </CodeBlockConfig>
 
+  </CodeBlockConfig>
+
 1. Navigate to your GitHub repository settings to confirm your secret was successfully created.
 
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
 counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
 or the association in Vault will delete the secret in GitHub as well.
 
-## Notes
+<Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
 In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
@@ -126,6 +131,9 @@ To extract out individual properties in a GitHub action workflow, consider using
 When synced to GitHub:
 * Secret names with unsupported characters will be replaced by an "_".
 * Secret names are capitalized, and case-insensitive.
+
+</Note>
+
 
 ## API
 
