@@ -91,6 +91,15 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	return nil
 }
 
+func (a *acmeState) Shutdown(b *backend) {
+	// If we aren't the active node, nothing to shutdown
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		return
+	}
+
+	a.validator.Closing <- struct{}{}
+}
+
 func (a *acmeState) markConfigDirty() {
 	a.configDirty.Store(true)
 }
