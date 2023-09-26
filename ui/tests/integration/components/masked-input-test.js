@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, focus, triggerKeyEvent, typeIn, fillIn } from '@ember/test-helpers';
+import { render, focus, triggerKeyEvent, typeIn, fillIn, click } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -51,8 +51,14 @@ module('Integration | Component | masked input', function (hooks) {
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
-    await render(hbs`<MaskedInput @allowDownload={{true}} />`);
-    assert.ok(component.downloadButtonIsPresent);
+    await render(hbs`<MaskedInput @allowDownload={{true}} /> <div id="modal-wormhole"></div>
+`);
+    assert.ok(component.downloadIconIsPresent);
+
+    await click('[data-test-download-icon]');
+    assert.ok(component.downloadButtonIsPresent, 'clicking download icon opens modal with download button');
+
+    assert;
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
@@ -116,7 +122,7 @@ module('Integration | Component | masked input', function (hooks) {
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
     assert.ok(component.copyButtonIsPresent);
-    assert.ok(component.downloadButtonIsPresent);
+    assert.ok(component.downloadIconIsPresent);
     assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
 
     await component.toggleMasked();

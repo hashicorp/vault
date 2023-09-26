@@ -56,10 +56,10 @@ func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.
 	defer c.lock.RUnlock()
 	entry, err := c.catalogView.Get(ctx, storageKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve plugin runtime %q %q: %w", prt.String(), name, err)
+		return nil, fmt.Errorf("failed to retrieve %s plugin runtime %q: %w", prt.String(), name, err)
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("failed to retrieve plugin %q %q: %w", prt.String(), name, err)
+		return nil, fmt.Errorf("failed to retrieve %s plugin runtime %q: %w", prt.String(), name, ErrPluginRuntimeNotFound)
 	}
 	runner := new(pluginruntimeutil.PluginRuntimeConfig)
 	if err := jsonutil.DecodeJSON(entry.Value, runner); err != nil {

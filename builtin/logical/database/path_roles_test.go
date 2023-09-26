@@ -205,7 +205,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Config(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -470,7 +470,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 }
 
 func TestBackend_StaticRole_ReadCreds(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -650,7 +650,7 @@ func TestBackend_StaticRole_ReadCreds(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Updates(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -949,7 +949,7 @@ func TestBackend_StaticRole_Updates_RotationSchedule(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Role_name_check(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()

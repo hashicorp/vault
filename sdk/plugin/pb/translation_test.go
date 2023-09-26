@@ -265,6 +265,7 @@ func TestTranslation_Response(t *testing.T) {
 				CreationPath:    "test/foo",
 				SealWrap:        true,
 			},
+			MountType: "mountType",
 		},
 	}
 
