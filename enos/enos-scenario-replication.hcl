@@ -9,7 +9,7 @@ scenario "replication" {
     arch              = ["amd64", "arm64"]
     artifact_source   = ["local", "crt", "artifactory"]
     artifact_type     = ["bundle", "package"]
-    consul_version    = ["1.14.2", "1.13.4", "1.12.7"]
+    consul_version    = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
     distro            = ["ubuntu", "rhel"]
     edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     primary_backend   = ["raft", "consul"]
@@ -48,6 +48,11 @@ scenario "replication" {
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
   }
 
+  step "get_local_metadata" {
+    skip_step = matrix.artifact_source != "local"
+    module    = module.get_local_metadata
+  }
+
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
@@ -84,7 +89,7 @@ scenario "replication" {
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
-    skip_step = (matrix.primary_backend == "raft" && matrix.secondary_backend == "raft") || var.backend_edition == "oss"
+    skip_step = (matrix.primary_backend == "raft" && matrix.secondary_backend == "raft") || var.backend_edition == "ce"
     module    = module.read_license
 
     variables {
@@ -241,7 +246,7 @@ scenario "replication" {
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = local.vault_install_dir
-      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
@@ -298,7 +303,7 @@ scenario "replication" {
       } : null
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = local.vault_install_dir
-      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
@@ -340,6 +345,42 @@ scenario "replication" {
     }
   }
 
+  step "verify_vault_version" {
+    module = module.vault_verify_version
+    depends_on = [
+      step.create_primary_cluster
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.create_primary_cluster_targets.hosts
+      vault_edition         = matrix.edition
+      vault_install_dir     = local.vault_install_dir
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_primary_cluster.root_token
+    }
+  }
+
+  step "verify_ui" {
+    module = module.vault_verify_ui
+    depends_on = [
+      step.create_primary_cluster
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances = step.create_primary_cluster_targets.hosts
+    }
+  }
+
   step "get_primary_cluster_ips" {
     module     = module.vault_get_cluster_ips
     depends_on = [step.verify_that_vault_primary_cluster_is_unsealed]
@@ -349,9 +390,18 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.create_primary_cluster_targets.hosts
+      vault_hosts       = step.create_primary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
+    }
+  }
+
+  step "get_primary_cluster_replication_data" {
+    module     = module.replication_data
+    depends_on = [step.get_primary_cluster_ips]
+
+    variables {
+      follower_hosts = step.get_primary_cluster_ips.follower_hosts
     }
   }
 
@@ -364,7 +414,7 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances   = step.create_secondary_cluster_targets.hosts
+      vault_hosts       = step.create_secondary_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_secondary_cluster.root_token
     }
@@ -542,7 +592,7 @@ scenario "replication" {
       force_unseal         = matrix.primary_seal == "shamir"
       initialize_cluster   = false
       install_dir          = local.vault_install_dir
-      license              = matrix.edition != "oss" ? step.read_vault_license.license : null
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
@@ -555,7 +605,7 @@ scenario "replication" {
     }
   }
 
-  step "verify_addtional_primary_nodes_are_unsealed" {
+  step "verify_additional_primary_nodes_are_unsealed" {
     module     = module.vault_verify_unsealed
     depends_on = [step.add_additional_nodes_to_primary_cluster]
 
@@ -575,7 +625,7 @@ scenario "replication" {
     depends_on = [
       step.add_additional_nodes_to_primary_cluster,
       step.create_primary_cluster,
-      step.verify_addtional_primary_nodes_are_unsealed
+      step.verify_additional_primary_nodes_are_unsealed
     ]
 
     providers = {
@@ -592,8 +642,8 @@ scenario "replication" {
   step "remove_primary_follower_1" {
     module = module.shutdown_node
     depends_on = [
-      step.get_primary_cluster_ips,
-      step.verify_addtional_primary_nodes_are_unsealed
+      step.get_primary_cluster_replication_data,
+      step.verify_additional_primary_nodes_are_unsealed
     ]
 
     providers = {
@@ -601,7 +651,7 @@ scenario "replication" {
     }
 
     variables {
-      node_public_ip = step.get_primary_cluster_ips.follower_public_ip_1
+      node_public_ip = step.get_primary_cluster_replication_data.follower_public_ip_1
     }
   }
 
@@ -621,12 +671,31 @@ scenario "replication" {
     }
   }
 
-  step "get_updated_primary_cluster_ips" {
-    module = module.vault_get_cluster_ips
+  // After we've removed two nodes from the cluster we need to get an updated set of vault hosts
+  // to work with.
+  step "get_remaining_hosts_replication_data" {
+    module = module.replication_data
     depends_on = [
-      step.add_additional_nodes_to_primary_cluster,
-      step.remove_primary_follower_1,
-      step.remove_primary_leader
+      step.get_primary_cluster_ips,
+      step.remove_primary_leader,
+    ]
+
+    variables {
+      added_hosts           = step.create_primary_cluster_additional_targets.hosts
+      added_hosts_count     = var.vault_instance_count
+      initial_hosts         = step.create_primary_cluster_targets.hosts
+      initial_hosts_count   = var.vault_instance_count
+      removed_follower_host = step.get_primary_cluster_replication_data.follower_host_1
+      removed_primary_host  = step.get_primary_cluster_ips.leader_host
+    }
+  }
+
+  // Wait for the remaining hosts in our cluster to elect a new leader.
+  step "wait_for_leader_in_remaining_hosts" {
+    module = module.vault_wait_for_leader
+    depends_on = [
+      step.remove_primary_leader,
+      step.get_remaining_hosts_replication_data,
     ]
 
     providers = {
@@ -634,17 +703,41 @@ scenario "replication" {
     }
 
     variables {
-      vault_instances       = step.create_primary_cluster_targets.hosts
-      vault_install_dir     = local.vault_install_dir
-      added_vault_instances = step.create_primary_cluster_additional_targets.hosts
-      vault_root_token      = step.create_primary_cluster.root_token
-      node_public_ip        = step.get_primary_cluster_ips.follower_public_ip_2
+      timeout           = 120 # seconds
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_primary_cluster.root_token
+      vault_hosts       = step.get_remaining_hosts_replication_data.remaining_hosts
     }
   }
 
+  // Get our new leader and follower IP addresses.
+  step "get_updated_primary_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.get_remaining_hosts_replication_data,
+      step.wait_for_leader_in_remaining_hosts,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts          = step.get_remaining_hosts_replication_data.remaining_hosts
+      vault_install_dir    = local.vault_install_dir
+      vault_instance_count = step.get_remaining_hosts_replication_data.remaining_hosts_count
+      vault_root_token     = step.create_primary_cluster.root_token
+    }
+  }
+
+  // Make sure the cluster has the correct performance replication state after the new leader election.
   step "verify_updated_performance_replication" {
-    module     = module.vault_verify_performance_replication
-    depends_on = [step.get_updated_primary_cluster_ips]
+    module = module.vault_verify_performance_replication
+    depends_on = [
+      step.get_remaining_hosts_replication_data,
+      step.wait_for_leader_in_remaining_hosts,
+      step.get_updated_primary_cluster_ips,
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -707,6 +800,11 @@ scenario "replication" {
   output "secondary_cluster_hosts" {
     description = "The Vault secondary cluster public IPs"
     value       = step.create_secondary_cluster_targets.hosts
+  }
+
+  output "remaining_hosts" {
+    description = "The Vault cluster primary hosts after removing the leader and follower"
+    value       = step.get_remaining_hosts_replication_data.remaining_hosts
   }
 
   output "initial_primary_replication_status" {
