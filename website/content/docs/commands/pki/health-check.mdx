@@ -172,6 +172,7 @@ Use `vault write` to enable CRL auto-rebuild:
 
 ```shell-session
 $ vault write <mount>/config/crl auto_rebuild=true
+```
 
 ### Hardware-Backed root certificate
 
@@ -485,15 +486,15 @@ This health check verifies that this cluster has a reasonable number of certific
     vault read <mount>/tidy-status
     ````
 1. Schedule a manual run of tidy with `vault write`:
-	    ```shell-session
-	    vault write <mount>/tidy \
-	      tidy_cert_store=true \
-	      tidy_revoked_certs=true \
-	      tidy_acme=true \
-	      tidy_revocation_queue=true \
-	      tidy_cross_cluster_revoked_certs=true \
-	      tidy_revoked_cert_issuer_associations=true
-	    ```
+    ```shell-session
+    vault write <mount>/tidy \
+      tidy_cert_store=true \
+      tidy_revoked_certs=true \
+      tidy_acme=true \
+      tidy_revocation_queue=true \
+      tidy_cross_cluster_revoked_certs=true \
+      tidy_revoked_cert_issuer_associations=true
+    ```
 1. Enable `auto-tidy`.
 1. Make sure that you are not renewing certificates too soon. Certificate
    lifetimes should reflect the expected usage of the certificate. If the TTL is
