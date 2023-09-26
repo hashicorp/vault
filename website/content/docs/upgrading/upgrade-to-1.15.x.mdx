@@ -40,3 +40,11 @@ To continue measuring `vault.rollback.attempts.{MOUNTPOINT}` and
 metrics in the `telemetry` stanza of your Vault configuration with the
 [`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
 option.
+
+## Application of Sentinel Role Governing Policies (RGPs) via identity groups
+
+As of versions 1.15, 1.14.4, and 1.13.8, [the Sentinel RGPSs derived from membership in identity groups apply
+only to entities in the same and child namespaces, relative to the identity group](/vault/docs/enterprise/sentinel#rgps-and-namespaces).
+
+Also, the [`group_policy_application_mode`](vault/api-docs/system/config-group-policy-application) only applies to
+to ACL policies. Vault Sentinel Role Governing Policies (RGPs) are not affected by group policy application mode.
