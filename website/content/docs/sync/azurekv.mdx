@@ -5,3 +5,94 @@ description: The Azure Key Vault destination syncs secrets from Vault to Azure.
 ---
 
 # Azure Key Vault
+
+The Azure Key Vault destination enables Vault to sync and unsync secrets of your choosing into
+an external Azure account. When configured, Vault will actively maintain the state of each externally-synced
+secret in realtime. This includes sending new secrets, updating existing secret values, and removing
+secrets when they either get dissociated from the destination or deleted from Vault.
+
+## Setup
+
+A service principal with a client id and client secret will be needed to configure Azure Key Vault as a
+sync destination. This [guide](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
+will walk you through creating the service principal.
+
+Once the service principal is created, the next step is to
+[grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
+access to Azure Key Vault. We recommend using the "Key Vault Secrets Officer" built-in role,
+which gives sufficient access to manage secrets. For more information, see the [Permissions](#permissions) section.
+
+When Azure credentials for the service principal have been obtained and it has access to Azure Key Vault,
+Vault can be configured to create an Azure destination, then begin to associate your secrets with this destination.
+
+1.	Configure the sync destination:
+  ```shell-session
+  $ vault write sys/sync/stores/azure-kv/my-azure-1 \
+  key_vault_uri=$KEY_VAULT_URI \
+  client_id=$CLIENT_ID \
+  client_secret=$CLIENT_SECRET \
+  tenant_id=$TENANT_ID
+  ```
+
+  Output:
+  ```text
+  Key                   Value
+  ---                   -----
+  connection_details    map[client_id:123 client_secret:***** key_vault_uri:***** tenant_id:123]
+  name                  my-azure-1
+  type                  azure-kv
+  ```
+
+## Usage
+
+1. Store any KV secret into Vault, like so:
+  ```shell-session
+  $ vault kv put secret/foo mypass=bar
+  ```
+
+  Output:
+  ```
+  === Secret Path ===
+  secret/data/foo
+
+  ======= Metadata =======
+  Key                Value
+  ---                -----
+  created_time       2023-09-21T20:52:47.723315Z
+  custom_metadata    <nil>
+  deletion_time      n/a
+  destroyed          false
+  version            1
+  ```
+
+1. Set a secret to be associated with the configured secret destination:
+  ```shell-session
+  $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
+  mount='secret' \
+  secret_name='foo'
+  ```
+
+  Output:
+  ```
+  Key                   Value
+  ---                   -----
+  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-21T13:53:24.839885-07:00]]
+  store_name            my-azure-1
+  store_type            azure-kv
+  ```
+
+1. Navigate to [Azure Key Vault](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2Fvaults) in the Azure portal
+to confirm your secret was successfully created.
+
+Moving forward, any modification on the Vault secret will be propagated in near real time to its Azure Key Vault
+counterpart. Creating a new secret version in Vault will create a new version in Azure Key Vault. Deleting the secret
+or the association in Vault will delete the secret in your Azure Key Vault as well.
+
+
+## Permissions
+
+TODO
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
