@@ -11,6 +11,7 @@ This is a low footprint option that enables your applications to benefit from Va
 to connect directly with Vault. This guide walks you through the configuration process.
 
 Prerequisites:
+
 * Ability to read or create KVv2 secrets
 * Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
 * Ability to create sync destinations and associations on your Vault server
@@ -27,12 +28,16 @@ and allow "Read and Write" access to the repository secrets.
 When credentials for GitHub have been obtained, and it has access to manage secrets in your repository,
 Vault can be configured to create a GitHub destination, then begin to associate your secrets with this destination.
 
-1. Store any KV secret into Vault, like so:
+1. Store any KV secret into Vault.
+
   ```shell-session
   $ vault kv put secret/foo mypass=bar
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```
   === Secret Path ===
   secret/data/foo
@@ -47,15 +52,21 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   version            1
   ```
 
-1.	Configure the sync destination:
+  </CodeBlockConfig>
+
+1.	Configure the sync destination.
+
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-gh-1 \
-  access_token=$ACCESS_TOKEN \
-  repository_owner=$REPOSITORY_OWNER \
-  repository_name=$REPOSITORY_NAME
+      access_token=$ACCESS_TOKEN \
+      repository_owner=$REPOSITORY_OWNER \
+      repository_name=$REPOSITORY_NAME
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```text
   Key                   Value
   ---                   -----
@@ -64,14 +75,20 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   type                  gh
   ```
 
-1.	Set a secret to be associated with the configured secret destination:
+  </CodeBlockConfig>
+
+1.	Set a secret to be associated with the configured secret destination.
+
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
-  mount='secret' \
-  secret_name='foo'
+      mount='secret' \
+      secret_name='foo'
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
   ```
   Key                   Value
   ---                   -----
@@ -80,13 +97,15 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   store_type            gh
   ```
 
+  </CodeBlockConfig>
+
 1. Navigate to your GitHub repository settings to confirm your secret was successfully created.
 
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
 counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
 or the association in Vault will delete the secret in GitHub as well.
 
-## Notes
+<Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
 In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
@@ -95,6 +114,9 @@ To extract out individual properties in a GitHub action workflow, consider using
 When synced to GitHub:
 * Secret names with unsupported characters will be replaced by an "_".
 * Secret names are capitalized, and case-insensitive.
+
+</Note>
+
 
 ## API
 
