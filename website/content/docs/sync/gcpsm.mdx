@@ -46,7 +46,7 @@ Prerequisites:
 
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path='my-kv' kv-v2
@@ -62,7 +62,7 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target GCP Secret Manager:
+1. Create secrets you wish to sync with a target GCP Secret Manager.
 
   ```shell-session
   $ vault kv put -mount='my-kv' my-secret foo=bar
@@ -88,7 +88,7 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create an association between the destination and a secret to synchronize:
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/aws-sm/my-dest/associations/set \
@@ -207,14 +207,30 @@ to provision a GCP Service Account with the appropriate policies.
 
   ```shell-session
   $ terraform init && terraform plan
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   (...)
   Plan: 4 to add, 0 to change, 0 to destroy.
   ```
+
+  </CodeBlockConfig>
 
 1. Execute an apply to provision the Service Account.
 
   ```shell-session
   $ terraform apply
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   (...)
   Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
 
@@ -222,6 +238,8 @@ to provision a GCP Service Account with the appropriate policies.
 
   sync_service_account_credentials_file = "/path/to/credentials/file/gcp-sm-sync-service-account-credentials.json"
   ```
+
+  </CodeBlockConfig>
 
 The generated Service Account credentials file can then be used to configure the Vault GCP Secret Manager destination
 following the [setup](/vault/docs/sync/gcpsm#setup) steps.

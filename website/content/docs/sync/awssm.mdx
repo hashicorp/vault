@@ -39,7 +39,7 @@ ability to keep control of all your secrets localized while leveraging the benef
 	}
 	```
 
-1.	Configure a sync destination with the IAM user credentials created in the previous step:
+1.	Configure a sync destination with the IAM user credentials created in the previous step.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
@@ -64,7 +64,7 @@ ability to keep control of all your secrets localized while leveraging the benef
 
 ## Usage
 
-1.	If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+1.	If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
 	```shell-session
 	$ vault secrets enable -path=my-kv kv-v2
@@ -80,7 +80,7 @@ ability to keep control of all your secrets localized while leveraging the benef
 	
 	</CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target AWS Secrets Manager:
+1. Create secrets you wish to sync with a target AWS Secrets Manager.
 
 	```shell-session
 	$ vault kv put -mount=my-kv my-secret foo=bar
@@ -106,7 +106,7 @@ ability to keep control of all your secrets localized while leveraging the benef
 	
 	</CodeBlockConfig>
 
-1.	Create an association between the destination and a secret to synchronize:
+1.	Create an association between the destination and a secret to synchronize.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
@@ -135,7 +135,7 @@ Moving forward, any modification on the Vault secret will be propagated to its A
 counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
 the secret or the association in Vault will delete the secret in your AWS account as well.
 
-1. Delete the secret association:
+1. Delete the secret association.
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/remove \
 		mount='my-kv' \

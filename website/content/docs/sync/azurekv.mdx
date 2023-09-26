@@ -25,7 +25,7 @@ secrets when they either get dissociated from the destination or deleted from Va
   When Azure credentials for the service principal have been obtained and it has access to Azure Key Vault,
   Vault can be configured to create an Azure destination, then begin to associate your secrets with this destination.
 
-1. Configure a sync destination with the service principal credentials created in the previous step:
+1. Configure a sync destination with the service principal credentials created in the previous step.
 
   ```shell-session
   $ vault write sys/sync/stores/azure-kv/my-azure-1 \
@@ -34,10 +34,6 @@ secrets when they either get dissociated from the destination or deleted from Va
       client_secret="$CLIENT_SECRET" \
       tenant_id="$TENANT_ID"
   ```
-
-  **Output:**
-
-  <CodeBlockConfig hideClipboard>
 
   **Output:**
 
@@ -53,11 +49,9 @@ secrets when they either get dissociated from the destination or deleted from Va
 
   </CodeBlockConfig>
 
-  </CodeBlockConfig>
-
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path='my-kv' kv-v2
@@ -73,7 +67,7 @@ secrets when they either get dissociated from the destination or deleted from Va
   
   </CodeBlockConfig>
 
-1. Create an association between the destination and a secret to synchronize:
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault kv put -mount='my-kv' my-secret foo=bar
@@ -99,14 +93,12 @@ secrets when they either get dissociated from the destination or deleted from Va
   
   </CodeBlockConfig>
 
-1. Set a secret to be associated with the configured secret destination:
+1. Set a secret to be associated with the configured secret destination.
 
   ```shell-session
   $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
-      mount='secret' \
-      secret_name='foo'
-      mount='secret' \
-      secret_name='foo'
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
@@ -116,7 +108,7 @@ secrets when they either get dissociated from the destination or deleted from Va
   ```text
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-21T13:53:24.839885-07:00]]
+  associated_secrets    map[kv_7532a8b4/my-secret:map[accessor:kv_7532a8b4 secret_name:my-secret sync_status:SYNCED updated_at:2023-09-21T13:53:24.839885-07:00]]
   store_name            my-azure-1
   store_type            azure-kv
   ```

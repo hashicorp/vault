@@ -23,7 +23,7 @@ Prerequisites:
   to generate an access token. When creating your token, provide it access to the repository you want to manage secrets for,
   and allow "Read and Write" access to the repository secrets.
 
-1. Configure the sync destination:
+1. Configure the sync destination.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-gh-1 \
@@ -48,7 +48,7 @@ Prerequisites:
 
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
 	```shell-session
 	$ vault secrets enable -path='my-kv' kv-v2
@@ -64,7 +64,7 @@ Prerequisites:
 	
 	</CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target GitHub repository:
+1. Create secrets you wish to sync with a target GitHub repository.
 
 	```shell-session
 	$ vault kv put -mount='my-kv' my-secret foo=bar
@@ -90,14 +90,12 @@ Prerequisites:
 	
 	</CodeBlockConfig>
 
-1. Create an association between the destination and a secret to synchronize:
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
-      mount='secret' \
-      secret_name='foo'
-      mount='secret' \
-      secret_name='foo'
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
@@ -107,12 +105,10 @@ Prerequisites:
   ```text
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
+  associated_secrets    map[kv_7532a8b4/my-secret:map[accessor:kv_7532a8b4 secret_name:my-secret sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
   store_name            my-gh-1
   store_type            gh
   ```
-
-  </CodeBlockConfig>
 
   </CodeBlockConfig>
 
@@ -125,7 +121,7 @@ or the association in Vault will delete the secret in GitHub as well.
 <Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
 To extract out individual properties in a GitHub action workflow, consider using `jq`.
 
 When synced to GitHub:
@@ -133,7 +129,6 @@ When synced to GitHub:
 * Secret names are capitalized, and case-insensitive.
 
 </Note>
-
 
 ## API
 
