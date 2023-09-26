@@ -45,8 +45,8 @@ Prerequisites:
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
-		  access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
-		  secret_access_key='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' \
+		  access_key_id='$ACCESS_KEY_ID' \
+		  secret_access_key='$SECRET_ACCESS_KEY' \
 		  region='us-east-1'
 	```
 
@@ -55,29 +55,6 @@ Prerequisites:
 	<CodeBlockConfig hideClipboard>
 
 	```text
-	Key                   Value
-	---                   -----
-	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
-	name                  my-awssm-1
-	type                  aws-sm
-	```
-
-	</CodeBlockConfig>
-
-## Usage
-
-	```shell-session
-	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
-		access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
-		secret_access_key='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' \
-		region='us-east-1'
-	```
-
-	**Output:**
-
-	<CodeBlockConfig hideClipboard>
-
-	```plaintext
 	Key                   Value
 	---                   -----
 	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
