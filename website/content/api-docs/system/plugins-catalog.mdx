@@ -160,8 +160,9 @@ supplied name.
   binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
   If they do not match the plugin can not be run.
 
-- `command` `(string: "")` - Specifies the command to spawn the plugin. This defaults
-  to the name of the plugin if both `oci_image` and `command` are unspecified.
+- `command` `(string: <required>)` - Specifies the command used to execute the
+  plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
+  is also specified, it is relative to the image's working directory.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
