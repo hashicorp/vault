@@ -368,7 +368,7 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 
 func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, config *acmeConfigEntry) (bool, time.Time, error) {
 	now := time.Now()
-	backoffTime := now.Add(5 * time.Second)
+	backoffTime := now.Add(1 * time.Second)
 	path := acmeValidationPrefix + id
 	challengeEntry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
