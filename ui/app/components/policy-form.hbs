@@ -25,7 +25,19 @@
     <div class="field">
       {{#if @model.isNew}}
         <Toolbar>
-          <label class="has-text-weight-bold">Policy</label>
+          <label class="has-text-weight-bold has-side-padding-s">Policy</label>
+          <ToolbarFilters>
+            {{#if @renderPolicyExampleModal}}
+              <Hds::Button
+                @text="Example template"
+                @icon="info"
+                @size="small"
+                @color="tertiary"
+                {{on "click" (fn (mut this.showTemplateModal))}}
+                data-test-policy-example-button
+              />
+            {{/if}}
+          </ToolbarFilters>
           <ToolbarActions>
             <div class="toolbar-separator"></div>
             <div class="control is-flex">
@@ -66,25 +78,12 @@
           data-test-policy-editor
         />
       {{/if}}
-      <div class="has-top-margin-xs">
+      <div class="has-top-margin-xs is-flex-between">
         <span class="is-size-9 has-text-grey has-bottom-margin-l">
           You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
         </span>
         {{! Only renders button (and modal) if not already in the "create policy" modal }}
-        {{#if @renderPolicyExampleModal}}
-          <span class="is-size-9 has-text-grey has-bottom-margin-l">
-            See
-            <button
-              type="button"
-              class="text-button has-text-info"
-              {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-policy-example-button
-            >
-              example template
-            </button>.
-          </span>
-          {{! Only renders more information if already in the "create policy" modal }}
-        {{else}}
+        {{#unless @renderPolicyExampleModal}}
           <p class="has-top-margin-l">
             More information about
             {{uppercase @model.policyType}}
@@ -99,7 +98,7 @@
               here.
             </DocLink>
           </p>
-        {{/if}}
+        {{/unless}}
       </div>
     </div>
     {{#each @model.additionalAttrs as |attr|}}
@@ -128,26 +127,26 @@
     </div>
   </div>
 </form>
+
 {{! SAMPLE POLICY MODAL. Only renders modal if not already in create policy modal }}
-{{#if @renderPolicyExampleModal}}
-  <Modal
-    @title="Example {{uppercase @model.policyType}} Policy"
+{{#if (and @renderPolicyExampleModal this.showTemplateModal)}}
+  <Hds::Modal
+    id="policy-example-modal"
+    @size="large"
     @onClose={{fn (mut this.showTemplateModal) false}}
-    @isActive={{this.showTemplateModal}}
-    @showCloseButton={{true}}
     data-test-policy-example-modal
+    as |M|
   >
-    <section class="modal-card-body">
-      {{! code-mirror modifier does not render value initially until focus event fires }}
-      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
-      {{#if this.showTemplateModal}}
-        <PolicyExample @policyType={{@model.policyType}} />
-      {{/if}}
-    </section>
-    <div class="modal-card-head has-border-top-light">
-      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
-        Close
-      </button>
-    </div>
-  </Modal>
+    <M.Header>
+      Example
+      {{uppercase @model.policyType}}
+      Policy
+    </M.Header>
+    <M.Body>
+      <PolicyExample @policyType={{@model.policyType}} />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button type="button" @text="Close" {{on "click" F.close}} data-test-close-modal />
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}
