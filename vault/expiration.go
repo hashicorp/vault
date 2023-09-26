@@ -860,26 +860,18 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	// Replacing the entire map would cause a race with
-	// a simultaneous WalkTokens, which doesn't hold pendingLock.
-	m.pending.Range(func(key, value interface{}) bool {
-		info := value.(pendingInfo)
-		info.timer.Stop()
-		m.pending.Delete(key)
-		return true
-	})
+	oldPending := m.pending
+	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
-	m.nonexpiring.Range(func(key, value interface{}) bool {
-		m.nonexpiring.Delete(key)
-		return true
-	})
 	m.uniquePolicies = make(map[string][]string)
-	m.irrevocable.Range(func(key, _ interface{}) bool {
-		m.irrevocable.Delete(key)
-		return true
-	})
 	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
+
+	go oldPending.Range(func(key, value interface{}) bool {
+		info := value.(pendingInfo)
+		info.timer.Stop()
+		return true
+	})
 
 	if m.inRestoreMode() {
 		for {
@@ -2471,8 +2463,13 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 		return true
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2495,8 +2492,13 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 		return walkFn(key.(string), expireTime)
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
