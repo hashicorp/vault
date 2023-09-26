@@ -18,41 +18,37 @@ Prerequisites:
 
 ## Setup
 
-To get started with syncing Vault secrets to your GitHub repository, you'll need an access token.
-Please view the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-to generate an access token. When creating your token, provide it access to the repository you want to manage secrets for,
-and allow "Read and Write" access to the repository secrets.
+1. To get started with syncing Vault secrets to your GitHub repository, you'll need an access token.
+  Please view the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+  to generate an access token. When creating your token, provide it access to the repository you want to manage secrets for,
+  and allow "Read and Write" access to the repository secrets.
 
-## Usage
-
-When credentials for GitHub have been obtained, and it has access to manage secrets in your repository,
-Vault can be configured to create a GitHub destination, then begin to associate your secrets with this destination.
-
-1. Store any KV secret into Vault.
+1. Configure the sync destination.
 
   ```shell-session
-  $ vault kv put secret/foo mypass=bar
+  $ vault write sys/sync/destinations/gh/my-gh-1 \
+      access_token="$ACCESS_TOKEN" \
+      repository_owner="$REPOSITORY_OWNER" \
+      repository_name="$REPOSITORY_NAME"
   ```
 
   **Output:**
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   Key                   Value
   ---                   -----
   connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
   name                  my-gh-1
   type                  gh
   ```
-  === Secret Path ===
-  secret/data/foo
 
   </CodeBlockConfig>
 
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
 	```shell-session
 	$ vault secrets enable -path='my-kv' kv-v2
@@ -62,13 +58,13 @@ Vault can be configured to create a GitHub destination, then begin to associate 
 
 	<CodeBlockConfig hideClipboard>
 
-	```text
+	```plaintext
 	Success! Enabled the kv-v2 secrets engine at: my-kv/
 	```
 
 	</CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target GitHub repository:
+1. Create secrets you wish to sync with a target GitHub repository.
 
 	```shell-session
 	$ vault kv put -mount='my-kv' my-secret foo=bar
@@ -78,14 +74,14 @@ Vault can be configured to create a GitHub destination, then begin to associate 
 
 	<CodeBlockConfig hideClipboard>
 
-	```text
+	```plaintext
   ==== Secret Path ====
   my-kv/data/my-secret
 
   ======= Metadata =======
   Key                Value
   ---                -----
-  created_time       2023-09-21T20:52:47.723315Z
+  created_time       2023-09-19T13:17:23.395109Z
   custom_metadata    <nil>
   deletion_time      n/a
   destroyed          false
@@ -94,44 +90,22 @@ Vault can be configured to create a GitHub destination, then begin to associate 
 
 	</CodeBlockConfig>
 
-1.	Configure the sync destination:
-  ```shell-session
-  $ vault write sys/sync/destinations/gh/my-gh-1 \
-      access_token=$ACCESS_TOKEN \
-      repository_owner=$REPOSITORY_OWNER \
-      repository_name=$REPOSITORY_NAME
-  ```
-
-  **Output:**
-
-  <CodeBlockConfig hideClipboard>
-
-  ```text
-  Key                   Value
-  ---                   -----
-  connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
-  name                  my-gh-1
-  type                  gh
-  ```
-
-  </CodeBlockConfig>
-
-1.	Set a secret to be associated with the configured secret destination.
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
-      mount='secret' \
-      secret_name='foo'
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
+  associated_secrets    map[kv_7532a8b4/my-secret:map[accessor:kv_7532a8b4 secret_name:my-secret sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
   store_name            my-gh-1
   store_type            gh
   ```
@@ -147,7 +121,7 @@ or the association in Vault will delete the secret in GitHub as well.
 <Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
 To extract out individual properties in a GitHub action workflow, consider using `jq`.
 
 When synced to GitHub:
@@ -155,7 +129,6 @@ When synced to GitHub:
 * Secret names are capitalized, and case-insensitive.
 
 </Note>
-
 
 ## API
 
