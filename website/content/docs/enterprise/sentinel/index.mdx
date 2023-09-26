@@ -87,15 +87,31 @@ a step-by-step instruction.
 
 </Tip>
 
-Consider the following scenario. 
+<Warning>
+  Starting with Vault versions 1.15.0, 1.14.4, and 1.13.8 RGPs derived
+  from identity group memberships are applied to requests in child namespaces,
+  instead of parent ones. Read the scenarios below to familiarize yourself with the changes.
+</Warning>
+
+#### Versions 1.15.0, 1.14.4, 1.13.8, and later
+
+The training namespace is a child namespace of the education namespace. The "Sun
+Shine" entity created in the training namespace is a member of the "Tester"
+group which is defined in the education namespace. The group members inherit the
+group-level policy.
+
+![Relationship](/img/diagram-rgp-namespace-post-115_light.png#light-theme-only)
+![Relationship](/img/diagram-rgp-namespace-post-115_dark.png#dark-theme-only)
+
+#### Versions 1.15.0-rc1, 1.14.3, 1.13.7, and earlier
 
 The training namespace is a child namespace of the education namespace. The "Sun
 Shine" entity created in the education namespace is a member of the "Tester"
 group which is defined in the training namespace. The group members inherit the
 group-level policy.
 
-![Relationship](/img/diagram-rgp-namespace_light.png#light-theme-only)
-![Relationship](/img/diagram-rgp-namespace_dark.png#dark-theme-only)
+![Relationship](/img/diagram-rgp-namespace-pre-115_light.png#light-theme-only)
+![Relationship](/img/diagram-rgp-namespace-pre-115_dark.png#dark-theme-only)
 
 While ACL policies and EGPs set rules on a specific path, an RGP does not
 specify a target path. RGPs are tied to tokens, identity entities, or identity
