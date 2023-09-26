@@ -67,8 +67,8 @@ supplied type and name.
 - `type` `(string: <required>)` – Specifies the type of this plugin runtime. Currently
   only accepts "container".
 
-- `name` `(string: <required>)` – Specifies the name for this plugin runtime. The name
-  is what is used to look up plugin runtimes in the catalog. This is part of the request URL.
+- `name` `(string: <required>)` – Part of the request URL. Specifies the plugin runtime name.
+   Use the runtime name to look up plugin runtimes in the catalog.
 
 - `oci_runtime` `(string: <optional>)` – Specifies OCI-compliant container runtime to use.
   Default is "runsc", gVisor's OCI runtime.
