@@ -6,11 +6,11 @@ package pki
 import (
 	"container/list"
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -121,7 +121,7 @@ func (ace *ACMEChallengeEngine) _run(b *backend, state *acmeState) error {
 	// We want at most a certain number of workers operating to verify
 	// challenges.
 	var finishedWorkersChannels []chan bool
-	for true {
+	for {
 		// Wait until we've got more work to do.
 		select {
 		case <-ace.Closing:
@@ -202,6 +202,11 @@ func (ace *ACMEChallengeEngine) _run(b *backend, state *acmeState) error {
 			// actionable). At the worst, we'll spend a little more time
 			// looping through the queue until we hit a repeat.
 			firstIdentifier = ""
+
+			// If we are no longer the active node, break out
+			if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+				break
+			}
 
 			// Here, we got a piece of work that is ready to check; create a
 			// channel and a new go routine and run it. Note that this still
@@ -307,36 +312,27 @@ func (ace *ACMEChallengeEngine) AcceptChallenge(sc *storageContext, account stri
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, retries int, finished chan bool, config *acmeConfigEntry) {
+func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id string, validationQueueRetries int, finished chan bool, config *acmeConfigEntry) {
 	sc, cancel := runnerSc.WithFreshTimeout(MaxChallengeTimeout)
 	defer cancel()
 	runnerSc.Backend.Logger().Debug("Starting verification of challenge", "id", id)
 
 	if retry, retryAfter, err := ace._verifyChallenge(sc, id, config); err != nil {
-		if errors.Is(err, logical.ErrReadOnly) {
-			// If we get a storage read only error we should bail out as we
-			// are no longer running on the active node as all ACME writes
-			// are cluster local
-			finished <- true
-			sc.Backend.Logger().Warn("ACME validation thread stopping as an ErrReadOnly error was encountered")
-			return
-		}
-
 		// Because verification of this challenge failed, we need to retry
 		// it in the future. Log the error and re-add the item to the queue
 		// to try again later.
 		sc.Backend.Logger().Error(fmt.Sprintf("ACME validation failed for %v: %v", id, err))
 
 		if retry {
-			retries++
+			validationQueueRetries++
 
-			// This additional retry logic is here in case we start failing to decode entries within the
-			// data store, we would re-attempt them forever and never clean them up. We want to leverage
-			// the retry counts within the authorization/challenge objects first which is why we give ourselves
-			// twice the attempts here.
-			if retries > MaxRetryAttempts*2 {
+			// The retry logic within _verifyChallenge is dependent on being able to read and decode
+			// the ACME challenge entries. If we encounter such failures we would retry forever, so
+			// we have a secondary check here to see if we are consistently looping within the validation
+			// queue that is larger than the normal retry attempts we would allow.
+			if validationQueueRetries > MaxRetryAttempts*2 {
 				sc.Backend.Logger().Warn("reached max error attempts within challenge queue: %v, giving up", id)
-				_, _, err = ace._verifyChallengeCleanup(sc, err, id)
+				_, _, err = ace._verifyChallengeCleanup(sc, nil, id)
 				if err != nil {
 					sc.Backend.Logger().Warn("Failed cleaning up challenge entry: %v", err)
 				}
@@ -349,7 +345,7 @@ func (ace *ACMEChallengeEngine) VerifyChallenge(runnerSc *storageContext, id str
 			ace.Validations.PushBack(&ChallengeQueueEntry{
 				Identifier: id,
 				RetryAfter: retryAfter,
-				NumRetries: retries,
+				NumRetries: validationQueueRetries,
 			})
 
 			// Let the validator know there's a pending challenge.
@@ -552,16 +548,16 @@ func updateChallengeStatus(sc *storageContext, cv *ChallengeValidation, authzPat
 }
 
 func (ace *ACMEChallengeEngine) _verifyChallengeCleanup(sc *storageContext, err error, id string) (bool, time.Time, error) {
-	backoff := time.Now().Add(5 * time.Second)
+	now := time.Now()
 
 	// Remove our ChallengeValidation entry only.
 	if deleteErr := sc.Storage.Delete(sc.Context, acmeValidationPrefix+id); deleteErr != nil {
-		return true, backoff, fmt.Errorf("error deleting challenge %v (error prior to cleanup, "+"if any: %v): %w", id, err, deleteErr)
+		return true, now.Add(1 * time.Second), fmt.Errorf("error deleting challenge %v (error prior to cleanup, if any: %v): %w", id, err, deleteErr)
 	}
 
 	if err != nil {
 		err = fmt.Errorf("removing challenge validation attempt and not retrying %v; previous error: %w", id, err)
 	}
 
-	return false, backoff, err
+	return false, now, err
 }
