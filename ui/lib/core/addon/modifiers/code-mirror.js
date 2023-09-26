@@ -63,7 +63,7 @@ export default class CodeMirrorModifier extends Modifier {
       theme: namedArgs.theme || 'hashi',
       value: namedArgs.content || '',
       viewportMargin: namedArgs.viewportMargin || '',
-      autoRefresh: namedArgs.container ? true : false,
+      autoRefresh: namedArgs.autoRefresh,
     });
 
     editor.on('change', bind(this, this._onChange, namedArgs));
