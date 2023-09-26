@@ -860,6 +860,10 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
+	m.expireFunc = func(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {
+		// We don't want any lease timers that fire to do anything; they can wait
+		// for the next ExpirationManager to handle them.
+	}
 	oldPending := m.pending
 	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
@@ -869,6 +873,7 @@ func (m *ExpirationManager) Stop() error {
 
 	go oldPending.Range(func(key, value interface{}) bool {
 		info := value.(pendingInfo)
+		// We need to stop the timers to prevent memory leaks.
 		info.timer.Stop()
 		return true
 	})
