@@ -1,0 +1,55 @@
+---
+layout: docs
+page_title: Secrets Sync
+description: Secrets sync allows you to safely sync Vault-managed secrets with external destinations.
+---
+
+# Secrets Sync
+
+Secrets sync enables users to manage their secrets with Vault while syncing a subset of them into
+external secret store destinations. Secrets that will be synced must be individually associated
+with each desired destination. This means that associating a secret named `my-secret` with a
+destinated named `my-aws` will not automatically sync to second destination named `my-gcp`.
+
+<Note>
+	Unsyncing a secret either by deleting the secret from Vault or from deleting its association
+	is a hard-delete option. This means it is immediately removed from the external system and bypasses
+	any soft-deletion states or recovery mechanisms.
+</Note>
+
+## Destinations
+
+Secrets can be synced into various external stores, called destinations. Destinations are configured
+separately for each type of external system. The supported destinations are listed:
+* [AWS Secrets Manager](/vault/docs/sync/awssm)
+* [Azure Key Vault](/vault/docs/sync/azurekv)
+* [GCP Secret Manager](/vault/docs/sync/gcpsm)
+* [GitHub Repository Actions](/vault/docs/sync/github)
+* [Vercel Projects](/vault/docs/sync/vercelproject)
+
+## Assocations
+
+Choosing the secrets you want synced to a given destination is done by creating links between them,
+called associations. Once a destination has been successfully configured, you can begin making the
+associations to it by providing the secret's name and its mount. Each secret's association keeps
+track of its current sync status, the timestamp of its last status change, and the error code of
+the last sync or unsync operation, if it failed.
+
+
+## Sync Statuses
+
+There are several sync statuses which relay information about the outcome of the last sync
+operation to have occurred on that secret. The status information is stored inside each
+association object returned by the endpoint and, upon failure, includes an error code explaining why.
+
+* `SYNCING` - The sync operation for the secret is currently in-progress.
+* `SYNCED` - The sync operation was successful and sent the secret to the external destination.
+* `UNSYNCING` - The unsync operation for the secret is currently in-progress.
+* `UNSYNCED` - The unsync operation was successful and removed the secret from the external destination.
+	This is returned when a secret itself is deleted but the association is not.
+* `INTERNAL_VAULT_ERROR` - The sync or unsync operation failed due to an issue internal to Vault.
+* `CLIENT_SIDE_ERROR` - The sync or unsync operation failed due to a configuration error.
+	For example, the credentials used to configure the destination expired or were revoked.
+* `EXTERNAL_SERVICE_ERROR` - The sync or unsync operation failed due to an issue with the
+	external service provider's side.
+* `UNKNOWN` - Vault is unable to determine the current state of the secret in regards to the external service.

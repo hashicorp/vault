@@ -8,8 +8,9 @@ description: The AWS Secrets Manager destination syncs secrets from Vault to AWS
 
 The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
 an external AWS account. When configured, Vault will actively maintain the state of each externally-synced
-secret in realtime. This includes sending new secrets, updating existing secret values, and removing
-secrets when they either get dissocaited from the destination or deleted from Vault.  
+secret in near-realtime. This includes sending new secrets, updating existing secret values, and removing
+secrets when they either get dissociated from the destination or deleted from Vault. This enables the
+ability to keep control of all your secrets localized while leveraging the benefits of the AWS Secrets Manager.
 
 ## Setup
 
@@ -24,41 +25,54 @@ The following is an example policy outlining the required permissions to use sec
 {
 	"Version": "2012-10-17",
 	"Statement": [
-	{
-		"Effect": "Allow",
-		"Action": [
-			"secretsmanager:Create*",
-			"secretsmanager:Put*",
-			"secretsmanager:Update*",
-			"secretsmanager:Delete*",
-			"secretsmanager:TagResource",
-			"secretsmanager:UntagResource"
-		],
-		"Resource": "*"
-	}
+    	{
+    		"Effect": "Allow",
+    		"Action": [
+    			"secretsmanager:Create*",
+    			"secretsmanager:Update*",
+    			"secretsmanager:Delete*",
+    			"secretsmanager:TagResource"
+    		],
+    		"Resource": "arn:aws:secretsmanager:*:*:secret:vault*"
+    	}
 	]
 }
 ```
 
 ## Usage
 
-When AWS credentials have been obtained, Vault can be configured to create an AWS destination, then
-begin to associate your secrets with this destination.
+Once AWS credentials have been obtained, configure Vault with them to create an AWS destination. If
+you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and create a secret.
 
-1. Store any KV secret into Vault, like so:
+1. Mount the secret engine:
 
 	```shell-session
-	$ vault kv put secret/foo mypass=bar
+	$ vault secrets enable -path=my-kv kv-v2
 	```
 
 	**Output:**
 
 	<CodeBlockConfig hideClipboard>
 
+	```text
+	Success! Enabled the kv-v2 secrets engine at: my-kv/
 	```
-	=== Secret Path ===
-	secret/data/foo
+	
+	</CodeBlockConfig>
 
+1. Create a KV secret:
+
+	```shell-session
+	$ vault kv put -mount=my-kv my-secret foo=bar
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```text
+	==== Secret Path ====
+	my-kv/data/my-secret
 	======= Metadata =======
 	Key                Value
 	---                -----
@@ -68,7 +82,7 @@ begin to associate your secrets with this destination.
 	destroyed          false
 	version            1
 	```
-
+	
 	</CodeBlockConfig>
 
 1.	Configure the sync destination:
@@ -83,7 +97,7 @@ begin to associate your secrets with this destination.
 	**Output:**
 
 	<CodeBlockConfig hideClipboard>
-	
+
 	```text
 	Key                   Value
 	---                   -----
@@ -94,12 +108,12 @@ begin to associate your secrets with this destination.
 
 	</CodeBlockConfig>
 
-1.	Set a secret to be associated with the configured secret destination:
+1.	Set a secret to be associated with this AWS SM destination:
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
-		mount='secret' \
-		secret_name='foo'
+		mount='my-kv' \
+		secret_name='my-secret'
 	```
 
 	**Output:**
@@ -109,7 +123,35 @@ begin to associate your secrets with this destination.
 	```
 	Key                   Value
 	---                   -----
-	associated_secrets    map[kv_37993f8a/foo:map[accessor:kv_37993f8a secret_name:foo sync_status:SYNCED updated_at:2023-09-19T13:17:35.085581-05:00]]
+	associated_secrets    map[kv_37993f8a/my-secret:map[accessor:kv_37993f8a secret_name:my-secret sync_status:SYNCED updated_at:2023-09-19T13:17:35.085581-05:00]]
+	store_name            aws1
+	store_type            aws-sm
+	```
+
+	</CodeBlockConfig>
+
+1. Navigate to the [Secrets Manager](https://console.aws.amazon.com/secretsmanager/) in the AWS console
+	to confirm your secret was successfully synced.
+
+	Moving forward, any modification on the Vault secret will be propagated to its AWS Secrets Manager
+	counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
+	the secret or the association in Vault will delete the secret in your AWS account as well.
+
+1. Delete the secret association:
+	```shell-session
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/remove \
+		mount='my-kv' \
+		secret_name='my-secret'
+	```
+	
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```text
+	Key                   Value
+	---                   -----
+	associated_secrets    map[]
 	store_name            aws1
 	store_type            aws-sm
 	```
@@ -118,13 +160,20 @@ begin to associate your secrets with this destination.
 
 ## Troubleshooting
 
-...
+### Synced secrets not appearing in AWS Secrets Manager
 
+Ensure that you are looking at the correct region in AWS, especially if using the web console.
+The region you synced your secrets to must match the region you are trying to read them from.
+
+### Error: unauthorized request: UnrecognizedClientException: The security token included in the request is invalid.
+
+Ensure you are not using short-lived credentials with secrets syncing. By nature of the feature,
+the credentials used by Vault to keep secrets synced must be long-lived.
 
 ## Tutorial
 
-Refer to the [Vault Enterprise Secrets Sync](/vault/tutorials/enterprise/secrets-sync)
-tutorial to learn how to configure the secrets sync between Vault and AWS Secrets Manager.
+Refer to the [Vault Enterprise Secrets Sync tutorial](/vault/tutorials/enterprise/secrets-sync)
+to learn how to configure the secrets sync between Vault and AWS Secrets Manager.
 
 ## API
 
