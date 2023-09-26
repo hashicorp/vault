@@ -2,18 +2,18 @@
 layout: docs
 page_title: Vault Secrets Operator
 description: >-
-  The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
+  The Vault Secrets Operator allows Pods to consume HashiCorp secrets natively from Kubernetes Secrets.
 ---
 
-# Vault secrets operator
+# Vault Secrets Operator
 
-The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets natively from Kubernetes Secrets.
+The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets and HCP Vault Secrets Apps natively from Kubernetes Secrets.
 
 ## Overview
 
 The Vault Secrets Operator operates by watching for changes to its supported set of Custom Resource Definitions (CRD).
-Each CRD provides the specification required to allow the Operator to synchronize a Vault Secrets to a Kubernetes Secret.
-The Operator writes the *source* Vault secret data directly to the *destination* Kubernetes Secret, ensuring that any
+Each CRD provides the specification required to allow the Operator to synchronize from one of the supported sources for secrets to a Kubernetes Secret.
+The Operator writes the *source* secret data directly to the *destination* Kubernetes Secret, ensuring that any
 changes made to the *source* are replicated to the *destination* over its lifetime. In this way, an application only needs
 to have access to the *destination* secret in order to make use of the secret data contained within.
 
@@ -21,27 +21,21 @@ to have access to the *destination* secret in order to make use of the secret da
 
 The following features are supported by the Vault Secrets Operator:
 
-- All Vault [secret engines](/vault/docs/secrets) supported.
-- TLS/mTLS communications with Vault.
-- Authentication to Vault with any of the following Auth Methods:
-  - [Kubernetes](/vault/docs/auth/kubernetes)
-  - [JWT](/vault/docs/auth/jwt)
-  - [AppRole](/vault/docs/auth/approle)
-  - [AWS](/vault/docs/auth/aws)
-  - Support for additional Auth Methods coming soon.
-- Secret rotation for `Deployment`, `ReplicaSet`, `StatefulSet` Kubernetes resource types.
-- Prometheus instrumentation for [monitoring](/vault/docs/platform/k8s/vso/telemetry) the Operator
+- Support for syncing from multiple secret sources.
+- Automatic secret drift and remediation.
+- Automatic secret rotation for `Deployment`, `ReplicaSet`, `StatefulSet` Kubernetes resource types.
+- Prometheus specific instrumentation for [monitoring](/vault/docs/platform/k8s/vso/telemetry) the Operator.
 - Support for installing using: `Helm` or `Kustomize`<br />
 *see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
 
-## Supported Vault versions
+## Supported Secret Sources
 
-- Vault 1.11+
-- [HCP Vault](https://www.hashicorp.com/cloud)
+The Vault Secrets Operator supports syncing from multiple secret sources.
+Please see [secret sources](/vault/docs/platform/k8s/vso/sources) for more details.
 
 @include 'kubernetes-supported-versions.mdx'
 
-## Supported Cloud providers
+## Supported Kubernetes distributions
 
 The Vault Secrets Operator has been tested successfully in the following hosted Kubernetes environments:
 - Amazon Elastic Kubernetes Service (EKS)
@@ -50,231 +44,10 @@ The Vault Secrets Operator has been tested successfully in the following hosted 
 - Red Hat OpenShift
 
 Basic integration tests are available in the project repository.
-Please report any incompatibilities via a [Github Issue](https://github.com/hashicorp/vault-secrets-operator/issues).
-
-
-## Vault access and custom resource definitions
-
-The Vault connection and authentication configuration is provided by the `VaultConnection` and `VaultAuth` CRDs. These can be considered as
-foundational Custom Resources that all secret replication type resources will reference.
-
-### VaultConnection custom resource
-
-Provides the configuration necessary for the Operator to connect to a single Vault server instance.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultConnection
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  # required configuration
-  # address to the Vault server.
-  address: http://vault.vault.svc.cluster.local:8200
-
-  # optional configuration
-  # HTTP headers to be included in all Vault requests.
-  # headers: []
-  # TLS server name to use as the SNI host for TLS connections.
-  # tlsServerName: ""
-  # skip TLS verification for TLS connections to Vault.
-  # skipTLSVerify: false
-  # the trusted PEM encoded CA certificate chain stored in a Kubernetes Secret
-  # caCertSecretRef: ""
-```
-
-### VaultAuth custom resource
-
-Provide the configuration necessary for the Operator to authenticate to a single Vault server instance as
-specified in a `VaultConnection` Custom Resource.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultAuth
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  # required configuration
-  # VaultConnectionRef of the corresponding VaultConnection CustomResource.
-  # If no value is specified the Operator will default to the `default` VaultConnection,
-  # configured in its own Kubernetes namespace.
-  vaultConnectionRef: example
-  # Method to use when authenticating to Vault.
-  method: kubernetes
-  # Mount to use when authenticating to auth method.
-  mount: kubernetes
-  # Kubernetes specific auth configuration, requires that the Method be set to kubernetes.
-  kubernetes:
-    # role to use when authenticating to Vault
-    role: example
-    # ServiceAccount to use when authenticating to Vault
-    # it is recommended to always provide a unique serviceAccount per Pod/application
-    serviceAccount: default
-
-  # optional configuration
-  # Vault namespace where the auth backend is mounted (requires Vault Enterprise)
-  # namespace: ""
-  # Params to use when authenticating to Vault
-  # params: []
-  # HTTP headers to be included in all Vault authentication requests.
-  # headers: []
-```
-
-## Vault secret custom resource definitions
-
-Provide the configuration necessary for the Operator to replicate a single Vault Secret to a single Kubernetes Secret.
-Each supported CRD is specialized to a *class* of Vault secret, documented below.
-
-### VaultStaticSecret custom resource
-
-Provides the configuration necessary for the Operator to synchronize a single Vault *static* Secret to a single Kubernetes Secret.<br />
-Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault/docs/secrets/kv/kv-v1)
-
-##### KV version 1 secret example
-
-The KV secrets engine's `kvv1` mount path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 1 - Setup](/vault/docs/secrets/kv/kv-v1#setup) for configuring KV secrets engine version 1. The following results in a request to `http://127.0.0.1:8200/v1/kvv1/eng/apikey/google` to retrieve the secret.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultStaticSecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: kvv1
-  type: kv-v1
-  path: eng/apikey/google
-  refreshAfter: 60s
-  destination:
-    create: true
-    name: static-secret1
-```
-
-##### KV version 2 secret example
-
-The KV secrets engine's `kvv2` mount path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv/kv-v2#setup) for configuring KV secrets engine version 2. The following results in a request to `http://127.0.0.1:8200/v1/kvv2/data/eng/apikey/google?version=2` to retrieve the secret.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultStaticSecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: kvv2
-  type: kv-v2
-  path: eng/apikey/google
-  version: 2
-  refreshAfter: 60s
-  destination:
-    create: true
-    name: static-secret2
-```
-
-### VaultPKISecret custom resource
-Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
-Supported secrets engines: [pki](/vault/docs/secrets/pki)
-
-The PKI secrets engine's mount path is specified under `spec.mount` of `VaultPKISecret` custom resource. Please consult [PKI Secrets Engine - Setup and Usage](/vault/docs/secrets/pki/setup) for configuring PKI secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/pki/issue/default` to generate TLS certificates.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultPKISecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: pki
-  role: default
-  commonName: example.com
-  format: pem
-  expiryOffset: 1s
-  ttl: 60s
-  namespace: tenant-1
-  destination:
-    create: true
-    name: pki1
-```
-
-### VaultDynamicSecret custom resource
-
-Provides the configuration necessary for the Operator to synchronize a single Vault *dynamic* Secret to a single Kubernetes Secret.<br />
-Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/databases), [aws](/vault/docs/secrets/aws),
-[azure](/vault/docs/secrets/azure), [gcp](/vault/docs/secrets/gcp), ...
-
-##### Database secret example
-
-The database secret engine's `db` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [Database Secrets Engine - Setup](/vault/docs/secrets/databases#setup) for configuring the database secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new credential.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultDynamicSecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: db
-  path: creds/my-postgresql-role
-  destination:
-    create: true
-    name: dynamic1
-```
-
-##### AWS secret example
-
-The AWS secrets engine's `aws` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [AWS Secrets Engine - Setup](/vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
-
-The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam-role` to generate a new IAM credential.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultDynamicSecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: aws
-  path: creds/my-iam-role
-  destination:
-    create: true
-    name: dynamic1
-```
-
-The following results in a request to `http://127.0.0.1:8200/v1/aws/sts/my-sts-role` to generate a new STS credential.
-
-```yaml
----
-apiVersion: secrets.hashicorp.com/v1beta1
-kind: VaultDynamicSecret
-metadata:
-  namespace: vso-example
-  name: example
-spec:
-  vaultAuthRef: example
-  mount: aws
-  path: sts/my-sts-role
-  destination:
-    create: true
-    name: dynamic2
-```
-
+Please report any issues [here](https://github.com/hashicorp/vault-secrets-operator/issues).
 
 ## Tutorial
 
-Refer to the [The Vault Secrets Operator on
+Refer to the [Vault Secrets Operator on
 Kubernetes](/vault/tutorials/kubernetes/vault-secrets-operator) tutorial to
 learn the end-to-end workflow using the Vault Secrets Operator.

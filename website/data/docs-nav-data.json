@@ -1885,6 +1885,23 @@
                 "path": "platform/k8s/vso/installation"
               },
               {
+                "title": "Secret Sources",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/vso/sources"
+                  },
+                  {
+                    "title": "Vault",
+                    "path": "platform/k8s/vso/sources/vault"
+                  },
+                  {
+                    "title": "HCP Vault Secrets",
+                    "path": "platform/k8s/vso/sources/hvs"
+                  }
+                ]
+              },
+              {
                 "title": "Examples",
                 "path": "platform/k8s/vso/examples"
               },
