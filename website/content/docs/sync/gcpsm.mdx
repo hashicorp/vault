@@ -22,7 +22,7 @@ Prerequisites:
   [necessary permissions](/vault/docs/sync/gcpsm#permissions). [Instructions](/vault/docs/sync/gcpsm#provision-service-account)
   to provision this Service Account via Terraform can be found below.
 
-1. Configure a sync destination with the Service Account json credentials created in the previous step. See docs for
+1. Configure a sync destination with the Service Account JSON credentials created in the previous step. See docs for
   [alternative ways](/vault/docs/secrets/gcp#authentication) to pass in the `credentials` parameter.
 
   ```shell-session
@@ -243,3 +243,7 @@ to provision a GCP Service Account with the appropriate policies.
 
 The generated Service Account credentials file can then be used to configure the Vault GCP Secret Manager destination
 following the [setup](/vault/docs/sync/gcpsm#setup) steps.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

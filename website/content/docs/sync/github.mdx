@@ -125,7 +125,7 @@ In the example above, the value for secret "my-secret" will be synced to GitHub 
 To extract out individual properties in a GitHub action workflow, consider using `jq`.
 
 When synced to GitHub:
-* Secret names with unsupported characters will be replaced by an "_".
+* Unsupported characters in the secret name will be replaced by an underscore character.
 * Secret names are capitalized, and case-insensitive.
 
 </Note>

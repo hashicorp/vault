@@ -13,19 +13,19 @@ secrets when they either get dissociated from the destination or deleted from Va
 
 ## Setup
 
+1. If you do not already have an Azure Key Vault instance, navigate to the Azure Portal to create a new
+  [Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/quick-create-portal).
+
 1. A service principal with a client id and client secret will be needed to configure Azure Key Vault as a
   sync destination. This [guide](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
   will walk you through creating the service principal.
 
-  Once the service principal is created, the next step is to
+1. Once the service principal is created, the next step is to
   [grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
   access to Azure Key Vault. We recommend using the "Key Vault Secrets Officer" built-in role,
-  which gives sufficient access to manage secrets. For more information, see the [Permissions](#permissions) section.
+  which gives sufficient access to manage secrets.
 
-  When Azure credentials for the service principal have been obtained and it has access to Azure Key Vault,
-  Vault can be configured to create an Azure destination, then begin to associate your secrets with this destination.
-
-1. Configure a sync destination with the service principal credentials created in the previous step.
+1. Configure a sync destination with the service principal credentials and Key Vault URI created in the previous steps:
 
   ```shell-session
   $ vault write sys/sync/stores/azure-kv/my-azure-1 \
@@ -93,8 +93,7 @@ secrets when they either get dissociated from the destination or deleted from Va
   
   </CodeBlockConfig>
 
-1. Set a secret to be associated with the configured secret destination.
-
+1. Set a secret to be associated with the configured secret destination:
   ```shell-session
   $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
       mount='my-kv' \
@@ -121,11 +120,6 @@ secrets when they either get dissociated from the destination or deleted from Va
 Moving forward, any modification on the Vault secret will be propagated in near real time to its Azure Key Vault
 counterpart. Creating a new secret version in Vault will create a new version in Azure Key Vault. Deleting the secret
 or the association in Vault will delete the secret in your Azure Key Vault as well.
-
-
-## Permissions
-
-TODO
 
 ## API
 
