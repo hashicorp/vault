@@ -250,7 +250,12 @@ any storage backend.
    implies that the seal wrapped storage entries get re-wrapped. Monitor the log
    and wait until this process is complete (look for `seal re-wrap completed`). 
 
-   Note about seal-rewrap: Seal-rewrap gets invoked when changes in seal stanza is made, this is true even when you are trying to migrate from the same auto-unseal type like pkcs11 to pkcs11.
+<Warning heading="Seal configuration changes will invoke rewrap">
+
+   Any change to the `seal` stanza in your Vault configuration invokes seal-rewrap,
+   even "migrations" from the same auto-unseal type like `pkcs11` to `pkcs11`.
+
+</Warning>
 
 1. Seal migration is now completed. Take down the old active node, update its
    configuration to use the new seal blocks (completely unaware of the old seal type)
