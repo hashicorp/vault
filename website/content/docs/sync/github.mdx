@@ -4,34 +4,72 @@ page_title: GitHub - Secrets Sync Destination
 description: The GitHub destination syncs secrets from Vault to GitHub.
 ---
 
-# GitHub
+# GitHub repository secrets
 
 The GitHub repository sync destination allows Vault to safely synchronize secrets as GitHub repository action secrets.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
 to connect directly with Vault. This guide walks you through the configuration process.
 
 Prerequisites:
-
 * Ability to read or create KVv2 secrets
 * Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
 * Ability to create sync destinations and associations on your Vault server
 
 ## Setup
 
-To get started with syncing Vault secrets to your GitHub repository, you'll need an access token.
-Please view the [GitHub documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-to generate an access token. When creating your token, provide it access to the repository you want to manage secrets for,
-and allow "Read and Write" access to the repository secrets.
+1. To get started with syncing Vault secrets to your GitHub repository, you will need an
+  [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+  with access to the repository you want to manage secrets for and write permissions on the repository secrets.
+
+1. Configure a sync destination with the access token obtained in the previous steps.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-dest \
+      access_token='$ACCESS_TOKEN' \
+      repository_owner='$OWNER' \
+      repository_name='$NAME'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** repository_owner:<owner> repository_name:<name>]
+  name                  my-dest
+  type                  gh
+  ```
+
+  </CodeBlockConfig>
 
 ## Usage
 
-When credentials for GitHub have been obtained, and it has access to manage secrets in your repository,
-Vault can be configured to create a GitHub destination, then begin to associate your secrets with this destination.
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
-1. Store any KV secret into Vault.
+  <CodeBlockConfig hideClipboard>
 
   ```shell-session
-  $ vault kv put secret/foo mypass=bar
+  $ vault secrets enable -path=my-kv kv-v2
+  ```
+
+  </CodeBlockConfig>
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```
+  Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
+
+  </CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target GitHub repository:
+
+  ```shell-session
+  $ vault kv put -mount='my-kv' my-secret foo=bar
   ```
 
   **Output:**
@@ -39,89 +77,27 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   <CodeBlockConfig hideClipboard>
 
   ```text
-  Key                   Value
-  ---                   -----
-  connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
-  name                  my-gh-1
-  type                  gh
-  ```
-  === Secret Path ===
-  secret/data/foo
-
-  </CodeBlockConfig>
-
-## Usage
-
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
-
-	```shell-session
-	$ vault secrets enable -path='my-kv' kv-v2
-	```
-
-	**Output:**
-
-	<CodeBlockConfig hideClipboard>
-
-	```text
-	Success! Enabled the kv-v2 secrets engine at: my-kv/
-	```
-
-	</CodeBlockConfig>
-
-1. Create secrets you wish to sync with a target GitHub repository:
-
-	```shell-session
-	$ vault kv put -mount='my-kv' my-secret foo=bar
-	```
-
-	**Output:**
-
-	<CodeBlockConfig hideClipboard>
-
-	```text
   ==== Secret Path ====
   my-kv/data/my-secret
 
   ======= Metadata =======
   Key                Value
   ---                -----
-  created_time       2023-09-21T20:52:47.723315Z
+  created_time       <timestamp>
   custom_metadata    <nil>
   deletion_time      n/a
   destroyed          false
   version            1
-	```
-
-	</CodeBlockConfig>
-
-1.	Configure the sync destination:
-  ```shell-session
-  $ vault write sys/sync/destinations/gh/my-gh-1 \
-      access_token=$ACCESS_TOKEN \
-      repository_owner=$REPOSITORY_OWNER \
-      repository_name=$REPOSITORY_NAME
-  ```
-
-  **Output:**
-
-  <CodeBlockConfig hideClipboard>
-
-  ```text
-  Key                   Value
-  ---                   -----
-  connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
-  name                  my-gh-1
-  type                  gh
   ```
 
   </CodeBlockConfig>
 
-1.	Set a secret to be associated with the configured secret destination.
+1. Create an association between your GitHub repository destination and the secret to synchronize.
 
   ```shell-session
-  $ vault write sys/sync/destinations/gh/my-gh-1/associations/set \
-      mount='secret' \
-      secret_name='foo'
+  $ vault write sys/sync/destinations/gh/my-dest/associations/set \
+      mount=my-kv \
+      secret_name=my-secret
   ```
 
   **Output:**
@@ -131,8 +107,8 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   ```text
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
-  store_name            my-gh-1
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
+  store_name            my-dest
   store_type            gh
   ```
 
@@ -148,11 +124,6 @@ or the association in Vault will delete the secret in GitHub as well.
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
 In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
-To extract out individual properties in a GitHub action workflow, consider using `jq`.
-
-When synced to GitHub:
-* Unsupported characters in the secret name will be replaced by an underscore character.
-* Secret names are capitalized, and case-insensitive.
 
 </Note>
 

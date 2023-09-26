@@ -12,32 +12,57 @@ secret in near-realtime. This includes sending new secrets, updating existing se
 secrets when they either get dissociated from the destination or deleted from Vault. This enables the
 ability to keep control of all your secrets localized while leveraging the benefits of the AWS Secrets Manager.
 
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create AWS IAM user and access keys with access to the Secrets Manager
+* Ability to create sync destinations and associations on your Vault server
+
 ## Setup
 
-The use of this sync destination requires prerequesite setup before beginning to configure it. Either an IAM
-User or an IAM role must be set with the necessary policies in order for Vault to manage secrets in the
-external destination. It is this IAM User or IAM Role in AWS for which access credentials will be generated,
-then provided to Vault during configuration.
+1. Navigate to the [AWS Identity and Access Management (IAM) console](https://us-east-1.console.aws.amazon.com/iamv2/home#/home)
+  to configure a IAM user with access to the Secrets Manager. The following is an example policy outlining the required
+  permissions to use secrets syncing.
 
-The following is an example policy outlining the required permissions to use secrets syncing:
+  ```
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:Create*",
+            "secretsmanager:Update*",
+            "secretsmanager:Delete*",
+            "secretsmanager:TagResource"
+          ],
+          "Resource": "arn:aws:secretsmanager:*:*:secret:vault*"
+        }
+    ]
+  }
+  ```
 
-```
-{
-	"Version": "2012-10-17",
-	"Statement": [
-    	{
-    		"Effect": "Allow",
-    		"Action": [
-    			"secretsmanager:Create*",
-    			"secretsmanager:Update*",
-    			"secretsmanager:Delete*",
-    			"secretsmanager:TagResource"
-    		],
-    		"Resource": "arn:aws:secretsmanager:*:*:secret:vault*"
-    	}
-	]
-}
-```
+1.	Configure the sync destination.
+
+	```shell-session
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
+		  access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
+		  secret_access_key='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' \
+		  region='us-east-1'
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```text
+	Key                   Value
+	---                   -----
+	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
+	name                  my-awssm-1
+	type                  aws-sm
+	```
+
+	</CodeBlockConfig>
 
 ## Usage
 
@@ -81,29 +106,6 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 	deletion_time      n/a
 	destroyed          false
 	version            1
-	```
-
-	</CodeBlockConfig>
-
-1.	Configure the sync destination:
-
-	```shell-session
-	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
-		access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
-		secret_access_key='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' \
-		region='us-east-1'
-	```
-
-	**Output:**
-
-	<CodeBlockConfig hideClipboard>
-
-	```text
-	Key                   Value
-	---                   -----
-	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
-	name                  my-awssm-1
-	type                  aws-sm
 	```
 
 	</CodeBlockConfig>

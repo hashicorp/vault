@@ -26,8 +26,8 @@ Prerequisites:
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
-      access_token=<token> \
-      project_id=<project-id> \
+      access_token='$TOKEN' \
+      project_id='$PROJECT_ID' \
       deployment_environments=development \
       deployment_environments=preview \
       deployment_environments=production
@@ -51,8 +51,19 @@ Prerequisites:
 
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
+  <CodeBlockConfig hideClipboard>
+
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
+  ```
+
+  </CodeBlockConfig>
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```
   Success! Enabled the kv-v2 secrets engine at: my-kv/
   ```
 
@@ -81,6 +92,8 @@ Prerequisites:
   destroyed          false
   version            1
   ```
+
+  </CodeBlockConfig>
 
 1. Create an association between your Vercel Project destination and the secret to synchronize.
 

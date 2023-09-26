@@ -4,7 +4,7 @@ page_title: Google Cloud Platform Secret Manager - Secrets Sync Destination
 description: The Google Cloud Platform Secret Manager destination syncs secrets from Vault to GCP.
 ---
 
-# Google Cloud Platform Secret Manager sync destination
+# Google Cloud Platform Secret Manager
 
 The Google Cloud Platform (GCP) Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
@@ -42,19 +42,37 @@ Prerequisites:
   type                  gcp-sm
   ```
 
+  </CodeBlockConfig>
+
 ## Usage
 
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
+  ```
+
+  **Output**:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   Success! Enabled the kv-v2 secrets engine at: my-kv/
   ```
+
+  </CodeBlockConfig>
 
 1. Create secrets you wish to sync with a target GCP Secret Manager.
 
   ```shell-session
   $ vault kv put -mount=my-kv my-secret foo=bar
+  ```
+
+  **Output**:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   ==== Secret Path ====
   my-kv/data/my-secret
 
@@ -67,6 +85,8 @@ Prerequisites:
   destroyed          false
   version            1
   ```
+
+  </CodeBlockConfig>
 
 1. Create an association between your GCP Secret Manager destination and the secret to synchronize.
 
