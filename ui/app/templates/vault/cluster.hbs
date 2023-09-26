@@ -9,7 +9,6 @@
     @onClose={{fn (mut this.auth.showRootTokenWarning) false}}
     @isActive={{this.auth.showRootTokenWarning}}
     @type="warning"
-    @showCloseButton={{true}}
   >
     <section class="modal-card-body">
       {{#if this.namespaceService.inRootNamespace}}
