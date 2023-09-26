@@ -22,16 +22,22 @@ Prerequisites:
 
 1. Next you need to locate your project ID. It can be found under the `Settings` tab in your project's overview page.
 
-1. Configure a sync destination with the access token & project ID obtained in the previous steps.
+1. Configure a sync destination with the access token & project ID obtained in the previous steps:
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
-  access_token=<token> \
-  project_id=<project-id> \
-  deployment_environments=development \
-  deployment_environments=preview \
-  deployment_environments=production
+      access_token='<token>' \
+      project_id='<project-id>' \
+      deployment_environments='development' \
+      deployment_environments='preview' \
+      deployment_environments='production'
+  ```
 
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   Key                   Value
   ---                   -----
   connection_details    map[access_token:***** deployment_environments:[development preview production] project_id:<project-id>]
@@ -39,18 +45,40 @@ Prerequisites:
   type                  vercel-project
   ```
 
+  </CodeBlockConfig>
+
 ## Usage
 
-1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine and create a secret.
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
 
   ```shell-session
-  $ vault secrets enable -path=my-kv kv-v2
-  Success! Enabled the kv-v2 secrets engine at: my-kv/
+  $ vault secrets enable -path='my-kv' kv-v2
+  ```
 
-  $ vault kv put -mount=my-kv my-secret foo=bar
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
+  Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
+
+  </CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target Vercel project:
+
+  ```shell-session
+  $ vault kv put -mount='my-kv' my-secret foo=bar
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+  
+  ```text
   ==== Secret Path ====
   my-kv/data/my-secret
-
+  
   ======= Metadata =======
   Key                Value
   ---                -----
@@ -61,17 +89,29 @@ Prerequisites:
   version            1
   ```
 
-1. Create an association between your Vercel Project destination and the secret to synchronize
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize:
 
   ```shell-session
-  vault write sys/sync/destinations/vercel-project/my-dest/associations/set mount=my-kv secret_name=my-secret
+  $ vault write sys/sync/destinations/vercel-project/my-dest/associations/set \
+    mount='my-kv' \
+    secret_name='my-secret'
+  ```
 
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+  
+  ```text
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
   store_name            my-dest
   store_type            vercel-project
   ```
+
+  </CodeBlockConfig>
 
 1. Navigate to your project's settings under the `Environment Variables` section to confirm your secret was successfully
   created in your Vercel project.
