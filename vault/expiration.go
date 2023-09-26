@@ -147,7 +147,7 @@ type ExpirationManager struct {
 	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
-	expireFunc          ExpireLeaseStrategy
+	expireFunc          atomic.Pointer[ExpireLeaseStrategy]
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -360,11 +360,11 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          e,
 
 		jobManager:      jobManager,
 		revokeRetryBase: c.expirationRevokeRetryBase,
 	}
+	exp.expireFunc.Store(&e)
 	if exp.revokeRetryBase == 0 {
 		exp.revokeRetryBase = revokeRetryBase
 	}
@@ -846,6 +846,8 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	return nil
 }
 
+func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {}
+
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
@@ -860,10 +862,10 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	m.expireFunc = func(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {
-		// We don't want any lease timers that fire to do anything; they can wait
-		// for the next ExpirationManager to handle them.
-	}
+	// We don't want any lease timers that fire to do anything; they can wait
+	// for the next ExpirationManager to handle them.
+	newStrategy := ExpireLeaseStrategy(expireNoop)
+	m.expireFunc.Store(&newStrategy)
 	oldPending := m.pending
 	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
@@ -1878,7 +1880,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseID, namespace := le.LeaseID, le.namespace
 			// Extend the timer by the lease total
 			timer := time.AfterFunc(leaseTotal, func() {
-				m.expireFunc(m.quitContext, m, leaseID, namespace)
+				(*m.expireFunc.Load())(m.quitContext, m, leaseID, namespace)
 			})
 			pending = pendingInfo{
 				timer: timer,
