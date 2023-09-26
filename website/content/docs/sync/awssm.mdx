@@ -57,7 +57,7 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 	```text
 	Success! Enabled the kv-v2 secrets engine at: my-kv/
 	```
-	
+
 	</CodeBlockConfig>
 
 1. Create a KV secret:
@@ -82,7 +82,7 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 	destroyed          false
 	version            1
 	```
-	
+
 	</CodeBlockConfig>
 
 1.	Configure the sync destination:
@@ -137,39 +137,6 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 	counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
 	the secret or the association in Vault will delete the secret in your AWS account as well.
 
-1. Delete the secret association:
-	```shell-session
-	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/remove \
-		mount='my-kv' \
-		secret_name='my-secret'
-	```
-	
-	**Output:**
-
-	<CodeBlockConfig hideClipboard>
-
-	```text
-	Key                   Value
-	---                   -----
-	associated_secrets    map[]
-	store_name            aws1
-	store_type            aws-sm
-	```
-
-	</CodeBlockConfig>
-
-## Troubleshooting
-
-### Synced secrets not appearing in AWS Secrets Manager
-
-Ensure that you are looking at the correct region in AWS, especially if using the web console.
-The region you synced your secrets to must match the region you are trying to read them from.
-
-### Error: unauthorized request: UnrecognizedClientException: The security token included in the request is invalid.
-
-Ensure you are not using short-lived credentials with secrets syncing. By nature of the feature,
-the credentials used by Vault to keep secrets synced must be long-lived.
-
 ## Tutorial
 
 Refer to the [Vault Enterprise Secrets Sync tutorial](/vault/tutorials/enterprise/secrets-sync)
@@ -177,4 +144,4 @@ to learn how to configure the secrets sync between Vault and AWS Secrets Manager
 
 ## API
 
-The AWS Secrets Manager destination has a full HTTP API. Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

@@ -13,19 +13,20 @@ secrets when they either get dissociated from the destination or deleted from Va
 
 ## Setup
 
-A service principal with a client id and client secret will be needed to configure Azure Key Vault as a
-sync destination. This [guide](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
-will walk you through creating the service principal.
+1. If you do not already have an Azure Key Vault instance, navigate to the Azure Portal to create a new
+  [Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/quick-create-portal).
 
-Once the service principal is created, the next step is to
-[grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
-access to Azure Key Vault. We recommend using the "Key Vault Secrets Officer" built-in role,
-which gives sufficient access to manage secrets. For more information, see the [Permissions](#permissions) section.
+1. A service principal with a client id and client secret will be needed to configure Azure Key Vault as a
+  sync destination. This [guide](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
+  will walk you through creating the service principal.
 
-When Azure credentials for the service principal have been obtained and it has access to Azure Key Vault,
-Vault can be configured to create an Azure destination, then begin to associate your secrets with this destination.
+1. Once the service principal is created, the next step is to
+  [grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
+  access to Azure Key Vault. We recommend using the "Key Vault Secrets Officer" built-in role,
+  which gives sufficient access to manage secrets.
 
-1.	Configure the sync destination:
+1. Configure a sync destination with the service principal credentials and Key Vault URI created in the previous steps:
+
   ```shell-session
   $ vault write sys/sync/stores/azure-kv/my-azure-1 \
   key_vault_uri=$KEY_VAULT_URI \
@@ -52,8 +53,22 @@ Vault can be configured to create an Azure destination, then begin to associate 
 
   Output:
   ```
-  === Secret Path ===
-  secret/data/foo
+
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize:
+
+  ```shell-session
+  $ vault kv put -mount='my-kv' my-secret foo=bar
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
+  ==== Secret Path ====
+  my-kv/data/my-secret
 
   ======= Metadata =======
   Key                Value
@@ -64,6 +79,8 @@ Vault can be configured to create an Azure destination, then begin to associate 
   destroyed          false
   version            1
   ```
+
+  </CodeBlockConfig>
 
 1. Set a secret to be associated with the configured secret destination:
   ```shell-session
@@ -87,11 +104,6 @@ to confirm your secret was successfully created.
 Moving forward, any modification on the Vault secret will be propagated in near real time to its Azure Key Vault
 counterpart. Creating a new secret version in Vault will create a new version in Azure Key Vault. Deleting the secret
 or the association in Vault will delete the secret in your Azure Key Vault as well.
-
-
-## Permissions
-
-TODO
 
 ## API
 

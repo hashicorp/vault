@@ -32,10 +32,53 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   $ vault kv put secret/foo mypass=bar
   ```
 
-  Output:
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** app_config:map[] repository_name:<repo name> repository_owner:<repo owner>]
+  name                  my-gh-1
+  type                  gh
   ```
   === Secret Path ===
   secret/data/foo
+
+  </CodeBlockConfig>
+
+## Usage
+
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine:
+
+	```shell-session
+	$ vault secrets enable -path='my-kv' kv-v2
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```text
+	Success! Enabled the kv-v2 secrets engine at: my-kv/
+	```
+
+	</CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target GitHub repository:
+
+	```shell-session
+	$ vault kv put -mount='my-kv' my-secret foo=bar
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```text
+  ==== Secret Path ====
+  my-kv/data/my-secret
 
   ======= Metadata =======
   Key                Value
@@ -45,7 +88,9 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   deletion_time      n/a
   destroyed          false
   version            1
-  ```
+	```
+
+	</CodeBlockConfig>
 
 1.	Configure the sync destination:
   ```shell-session
@@ -71,8 +116,11 @@ Vault can be configured to create a GitHub destination, then begin to associate 
   secret_name='foo'
   ```
 
-  Output:
-  ```
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```text
   Key                   Value
   ---                   -----
   associated_secrets    map[kv_7532a8b4/foo:map[accessor:kv_7532a8b4 secret_name:foo sync_status:SYNCED updated_at:2023-09-22T14:45:28.031262-07:00]]
@@ -93,7 +141,7 @@ In the example above, the value for secret "foo" will be synced to GitHub as the
 To extract out individual properties in a GitHub action workflow, consider using `jq`.
 
 When synced to GitHub:
-* Secret names with unsupported characters will be replaced by an "_".
+* Unsupported characters in the secret name will be replaced by an underscore character.
 * Secret names are capitalized, and case-insensitive.
 
 ## API
