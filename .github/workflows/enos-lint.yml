@@ -23,6 +23,7 @@ jobs:
       - id: metadata
         run: |
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
+          github_repository="${{ github.repository }}"
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
             echo 'runs-on=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
           else
