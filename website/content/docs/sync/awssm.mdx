@@ -45,8 +45,8 @@ Prerequisites:
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
-		  access_key_id='$ACCESS_KEY_ID' \
-		  secret_access_key='$SECRET_ACCESS_KEY' \
+		  access_key_id="$ACCESS_KEY_ID" \
+		  secret_access_key="$SECRET_ACCESS_KEY" \
 		  region='us-east-1'
 	```
 

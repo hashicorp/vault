@@ -26,8 +26,8 @@ Prerequisites:
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
-      access_token='$TOKEN' \
-      project_id='$PROJECT_ID' \
+      access_token="$TOKEN" \
+      project_id="$PROJECT_ID" \
       deployment_environments=development \
       deployment_environments=preview \
       deployment_environments=production
