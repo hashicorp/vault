@@ -19,7 +19,7 @@ will walk you through creating the service principal.
 
 Once the service principal is created, the next step is to
 [grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
-access to Azure Key Vault. We recommend using the "Key Vault Secrets Officer" built-in role,
+access to Azure Key Vault. To quickly get started, we recommend using the "Key Vault Secrets Officer" built-in role,
 which gives sufficient access to manage secrets. For more information, see the [Permissions](#permissions) section.
 
 When Azure credentials for the service principal have been obtained and it has access to Azure Key Vault,
@@ -109,7 +109,41 @@ or the association in Vault will delete the secret in your Azure Key Vault as we
 
 ## Permissions
 
-TODO
+For a more minimal set of permissions, you can create a
+[custom role](https://learn.microsoft.com/en-us/azure/role-based-access-control/custom-roles#steps-to-create-a-custom-role)
+using the following JSON role definition. Be sure to replace the subscription id placeholder.
+
+```json
+{
+  "properties": {
+    "roleName": "Key Vault Secrets Reader Writer",
+    "description": "Custom role for reading and updating Azure Key Vault secrets.",
+    "permissions": [
+      {
+        "actions": [
+          "Microsoft.KeyVault/vaults/secrets/read",
+          "Microsoft.KeyVault/vaults/secrets/write"
+        ],
+        "notActions": [],
+        "dataActions": [
+          "Microsoft.KeyVault/vaults/secrets/delete",
+          "Microsoft.KeyVault/vaults/secrets/backup/action",
+          "Microsoft.KeyVault/vaults/secrets/purge/action",
+          "Microsoft.KeyVault/vaults/secrets/recover/action",
+          "Microsoft.KeyVault/vaults/secrets/restore/action",
+          "Microsoft.KeyVault/vaults/secrets/readMetadata/action",
+          "Microsoft.KeyVault/vaults/secrets/getSecret/action",
+          "Microsoft.KeyVault/vaults/secrets/setSecret/action"
+        ],
+        "notDataActions": []
+      }
+    ],
+    "assignableScopes": [
+      "/subscriptions/{subscriptionId}/"
+    ]
+  }
+}
+```
 
 ## API
 
