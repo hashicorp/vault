@@ -34,7 +34,7 @@ Prerequisites:
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   Key                   Value
   ---                   -----
   connection_details    map[credentials:*****]
@@ -90,10 +90,12 @@ Prerequisites:
 
 1. Create an association between your GCP Secret Manager destination and the secret to synchronize.
 
+1. Create an association between the destination and a secret to synchronize.
+
   ```shell-session
   $ vault write sys/sync/destinations/aws-sm/my-dest/associations/set \
-      mount=my-kv \
-      secret_name=my-secret
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
@@ -111,7 +113,7 @@ Prerequisites:
   </CodeBlockConfig>
 
 1. Navigate to the [Secret Manager](https://console.cloud.google.com/security/secret-manager) in the Google Cloud console
-to confirm your secret was successfully created in your GCP project.
+  to confirm your secret was successfully created in your GCP project.
 
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GCP Secret Manager
 counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
@@ -207,14 +209,30 @@ to provision a GCP Service Account with the appropriate policies.
 
   ```shell-session
   $ terraform init && terraform plan
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   (...)
   Plan: 4 to add, 0 to change, 0 to destroy.
   ```
+
+  </CodeBlockConfig>
 
 1. Execute an apply to provision the Service Account.
 
   ```shell-session
   $ terraform apply
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   (...)
   Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
 
@@ -222,6 +240,8 @@ to provision a GCP Service Account with the appropriate policies.
 
   sync_service_account_credentials_file = "/path/to/credentials/file/gcp-sm-sync-service-account-credentials.json"
   ```
+
+  </CodeBlockConfig>
 
 The generated Service Account credentials file can then be used to configure the Vault GCP Secret Manager destination
 following the [setup](/vault/docs/sync/gcpsm#setup) steps.

@@ -66,10 +66,30 @@ Prerequisites:
 
 ## Usage
 
-Once AWS credentials have been obtained, configure Vault with them to create an AWS destination. If
-you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and create a secret.
+	```shell-session
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
+		access_key_id='AKIAJWVN5Z4FOFT7NLNA' \
+		secret_access_key='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' \
+		region='us-east-1'
+	```
 
-1. Mount the secret engine:
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```plaintext
+	Key                   Value
+	---                   -----
+	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
+	name                  my-awssm-1
+	type                  aws-sm
+	```
+
+	</CodeBlockConfig>
+
+## Usage
+
+1.	If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
 	```shell-session
 	$ vault secrets enable -path=my-kv kv-v2
@@ -79,13 +99,13 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 
 	<CodeBlockConfig hideClipboard>
 
-	```text
+	```plaintext
 	Success! Enabled the kv-v2 secrets engine at: my-kv/
 	```
 
 	</CodeBlockConfig>
 
-1. Create a KV secret:
+1. Create secrets you wish to sync with a target AWS Secrets Manager.
 
 	```shell-session
 	$ vault kv put -mount=my-kv my-secret foo=bar
@@ -95,9 +115,10 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 
 	<CodeBlockConfig hideClipboard>
 
-	```text
+	```plaintext
 	==== Secret Path ====
 	my-kv/data/my-secret
+
 	======= Metadata =======
 	Key                Value
 	---                -----
@@ -135,9 +156,9 @@ you do not already have a KVv2 ready to use, mount a new KVv2 secrets engine and
 1. Navigate to the [Secrets Manager](https://console.aws.amazon.com/secretsmanager/) in the AWS console
 	to confirm your secret was successfully synced.
 
-	Moving forward, any modification on the Vault secret will be propagated to its AWS Secrets Manager
-	counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
-	the secret or the association in Vault will delete the secret in your AWS account as well.
+Moving forward, any modification on the Vault secret will be propagated to its AWS Secrets Manager
+counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
+the secret or the association in Vault will delete the secret in your AWS account as well.
 
 ## Tutorial
 

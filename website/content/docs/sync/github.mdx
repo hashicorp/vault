@@ -104,7 +104,7 @@ Prerequisites:
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   Key                   Value
   ---                   -----
   associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
@@ -126,7 +126,6 @@ GitHub only supports single value secrets, so KVv2 secrets from Vault will be st
 In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
 
 </Note>
-
 
 ## API
 

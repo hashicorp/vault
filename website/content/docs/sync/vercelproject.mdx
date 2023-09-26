@@ -69,7 +69,7 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target Vercel project:
+1. Create secrets you wish to sync with a target Vercel project.
 
   ```shell-session
   $ vault kv put -mount='my-kv' my-secret foo=bar
@@ -79,7 +79,7 @@ Prerequisites:
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   ==== Secret Path ====
   my-kv/data/my-secret
 
@@ -97,20 +97,22 @@ Prerequisites:
 
 1. Create an association between your Vercel Project destination and the secret to synchronize.
 
+1. Create an association between the destination and a secret to synchronize.
+
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest/associations/set \
-      mount=my-kv \
-      secret_name=my-secret
+    mount='my-kv' \
+    secret_name='my-secret'
   ```
 
   **Output:**
 
   <CodeBlockConfig hideClipboard>
 
-  ```text
+  ```plaintext
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
   store_name            my-dest
   store_type            vercel-project
   ```
@@ -124,11 +126,9 @@ Moving forward, any modification on the Vault secret will be propagated in near 
 counterpart. Creating a new secret version in Vault will overwrite the value in your Vercel Project. Deleting the secret
 or the association in Vault will delete the secret on Vercel as well.
 
-## Notes
+<Note>
 
-KVv2 secrets are multi-values while Vercel Project environment variables are single value. As such the secret values
-from Vault are exported as a JSON string.
+Vercel Project environment variables only support single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
+In the example above, the value for secret "my-secret" will be synced to Vercel as the JSON string `{"foo":"bar"}`.
 
-## API
-
-Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
+</Note>
