@@ -24,16 +24,6 @@ sample "build_ce_linux_amd64_deb" {
     }
   }
 
-  subset "proxy" {
-    matrix {
-      arch            = ["amd64"]
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-      distro          = ["ubuntu"]
-      edition         = ["ce"]
-    }
-  }
-
   subset "upgrade" {
     matrix {
       arch            = ["amd64"]
@@ -65,16 +55,6 @@ sample "build_ce_linux_arm64_deb" {
   }
 
   subset "smoke" {
-    matrix {
-      arch            = ["arm64"]
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-      distro          = ["ubuntu"]
-      edition         = ["ce"]
-    }
-  }
-
-  subset "proxy" {
     matrix {
       arch            = ["arm64"]
       artifact_source = ["crt"]
@@ -124,16 +104,6 @@ sample "build_ce_linux_arm64_rpm" {
     }
   }
 
-  subset "proxy" {
-    matrix {
-      arch            = ["arm64"]
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-      distro          = ["rhel"]
-      edition         = ["ce"]
-    }
-  }
-
   subset "upgrade" {
     matrix {
       arch            = ["arm64"]
@@ -165,16 +135,6 @@ sample "build_ce_linux_amd64_rpm" {
   }
 
   subset "smoke" {
-    matrix {
-      arch            = ["amd64"]
-      artifact_source = ["crt"]
-      artifact_type   = ["package"]
-      distro          = ["rhel"]
-      edition         = ["ce"]
-    }
-  }
-
-  subset "proxy" {
     matrix {
       arch            = ["amd64"]
       artifact_source = ["crt"]
@@ -222,15 +182,6 @@ sample "build_ce_linux_amd64_zip" {
     }
   }
 
-  subset "proxy" {
-    matrix {
-      arch            = ["amd64"]
-      artifact_type   = ["bundle"]
-      artifact_source = ["crt"]
-      edition         = ["ce"]
-    }
-  }
-
   subset "upgrade" {
     matrix {
       arch            = ["amd64"]
@@ -260,15 +211,6 @@ sample "build_ce_linux_arm64_zip" {
   }
 
   subset "smoke" {
-    matrix {
-      arch            = ["arm64"]
-      artifact_source = ["crt"]
-      artifact_type   = ["bundle"]
-      edition         = ["ce"]
-    }
-  }
-
-  subset "proxy" {
     matrix {
       arch            = ["arm64"]
       artifact_source = ["crt"]
