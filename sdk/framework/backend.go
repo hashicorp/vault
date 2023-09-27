@@ -417,6 +417,8 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
+	b.logger.Info("Setting up backend...", "b.BackendType",
+		b.BackendType, "b.system", b.system, "EventsSender", config.EventsSender)
 	b.events = config.EventsSender
 	return nil
 }
