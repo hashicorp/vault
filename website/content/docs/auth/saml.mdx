@@ -106,7 +106,7 @@ complete list of configuration options.
 ### Assertion consumer service URLs
 
 The [`acs_urls`](/vault/api-docs/auth/saml#acs_urls) configuration parameter determines
-where the SAML Response will be sent after users authenticate with the configured SAML
+where the SAML response will be sent after users authenticate with the configured SAML
 Identity Provider in their browser.
 
 The values provided to Vault must:
@@ -118,8 +118,8 @@ The values provided to Vault must:
 
 <Note>
   It is highly recommended and enforced by some identity providers to TLS-protect the
-  Assertion Consumer Service URLs. A warning will be returned from Vault if any of the
-  configured Assertion Consumer Service URLs are not protected by TLS.
+  assertion consumer service URLs. A warning will be returned from Vault if any of the
+  configured assertion consumer service URLs are not protected by TLS.
 </Note>
 
 To support a single auth method mount being used across Vault [replication](/vault/docs/enterprise/replication)
@@ -132,7 +132,7 @@ configuration could be given:
       acs_urls="https://primary.vault/v1/auth/saml/callback,https://secondary.vault/v1/auth/saml/callback"
    ```
 
-The Vault UI and CLI will automatically request the proper Assertion Consumer Service URL
+The Vault UI and CLI will automatically request the proper assertion consumer service URL
 for the cluster they're configured to communicate with. This means that the entirety of the
 authentication flow will stay within the local cluster.
 

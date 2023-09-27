@@ -268,9 +268,13 @@ $ curl \
 ## Obtain SSO service URL
 
 Starts a login flow by providing a SAML Single Sign-On (SSO) Service URL for the
-configured Identity Provider. The returned `token_poll_id` can be used to obtain
-the Vault token after the user is authenticated with the Identity Provider and the
-SAML Response has passed validation. This API is unauthenticated.
+configured identity provider. The returned `token_poll_id` can be used to obtain
+the Vault token after the user is authenticated with the identity provider and the
+SAML response has passed validation.
+
+<Note title="Unauthenticated">
+A Vault token is not required to interact with this API.
+</Note>
 
 | Method  | Path                         |
 |:--------|:-----------------------------|
@@ -289,7 +293,7 @@ SAML Response has passed validation. This API is unauthenticated.
   will differ based on the provided type. If `cli`, an HTML success page will be returned
   in the response. If `browser`, a blank HTML page will be returned in the response.
 - `acs_url` `(string, <required>)` - The URL where the identity provider will send its
-  SAML Response. Must be in the set of configured [`acs_urls`](/vault/api-docs/auth/saml#acs_urls).
+  SAML response. Must be in the set of configured [`acs_urls`](/vault/api-docs/auth/saml#acs_urls).
 
 ### Sample payload
 
@@ -323,9 +327,12 @@ $ curl \
 
 ## Assertion consumer service callback
 
-The Assertion Consumer Service URL of the auth method. Completes the round trip from
-the Identity Provider and performs validations on the SAML Response. This API is
-unauthenticated.
+The assertion consumer service URL of the auth method. Completes the round trip from
+the identity provider and performs validations on the SAML response.
+
+<Note title="Unauthenticated">
+A Vault token is not required to interact with this API.
+</Note>
 
 | Method  | Path                  |
 |:--------|:----------------------|
@@ -359,7 +366,11 @@ $ curl \
 
 ## Obtain vault token
 
-Completes the login flow by returning a Vault token. This API is unauthenticated.
+Completes the login flow by returning a Vault token.
+
+<Note title="Unauthenticated">
+A Vault token is not required to interact with this API.
+</Note>
 
 | Method  | Path               |
 |:--------|:-------------------|
