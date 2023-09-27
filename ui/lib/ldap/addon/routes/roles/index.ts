@@ -25,11 +25,11 @@ interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRolesRouteModel;
   pageFilter: string | undefined;
-  currentPage: number | undefined;
+  page: number | undefined;
 }
 
 interface LdapRolesRouteParams {
-  currentPage?: string;
+  page?: string;
   pageFilter: string;
 }
 
@@ -44,7 +44,7 @@ export default class LdapRolesRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
-    currentPage: {
+    page: {
       refreshModel: true,
     },
   };
@@ -58,7 +58,7 @@ export default class LdapRolesRoute extends Route {
         'ldap/role',
         {
           backend: backendModel.id,
-          page: Number(params.currentPage) || 1,
+          page: Number(params.page) || 1,
           pageFilter: params.pageFilter,
           responsePath: 'data.keys',
         },
@@ -83,7 +83,7 @@ export default class LdapRolesRoute extends Route {
   resetController(controller: LdapRolesController, isExiting: boolean) {
     if (isExiting) {
       controller.set('pageFilter', undefined);
-      controller.set('currentPage', undefined);
+      controller.set('page', undefined);
     }
   }
 }
