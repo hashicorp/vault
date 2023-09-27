@@ -7,8 +7,6 @@ description: >-
 
 # `/sys/internal/counters`
 
-@include 'alerts/restricted-root.mdx'
-
 The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
 ## Entities
@@ -330,6 +328,8 @@ queries in the root namespace because the information about the namespace path
 is unknown.
 
 This endpoint was added in Vault 1.6.
+
+@include 'alerts/restricted-root.mdx'
 
 | Method | Path                              |
 | :----- | :-------------------------------- |
@@ -733,6 +733,8 @@ loading of client data has completed.
 
 This endpoint was added in Vault 1.7.
 
+@include 'alerts/restricted-root.mdx'
+
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/monthly` |
@@ -863,6 +865,8 @@ $ curl \
 
 ## Update the client count configuration
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.
 
 | Method | Path                            |
@@ -956,6 +960,8 @@ information returned by this API will include activity for this month, however
 it may be up to 20 minutes delayed.
 
 This endpoint was added in Vault 1.11.
+
+@include 'alerts/restricted-root.mdx'
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
