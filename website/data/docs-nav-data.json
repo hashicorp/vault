@@ -813,6 +813,31 @@
           {
             "title": "<code>reload</code>",
             "path": "commands/plugin/reload"
+          },
+          {
+            "title": "<code>runtime</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "commands/plugin/runtime"
+              },
+              {
+                "title": "<code>deregister</code>",
+                "path": "commands/plugin/runtime/deregister"
+              },
+              {
+                "title": "<code>info</code>",
+                "path": "commands/plugin/runtime/info"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "commands/plugin/runtime/list"
+              },
+              {
+                "title": "<code>register</code>",
+                "path": "commands/plugin/runtime/register"
+              }
+            ]
           }
         ]
       },
@@ -1718,6 +1743,10 @@
       {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Containerized Plugins",
+        "path": "plugins/containerized-plugins"
       },
       {
         "title": "Integrations Library",
