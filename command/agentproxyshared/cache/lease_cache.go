@@ -579,15 +579,14 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 		return err
 	}
 
-	// We must hold a lock for the index while it's being updated.
-	// We keep the two locking mechanisms distinct, so that it's only writes
-	// that have to be serial.
-	index.IndexLock.Lock()
-	defer index.IndexLock.Unlock()
-
 	// The index already exists, so all we need to do is add our token
 	// to the index's allowed token list, then re-store it
 	if indexFromCache != nil {
+		// We must hold a lock for the index while it's being updated.
+		// We keep the two locking mechanisms distinct, so that it's only writes
+		// that have to be serial.
+		indexFromCache.IndexLock.Lock()
+		defer indexFromCache.IndexLock.Unlock()
 		indexFromCache.Tokens[req.Token] = struct{}{}
 
 		return c.storeStaticSecretIndex(ctx, req, indexFromCache)
@@ -646,7 +645,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 	err = c.Set(ctx, capabilitiesIndex)
 	if err != nil {
-		c.logger.Error("failed to cache the proxied response", "error", err)
+		c.logger.Error("failed to cache token capabilities as part of caching the proxied response", "error", err)
 		return err
 	}
 

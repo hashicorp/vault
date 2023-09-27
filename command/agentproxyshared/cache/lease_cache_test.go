@@ -18,8 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
-
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -30,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -558,6 +557,10 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 	require.Nil(t, expectedClearedIndex)
 }
 
+// TestLeaseCache_SendCacheableStaticSecret tests that the cache has no issue returning
+// static secret style responses. It's similar to TestLeaseCache_SendCacheable in that it
+// only tests the surface level of the functionality, but there are other tests that
+// test the rest.
 func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
 	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
 	responses := []*SendResponse{
