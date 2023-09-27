@@ -128,9 +128,9 @@ authentication and properties of resulting Vault tokens.
   expected to exist in the SAML assertion. The expected value may be a single string or a
   comma-separated list of strings. The user will be authenticated if the SAML attributes
   match at least one of the expected values.
-- `bound_attributes_type` `(string: <optional>)` - The type of matching assertion to perform
-  on `bound_attributes` key-value pairs. If `string`, requires a direct string match in
-  values. If `glob`, allows for wildcard matching using the `*` character in values.
+- `bound_attributes_type` `(string: "string")` - The type of matching assertion to perform
+  on the key-value pairs provided by `bound_attributes`. If set to `string`, a direct string
+  match is required. If set to `glob`, allows for wildcard matching using the `*` character.
 - `groups_attribute` `(string: <optional>)` - The attribute used to identify the groups
   the user is a member of. Used for Vault Identity group alias names.
 
