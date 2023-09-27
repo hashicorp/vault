@@ -11,6 +11,11 @@ an external Azure account. When configured, Vault will actively maintain the sta
 secret in realtime. This includes sending new secrets, updating existing secret values, and removing
 secrets when they either get dissociated from the destination or deleted from Vault.
 
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create Azure AD user credentials with access to an Azure Key Vault
+* Ability to create sync destinations and associations on your Vault server
+
 ## Setup
 
 1. If you do not already have an Azure Key Vault instance, navigate to the Azure Portal to create a new
@@ -70,7 +75,7 @@ secrets when they either get dissociated from the destination or deleted from Va
 1. Create secrets you wish to sync with a target Azure Key Vault.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo=bar
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
   ```
 
   **Output:**
@@ -93,7 +98,7 @@ secrets when they either get dissociated from the destination or deleted from Va
 
   </CodeBlockConfig>
 
-1. Set a secret to be associated with the configured secret destination.
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \

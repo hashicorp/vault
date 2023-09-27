@@ -22,7 +22,7 @@ Prerequisites:
 
 1. Next you need to locate your project ID. It can be found under the `Settings` tab in your project's overview page.
 
-1. Configure a sync destination with the access token & project ID obtained in the previous steps.
+1. Configure a sync destination with the access token and project ID obtained in the previous steps.
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
@@ -52,7 +52,7 @@ Prerequisites:
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
-  $ vault secrets enable -path=my-kv kv-v2
+  $ vault secrets enable -path='my-kv' kv-v2
   ```
 
   **Output:**
@@ -68,7 +68,7 @@ Prerequisites:
 1. Create secrets you wish to sync with a target Vercel project.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo=bar
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
   ```
 
   **Output:**
@@ -90,8 +90,6 @@ Prerequisites:
   ```
 
   </CodeBlockConfig>
-
-1. Create an association between your Vercel Project destination and the secret to synchronize.
 
 1. Create an association between the destination and a secret to synchronize.
 

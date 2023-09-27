@@ -22,7 +22,7 @@ Prerequisites:
   [necessary permissions](/vault/docs/sync/gcpsm#permissions). [Instructions](/vault/docs/sync/gcpsm#provision-service-account)
   to provision this Service Account via Terraform can be found below.
 
-1. Configure a sync destination with the Service Account JSON credentials created in the previous step. See docs for
+1. Configure a sync destination with the Service Account JSON credentials created in the previous steps. See docs for
   [alternative ways](/vault/docs/secrets/gcp#authentication) to pass in the `credentials` parameter.
 
   ```shell-session
@@ -65,7 +65,7 @@ Prerequisites:
 1. Create secrets you wish to sync with a target GCP Secret Manager.
 
   ```shell-session
-  $ vault kv put -mount=my-kv my-secret foo=bar
+  $ vault kv put -mount=my-kv my-secret foo='bar'
   ```
 
   **Output**:
@@ -87,8 +87,6 @@ Prerequisites:
   ```
 
   </CodeBlockConfig>
-
-1. Create an association between your GCP Secret Manager destination and the secret to synchronize.
 
 1. Create an association between the destination and a secret to synchronize.
 

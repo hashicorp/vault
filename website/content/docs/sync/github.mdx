@@ -19,9 +19,10 @@ Prerequisites:
 
 1. To get started with syncing Vault secrets to your GitHub repository, you will need an
   [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-  with access to the repository you want to manage secrets for and write permissions on the repository secrets.
+  which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
+  In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
 
-1. Configure a sync destination with the access token obtained in the previous steps.
+1. Configure a sync destination with the access token created in the previous steps.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest \
@@ -62,10 +63,10 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target GitHub repository.
+1. Create secrets you wish to sync with a target GitHub repository for Actions.
 
   ```shell-session
-  $ vault kv put -mount='my-kv' my-secret foo=bar
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
   ```
 
   **Output:**
@@ -88,7 +89,7 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create an association between your GitHub repository destination and the secret to synchronize.
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest/associations/set \
@@ -119,7 +120,7 @@ or the association in Vault will delete the secret in GitHub as well.
 <Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
-In the example above, the value for secret "foo" will be synced to GitHub as the JSON string `{"mypass":"bar"}`.
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
 
 </Note>
 

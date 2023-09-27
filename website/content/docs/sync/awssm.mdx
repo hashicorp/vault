@@ -41,7 +41,7 @@ Prerequisites:
   }
   ```
 
-1.	Configure the sync destination.
+1.	Configure a sync destination with the IAM user credentials created in the previous steps.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
@@ -85,7 +85,7 @@ Prerequisites:
 1. Create secrets you wish to sync with a target AWS Secrets Manager.
 
 	```shell-session
-	$ vault kv put -mount=my-kv my-secret foo=bar
+	$ vault kv put -mount=my-kv my-secret foo='bar'
 	```
 
 	**Output:**
@@ -108,7 +108,7 @@ Prerequisites:
 
 	</CodeBlockConfig>
 
-1.	Set a secret to be associated with this AWS SM destination.
+1.	Create an association between the destination and a secret to synchronize.
 
 	```shell-session
 	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
