@@ -1,0 +1,105 @@
+---
+layout: docs
+page_title: Containerized plugins
+description: External Vault plugins can be run in containers.
+---
+
+# Containerized plugins
+
+<Note title="Beta feature">
+  Beta functionality is stable but possibly incomplete and subject to change.
+</Note>
+
+<Note title="Limited OS support">
+  Support for the 'container` runtime is currently limited to Linux.
+</Note>
+
+By default, external plugins run as subprocesses that share Vault's user and
+environment variables. Administrators managing Vault instances on Linux can
+choose to run external plugins in containers. Running plugins in containers
+increases the isolation between plugins, and between plugins and Vault.
+
+## System requirements
+
+- **Your Vault instance must be running on Linux**.
+
+- **Your environment must provide Vault local access to the Docker Engine API**.
+  Vault uses the [Docker SDK](https://pkg.go.dev/github.com/docker/docker) to
+  manage containerized plugins.
+
+- **You must have a valid container runtime installed**. We recommend
+  [installing gVisor](https://gvisor.dev/docs/user_guide/install/) for your
+  container runtime as Vault specifies the `runsc` runtime by default.
+
+- **You must have all your plugin container images pulled and available locally**.
+  Vault does not currently support pulling images as part of the plugin
+  registration process.
+
+## Plugin requirements
+
+All plugins have the following basic requirements to be containerized:
+
+- **Your plugin must be built with at least v1.5.0 of the HashiCorp
+  [`go-plugin`](https://github.com/hashicorp/go-plugin) library**.
+
+- **The image entrypoint should run the plugin binary**.
+
+Some configurations have additional requirements for the container image, listed
+in [supported configurations](#supported-configurations).
+
+## Supported configurations
+
+Vault's containerized plugins are compatible with a variety of configurations.
+In particular, it has been tested with the following:
+
+- Docker and Podman.
+- Default and rootless container engine.
+- OCI runtimes runsc and runc.
+- Plugin container images with root and non-root users.
+- [Mlock](/vault/docs/configuration#disable_mlock) disabled or enabled.
+
+Not all combinations work and some have additional requirements, listed below.
+If you use a configuration that matches multiple headings, you should combine
+the requirements from each matching heading.
+
+### Rootless installation with non-root container user
+
+Not currently supported. We are hoping to provide support in future.
+
+### runsc runtime
+
+- You must pass an additional `--host-uds=all` flag to the `runsc` runtime.
+
+### Rootless installation with `runsc`
+
+- Does not currently support cgroup limits.
+- You must pass an additional `--ignore-cgroups` flag to the `runsc` runtime.
+
+### Non-root container user with mlock enabled
+
+- You must set the IPC_LOCK capability on the plugin binary.
+
+### Rootless container engine with mlock enabled
+
+- You must set the IPC_LOCK capability on the container engine's binary.
+- You do not need to set the IPC_LOCK capability if running with Docker and runsc.
+  The `runsc` runtime supports mlock syscalls in rootless Docker without needing
+  IPC_LOCK itself.
+
+## Container lifecycle and metadata
+
+Like any other external plugin, Vault will automatically manage the lifecycle
+of plugin containers. If they are killed out of band, Vault will restart them
+before servicing any requests that need to be handled by them. Vault will also
+[multiplex](/vault/docs/plugins/plugin-architecture#plugin-multiplexing) multiple
+mounts to be serviced by the same container if the plugin supports multiplexing.
+
+Vault labels each plugin container with a standard set of metadata to help
+identify the owner of the container, including the cluster ID, Vault's own
+process ID, and the plugin's name, type, and version.
+
+## Plugin runtimes
+
+Users who require more control over plugin containers can use the "plugin
+runtime" APIs for finer grained settings. See the CLI documentation for
+[`vault plugin runtime`](/vault/docs/commands/plugin/runtime) for more details.

@@ -96,18 +96,18 @@
       <Icon @name={{if item.isFolder "folder" "file"}} class="has-text-grey-light" />
       <span class="has-text-weight-semibold">{{or item.keyWithoutParent item.id}}</span>
     </LinkTo>
+
+    <Hds::Pagination::Numbered
+      @currentPage={{this.model.meta.currentPage}}
+      @currentPageSize={{this.model.meta.pageSize}}
+      @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
+      @showSizeSelector={{false}}
+      @totalItems={{this.model.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+    />
   {{else}}
     <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
   {{/each}}
 {{else}}
   <EmptyState @title={{this.emptyTitle}} />
 {{/if}}
-
-<Hds::Pagination::Numbered
-  @currentPage={{this.model.meta.currentPage}}
-  @currentPageSize={{this.model.meta.pageSize}}
-  @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
-  @showSizeSelector={{false}}
-  @totalItems={{this.model.meta.total}}
-  @queryFunction={{this.paginationQueryParams}}
-/>
