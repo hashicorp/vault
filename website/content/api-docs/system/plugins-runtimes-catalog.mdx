@@ -6,8 +6,8 @@ description: The `/sys/plugins/runtimes/catalog` endpoint is used to manage plug
 
 # `/sys/plugins/runtimes/catalog`
 
-The `/sys/plugins/runtimes/catalog` endpoint is used to read, register, update, and
-remove plugin runtimes in Vault's catalog. Plugin runtimes must be registered before use, and
+The `/sys/plugins/runtimes/catalog` manages plugin runtimes in your Vault catalog by reading, registering,
+updating, and removing plugin runtime information. Plugin runtimes must be registered before use, and
 once registered, backends can use the plugin runtime by referencing them when registering a plugin.
 
 ## LIST plugin runtimes
@@ -20,6 +20,7 @@ The `LIST` endpoint returns a list of the plugin runtimes in the catalog.
 | Method | Path                   |
 | :----- | :--------------------- |
 | `LIST`  | `/sys/plugins/runtimes/catalog` |
+| `GET`  | `/sys/plugins/runtimes/catalog` |
 
 ### Sample request
 
