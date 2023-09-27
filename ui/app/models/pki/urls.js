@@ -30,7 +30,7 @@ export default class PkiUrlsModel extends Model {
   crlDistributionPoints;
 
   @attr({
-    label: 'OSCP Servers',
+    label: 'OCSP Servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
     showHelpText: false,
     editType: 'stringArray',
