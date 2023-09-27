@@ -16,17 +16,11 @@ Authentication is suited for human users by requiring interaction with a web bro
 
 ## Authentication
 
-### Via the UI
+<Tabs>
 
-1. Select "SAML" from the "Method" select box.
-1. Enter a role name into the "Role" input field or leave blank to use
-   the [default role](/vault/api-docs/auth/saml#default_role).
-1. Press "Sign in with SAML Provider" and complete the authentication with the
-   configured SAML identity provider.
+<Tab heading="Vault CLI">
 
-### Via the CLI
-
-The CLI login defaults to the path of `/saml`. If this auth method was enabled at a
+The CLI login defaults to the `/saml` path. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
 
 ```shell-session
@@ -37,17 +31,31 @@ Complete the login via your SAML provider. Launching browser to:
     https://company.okta.com/app/vault/abc123eb9xnIfzlaf697/sso/saml?SAMLRequest=fJI9b9swEIZ3%2FwqBu0SJ%2FpBDRAZce4iBtDViN0MX40Sda...
 ```
 
-The default browser will open to the generated URL where the user must authenticate with
-the configured SAML identity provider. The URL may be manually entered into the browser
-if it cannot be automatically opened.
+The CLI opens the default browser to the generated URL where users must authenticate
+with the configured SAML identity provider. The URL may be manually entered into the
+browser if it cannot be automatically opened.
 
 The CLI login behavior may be customized with the following optional parameters:
 
 - `skip_browser` (default: `false`): If set to `true`, automatic launching of the default
   browser will be skipped. The SAML identity provider URL must be manually entered in a
   browser to complete the authentication flow.
-- `abort_on_error` (default: `false`): If set to `true`, failure to launch the default
-  browser will result in a non-zero exit of the CLI and an error displayed.
+- `abort_on_error` (default: `false`): If set to `true`, the CLI returns an error and
+  exits with a non-zero value if it cannot launch the default browser.
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+1. Select "SAML" from the "Method" select box.
+1. Enter a role name for the "Role" field or leave blank to use
+   the [default role](/vault/api-docs/auth/saml#default_role).
+1. Press **Sign in with SAML Provider** and complete the authentication with the
+   configured SAML identity provider.
+
+</Tab>
+
+</Tabs>
 
 ## Configuration
 
@@ -100,7 +108,7 @@ management tool.
    are in the `admin` group to authenticate. It also gives the resulting Vault token a
    time-to-live of 1 hour and the `writer` policy.
 
-Refer to full SAML  [API documentation](/vault/api-docs/auth/saml) for a
+Refer to the SAML [API documentation](/vault/api-docs/auth/saml) for a
 complete list of configuration options.
 
 ### Assertion consumer service URLs
