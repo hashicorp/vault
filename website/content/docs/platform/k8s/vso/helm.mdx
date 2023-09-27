@@ -137,10 +137,6 @@ Use these links to navigate to a particular top-level stanza.
 
         default: "none"
 
-      - `revokeClientCacheOnUninstall` ((#v-controller-manager-clientcache-revokeclientcacheonuninstall)) (`boolean: false`) - Toggles the revocation of client cache on Helm uninstall.
-        If revokeClientCacheOnUninstall is true, all Vault client tokens used by the operator will be revoked, and purged from the cache and storage.
-        NOTE: When a token is revoked, all of its leases are also revoked. This can cause failures in the consuming applications.
-
       - `cacheSize` ((#v-controller-manager-clientcache-cachesize)) (`integer: ""`) - Defines the size of the in-memory LRU cache *in entries*, that is used by the client cache controller.
         Larger numbers will increase memory usage by the controller, lower numbers will cause more frequent evictions
         of the client cache which can result in additional Vault client counts.
