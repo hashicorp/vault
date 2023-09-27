@@ -629,35 +629,6 @@
         ]
       },
       {
-        "title": "<code>pki</code>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/pki"
-          },
-          {
-            "title": "<code>health-check</code>",
-            "path": "commands/pki/health-check"
-          },
-          {
-            "title": "<code>verify-sign</code>",
-            "path": "commands/pki/verify-sign"
-          },
-          {
-            "title": "<code>list-intermediates</code>",
-            "path": "commands/pki/list-intermediates"
-          },
-          {
-            "title": "<code>issue</code>",
-            "path": "commands/pki/issue"
-          },
-          {
-            "title": "<code>reissue</code>",
-            "path": "commands/pki/reissue"
-          }
-        ]
-      },
-      {
         "title": "<code>lease</code>",
         "routes": [
           {
@@ -779,6 +750,35 @@
       {
         "title": "<code>path-help</code>",
         "path": "commands/path-help"
+      },
+      {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          },
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
+        ]
       },
       {
         "title": "<code>plugin</code>",
