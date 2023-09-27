@@ -29,9 +29,10 @@ Secrets can be synced into various external systems, called destinations. The su
 
 ## Associations
 
-Syncing a secret into a given destination is done by creating an association via Vault's API between the targeted KVv2
-secret and any of the configured destinations. Each secret's association keeps track of its current sync status,
-the timestamp of its last status change, and the error code of the last sync or unsync operation, if it failed.
+Syncing a secret into one of the external systems is done by creating a connection between it and a destination, which is
+called an association. These associations are created via Vault's API by adding a KVv2 secret target to one of the configured
+destinations. Each association keeps track of that secret's current sync status, the timestamp of its last status change, and
+the error code of the last sync or unsync operation if it failed. Each destination can have any number of secret associations.
 
 ## Sync Statuses
 
