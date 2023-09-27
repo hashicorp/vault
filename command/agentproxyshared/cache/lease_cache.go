@@ -231,6 +231,9 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 		return nil, nil
 	}
 
+	index.IndexLock.RLock()
+	defer index.IndexLock.RUnlock()
+
 	if token != "" {
 		// This is a static secret check. We need to ensure that this token
 		// has previously demonstrated access to this static secret.

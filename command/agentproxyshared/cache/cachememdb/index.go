@@ -87,7 +87,7 @@ type Index struct {
 
 	// IndexLock is a lock held for some indexes to prevent data
 	// races upon update.
-	IndexLock sync.Mutex
+	IndexLock sync.RWMutex
 }
 
 type IndexName uint32
