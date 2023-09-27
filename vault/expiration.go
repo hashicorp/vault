@@ -1880,7 +1880,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseID, namespace := le.LeaseID, le.namespace
 			// Extend the timer by the lease total
 			timer := time.AfterFunc(leaseTotal, func() {
-				(*m.expireFunc.Load())(m.quitContext, m, leaseID, namespace)
+				expFn := *m.expireFunc.Load() // Load and deref the pointer
+				expFn(m.quitContext, m, leaseID, namespace)
 			})
 			pending = pendingInfo{
 				timer: timer,
