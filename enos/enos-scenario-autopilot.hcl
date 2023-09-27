@@ -10,7 +10,7 @@ scenario "autopilot" {
     edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     // NOTE: when backporting, make sure that our initial versions are less than that
     // release branch's version.
-    initial_version = ["1.11.12", "1.12.11", "1.13.6"]
+    initial_version = ["1.11.12", "1.12.11"]
     seal            = ["awskms", "shamir"]
 
     # Our local builder always creates bundles

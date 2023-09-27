@@ -14,7 +14,7 @@ scenario "upgrade" {
     // are a higher minor version that our release candidate. Also, prior to 1.11.x the
     // /v1/sys/seal-status API has known issues that could cause this scenario to fail when using
     // those earlier versions.
-    initial_version = ["1.11.12", "1.12.11", "1.13.6", "1.14.2"]
+    initial_version = ["1.11.12", "1.12.11"]
     seal            = ["awskms", "shamir"]
 
     # Our local builder always creates bundles
