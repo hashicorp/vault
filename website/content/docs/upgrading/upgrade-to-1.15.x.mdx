@@ -43,8 +43,4 @@ option.
 
 ## Application of Sentinel Role Governing Policies (RGPs) via identity groups
 
-As of versions `1.15.0`, `1.14.4`, and `1.13.8`, [the Sentinel RGPSs derived from membership in identity groups apply
-only to entities in the same and child namespaces, relative to the identity group](/vault/docs/enterprise/sentinel#rgps-and-namespaces).
-
-Also, the [`group_policy_application_mode`](/vault/api-docs/system/config-group-policy-application) only applies to
-to ACL policies. Vault Sentinel Role Governing Policies (RGPs) are not affected by group policy application mode.
+@include 'application-of-sentinel-rgps-via-identity-groups.mdx'
