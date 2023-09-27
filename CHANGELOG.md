@@ -102,7 +102,6 @@ IMPROVEMENTS:
 * core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy
 * core: remove unnecessary *BarrierView field from backendEntry struct [[GH-20933](https://github.com/hashicorp/vault/pull/20933)]
 * core: use Go stdlib functionalities instead of explicit byte/string conversions [[GH-21854](https://github.com/hashicorp/vault/pull/21854)]
-* docs: Clarify when a entity is created [[GH-22233](https://github.com/hashicorp/vault/pull/22233)]
 * eventbus: updated go-eventlogger library to allow removal of nodes referenced by pipelines (used for subscriptions) [[GH-21623](https://github.com/hashicorp/vault/pull/21623)]
 * events: Allow subscriptions to multiple namespaces [[GH-22540](https://github.com/hashicorp/vault/pull/22540)]
 * events: Enabled by default [[GH-22815](https://github.com/hashicorp/vault/pull/22815)]
@@ -183,7 +182,6 @@ Also fix a related potential deadlock. [[GH-21110](https://github.com/hashicorp/
 * core: Fixed issue with some durations not being properly parsed to include days. [[GH-21357](https://github.com/hashicorp/vault/pull/21357)]
 * core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
 * core: fix race when updating a mount's route entry tainted status and incoming requests [[GH-21640](https://github.com/hashicorp/vault/pull/21640)]
-* docs: fix wrong api path for ldap secrets cli-commands [[GH-23225](https://github.com/hashicorp/vault/pull/23225)]
 * events: Ensure subscription resources are cleaned up on close. [[GH-23042](https://github.com/hashicorp/vault/pull/23042)]
 * expiration: Fix a deadlock that could occur when a revocation failure happens while restoring leases on startup. [[GH-22374](https://github.com/hashicorp/vault/pull/22374)]
 * identity/mfa: Fixes to OpenAPI representation and returned error codes for `identity/mfa/method/*` APIs [[GH-20879](https://github.com/hashicorp/vault/pull/20879)]
@@ -262,7 +260,6 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
-* docs: fix wrong api path for ldap secrets cli-commands [[GH-23225](https://github.com/hashicorp/vault/pull/23225)]
 * secrets/pki: Fix removal of issuers to clean up unreferenced CRLs. [[GH-23007](https://github.com/hashicorp/vault/pull/23007)]
 * ui (enterprise): Fix error message when generating SSH credential with control group [[GH-23025](https://github.com/hashicorp/vault/pull/23025)]
 * ui: Fix the issue where confirm delete dropdown is being cut off [[GH-23066](https://github.com/hashicorp/vault/pull/23066)]
@@ -681,7 +678,6 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
-* docs: fix wrong api path for ldap secrets cli-commands [[GH-23225](https://github.com/hashicorp/vault/pull/23225)]
 * secrets/pki: Fix removal of issuers to clean up unreferenced CRLs. [[GH-23007](https://github.com/hashicorp/vault/pull/23007)]
 * ui (enterprise): Fix error message when generating SSH credential with control group [[GH-23025](https://github.com/hashicorp/vault/pull/23025)]
 * ui: Fixes old pki's filter and search roles page bug [[GH-22810](https://github.com/hashicorp/vault/pull/22810)]
