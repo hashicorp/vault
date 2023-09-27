@@ -35,7 +35,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   }
 
   get paginationQueryParams() {
-    return (page: number) => ({ currentPage: page });
+    return (page: number) => ({ page });
   }
 
   @action

@@ -886,9 +886,22 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}}, nil
 }
 
-func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []map[string]any
-	for _, runtimeType := range consts.PluginRuntimeTypes {
+
+	var pluginRuntimeTypes []consts.PluginRuntimeType
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr != "" {
+		runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		pluginRuntimeTypes = []consts.PluginRuntimeType{runtimeType}
+	} else {
+		pluginRuntimeTypes = consts.PluginRuntimeTypes
+	}
+
+	for _, runtimeType := range pluginRuntimeTypes {
 		if runtimeType == consts.PluginRuntimeTypeUnsupported {
 			continue
 		}

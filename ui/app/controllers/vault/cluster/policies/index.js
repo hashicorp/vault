@@ -24,6 +24,15 @@ export default Controller.extend({
   // set via the route `loading` action
   isLoading: false,
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;
     var content = this.model;
