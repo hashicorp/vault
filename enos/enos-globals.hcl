@@ -4,7 +4,7 @@
 globals {
   backend_tag_key = "VaultStorage"
   build_tags = {
-    "oss"              = ["ui"]
+    "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
     "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]

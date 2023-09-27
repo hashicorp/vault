@@ -92,7 +92,7 @@ variable "consul_release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.1"
-    edition = "oss"
+    edition = "ce"
   }
 }
 

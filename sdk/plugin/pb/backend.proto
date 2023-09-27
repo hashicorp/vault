@@ -309,6 +309,10 @@ message Response {
   // be used in the audit broker to ensure we are auditing only the allowed
   // headers.
   map<string, Header> headers = 7;
+
+  // MountType, if non-empty, provides some information about what kind
+  // of mount this secret came from.
+  string mount_type = 8;
 }
 
 message ResponseWrapInfo {

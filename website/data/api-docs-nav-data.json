@@ -356,6 +356,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -672,6 +681,10 @@
       {
         "title": "<code>/sys/seal-status</code>",
         "path": "system/seal-status"
+      },
+      {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
       },
       {
         "title": "<code>/sys/sealwrap/rewrap</code>",
