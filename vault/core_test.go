@@ -2054,7 +2054,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	// Wait for core to become active
 	TestWaitActive(t, core)
 
-	testCoreAddSecretMount(t, core, root)
+	testCoreAddSecretMount(t, core, root, "1")
 
 	// Put a secret
 	req := &logical.Request{

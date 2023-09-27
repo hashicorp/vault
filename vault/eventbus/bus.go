@@ -115,6 +115,8 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
 func (bus *EventBus) SendEventInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+	// TODO Violet: Delete this
+	bus.logger.Debug("Entering SendEventInternal", "ns", ns, "type", eventType)
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -127,6 +129,8 @@ func (bus *EventBus) SendEventInternal(ctx context.Context, ns *namespace.Namesp
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
+	// TODO Violet: Delete this
+	bus.logger.Debug("Sending event", "event", eventReceived)
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.

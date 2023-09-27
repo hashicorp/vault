@@ -1712,6 +1712,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		PluginVersion: entry.RunningVersion,
 		Version:       entry.Version,
 	})
+	c.logger.Info("Violet: pluginEventSender", "pluginEventSender", pluginEventSender, "err", err, "MountClass", consts.PluginTypeSecrets.String(), "entry.Path", entry.Path, "entry.Type", entry.Type, "entry.RunningVersion", entry.RunningVersion, "entry.Version", entry.Version)
 	if err != nil {
 		return nil, "", err
 	}

@@ -12,6 +12,8 @@ module github.com/hashicorp/vault
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.20
 
+replace github.com/hashicorp/vault-plugin-secrets-kv => /Users/violet/Repositories/vault-plugin-secrets-kv
+
 replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/api/auth/approle => ./api/auth/approle

@@ -5,6 +5,7 @@ package logical
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-uuid"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -54,6 +55,8 @@ type EventSender interface {
 // SendEvent is a convenience method for plugins events to an EventSender, converting the
 // metadataPairs to the EventData structure.
 func SendEvent(ctx context.Context, sender EventSender, eventType string, metadataPairs ...string) error {
+	// TODO Violet: Delete this
+	fmt.Println("Entering logical.SendEvent", "type", eventType)
 	ev, err := NewEvent()
 	if err != nil {
 		return err

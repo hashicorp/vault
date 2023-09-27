@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/sdk/logical"
+
 	"nhooyr.io/websocket"
 
 	"go.uber.org/atomic"
@@ -158,7 +161,9 @@ func TestOpenWebSocketConnection(t *testing.T) {
 }
 
 // TestOpenWebSocketConnectionReceivesEvents tests that the openWebSocketConnection function
-// works as expected, and then the connection can be used to receive an event.
+// works as expected with KVV1, and then the connection can be used to receive an event.
+// This acts as more of an event system sanity check than a test of the updater
+// logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEvents(t *testing.T) {
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
@@ -184,6 +189,139 @@ func TestOpenWebSocketConnectionReceivesEvents(t *testing.T) {
 			"foo": fmt.Sprintf("bar%d", i),
 		}
 	}
+	// Put a secret, which should trigger an event
+	err = client.KVv1("secret").Put(context.Background(), "foo", makeData(100))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 5; i++ {
+		// Do a fresh PUT just to refresh the secret and send a new message
+		err = client.KVv1("secret").Put(context.Background(), "foo", makeData(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// This method blocks until it gets a secret, so this test
+		// will only pass if we're receiving events correctly.
+		_, message, err := conn.Read(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log(string(message))
+	}
+}
+
+// TestOpenWebSocketConnectionReceivesEvents tests that the openWebSocketConnection function
+// works as expected with KVV2, and then the connection can be used to receive an event.
+// This acts as more of an event system sanity check than a test of the updater
+// logic. It's still important coverage, though.
+func TestOpenWebSocketConnectionReceivesEventsKVV2(t *testing.T) {
+	t.Parallel()
+	// We need a valid cluster for the connection to succeed.
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	conn, err := updater.openWebSocketConnection(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.NotNil(t, conn)
+
+	t.Cleanup(func() {
+		conn.Close(websocket.StatusNormalClosure, "")
+	})
+
+	makeData := func(i int) map[string]interface{} {
+		return map[string]interface{}{
+			"foo": fmt.Sprintf("bar%d", i),
+		}
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put a secret, which should trigger an event
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", makeData(100))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 5; i++ {
+		// Do a fresh PUT just to refresh the secret and send a new message
+		_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", makeData(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// This method blocks until it gets a secret, so this test
+		// will only pass if we're receiving events correctly.
+		_, _, err := conn.Read(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestVioletDeleteMe(t *testing.T) {
+	t.Parallel()
+	// We need a valid cluster for the connection to succeed.
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
+	ln, addr := vaulthttp.TestServer(t, core)
+	defer ln.Close()
+
+	keys, rootToken := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	config := api.DefaultConfig()
+	config.Address = addr
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(rootToken)
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	conn, err := updater.openWebSocketConnection(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.NotNil(t, conn)
+
+	t.Cleanup(func() {
+		conn.Close(websocket.StatusNormalClosure, "")
+	})
+
+	makeData := func(i int) map[string]interface{} {
+		return map[string]interface{}{
+			"foo": fmt.Sprintf("bar%d", i),
+		}
+	}
+
+	err = client.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Put a secret, which should trigger an event
 	err = client.KVv1("secret").Put(context.Background(), "foo", makeData(100))
 	if err != nil {
