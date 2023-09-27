@@ -4,6 +4,7 @@
 package testcluster
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -115,4 +116,11 @@ type CA struct {
 	CACertPEMFile string
 	CAKey         *ecdsa.PrivateKey
 	CAKeyPEM      []byte
+}
+
+type ClusterStorage interface {
+	Start(context.Context, *ClusterOptions) error
+	Cleanup() error
+	Opts() map[string]interface{}
+	Type() string
 }

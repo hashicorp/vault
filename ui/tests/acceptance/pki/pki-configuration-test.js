@@ -69,28 +69,50 @@ module('Acceptance | pki configuration test', function (hooks) {
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.configureButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/configuration/create`,
+        'goes to pki configure page'
+      );
       await click(SELECTORS.configuration.generateRootOption);
       await fillIn(SELECTORS.configuration.typeField, 'exported');
       await fillIn(SELECTORS.configuration.generateRootCommonNameField, 'issuer-common-0');
       await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
       await click(SELECTORS.configuration.generateRootSave);
       await click(SELECTORS.configuration.doneButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/overview`,
+        'goes to overview page'
+      );
       await click(SELECTORS.configTab);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/configuration`,
+        'goes to configuration page'
+      );
       await click(SELECTORS.configuration.issuerLink);
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
       await isSettled();
-      assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
+      assert
+        .dom(SELECTORS.configuration.deleteAllIssuerModal)
+        .doesNotExist('delete all issuers modal closes');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/configuration`,
+        'is still on configuration page'
+      );
       await isSettled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await waitUntil(() => currentURL() === `/vault/secrets/${this.mountPath}/pki/overview`);
       await isSettled();
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.mountPath}/pki/overview`,
+        'goes to overview page'
+      );
       assert
         .dom(SELECTORS.emptyStateMessage)
         .hasText(

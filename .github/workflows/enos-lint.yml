@@ -7,21 +7,37 @@ on:
       - enos/**
 
 jobs:
-  lint:
+  metadata:
     # Only run this workflow on pull requests from hashicorp/vault branches
     # as we need secrets to install enos.
     if: "! github.event.pull_request.head.repo.fork"
+    name: metadata
     runs-on: ubuntu-latest
+    outputs:
+      runs-on: ${{ steps.metadata.outputs.runs-on }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - id: set-product-version
+        uses: hashicorp/actions-set-product-version@v1
+      - id: metadata
+        run: |
+          echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
+          github_repository="${{ github.repository }}"
+          if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
+            echo 'runs-on=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'runs-on="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
+          fi
+
+  lint:
+    needs: metadata
+    runs-on: ${{ fromJSON(needs.metadata.outputs.runs-on) }}
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - name: Set Product version
-        id: set-product-version
-        uses: hashicorp/actions-set-product-version@v1
-      - id: get-version
-        run: echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
@@ -31,5 +47,5 @@ jobs:
       - name: lint
         working-directory: ./enos
         env:
-          ENOS_VAR_vault_product_version: ${{ steps.get-version.outputs.version }}
+          ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.version }}
         run: make lint
