@@ -72,7 +72,7 @@ spec:
 ### VaultAuth custom resource
 
 Provide the configuration necessary for the Operator to authenticate to a single Vault server instance as
-specified in a `VaultConnection` Custom Resource.
+specified in a `VaultConnection` custom resource.
 
 ```yaml
 ---
@@ -142,7 +142,14 @@ spec:
 
 ##### KV version 2 secret example
 
-The KV secrets engine's `kvv2` mount path is specified under `spec.mount` of `VaultStaticSecret` custom resource. Please consult [KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv/kv-v2#setup) for configuring KV secrets engine version 2. The following results in a request to `http://127.0.0.1:8200/v1/kvv2/data/eng/apikey/google?version=2` to retrieve the secret.
+Set the KV secrets engine (`kvv2`) mount path with the `spec.mount` parameter of
+your `VaultStaticSecret` custom resource. For more advanced KV secrets engine
+version 2 configuration options, consult the
+[KV Secrets Engine - Version 2 - Setup](/vault/docs/secrets/kv/kv-v2#setup)
+guide.
+
+For example, to send requests to `http://127.0.0.1:8200/v1/kvv2/eng/apikey/google`
+to retrieve secrets:
 
 ```yaml
 ---
@@ -198,7 +205,14 @@ Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/data
 
 ##### Database secret example
 
-The database secret engine's `db` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [Database Secrets Engine - Setup](/vault/docs/secrets/databases#setup) for configuring the database secrets engine. The following results in a request to `http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new credential.
+Set the database secret engine mount path (`db`) with the `spec.mount` of your
+`VaultDynamicSecret` custom resource. For more advanced database secrets engine
+configuration options, consult the
+[Database Secrets Engine - Setup](/vault/docs/secrets/databases#setup) guide.
+
+For example, to send requests to
+`http://127.0.0.1:8200/v1/db/creds/my-postgresql-role` to generate a new
+credential:
 
 ```yaml
 ---
@@ -218,9 +232,13 @@ spec:
 
 ##### AWS secret example
 
-The AWS secrets engine's `aws` mount path is specified under `spec.mount` of `VaultDynamicSecret` custom resource. Please consult [AWS Secrets Engine - Setup](/vault/docs/secrets/aws#setup) for configuring AWS secrets engine.
+Set the AWS secrets engine mount path (`aws`) with the `spec.mount` parameter of
+your `VaultDynamicSecret` custom resource. For more advanced AWS secrets engine
+configuration options, consult the
+[AWS Secrets Engine - Setup](/vault/docs/secrets/aws#setup) guide.
 
-The following results in a request to `http://127.0.0.1:8200/v1/aws/creds/my-iam-role` to generate a new IAM credential.
+For example, to send requests to `http://127.0.0.1:8200/v1/aws/creds/my-iam-role`
+to generate a new IAM credential:
 
 ```yaml
 ---
@@ -238,7 +256,7 @@ spec:
     name: dynamic-aws-iam
 ```
 
-The following results in a request to `http://127.0.0.1:8200/v1/aws/sts/my-sts-role` to generate a new STS credential.
+To send requests to `http://127.0.0.1:8200/v1/aws/sts/my-sts-role` to generate a new STS credential:
 
 ```yaml
 ---
