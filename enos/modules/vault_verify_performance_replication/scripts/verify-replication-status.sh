@@ -81,5 +81,5 @@ check_pr_status() {
   return 0
 }
 
-# Retry a few times because it can take some time for replication to sync
-retry 5 check_pr_status
+# Retry for a while because it can take some time for replication to sync
+retry 10 check_pr_status
