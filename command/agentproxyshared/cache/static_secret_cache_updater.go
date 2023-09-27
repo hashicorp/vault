@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+
 	"github.com/hashicorp/vault/helper/useragent"
 
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
@@ -54,14 +56,13 @@ import (
 //  "time": "2023-09-12T15:19:49.394915-07:00"
 //}
 
-const StaticSecretBackoff = 10 * time.Second
-
 // StaticSecretCacheUpdater is a struct that utilizes
 // the event system to keep the static secret cache up to date.
 type StaticSecretCacheUpdater struct {
 	client     *api.Client
 	leaseCache *LeaseCache
 	logger     hclog.Logger
+	tokenSink  sink.Sink
 }
 
 // StaticSecretCacheUpdaterConfig is the configuration for initializing a new
@@ -70,6 +71,10 @@ type StaticSecretCacheUpdaterConfig struct {
 	Client     *api.Client
 	LeaseCache *LeaseCache
 	Logger     hclog.Logger
+	// TokenSink is a token sync that will have the latest
+	// token from auto-auth in it, to be used in event system
+	// connections.
+	TokenSink sink.Sink
 }
 
 // NewStaticSecretCacheUpdater creates a new instance of a StaticSecretCacheUpdater.
@@ -86,10 +91,15 @@ func NewStaticSecretCacheUpdater(conf *StaticSecretCacheUpdaterConfig) (*StaticS
 		return nil, fmt.Errorf("nil API client")
 	}
 
+	if conf.TokenSink == nil {
+		return nil, fmt.Errorf("nil token sink")
+	}
+
 	return &StaticSecretCacheUpdater{
 		client:     conf.Client,
 		leaseCache: conf.LeaseCache,
 		logger:     conf.Logger,
+		tokenSink:  conf.TokenSink,
 	}, nil
 }
 
@@ -99,21 +109,12 @@ func NewStaticSecretCacheUpdater(conf *StaticSecretCacheUpdaterConfig) (*StaticS
 // For best results, the caller of this function should retry on error with backoff,
 // if it is desired for the cache to always remain up to date.
 func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Context) error {
-	var conn *websocket.Conn
-	for {
-		var err error
-		conn, err = updater.openWebSocketConnection(ctx)
-		if err != nil {
-			updater.logger.Error("error when opening event stream:", err)
-
-			// We backoff in case of Vault downtime etc
-			time.Sleep(StaticSecretBackoff)
-			continue
-		} else {
-			break
-		}
+	// First, ensure our token is up-to-date:
+	updater.client.SetToken(updater.tokenSink.(sink.SinkReader).Token())
+	conn, err := updater.openWebSocketConnection(ctx)
+	if err != nil {
+		return fmt.Errorf("error when opening event stream: %w", err)
 	}
-
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
 	// before we check for events, update all of our cached
@@ -127,6 +128,7 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 			// the websocket connection will be retried, and we will check for missed events.
 			return fmt.Errorf("error when attempting to read from event stream, reopening websocket: %w", err)
 		}
+		updater.logger.Trace("received event", "message", string(message))
 		messageMap := make(map[string]interface{})
 		err = json.Unmarshal(message, &messageMap)
 		if err != nil {
@@ -194,7 +196,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 
 	// We use a raw request so that we can store all the
 	// request information, just like we do in the Proxier Send methods.
-	request := client.NewRequest(http.MethodGet, path)
+	request := client.NewRequest(http.MethodGet, "/v1/"+path)
 	if request.Headers == nil {
 		request.Headers = make(http.Header)
 	}
@@ -202,21 +204,25 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 
 	var resp *api.Response
 	var tokensToRemove []string
+	var successfulAttempt bool
 	for _, token := range index.Tokens {
 		client.SetToken(token)
+		request.Headers.Set(api.AuthHeaderName, token)
 		resp, err = client.RawRequestWithContext(ctx, request)
 		if err != nil {
+			updater.logger.Trace("received error when trying to update cache", "path", path, "err", err, "token", token)
 			// We cannot access this secret with this token for whatever reason,
 			// so token for removal.
 			tokensToRemove = append(tokensToRemove, token)
 			continue
 		} else {
 			// We got our updated secret!
+			successfulAttempt = true
 			break
 		}
 	}
 
-	if resp != nil {
+	if successfulAttempt {
 		// We need to update the index, so first, hold the lock.
 		index.IndexLock.Lock()
 		defer index.IndexLock.Unlock()
@@ -242,9 +248,10 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 
 		// Set the index's Response
 		index.Response = respBytes.Bytes()
+		index.LastRenewed = time.Now().UTC()
 
 		// Lastly, store the secret
-		updater.logger.Debug("storing response into the cache due to event update", "method", req.Request.Method, "path", req.Request.URL.Path)
+		updater.logger.Debug("storing response into the cache due to event update", "path", path)
 		err = updater.leaseCache.db.Set(index)
 		if err != nil {
 			return err
@@ -252,6 +259,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	} else {
 		// No token could successfully update the secret, or secret was deleted.
 		// We should evict the cache instead of re-storing the secret.
+		updater.logger.Debug("evicting response from cache", "path", path)
 		err = updater.leaseCache.db.Evict(cachememdb.IndexNameID, computeStaticSecretCacheIndex(req))
 		if err != nil {
 			return err
@@ -325,4 +333,40 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	}
 
 	return conn, nil
+}
+
+func (updater *StaticSecretCacheUpdater) Run(ctx context.Context) error {
+	updater.logger.Info("starting static secret cache updater subsystem")
+	defer func() {
+		updater.logger.Info("static secret cache updater subsystem stopped")
+	}()
+
+	for {
+		// Wait for the auto-auth token to be populated...
+		if updater.tokenSink.(sink.SinkReader).Token() != "" {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	shouldBackoff := false
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			// If we're erroring and the context isn't done, we should add
+			// a little backoff to make sure we don't accidentally overload
+			// Vault or similar.
+			if shouldBackoff {
+				time.Sleep(10 * time.Second)
+			}
+			err := updater.streamStaticSecretEvents(ctx)
+			if err != nil {
+				updater.logger.Warn("error occurred during streaming static secret cache update events:", err)
+				shouldBackoff = true
+				continue
+			}
+		}
+	}
 }

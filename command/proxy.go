@@ -433,6 +433,8 @@ func (c *ProxyCommand) Run(args []string) int {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
+	var updater *cache.StaticSecretCacheUpdater
+
 	// Parse proxy cache configurations
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
@@ -461,6 +463,33 @@ func (c *ProxyCommand) Run(args []string) int {
 			previousToken = oldToken
 			if deferFunc != nil {
 				defer deferFunc()
+			}
+		}
+
+		// If we're caching static secrets, we need to start the updater, too
+		if config.Cache.CacheStaticSecrets {
+			staticSecretCacheUpdaterLogger := c.logger.Named("cache.staticsecretcacheupdater")
+			inmemSink, err := inmem.New(&sink.SinkConfig{
+				Logger: staticSecretCacheUpdaterLogger,
+			}, leaseCache)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating inmem sink for static secret updater susbsystem: %v", err))
+				return 1
+			}
+			sinks = append(sinks, &sink.SinkConfig{
+				Logger: staticSecretCacheUpdaterLogger,
+				Sink:   inmemSink,
+			})
+
+			updater, err = cache.NewStaticSecretCacheUpdater(&cache.StaticSecretCacheUpdaterConfig{
+				Client:     client,
+				LeaseCache: leaseCache,
+				Logger:     staticSecretCacheUpdaterLogger,
+				TokenSink:  inmemSink,
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating static secret cache updater: %v", err))
+				return 1
 			}
 		}
 	}
@@ -500,7 +529,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		var inmemSink sink.Sink
 		if config.APIProxy != nil {
 			if config.APIProxy.UseAutoAuthToken {
-				apiProxyLogger.Debug("auto-auth token is allowed to be used; configuring inmem sink")
+				apiProxyLogger.Debug("configuring inmem auto-auth sink")
 				inmemSink, err = inmem.New(&sink.SinkConfig{
 					Logger: apiProxyLogger,
 				}, leaseCache)
@@ -695,6 +724,16 @@ func (c *ProxyCommand) Run(args []string) int {
 			if leaseCache != nil {
 				leaseCache.SetShuttingDown(true)
 			}
+			cancelFunc()
+		})
+	}
+
+	// Add the static secret cache updater, if appropriate
+	if updater != nil {
+		g.Add(func() error {
+			err := updater.Run(ctx)
+			return err
+		}, func(error) {
 			cancelFunc()
 		})
 	}

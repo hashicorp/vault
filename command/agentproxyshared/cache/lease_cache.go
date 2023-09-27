@@ -206,23 +206,6 @@ func (c *LeaseCache) checkCacheForStaticSecretRequest(id string, req *SendReques
 // If a token is provided, it will validate that the token is allowed to retrieve this
 // cache entry, and return nil if it isn't.
 func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendResponse, error) {
-	var token string
-	if req != nil {
-		token = req.Token
-		// HEAD and OPTIONS are included as future-proofing, since neither of those modify the resource either.
-		if req.Request.Method != http.MethodGet && req.Request.Method != http.MethodHead && req.Request.Method != http.MethodOptions {
-			// This must be an update to the resource, so we should short-circuit and invalidate the cache
-			// as we know the cache is now stale.
-			c.logger.Debug("evicting index from cache, as non-GET received", "id", id, "method", req.Request.Method, "path", req.Request.URL.Path)
-			err := c.db.Evict(cachememdb.IndexNameID, id)
-			if err != nil {
-				return nil, err
-			}
-
-			return nil, nil
-		}
-	}
-
 	index, err := c.db.Get(cachememdb.IndexNameID, id)
 	if err != nil {
 		return nil, err
@@ -230,6 +213,11 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 
 	if index == nil {
 		return nil, nil
+	}
+
+	var token string
+	if req != nil {
+		token = req.Token
 	}
 
 	if token != "" {
@@ -583,7 +571,8 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	defer index.IndexLock.Unlock()
 
 	// The index already exists, so all we need to do is add our token
-	// to the index's allowed token list, then re-store it
+	// to the index's allowed token list, then re-store it, ensuring
+	// we mark it as no longer stale.
 	if indexFromCache != nil {
 		indexFromCache.Tokens = append(indexFromCache.Tokens, req.Token)
 
@@ -607,8 +596,10 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
 
-	// Set the index's tokens
-	index.Tokens = []string{req.Token}
+	if len(index.Tokens) == 0 {
+		// Set the index's tokens
+		index.Tokens = []string{req.Token}
+	}
 
 	// Set the index type
 	index.Type = cacheboltdb.StaticSecretType

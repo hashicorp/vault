@@ -247,9 +247,10 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.AutoAuth != nil {
+		cacheStaticSecrets := c.Cache != nil && c.Cache.CacheStaticSecrets
 		if len(c.AutoAuth.Sinks) == 0 &&
-			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) {
-			return fmt.Errorf("auto_auth requires at least one sink or api_proxy.use_auto_auth_token=true")
+			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) && !cacheStaticSecrets {
+			return fmt.Errorf("auto_auth requires at least one sink, api_proxy.use_auto_auth_token=true, or cache.cache_static_secrets=true")
 		}
 	}
 
