@@ -2053,8 +2053,7 @@
       },
       {
         "title": "Upgrade to 1.15.x",
-        "path": "upgrading/upgrade-to-1.15.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.15.x"
       },
       {
         "title": "Upgrade to 1.14.x",
@@ -2303,6 +2302,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.15.0",
+        "path": "release-notes/1.15.0"
       },
       {
         "title": "1.14.0",
