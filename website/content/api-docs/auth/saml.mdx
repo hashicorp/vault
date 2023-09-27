@@ -131,8 +131,9 @@ authentication and properties of resulting Vault tokens.
 - `bound_attributes_type` `(string: "string")` - The type of matching assertion to perform
   on the key-value pairs provided by `bound_attributes`. If set to `string`, a direct string
   match is required. If set to `glob`, allows for wildcard matching using the `*` character.
-- `groups_attribute` `(string: <optional>)` - The attribute used to identify the groups
-  the user is a member of. Used for Vault Identity group alias names.
+- `groups_attribute` `(string: <optional>)` - The attribute to use to identify the set of
+  groups to which the user belongs. This will be used as the names for the Identity group
+  aliases created due to a successful login.
 
 @include 'tokenfields.mdx'
 
