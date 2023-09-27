@@ -6,9 +6,13 @@ description: External Vault plugins can be run in containers.
 
 # Containerized plugins
 
-<Important title="Beta feature">
+<Note title="Beta feature">
   Beta functionality is stable but possibly incomplete and subject to change.
-</Important>
+</Note>
+
+<Note title="Limited OS support">
+  Support for the 'container` runtime is currently limited to Linux.
+</Note>
 
 By default, external plugins run as subprocesses that share Vault's user and
 environment variables. Administrators managing Vault instances on Linux can
@@ -17,7 +21,7 @@ increases the isolation between plugins, and between plugins and Vault.
 
 ## System requirements
 
-- **Your Vault instance must be running on Linux**
+- **Your Vault instance must be running on Linux**.
 
 - **Your environment must provide Vault local access to the Docker Engine API**.
   Vault uses the [Docker SDK](https://pkg.go.dev/github.com/docker/docker) to
@@ -48,11 +52,11 @@ in [supported configurations](#supported-configurations).
 Vault's containerized plugins are compatible with a variety of configurations.
 In particular, it has been tested with the following:
 
-- Docker and Podman
-- Default and rootless container engine
-- OCI runtimes runsc and runc
-- Plugin container images with root and non-root users
-- [Mlock](/vault/docs/configuration#disable_mlock) disabled or enabled
+- Docker and Podman.
+- Default and rootless container engine.
+- OCI runtimes runsc and runc.
+- Plugin container images with root and non-root users.
+- [Mlock](/vault/docs/configuration#disable_mlock) disabled or enabled.
 
 Not all combinations work and some have additional requirements, listed below.
 If you use a configuration that matches multiple headings, you should combine
@@ -79,7 +83,7 @@ Not currently supported. We are hoping to provide support in future.
 
 - You must set the IPC_LOCK capability on the container engine's binary.
 - You do not need to set the IPC_LOCK capability if running with Docker and runsc.
-  The `runsc` runtime can support mlock syscalls in rootless containers without
+  The `runsc` runtime supports mlock syscalls in rootless Docker without needing
   IPC_LOCK itself.
 
 ## Container lifecycle and metadata

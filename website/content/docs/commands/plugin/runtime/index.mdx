@@ -12,22 +12,25 @@ description: |-
 The `plugin runtime` command groups subcommands for interacting with
 and configuring the context within which your external plugins run.
 
-To use a registered plugin runtime, use the `-runtime` option with the
-[plugin registration command](/vault/docs/commands/plugin/register).
-
-If you register a container plugin without referencing a plugin runtime, it will
-use [gVisor's](https://gvisor.dev/) OCI runtime 'runsc' by default, with no
-resource limits. You can use plugin runtimes to configure other OCI-compliant
-runtimes such as `runc`. Vault does not come packaged with any supporting
-container runtimes, and you must separately install whichever you want to use.
-
-<Note title="Limited -type flag support">
+<Note title="Limited type support">
   Support for runtime types is currently limited to `container`.
 </Note>
 
 <Note title="Limited OS support">
   Support for the 'container` runtime is currently limited to Linux.
 </Note>
+
+If you register a container plugin without referencing a plugin runtime, it will
+use [gVisor's](https://gvisor.dev/) OCI runtime `runsc` by default, with no
+resource limits. You can use plugin runtimes to configure other OCI-compliant
+runtimes such as `runc`. Vault does not come packaged with any supporting
+container runtimes, and you must separately install whichever you want to use.
+
+To use a registered plugin runtime, use the `-runtime` option with the
+[plugin registration command](/vault/docs/commands/plugin/register).
+
+See [containerized plugins](/vault/docs/plugins/containerized-plugins) for more
+details on running external plugins in containers.
 
 ## Examples
 

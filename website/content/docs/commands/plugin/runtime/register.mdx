@@ -9,7 +9,10 @@ description: |-
 # plugin runtime register
 
 Register a new plugin runtime in the plugin runtime catalog of your Vault instance.
-Vault currently only supports plugin runtimes of type `container`.
+
+<Note title="Limited type support">
+  Support for runtime types is currently limited to `container`.
+</Note>
 
 To use a registered plugin runtime, use the `-runtime` option with the
 [plugin registration command](/vault/docs/commands/plugin/register).
