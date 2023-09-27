@@ -56,9 +56,6 @@ func newDB() (*memdb.MemDB, error) {
 					IndexNameRequestPath: {
 						Name:   IndexNameRequestPath,
 						Unique: false,
-						// This does not apply to token capabilities types, so
-						// we allow it to be missing.
-						AllowMissing: true,
 						Indexer: &memdb.CompoundIndex{
 							Indexes: []memdb.Indexer{
 								&memdb.StringFieldIndex{
