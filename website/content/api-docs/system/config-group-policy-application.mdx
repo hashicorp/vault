@@ -8,6 +8,17 @@ description: The '/sys/config/group-policy-application' endpoint is used to conf
 
 ~> **Enterprise Only** – These endpoints require Vault Enterprise Platform.
 
+<Warning>
+  The group policy application mode only applies to ACL policies and no longer
+  affects Vault sentinel role governing policies (RGPs) for the following Vault
+  versions:
+
+  - `1.15.0+`
+  - `1.14.4+`
+  - `1.13.8+`
+
+</Warning>
+
 The `sys/config/group-policy-application` endpoint can be used to configure the
 mode of policy application for identity groups in Vault. This setting dictates
 the behavior across all groups in all namespaces in Vault.
