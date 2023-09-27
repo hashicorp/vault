@@ -113,8 +113,8 @@ The values provided to Vault must:
 
 - Match or be a subset of the configured values for the SAML application within the
   configured identity provider.
-- Be directed to the auth method's [Assertion Consumer Service
-  Callback](/vault/api-docs/auth/saml#assertion-consumer-service-callback) API.
+- Be directed to the auth method's [assertion consumer service
+  callback](/vault/api-docs/auth/saml#assertion-consumer-service-callback) API.
 
 <Note>
   It is highly recommended and enforced by some identity providers to TLS-protect the
@@ -137,6 +137,19 @@ configuration could be given:
 The Vault UI and CLI will automatically request the proper assertion consumer service URL
 for the cluster they're configured to communicate with. This means that the entirety of the
 authentication flow will stay within the local cluster.
+
+#### Configuration for namespaces
+
+The SAML auth method can be used within Vault [namespaces](/vault/docs/enterprise/namespaces).
+The assertion consumer service URLs configured in both Vault and the identity provider must
+include the namespace path segment.
+
+The following table provides assertion consumer service URLs given different namespace paths:
+
+| Namespace path  | Assertion consumer service URL                        |
+|-----------------|-------------------------------------------------------|
+| `admin/`        | `https://my.vault/v1/admin/auth/saml/callback`        |
+| `org/security/` | `https://my.vault/v1/org/security/auth/saml/callback` |
 
 ### Bound attributes
 
