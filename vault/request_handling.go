@@ -1138,6 +1138,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
+		// Add mount type information to the response
+		if entry != nil {
+			resp.MountType = entry.Type
+		}
 
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
