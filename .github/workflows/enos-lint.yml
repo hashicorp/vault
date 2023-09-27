@@ -25,6 +25,8 @@ jobs:
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Ensure shellcheck is available for linting
+        run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)
       - name: lint
         working-directory: ./enos
         env:
