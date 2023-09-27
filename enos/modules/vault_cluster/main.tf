@@ -109,9 +109,11 @@ resource "enos_remote_exec" "install_packages" {
     if length(var.packages) > 0
   }
 
-  content = templatefile("${path.module}/templates/install-packages.sh", {
-    packages = join(" ", var.packages)
-  })
+  environment = {
+    PACKAGES = join(" ", var.packages)
+  }
+
+  scripts = [abspath("${path.module}/scripts/install-packages.sh")]
 
   transport = {
     ssh = {
@@ -271,59 +273,6 @@ resource "enos_vault_unseal" "leader" {
   }
 }
 
-# We need to ensure that the directory used for audit logs is present and accessible to the vault
-# user on all nodes, since logging will only happen on the leader.
-resource "enos_remote_exec" "create_audit_log_dir" {
-  depends_on = [
-    enos_bundle_install.vault,
-    enos_vault_unseal.leader,
-  ]
-  for_each = toset([
-    for idx, host in toset(local.instances) : idx
-    if var.enable_audit_devices
-  ])
-
-  environment = {
-    LOG_FILE_PATH = local.audit_device_file_path
-    SERVICE_USER  = local.vault_service_user
-  }
-
-  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
-}
-
-resource "enos_remote_exec" "enable_audit_devices" {
-  depends_on = [
-    enos_remote_exec.create_audit_log_dir,
-    enos_vault_unseal.leader,
-  ]
-  for_each = toset([
-    for idx in local.leader : idx
-    if local.enable_audit_devices
-  ])
-
-  environment = {
-    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
-    VAULT_ADDR     = "http://127.0.0.1:8200"
-    VAULT_BIN_PATH = local.bin_path
-    LOG_FILE_PATH  = local.audit_device_file_path
-    SERVICE_USER   = local.vault_service_user
-  }
-
-  scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.key].public_ip
-    }
-  }
-}
-
 resource "enos_vault_unseal" "followers" {
   depends_on = [
     enos_vault_init.leader,
@@ -387,15 +336,72 @@ resource "enos_remote_exec" "vault_write_license" {
     enos_vault_unseal.maybe_force_unseal,
   ]
 
-  content = templatefile("${path.module}/templates/vault-write-license.sh", {
-    bin_path   = local.bin_path,
-    root_token = coalesce(var.root_token, try(enos_vault_init.leader[0].root_token, null), "none")
-    license    = coalesce(var.license, "none")
-  })
+  environment = {
+    BIN_PATH    = local.bin_path,
+    LICENSE     = coalesce(var.license, "none")
+    VAULT_TOKEN = coalesce(var.root_token, try(enos_vault_init.leader[0].root_token, null), "none")
+  }
+
+  scripts = [abspath("${path.module}/scripts/vault-write-license.sh")]
 
   transport = {
     ssh = {
       host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+# We need to ensure that the directory used for audit logs is present and accessible to the vault
+# user on all nodes, since logging will only happen on the leader.
+resource "enos_remote_exec" "create_audit_log_dir" {
+  depends_on = [
+    enos_vault_start.leader,
+    enos_vault_start.followers,
+    enos_vault_unseal.leader,
+    enos_vault_unseal.followers,
+    enos_vault_unseal.maybe_force_unseal,
+  ]
+  for_each = toset([
+    for idx, host in toset(local.instances) : idx
+    if var.enable_audit_devices
+  ])
+
+  environment = {
+    LOG_FILE_PATH = local.audit_device_file_path
+    SERVICE_USER  = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/create_audit_log_dir.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.value].public_ip
+    }
+  }
+}
+
+resource "enos_remote_exec" "enable_audit_devices" {
+  depends_on = [
+    enos_remote_exec.create_audit_log_dir,
+  ]
+  for_each = toset([
+    for idx in local.leader : idx
+    if local.enable_audit_devices
+  ])
+
+  environment = {
+    VAULT_TOKEN    = enos_vault_init.leader[each.key].root_token
+    VAULT_ADDR     = "http://127.0.0.1:8200"
+    VAULT_BIN_PATH = local.bin_path
+    LOG_FILE_PATH  = local.audit_device_file_path
+    SERVICE_USER   = local.vault_service_user
+  }
+
+  scripts = [abspath("${path.module}/scripts/enable_audit_logging.sh")]
+
+  transport = {
+    ssh = {
+      host = var.target_hosts[each.key].public_ip
     }
   }
 }
