@@ -39,11 +39,13 @@
                   </LinkTo>
                 </li>
               {{/if}}
-              <li class="action">
+              <li class="action" id="container">
+                {{! container is required in navbar collapsed state }}
                 <Hds::Copy::Button
                   @text="Copy token"
                   @textToCopy={{this.auth.currentToken}}
                   @isFullWidth={{true}}
+                  @container="#container"
                   class="in-dropdown link is-flex-start"
                   {{on "click" (fn (set-flash-message "Token copied!"))}}
                 />
