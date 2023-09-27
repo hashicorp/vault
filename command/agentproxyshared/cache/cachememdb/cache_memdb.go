@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	tableNameIndexer = "indexer"
+	tableNameIndexer             = "indexer"
+	tableNameCapabilitiesIndexer = "capabilities-indexer"
 )
 
 // CacheMemDB is the underlying cache database for storing indexes.
@@ -123,6 +124,30 @@ func newDB() (*memdb.MemDB, error) {
 					},
 				},
 			},
+			tableNameCapabilitiesIndexer: {
+				Name: tableNameCapabilitiesIndexer,
+				Indexes: map[string]*memdb.IndexSchema{
+					// This index enables fetching the cached item based on the
+					// identifier of the index.
+					IndexNameID: {
+						Name:   IndexNameID,
+						Unique: true,
+						Indexer: &memdb.StringFieldIndex{
+							Field: "ID",
+						},
+					},
+					// This index enables fetching the entriy in cache
+					// that is tied to the given token.
+					IndexNameToken: {
+						Name:         IndexNameToken,
+						Unique:       true,
+						AllowMissing: false,
+						Indexer: &memdb.StringFieldIndex{
+							Field: "Token",
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -168,6 +193,49 @@ func (c *CacheMemDB) Set(index *Index) error {
 	defer txn.Abort()
 
 	if err := txn.Insert(tableNameIndexer, index); err != nil {
+		return fmt.Errorf("unable to insert index into cache: %v", err)
+	}
+
+	txn.Commit()
+
+	return nil
+}
+
+// GetCapabilitiesIndex returns the CapabilitiesIndex from the cache.
+func (c *CacheMemDB) GetCapabilitiesIndex(indexName string, indexValues ...interface{}) (*CapabilitiesIndex, error) {
+	if !validCapabilitiesIndexName(indexName) {
+		return nil, fmt.Errorf("invalid index name %q", indexName)
+	}
+
+	txn := c.db.Load().(*memdb.MemDB).Txn(false)
+
+	raw, err := txn.First(tableNameCapabilitiesIndexer, indexName, indexValues...)
+	if err != nil {
+		return nil, err
+	}
+
+	if raw == nil {
+		return nil, nil
+	}
+
+	index, ok := raw.(*CapabilitiesIndex)
+	if !ok {
+		return nil, errors.New("unable to parse capabilities index value from the cache")
+	}
+
+	return index, nil
+}
+
+// SetCapabilitiesIndex stores the CapabilitiesIndex index into the cache.
+func (c *CacheMemDB) SetCapabilitiesIndex(index *CapabilitiesIndex) error {
+	if index == nil {
+		return errors.New("nil capabilities index provided")
+	}
+
+	txn := c.db.Load().(*memdb.MemDB).Txn(true)
+	defer txn.Abort()
+
+	if err := txn.Insert(tableNameCapabilitiesIndexer, index); err != nil {
 		return fmt.Errorf("unable to insert index into cache: %v", err)
 	}
 

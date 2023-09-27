@@ -463,17 +463,19 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 		return
 	}
 
+	require.NotNil(t, indexFromDB)
 	require.Equal(t, "token", indexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
 	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
 	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
 	require.Equal(t, "root/", indexFromDB.Namespace)
 
-	capabilitiesIndexFromDB, err := lc.db.Get(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	capabilitiesIndexFromDB, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
 	if err != nil {
 		return
 	}
 
+	require.NotNil(t, capabilitiesIndexFromDB)
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
@@ -528,17 +530,19 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 		return
 	}
 
+	require.NotNil(t, indexFromDB)
 	require.Equal(t, "token", indexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
 	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
 	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
 	require.Equal(t, "root/", indexFromDB.Namespace)
 
-	capabilitiesIndexFromDB, err := lc.db.Get(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	capabilitiesIndexFromDB, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
 	if err != nil {
 		return
 	}
 
+	require.NotNil(t, capabilitiesIndexFromDB)
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
 	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
@@ -552,9 +556,9 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, expectedClearedIndex)
 
-	expectedClearedIndex, err = lc.db.Get(cachememdb.IndexNameID, capabilitiesIndexFromDB.ID)
+	expectedClearedCapabilitiesIndex, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, capabilitiesIndexFromDB.ID)
 	require.NoError(t, err)
-	require.Nil(t, expectedClearedIndex)
+	require.Nil(t, expectedClearedCapabilitiesIndex)
 }
 
 // TestLeaseCache_SendCacheableStaticSecret tests that the cache has no issue returning

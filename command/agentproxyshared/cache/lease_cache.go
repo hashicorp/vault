@@ -643,7 +643,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 	// update the index with the new capability:
 	capabilitiesIndex.Capabilities[path] = struct{}{}
 
-	err = c.Set(ctx, capabilitiesIndex)
+	err = c.db.SetCapabilitiesIndex(capabilitiesIndex)
 	if err != nil {
 		c.logger.Error("failed to cache token capabilities as part of caching the proxied response", "error", err)
 		return err
@@ -654,10 +654,10 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 
 // retrieveOrCreateTokenCapabilitiesEntry will either retrieve the token
 // capabilities entry from the cache, or create a new, empty one.
-func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.Index, error) {
+func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.CapabilitiesIndex, error) {
 	// The index ID is a hash of the token.
 	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
-	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, indexId)
+	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +667,7 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 	}
 
 	// Build the index to cache based on the response received
-	index := &cachememdb.Index{
+	index := &cachememdb.CapabilitiesIndex{
 		ID:           indexId,
 		Token:        token,
 		Type:         cacheboltdb.TokenCapabilitiesType,

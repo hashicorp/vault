@@ -77,7 +77,33 @@ type Index struct {
 	// LastRenewed is the timestamp of last renewal
 	LastRenewed time.Time
 
-	// Type is the index type (token, auth-lease, secret-lease, static-secret, token-capabilities)
+	// Type is the index type (token, auth-lease, secret-lease, static-secret)
+	Type string
+
+	// Capabilities is a set of known capabilities for the given token. Used only for
+	// token-capabilities type cache entries.
+	// Implemented as a map for uniqueness.
+	Capabilities map[string]struct{}
+
+	// IndexLock is a lock held for some indexes to prevent data
+	// races upon update.
+	IndexLock sync.RWMutex
+}
+
+// CapabilitiesIndex holds the capabilities for cached static secrets.
+// This type of index does not represent a response.
+type CapabilitiesIndex struct {
+	// ID is a value that uniquely represents the request held by this
+	// index. This is computed by hashing the token that this capabilities
+	// index .
+	// Required: true, Unique: true
+	ID string
+
+	// Token is the token that fetched the response held by this index
+	// Required: true, Unique: true
+	Token string
+
+	// Type is the index type (token-capabilities)
 	Type string
 
 	// Capabilities is a set of known capabilities for the given token. Used only for
@@ -117,13 +143,23 @@ const (
 
 func validIndexName(indexName string) bool {
 	switch indexName {
-	case "id":
-	case "lease":
-	case "request_path":
-	case "token":
-	case "token_accessor":
-	case "token_parent":
-	case "lease_token":
+	case IndexNameID:
+	case IndexNameLease:
+	case IndexNameRequestPath:
+	case IndexNameToken:
+	case IndexNameTokenAccessor:
+	case IndexNameTokenParent:
+	case IndexNameLeaseToken:
+	default:
+		return false
+	}
+	return true
+}
+
+func validCapabilitiesIndexName(indexName string) bool {
+	switch indexName {
+	case IndexNameID:
+	case IndexNameToken:
 	default:
 		return false
 	}
