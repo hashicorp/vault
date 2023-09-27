@@ -22,7 +22,7 @@ Prerequisites:
   which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
   In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
 
-1. Configure a sync destination with the access token created in the previous steps.
+1. Configure a sync destination with the access token created in the previous step.
 
   ```shell-session
   $ vault write sys/sync/destinations/gh/my-dest \
