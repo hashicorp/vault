@@ -145,11 +145,11 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	case assumedRoleCred:
 		switch {
 		case roleArn == "":
-			if len(role.RoleArns) != 1 {
+			if len(role.RoleArns) != 1 || strings.Contains(role.RoleArns[0], "*") {
 				return logical.ErrorResponse("did not supply a role_arn parameter and unable to determine one"), nil
 			}
 			roleArn = role.RoleArns[0]
-		case !strutil.StrListContains(role.RoleArns, roleArn):
+		case !strutil.StrListContainsGlob(role.RoleArns, roleArn):
 			return logical.ErrorResponse(fmt.Sprintf("role_arn %q not in allowed role arns for Vault role %q", roleArn, roleName)), nil
 		}
 		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
