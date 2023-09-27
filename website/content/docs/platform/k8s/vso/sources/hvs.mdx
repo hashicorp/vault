@@ -9,19 +9,19 @@ description: >-
 
 ## Overview
 
-The Vault Secrets Operator (VSO) is able to sync a [HCP Vault Secrets App](/hcp/docs/vault-secrets) (HVSA) to
-a Kubernetes Secret. Each `HCPVaultSecretsApp` custom resource will be periodically synced, ensuring
-that any changes to the secret source are reflected in the Kubernetes secret.
+The Vault secrets operator (VSO) syncs your [HCP Vault Secrets app](/hcp/docs/vault-secrets) (HVSA) to
+a Kubernetes Secret. Vault syncs each `HCPVaultSecretsApp` custom resource periodically to ensure that
+changes to the secret source are properly reflected in the Kubernetes secret.
 
 
 ## Features
 
-- Periodic synchronization of HCP Vault Secrets App to a *destination* Kubernetes Secret.
-- Automatic drift detection and remediation in the case where the destination Kubernetes Secret
+- Periodic synchronization of HCP Vault Secrets app to a *destination* Kubernetes Secret.
+- Automatic drift detection and remediation when the destination Kubernetes Secret
   is modified or deleted.
-- Support for all VSO features, including performing a *rollout-restart* upon secret rotation or
+- Supports all VSO features, including rollout-restarts on secret rotation or
   during drift remediation.
-- Authentication to HCP using [HCP service principals](/hcp/docs/hcp/admin/iam/service-principals).
+- Supports authentication to HCP using [HCP service principals](/hcp/docs/hcp/admin/iam/service-principals).
 
 
 ### Supported HCP authentication methods
@@ -38,7 +38,14 @@ to the Kubernetes Secret, `vso-app-secret`, in the `vso-example-ns` Kubernetes N
 you have already setup [service principal Kubernetes secret](/vault/docs/platform/k8s/vso/api-reference#hcpauthserviceprincipal),
 and have created the HCP Vault Secrets app.
 
-*see the [installation](/vault/docs/platform/k8s/vso/installation) docs before applying any of example CRs below.*
+Use the following Kubernetes configuration to sync your HCP Vault Secrets app, `vso-example`,
+to the Kubernetes secret, `vso-app-secret`, in the `vso-example-ns` Kubernetes namespace.
+The example configuration assumes you already a HCP Vault Secrets app created and have your
+[service principal Kubernetes secret](/vault/docs/platform/k8s/vso/api-reference#hcpauthserviceprincipal)
+configured.
+
+Refer to the [Kubernetes VSO installation guide](/vault/docs/platform/k8s/vso/installation)
+before applying any of the example configurations below.
 
 ```yaml
 ---
@@ -67,7 +74,3 @@ spec:
 ```
 
 @include 'vso/blurb-api-reference.mdx'
-
-## Tutorial
-
-Stay tuned...

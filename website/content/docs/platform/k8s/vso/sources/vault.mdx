@@ -19,12 +19,12 @@ seamlessly integrate with Vault running on any platform.
 
 ## Features
 
-The following Vault specific features are supported by the Vault Secrets Operator:
+Vault Secrets Operator supports the following Vault features:
 
 - Sync from multiple instances of Vault.
 - All Vault [secret engines](/vault/docs/secrets) supported.
 - TLS/mTLS communications with Vault.
-- Support for all VSO features, including performing a *rollout-restart* upon secret rotation or
+- Support for all VSO features, including performing a rollout-restart upon secret rotation or
 during drift remediation.
 
 ### Supported Vault authentication methods
@@ -38,12 +38,13 @@ during drift remediation.
 
 ## Vault access and custom resource definitions
 
-The Vault connection and authentication configuration is provided by the `VaultConnection` and `VaultAuth` CRDs. These can be considered as
-foundational Custom Resources that all secret replication type resources will reference.
+`VaultConnection` and `VaultAuth` CRDs provide Vault connection and authentication configuration
+information for the operator. Consider `VaultConnection` and `VaultAuth` as foundational resources
+used by all secret replication type resources.
 
 ### VaultConnection custom resource
 
-Provides the configuration necessary for the Operator to connect to a single Vault server instance.
+Provides the required configuration details for connecting to a single Vault server instance.
 
 ```yaml
 ---

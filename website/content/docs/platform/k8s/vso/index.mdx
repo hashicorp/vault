@@ -12,8 +12,8 @@ The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets and HCP Va
 ## Overview
 
 The Vault Secrets Operator operates by watching for changes to its supported set of Custom Resource Definitions (CRD).
-Each CRD provides the specification required to allow the Operator to synchronize from one of the supported sources for secrets to a Kubernetes Secret.
-The Operator writes the *source* secret data directly to the *destination* Kubernetes Secret, ensuring that any
+Each CRD provides the specification required to allow the operator to synchronize from one of the supported sources for secrets to a Kubernetes Secret.
+The operator writes the *source* secret data directly to the *destination* Kubernetes Secret, ensuring that any
 changes made to the *source* are replicated to the *destination* over its lifetime. In this way, an application only needs
 to have access to the *destination* secret in order to make use of the secret data contained within.
 
@@ -28,10 +28,10 @@ The following features are supported by the Vault Secrets Operator:
 - Support for installing using: `Helm` or `Kustomize`<br />
 *see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
 
-## Supported Secret Sources
+## Supported secret sources
 
 The Vault Secrets Operator supports syncing from multiple secret sources.
-Please see [secret sources](/vault/docs/platform/k8s/vso/sources) for more details.
+Refer to the [secret sources overview](/vault/docs/platform/k8s/vso/sources) for more details.
 
 @include 'kubernetes-supported-versions.mdx'
 
