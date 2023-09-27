@@ -5,15 +5,21 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 export default class PkiIssuersListRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
+  model(params) {
+    const page = Number(params.page) || 1;
     return this.store
-      .query('pki/issuer', { backend: this.secretMountPath.currentPath, isListView: true })
+      .lazyPaginatedQuery('pki/issuer', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page,
+        skipCache: page === 1,
+        isListView: true,
+      })
       .then((issuersModel) => {
         return { issuersModel, parentModel: this.modelFor('issuers') };
       })
@@ -33,6 +39,11 @@ export default class PkiIssuersListRoute extends Route {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
     ];
-    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }
