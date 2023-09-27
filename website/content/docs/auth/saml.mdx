@@ -3,7 +3,7 @@ layout: docs
 page_title: SAML - Auth Methods
 description: >-
   The "saml" auth method allows users to authenticate with Vault using their
-  identity in a SAML Identity Provider.
+  identity in a SAML identity provider.
 ---
 
 # SAML auth method
@@ -11,7 +11,7 @@ description: >-
 <EnterpriseAlert />
 
 The `saml` auth method allows users to authentication with Vault using their identity
-within a [SAML V2.0](https://saml.xml.org/saml-specifications) Identity Provider.
+within a [SAML V2.0](https://saml.xml.org/saml-specifications) identity provider.
 Authentication is suited for human users by requiring interaction with a web browser.
 
 ## Authentication
@@ -22,7 +22,7 @@ Authentication is suited for human users by requiring interaction with a web bro
 1. Enter a role name into the "Role" input field or leave blank to use
    the [default role](/vault/api-docs/auth/saml#default_role).
 1. Press "Sign in with SAML Provider" and complete the authentication with the
-   configured SAML Identity Provider.
+   configured SAML identity provider.
 
 ### Via the CLI
 
@@ -38,13 +38,13 @@ Complete the login via your SAML provider. Launching browser to:
 ```
 
 The default browser will open to the generated URL where the user must authenticate with
-the configured SAML Identity Provider. The URL may be manually entered into the browser
+the configured SAML identity provider. The URL may be manually entered into the browser
 if it cannot be automatically opened.
 
 The CLI login behavior may be customized with the following optional parameters:
 
 - `skip_browser` (default: `false`): If set to `true`, automatic launching of the default
-  browser will be skipped. The SAML Identity Provider URL must be manually entered in a
+  browser will be skipped. The SAML identity provider URL must be manually entered in a
   browser to complete the authentication flow.
 - `abort_on_error` (default: `false`): If set to `true`, failure to launch the default
   browser will result in a non-zero exit of the CLI and an error displayed.
@@ -61,7 +61,7 @@ management tool.
    $ vault auth enable saml
    ```
 
-1. Use the `/config` endpoint to save the configuration of your SAML Identity Provider and
+1. Use the `/config` endpoint to save the configuration of your SAML identity provider and
    set the default role. You can configure the trust relationship with the SAML Identity
    Provider by either providing a URL for its Metadata document:
 
@@ -107,12 +107,12 @@ complete list of configuration options.
 
 The [`acs_urls`](/vault/api-docs/auth/saml#acs_urls) configuration parameter determines
 where the SAML response will be sent after users authenticate with the configured SAML
-Identity Provider in their browser.
+identity provider in their browser.
 
 The values provided to Vault must:
 
 - Match or be a subset of the configured values for the SAML application within the
-  configured Identity Provider.
+  configured identity provider.
 - Be directed to the auth method's [Assertion Consumer Service
   Callback](/vault/api-docs/auth/saml#assertion-consumer-service-callback) API.
 
@@ -121,6 +121,8 @@ The values provided to Vault must:
   assertion consumer service URLs. A warning will be returned from Vault if any of the
   configured assertion consumer service URLs are not protected by TLS.
 </Note>
+
+#### Configuration for replication
 
 To support a single auth method mount being used across Vault [replication](/vault/docs/enterprise/replication)
 clusters, `acs_urls` supports configuration of multiple values. For example, to support
@@ -142,7 +144,7 @@ Once the user has been authenticated the authorization flow will validate
 that both the [`bound_subjects`](/vault/api-docs/auth/saml#bound_subjects) and
 [`bound_attributes`](/vault/api-docs/auth/saml#bound_attributes) match expected
 values configured for the role. This can be used to restrict access to Vault for
-a subset of users in the SAML Identity Provider.
+a subset of users in the SAML identity provider.
 
 For example, a role with `bound_subjects=*@hashicorp.com` and
 `bound_attributes=groups=support,engineering` will only authorize users whose subject has
