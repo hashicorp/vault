@@ -461,7 +461,7 @@ This health check verifies that tidy has run within the last run window. This ca
       tidy_cross_cluster_revoked_certs=true \
       tidy_revoked_cert_issuer_associations=true
   ```
-  
+
 1. Review the tidy status endpoint, `vault read <mount>/tidy-status` for
    additional information.
 1. Re-configure auto-tidy based on the log information and results of your
@@ -488,11 +488,11 @@ This health check verifies that this cluster has a reasonable number of certific
 
 1. Verify that tidy ran recently with `vault read`:
     ```shell-session
-    vault read <mount>/tidy-status
+    $ vault read <mount>/tidy-status
     ````
 1. Schedule a manual run of tidy with `vault write`:
     ```shell-session
-    vault write <mount>/tidy \
+    $ vault write <mount>/tidy \
       tidy_cert_store=true \
       tidy_revoked_certs=true \
       tidy_acme=true \
@@ -541,7 +541,7 @@ This health check verifies if the `"Replay-Nonce`, `Link`, and `Location` header
 
 Use `vault secrets tune` to add the missing headers to `allowed_response_headers`:
 ```shell-session
-vault secrets tune \
+$ vault secrets tune \
   -allowed-response-headers="Last-Modified" \
   -allowed-response-headers="Replay-Nonce" \
   -allowed-response-headers="Link" \
