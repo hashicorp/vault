@@ -91,7 +91,7 @@ jobs:
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - name: Set Up Vault Enterprise License
-        if: contains(${{ github.event.repository.name }}, 'ent')
+        if: contains(github.event.repository.name, 'ent')
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Check Chrome Installed
         id: chrome-check
