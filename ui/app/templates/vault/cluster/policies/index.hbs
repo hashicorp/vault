@@ -151,14 +151,16 @@
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-    <Hds::Pagination::Numbered
-      @currentPage={{this.model.meta.currentPage}}
-      @currentPageSize={{this.model.meta.pageSize}}
-      @route="vault.cluster.policies.index"
-      @showSizeSelector={{false}}
-      @totalItems={{this.model.meta.total}}
-      @queryFunction={{this.paginationQueryParams}}
-    />
+    {{#unless this.pageFilter}}
+      <Hds::Pagination::Numbered
+        @currentPage={{this.model.meta.currentPage}}
+        @currentPageSize={{this.model.meta.pageSize}}
+        @route="vault.cluster.policies.index"
+        @showSizeSelector={{false}}
+        @totalItems={{this.model.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
+      />
+    {{/unless}}
   {{else}}
     <EmptyState
       @title="No {{uppercase this.policyType}} policies yet"
