@@ -1,5 +1,9 @@
 <a id="#privileged-endpoints" />
 
+<Note>
+  The CLI commands associated with restricted API paths are also restricted.
+</Note>
+
 API path                                  | Root | Admin
 ----------------------------------------- | ---- | -----
 `sys/audit`                               | YES  | NO
@@ -49,11 +53,15 @@ API path                                  | Root | Admin
 `sys/step-down`                           | YES  | NO
 `sys/storage`                             | YES  | NO
 `sys/unseal`                              | YES  | NO
-`sys/plugins/runtimes/catalog/{TYPE}`     | YES  | NO
-`sys/plugins/runtimes/catalog`            | YES  | NO
 `sys/internal/counters/activity`          | YES  | NO
 `sys/internal/counters/activity/monthly`  | YES  | NO
 `sys/internal/counters/config`            | YES  | NO
 `sys/internal/counters/activity/export`   | YES  | NO
 `sys/internal/inspect/router/*`           | YES  | NO
 `sys/mfa/method/*`                        | YES  | NO
+
+Privileged CLI commands without public API endpoints:
+
+CLI command             | Root | Admin
+----------------------- | ---- | -----
+`vault plugin runtime`  | YES  | NO
