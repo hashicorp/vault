@@ -23,7 +23,7 @@ Prerequisites:
   to configure a IAM user with access to the Secrets Manager. The following is an example policy outlining the required
   permissions to use secrets syncing.
 
-  ```
+  ```json
   {
     "Version": "2012-10-17",
     "Statement": [
@@ -54,7 +54,7 @@ Prerequisites:
 
 	<CodeBlockConfig hideClipboard>
 
-	```text
+	```plaintext
 	Key                   Value
 	---                   -----
 	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
@@ -120,7 +120,7 @@ Prerequisites:
 
 	<CodeBlockConfig hideClipboard>
 
-	```
+	```plaintext
 	Key                   Value
 	---                   -----
 	associated_secrets    map[kv_37993f8a/my-secret:map[accessor:kv_37993f8a secret_name:my-secret sync_status:SYNCED updated_at:2023-09-19T13:17:35.085581-05:00]]
