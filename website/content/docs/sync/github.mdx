@@ -48,13 +48,9 @@ Prerequisites:
 
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
-  <CodeBlockConfig hideClipboard>
-
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
   ```
-
-  </CodeBlockConfig>
 
   **Output:**
 
@@ -66,7 +62,7 @@ Prerequisites:
 
   </CodeBlockConfig>
 
-1. Create secrets you wish to sync with a target GitHub repository:
+1. Create secrets you wish to sync with a target GitHub repository.
 
   ```shell-session
   $ vault kv put -mount='my-kv' my-secret foo=bar
