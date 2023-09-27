@@ -356,6 +356,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -678,6 +687,10 @@
         "path": "system/seal-status"
       },
       {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
+      },
+      {
         "title": "<code>/sys/sealwrap/rewrap</code>",
         "path": "system/sealwrap-rewrap"
       },
@@ -705,6 +718,15 @@
             "path": "system/storage/raftautosnapshots"
           }
         ]
+      },
+      {
+        "title": "<code>/sys/sync</code>",
+        "path": "system/secrets-sync",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/tools</code>",
