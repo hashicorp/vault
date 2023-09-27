@@ -110,7 +110,7 @@ jobs:
           - goos: windows
             goarch: arm
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -131,7 +131,7 @@ jobs:
         goos: [linux]
         goarch: [arm, arm64, 386, amd64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
@@ -151,7 +151,7 @@ jobs:
         goos: [darwin]
         goarch: [amd64, arm64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -212,17 +212,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - sample-name: build_oss_linux_amd64_deb
+          - sample-name: build_ce_linux_amd64_deb
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
-          - sample-name: build_oss_linux_arm64_deb
+          - sample-name: build_ce_linux_arm64_deb
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
-          - sample-name: build_oss_linux_amd64_rpm
+          - sample-name: build_ce_linux_amd64_rpm
             build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
-          - sample-name: build_oss_linux_arm64_rpm
+          - sample-name: build_ce_linux_arm64_rpm
             build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
-          - sample-name: build_oss_linux_amd64_zip
+          - sample-name: build_ce_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - sample-name: build_oss_linux_arm64_zip
+          - sample-name: build_ce_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
@@ -292,7 +292,7 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-completed-successfully-failures-oss:
+  notify-completed-successfully-failures-ce:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
@@ -312,7 +312,7 @@ jobs:
         with:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
-            {"text":"OSS build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {"text":"CE build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: CE build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
 
   notify-completed-successfully-failures-ent:
     if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
