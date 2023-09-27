@@ -39,7 +39,7 @@ resource "enos_remote_exec" "configure_pr_primary" {
   environment = {
     VAULT_ADDR        = "http://127.0.0.1:8200"
     VAULT_TOKEN       = var.vault_root_token
-    vault_install_dir = var.vault_install_dir
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
