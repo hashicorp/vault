@@ -295,7 +295,7 @@ func waitForKVv2Upgrade(t *testing.T, ctx context.Context, client *api.Client, p
 		if err == nil {
 			return
 		}
-		t.Logf("waitForKVv2Upgrade: write faile: %s", err)
+		t.Logf("waitForKVv2Upgrade: write failed: %s", err)
 		select {
 		case <-ctx.Done():
 			t.Fatalf("context cancelled waiting for KVv2 (%s) upgrade to complete: %s",
