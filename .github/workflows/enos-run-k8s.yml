@@ -60,8 +60,8 @@ jobs:
             echo "image_repo=hashicorp/vault-enterprise" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault-enterprise'"
           else
-            echo "edition=oss" >> "$GITHUB_ENV"
-            echo "edition set to 'oss'"
+            echo "edition=ce" >> "$GITHUB_ENV"
+            echo "edition set to 'ce'"
             echo "image_repo=hashicorp/vault" >> "$GITHUB_ENV"
             echo "image repo set to 'hashicorp/vault'"
           fi
