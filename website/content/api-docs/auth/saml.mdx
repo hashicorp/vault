@@ -46,6 +46,10 @@ Configures the auth method with a SAML identity provider.
   protection.
 - `default_role` `(string, <optional>)` - The role to use if no role is provided during login.
   If not set, a role is required during login.
+- `verbose_logging` `(bool, false)` - Log additional information during the SAML exchange.
+  The user attributes will be logged when debug-level logging is active. The full SAML response
+  will be logged when trace-level logging is active. **Not recommended** in production since
+  sensitive information may be present in SAML responses.
 
 ### Sample payload
 
