@@ -292,33 +292,34 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 
 	config, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
-		return "", nil, nil, logical.ErrorResponse("error getting configuration"), nil
+		return "", nil, nil, nil, fmt.Errorf("error getting configuration: %w", err)
+	}
+	if config == nil {
+		return "", nil, nil, logical.ErrorResponse("configuration does not exist"), nil
 	}
 
 	endpoint := "https://sts.amazonaws.com"
-
 	maxRetries := awsClient.DefaultRetryerMaxNumRetries
-	if config != nil {
-		if config.IAMServerIdHeaderValue != "" {
-			err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
-			if err != nil {
-				return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
-			}
+
+	if config.IAMServerIdHeaderValue != "" {
+		err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 		}
-		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
+	}
+	if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
+		return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+	}
+	if method == http.MethodGet {
+		if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 		}
-		if method == http.MethodGet {
-			if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
-				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
-			}
-		}
-		if config.STSEndpoint != "" {
-			endpoint = config.STSEndpoint
-		}
-		if config.MaxRetries >= 0 {
-			maxRetries = config.MaxRetries
-		}
+	}
+	if config.STSEndpoint != "" {
+		endpoint = config.STSEndpoint
+	}
+	if config.MaxRetries >= 0 {
+		maxRetries = config.MaxRetries
 	}
 
 	// Extract and use a regional STS endpoint
