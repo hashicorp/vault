@@ -1,0 +1,3 @@
+```release-note:bug
+auth/aws: Fixes a panic that can occur when an IAM-based login is attempted after config deletion.
+```
