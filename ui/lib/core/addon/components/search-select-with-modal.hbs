@@ -94,6 +94,8 @@
       @isActive={{this.showModal}}
       @type="info"
       @showCloseButton={{false}}
+      {{! temporary class until Hds::Modal is fully adopted so dynamic components with copy buttons work }}
+      class="hds-modal"
     >
       <section class="modal-card-body">
         {{#if @modalSubtext}}

@@ -332,6 +332,7 @@ a.button.disabled {
   }
 }
 
+// TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
 // Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
   font-weight: $font-weight-semibold;
@@ -383,6 +384,21 @@ a.button.disabled {
     }
     svg {
       color: transparent;
+    }
+  }
+}
+
+// Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
+.hds-button {
+  &.toolbar-button {
+    font-weight: $font-weight-semibold;
+    background: none;
+    border: none;
+    box-shadow: none;
+    &:hover:not(.disabled) {
+      background-color: $ui-gray-100;
+      border: 0;
+      color: $blue;
     }
   }
 }

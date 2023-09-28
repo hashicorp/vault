@@ -281,7 +281,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await connectionPage.save();
       await settled();
       assert
-        .dom('.modal.is-active .title')
+        .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
@@ -397,7 +397,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.save();
     await settled();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.strictEqual(
