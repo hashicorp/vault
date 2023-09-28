@@ -12,7 +12,7 @@ once registered, backends can use the plugin runtime by referencing them when re
 
 ## LIST plugin runtimes
 
-The `LIST` endpoint returns a list of the plugin runtimes in the catalog.
+The list endpoint returns a list of the plugin runtimes in the catalog.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
@@ -21,6 +21,13 @@ The `LIST` endpoint returns a list of the plugin runtimes in the catalog.
 | :----- | :--------------------- |
 | `LIST`  | `/sys/plugins/runtimes/catalog` |
 | `GET`  | `/sys/plugins/runtimes/catalog` |
+| `LIST`  | `/sys/plugins/runtimes/catalog?type=:type` |
+| `GET`  | `/sys/plugins/runtimes/catalog?type=:type` |
+
+### Parameters
+
+- `type` `(string: <required>)` – Specifies the plugin runtime type to list. Currently
+  only accepts "container".
 
 ### Sample request
 
