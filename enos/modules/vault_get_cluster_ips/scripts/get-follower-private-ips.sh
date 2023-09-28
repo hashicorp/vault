@@ -20,7 +20,7 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "Unable to locate vault binary at $binpath"
 
 count=0
-retries=5
+retries=10
 while :; do
   # Vault >= 1.10.x has the operator members. If we have that then we'll use it.
   if $binpath operator -h 2>&1 | grep members &> /dev/null; then
