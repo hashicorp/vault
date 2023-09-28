@@ -160,7 +160,8 @@ func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
 	}
 
 	index := computeStaticSecretCacheIndex(req)
-	expectedIndex := "b117a962f19f17fa372c8681cadcd6fd370d28ee6e0a7012196b780bef601b53"
+	// We expect this to be "", as it doesn't start with /v1
+	expectedIndex := ""
 	require.Equal(t, expectedIndex, index)
 
 	req = &SendRequest{
@@ -171,7 +172,7 @@ func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
 		},
 	}
 
-	// We expect that computeStaticSecretCacheIndex will trim the /v1
+	expectedIndex = "b117a962f19f17fa372c8681cadcd6fd370d28ee6e0a7012196b780bef601b53"
 	index2 := computeStaticSecretCacheIndex(req)
 	require.Equal(t, expectedIndex, index2)
 }
@@ -193,14 +194,14 @@ func Test_GetStaticSecretPathFromRequestNoNamespaces(t *testing.T) {
 	req = &SendRequest{
 		Request: &http.Request{
 			URL: &url.URL{
-				// We don't expect paths like this, but it should still work as expected regardless.
+				// Paths like this are not static secrets, so we should return ""
 				Path: "foo/bar",
 			},
 		},
 	}
 
 	path = getStaticSecretPathFromRequest(req)
-	require.Equal(t, "foo/bar", path)
+	require.Equal(t, "", path)
 }
 
 // Test_GetStaticSecretPathFromRequestNamespaces tests that getStaticSecretPathFromRequest
@@ -232,14 +233,63 @@ func Test_GetStaticSecretPathFromRequestNamespaces(t *testing.T) {
 	req = &SendRequest{
 		Request: &http.Request{
 			URL: &url.URL{
-				// We don't expect paths like this, but it should still work as expected regardless.
+				// Paths like this are not static secrets, so we should return ""
 				Path: "ns1/foo/bar",
 			},
 		},
 	}
 
 	path = getStaticSecretPathFromRequest(req)
-	require.Equal(t, "ns1/foo/bar", path)
+	require.Equal(t, "", path)
+}
+
+// TestCache_CanonicalizeStaticSecretPath ensures that
+// canonicalizeStaticSecretPath works as expected with all kinds of inputs.
+func TestCache_CanonicalizeStaticSecretPath(t *testing.T) {
+	expected := "foo/bar"
+	actual := canonicalizeStaticSecretPath("/v1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("foo/bar", "")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("/ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
 }
 
 // TestCache_ComputeStaticSecretIndexIDNamespaces ensures that
@@ -257,8 +307,8 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 	}
 
 	index := computeStaticSecretCacheIndex(req)
-	expectedIndex := "a4605679d269aa1bebac7079a471a33403413f388f63bf0da3c771b225857932"
-	require.Equal(t, expectedIndex, index)
+	// Paths like this are not static secrets, so we should expect ""
+	require.Equal(t, "", index)
 
 	req = &SendRequest{
 		Request: &http.Request{
@@ -268,9 +318,9 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 		},
 	}
 
-	// We expect that computeStaticSecretCacheIndex will compute the same index
+	// Paths like this are not static secrets, so we should expect ""
 	index2 := computeStaticSecretCacheIndex(req)
-	require.Equal(t, expectedIndex, index2)
+	require.Equal(t, "", index2)
 
 	req = &SendRequest{
 		Request: &http.Request{
@@ -280,6 +330,7 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 		},
 	}
 
+	expectedIndex := "a4605679d269aa1bebac7079a471a33403413f388f63bf0da3c771b225857932"
 	// We expect that computeStaticSecretCacheIndex will compute the same index
 	index3 := computeStaticSecretCacheIndex(req)
 	require.Equal(t, expectedIndex, index3)
@@ -305,8 +356,9 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 		},
 	}
 
+	// Paths like this are not static secrets, so we should expect ""
 	index5 := computeStaticSecretCacheIndex(req)
-	require.Equal(t, expectedIndex, index5)
+	require.Equal(t, "", index5)
 
 	req = &SendRequest{
 		Request: &http.Request{

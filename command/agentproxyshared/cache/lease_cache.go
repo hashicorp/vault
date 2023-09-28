@@ -297,7 +297,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// This is the last step, so we defer the call first
 		if inflight != nil && inflight.remaining.Load() == 0 {
 			c.inflightCache.Delete(dynamicSecretCacheId)
-			c.inflightCache.Delete(staticSecretCacheId)
+			if staticSecretCacheId != "" {
+				c.inflightCache.Delete(staticSecretCacheId)
+			}
 		}
 	}()
 
@@ -334,37 +336,39 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		idLockDynamicSecret.Unlock()
 	}
 
-	idLockStaticSecret := locksutil.LockForKey(c.idLocks, staticSecretCacheId)
+	if staticSecretCacheId != "" {
+		idLockStaticSecret := locksutil.LockForKey(c.idLocks, staticSecretCacheId)
 
-	// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
-	// and prevent concurrent cacheable requests from being proxied twice if
-	// they both miss the cache due to it being clean when peeking the cache
-	// entry.
-	idLockStaticSecret.Lock()
-	inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
-	if found {
-		idLockStaticSecret.Unlock()
-		inflight = inflightRaw.(*inflightRequest)
-		inflight.remaining.Inc()
-		defer inflight.remaining.Dec()
-
-		// If found it means that there's an inflight request being processed.
-		// We wait until that's finished before proceeding further.
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-inflight.ch:
-		}
-	} else {
-		if inflight == nil {
-			inflight = newInflightRequest()
+		// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
+		// and prevent concurrent cacheable requests from being proxied twice if
+		// they both miss the cache due to it being clean when peeking the cache
+		// entry.
+		idLockStaticSecret.Lock()
+		inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
+		if found {
+			idLockStaticSecret.Unlock()
+			inflight = inflightRaw.(*inflightRequest)
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
-			defer close(inflight.ch)
-		}
 
-		c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
-		idLockStaticSecret.Unlock()
+			// If found it means that there's an inflight request being processed.
+			// We wait until that's finished before proceeding further.
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-inflight.ch:
+			}
+		} else {
+			if inflight == nil {
+				inflight = newInflightRequest()
+				inflight.remaining.Inc()
+				defer inflight.remaining.Dec()
+				defer close(inflight.ch)
+			}
+
+			c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
+			idLockStaticSecret.Unlock()
+		}
 	}
 
 	// Check if the response for this request is already in the dynamic secret cache
@@ -378,13 +382,15 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Check if the response for this request is already in the static secret cache
-	cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
-	if err != nil {
-		return nil, err
-	}
-	if cachedResp != nil {
-		c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
-		return cachedResp, nil
+	if staticSecretCacheId != "" {
+		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
+		if err != nil {
+			return nil, err
+		}
+		if cachedResp != nil {
+			c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
+			return cachedResp, nil
+		}
 	}
 
 	c.logger.Debug("forwarding request from cache", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -439,7 +445,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	if c.cacheStaticSecrets && secret.MountType == "kv" {
+	// There shouldn't be a situation where secret.MountType == "kv" and
+	// staticSecretCacheId == "", but just in case.
+	if c.cacheStaticSecrets && secret.MountType == "kv" && staticSecretCacheId != "" {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		err := c.cacheStaticSecret(ctx, req, resp, index)
@@ -809,6 +817,30 @@ func computeIndexID(req *SendRequest) (string, error) {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
+// canonicalizeStaticSecretPath takes an API request path such as
+// /v1/foo/bar and a namespace, and turns it into a canonical representation
+// of the secret's path in Vault.
+// We opt for this form as namespace.Canonicalize returns a namespace in the
+// form of "ns1/", so we keep consistent with path canonicalization.
+func canonicalizeStaticSecretPath(requestPath string, ns string) string {
+	// /sys/capabilities accepts both requests that look like foo/bar
+	// and /foo/bar but not /v1/foo/bar.
+	// We trim the /v1/ from the start of the URL to get the foo/bar form.
+	// This means that we can use the paths we retrieve from the
+	// /sys/capabilities endpoint to access this index
+	// without having to re-add the /v1/
+	path := strings.TrimPrefix(requestPath, "/v1/")
+	// Trim any leading slashes, as we never want those.
+	// This ensures /foo/bar gets turned to foo/bar
+	path = strings.TrimPrefix(path, "/")
+
+	// If a namespace was provided in a way that wasn't directly in the path,
+	// it must be added to the path.
+	path = namespace.Canonicalize(ns) + path
+
+	return path
+}
+
 // getStaticSecretPathFromRequest gets the canonical path for a
 // request, taking into account intricacies relating to /v1/ and namespaces
 // in the header.
@@ -816,33 +848,31 @@ func computeIndexID(req *SendRequest) (string, error) {
 // We opt for this form as namespace.Canonicalize returns a namespace in the
 // form of "ns1/", so we keep consistent with path canonicalization.
 func getStaticSecretPathFromRequest(req *SendRequest) string {
-	// /sys/capabilities accepts both requests that look like foo/bar
-	// and /foo/bar but not /v1/foo/bar.
-	// We trim the /v1/ from the start of the URL to get the foo/bar form.
-	// This means that we can use the paths we retrieve from the
-	// /sys/capabilities endpoint to access this index
-	// without having to re-add the /v1/
-	path := strings.TrimPrefix(req.Request.URL.Path, "/v1/")
-	// Trim any leading slashes, as we never want those.
-	// This ensures /foo/bar gets turned to foo/bar
-	path = strings.TrimPrefix(path, "/")
-	// Also, we have to ensure that if a namespace header was included, that
-	// it gets added to the path. We need to identify the same secret irrespective
-	// of if it's specified via header or not.
-	if header := req.Request.Header; header != nil {
-		if ns := header.Get(api.NamespaceHeaderName); ns != "" {
-			path = namespace.Canonicalize(ns) + path
-		}
+	path := req.Request.URL.Path
+	// Static secrets always have /v1 as a prefix. This enables us to
+	// enable a pass-through and never attempt to cache or view-from-cache
+	// any request without the /v1 prefix.
+	if !strings.HasPrefix(path, "/v1") {
+		return ""
 	}
-	return path
+	var namespace string
+	if header := req.Request.Header; header != nil {
+		namespace = header.Get(api.NamespaceHeaderName)
+	}
+	return canonicalizeStaticSecretPath(path, namespace)
 }
 
 // computeStaticSecretCacheIndex results in a value that uniquely identifies a static
 // secret's cached ID. Notably, we intentionally ignore headers (for example,
 // the X-Vault-Token header) to remain agnostic to which token is being
 // used in the request. We care only about the path.
+// This will return "" if the index does not have a /v1 prefix, and therefore
+// cannot be a static secret.
 func computeStaticSecretCacheIndex(req *SendRequest) string {
 	path := getStaticSecretPathFromRequest(req)
+	if path == "" {
+		return path
+	}
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
 }
 
