@@ -13,6 +13,9 @@ import { statuses } from '../../../mirage/handlers/hcp-link';
 const SELECTORS = {
   modalOpen: '[data-test-link-status] button',
   modalClose: '[data-test-icon="x"]',
+  bannerSuccess: '.hds-alert [data-test-icon="check-circle"]',
+  bannerWarning: '.hds-alert [data-test-icon="alert-triangle"]',
+  banner: '[data-test-link-status]',
 };
 
 module('Integration | Component | link-status', function (hooks) {
@@ -27,31 +30,28 @@ module('Integration | Component | link-status', function (hooks) {
 
   test('it does not render banner when status is not present', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{undefined}} />
     `);
 
-    assert.dom('.link-status').doesNotExist('Banner is hidden for missing status message');
+    assert.dom(SELECTORS.banner).doesNotExist('Banner is hidden for missing status message');
   });
 
   test('it does not render banner in oss version', async function (assert) {
     this.owner.lookup('service:version').set('version', '1.13.0');
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
-    assert.dom('.link-status').doesNotExist('Banner is hidden in oss');
+    assert.dom(SELECTORS.banner).doesNotExist('Banner is hidden in oss');
   });
 
   test('it renders connected status', async function (assert) {
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
-    assert.dom('.link-status').hasClass('connected', 'Correct banner class renders for connected state');
+    assert.dom(SELECTORS.bannerSuccess).exists('Success banner renders for connected state');
     assert
       .dom('[data-test-link-status]')
       .hasText('This self-managed Vault is linked to HCP.', 'Banner copy renders for connected state');
@@ -63,11 +63,10 @@ module('Integration | Component | link-status', function (hooks) {
   test('it should render error states', async function (assert) {
     // disconnected error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 1}} />
     `);
 
-    assert.dom('.link-status').hasClass('warning', 'Correct banner class renders for error state');
+    assert.dom(SELECTORS.bannerWarning).exists('Warning banner renders for error state');
     assert
       .dom('[data-test-link-status]')
       .hasText(
@@ -86,7 +85,6 @@ module('Integration | Component | link-status', function (hooks) {
     await click(SELECTORS.modalClose);
     // connecting error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 3}} />
     `);
     await click(SELECTORS.modalOpen);
@@ -97,7 +95,6 @@ module('Integration | Component | link-status', function (hooks) {
 
     // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
     await render(hbs`
-      <div id="modal-wormhole"></div>
       <LinkStatus @status="connecting" />
     `);
     await click(SELECTORS.modalOpen);

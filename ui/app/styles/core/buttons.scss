@@ -401,19 +401,4 @@ a.button.disabled {
       color: $blue;
     }
   }
-  &.hds-text-button {
-    padding: unset;
-    border: none;
-    background-color: inherit;
-    color: inherit;
-    font-size: inherit;
-    font-weight: inherit;
-    display: inline;
-    text-decoration: underline;
-    cursor: pointer;
-    &:hover:not(.disabled) {
-      border: 0;
-      color: $blue;
-    }
-  }
 }

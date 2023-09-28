@@ -4,9 +4,8 @@
 ~}}
 
 {{#if (and this.state this.version.isEnterprise)}}
-  <div class="has-padding-s link-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
-    <Icon @name="info" />
-    <p data-test-link-status>
+  <Hds::Alert @type="page" @color={{if (eq this.state "connected") "success" "warning"}} as |A|>
+    <A.Title data-test-link-status>
       {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to
         <ExternalLink @href="https://portal.cloud.hashicorp.com/sign-in">
@@ -14,16 +13,18 @@
         </ExternalLink>
       {{else}}
         There was an error connecting to HCP. Click
-        <Hds::Button @text="here" class="hds-text-button" {{on "click" (fn (mut this.showModal))}} />
+        <button type="button" class="text-button is-underline" {{on "click" (fn (mut this.showModal))}}>
+          here
+        </button>
         for more information.
       {{/if}}
-    </p>
-  </div>
+    </A.Title>
+  </Hds::Alert>
 {{/if}}
 
 {{#if this.showModal}}
-  <Hds::Modal id="hcp-link-error-modal" @onClose={{fn (mut this.showModal) false}} as |M|>
-    <M.Header @icon="info">
+  <Hds::Modal id="hcp-link-error-modal" @color="warning" @size="small" @onClose={{fn (mut this.showModal) false}} as |M|>
+    <M.Header @icon="alert-triangle">
       HCP Link error
     </M.Header>
     <M.Body>
