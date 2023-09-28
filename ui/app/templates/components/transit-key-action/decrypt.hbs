@@ -56,7 +56,7 @@
   </div>
 </form>
 {{#if @isModalActive}}
-  <Hds::Modal id="transit-decrypt-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+  <Hds::Modal id="transit-decrypt-modal" @onClose={{fn (mut @isModalActive) false}} data-test-decrypt-modal as |M|>
     <M.Header>
       Copy your unwrapped data
     </M.Header>
