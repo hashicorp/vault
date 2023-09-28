@@ -80,11 +80,6 @@ type Index struct {
 	// Type is the index type (token, auth-lease, secret-lease, static-secret)
 	Type string
 
-	// Capabilities is a set of known capabilities for the given token. Used only for
-	// token-capabilities type cache entries.
-	// Implemented as a map for uniqueness.
-	Capabilities map[string]struct{}
-
 	// IndexLock is a lock held for some indexes to prevent data
 	// races upon update.
 	IndexLock sync.RWMutex
