@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	paths "path"
 	"strconv"
 	"strings"
 	"time"
@@ -949,7 +950,7 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 }
 
 func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
-	return c.router.LoginPath(ctx, req.Path)
+	return c.router.LoginPath(ctx, req.Path) && req.ClientToken == ""
 }
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
@@ -1488,8 +1489,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 
-	// if routeErr has invalid credentials error, update the userFailedLoginMap
-	if routeErr != nil && routeErr == logical.ErrInvalidCredentials {
+	handleInvalidCreds := func() (*logical.Response, *logical.Auth, error) {
 		if !isUserLockoutDisabled {
 			err := c.failedUserLoginProcess(ctx, entry, req)
 			if err != nil {
@@ -1497,6 +1497,43 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 		}
 		return resp, nil, routeErr
+	}
+
+	if routeErr != nil {
+		// if routeErr has invalid credentials error, update the userFailedLoginMap
+		if routeErr == logical.ErrInvalidCredentials {
+			return handleInvalidCreds()
+		} else if da, ok := routeErr.(*logical.DelegatedAuthenticationError); ok {
+			// If the route is requesting delegated authentication...
+			mount, err := c.auth.findByAccessor(ctx, da.MountAccessor())
+			if err != nil {
+				return nil, nil, err
+			}
+			if mount == nil {
+				return nil, nil, fmt.Errorf("backend requested delegate authentication but mount with accessor '%s' not found", da.MountAccessor())
+			}
+			path := paths.Join("auth", mount.Path, da.Path())
+			req2, err := req.Clone()
+			if err != nil {
+				return nil, nil, err
+			}
+			req2.MountAccessor = da.MountAccessor()
+			req2.Path = path
+			resp, auth, err = c.handleLoginRequest(ctx, req2)
+			if err == logical.ErrInvalidCredentials {
+				return handleInvalidCreds()
+			} else if err != nil {
+				return nil, nil, err
+			}
+			req2, err = req.Clone()
+			if err != nil {
+				return nil, nil, err
+			}
+			req2.ClientToken = resp.Auth.ClientToken
+			req2.ClientTokenSource = logical.ClientTokenFromVaultHeader // TODO: From internal
+			resp2, err := c.handleCancelableRequest(ctx, req2)
+			return resp2, nil, err
+		}
 	}
 
 	if resp != nil {

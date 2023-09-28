@@ -411,16 +411,17 @@ type Operation string
 
 const (
 	// The operations below are called per path
-	CreateOperation         Operation = "create"
-	ReadOperation                     = "read"
-	UpdateOperation                   = "update"
-	PatchOperation                    = "patch"
-	DeleteOperation                   = "delete"
-	ListOperation                     = "list"
-	HelpOperation                     = "help"
-	AliasLookaheadOperation           = "alias-lookahead"
-	ResolveRoleOperation              = "resolve-role"
-	HeaderOperation                   = "header"
+	CreateOperation          Operation = "create"
+	ReadOperation                      = "read"
+	UpdateOperation                    = "update"
+	PatchOperation                     = "patch"
+	DeleteOperation                    = "delete"
+	ListOperation                      = "list"
+	HelpOperation                      = "help"
+	AliasLookaheadOperation            = "alias-lookahead"
+	ResolveRoleOperation               = "resolve-role"
+	HeaderOperation                    = "header"
+	PreAuthenticateOperation           = "pre-authenticate"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
