@@ -230,8 +230,8 @@ corruption.  The `corrupted_root` field indicates whether the root of the tree
 is corrupted. The `corrupted_tree_map` field identifies any corruption in the
 roots of its subtrees, including replicated and local subtrees. In the event of
 corruption within a page or subpage of the tree, `corrupted_tree_map` includes
-the page number along with a list of corrupted subpage numbers. This information
-serves as an indicator of the extent of corruption within the merkle tree.
+the page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the merkle tree.
 
 ```json
 {
