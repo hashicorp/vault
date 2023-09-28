@@ -1,20 +1,15 @@
 ---
 layout: docs
-page_title: Seal High Availability (Beta) - Seals - Configuration
+page_title: Seal High Availability - Seals - Configuration
 description: |-
   How to configure multiple Seals for high availability.
 ---
 
-# Seal High Availability (Beta)
+# Seal High Availability
 
-<Note title="Seal HA functionality requires Vault Enterprise">
+<EnterpriseAlert product="vault" />
 
-  Seal High Availability requires Vault Enterprise.
-
-</Note>
-
--> **Warning:** This feature is available as a Beta for evaluation and should not 
-be used in production deployments of Vault.
+@include 'alerts/beta.mdx'
 
 [Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise-beta) 
 is the ability to configure more than one seal in order to have resilience against
