@@ -188,12 +188,6 @@ func (c *CacheMemDB) Set(index *Index) error {
 	return nil
 }
 
-type NotFoundError struct{}
-
-func (m *NotFoundError) Error() string {
-	return "boom"
-}
-
 // GetCapabilitiesIndex returns the CapabilitiesIndex from the cache.
 func (c *CacheMemDB) GetCapabilitiesIndex(indexName string, indexValues ...interface{}) (*CapabilitiesIndex, error) {
 	if !validCapabilitiesIndexName(indexName) {
