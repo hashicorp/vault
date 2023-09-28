@@ -68,7 +68,7 @@
 
 {{! CONFIRM DOWNLOAD MODAL }}
 {{#if this.modalOpen}}
-  <Hds::Modal @color="warning" id="confirm-download-modal" @size="small" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+  <Hds::Modal @color="warning" id="confirm-download-modal" @onClose={{fn (mut this.modalOpen) false}} as |M|>
     <M.Header @icon="alert-triangle">
       Download secret value?
     </M.Header>
