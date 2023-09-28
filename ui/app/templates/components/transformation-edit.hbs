@@ -58,6 +58,7 @@
             @color="secondary"
             class="toolbar-button"
             {{on "click" (fn (mut this.isEditModalActive) true)}}
+            data-test-edit-link
           />
         {{else}}
           <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
