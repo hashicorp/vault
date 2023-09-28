@@ -103,9 +103,6 @@ type CapabilitiesIndex struct {
 	// Required: true, Unique: true
 	Token string
 
-	// Type is the index type (token-capabilities)
-	Type string
-
 	// ReadablePaths is a set of paths with read capabilities for the given token.
 	// Implemented as a map for uniqueness. The key to the map is a path (such as
 	// `foo/bar` that we've demonstrated we can read.

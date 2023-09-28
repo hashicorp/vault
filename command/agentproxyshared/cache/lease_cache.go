@@ -678,7 +678,6 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 	index := &cachememdb.CapabilitiesIndex{
 		ID:            indexId,
 		Token:         token,
-		Type:          cacheboltdb.TokenCapabilitiesType,
 		ReadablePaths: make(map[string]struct{}),
 	}
 
