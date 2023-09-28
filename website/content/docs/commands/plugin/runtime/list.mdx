@@ -1,0 +1,40 @@
+---
+layout: docs
+page_title: plugin runtime list - Command
+description: The "plugin runtime list" command lists all available plugin runtimes in the plugin runtime catalog.
+---
+
+# plugin list
+
+List all plugin runtimes currently registered with Vault. Returns all the
+available plugin runtimes or an error if the set of registered runtimes is empty.
+Vault considers any registered plugin runtime "available", regardless of whether
+it is currently in use.
+
+## Examples
+
+List all available plugin runtimes in the catalog.
+
+```shell-session
+$ vault plugin runtime list
+
+Name    Type         OCI Runtime    Parent Cgroup    CPU Nanos    Memory Bytes
+----    ----         -----------    -------------    ---------    ------------
+runc    container    runc           n/a              0            0
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output for the current command in
+  the given format. Valid formats are `table`, `json`, or `yaml`. Use the
+  `VAULT_FORMAT` environment variable to set your output preferences globally.
+
+### Command options
+
+- `-type` `(string: "")` - Plugin runtime type. Vault currently only supports
+  `container` runtime type.
