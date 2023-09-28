@@ -644,12 +644,12 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 	path := getStaticSecretPathFromRequest(req)
 
 	// Extra caution -- avoid potential nil
-	if capabilitiesIndex.Capabilities == nil {
-		capabilitiesIndex.Capabilities = make(map[string]struct{})
+	if capabilitiesIndex.ReadablePaths == nil {
+		capabilitiesIndex.ReadablePaths = make(map[string]struct{})
 	}
 
 	// update the index with the new capability:
-	capabilitiesIndex.Capabilities[path] = struct{}{}
+	capabilitiesIndex.ReadablePaths[path] = struct{}{}
 
 	err = c.db.SetCapabilitiesIndex(capabilitiesIndex)
 	if err != nil {
@@ -676,10 +676,10 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 
 	// Build the index to cache based on the response received
 	index := &cachememdb.CapabilitiesIndex{
-		ID:           indexId,
-		Token:        token,
-		Type:         cacheboltdb.TokenCapabilitiesType,
-		Capabilities: make(map[string]struct{}),
+		ID:            indexId,
+		Token:         token,
+		Type:          cacheboltdb.TokenCapabilitiesType,
+		ReadablePaths: make(map[string]struct{}),
 	}
 
 	return index, nil

@@ -126,21 +126,11 @@ func newDB() (*memdb.MemDB, error) {
 				Indexes: map[string]*memdb.IndexSchema{
 					// This index enables fetching the cached item based on the
 					// identifier of the index.
-					IndexNameID: {
-						Name:   IndexNameID,
+					CapabilitiesIndexNameID: {
+						Name:   CapabilitiesIndexNameID,
 						Unique: true,
 						Indexer: &memdb.StringFieldIndex{
 							Field: "ID",
-						},
-					},
-					// This index enables fetching the entriy in cache
-					// that is tied to the given token.
-					IndexNameToken: {
-						Name:         IndexNameToken,
-						Unique:       true,
-						AllowMissing: false,
-						Indexer: &memdb.StringFieldIndex{
-							Field: "Token",
 						},
 					},
 				},

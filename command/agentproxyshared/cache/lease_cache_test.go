@@ -529,7 +529,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 
 	require.NotNil(t, capabilitiesIndexFromDB)
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
-	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.ReadablePaths)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
 
 	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
@@ -596,7 +596,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 
 	require.NotNil(t, capabilitiesIndexFromDB)
 	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
-	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.Capabilities)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.ReadablePaths)
 	require.Equal(t, cacheboltdb.TokenCapabilitiesType, capabilitiesIndexFromDB.Type)
 
 	err = lc.handleCacheClear(context.Background(), &cacheClearInput{

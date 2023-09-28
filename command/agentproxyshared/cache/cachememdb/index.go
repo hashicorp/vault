@@ -106,10 +106,10 @@ type CapabilitiesIndex struct {
 	// Type is the index type (token-capabilities)
 	Type string
 
-	// Capabilities is a set of known capabilities for the given token. Used only for
-	// token-capabilities type cache entries.
-	// Implemented as a map for uniqueness.
-	Capabilities map[string]struct{}
+	// ReadablePaths is a set of paths with read capabilities for the given token.
+	// Implemented as a map for uniqueness. The key to the map is a path (such as
+	// `foo/bar` that we've demonstrated we can read.
+	ReadablePaths map[string]struct{}
 
 	// IndexLock is a lock held for some indexes to prevent data
 	// races upon update.
@@ -139,6 +139,9 @@ const (
 
 	// IndexNameLeaseToken is the token that created the lease.
 	IndexNameLeaseToken = "lease_token"
+
+	// CapabilitiesIndexNameID is the ID of the capabilities index.
+	CapabilitiesIndexNameID = "id"
 )
 
 func validIndexName(indexName string) bool {
@@ -158,8 +161,7 @@ func validIndexName(indexName string) bool {
 
 func validCapabilitiesIndexName(indexName string) bool {
 	switch indexName {
-	case IndexNameID:
-	case IndexNameToken:
+	case CapabilitiesIndexNameID:
 	default:
 		return false
 	}
