@@ -353,7 +353,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	_, _, status, err = buildLogicalRequestNoAuth(nil, core.PerfStandby(), nil, req)
 	if err != nil || status != 0 {
 		t.Fatal(err)
 	}

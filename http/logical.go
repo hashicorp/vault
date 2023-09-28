@@ -44,7 +44,7 @@ func (b *bufferedReader) Close() error {
 
 const MergePatchContentTypeHeader = "application/merge-patch+json"
 
-func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(access *vault.RouterAccess, perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -105,11 +105,12 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
+		isBinary := access.BinaryPath(r.Context(), path)
 		// If we are uploading a snapshot or receiving an ocsp-request (which
 		// is der encoded) we don't want to parse it. Instead, we will simply
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
+		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) || isBinary {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -263,7 +264,7 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 }
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
-	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.RouterAccess(), core.PerfStandby(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
@@ -315,7 +316,7 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		req, _, statusCode, err := buildLogicalRequestNoAuth(nil, false, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return

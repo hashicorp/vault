@@ -35,6 +35,7 @@ type Router struct {
 	root               *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
+	binaryPaths        *radix.Tree
 	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
@@ -51,6 +52,7 @@ func NewRouter() *Router {
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		binaryPaths:        radix.New(),
 		// this will get replaced in production with a real logger but it's useful to have a default in place for tests
 		logger: hclog.NewNullLogger(),
 	}
@@ -66,6 +68,7 @@ type routeEntry struct {
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
+	binaryPaths   atomic.Value
 	l             sync.RWMutex
 }
 
@@ -202,7 +205,11 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
-
+	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	if err != nil {
+		return err
+	}
+	re.binaryPaths.Store(binaryPathsEntry)
 	switch {
 	case prefix == "":
 		return fmt.Errorf("missing prefix to be used for router entry; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
@@ -904,6 +911,55 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 
 	// Check the loginPaths of this backend
 	pe := re.loginPaths.Load().(*loginPathsEntry)
+	match, raw, ok := pe.paths.LongestPrefix(remain)
+	if !ok && len(pe.wildcardPaths) == 0 {
+		// no match found
+		return false
+	}
+
+	if ok {
+		prefixMatch := raw.(bool)
+		if prefixMatch {
+			// Handle the prefix match case
+			return strings.HasPrefix(remain, match)
+		}
+		if match == remain {
+			// Handle the exact match case
+			return true
+		}
+	}
+
+	// check Login Paths containing wildcards
+	reqPathParts := strings.Split(remain, "/")
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Router) BinaryPath(ctx context.Context, path string) bool {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return false
+	}
+
+	adjustedPath := ns.Path + path
+
+	r.l.RLock()
+	mount, raw, ok := r.root.LongestPrefix(adjustedPath)
+	r.l.RUnlock()
+	if !ok {
+		return false
+	}
+	re := raw.(*routeEntry)
+
+	// Trim to get remaining path
+	remain := strings.TrimPrefix(adjustedPath, mount)
+
+	// Check the binaryPaths of this backend
+	pe := re.binaryPaths.Load().(*loginPathsEntry)
 	match, raw, ok := pe.paths.LongestPrefix(remain)
 	if !ok && len(pe.wildcardPaths) == 0 {
 		// no match found

@@ -4,11 +4,13 @@
 package transit
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -94,6 +96,20 @@ by one or more concatenated PEM blocks and ordered starting from the end-entity 
 	}
 }
 
+func (b *backend) pathBinary() *framework.Path {
+	return &framework.Path{
+		// NOTE: `set-certificate` or `set_certificate`? Paths seem to use different
+		// case, such as `transit/wrapping_key` and `transit/cache-config`.
+		Pattern: "binary",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathBinaryTest,
+			},
+		},
+	}
+}
+
 func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
@@ -157,6 +173,13 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	}
 
 	return resp, nil
+}
+
+func (b *backend) pathBinaryTest(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var body bytes.Buffer
+	io.Copy(&body, req.HTTPRequest.Body)
+	b.Logger().Info("Got bytes", "len", body.Len())
+	return nil, nil
 }
 
 func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

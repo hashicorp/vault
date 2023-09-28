@@ -17,3 +17,7 @@ func NewRouterAccess(c *Core) *RouterAccess {
 func (r *RouterAccess) StoragePrefixByAPIPath(ctx context.Context, path string) (string, bool) {
 	return r.c.router.MatchingStoragePrefixByAPIPath(ctx, path)
 }
+
+func (r *RouterAccess) BinaryPath(ctx context.Context, path string) bool {
+	return r.c.router.BinaryPath(ctx, path)
+}

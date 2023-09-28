@@ -128,6 +128,9 @@ type Paths struct {
 	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
 	Unauthenticated []string
 
+	// Binary paths are those whose bodies should be treated as binary and not parsed to JSON
+	Binary []string
+
 	// LocalStorage are storage paths (prefixes) that are local to this cluster;
 	// this indicates that these paths should not be replicated across performance clusters
 	// (DR replication is unaffected).
