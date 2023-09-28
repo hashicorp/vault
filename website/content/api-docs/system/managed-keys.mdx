@@ -6,12 +6,12 @@ description: The `/sys/managed-keys` endpoint is used to manage the managed keys
 
 # `/sys/managed-keys`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/managed-keys` endpoint is used to manage the Managed Key configuration within Vault.
 See the [Managed Keys](/vault/docs/enterprise/managed-keys) section for further details on the Managed Keys system.
 
 ## List managed keys.
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint lists all the Managed Keys of a certain type within the namespace.
 
@@ -44,8 +44,6 @@ $ curl \
 ```
 
 ## Create/Update managed key
-
-@include 'alerts/restricted-admin.mdx'
 
 An endpoint that will create or update a Managed Key within a given namespace. The :type refers to the backend type
 that the key is to use, such as `pkcs11`. The :name argument is unique name within all managed key types in
@@ -266,8 +264,6 @@ $ curl \
 
 ## Read managed key
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint returns the managed key configuration at the given path.
 
 | Method | Path                            |
@@ -312,8 +308,6 @@ $ curl \
 
 ## Test sign with a managed key
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint allows an operator to validate that a managed key configuration works
 by signing and verifying some randomly generated data. If the call returns a successful HTTP
 status code, the configuration can be considered valid.
@@ -354,8 +348,6 @@ $ curl \
 
 
 ## Delete managed key
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint deletes the managed key at the given path provided it is not
 listed within any mount point's `allowed_managed_keys`.

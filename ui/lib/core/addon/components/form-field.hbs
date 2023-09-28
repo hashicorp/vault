@@ -97,7 +97,7 @@
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
       @validationError={{this.validationError}}
-      class={{if (not-eq @mode "customMetadata") "form-section"}}
+      class="form-section"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
@@ -281,12 +281,6 @@
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
-        {{! TODO: explore removing in favor of new model validations pattern since it is only used on the namespace model }}
-        {{#if @attr.options.validationAttr}}
-          {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
-            <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
-          {{/if}}
-        {{/if}}
       {{/if}}
     </div>
   {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}

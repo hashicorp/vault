@@ -3,7 +3,7 @@
 
 scenario "ui" {
   matrix {
-    edition = ["oss", "ent"]
+    edition = ["ce", "ent"]
     backend = ["consul", "raft"]
   }
 
@@ -20,12 +20,12 @@ scenario "ui" {
     backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
     backend_tag_key      = "VaultStorage"
     build_tags = {
-      "oss" = ["ui"]
+      "ce"  = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
     }
     bundle_path    = abspath(var.vault_artifact_path)
     distro         = "ubuntu"
-    consul_version = "1.14.2"
+    consul_version = "1.16.1"
     seal           = "awskms"
     tags = merge({
       "Project Name" : var.project_name
@@ -39,11 +39,7 @@ scenario "ui" {
     vault_install_dir  = var.vault_install_dir
     vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
-    ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
-  }
-
-  step "get_local_metadata" {
-    module = module.get_local_metadata
+    ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "ce") ? "!enterprise" : null
   }
 
   step "build_vault" {
@@ -75,7 +71,7 @@ scenario "ui" {
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
-    skip_step = matrix.backend == "raft" || var.backend_edition == "oss"
+    skip_step = matrix.backend == "raft" || var.backend_edition == "ce"
     module    = module.read_license
 
     variables {
@@ -84,7 +80,7 @@ scenario "ui" {
   }
 
   step "read_vault_license" {
-    skip_step = matrix.edition == "oss"
+    skip_step = matrix.edition == "ce"
     module    = module.read_license
 
     variables {
@@ -170,18 +166,37 @@ scenario "ui" {
         edition = var.backend_edition
         version = local.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
-      local_artifact_path      = local.bundle_path
-      storage_backend          = matrix.backend
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = local.seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
+      local_artifact_path  = local.bundle_path
+      packages             = global.distro_packages["ubuntu"]
+      storage_backend      = matrix.backend
+      target_hosts         = step.create_vault_cluster_targets.hosts
+      unseal_method        = local.seal
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
   step "test_ui" {
-    module = module.vault_test_ui
+    module     = module.vault_test_ui
+    depends_on = [step.wait_for_leader]
 
     variables {
       vault_addr               = step.create_vault_cluster_targets.hosts[0].public_ip

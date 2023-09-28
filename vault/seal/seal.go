@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -34,6 +35,11 @@ const (
 	StoredKeysSupportedShamirRoot
 )
 
+var (
+	ErrUnconfiguredWrapper = errors.New("unconfigured wrapper")
+	ErrNoHealthySeals      = errors.New("no healthy seals!")
+)
+
 func (s StoredKeysSupport) String() string {
 	switch s {
 	case StoredKeysNotSupported:
@@ -56,26 +62,45 @@ type SealGenerationInfo struct {
 // Validate is used to sanity check the seal generation info being created
 func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
+	numConfiguredSeals := len(sgi.Seals)
+	configuredSealNameAndType := sealNameAndTypeAsStr(sgi.Seals)
+
+	// If no previous generation info exists, make sure we perform the initial migration/setup
+	// check for enabled configured seals to allow an old style seal migration configuration
+	if existingSgi == nil {
+		if numConfiguredSeals > 1 {
+			return fmt.Errorf("Initializing a cluster or enabling multi-seal on an existing "+
+				"cluster must occur with a single seal before adding additional seals\n"+
+				"Configured seals: %v", configuredSealNameAndType)
+		}
+
+		// No point in comparing anything more as we don't have any information around the
+		// existing seal if any actually existed
+		return nil
+	}
+
+	existingSealNameAndType := sealNameAndTypeAsStr(existingSgi.Seals)
 	previousShamirConfigured := false
-	if existingSgi != nil {
-		if sgi.Generation == existingSgi.Generation {
-			if !cmp.Equal(sgi.Seals, existingSgi.Seals) {
-				return errors.New("existing seal generation is the same, but the configured seals are different")
-			}
-			return nil
-		}
 
-		existingSealsLen = len(existingSgi.Seals)
-		for _, sealKmsConfig := range existingSgi.Seals {
-			if sealKmsConfig.Type == wrapping.WrapperTypeShamir.String() {
-				previousShamirConfigured = true
-				break
-			}
+	if sgi.Generation == existingSgi.Generation {
+		if !haveMatchingSeals(sgi.Seals, existingSgi.Seals) {
+			return fmt.Errorf("existing seal generation is the same, but the configured seals are different\n"+
+				"Existing seals: %v\n"+
+				"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 		}
+		return nil
+	}
 
-		if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
-			return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
+	existingSealsLen = len(existingSgi.Seals)
+	for _, sealKmsConfig := range existingSgi.Seals {
+		if sealKmsConfig.Type == wrapping.WrapperTypeShamir.String() {
+			previousShamirConfigured = true
+			break
 		}
+	}
+
+	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 
 	numSealsToAdd := 0
@@ -85,43 +110,112 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 	// be set disabled, so, the number of seals to add is always going to be the length
 	// of new seal configs.
 	if previousShamirConfigured {
-		numSealsToAdd = len(sgi.Seals)
+		numSealsToAdd = numConfiguredSeals
 	} else {
-		numSealsToAdd = len(sgi.Seals) - existingSealsLen
+		numSealsToAdd = numConfiguredSeals - existingSealsLen
 	}
 
-	numSealsToDelete := existingSealsLen - len(sgi.Seals)
+	numSealsToDelete := existingSealsLen - numConfiguredSeals
 	switch {
 	case numSealsToAdd > 1:
-		return errors.New("cannot add more than one seal")
+		return fmt.Errorf("cannot add more than one seal\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 
 	case numSealsToDelete > 1:
-		return errors.New("cannot delete more than one seal")
+		return fmt.Errorf("cannot delete more than one seal\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 
 	case !previousShamirConfigured && existingSgi != nil && !haveCommonSeal(existingSgi.Seals, sgi.Seals):
 		// With a previously configured shamir seal, we are either going from [shamir]->[auto] or [shamir]->[another shamir],
 		// in which case we cannot have a common seal because shamir seals cannot be set to disabled, they can only be deleted.
-		return errors.New("must have at least one seal in common with the old generation")
+		return fmt.Errorf("must have at least one seal in common with the old generation\n"+
+			"Existing seals: %v\n"+
+			"Configured seals: %v", existingSealNameAndType, configuredSealNameAndType)
 	}
 	return nil
 }
 
-func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) (result bool) {
+func sealNameAndTypeAsStr(seals []*configutil.KMS) string {
+	info := []string{}
+	for _, seal := range seals {
+		info = append(info, fmt.Sprintf("Name: %s Type: %s", seal.Name, seal.Type))
+	}
+	return fmt.Sprintf("[%s]", strings.Join(info, ", "))
+}
+
+// haveMatchingSeals verifies that we have the corresponding matching seals by name and type, config and other
+// properties are ignored in the comparison
+func haveMatchingSeals(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) bool {
+	if len(existingSealKmsConfigs) != len(newSealKmsConfigs) {
+		return false
+	}
+
+	for _, existingSealKmsConfig := range existingSealKmsConfigs {
+		found := false
+		for _, newSealKmsConfig := range newSealKmsConfigs {
+			if cmp.Equal(existingSealKmsConfig, newSealKmsConfig, compareKMSConfigByNameAndType()) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// haveCommonSeal verifies that we have at least one matching seal across
+// the inputs by name and type, config and other properties are ignored in
+// the comparison
+func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) bool {
 	for _, existingSealKmsConfig := range existingSealKmsConfigs {
 		for _, newSealKmsConfig := range newSealKmsConfigs {
-			// Clone the existing seal config and set 'Disabled' and 'Priority' fields same as the
-			// new seal config, because there might be a case where a seal might be disabled in
-			// current config, but might be stored as enabled previously, and this still needs to
-			// be considered as a common seal.
-			clonedSgi := existingSealKmsConfig.Clone()
-			clonedSgi.Disabled = newSealKmsConfig.Disabled
-			clonedSgi.Priority = newSealKmsConfig.Priority
-			if cmp.Equal(clonedSgi, newSealKmsConfig.Clone()) {
+			// Technically we might be matching the "wrong" seal if the old seal was renamed to
+			// "transit-disabled" and we have a new seal named transit. There isn't any way for
+			// us to properly distinguish between them
+			if cmp.Equal(existingSealKmsConfig, newSealKmsConfig, compareKMSConfigByNameAndType()) {
 				return true
 			}
 		}
 	}
+
+	// We might have renamed a disabled seal that was previously used so attempt to match by
+	// removing the "-disabled" suffix
+	for _, seal := range findRenamedDisabledSeals(newSealKmsConfigs) {
+		clonedSeal := seal.Clone()
+		clonedSeal.Name = strings.TrimSuffix(clonedSeal.Name, configutil.KmsRenameDisabledSuffix)
+
+		for _, existingSealKmsConfig := range existingSealKmsConfigs {
+			if cmp.Equal(existingSealKmsConfig, clonedSeal, compareKMSConfigByNameAndType()) {
+				return true
+			}
+		}
+	}
+
 	return false
+}
+
+func findRenamedDisabledSeals(configs []*configutil.KMS) []*configutil.KMS {
+	diabledSeals := []*configutil.KMS{}
+	for _, seal := range configs {
+		if seal.Disabled && strings.HasSuffix(seal.Name, configutil.KmsRenameDisabledSuffix) {
+			diabledSeals = append(diabledSeals, seal)
+		}
+	}
+	return diabledSeals
+}
+
+func compareKMSConfigByNameAndType() cmp.Option {
+	// We only match based on name and type to avoid configuration changes such
+	// as a Vault token change in the config map from eliminating the match and
+	// preventing startup on a matching seal.
+	return cmp.Comparer(func(a, b *configutil.KMS) bool {
+		return a.Name == b.Name && a.Type == b.Type
+	})
 }
 
 // SetRewrapped updates the SealGenerationInfo's rewrapped status to the provided value.
@@ -161,6 +255,16 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// OldKey is used as a return value from Decrypt to indicate that the old
+// key was used for decryption and that the value should be re-encrypted
+// with the new key and saved. It is not returned as an error by any
+// function.
+var OldKey = errors.New("decrypted with old key")
+
+func IsOldKeyError(err error) bool {
+	return errors.Is(err, OldKey)
+}
+
 // Access is the embedded implementation of autoSeal that contains logic
 // specific to encrypting and decrypting data, or in this case keys.
 type Access interface {
@@ -194,8 +298,11 @@ type Access interface {
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 
-	// GetAllSealWrappersByPriority returns all the SealWrapper for all the seal wrappers, including disabled ones.
+	// GetConfiguredSealWrappersByPriority returns all the SealWrappers including disabled and unconfigured wrappers.
 	GetAllSealWrappersByPriority() []*SealWrapper
+
+	// GetConfiguredSealWrappersByPriority returns all the configured SealWrappers for all the seal wrappers, including disabled ones.
+	GetConfiguredSealWrappersByPriority() []*SealWrapper
 
 	// GetEnabledSealWrappersByPriority returns the SealWrapper for the enabled seal wrappers.
 	GetEnabledSealWrappersByPriority() []*SealWrapper
@@ -264,37 +371,58 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 // The SealWrapper created uses the seal config type as the name, has priority set to 1 and the
 // disabled flag set to false.
 func NewAccessFromWrapper(logger hclog.Logger, wrapper wrapping.Wrapper, sealConfigType string) (Access, error) {
-	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false)
+	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false, true)
 
 	return NewAccessFromSealWrappers(logger, 1, true, []*SealWrapper{sealWrapper})
 }
 
 func (a *access) GetAllSealWrappersByPriority() []*SealWrapper {
-	return copySealWrappers(a.wrappersByPriority, false)
+	return a.filterSealWrappers(allWrappers)
+}
+
+func (a *access) GetConfiguredSealWrappersByPriority() []*SealWrapper {
+	return a.filterSealWrappers(configuredWrappers, allWrappers)
 }
 
 func (a *access) GetEnabledSealWrappersByPriority() []*SealWrapper {
-	return copySealWrappers(a.wrappersByPriority, true)
+	return a.filterSealWrappers(configuredWrappers, enabledWrappers)
 }
 
 func (a *access) AllSealWrappersHealthy() bool {
-	for _, sw := range a.wrappersByPriority {
-		// Ignore disabled seals
-		if sw.Disabled {
-			continue
-		}
-		if !sw.IsHealthy() {
-			return false
-		}
-	}
+	return len(a.wrappersByPriority) == len(a.filterSealWrappers(configuredWrappers, healthyWrappers))
+}
+
+type sealWrapperFilter func(*SealWrapper) bool
+
+func allWrappers(wrapper *SealWrapper) bool {
 	return true
 }
 
-func copySealWrappers(sealWrappers []*SealWrapper, enabledOnly bool) []*SealWrapper {
-	ret := make([]*SealWrapper, 0, len(sealWrappers))
-	for _, sw := range sealWrappers {
-		if enabledOnly && sw.Disabled {
-			continue
+func healthyWrappers(wrapper *SealWrapper) bool {
+	return wrapper.IsHealthy()
+}
+
+func enabledWrappers(wrapper *SealWrapper) bool {
+	return !wrapper.Disabled
+}
+
+func configuredWrappers(wrapper *SealWrapper) bool {
+	return wrapper.Configured
+}
+
+// Returns a slice of wrappers who satisfy all filters
+func (a *access) filterSealWrappers(filters ...sealWrapperFilter) []*SealWrapper {
+	return filterSealWrappers(a.wrappersByPriority, filters...)
+}
+
+func filterSealWrappers(wrappers []*SealWrapper, filters ...sealWrapperFilter) []*SealWrapper {
+	ret := make([]*SealWrapper, 0, len(wrappers))
+outer:
+	for _, sw := range wrappers {
+		for _, f := range filters {
+			if !f(sw) {
+				continue outer
+			}
 		}
 		ret = append(ret, sw)
 	}
@@ -319,7 +447,7 @@ func (a *access) GetEnabledWrappers() []wrapping.Wrapper {
 
 func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 	var keyIds []string
-	for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
+	for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
 		if initWrapper, ok := sealWrapper.Wrapper.(wrapping.InitFinalizer); ok {
 			if err := initWrapper.Init(ctx, options...); err != nil {
 				return err
@@ -348,11 +476,10 @@ func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKey
 			a.logger.Error("error refreshing seal key IDs")
 			return false, JoinSealWrapErrors("cannot determine key IDs of Access wrappers", errs)
 		}
-		// TODO(SEALHA): What to do if there are partial failures?
 		if len(errs) > 0 {
 			msg := "could not determine key IDs of some Access wrappers"
-			a.logger.Warn(msg)
-			a.logger.Trace("partial failure refreshing seal key IDs", "err", JoinSealWrapErrors(msg, errs))
+			a.logger.Error("partial failure refreshing seal key IDs", "err", JoinSealWrapErrors(msg, errs))
+			return false, JoinSealWrapErrors(msg, errs)
 		}
 		a.keyIdSet.set(test)
 	}
@@ -360,43 +487,90 @@ func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKey
 	return a.keyIdSet.equal(value), nil
 }
 
+const (
+	// wrapperEncryptTimeout is the duration we will wait for seal wrappers to return from an encrypt call.
+	// After the timeout, we return any successful results and errors for the rest of the wrappers, so
+	// that a partial seal wrap entry can be recorded.
+	wrapperEncryptTimeout = 10 * time.Second
+
+	// wrapperDecryptHighPriorityHeadStart is the duration we wait for the highest priority wrapper
+	// to return from a decrypt call before we try decrypting with any additional wrappers.
+	wrapperDecryptHighPriorityHeadStart = 2 * time.Second
+)
+
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
 func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error) {
+	// Note that we do not encrypt with disabled wrappers. Disabled wrappers are only used to decrypt.
+	candidateWrappers := a.filterSealWrappers(enabledWrappers, healthyWrappers)
+	if len(candidateWrappers) == 0 {
+		// If all seals are unhealthy, try any way since a seal may have recovered
+		candidateWrappers = a.filterSealWrappers(enabledWrappers)
+	}
+	enabledWrappersByPriority := filterSealWrappers(candidateWrappers, configuredWrappers)
+
+	type result struct {
+		name       string
+		ciphertext *wrapping.BlobInfo
+		err        error
+	}
+	resultCh := make(chan *result)
+
+	encryptCtx, cancelEncryptCtx := context.WithTimeout(ctx, wrapperEncryptTimeout)
+	defer cancelEncryptCtx()
+
+	// Start goroutines to encrypt the value using each of the wrappers.
+	for _, sealWrapper := range enabledWrappersByPriority {
+		go func(sealWrapper *SealWrapper) {
+			ciphertext, err := a.tryEncrypt(encryptCtx, sealWrapper, plaintext, options...)
+			resultCh <- &result{
+				name:       sealWrapper.Name,
+				ciphertext: ciphertext,
+				err:        err,
+			}
+		}(sealWrapper)
+	}
+
+	results := make(map[string]*result)
+GATHER_RESULTS:
+	for {
+		select {
+		case result := <-resultCh:
+			results[result.name] = result
+			if len(results) == len(enabledWrappersByPriority) {
+				break GATHER_RESULTS
+			}
+		case <-encryptCtx.Done():
+			break GATHER_RESULTS
+		case <-ctx.Done():
+			cancelEncryptCtx()
+			break GATHER_RESULTS
+		}
+	}
+
+	// Sort out the successful results from the errors
 	var slots []*wrapping.BlobInfo
 	errs := make(map[string]error)
-
-	for _, sealWrapper := range a.GetEnabledSealWrappersByPriority() {
-		now := time.Now()
-		var encryptErr error
-		defer func(now time.Time) {
-			metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
-			metrics.MeasureSince([]string{"seal", sealWrapper.Name, "encrypt", "time"}, now)
-
-			if encryptErr != nil {
-				metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
-				metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt", "error"}, 1)
+	for _, sealWrapper := range enabledWrappersByPriority {
+		if result, ok := results[sealWrapper.Name]; ok {
+			if result.err != nil {
+				errs[sealWrapper.Name] = result.err
+			} else {
+				slots = append(slots, result.ciphertext)
 			}
-		}(now)
-
-		metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
-		metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt"}, 1)
-
-		ciphertext, encryptErr := sealWrapper.Wrapper.Encrypt(ctx, plaintext, options...)
-		if encryptErr != nil {
-			a.logger.Warn("error encrypting with seal", "seal", sealWrapper.Name)
-			a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", encryptErr)
-
-			errs[sealWrapper.Name] = encryptErr
-			sealWrapper.SetHealthy(false, now)
 		} else {
-			a.logger.Trace("encrypted value using seal", "seal", sealWrapper.Name, "keyId", ciphertext.KeyInfo.KeyId)
-
-			slots = append(slots, ciphertext)
+			if encryptCtx.Err() != nil {
+				errs[sealWrapper.Name] = encryptCtx.Err()
+			} else {
+				// Just being paranoid, encryptCtx.Err() should never be nil in this case
+				errs[sealWrapper.Name] = errors.New("context timeout exceeded")
+			}
+			// This failure did not happen on tryDecrypt, so we must log it here
+			a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", errs[sealWrapper.Name])
 		}
 	}
 
 	if len(slots) == 0 {
-		a.logger.Error("all seals failed to encrypt value")
+		a.logger.Error("failed to encrypt value using any seal wrappers")
 		return nil, errs
 	}
 
@@ -407,10 +581,49 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 		Slots:      slots,
 	}
 
-	// cache key IDs
-	a.keyIdSet.set(ret)
+	if len(errs) == 0 {
+		// cache key IDs
+		a.keyIdSet.set(ret)
+	}
+
+	// Add errors for unconfigured wrappers
+	for _, sw := range candidateWrappers {
+		if !sw.Configured {
+			errs[sw.Name] = ErrUnconfiguredWrapper
+		}
+	}
 
 	return ret, errs
+}
+
+func (a *access) tryEncrypt(ctx context.Context, sealWrapper *SealWrapper, plaintext []byte, options ...wrapping.Option) (*wrapping.BlobInfo, error) {
+	now := time.Now()
+	var encryptErr error
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", sealWrapper.Name, "encrypt", "time"}, now)
+
+		if encryptErr != nil {
+			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt", "error"}, 1)
+		}
+	}(now)
+
+	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt"}, 1)
+
+	ciphertext, encryptErr := sealWrapper.Wrapper.Encrypt(ctx, plaintext, options...)
+	if encryptErr != nil {
+		a.logger.Warn("error encrypting with seal", "seal", sealWrapper.Name)
+		a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", encryptErr)
+
+		sealWrapper.SetHealthy(false, now)
+		return nil, encryptErr
+	}
+	a.logger.Trace("encrypted value using seal", "seal", sealWrapper.Name, "keyId", ciphertext.KeyInfo.KeyId)
+
+	sealWrapper.SetHealthy(true, now)
+	return ciphertext, nil
 }
 
 // Decrypt uses the underlying seal to decrypt the ciphertext and returns it.
@@ -426,46 +639,110 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		return nil, false, err
 	}
 
-	// First, lets try the wrappers in order of priority and look for an exact key ID match
-	for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
-		if keyId, err := sealWrapper.Wrapper.KeyId(ctx); err == nil {
-			if blobInfo, ok := blobInfoMap[keyId]; ok {
-				pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfo, options)
-				if oldKey {
-					a.logger.Trace("decrypted using OldKey", "seal", sealWrapper.Name)
-					return pt, false, err
+	wrappersByPriority := a.filterSealWrappers(configuredWrappers, healthyWrappers)
+	if len(wrappersByPriority) == 0 {
+		// If all seals are unhealthy, try any way since a seal may have recovered
+		wrappersByPriority = a.filterSealWrappers(configuredWrappers)
+	}
+	if len(wrappersByPriority) == 0 {
+		return nil, false, ErrNoHealthySeals
+	}
+
+	type result struct {
+		name   string
+		pt     []byte
+		oldKey bool
+		err    error
+	}
+	resultCh := make(chan *result)
+
+	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
+		resultCh <- &result{
+			name:   name,
+			pt:     plaintext,
+			oldKey: oldKey,
+			err:    err,
+		}
+	}
+
+	decrypt := func(sealWrapper *SealWrapper) {
+		pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfoMap, options)
+		reportResult(sealWrapper.Name, pt, oldKey, err)
+	}
+
+	// Start goroutines to decrypt the value
+
+	first := wrappersByPriority[0]
+	// First, if we only have one slot, try matching by keyId
+	if len(blobInfoMap) == 1 {
+	outer:
+		for k := range blobInfoMap {
+			for _, sealWrapper := range wrappersByPriority {
+				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
+				if err != nil {
+					reportResult(sealWrapper.Name, nil, false, err)
+					continue
 				}
-				if err == nil {
-					a.logger.Trace("decrypted value using seal", "seal", sealWrapper.Name)
-					return pt, isUpToDate, nil
+				if keyId == k {
+					first = sealWrapper
+					break outer
 				}
-				// If there is an error, keep trying with the other wrappers
-				a.logger.Trace("error decrypting with seal, will try other seals", "seal", sealWrapper.Name, "keyId", keyId, "err", err)
 			}
 		}
 	}
 
-	// No key ID match, so try each wrapper with all slots
+	go decrypt(first)
+	for _, sealWrapper := range wrappersByPriority {
+		sealWrapper := sealWrapper
+		if sealWrapper != first {
+			timer := time.AfterFunc(wrapperDecryptHighPriorityHeadStart, func() {
+				decrypt(sealWrapper)
+			})
+			defer timer.Stop()
+		}
+	}
+
+	// Gathering failures, but return right away if there is a succesful result
 	errs := make(map[string]error)
-	for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
-		for _, blobInfo := range ciphertext.Slots {
-			pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfo, options)
-			if oldKey {
-				a.logger.Trace("decrypted using OldKey", "seal", sealWrapper.Name)
-				return pt, false, err
+GATHER_RESULTS:
+	for {
+		select {
+		case result := <-resultCh:
+			switch {
+			case result.err != nil:
+				errs[result.name] = result.err
+				if len(errs) == len(wrappersByPriority) {
+					break GATHER_RESULTS
+				}
+
+			case result.oldKey:
+				return result.pt, false, OldKey
+
+			default:
+				return result.pt, isUpToDate, nil
 			}
-			if err == nil {
-				a.logger.Trace("decrypted value using seal", "seal", sealWrapper.Name)
-				return pt, isUpToDate, nil
-			}
-			errs[sealWrapper.Name] = err
+		case <-ctx.Done():
+			break GATHER_RESULTS
 		}
 	}
 
-	return nil, false, JoinSealWrapErrors("error decrypting seal wrapped value", errs)
+	// No wrapper was able to decrypt the value, return an error
+
+	if len(errs) > 0 {
+		return nil, false, JoinSealWrapErrors("error decrypting seal wrapped value", errs)
+	}
+
+	if ctx.Err() != nil {
+		return nil, false, ctx.Err()
+	}
+	// Just being paranoid, ctx.Err() should never be nil in this case
+	return nil, false, errors.New("context timeout exceeded")
 }
 
-func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, ciphertext *wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
+// tryDecrypt returns the plaintext and a flad indicating whether the decryption was done by the "unwrapSeal" (see
+// sealWrapMigration.Decrypt).
+func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, ciphertextByKeyId map[string]*wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
+	now := time.Now()
 	var decryptErr error
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
@@ -475,19 +752,52 @@ func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, ciphe
 			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
 			metrics.IncrCounter([]string{"seal", sealWrapper.Name, "decrypt", "error"}, 1)
 		}
-		// TODO (multiseal): log an error?
-	}(time.Now())
+	}(now)
 
 	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
 	metrics.IncrCounter([]string{"seal", sealWrapper.Name, "decrypt"}, 1)
 
-	pt, err := sealWrapper.Wrapper.Decrypt(ctx, ciphertext, options...)
-	isOldKey := false
-	if err != nil && err.Error() == "decrypted with old key" {
-		// This is for compatibility with sealWrapMigration
-		isOldKey = true
+	var pt []byte
+
+	// First, let's look for an exact key ID match
+	var keyId string
+	if id, err := sealWrapper.Wrapper.KeyId(ctx); err == nil {
+		keyId = id
+		if ciphertext, ok := ciphertextByKeyId[keyId]; ok {
+			pt, decryptErr = sealWrapper.Wrapper.Decrypt(ctx, ciphertext, options...)
+
+			sealWrapper.SetHealthy(decryptErr == nil || IsOldKeyError(decryptErr), now)
+		}
 	}
-	return pt, isOldKey, err
+	// If we don't get a result, try all the slots
+	if pt == nil && decryptErr == nil {
+		for _, ciphertext := range ciphertextByKeyId {
+			pt, decryptErr = sealWrapper.Wrapper.Decrypt(ctx, ciphertext, options...)
+			if decryptErr == nil {
+				// Note that we only update wrapper health for failures on exact key ID match,
+				// otherwise we would have false negatives.
+				sealWrapper.SetHealthy(true, now)
+				break
+			}
+		}
+	}
+
+	switch {
+	case decryptErr != nil && IsOldKeyError(decryptErr):
+		// an OldKey error is not an actual error, it just means that the decryption was done
+		// by the "unwrapSeal" of a seal migration (see sealWrapMigration.Decrypt).
+		a.logger.Trace("decrypted using OldKey", "seal_name", sealWrapper.Name)
+		return pt, true, nil
+
+	case decryptErr != nil:
+		// Note that if there are more than one ciphertext, the error may be misleading...
+		a.logger.Trace("error decrypting with seal, this may be a harmless mismatch between wrapper and ciphertext", "seal_name", sealWrapper.Name, "keyId", keyId, "err", decryptErr)
+		return nil, false, decryptErr
+
+	default:
+		a.logger.Trace("decrypted value using seal", "seal_name", sealWrapper.Name)
+		return pt, false, nil
+	}
 }
 
 func JoinSealWrapErrors(msg string, errorMap map[string]error) error {
@@ -501,7 +811,7 @@ func JoinSealWrapErrors(msg string, errorMap map[string]error) error {
 func (a *access) Finalize(ctx context.Context, options ...wrapping.Option) error {
 	var errs []error
 
-	for _, w := range a.GetAllSealWrappersByPriority() {
+	for _, w := range a.GetConfiguredSealWrappersByPriority() {
 		if finalizeWrapper, ok := w.Wrapper.(wrapping.InitFinalizer); ok {
 			if err := finalizeWrapper.Finalize(ctx, options...); err != nil {
 				errs = append(errs, err)

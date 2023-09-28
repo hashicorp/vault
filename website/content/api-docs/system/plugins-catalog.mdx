@@ -12,8 +12,6 @@ once registered backends can use the plugin by querying the catalog.
 
 ## LIST plugins
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint lists the plugins in the catalog by type.
 
 | Method | Path                   |
@@ -71,21 +69,29 @@ $ curl \
                 "version": "v1.12.0+builtin.vault"
             },
             ...
+            {
+                "builtin": false,
+                "name": "example-plugin",
+                "type": "secret",
+                "oci_image": "example-secret-plugin-oci-image",
+                "runtime": "example-runtime",
+                "version": "v1.0.0"
+            },
+            ...
         ],
         "secret": [
             "ad",
             "aws",
             "azure",
             "gcp",
-            "transit"
+            "transit",
+            "example-plugin",
         ]
     }
 }
 ```
 
 ## LIST plugins
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -122,8 +128,6 @@ $ curl \
 
 ## Register plugin
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint registers a new plugin, or updates an existing one with the
 supplied name.
 
@@ -143,14 +147,23 @@ supplied name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-- `version` `(string: "")` - Specifies the semantic version of this plugin.
+- `oci_image` `(string: "")` - Specifies OCI image to run. If specified, setting `command`,
+  `args`, and `env` will update the container's entrypoint, args, and environment
+  variables (append-only) respectively.
+
+- `runtime` `(string: "")` - Specifies Vault plugin runtime to use if `oci_image` is specified.
+  See [/sys/plugins/runtimes/catalog](/vault/api-docs/system/plugins-runtimes-catalog) for additional information.
+
+- `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
+  when specifying `oci_image`, but with any leading 'v' trimmed.
 
 - `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
-  binary. Before a plugin is run it's SHA will be checked against this value, if
-  they do not match the plugin can not be run.
+  binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
+  If they do not match the plugin can not be run.
 
-- `command` `(string: <required>)` – Specifies the command used to execute the
-  plugin. This is relative to the plugin directory. e.g. `"myplugin"`.
+- `command` `(string: <required>)` - Specifies the command used to execute the
+  plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
+  is also specified, it is relative to the image's working directory.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
@@ -169,6 +182,16 @@ supplied name.
 }
 ```
 
+### Sample payload using OCI image
+
+```json
+{
+  "sha256": "d150b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961a9",
+  "oci_image": "example-secret-plugin-oci-image",
+  "runtime": "example-runtime"
+}
+```
+
 ### Sample request
 
 ```shell-session
@@ -180,8 +203,6 @@ $ curl \
 ```
 
 ## Read plugin
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the configuration data for the plugin with the given name.
 
@@ -219,7 +240,9 @@ $ curl \
   "data": {
     "args": [],
     "builtin": false,
-    "command": "/tmp/vault-plugins/mysql-database-plugin",
+    "runtime": "example-runtime",
+    "oci_image": "example-secret-plugin-oci-image",
+    "command": "/example-secret-plugin",
     "name": "example-plugin",
     "sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek=",
     "version": "v1.0.0"
@@ -228,8 +251,6 @@ $ curl \
 ```
 
 ## Remove plugin from catalog
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint removes the plugin with the given name.
 

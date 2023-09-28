@@ -467,6 +467,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
@@ -544,8 +550,18 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return nil, err
 		}
 	}
-	if ociImage != "" && runtime.GOOS != "linux" {
-		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+
+	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
@@ -574,8 +590,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Name:     pluginName,
 		Type:     pluginType,
 		Version:  pluginVersion,
-		Command:  command,
 		OCIImage: ociImage,
+		Runtime:  pluginRuntime,
+		Command:  command,
 		Args:     args,
 		Env:      env,
 		Sha256:   sha256Bytes,
@@ -650,6 +667,10 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 
 	if plugin.OCIImage != "" {
 		data["oci_image"] = plugin.OCIImage
+	}
+
+	if plugin.Runtime != "" {
+		data["runtime"] = plugin.Runtime
 	}
 
 	return &logical.Response{
@@ -815,6 +836,15 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	plugins, err := b.Core.pluginCatalog.ListPluginsWithRuntime(ctx, runtimeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(plugins) != 0 {
+		return logical.ErrorResponse("unable to delete %q runtime. Registered plugins=%v are referencing it.", runtimeName, plugins), nil
+	}
+
 	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
 	if err != nil {
 		return nil, err
@@ -839,7 +869,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
@@ -856,9 +886,22 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}}, nil
 }
 
-func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []map[string]any
-	for _, runtimeType := range consts.PluginRuntimeTypes {
+
+	var pluginRuntimeTypes []consts.PluginRuntimeType
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr != "" {
+		runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		pluginRuntimeTypes = []consts.PluginRuntimeType{runtimeType}
+	} else {
+		pluginRuntimeTypes = consts.PluginRuntimeTypes
+	}
+
+	for _, runtimeType := range pluginRuntimeTypes {
 		if runtimeType == consts.PluginRuntimeTypeUnsupported {
 			continue
 		}
@@ -3181,11 +3224,13 @@ const (
 
 // handlePoliciesPasswordList returns the list of password policies
 func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
-	keys, err := req.Storage.List(ctx, "password_policy/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "password_policy/")
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "password_policy/")
+	}
 	return logical.ListResponse(keys), nil
 }
 
@@ -4995,7 +5040,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
+		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
 			b := SealBackendStatus{
 				Name:    sealWrapper.Name,
 				Healthy: sealWrapper.IsHealthy(),
@@ -5021,6 +5066,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 				Healthy: true,
 			},
 		}
+		r.Healthy = true
 	}
 	return &r, nil
 }
@@ -6123,6 +6169,10 @@ Each entry is of the form "key=value".`,
 Must already be present on the machine.`,
 		"",
 	},
+	"plugin-catalog_runtime": {
+		`The Vault plugin runtime to use when running the plugin.`,
+		"",
+	},
 	"plugin-runtime-catalog": {
 		"Configures plugin runtimes",
 		`
@@ -6157,15 +6207,15 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-runtime-catalog_cgroup-parent": {
-		"Optional parent cgroup for the container",
+		"Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
 		"",
 	},
 	"plugin-runtime-catalog_cpu-nanos": {
-		"The limit of runtime CPU in nanos",
+		"CPU limit to set per container in nanos. Defaults to no limit.",
 		"",
 	},
 	"plugin-runtime-catalog_memory-bytes": {
-		"The limit of runtime memory in bytes",
+		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {

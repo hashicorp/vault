@@ -1,0 +1,47 @@
+---
+layout: api
+page_title: /sys/seal-backend-status - HTTP API
+description: The `/sys/seal-backend-status` endpoint is used to check the status of each seal backend.
+---
+
+# `/sys/seal-backend-status`
+
+The `/sys/seal-backend-status` endpoint is used to display the status of
+each backing seal, namely whether each backend is healthy.
+
+## Seal Backend Status
+
+This endpoint returns the seal status of the Vault. This is an unauthenticated
+endpoint.
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `GET`  | `/sys/seal-backend-status` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/seal-backend-status
+```
+
+### Sample response
+
+
+```json
+{ 
+  "healthy": false,
+  "unhealthy_since": "2023-09-22T08:34:11Z",
+  "backends": [
+     {
+      "name": "hsm",
+      "healthy": true
+     },
+     {
+      "name": "transit",
+      "healthy": false,
+      "unhealthy_since": "2023-09-22T08:34:11Z"
+     }
+  ]
+}
+```

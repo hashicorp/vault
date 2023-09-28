@@ -76,7 +76,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('it should copy tooltip', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     this.set('isCopyable', false);
 
@@ -91,13 +91,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
+    assert.dom('[data-test-tooltip-copy]').doesNotExist('Tooltip has no copy button');
+    this.set('isCopyable', true);
+    assert.dom('[data-test-tooltip-copy]').exists('Tooltip has copy button');
     assert
       .dom('[data-test-tooltip-copy]')
-      .doesNotHaveClass('has-pointer', 'Pointer class not applied when disabled');
-    this.set('isCopyable', true);
-    assert.dom('[data-test-tooltip-copy]').doesNotHaveAttribute('disabled', 'Tooltip copy button is enabled');
-    assert.dom('[data-test-tooltip-copy]').hasClass('has-pointer', 'Pointer class applied to copy button');
+      .hasAttribute('data-clipboard-text', 'Foo bar', 'Copy button will copy the tooltip text');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {
@@ -138,13 +137,13 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     this.set('value', '');
     this.set('label', LABEL);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for empty string value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for empty string value');
 
     this.set('value', null);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for null value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for null value');
 
     this.set('value', undefined);
-    assert.dom('div.column.is-flex .flight-icon').exists('Renders a dash (-) for undefined value');
+    assert.dom('div.column.is-flex-center .flight-icon').exists('Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
     assert.dom('[data-test-value-div]').hasText(DEFAULT, 'Renders default text if value is empty');

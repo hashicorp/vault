@@ -1,4 +1,3 @@
----
 name: build
 
 on:
@@ -35,11 +34,10 @@ jobs:
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
-      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
       package-name: ${{ steps.get-metadata.outputs.package-name }}
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
-      vault-version: ${{ steps.get-metadata.outputs.vault-version }}
-      vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
+      vault-version: ${{ steps.set-product-version.outputs.product-version }}
+      vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Ensure Go modules are cached
@@ -48,25 +46,23 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+      - name: Set Product version
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v1
       - name: Get metadata
         id: get-metadata
         env:
-          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
-          # test group. It should be set to the highest test_group used in the
-          # enos-run-matrices.
-          MATRIX_MAX_TEST_GROUPS: 5
+          VAULT_VERSION: ${{ steps.set-product-version.outputs.product-version }}
         run: |
           # shellcheck disable=SC2129
           echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
-          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
           echo "package-name=vault" >> "$GITHUB_OUTPUT"
-          echo "vault-base-version=$(make ci-get-version-base)" >> "$GITHUB_OUTPUT"
           echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
-          echo "vault-version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
+          echo "vault-version-package=$(make ci-get-version-package)" >> "$GITHUB_OUTPUT"
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
         with:
-          version: ${{ steps.get-metadata.outputs.vault-version }}
+          version: ${{ steps.set-product-version.outputs.product-version }}
           product: ${{ steps.get-metadata.outputs.package-name }}
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
@@ -122,7 +118,7 @@ jobs:
           - goos: windows
             goarch: arm
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -143,7 +139,7 @@ jobs:
         goos: [linux]
         goarch: [arm, arm64, 386, amd64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
@@ -163,7 +159,7 @@ jobs:
         goos: [darwin]
         goarch: [amd64, arm64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -183,17 +179,20 @@ jobs:
     strategy:
       matrix:
         arch: [arm, arm64, 386, amd64]
+    env:
+      repo: ${{ github.event.repository.name }}
+      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{ needs.product-metadata.outputs.vault-version }}
+          version: ${{ env.version }}
           target: default
           arch: ${{ matrix.arch }}
-          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: vault_${{ env.version }}_linux_${{ matrix.arch }}.zip
           tags: |
-            docker.io/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
-            public.ecr.aws/hashicorp/${{ github.event.repository.name }}:${{ needs.product-metadata.outputs.vault-version }}
+            docker.io/hashicorp/${{ env.repo }}:${{ env.version }}
+            public.ecr.aws/hashicorp/${{ env.repo }}:${{ env.version }}
 
   build-ubi:
     name: UBI image
@@ -204,15 +203,19 @@ jobs:
     strategy:
       matrix:
         arch: [amd64]
+    env:
+      repo: ${{ github.event.repository.name }}
+      version: ${{ needs.product-metadata.outputs.vault-version }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{ needs.product-metadata.outputs.vault-version }}
+          version: ${{ env.version }}
           target: ubi
           arch: ${{ matrix.arch }}
-          zip_artifact_name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ needs.product-metadata.outputs.vault-version }}-ubi
+          zip_artifact_name: vault_${{ env.version }}_linux_${{ matrix.arch }}.zip
+          # The redhat_tag differs on CE and ENT editions. Be mindful when resolving merge conflicts.
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{ env.version }}-ubi
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
@@ -233,17 +236,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - matrix-file-name: build-github-oss-linux-amd64-zip
+          - sample-name: build_ce_linux_amd64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
+          - sample-name: build_ce_linux_arm64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
+          - sample-name: build_ce_linux_amd64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
+          - sample-name: build_ce_linux_arm64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
+          - sample-name: build_ce_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - matrix-file-name: build-github-oss-linux-arm64-zip
+          - sample-name: build_ce_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
-      matrix-file-name: ${{ matrix.matrix-file-name }}
-      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
-      vault-edition: oss
-      vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      sample-max: 1
+      sample-name: ${{ matrix.sample-name }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
+      vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
+      vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
   test-docker-k8s:
@@ -315,7 +326,7 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-completed-successfully-failures-oss:
+  notify-completed-successfully-failures-ce:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
@@ -335,7 +346,7 @@ jobs:
         with:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
-            {"text":"OSS build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {"text":"CE build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: CE build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
 
   notify-completed-successfully-failures-ent:
     if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}

@@ -34,6 +34,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeSecret(this.backend, this.fullSecretPath, 'foo', 'bar');
+    await writeSecret(this.backend, 'edge/one', 'foo', 'bar');
+    await writeSecret(this.backend, 'edge/two', 'foo', 'bar');
     return;
   });
 
@@ -249,6 +251,19 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         );
     });
   });
+
+  test('no ghost item after editing metadata', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/edge/directory`);
+    assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
+    await click(PAGE.list.item('two'));
+    await click(PAGE.secretTab('Metadata'));
+    await click(PAGE.metadata.editBtn);
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.valueInput(), 'bar');
+    await click(FORM.saveBtn);
+    await click(PAGE.breadcrumbAtIdx(2));
+    assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
+  });
 });
 
 // NAMESPACE TESTS
@@ -366,7 +381,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
 
     test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
-      assert.expect(32);
+      assert.expect(34);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-delete-secret';
