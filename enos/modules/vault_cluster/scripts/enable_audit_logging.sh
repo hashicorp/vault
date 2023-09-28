@@ -12,14 +12,17 @@ set -exo pipefail
 nohup nc -kl 9090 &> /dev/null < /dev/null &
 
 # Wait for nc to be listening before we attempt to enable the socket auditor.
-retries=3
+attempts=3
 count=0
 until nc -zv 127.0.0.1 9090 &> /dev/null < /dev/null; do
   wait=$((2 ** count))
   count=$((count + 1))
 
-  if [ "$count" -lt "$retries" ]; then
+  if [ "$count" -le "$attempts" ]; then
     sleep "$wait"
+    if ! pgrep -x nc; then
+      nohup nc -kl 9090 &> /dev/null < /dev/null &
+    fi
   else
 
     echo "Timed out waiting for nc to listen on 127.0.0.1:9090" 1>&2
