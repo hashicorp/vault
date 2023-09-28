@@ -19,7 +19,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 
 	expected := &DefaultConfig{
-		TokenHelper: "foo",
+		TokenHelper: "fooo",
 	}
 	if !reflect.DeepEqual(expected, config) {
 		t.Fatalf("bad: %#v", config)
