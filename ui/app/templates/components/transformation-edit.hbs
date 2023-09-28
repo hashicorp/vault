@@ -97,7 +97,7 @@
 
 {{#if this.isEditModalActive}}
   <Hds::Modal id="transformation-edit-modal" @color="warning" @onClose={{fn (mut this.isEditModalActive) false}} as |M|>
-    <M.Header>
+    <M.Header @icon="alert-triangle">
       Edit transformation
     </M.Header>
     <M.Body>
@@ -109,12 +109,12 @@
     <M.Footer as |F|>
       <Hds::ButtonSet>
         <Hds::Button
-          type="button"
           @text="Confirm"
-          {{on "click" (transition-to "vault.cluster.secrets.backend.edit" this.model.id)}}
+          @route="vault.cluster.secrets.backend.edit"
+          @model={{this.model.id}}
           data-test-edit-confirm-button
         />
-        <Hds::Button type="button" @color="secondary" @text="Cancel" {{on "click" F.close}} />
+        <Hds::Button @color="secondary" @text="Cancel" {{on "click" F.close}} />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
