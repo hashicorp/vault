@@ -18,7 +18,6 @@ func TestSerializeDeserialize(t *testing.T) {
 		ID:            "testid",
 		Token:         "testtoken",
 		Tokens:        map[string]struct{}{"token1": {}, "token2": {}},
-		Capabilities:  map[string]struct{}{"/foo/bar": {}, "/bar/baz": {}},
 		TokenParent:   "parent token",
 		TokenAccessor: "test accessor",
 		Namespace:     "test namespace",
