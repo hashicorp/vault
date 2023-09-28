@@ -62,7 +62,7 @@ export default class KeymgmtProviderEdit extends Component {
   }
   @task
   @waitFor
-  *fetchKeys(page = 1) {
+  *fetchKeys(page) {
     try {
       yield this.args.model.fetchKeys(page);
     } catch (error) {
