@@ -151,7 +151,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   });
 
   test('it should show example template modal', async function (assert) {
-    assert.expect(8);
+    assert.expect(5);
     const MODAL = (e) => `[data-test-scope-modal="${e}"]`;
     this.model = this.store.createRecord('oidc/scope');
 
@@ -174,15 +174,14 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     `);
 
     await click('[data-test-oidc-scope-example]');
-    assert.dom(MODAL.title).hasText('Scope template', 'Modal title renders');
-    assert.dom(MODAL.text).hasText('Example of a JSON template for scopes:', 'Modal text renders');
-    assert.dom('[data-test-copy-button]').exists('Modal copy button renders');
+    assert.dom(MODAL('title')).hasText('Scope template', 'Modal title renders');
+    assert.dom(MODAL('text')).hasText('Example of a JSON template for scopes:', 'Modal text renders');
     assert
-      .dom('.hds#scope-template-modal [data-test-copy-button]')
+      .dom('#scope-template-modal [data-test-copy-button]')
       .hasAttribute('data-clipboard-text', exampleTemplate, 'Modal copy button copies the example template');
     assert.dom('.cm-string').hasText('"username"', 'Example template json renders');
     await click('[data-test-close-modal]');
-    assert.dom('[data-test-modal-div]').doesNotHaveClass('is-active', 'Modal is hidden');
+    assert.dom('.hds#scope-template-modal').doesNotExist('Modal is hidden');
   });
 
   test('it should render error alerts when API returns an error', async function (assert) {
