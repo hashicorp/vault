@@ -81,7 +81,7 @@
 </form>
 
 {{#if this.showTemplateModal}}
-  <Hds::Modal id="scope-template-modal" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
+  <Hds::Modal id="scope-template-modal" @size="large" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
     <M.Header>
       Scope template
     </M.Header>
@@ -89,20 +89,7 @@
       <p data-test-modal-text>
         Example of a JSON template for scopes:
       </p>
-      <Hds::Copy::Button
-        @text="Copy"
-        @isIconOnly={{true}}
-        @textToCopy={{this.exampleTemplate}}
-        class="transparent"
-        data-test-copy-button
-      />
-      <JsonEditor
-        @value={{this.exampleTemplate}}
-        @mode="ruby"
-        @readOnly={{true}}
-        @showToolbar={{false}}
-        @container=".hds-modal"
-      />
+      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @container=".hds-modal" />
       <p class="has-top-margin-m">
         The full list of template parameters can be found
         <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
