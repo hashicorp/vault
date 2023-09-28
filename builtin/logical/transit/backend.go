@@ -45,6 +45,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 				"archive/",
 				"policy/",
 			},
+			Unauthenticated: []string{
+				"preauth-test",
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -75,6 +78,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathConfigKeys(),
 			b.pathCreateCsr(),
 			b.pathImportCertChain(),
+			b.pathPreauthTest(),
 		},
 
 		Secrets:      []*framework.Secret{},

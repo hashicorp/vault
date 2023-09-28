@@ -61,6 +61,31 @@ var (
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
 )
 
+// Special error indicating the backend wants to delegate authentication elsewhere
+type DelegatedAuthenticationError struct {
+	mountAccessor string
+	path          string
+}
+
+func NewDelegatedAuthenticationError(mountAccessor, path string) *DelegatedAuthenticationError {
+	return &DelegatedAuthenticationError{
+		mountAccessor: mountAccessor,
+		path:          path,
+	}
+}
+
+func (d *DelegatedAuthenticationError) Error() string {
+	return "authentication delegation requested"
+}
+
+func (d *DelegatedAuthenticationError) MountAccessor() string {
+	return d.mountAccessor
+}
+
+func (d *DelegatedAuthenticationError) Path() string {
+	return d.path
+}
+
 type HTTPCodedError interface {
 	Error() string
 	Code() int
