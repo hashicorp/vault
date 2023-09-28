@@ -770,13 +770,13 @@ $ curl \
 }
 ```
 
-## Check Merkle Tree Corruption
+## `/sys/replication/dr/secondary/merkle-check`
 
-This endpoint prints information about the corruption status of the merkle tree on a DR
+The Merkle check endpoint prints information about the corruption status of the Merkle tree on a DR
 secondary cluster. Check [merkle tree corruption](/vault/api-docs/system/replication#check-merkle-tree-corruption) for more details.
 
-This endpoint requires a DR Operation Token to be provided as means of
-authorization. See the [DR Operation Token API
+Requests to `/sys/replication/dr/secondary/merkle-check` must provide a DR
+Operation Token as authorization. See the [DR Operation Token API
 docs](#generate-disaster-recovery-operation-token) for more information.
 
 | Method  | Path                                         |
@@ -785,7 +785,7 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 
 ### Parameters
 
-- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize this request.
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize the request.
 
 ### Sample request
 
@@ -795,12 +795,13 @@ $ curl \
 ```
 
 ### Sample response
+
 The response provides information about the health of the Merkle composite tree.
 It indicates whether the root of the tree is corrupted and also identifies any
 corruption in the roots of its subtrees, including replicated and local subtrees.
 In the event of corruption within a page or subpage of the tree, it includes the
-page number along with a list of corrupted subpage numbers. This information
-serves as an indicator of the extent of corruption within the Merkle tree.
+page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the Merkle tree.
 
 ```json
 {
