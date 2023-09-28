@@ -38,6 +38,8 @@ primary, it will look something like:
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
     "known_secondaries": ["3"],
+    "corrupted_merkle_tree": false,
+    "last_corruption_check_epoch": "1694456090",
     "last_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "primary",
@@ -730,5 +732,74 @@ $ curl \
 ```json
 {
   "warnings": ["..."]
+}
+```
+
+## `/sys/replication/dr/secondary/merkle-check`
+
+The Merkle check endpoint prints information about the corruption status of the Merkle tree on a DR
+secondary cluster. Check [merkle tree corruption](/vault/api-docs/system/replication#check-merkle-tree-corruption) for more details.
+
+Requests to `/sys/replication/dr/secondary/merkle-check` must provide a DR
+Operation Token as authorization. See the [DR Operation Token API
+docs](#generate-disaster-recovery-operation-token) for more information.
+
+| Method  | Path                                         |
+| :------ | :------------------------------------------- |
+| `POST`  | `/sys/replication/dr/secondary/merkle-check` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize the request.
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/merkle-check
+```
+
+### Sample response
+
+The response provides information about the health of the Merkle composite tree.
+It indicates whether the root of the tree is corrupted and also identifies any
+corruption in the roots of its subtrees, including replicated and local subtrees.
+In the event of corruption within a page or subpage of the tree, it includes the
+page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the Merkle tree.
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
 }
 ```
