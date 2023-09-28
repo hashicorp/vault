@@ -280,7 +280,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
         .doesNotExist('does not show oracle alert for non-oracle plugins');
       await connectionPage.save();
       await settled();
-      await click('[data-test-root-warning-confirm]');
       assert
         .dom('.modal.is-active .title')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
@@ -397,7 +396,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.toggleVerify();
     await connectionPage.save();
     await settled();
-    await click('[data-test-root-warning-confirm]');
     assert
       .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');

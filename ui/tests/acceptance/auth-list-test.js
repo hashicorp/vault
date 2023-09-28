@@ -79,7 +79,6 @@ module('Acceptance | auth backend list', function (hooks) {
   test('auth methods are linkable and link to correct view', async function (assert) {
     assert.expect(16);
     const uid = uuidv4();
-    await click('[data-test-root-warning-confirm]');
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();
@@ -118,7 +117,6 @@ module('Acceptance | auth backend list', function (hooks) {
   test('enterprise: auth methods are linkable and link to correct view', async function (assert) {
     assert.expect(19);
     const uid = uuidv4();
-    await click('[data-test-root-warning-confirm]');
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();

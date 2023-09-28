@@ -21,7 +21,7 @@ export default Service.extend({
 
   inRootNamespace: equal('path', ROOT_NAMESPACE),
 
-  currentNamespacePath: computed('inRootNamespace', 'path', function () {
+  currentNamespace: computed('inRootNamespace', 'path', function () {
     if (this.inRootNamespace) return 'root';
 
     const parts = this.path?.split('/');

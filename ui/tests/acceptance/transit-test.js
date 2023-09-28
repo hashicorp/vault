@@ -339,7 +339,6 @@ module('Acceptance | transit (flaky)', function (hooks) {
 
     const name = await this.generateTransitKey(keyData);
     await visit(`vault/secrets/${this.path}/show/${name}`);
-    await click('[data-test-root-warning-confirm]');
     assert
       .dom(SELECTORS.infoRow('Auto-rotation period'))
       .hasText('30 days', 'Has expected auto rotate value');

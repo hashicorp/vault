@@ -2,7 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
+import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
@@ -62,6 +62,8 @@ export default Controller.extend({
     }
     transition.followRedirects().then(() => {
       if (isRoot) {
+        if (Ember.testing) return;
+
         this.auth.set('showRootTokenWarning', true);
       }
     });
