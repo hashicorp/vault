@@ -354,7 +354,7 @@
 
 {{#if this.showSaveModal}}
   <Hds::Modal id="rotate-credentials-modal" @onClose={{this.continueWithoutRotate}} as |M|>
-    <M.Header @icon="info">
+    <M.Header @icon="info" data-test-db-connection-modal-title>
       Rotate your root credentials?
     </M.Header>
     <M.Body>
