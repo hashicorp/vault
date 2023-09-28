@@ -10,6 +10,11 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { statuses } from '../../../mirage/handlers/hcp-link';
 
+const SELECTORS = {
+  modalOpen: '[data-test-link-status] button',
+  modalClose: '[data-test-icon="x"]',
+};
+
 module('Integration | Component | link-status', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -70,7 +75,7 @@ module('Integration | Component | link-status', function (hooks) {
         'Banner copy renders for error state'
       );
 
-    await click('[data-test-link-status] button');
+    await click(SELECTORS.modalOpen);
     assert
       .dom('[data-test-link-status-timestamp]')
       .hasText('2022-09-21T11:25:02.196835-07:00', 'Timestamp renders');
@@ -78,20 +83,25 @@ module('Integration | Component | link-status', function (hooks) {
       .dom('[data-test-link-status-error]')
       .hasText('unable to establish a connection with HCP', 'Error renders');
 
+    await click(SELECTORS.modalClose);
     // connecting error
     await render(hbs`
       <div id="modal-wormhole"></div>
       <LinkStatus @status={{get this.statuses 3}} />
     `);
+    await click(SELECTORS.modalOpen);
     assert
       .dom('[data-test-link-status-error]')
       .hasText('principal does not have the permission to register as a provider', 'Error renders');
+    await click(SELECTORS.modalClose);
 
     // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
     await render(hbs`
       <div id="modal-wormhole"></div>
       <LinkStatus @status="connecting" />
     `);
+    await click(SELECTORS.modalOpen);
+
     assert.dom('[data-test-link-status-timestamp]').hasText('Not available', 'Timestamp placeholder renders');
     assert.dom('[data-test-link-status-error]').hasText('Not available', 'Error placeholder renders');
   });
