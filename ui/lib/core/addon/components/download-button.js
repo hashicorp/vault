@@ -12,22 +12,21 @@ import { tracked } from '@glimmer/tracking';
 import { assert } from '@ember/debug';
 /**
  * @module DownloadButton
- * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
+ * DownloadButton wraps an <Hds::Button> to perform a download action. https://helios.hashicorp.design/components/button?tab=code
  * * NOTE: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
  * [ember-docs](https://ember-engines.com/docs/services)
  * @example
  * ```js
  *   <DownloadButton
- *     class="button"
+ *     @text="Download this stuff"
+ *     @icon="chevron-right"
+ *     @color="secondary"
  *     @data={{this.data}}
  *     @filename={{this.filename}}
  *     @mime={{this.mime}}
  *     @extension={{this.extension}}
  *     @stringify={{true}}
- *   >
- *    <Icon @name="download" />
- *      Download
- *   </DownloadButton>
+ *  />
  * ```
  * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
  * @param {string} [data] - data to download
@@ -35,6 +34,10 @@ import { assert } from '@ember/debug';
  * @param {string} [extension='txt'] - file extension, the download service uses this to determine the mimetype
  * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
  * @param {callback} [onSuccess] - callback from parent to invoke if download is successful
+ * @param {string} [text="Download"] - button text, defaults to 'Download'
+ * @param {string} [icon] - icon name that trails button text, if @isIconOnly is true then this defaults to 'download'
+ * @param {string} [color] - HDS default is primary, but there are four color options: primary, secondary, tertiary, and critical.
+ * @param {boolean} [isIconOnly] - button only renders an icon, if true then @icon is set to "download"
  */
 
 export default class DownloadButton extends Component {

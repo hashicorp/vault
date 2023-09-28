@@ -3,6 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<button data-test-download-button type="button" {{on "click" this.handleDownload}} ...attributes>
-  {{yield}}
-</button>
+<Hds::Button
+  data-test-download-button
+  @text={{or @text "Download"}}
+  @icon={{if @isIconOnly "download" @icon}}
+  @color={{@color}}
+  @isIconOnly={{@isIconOnly}}
+  @iconPosition="trailing"
+  {{on "click" this.handleDownload}}
+  ...attributes
+/>

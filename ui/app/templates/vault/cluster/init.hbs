@@ -95,15 +95,14 @@
             </div>
           {{/if}}
           <DownloadButton
-            class="button is-ghost"
+            @color="tertiary"
             @filename={{this.keyFilename}}
             @data={{this.keyData}}
             @extension="json"
             @stringify={{true}}
-          >
-            <Icon @name="download" />
-            Download keys
-          </DownloadButton>
+            @icon="download"
+            @text="Download keys"
+          />
         </div>
       </div>
     </Page.content>

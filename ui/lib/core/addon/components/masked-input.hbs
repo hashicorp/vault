@@ -45,7 +45,7 @@
   {{/if}}
   {{#if @allowDownload}}
     <Hds::Button
-      @text="Download"
+      @text="Download secret value"
       @icon="download"
       @isIconOnly={{true}}
       @color="tertiary"
@@ -79,15 +79,11 @@
     <M.Footer as |F|>
       <Hds::ButtonSet>
         <DownloadButton
-          class="button is-primary"
           @filename={{or @name "secret-value"}}
           @data={{@value}}
           @stringify={{true}}
-          aria-label="Download secret value"
           @onSuccess={{fn (mut this.modalOpen) false}}
-        >
-          Download
-        </DownloadButton>
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
     </M.Footer>

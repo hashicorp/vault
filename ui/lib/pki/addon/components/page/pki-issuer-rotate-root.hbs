@@ -53,9 +53,8 @@
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
-                >
-                  PEM format
-                </DownloadButton>
+                  @text="PEM format"
+                />
               </li>
               <li class="action">
                 <DownloadButton
@@ -64,9 +63,8 @@
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
-                >
-                  DER format
-                </DownloadButton>
+                  @text="DER format"
+                />
               </li>
             </ul>
           </nav>

@@ -388,6 +388,7 @@ a.button.disabled {
 
 // Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
 .hds-button {
+  // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
     font-weight: $font-weight-semibold;
     background: none;
