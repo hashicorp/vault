@@ -248,7 +248,7 @@
     ]
   },
   "dependencies": {
-    "@hashicorp/design-system-components": "^2.9.0",
+    "@hashicorp/design-system-components": "^2.12.2",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
     "node-notifier": "^8.0.1",

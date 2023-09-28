@@ -4977,14 +4977,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:^2.9.0":
-  version: 2.9.0
-  resolution: "@hashicorp/design-system-components@npm:2.9.0"
+"@hashicorp/design-system-components@npm:^2.12.2":
+  version: 2.12.2
+  resolution: "@hashicorp/design-system-components@npm:2.12.2"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/test-waiters": ^3.0.2
-    "@hashicorp/design-system-tokens": ^1.7.0
-    "@hashicorp/ember-flight-icons": ^3.0.9
+    "@hashicorp/design-system-tokens": ^1.8.0
+    "@hashicorp/ember-flight-icons": ^3.1.3
     dialog-polyfill: ^0.5.6
     ember-a11y-refocus: ^3.0.2
     ember-auto-import: ^2.6.3
@@ -4996,20 +4996,19 @@ __metadata:
     ember-composable-helpers: ^4.5.0
     ember-focus-trap: ^1.0.2
     ember-keyboard: ^8.2.0
-    ember-named-blocks-polyfill: ^0.2.5
     ember-stargate: ^0.4.3
     ember-style-modifier: ^3.0.1
     ember-truth-helpers: ^3.1.1
     sass: ^1.62.1
     tippy.js: ^6.3.7
-  checksum: b7fb3026f6c73f370dc34032d57b292081e5f3a89c16d5a884e9ce778fe77173c9a243ebe6bff76c4eadc0ebd2954169ab56eb181d504ac1204be796a72760cf
+  checksum: 064f54a290523c8421a9f5a9e52f5f88f6a8e88fe457216e5a30a4b27393c339ca9e886c7aeeb55c535badd4d0615096a1ed204beaca7f576eec4281cd71f43f
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^1.7.0":
-  version: 1.7.0
-  resolution: "@hashicorp/design-system-tokens@npm:1.7.0"
-  checksum: fafddf1f4534d34dbe03ee3345064ddb19e06314a9a8b5fed074cc1b768ab56c72b477ab9a75a036ce521d883bf7e09e0509ecdc284556a9ffae418dcac8adbc
+"@hashicorp/design-system-tokens@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "@hashicorp/design-system-tokens@npm:1.8.0"
+  checksum: 9cc65907defb1bb6e2d91a9f8c778d592c9aa391b186e38bbf14353b532fee2f018fd53138b514360eea857f440efb870ac1b264b56efc7a4766bd55ca83b5a8
   languageName: node
   linkType: hard
 
@@ -5025,10 +5024,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hashicorp/ember-flight-icons@npm:^3.1.3":
+  version: 3.1.3
+  resolution: "@hashicorp/ember-flight-icons@npm:3.1.3"
+  dependencies:
+    "@hashicorp/flight-icons": ^2.20.0
+    ember-auto-import: ^2.6.3
+    ember-cli-babel: ^7.26.11
+    ember-cli-htmlbars: ^6.2.0
+  checksum: 196dec75deb983cbfeae6738c5bba7482f645d8ad419b1ab79c0f12f64d0f06e9c7ffb01ce13540e80aabb5ceb490c05c6cd56a7b25ceb3413ebe8274889a298
+  languageName: node
+  linkType: hard
+
 "@hashicorp/flight-icons@npm:^2.17.0":
   version: 2.17.0
   resolution: "@hashicorp/flight-icons@npm:2.17.0"
   checksum: 7df3e08ac8d814a661ff39a81421d586279091c83a742434dfc24a7f5381d000bbfa9a6b10aefbe138e2543a17e0643aadea8fe1004128e989c59dd74bfdc9e6
+  languageName: node
+  linkType: hard
+
+"@hashicorp/flight-icons@npm:^2.20.0":
+  version: 2.20.0
+  resolution: "@hashicorp/flight-icons@npm:2.20.0"
+  checksum: 4ec750e46cd780f007a5046e4cd2cf9e69f946ef131d30b3090c24616c2c0a407f327d0135ebbb0af6578cfdbbb65ab59b18c6ab95599ec04ed2a04827aa24ec
   languageName: node
   linkType: hard
 
@@ -13748,16 +13766,6 @@ __metadata:
     ember-source:
       optional: true
   checksum: 5e14a864de2184c07e59fb9bc76a09ae25d1bd37722a94751a3cef6165df22027007696c4dda03e1862cb3bbeefb046772810dda3104d05c7fe8476389c34a77
-  languageName: node
-  linkType: hard
-
-"ember-named-blocks-polyfill@npm:^0.2.5":
-  version: 0.2.5
-  resolution: "ember-named-blocks-polyfill@npm:0.2.5"
-  dependencies:
-    ember-cli-babel: ^7.19.0
-    ember-cli-version-checker: ^5.1.1
-  checksum: f3ca8eeb61a208bf4690d423806b35371b5f01c58028404c9065d7d6e289d2220f40232756718a784fe0d0a65ed9c5a66a3df76f4abd222d07fca35886f5c583
   languageName: node
   linkType: hard
 
@@ -25918,7 +25926,7 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ^2.9.0
+    "@hashicorp/design-system-components": ^2.12.2
     "@hashicorp/ember-flight-icons": ^3.0.9
     "@hashicorp/structure-icons": ^1.3.0
     "@icholy/duration": ^5.1.0
