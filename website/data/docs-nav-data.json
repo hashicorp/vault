@@ -636,35 +636,6 @@
         ]
       },
       {
-        "title": "<code>pki</code>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/pki"
-          },
-          {
-            "title": "<code>health-check</code>",
-            "path": "commands/pki/health-check"
-          },
-          {
-            "title": "<code>verify-sign</code>",
-            "path": "commands/pki/verify-sign"
-          },
-          {
-            "title": "<code>list-intermediates</code>",
-            "path": "commands/pki/list-intermediates"
-          },
-          {
-            "title": "<code>issue</code>",
-            "path": "commands/pki/issue"
-          },
-          {
-            "title": "<code>reissue</code>",
-            "path": "commands/pki/reissue"
-          }
-        ]
-      },
-      {
         "title": "<code>lease</code>",
         "routes": [
           {
@@ -788,6 +759,35 @@
         "path": "commands/path-help"
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          },
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
+        ]
+      },
+      {
         "title": "<code>plugin</code>",
         "routes": [
           {
@@ -813,6 +813,31 @@
           {
             "title": "<code>reload</code>",
             "path": "commands/plugin/reload"
+          },
+          {
+            "title": "<code>runtime</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "commands/plugin/runtime"
+              },
+              {
+                "title": "<code>deregister</code>",
+                "path": "commands/plugin/runtime/deregister"
+              },
+              {
+                "title": "<code>info</code>",
+                "path": "commands/plugin/runtime/info"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "commands/plugin/runtime/list"
+              },
+              {
+                "title": "<code>register</code>",
+                "path": "commands/plugin/runtime/register"
+              }
+            ]
           }
         ]
       },
@@ -1485,6 +1510,45 @@
     ]
   },
   {
+    "title": "Secrets Sync",
+    "badge": {
+      "text": "ENT",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "sync",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "AWS Secrets Manager",
+        "path": "sync/awssm"
+      },
+      {
+        "title": "Azure Key Vault",
+        "path": "sync/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "sync/gcpsm"
+      },
+      {
+        "title": "GitHub",
+        "path": "sync/github"
+      },
+      {
+        "title": "Vercel Project",
+        "path": "sync/vercelproject"
+      }
+    ]
+  },
+  {
     "title": "Auth Methods",
     "routes": [
       {
@@ -1615,6 +1679,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -1670,6 +1743,10 @@
       {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Containerized Plugins",
+        "path": "plugins/containerized-plugins"
       },
       {
         "title": "Integrations Library",
@@ -1885,6 +1962,23 @@
                 "path": "platform/k8s/vso/installation"
               },
               {
+                "title": "Secret Sources",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/vso/sources"
+                  },
+                  {
+                    "title": "Vault",
+                    "path": "platform/k8s/vso/sources/vault"
+                  },
+                  {
+                    "title": "HCP Vault Secrets",
+                    "path": "platform/k8s/vso/sources/hvs"
+                  }
+                ]
+              },
+              {
                 "title": "Examples",
                 "path": "platform/k8s/vso/examples"
               },
@@ -1980,8 +2074,7 @@
       },
       {
         "title": "Upgrade to 1.15.x",
-        "path": "upgrading/upgrade-to-1.15.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.15.x"
       },
       {
         "title": "Upgrade to 1.14.x",
@@ -2230,6 +2323,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.15.0",
+        "path": "release-notes/1.15.0"
       },
       {
         "title": "1.14.0",
