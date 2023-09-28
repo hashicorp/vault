@@ -4,7 +4,7 @@
 ~}}
 
 {{#if (and this.state this.version.isEnterprise)}}
-  <Hds::Alert @type="page" @color={{if (eq this.state "connected") "success" "warning"}} as |A|>
+  <Hds::Alert @type="page" @color={{if (eq this.state "connected") "neutral" "warning"}} as |A|>
     <A.Title data-test-link-status>
       {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to

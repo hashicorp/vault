@@ -13,7 +13,7 @@ import { statuses } from '../../../mirage/handlers/hcp-link';
 const SELECTORS = {
   modalOpen: '[data-test-link-status] button',
   modalClose: '[data-test-icon="x"]',
-  bannerSuccess: '.hds-alert [data-test-icon="check-circle"]',
+  bannerConnected: '.hds-alert [data-test-icon="info"]',
   bannerWarning: '.hds-alert [data-test-icon="alert-triangle"]',
   banner: '[data-test-link-status]',
 };
@@ -51,7 +51,7 @@ module('Integration | Component | link-status', function (hooks) {
       <LinkStatus @status={{get this.statuses 0}} />
     `);
 
-    assert.dom(SELECTORS.bannerSuccess).exists('Success banner renders for connected state');
+    assert.dom(SELECTORS.bannerConnected).exists('Success banner renders for connected state');
     assert
       .dom('[data-test-link-status]')
       .hasText('This self-managed Vault is linked to HCP.', 'Banner copy renders for connected state');
