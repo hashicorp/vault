@@ -325,28 +325,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"config": func() (cli.Command, error) { // TODO: this could be renamed to client-config?
+		"config": func() (cli.Command, error) {
 			return &ConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"config set-context": func() (cli.Command, error) {
-			return &ConfigSetContext{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"config get-context": func() (cli.Command, error) {
-			return &ConfigGetContext{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"config use-context": func() (cli.Command, error) {
-			return &ConfigUseContext{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"config delete-context": func() (cli.Command, error) {
-			return &ConfigDeleteContext{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -355,8 +335,33 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"config delete-context": func() (cli.Command, error) {
+			return &ConfigDeleteContext{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"config get-context": func() (cli.Command, error) {
+			return &ConfigGetContext{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"config rename-context": func() (cli.Command, error) {
 			return &ConfigRenameContext{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"config set-context": func() (cli.Command, error) {
+			return &ConfigSetContext{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"config unset": func() (cli.Command, error) {
+			return &ConfigUnset{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"config use-context": func() (cli.Command, error) {
+			return &ConfigUseContext{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

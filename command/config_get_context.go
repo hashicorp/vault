@@ -78,6 +78,7 @@ func (c *ConfigGetContext) Run(args []string) int {
 
 	ctxInfo := currentConfig.ClientContexts[index]
 
+	// TODO: update the table output to include this info
 	c.UI.Output(fmt.Sprintf("name: %s, address: %s, token: %s, namespace: %s",
 		ctxInfo.Name,
 		ctxInfo.VaultAddr,

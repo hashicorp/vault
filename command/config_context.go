@@ -23,11 +23,11 @@ func (c *ConfigCommand) Help() string {
 	helpText := `
 Usage: vault config <subcommand> [options] [args]
 
-  Set a context:
+  Set a context with a name:
 
-      $ vault config set-context vault_1 --addr=http://127.0.0.1:8200 --token=hvs. --namespace=ns1
+      $ vault config set-context vault_1 -address=http://127.0.0.1:8200 -token=foo -namespace=ns1
 
-  Get a context:
+  Get a context with a name:
 
       $ vault config get-context vault_1
 
@@ -35,17 +35,23 @@ Usage: vault config <subcommand> [options] [args]
 
       $ vault config current-context
 
-  Delete a context:
+  Delete a context with a name:
 
       $ vault config delete-context vault_1
 
-  Rename a context
+  Rename a context:
 
       $ vault config rename-context vault_1 vault_1_new_name
 
-  Use a context
+  Use a context with a name:
 
       $ vault config use-context vault_2
+
+  Unset an entry in a context or unset the current context
+
+      $ vault config unset current-context
+      $ vault config unset contexts.vault_1.namespace
+      
 `
 
 	return strings.TrimSpace(helpText)

@@ -80,12 +80,15 @@ func (c *ConfigSetContext) Run(args []string) int {
 		return 2
 	}
 
+	// just trim spaces from the namespace. No need to warn about it.
+	namespace := strings.TrimSpace(c.flagNamespace)
+
 	address := c.flagAddress
 	if address == "" {
 		c.UI.Warn("address is empty")
 	}
-	namespace := c.flagNamespace
-	token := c.flagClientToken
+
+	token := strings.TrimSpace(c.flagClientToken)
 	if token == "" {
 		c.UI.Warn("token is empty")
 	}
