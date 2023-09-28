@@ -90,7 +90,7 @@ type Index struct {
 type CapabilitiesIndex struct {
 	// ID is a value that uniquely represents the request held by this
 	// index. This is computed by hashing the token that this capabilities
-	// index .
+	// index represents the capabilities of.
 	// Required: true, Unique: true
 	ID string
 

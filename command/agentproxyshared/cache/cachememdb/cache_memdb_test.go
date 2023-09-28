@@ -56,7 +56,6 @@ func TestCacheMemDB_Get(t *testing.T) {
 		TokenAccessor: "test_accessor",
 		Lease:         "test_lease",
 		Response:      []byte("hello world"),
-		Capabilities:  map[string]struct{}{},
 		Tokens:        map[string]struct{}{},
 	}
 
