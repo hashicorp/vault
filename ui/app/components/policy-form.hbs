@@ -120,7 +120,7 @@
     data-test-policy-example-modal
     as |M|
   >
-    <M.Header>
+    <M.Header data-test-modal-title>
       Example
       {{uppercase @model.policyType}}
       Policy
@@ -129,7 +129,7 @@
       <PolicyExample @policyType={{@model.policyType}} />
     </M.Body>
     <M.Footer as |F|>
-      <Hds::Button @text="Close" {{on "click" F.close}} data-test-close-modal />
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-close-button />
     </M.Footer>
   </Hds::Modal>
 {{/if}}

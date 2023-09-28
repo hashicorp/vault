@@ -49,7 +49,7 @@
 
   {{#if this.modalOpen}}
     <Hds::Modal id="clients-config-modal" @color="warning" @onClose={{fn (mut this.modalOpen) false}} as |M|>
-      <M.Header @icon="alert-triangle">
+      <M.Header @icon="alert-triangle" data-test-clients-config-modal="title">
         {{this.modalTitle}}
       </M.Header>
       <M.Body>
@@ -70,7 +70,7 @@
       <M.Footer as |F|>
         <Hds::ButtonSet>
           <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-clients-config-modal="continue" />
-          <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-clients-config-modal="cancel" />
         </Hds::ButtonSet>
       </M.Footer>
     </Hds::Modal>

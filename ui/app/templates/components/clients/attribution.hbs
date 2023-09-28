@@ -91,7 +91,7 @@
 {{! MODAL FOR CSV DOWNLOAD }}
 {{#if this.showCSVDownloadModal}}
   <Hds::Modal id="attribution-csv-download-modal" @onClose={{fn (mut this.showCSVDownloadModal) false}} as |M|>
-    <M.Header @icon="info">
+    <M.Header @icon="info" data-test-export-modal-title>
       Export attribution data
     </M.Header>
     <M.Body>
@@ -101,7 +101,8 @@
         {{if this.formattedEndDate "date range" "month"}}.
       </p>
       <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
-      <p class="has-bottom-margin-s">{{this.formattedStartDate}}
+      <p class="has-bottom-margin-s" data-test-export-date-range>
+        {{this.formattedStartDate}}
         {{if this.formattedEndDate "-"}}
         {{this.formattedEndDate}}</p>
     </M.Body>

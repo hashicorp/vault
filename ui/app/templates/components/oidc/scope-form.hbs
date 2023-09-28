@@ -82,11 +82,11 @@
 
 {{#if this.showTemplateModal}}
   <Hds::Modal id="scope-template-modal" @size="large" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
-    <M.Header>
+    <M.Header data-test-scope-modal="title">
       Scope template
     </M.Header>
     <M.Body>
-      <p data-test-modal-text>
+      <p data-test-scope-modal="text">
         Example of a JSON template for scopes:
       </p>
       <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @container=".hds-modal" />
