@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { attr } from '@ember-data/model';
@@ -35,7 +35,7 @@ export const expandOpenApiProps = function (props) {
 
     editType = editType || type;
 
-    if (format === 'seconds') {
+    if (format === 'seconds' || format === 'duration') {
       editType = 'ttl';
     } else if (items) {
       editType = items.type + capitalize(type);

@@ -4,6 +4,7 @@
 package testcluster
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -30,6 +31,7 @@ type VaultCluster interface {
 	ClusterID() string
 	NamedLogger(string) hclog.Logger
 	SetRootToken(token string)
+	GetRootToken() string
 }
 
 type VaultNodeConfig struct {
@@ -52,7 +54,8 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions map[string]string
+	StorageOptions      map[string]string
+	AdditionalListeners []VaultNodeListenerConfig
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -89,15 +92,21 @@ type ClusterJson struct {
 }
 
 type ClusterOptions struct {
-	ClusterName        string
-	KeepStandbysSealed bool
-	SkipInit           bool
-	CACert             []byte
-	NumCores           int
-	TmpDir             string
-	Logger             hclog.Logger
-	VaultNodeConfig    *VaultNodeConfig
-	VaultLicense       string
+	ClusterName                 string
+	KeepStandbysSealed          bool
+	SkipInit                    bool
+	CACert                      []byte
+	NumCores                    int
+	TmpDir                      string
+	Logger                      hclog.Logger
+	VaultNodeConfig             *VaultNodeConfig
+	VaultLicense                string
+	AdministrativeNamespacePath string
+}
+
+type VaultNodeListenerConfig struct {
+	Port            int
+	ChrootNamespace string
 }
 
 type CA struct {
@@ -107,4 +116,11 @@ type CA struct {
 	CACertPEMFile string
 	CAKey         *ecdsa.PrivateKey
 	CAKeyPEM      []byte
+}
+
+type ClusterStorage interface {
+	Start(context.Context, *ClusterOptions) error
+	Cleanup() error
+	Opts() map[string]interface{}
+	Type() string
 }

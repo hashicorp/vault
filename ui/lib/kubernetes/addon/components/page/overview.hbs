@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
   <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
 </TabPageHeader>
@@ -5,7 +10,7 @@
 {{#if @promptConfig}}
   <ConfigCta />
 {{else}}
-  <div class="selectable-card-container has-grid has-top-margin-l has-two-col-grid">
+  <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
     <OverviewCard
       @cardTitle="Roles"
       @subText="The number of Vault roles being used to generate Kubernetes credentials."
@@ -20,7 +25,7 @@
     <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
       <div class="has-top-margin-m is-flex">
         <SearchSelect
-          class="is-flex-1"
+          class="is-flex-grow-1"
           @placeholder="Type to find a role..."
           @disallowNewItems={{true}}
           @options={{this.roleOptions}}

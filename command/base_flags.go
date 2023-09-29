@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -594,7 +594,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
+		if d, err := parseutil.ParseDurationSecond(v); err == nil {
 			initial = d
 		}
 	}
@@ -634,7 +634,7 @@ func (d *durationValue) Set(s string) error {
 		s = "-1"
 	}
 
-	v, err := time.ParseDuration(appendDurationSuffix(s))
+	v, err := parseutil.ParseDurationSecond(s)
 	if err != nil {
 		return err
 	}
@@ -989,33 +989,3 @@ func (d *timeValue) Get() interface{} { return *d.target }
 func (d *timeValue) String() string   { return (*d.target).String() }
 func (d *timeValue) Example() string  { return "time" }
 func (d *timeValue) Hidden() bool     { return d.hidden }
-
-// -- helpers
-func envDefault(key, def string) string {
-	if v, exist := os.LookupEnv(key); exist {
-		return v
-	}
-	return def
-}
-
-func envBoolDefault(key string, def bool) bool {
-	if v, exist := os.LookupEnv(key); exist {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			panic(err)
-		}
-		return b
-	}
-	return def
-}
-
-func envDurationDefault(key string, def time.Duration) time.Duration {
-	if v, exist := os.LookupEnv(key); exist {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			panic(err)
-		}
-		return d
-	}
-	return def
-}

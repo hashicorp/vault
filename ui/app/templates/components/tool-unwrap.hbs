@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Unwrap data
+      Unwrap Data
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -11,10 +16,7 @@
     <nav class="tabs has-bottom-margin-l">
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "data") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "data") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"
@@ -24,10 +26,7 @@
             Data
           </button>
         </li>
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "details") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "details") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"
@@ -66,14 +65,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton
-        @clipboardText={{stringify @unwrap_data}}
-        @class="button is-primary"
-        @buttonType="button"
-        @success={{action (set-flash-message "Data copied!")}}
-      >
-        Copy
-      </CopyButton>
+      <Hds::Copy::Button @text="Copy" @textToCopy={{stringify @unwrap_data}} class="primary" />
     </div>
     <div class="control">
       <button {{on "click" this.onClear}} type="button" class="button">

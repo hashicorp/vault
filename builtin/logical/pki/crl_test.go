@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -12,12 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	"github.com/stretchr/testify/require"
 )
@@ -1068,7 +1070,7 @@ func TestAutoRebuild(t *testing.T) {
 	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
-	graceInterval, _ := time.ParseDuration(gracePeriod)
+	graceInterval, _ := parseutil.ParseDurationSecond(gracePeriod)
 	expectedUpdate := lastCRLExpiry.Add(-1 * graceInterval)
 	if requireSerialNumberInCRL(nil, crl, newLeafSerial) {
 		// If we somehow lagged and we ended up needing to rebuild
@@ -1436,4 +1438,91 @@ hbiiPARizZA/Tsna/9ox1qDT
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Empty(t, resp.Warnings)
+}
+
+func TestCRLIssuerRemoval(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	b, s := CreateBackendWithStorage(t)
+
+	if constants.IsEnterprise {
+		// We don't really care about the whole cross cluster replication
+		// stuff, but we do want to enable unified CRLs if we can, so that
+		// unified CRLs get built.
+		_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+			"cross_cluster_revocation": true,
+			"auto_rebuild":             true,
+		})
+		require.NoError(t, err, "failed enabling unified CRLs on enterprise")
+	}
+
+	// Create a single root, configure delta CRLs, and rotate CRLs to prep a
+	// starting state.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		"enable_delta": true,
+		"auto_rebuild": true,
+	})
+	require.NoError(t, err)
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// List items in storage under both CRL paths so we know what is there in
+	// the "good" state.
+	crlList, err := s.List(ctx, "crls/")
+	require.NoError(t, err)
+	require.Contains(t, crlList, "config")
+	require.Greater(t, len(crlList), 1)
+
+	unifiedCRLList, err := s.List(ctx, "unified-crls/")
+	require.NoError(t, err)
+	require.Contains(t, unifiedCRLList, "config")
+	require.Greater(t, len(unifiedCRLList), 1)
+
+	// Now, create a bunch of issuers, generate CRLs, and remove them.
+	var keyIDs []string
+	var issuerIDs []string
+	for i := 1; i <= 25; i++ {
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": fmt.Sprintf("Root X%v", i),
+			"key_type":    "ec",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		key := string(resp.Data["key_id"].(keyID))
+		keyIDs = append(keyIDs, key)
+		issuer := string(resp.Data["issuer_id"].(issuerID))
+		issuerIDs = append(issuerIDs, issuer)
+	}
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	for _, issuer := range issuerIDs {
+		_, err := CBDelete(b, s, "issuer/"+issuer)
+		require.NoError(t, err)
+	}
+	for _, key := range keyIDs {
+		_, err := CBDelete(b, s, "key/"+key)
+		require.NoError(t, err)
+	}
+
+	// Finally list storage entries again to ensure they are cleaned up.
+	afterCRLList, err := s.List(ctx, "crls/")
+	require.NoError(t, err)
+	for _, entry := range crlList {
+		require.Contains(t, afterCRLList, entry)
+	}
+	require.Equal(t, len(afterCRLList), len(crlList))
+
+	afterUnifiedCRLList, err := s.List(ctx, "unified-crls/")
+	require.NoError(t, err)
+	for _, entry := range unifiedCRLList {
+		require.Contains(t, afterUnifiedCRLList, entry)
+	}
+	require.Equal(t, len(afterUnifiedCRLList), len(unifiedCRLList))
 }

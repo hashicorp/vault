@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "ami_id" {
   description = "The machine image identifier"
   type        = string
@@ -15,10 +18,16 @@ variable "cluster_name" {
   default     = null
 }
 
+variable "cluster_tag_key" {
+  type        = string
+  description = "The key name for the cluster tag"
+  default     = "TargetCluster"
+}
+
 variable "common_tags" {
   description = "Common tags for cloud resources"
   type        = map(string)
-  default     = { "Project" : "Enos" }
+  default     = { "Project" : "vault-ci" }
 }
 
 variable "instance_count" {
@@ -27,21 +36,21 @@ variable "instance_count" {
   default     = 3
 }
 
-variable "instance_type" {
-  description = "The instance machine type"
-  type        = string
-  default     = "t3.small"
+variable "instance_types" {
+  description = "The instance types to use depending on architecture"
+  type = object({
+    amd64 = string
+    arm64 = string
+  })
+  default = {
+    amd64 = "t3a.medium"
+    arm64 = "t4g.medium"
+  }
 }
 
 variable "project_name" {
   description = "A unique project name"
   type        = string
-}
-
-variable "spot_price_max" {
-  description = "Unused shim variable to match target_ec2_spot_fleet"
-  type        = string
-  default     = null
 }
 
 variable "ssh_allow_ips" {

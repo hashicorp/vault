@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   @params={{array "vault.cluster.secrets.backend.show" (if this.keyTypeValue (concat "role/" @item.id) @item.id)}}
   class="list-item-row"

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -64,6 +64,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if !b.System().CachingDisabled() {
 		p.Lock(true)
 	}
+	defer p.Unlock()
 
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		var keyId string
@@ -78,8 +79,11 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 	}
 
-	p.Unlock()
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+
+	return b.formatKeyPolicy(p, nil)
 }
 
 const pathRotateHelpSyn = `Rotate named encryption key`

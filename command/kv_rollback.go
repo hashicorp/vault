@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -164,7 +164,7 @@ func (c *KVRollbackCommand) Run(args []string) int {
 		return 2
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "data")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "data", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

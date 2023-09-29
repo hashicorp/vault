@@ -1,15 +1,22 @@
-
 name: Lint GitHub Actions Workflows
 on:
-  push:
   pull_request:
     paths:
-    - '.github/**'
+      - '.github/**'
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   actionlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: "Check workflow files"
         uses: docker://docker.mirror.hashicorp.services/rhysd/actionlint@sha256:93834930f56ca380be3e9a3377670d7aa5921be251b9c774891a39b3629b83b8
+        with:
+          # milestoned and demilestoned work (https://github.com/github/docs/issues/23909) but they aren't listed in the github documentation, so actionlint complains about them 
+          args: "-ignore=\"invalid activity type \\\"demilestoned\\\" for \\\"pull_request\\\" Webhook event\" -ignore=\"invalid activity type \\\"milestoned\\\" for \\\"pull_request\\\" Webhook event\""

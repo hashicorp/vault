@@ -1,6 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
+  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
     @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
@@ -37,38 +43,45 @@
   {{/if}}
 
   {{#if
-    (and this.version.isEnterprise this.cluster.anyReplicationEnabled (has-permission "status" routeParams="replication"))
+    (and
+      this.version.isEnterprise
+      this.namespace.inRootNamespace
+      this.cluster.anyReplicationEnabled
+      (has-permission "status" routeParams="replication")
+    )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
     <Nav.Link
       @route="vault.cluster.replication.mode.index"
       @model="dr"
-      @text="DR Primary"
-      data-test-sidebar-nav-link="DR Primary"
+      @text="Disaster Recovery"
+      data-test-sidebar-nav-link="Disaster Recovery"
     />
 
     {{#if (has-feature "Performance Replication")}}
       <Nav.Link
         @route="vault.cluster.replication.mode.index"
         @model="performance"
-        @text="Performance Secondary"
-        data-test-sidebar-nav-link="Performance Secondary"
+        @text="Performance"
+        data-test-sidebar-nav-link="Performance"
       />
     {{/if}}
   {{/if}}
 
   {{#if
     (or
-      (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
+      (and
+        this.namespace.inRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
+      )
       (has-permission "clients" routeParams="activity")
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.version.isEnterprise (has-permission "status" routeParams="replication"))}}
+  {{#if (and this.version.isEnterprise this.namespace.inRootNamespace (has-permission "status" routeParams="replication"))}}
     <Nav.Link @route="vault.cluster.replication.index" @text="Replication" data-test-sidebar-nav-link="Replication" />
   {{/if}}
-  {{#if (and this.cluster.usingRaft (has-permission "status" routeParams="raft"))}}
+  {{#if (and this.cluster.usingRaft this.namespace.inRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
       @route="vault.cluster.storage"
       @model={{this.cluster.name}}
@@ -77,9 +90,16 @@
     />
   {{/if}}
   {{#if (and (has-permission "clients" routeParams="activity") (not this.cluster.dr.isSecondary))}}
-    <Nav.Link @route="vault.cluster.clients" @text="Client count" data-test-sidebar-nav-link="Client count" />
+    <Nav.Link @route="vault.cluster.clients" @text="Client Count" data-test-sidebar-nav-link="Client Count" />
   {{/if}}
-  {{#if (and this.version.features (has-permission "status" routeParams="license") (not this.cluster.dr.isSecondary))}}
+  {{#if
+    (and
+      this.version.features
+      this.namespace.inRootNamespace
+      (has-permission "status" routeParams="license")
+      (not this.cluster.dr.isSecondary)
+    )
+  }}
     <Nav.Link
       @route="vault.cluster.license"
       @model={{this.cluster.name}}
@@ -87,7 +107,7 @@
       data-test-sidebar-nav-link="License"
     />
   {{/if}}
-  {{#if (and (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+  {{#if (and this.namespace.inRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
     <Nav.Link
       @route="vault.cluster.settings.seal"
       @model={{this.cluster.name}}

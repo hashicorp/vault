@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package redshift
 
@@ -161,7 +161,7 @@ func TestRedshift_NewUser(t *testing.T) {
 		}
 
 		usernameRegex := regexp.MustCompile("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$")
-		if !usernameRegex.Match([]byte(username)) {
+		if !usernameRegex.MatchString(username) {
 			t.Fatalf("Expected username %q to match regex %q", username, usernameRegex.String())
 		}
 	}

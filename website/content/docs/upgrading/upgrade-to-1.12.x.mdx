@@ -13,15 +13,15 @@ for Vault 1.12.x compared to 1.11. Please read it carefully.
 
 ## Changes
 
-### Supported Storage Backends
+### Supported storage backends
 
-Vault Enterprise will now perform a supported storage check at startup. There is no impact on open-source Vault users.
+Vault Enterprise will now perform a supported storage check at startup. There is no impact on Vault Community Edition users.
 
 @include 'ent-supported-storage.mdx'
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
-### External Plugin Loading
+### External plugin loading
 
 Vault 1.12.0 introduced a change to how external plugins are loaded. Prior to
 Vault 1.12.0 plugins were lazy loaded on startup. This means that plugin
@@ -29,7 +29,7 @@ processes were killed after a successful mount and then respawned when a
 request is routed to them. Vault 1.12.0 introduced auto mutual TLS for
 secrets/auth plugins so we do not lazy load them on startup anymore.
 
-## Known Issues
+## Known issues
 
 ### Pinning to builtin plugin versions may cause failure on upgrade
 
@@ -88,7 +88,7 @@ remediations if you have any affected mounts:
 The bug was introduced by commit
 https://github.com/hashicorp/vault/commit/c36330f4c713b886a8a23c08cbbd862a7c530fc8.
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects upgrading from 1.12.0 to 1.12.1. All other upgrade paths are unaffected.
 1.12.2 will introduce a fix that enables upgrades from affected deployments of
@@ -127,7 +127,7 @@ feature](/vault/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-a
 For more information on the phases of deprecation, see the [Deprecation Notices
 FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects upgrading from any version of Vault to 1.12.x. All other upgrade paths
 are unaffected.
@@ -152,7 +152,7 @@ It will produce errors in Vault Server's logs such as:
   error=
   | 1 error occurred:
   | 	* panic generating audit log
-  | 
+  |
 ```
 
 As a workaround, [listing plugins by type](/vault/api-docs/system/plugins-catalog#list-plugins-1)
@@ -165,7 +165,7 @@ will succeed:
 The bug was introduced by commit
 https://github.com/hashicorp/vault/commit/76165052e54f884ed0aa2caa496083dc84ad1c19.
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects versions 1.12.0, 1.12.1, and 1.12.2. A fix will be released in 1.12.3.
 
@@ -177,10 +177,41 @@ handler.
 
 As a workaround, OCSP POST requests can be used which are unaffected.
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects version 1.12.3. A fix will be released in 1.12.4.
 
 @include 'tokenization-rotation-persistence.mdx'
 
 @include 'ocsp-redirect.mdx'
+
+### LDAP pagination issue
+
+There was a regression introduced in 1.12.6 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with an instance that has an existing LDAP Auth configuration.
+
+As a workaround, disable paged searching using the following:
+```shell-session
+vault write auth/ldap/config max_page_size=-1
+```
+
+#### Impacted versions
+
+Affects Vault 1.12.6.
+
+### Slow startup time when storing PKI certificates
+
+There was a regression introduced in 1.12.0 where Vault is slow to start because the 
+PKI secret engine performs a list operation on the stored certificates. If a large number 
+of certificates are stored this can cause long start times on active and standby nodes.
+
+There is currently no workaround for this other than limiting the number of certificates stored
+in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store`
+flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
+
+#### Impacted versions
+
+Affects Vault 1.12.0+
+
+@include 'pki-double-migration-bug.mdx'

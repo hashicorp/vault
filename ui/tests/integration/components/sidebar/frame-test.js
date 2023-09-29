@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
@@ -22,7 +27,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     const currentCluster = this.owner.lookup('service:currentCluster');
     currentCluster.setCluster({ hcpLinkStatus: 'connected' });
     const version = this.owner.lookup('service:version');
-    version.setVersion({ version: '1.13.0-dev1+ent' });
+    version.version = '1.13.0-dev1+ent';
 
     await render(hbs`
       <Sidebar::Frame @showSidebar={{true}}>
@@ -55,7 +60,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
 
   test('it should render namespace picker in sidebar footer', async function (assert) {
     const version = this.owner.lookup('service:version');
-    version.setFeatures({ features: ['Namespaces'] });
+    version.features = ['Namespaces'];
     const auth = this.owner.lookup('service:auth');
     sinon.stub(auth, 'authData').value({});
 

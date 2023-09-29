@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -211,17 +211,19 @@ export default ApplicationAdapter.extend({
   },
 
   generateDrOperationToken(data, options) {
-    let verb = options && options.checkStatus ? 'GET' : 'PUT';
-    if (options.cancel) {
-      verb = 'DELETE';
-    }
+    let verb = 'POST';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.attempt) {
-      // start the generation
-      url = url + 'attempt';
+    if (options?.cancel) {
+      verb = 'DELETE';
+      url += 'attempt';
+    } else if (options?.checkStatus) {
+      verb = 'GET';
+      url += 'attempt';
+    } else if (data?.pgp_key || data?.attempt) {
+      url += 'attempt';
     } else {
       // progress the operation
-      url = url + 'update';
+      url += 'update';
     }
     return this.ajax(url, verb, {
       data,

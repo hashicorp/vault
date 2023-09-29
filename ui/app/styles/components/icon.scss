@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .icon {
@@ -75,10 +75,15 @@
   height: 32px;
 }
 
+// if using @stretched on FlightIcon there must be an explicit height set on the parent if used in a flexbox
+// without height set the flexbox will scale out of proportion on Safari
+
 .brand-icon-large {
   width: 62px;
+  height: 62px;
 }
 
 .error-icon {
   width: 48px;
+  height: 48px;
 }

@@ -8,9 +8,11 @@ description: >-
 
 # `/sys/replication`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
-## Attempt Recovery
+@include 'alerts/restricted-root.mdx'
+
+## Attempt recovery
 
 This endpoint attempts recovery if replication is in an adverse state. For
 example: an error has caused replication to stop syncing.
@@ -19,7 +21,7 @@ example: an error has caused replication to stop syncing.
 | :----- | :------------------------- |
 | `POST` | `/sys/replication/recover` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -28,7 +30,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/recover
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -36,7 +38,7 @@ $ curl \
 }
 ```
 
-## Reindex Replication
+## Reindex replication
 
 This endpoint reindexes the local data storage. This can cause a very long delay
 depending on the number and size of objects in the data store.
@@ -61,13 +63,13 @@ depending on the number and size of objects in the data store.
   asynchronously flushed the reindex may not have applied fully and a new reindex
   may need to be done. Defaults false.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {}
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -76,7 +78,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/reindex
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -84,7 +86,7 @@ $ curl \
 }
 ```
 
-## Check Status
+## Check status
 
 This endpoint print information about the status of replication (mode,
 sync progress, etc).
@@ -95,14 +97,14 @@ This is an unauthenticated endpoint.
 | :----- | :------------------------ |
 | `GET`  | `/sys/replication/status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/status
 ```
 
-### Sample Response
+### Sample response
 
 The printed status of the replication environment. As an example, for a
 performance primary and DR primary node, it will look something like:
@@ -151,7 +153,7 @@ performance primary and DR primary node, it will look something like:
 Possible values for `connection_status` are `connected` or `disconnected`. `last_heartbeat` is the timestamp of the
 last time this node exchanged heartbeats with another node.
 
-### Sample Response from Performance Secondary & DR Primary
+### Sample response from performance secondary & DR primary
 
 The printed status of the replication environment. As an example, for a
 performance secondary and DR primary node, it will look something like:
@@ -181,6 +183,8 @@ performance secondary and DR primary node, it will look something like:
       "known_primary_cluster_addrs": ["https://127.0.0.1:8201"],
       "last_remote_wal": 291,
       "merkle_root": "43f40fc775b40cc76cd5d7e289b2e6eaf4ba138c",
+      "corrupted_merkle_tree": false,
+      "last_corruption_check_epoch": "1694456090",
       "mode": "secondary",
       "primaries": [
         {
@@ -193,6 +197,75 @@ performance secondary and DR primary node, it will look something like:
       "primary_cluster_addr": "https://127.0.0.1:8201",
       "secondary_id": "2",
       "state": "stream-wals"
+    }
+  }
+}
+```
+
+## `/sys/replication/merkle-check`
+
+The Merkle check endpoint prints information about the corruption
+status of the Merkle tree. The corruption information provides insight
+about whether any current replication issues can be resolved by
+reindexing the tree. We recommend consulting the Merkle check endpoint
+**before** reindexing to ensure the process will be useful as  reindexing
+can be time-consuming and lead to downtime.
+
+You must provide an authentication token when calling `replication/merkle-check`.
+
+| Method  | Path                            |
+| :------ | :------------------------------ |
+| `POST`  | `/sys/replication/merkle-check` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/merkle-check
+```
+
+### Sample response
+
+The response provides information about the health of the Merkle composite tree.
+The `merkle_corruption_report` stanza provides information about merkle tree
+corruption.  The `corrupted_root` field indicates whether the root of the tree
+is corrupted. The `corrupted_tree_map` field identifies any corruption in the
+roots of its subtrees, including replicated and local subtrees. In the event of
+corruption within a page or subpage of the tree, `corrupted_tree_map` includes
+the page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the merkle tree.
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
     }
   }
 }

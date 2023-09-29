@@ -1,5 +1,10 @@
 name: Security Scan
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -10,28 +15,33 @@ on:
 
 jobs:
   scan:
-    runs-on: ['linux', 'large']
-    if: ${{ github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core' }}
+    runs-on: ${{ fromJSON(vars.RUNNER_XL) }}
+    # The first check ensures this doesn't run on community-contributed PRs, who
+    # won't have the permissions to run this job.
+    if: ${{ (github.repository != 'hashicorp/vault' || (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+          && (github.actor != 'dependabot[bot]') && ( github.actor != 'hc-github-team-secure-vault-core') }}
+    
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
-        go-version: 1.18
+        cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+        go-version-file: .go-version
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0 # v4.6.1
       with:
         python-version: 3.x
 
     - name: Clone Security Scanner repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
         path: security-scanner
-        ref: 2526c196a28bb367b1ac6c997ff48e9ebf06834f
+        ref: 52d94588851f38a416f11c1e727131b3c8b0dd4d
 
     - name: Install dependencies
       shell: bash
@@ -42,19 +52,19 @@ jobs:
         cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-semgrep"
         go build -o scan-plugin-semgrep .
         mv scan-plugin-semgrep "$HOME/.bin"
-        
+
         cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-codeql"
         go build -o scan-plugin-codeql .
         mv scan-plugin-codeql "$HOME/.bin"
-        
+
         # Semgrep
         python3 -m pip install semgrep
-        
+
         # CodeQL
         LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
         gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
         tar xf codeql-bundle-linux64.tar.gz -C "$HOME/.bin"
-        
+
         # Add to PATH
         echo "$HOME/.bin" >> "$GITHUB_PATH"
         echo "$HOME/.bin/codeql" >> "$GITHUB_PATH"
@@ -68,6 +78,8 @@ jobs:
         #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
       with:
         repository: "$PWD"
+        cache-build: true
+        cache-go-modules: false
 
     - name: SARIF Output
       shell: bash
@@ -77,6 +89,6 @@ jobs:
         cat results.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@46a6823b81f2d7c67ddf123851eea88365bc8a67 # codeql-bundle-v2.13.5
       with:
         sarif_file: results.sarif

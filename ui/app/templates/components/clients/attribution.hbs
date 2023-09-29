@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! only show side-by-side horizontal bar charts if data is from a single, historical month }}
 <div
   class={{concat "chart-wrapper" (if @isHistoricalMonth " dual-chart-grid" " single-chart-grid")}}
@@ -69,8 +74,8 @@
       </div>
     {{/if}}
     <div class="legend-center">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
     </div>
   {{else}}
     <div class="chart-empty-state">

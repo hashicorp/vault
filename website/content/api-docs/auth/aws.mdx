@@ -4,7 +4,7 @@ page_title: AWS - Auth Methods - HTTP API
 description: This is the API documentation for the Vault AWS auth method.
 ---
 
-# AWS Auth Method (API)
+# AWS auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -22,7 +22,7 @@ please update your API calls accordingly.
 [list of affected endpoints](#deprecations-effective-in-vault-1-7) and their
 replacements is provided at the end of this document.
 
-## Configure Client
+## Configure client
 
 Configures the credentials required to perform API calls to AWS as well as
 custom endpoints to talk to AWS APIs. The instance identity document
@@ -65,6 +65,10 @@ capabilities, the credentials are fetched automatically.
 - `sts_region` `(string: "")` - Region to override the default region for making
   AWS STS API calls. Should only be set if `sts_endpoint` is set. If so, should
   be set to the region in which the custom `sts_endpoint` resides.
+- `use_sts_region_from_client` `(boolean: false)` - If set, overrides both `sts_endpoint`
+  and `sts_region` to instead use the region specified in the client request headers for
+  IAM-based authentication . This can be useful when you have client requests coming from
+  different regions and want flexibility in which regional STS API is used.
 - `iam_server_id_header_value` `(string: "")` - The value to require in the
   `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
   are used in the iam auth method. If not set, then no value is required or
@@ -78,7 +82,7 @@ capabilities, the credentials are fetched automatically.
   an IAM based login call. In any case, a default list of headers AWS STS
   expects for a GetCallerIdentity are allowed.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -87,7 +91,7 @@ capabilities, the credentials are fetched automatically.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -97,7 +101,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
-## Read Config
+## Read config
 
 Returns the previously configured AWS access credentials.
 
@@ -105,7 +109,7 @@ Returns the previously configured AWS access credentials.
 | :----- | :------------------------ |
 | `GET`  | `/auth/aws/config/client` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -113,7 +117,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -123,12 +127,13 @@ $ curl \
     "iam_endpoint": "",
     "sts_endpoint": "",
     "sts_region": "",
+    "use_sts_region_from_client": false,
     "iam_server_id_header_value": ""
   }
 }
 ```
 
-## Delete Config
+## Delete config
 
 Deletes the previously configured AWS access credentials.
 
@@ -136,7 +141,7 @@ Deletes the previously configured AWS access credentials.
 | :------- | :------------------------ |
 | `DELETE` | `/auth/aws/config/client` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -145,7 +150,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/client
 ```
 
-## Rotate Root Credentials
+## Rotate root credentials
 
 When you have configured Vault with static credentials, you can use this
 endpoint to have Vault rotate the access key it used. Note that, due to AWS
@@ -165,7 +170,7 @@ secret key is used to access AWS.
 
 There are no parameters to this operation.
 
-### Sample Request
+### Sample request
 
 ```$ curl \
     --header "X-Vault-Token: ..." \
@@ -173,7 +178,7 @@ There are no parameters to this operation.
     http://127.0.0.1:8200/v1/auth/aws/config/rotate-root
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -185,7 +190,7 @@ There are no parameters to this operation.
 
 The new access key Vault uses is returned by this operation.
 
-## Configure Identity Integration
+## Configure identity integration
 
 This configures the way that Vault interacts with the
 [Identity](/vault/docs/secrets/identity) store. The default (as of Vault
@@ -237,7 +242,7 @@ This configures the way that Vault interacts with the
   **Only select fields that will have a low rate of change** for your `ec2_alias` because
   each change triggers a storage write and can have a performance impact at scale.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -245,7 +250,7 @@ This configures the way that Vault interacts with the
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -255,7 +260,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/identity
 ```
 
-## Read Identity Integration Configuration
+## Read identity integration configuration
 
 Returns the previously configured Identity integration configuration
 
@@ -263,7 +268,7 @@ Returns the previously configured Identity integration configuration
 | :----- | :-------------------------- |
 | `GET`  | `/auth/aws/config/identity` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -271,7 +276,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/identity
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -281,7 +286,7 @@ $ curl \
 }
 ```
 
-## Create Certificate Configuration
+## Create certificate configuration
 
 Registers an AWS public key to be used to verify the instance identity
 documents. Indicate the type of the public key using the `type` parameter.
@@ -320,7 +325,7 @@ for more information on the signature types and the corresponding certificates.
   [/signature](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-signature.html)
   endpoint. Defaults to "pkcs7".
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -328,7 +333,7 @@ for more information on the signature types and the corresponding certificates.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -338,7 +343,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
-## Read Certificate Configuration
+## Read certificate configuration
 
 Returns the previously configured AWS public key.
 
@@ -350,7 +355,7 @@ Returns the previously configured AWS public key.
 
 - `cert_name` `(string: <required>)` - Name of the certificate.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -358,7 +363,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -369,7 +374,7 @@ $ curl \
 }
 ```
 
-## Delete Certificate Configuration
+## Delete certificate configuration
 
 Removes the previously configured AWS public key.
 
@@ -377,7 +382,7 @@ Removes the previously configured AWS public key.
 | :------- | :---------------------------------------- |
 | `DELETE` | `/auth/aws/config/certificate/:cert_name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -386,7 +391,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/certificate/test-cert
 ```
 
-## List Certificate Configurations
+## List certificate configurations
 
 Lists all the AWS public certificates that are registered with the method.
 
@@ -394,7 +399,7 @@ Lists all the AWS public certificates that are registered with the method.
 | :----- | :------------------------------ |
 | `LIST` | `/auth/aws/config/certificates` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -403,7 +408,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/certificates
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -413,7 +418,7 @@ $ curl \
 }
 ```
 
-## Create STS Role
+## Create STS role
 
 Allows the explicit association of STS roles to satellite AWS accounts
 (i.e. those which are not the account in which the Vault server is
@@ -433,7 +438,7 @@ when validating IAM principals or EC2 instances in the particular AWS account.
   interacting with the account specified. The Vault server must have
   permissions to assume this role.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -441,7 +446,7 @@ when validating IAM principals or EC2 instances in the particular AWS account.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -451,7 +456,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
-## Read STS Role
+## Read STS role
 
 Returns the previously configured STS role.
 
@@ -464,7 +469,7 @@ Returns the previously configured STS role.
 - `account_id` `(string: <required>)` - AWS account ID that has been
   previously associated with STS role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -472,7 +477,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -482,7 +487,7 @@ $ curl \
 }
 ```
 
-## List STS Roles
+## List STS roles
 
 Lists all the AWS Account IDs for which an STS role is registered.
 
@@ -490,7 +495,7 @@ Lists all the AWS Account IDs for which an STS role is registered.
 | :----- | :--------------------- |
 | `LIST` | `/auth/aws/config/sts` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -499,7 +504,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/sts
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -509,7 +514,7 @@ $ curl \
 }
 ```
 
-## Delete STS Role
+## Delete STS role
 
 Deletes a previously configured AWS account/STS role association.
 
@@ -522,7 +527,7 @@ Deletes a previously configured AWS account/STS role association.
 - `account_id` `(string: <required>)` - AWS account ID that has been
   previously associated with STS role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -531,7 +536,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/sts/111122223333
 ```
 
-## Configure Identity Access List Tidy Operation
+## Configure identity access list tidy operation
 
 Configures the periodic tidying operation of the access listed identity entries.
 
@@ -547,7 +552,7 @@ Configures the periodic tidying operation of the access listed identity entries.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `identity-accesslist/<instance_id>` entries.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -555,7 +560,7 @@ Configures the periodic tidying operation of the access listed identity entries.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -565,7 +570,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
-## Read Identity Access List Tidy Settings
+## Read identity access list tidy settings
 
 Returns the previously configured periodic access list tidying settings.
 
@@ -573,7 +578,7 @@ Returns the previously configured periodic access list tidying settings.
 | :----- | :------------------------------------------ |
 | `GET`  | `/auth/aws/config/tidy/identity-accesslist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -581,7 +586,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -592,7 +597,7 @@ $ curl \
 }
 ```
 
-## Delete Identity Access List Tidy Settings
+## Delete identity access list tidy settings
 
 Deletes the previously configured periodic access list tidying settings.
 
@@ -600,7 +605,7 @@ Deletes the previously configured periodic access list tidying settings.
 | :------- | :------------------------------------------ |
 | `DELETE` | `/auth/aws/config/tidy/identity-accesslist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -609,7 +614,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/identity-accesslist
 ```
 
-## Configure Role Tag Deny List Tidy Operation
+## Configure role tag deny list tidy operation
 
 Configures the periodic tidying operation of the deny listed role tag entries.
 
@@ -625,7 +630,7 @@ Configures the periodic tidying operation of the deny listed role tag entries.
 - `disable_periodic_tidy` `(bool: false)` - If set to 'true', disables the
   periodic tidying of the `roletag-denylist/<instance_id>` entries.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -633,7 +638,7 @@ Configures the periodic tidying operation of the deny listed role tag entries.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -643,7 +648,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
-## Read Role Tag Deny List Tidy Settings
+## Read role tag deny list tidy settings
 
 Returns the previously configured periodic deny list tidying settings.
 
@@ -651,7 +656,7 @@ Returns the previously configured periodic deny list tidying settings.
 | :----- | :--------------------------------------- |
 | `GET`  | `/auth/aws/config/tidy/roletag-denylist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -659,7 +664,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -670,7 +675,7 @@ $ curl \
 }
 ```
 
-## Delete Role Tag Deny List Tidy Settings
+## Delete role tag deny list tidy settings
 
 Deletes the previously configured periodic deny list tidying settings.
 
@@ -678,7 +683,7 @@ Deletes the previously configured periodic deny list tidying settings.
 | :------- | :--------------------------------------- |
 | `DELETE` | `/auth/aws/config/tidy/roletag-denylist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -687,7 +692,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/config/tidy/roletag-denylist
 ```
 
-## Create/Update Role
+## Create/Update role
 
 Registers a role in the method. Only those instances or principals which
 are using the role registered using this endpoint, will be able to perform
@@ -840,7 +845,7 @@ list in order to satisfy that constraint.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -854,7 +859,7 @@ list in order to satisfy that constraint.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -864,7 +869,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -876,7 +881,7 @@ Returns the previously registered role configuration.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -884,7 +889,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -899,7 +904,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the method.
 
@@ -907,7 +912,7 @@ Lists all the roles that are registered with the method.
 | :----- | :---------------- |
 | `LIST` | `/auth/aws/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -916,7 +921,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -926,7 +931,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -938,7 +943,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -947,7 +952,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/role/dev-role
 ```
 
-## Create Role Tags
+## Create role tags
 
 Creates a role tag on the role, which help in restricting the capabilities
 that are set on the role. Role tags are not tied to any specific ec2
@@ -989,7 +994,7 @@ given instance can be allowed to gain in a worst-case scenario.
   auth/aws/identity-accesslist endpoint. Defaults to 'false'. Mutually exclusive
   with `allow_instance_migration`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -997,7 +1002,7 @@ given instance can be allowed to gain in a worst-case scenario.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1007,7 +1012,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/role/dev-api-and-web-role/tag
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1073,18 +1078,18 @@ for more information on the signature types.
   enabled on either the role or the role tag, the `nonce` holds no significance.
   This is ignored unless using the ec2 auth method.
 - `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the
-  signed request. Currently only POST is supported, but other methods may be
-  supported in the future. This is required when using the iam auth method.
+  signed request. This is required when using the iam auth method.
 - `iam_request_url` `(string: <required-iam>)` - Base64-encoded HTTP URL used in
   the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=`
   (base64-encoding of `https://sts.amazonaws.com/`) as most requests will
-  probably use POST with an empty URI. This is required when using the iam auth
-  method.
+  probably use POST with an empty URI. If using GET method this will contain
+  the authentication headers that have been hoisted out of the message body.
+  This is required when using the iam auth method.
 - `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`, which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
-  required when using the iam auth method.
+  required when using the iam auth method with POST signed requests.
 - `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
   for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
   Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The
@@ -1095,13 +1100,13 @@ for more information on the signature types.
   its value must match the value configured, and the header must be included in
   the signed headers. This is required when using the iam auth method.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {}
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1110,7 +1115,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1131,7 +1136,7 @@ $ curl \
 }
 ```
 
-## Place Role Tags in Deny List
+## Place role tags in deny list
 
 Places a valid role tag in a deny list. This ensures that the role tag
 cannot be used by any instance to perform a login operation again. Note
@@ -1149,7 +1154,7 @@ token.
   created. The tag can be supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1158,7 +1163,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
-### Read Role Tag Deny List Information
+### Read role tag deny list information
 
 Returns the deny list entry of a previously deny listed role tag.
 
@@ -1172,7 +1177,7 @@ Returns the deny list entry of a previously deny listed role tag.
   supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1180,7 +1185,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1191,7 +1196,7 @@ $ curl \
 }
 ```
 
-## List Deny List Tags
+## List deny list tags
 
 Lists all the role tags that are deny listed.
 
@@ -1199,7 +1204,7 @@ Lists all the role tags that are deny listed.
 | :----- | :--------------------------- |
 | `LIST` | `/auth/aws/roletag-denylist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1208,7 +1213,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/roletag-denylist
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1220,7 +1225,7 @@ $ curl \
 }
 ```
 
-## Delete Deny List Tags
+## Delete deny list tags
 
 Deletes a deny listed role tag.
 
@@ -1234,7 +1239,7 @@ Deletes a deny listed role tag.
   supplied as-is. In order to avoid any encoding problems, it can be base64
   encoded.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1243,7 +1248,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/roletag-denylist/djE6MDlWcDBxR3V5Qjg9OmE9YW1pLWZjZTNjNjk2OnA9ZGVmYXVsdCxwcm9kOmQ9ZmFsc2U6dD0zMDBoMG0wczp1UExLQ1F4cXNlZlJocnAxcW1WYTF3c1FWVVhYSkc4VVpQLwo=
 ```
 
-## Tidy Deny List Tags
+## Tidy deny list tags
 
 Cleans up the entries in the deny listed based on expiration time on the entry and
 `safety_buffer`.
@@ -1258,7 +1263,7 @@ Cleans up the entries in the deny listed based on expiration time on the entry a
   passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1267,7 +1272,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/tidy/roletag-denylist
 ```
 
-### Read Identity Access List Information
+### Read identity access list information
 
 Returns an entry in the identity access list. An entry will be created/updated by every
 successful login.
@@ -1282,7 +1287,7 @@ successful login.
   operation from an EC2 instance gets cached in th access list, keyed off of
   instance ID.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1290,7 +1295,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/identity-accesslist/i-aab47d37
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1304,7 +1309,7 @@ $ curl \
 }
 ```
 
-## List Identity Access List Entries
+## List identity access list entries
 
 Lists all the instance IDs that are in the access list of successful logins.
 
@@ -1312,7 +1317,7 @@ Lists all the instance IDs that are in the access list of successful logins.
 | :----- | :------------------------------ |
 | `LIST` | `/auth/aws/identity-accesslist` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1321,7 +1326,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/identity-accesslist
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -1331,7 +1336,7 @@ $ curl \
 }
 ```
 
-## Delete Identity Access List Entries
+## Delete identity access list entries
 
 Deletes a cache of the successful login from an instance.
 
@@ -1345,7 +1350,7 @@ Deletes a cache of the successful login from an instance.
   operation from an EC2 instance gets cached in this access list, keyed off of
   instance ID.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -1354,7 +1359,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/aws/identity-accesslist/i-aab47d37
 ```
 
-## Tidy Identity Access List Entries
+## Tidy identity access list entries
 
 Cleans up the entries in the access list based on expiration time and
 `safety_buffer`.
@@ -1369,7 +1374,7 @@ Cleans up the entries in the access list based on expiration time and
   passed beyond the `roletag` expiration, before it is removed from the method
   storage. Defaults to 72h.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

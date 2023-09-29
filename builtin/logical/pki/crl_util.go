@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
-	atomic2 "go.uber.org/atomic"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	atomic2 "go.uber.org/atomic"
 )
 
 const (
@@ -207,6 +207,41 @@ func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error
 	return &configCopy, nil
 }
 
+func (cb *crlBuilder) getConfigWithForcedUpdate(sc *storageContext) (*crlConfig, error) {
+	cb.markConfigDirty()
+	return cb.getConfigWithUpdate(sc)
+}
+
+func (cb *crlBuilder) writeConfig(sc *storageContext, config *crlConfig) (*crlConfig, error) {
+	cb._config.Lock()
+	defer cb._config.Unlock()
+
+	if err := sc.setRevocationConfig(config); err != nil {
+		cb.markConfigDirty()
+		return nil, fmt.Errorf("failed writing CRL config: %w", err)
+	}
+
+	previousConfig := cb.config
+	if config != nil {
+		cb.config = *config
+	} else {
+		cb.config = defaultCrlConfig
+	}
+
+	triggerChangeNotification := true
+	if !cb.haveInitializedConfig {
+		cb.haveInitializedConfig = true
+		triggerChangeNotification = false // do not trigger on the initial loading of configuration.
+	}
+
+	// Certain things need to be triggered on all server types when crlConfig is loaded.
+	if triggerChangeNotification {
+		cb.notifyOnConfigChange(sc, previousConfig, cb.config)
+	}
+
+	return config, nil
+}
+
 func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 	cfg, err := cb.getConfigWithUpdate(sc)
 	if err != nil {
@@ -248,12 +283,12 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 	// the grace period and act accordingly.
 	now := time.Now()
 
-	period, err := time.ParseDuration(cfg.AutoRebuildGracePeriod)
+	period, err := parseutil.ParseDurationSecond(cfg.AutoRebuildGracePeriod)
 	if err != nil {
 		// This may occur if the duration is empty; in that case
 		// assume the default. The default should be valid and shouldn't
 		// error.
-		defaultPeriod, defaultErr := time.ParseDuration(defaultCrlConfig.AutoRebuildGracePeriod)
+		defaultPeriod, defaultErr := parseutil.ParseDurationSecond(defaultCrlConfig.AutoRebuildGracePeriod)
 		if defaultErr != nil {
 			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %w\n", cfg.AutoRebuildGracePeriod, defaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
 		}
@@ -436,7 +471,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool
 		return nil, nil
 	}
 
-	deltaRebuildDuration, err := time.ParseDuration(cfg.DeltaRebuildInterval)
+	deltaRebuildDuration, err := parseutil.ParseDurationSecond(cfg.DeltaRebuildInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -754,7 +789,7 @@ func (cb *crlBuilder) processRevocationQueue(sc *storageContext) error {
 				}
 
 				if err := sc.Storage.Put(sc.Context, confirmedEntry); err != nil {
-					return fmt.Errorf("error persisting cross-cluster revocation confirmation: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+					return fmt.Errorf("error persisting cross-cluster revocation confirmation: %w", err)
 				}
 			} else {
 				// Since we're the active node of the primary cluster, go ahead
@@ -2118,7 +2153,7 @@ func augmentWithRevokedIssuers(issuerIDEntryMap map[issuerID]*issuerEntry, issue
 func buildCRL(sc *storageContext, crlInfo *crlConfig, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64, isUnified bool, isDelta bool, lastCompleteNumber int64) (*time.Time, error) {
 	var revokedCerts []pkix.RevokedCertificate
 
-	crlLifetime, err := time.ParseDuration(crlInfo.Expiry)
+	crlLifetime, err := parseutil.ParseDurationSecond(crlInfo.Expiry)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
 	}

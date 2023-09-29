@@ -5,7 +5,7 @@ description: |-
   Upgrade instructions for Vault HA Pre 1.11 or Vault without autopilot upgrade automation being enabled. Be sure to read the Upgrading-Vault Guides as well.
 ---
 
-# Vault HA upgrades without Autopilot Upgrade Automation (Pre 1.11)
+# Vault HA upgrades without autopilot upgrade automation (Pre 1.11)
 
 This is our recommended upgrade procedure if **one** of the following applies:
 
@@ -26,7 +26,7 @@ Enterprise](/vault/tutorials/raft/raft-upgrade-automation) tutorial for
 additional guidance.
 
 
-## HA Installations
+## HA installations
 
 Regardless of the method you use, do not fail over from a newer version of Vault
 to an older version. Our suggested procedure is designed to prevent this.
@@ -64,14 +64,14 @@ Perform these steps on each standby:
 
 At this point all standby nodes are upgraded and ready to take over. The
 upgrade will not complete until one of the upgraded standby nodes takes over
-active duty. 
+active duty.
 
 To complete the cluster upgrade:
 
 1. Properly shut down the remaining (active) node
 
    <Note>
-   
+
    It is important that you shut the node down properly.
    This will perform a step-down and release the HA lock, allowing a standby
    node to take over with a very short delay.
@@ -95,47 +95,6 @@ takes over active duty.
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
 
-## Enterprise Replication Installations
+## Enterprise replication installations
 
-<Note>
-
-Prior to any upgrade, be sure to also read and follow any instructions in the
-version-specific upgrade notes which are found in the navigation menu for this
-documentation.
-
-</Note>
-
-Upgrading Vault Enterprise clusters which participate in [Enterprise
-Replication](/vault/docs/enterprise/replication) requires the following basic
-order of operations:
-
-- **Upgrade the replication secondary instances first** using appropriate
-  guidance from the previous sections depending on whether each secondary
-  instance is non-HA or HA
-- Verify functionality of each secondary instance after upgrading
-- When satisfied with functionality of upgraded secondary instances, upgrade
-  the primary instance
-
-<Note>
-
-It is not safe to replicate from a newer version of Vault to an older version.
-When upgrading replicated clusters, ensure that upstream clusters are always on
-older versions of Vault than downstream clusters.
-
-</Note>
-
-Here is an example of upgrading four Vault replicated Vault clusters:
-
-![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
-
-In the above scenario, the ideal upgrade procedure would be as follows,
-verifying functionality after each cluster upgrade.
-
-1. Upgrade Clusters B and D, using the HA upgrade process above. These clusters
-   have no downstream clusters, so they should be upgraded first, but the
-   ordering of B vs D does not matter.
-2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
-   Because Cluster C is a cluster, it should also use the HA upgrade process.
-3. Finally, upgrade Cluster A. All clusters downstream of A will already be
-   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
-   Primary.
+See the main [upgrading](/vault/docs/upgrading#enterprise-replication-installations) page.

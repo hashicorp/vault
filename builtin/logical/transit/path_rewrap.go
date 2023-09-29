@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -15,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
+
+var ErrNonceNotAllowed = errors.New("provided nonce not allowed for this key")
 
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
@@ -149,6 +152,11 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			continue
+		}
+
+		if item.Nonce != "" && !nonceAllowed(p) {
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 

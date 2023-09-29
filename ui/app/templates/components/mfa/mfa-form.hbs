@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="auth-form" data-test-mfa-form>
   <div class="box is-marginless is-shadowless">
     <p data-test-mfa-description>
       {{this.description}}
     </p>
     <form id="auth-form" {{on "submit" this.submit}}>
-      <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+      <MessageError @errorMessage={{this.error}} />
       <div class="field has-top-margin-l">
         {{#each this.constraints as |constraint index|}}
           {{#if index}}

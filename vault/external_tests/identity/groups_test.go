@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package identity
 
@@ -8,28 +8,11 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/vault/builtin/credential/github"
-	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestIdentityStore_ListGroupAlias(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"github": github.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	err := client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
@@ -152,19 +135,7 @@ func TestIdentityStore_ListGroupAlias(t *testing.T) {
 
 // Testing the fix for GH-4351
 func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": credLdap.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable the first LDAP auth

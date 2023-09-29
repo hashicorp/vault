@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { all } from 'rsvp';
-import { verifyCertificates } from 'vault/utils/parse-pki-cert';
+import { verifyCertificates, parseCertificate } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuerAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -39,7 +39,13 @@ export default class PkiIssuerAdapter extends ApplicationAdapter {
       const issuerRecord = await this.queryRecord(store, type, { id, backend: query.backend });
       const { data } = issuerRecord;
       const isRoot = await verifyCertificates(data.certificate, data.certificate);
-      return { ...keyInfo, ...data, isRoot };
+      const parsedCertificate = parseCertificate(data.certificate);
+      return {
+        ...keyInfo,
+        ...data,
+        isRoot,
+        parsedCertificate: { common_name: parsedCertificate.common_name },
+      };
     } catch (e) {
       return { ...keyInfo, issuer_id: id };
     }

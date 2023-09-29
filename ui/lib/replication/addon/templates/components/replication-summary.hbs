@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (not (has-feature "DR Replication"))}}
   <UpgradePage @title="Replication" />
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}
@@ -274,12 +279,7 @@
     }}
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <button
-            type="submit"
-            class="button is-primary"
-            disabled={{this.disallowEnable}}
-            data-test-replication-enable={{true}}
-          >
+          <button type="submit" class="button is-primary" disabled={{this.disallowEnable}} data-test-replication-enable>
             Enable Replication
           </button>
         </div>

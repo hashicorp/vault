@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -17,12 +17,15 @@ export default class PkiRoute extends Route {
     // the openAPI attributes to the model prototype
     const mountPath = this.secretMountPath.currentPath;
     return hash({
-      role: this.pathHelp.getNewModel('pki/role', mountPath),
-      urls: this.pathHelp.getNewModel('pki/urls', mountPath),
-      key: this.pathHelp.getNewModel('pki/key', mountPath),
-      signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
+      acme: this.pathHelp.getNewModel('pki/config/acme', mountPath),
       certGenerate: this.pathHelp.getNewModel('pki/certificate/generate', mountPath),
       certSign: this.pathHelp.getNewModel('pki/certificate/sign', mountPath),
+      cluster: this.pathHelp.getNewModel('pki/config/cluster', mountPath),
+      key: this.pathHelp.getNewModel('pki/key', mountPath),
+      role: this.pathHelp.getNewModel('pki/role', mountPath),
+      signCsr: this.pathHelp.getNewModel('pki/sign-intermediate', mountPath),
+      tidy: this.pathHelp.getNewModel('pki/tidy', mountPath),
+      urls: this.pathHelp.getNewModel('pki/config/urls', mountPath),
     });
   }
 }

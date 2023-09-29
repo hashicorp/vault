@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
@@ -10,12 +10,10 @@ import { match, alias, or } from '@ember/object/computed';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
-
-const BACKENDS = supportedAuthBackends();
 
 /**
  * @module AuthForm
@@ -49,6 +47,7 @@ export default Component.extend(DEFAULTS, {
   flashMessages: service(),
   store: service(),
   csp: service('csp-event'),
+  version: service(),
 
   //  passed in via a query param
   selectedAuth: null,
@@ -58,10 +57,13 @@ export default Component.extend(DEFAULTS, {
   wrappedToken: null,
   // internal
   oldNamespace: null,
-  authMethods: BACKENDS,
 
   // number answer for okta number challenge if applicable
   oktaNumberChallengeAnswer: null,
+
+  authMethods: computed('version.isEnterprise', function () {
+    return this.version.isEnterprise ? allSupportedAuthBackends() : supportedAuthBackends();
+  }),
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -139,7 +141,7 @@ export default Component.extend(DEFAULTS, {
     if (keyIsPath && !type) {
       return methods.findBy('path', selected);
     }
-    return BACKENDS.findBy('type', selected);
+    return this.authMethods.findBy('type', selected);
   },
 
   selectedAuthIsPath: match('selectedAuth', /\/$/),
@@ -168,21 +170,21 @@ export default Component.extend(DEFAULTS, {
 
   cspErrorText: `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`,
 
-  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', function () {
+  allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', 'authMethods', function () {
     const hasMethodsWithPath = this.hasMethodsWithPath;
     const methodsToShow = this.methodsToShow;
-    return hasMethodsWithPath ? methodsToShow.concat(BACKENDS) : methodsToShow;
+    return hasMethodsWithPath ? methodsToShow.concat(this.authMethods) : methodsToShow;
   }),
 
   hasMethodsWithPath: computed('methodsToShow', function () {
     return this.methodsToShow.isAny('path');
   }),
-  methodsToShow: computed('methods', function () {
+  methodsToShow: computed('methods', 'authMethods', function () {
     const methods = this.methods || [];
     const shownMethods = methods.filter((m) =>
-      BACKENDS.find((b) => b.type.toLowerCase() === m.type.toLowerCase())
+      this.authMethods.find((b) => b.type.toLowerCase() === m.type.toLowerCase())
     );
-    return shownMethods.length ? shownMethods : BACKENDS;
+    return shownMethods.length ? shownMethods : this.authMethods;
   }),
 
   unwrapToken: task(
@@ -219,6 +221,8 @@ export default Component.extend(DEFAULTS, {
             };
           })
         );
+        // without unloading the records there will be an issue where all methods set to list when unauthenticated will appear for all namespaces
+        // if possible, it would be more reliable to add a namespace attr to the model so we could filter against the current namespace rather than unloading all
         next(() => {
           store.unloadAll('auth-method');
         });
@@ -265,7 +269,7 @@ export default Component.extend(DEFAULTS, {
       return;
     }
     let response = null;
-    this.setOktaNumberChallenge(true);
+    this.args.setOktaNumberChallenge(true);
     this.setCancellingAuth(false);
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
     while (response === null) {
@@ -297,9 +301,9 @@ export default Component.extend(DEFAULTS, {
         this.set('token', token);
       }
       this.set('error', null);
-      // if callback from oidc or jwt we have a token at this point
+      // if callback from oidc, jwt, or saml we have a token at this point
       const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
-      const backendMeta = BACKENDS.find(
+      const backendMeta = this.authMethods.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
       const attributes = (backendMeta || {}).formAttributes || [];
@@ -328,7 +332,7 @@ export default Component.extend(DEFAULTS, {
       });
     },
     returnToLoginFromOktaNumberChallenge() {
-      this.setOktaNumberChallenge(false);
+      this.args.setOktaNumberChallenge(false);
       this.set('oktaNumberChallengeAnswer', null);
     },
   },

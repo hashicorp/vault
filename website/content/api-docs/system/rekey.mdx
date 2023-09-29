@@ -6,6 +6,8 @@ description: The `/sys/rekey` endpoints are used to rekey the unseal keys for Va
 
 # `/sys/rekey`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
 On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
@@ -13,7 +15,7 @@ can be provided to rekey the root key since no unseal keys are available. The
 secret shares, secret threshold, and stored shares parameters must be set to 1.
 Upon successful rekey, no split unseal key shares are returned.
 
-## Read Rekey Progress
+## Read rekey progress
 
 This endpoint reads the configuration and progress of the current rekey attempt.
 
@@ -21,7 +23,7 @@ This endpoint reads the configuration and progress of the current rekey attempt.
 | :----- | :---------------- |
 | `GET`  | `/sys/rekey/init` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -29,7 +31,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -54,7 +56,7 @@ keys will be backed up to physical storage will also be displayed.
 `verification_required` indicates whether verification was enabled for this
 operation.
 
-## Start Rekey
+## Start rekey
 
 This endpoint initializes a new rekey attempt. Only a single rekey attempt can
 take place at a time, and changing the parameters of a rekey requires canceling
@@ -94,7 +96,7 @@ and starting a new rekey, which will also provide a new nonce.
   can be successfully decrypted before committing to the new shares, which the
   backup functionality does not provide.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -103,7 +105,7 @@ and starting a new rekey, which will also provide a new nonce.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -113,7 +115,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
-## Cancel Rekey
+## Cancel rekey
 
 This endpoint cancels any in-progress rekey. This clears the rekey settings as
 well as any progress made. This must be called to change the parameters of the
@@ -124,7 +126,7 @@ during the verification flow, the current unseal keys remain valid.
 | :------- | :---------------- |
 | `DELETE` | `/sys/rekey/init` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -133,7 +135,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
-## Read Backup Key
+## Read backup key
 
 This endpoint returns the backup copy of PGP-encrypted unseal keys. The returned
 value is the nonce of the rekey operation and a map of PGP key fingerprint to
@@ -143,7 +145,7 @@ hex-encoded PGP-encrypted key.
 | :----- | :------------------ |
 | `GET`  | `/sys/rekey/backup` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -151,7 +153,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/backup
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -162,7 +164,7 @@ $ curl \
 }
 ```
 
-## Delete Backup Key
+## Delete backup key
 
 This endpoint deletes the backup copy of PGP-encrypted unseal keys.
 
@@ -170,7 +172,7 @@ This endpoint deletes the backup copy of PGP-encrypted unseal keys.
 | :------- | :------------------ |
 | `DELETE` | `/sys/rekey/backup` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -179,7 +181,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/backup
 ```
 
-## Submit Key
+## Submit key
 
 This endpoint is used to enter a single root key share to progress the rekey
 of the Vault. If the threshold number of root key shares is reached, Vault
@@ -205,7 +207,7 @@ for the verification operation.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the rekey operation.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -214,7 +216,7 @@ for the verification operation.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -224,7 +226,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/update
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -243,7 +245,7 @@ If the keys are PGP-encrypted, an array of key fingerprints will also be
 provided (with the order in which the keys were used for encryption) along with
 whether or not the keys were backed up to physical storage.
 
-## Read Rekey Verification Progress
+## Read rekey verification progress
 
 This endpoint reads the configuration and progress of the current rekey
 verification attempt.
@@ -252,7 +254,7 @@ verification attempt.
 | :----- | :------------------ |
 | `GET`  | `/sys/rekey/verify` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -260,7 +262,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/verify
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -276,7 +278,7 @@ threshold required for the new shares to pass verification. `progress` is how
 many of the new unseal keys have been provided for this verification operation.
 The `nonce` for the current rekey operation is also displayed.
 
-## Cancel Rekey Verification
+## Cancel rekey verification
 
 This endpoint cancels any in-progress rekey verification operation. This clears
 any progress made and resets the nonce. Unlike a `DELETE` against
@@ -288,7 +290,7 @@ nonce.
 | :------- | :------------------ |
 | `DELETE` | `/sys/rekey/verify` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -297,7 +299,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/verify
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -308,7 +310,7 @@ $ curl \
 }
 ```
 
-## Submit Verification Key
+## Submit verification key
 
 This endpoint is used to enter a single new key share to progress the rekey
 verification operation. If the threshold number of new key shares is reached,
@@ -332,7 +334,7 @@ below; otherwise the response will be the same as the `GET` method against
 - `nonce` `(string: <required>)` – Specifies the nonce of the rekey
   verification operation.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -341,7 +343,7 @@ below; otherwise the response will be the same as the `GET` method against
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -351,7 +353,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/rekey/verify
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

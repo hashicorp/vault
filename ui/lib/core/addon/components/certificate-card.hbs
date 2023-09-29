@@ -1,0 +1,32 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="is-flex-row has-top-padding-m has-bottom-padding-m is-medium-width"
+  data-test-certificate-card
+>
+  <span class="has-left-margin-s">
+    <Icon @name="certificate" @size="24" data-test-certificate-icon />
+  </span>
+  <div class="has-left-margin-m is-min-width-0 is-flex-grow-1">
+    <p class="has-text-weight-bold" data-test-certificate-label>
+      {{this.format}}
+    </p>
+    <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
+      {{@data}}
+    </code>
+  </div>
+  <div class="is-flex-center has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@data}}
+      class="transparent is-paddingless"
+      data-test-copy-button
+    />
+  </div>
+</Hds::Card::Container>

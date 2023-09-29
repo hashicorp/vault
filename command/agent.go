@@ -1,58 +1,49 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	token_file "github.com/hashicorp/vault/command/agent/auth/token-file"
-
-	ctconfig "github.com/hashicorp/consul-template/config"
-	"github.com/hashicorp/go-multierror"
-
-	"github.com/hashicorp/vault/command/agent/sink/inmem"
-
 	systemd "github.com/coreos/go-systemd/daemon"
+	ctconfig "github.com/hashicorp/consul-template/config"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	"github.com/hashicorp/vault/command/agent/auth/alicloud"
-	"github.com/hashicorp/vault/command/agent/auth/approle"
-	"github.com/hashicorp/vault/command/agent/auth/aws"
-	"github.com/hashicorp/vault/command/agent/auth/azure"
-	"github.com/hashicorp/vault/command/agent/auth/cert"
-	"github.com/hashicorp/vault/command/agent/auth/cf"
-	"github.com/hashicorp/vault/command/agent/auth/gcp"
-	"github.com/hashicorp/vault/command/agent/auth/jwt"
-	"github.com/hashicorp/vault/command/agent/auth/kerberos"
-	"github.com/hashicorp/vault/command/agent/auth/kubernetes"
-	"github.com/hashicorp/vault/command/agent/auth/oci"
-	"github.com/hashicorp/vault/command/agent/cache"
-	"github.com/hashicorp/vault/command/agent/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agent/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agent/cache/keymanager"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agent/exec"
 	"github.com/hashicorp/vault/command/agent/template"
-	"github.com/hashicorp/vault/command/agent/winsvc"
+	"github.com/hashicorp/vault/command/agentproxyshared"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
+	"github.com/hashicorp/vault/command/agentproxyshared/winsvc"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/useragent"
@@ -61,11 +52,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -258,7 +244,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Ignore any setting of Agent's address. This client is used by the Agent
 	// to reach out to Vault. This should never loop back to agent.
-	c.flagAgentAddress = ""
+	c.flagAgentProxyAddress = ""
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf(
@@ -278,7 +264,17 @@ func (c *AgentCommand) Run(args []string) int {
 		}
 	}
 
-	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, and
+	if config.IsDefaultListerDefined() {
+		// Notably, we cannot know for sure if they are using the API proxy functionality unless
+		// we log on each API proxy call, which would be too noisy.
+		// A customer could have a listener defined but only be using e.g. the cache-clear API,
+		// even though the API proxy is something they have available.
+		c.UI.Warn("==> Note: Vault Agent will be deprecating API proxy functionality in a future " +
+			"release, and this functionality has moved to a new subcommand, vault proxy. If you rely on this " +
+			"functionality, plan to move to Vault Proxy instead.")
+	}
+
+	// ctx and cancelFunc are passed to the AuthHandler, SinkServer, ExecServer and
 	// TemplateServer that periodically listen for ctx.Done() to fire and shut
 	// down accordingly.
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -353,39 +349,9 @@ func (c *AgentCommand) Run(args []string) int {
 			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
-		switch config.AutoAuth.Method.Type {
-		case "alicloud":
-			method, err = alicloud.NewAliCloudAuthMethod(authConfig)
-		case "aws":
-			method, err = aws.NewAWSAuthMethod(authConfig)
-		case "azure":
-			method, err = azure.NewAzureAuthMethod(authConfig)
-		case "cert":
-			method, err = cert.NewCertAuthMethod(authConfig)
-		case "cf":
-			method, err = cf.NewCFAuthMethod(authConfig)
-		case "gcp":
-			method, err = gcp.NewGCPAuthMethod(authConfig)
-		case "jwt":
-			method, err = jwt.NewJWTAuthMethod(authConfig)
-		case "kerberos":
-			method, err = kerberos.NewKerberosAuthMethod(authConfig)
-		case "kubernetes":
-			method, err = kubernetes.NewKubernetesAuthMethod(authConfig)
-		case "approle":
-			method, err = approle.NewApproleAuthMethod(authConfig)
-		case "oci":
-			method, err = oci.NewOCIAuthMethod(authConfig, config.Vault.Address)
-		case "token_file":
-			method, err = token_file.NewTokenFileAuthMethod(authConfig)
-		case "pcf": // Deprecated.
-			method, err = cf.NewCFAuthMethod(authConfig)
-		default:
-			c.UI.Error(fmt.Sprintf("Unknown auth method %q", config.AutoAuth.Method.Type))
-			return 1
-		}
+		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address)
 		if err != nil {
-			c.UI.Error(fmt.Errorf("Error creating %s auth method: %w", config.AutoAuth.Method.Type, err).Error())
+			c.UI.Error(fmt.Sprintf("Error creating %s auth method: %v", config.AutoAuth.Method.Type, err))
 			return 1
 		}
 	}
@@ -505,10 +471,12 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// The API proxy to be used, if listeners are configured
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                 proxyClient,
-		Logger:                 apiProxyLogger,
-		EnforceConsistency:     enforceConsistency,
-		WhenInconsistentAction: whenInconsistent,
+		Client:                  proxyClient,
+		Logger:                  apiProxyLogger,
+		EnforceConsistency:      enforceConsistency,
+		WhenInconsistentAction:  whenInconsistent,
+		UserAgentStringFunction: useragent.AgentProxyStringWithProxiedUserAgent,
+		UserAgentString:         useragent.AgentProxyString(),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -534,147 +502,14 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
-			if config.Cache.Persist.Path == "" {
-				c.UI.Error("must specify persistent cache path")
-				return 1
-			}
-
-			// Set AAD based on key protection type
-			var aad string
-			switch config.Cache.Persist.Type {
-			case "kubernetes":
-				aad, err = getServiceAccountJWT(config.Cache.Persist.ServiceAccountTokenFile)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to read service account token from %s: %s", config.Cache.Persist.ServiceAccountTokenFile, err))
-					return 1
-				}
-			default:
-				c.UI.Error(fmt.Sprintf("persistent key protection type %q not supported", config.Cache.Persist.Type))
-				return 1
-			}
-
-			// Check if bolt file exists already
-			dbFileExists, err := cacheboltdb.DBFileExists(config.Cache.Persist.Path)
+			deferFunc, oldToken, err := agentproxyshared.AddPersistentStorageToLeaseCache(ctx, leaseCache, config.Cache.Persist, cacheLogger)
 			if err != nil {
-				c.UI.Error(fmt.Sprintf("failed to check if bolt file exists at path %s: %s", config.Cache.Persist.Path, err))
+				c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
 				return 1
 			}
-			if dbFileExists {
-				// Open the bolt file, but wait to setup Encryption
-				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:   config.Cache.Persist.Path,
-					Logger: cacheLogger.Named("cacheboltdb"),
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache: %v", err))
-					return 1
-				}
-
-				// Get the token from bolt for retrieving the encryption key,
-				// then setup encryption so that restore is possible
-				token, err := ps.GetRetrievalToken()
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error getting retrieval token from persistent cache: %v", err))
-				}
-
-				if err := ps.Close(); err != nil {
-					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
-				}
-
-				km, err := keymanager.NewPassthroughKeyManager(ctx, token)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
-					return 1
-				}
-
-				// Open the bolt file with the wrapper provided
-				ps, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:    config.Cache.Persist.Path,
-					Logger:  cacheLogger.Named("cacheboltdb"),
-					Wrapper: km.Wrapper(),
-					AAD:     aad,
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error opening persistent cache with wrapper: %v", err))
-					return 1
-				}
-
-				// Restore anything in the persistent cache to the memory cache
-				if err := leaseCache.Restore(ctx, ps); err != nil {
-					c.UI.Error(fmt.Sprintf("Error restoring in-memory cache from persisted file: %v", err))
-					if config.Cache.Persist.ExitOnErr {
-						return 1
-					}
-				}
-				cacheLogger.Info("loaded memcache from persistent storage")
-
-				// Check for previous auto-auth token
-				oldTokenBytes, err := ps.GetAutoAuthToken(ctx)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error in fetching previous auto-auth token: %s", err))
-					if config.Cache.Persist.ExitOnErr {
-						return 1
-					}
-				}
-				if len(oldTokenBytes) > 0 {
-					oldToken, err := cachememdb.Deserialize(oldTokenBytes)
-					if err != nil {
-						c.UI.Error(fmt.Sprintf("Error in deserializing previous auto-auth token cache entry: %s", err))
-						if config.Cache.Persist.ExitOnErr {
-							return 1
-						}
-					}
-					previousToken = oldToken.Token
-				}
-
-				// If keep_after_import true, set persistent storage layer in
-				// leaseCache, else remove db file
-				if config.Cache.Persist.KeepAfterImport {
-					defer ps.Close()
-					leaseCache.SetPersistentStorage(ps)
-				} else {
-					if err := ps.Close(); err != nil {
-						c.UI.Warn(fmt.Sprintf("failed to close persistent cache file: %s", err))
-					}
-					dbFile := filepath.Join(config.Cache.Persist.Path, cacheboltdb.DatabaseFileName)
-					if err := os.Remove(dbFile); err != nil {
-						c.UI.Error(fmt.Sprintf("failed to remove persistent storage file %s: %s", dbFile, err))
-						if config.Cache.Persist.ExitOnErr {
-							return 1
-						}
-					}
-				}
-			} else {
-				km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
-					return 1
-				}
-				ps, err := cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
-					Path:    config.Cache.Persist.Path,
-					Logger:  cacheLogger.Named("cacheboltdb"),
-					Wrapper: km.Wrapper(),
-					AAD:     aad,
-				})
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error creating persistent cache: %v", err))
-					return 1
-				}
-				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
-
-				// Stash the key material in bolt
-				token, err := km.RetrievalToken(ctx)
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
-					return 1
-				}
-				if err := ps.StoreRetrievalToken(token); err != nil {
-					c.UI.Error(fmt.Sprintf("Error setting key in persistent cache: %v", err))
-					return 1
-				}
-
-				defer ps.Close()
-				leaseCache.SetPersistentStorage(ps)
+			previousToken = oldToken
+			if deferFunc != nil {
+				defer deferFunc()
 			}
 		}
 	}
@@ -682,7 +517,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var listeners []net.Listener
 
 	// If there are templates, add an in-process listener
-	if len(config.Templates) > 0 {
+	if len(config.Templates) > 0 || len(config.EnvTemplates) > 0 {
 		config.Listeners = append(config.Listeners, &configutil.Listener{Type: listenerutil.BufConnType})
 	}
 
@@ -845,7 +680,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 	// Start auto-auth and sink servers
 	if method != nil {
-		enableTokenCh := len(config.Templates) > 0
+		enableTemplateTokenCh := len(config.Templates) > 0
+		enableEnvTemplateTokenCh := len(config.EnvTemplates) > 0
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
@@ -870,9 +706,12 @@ func (c *AgentCommand) Run(args []string) int {
 			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
-			EnableTemplateTokenCh:        enableTokenCh,
+			EnableTemplateTokenCh:        enableTemplateTokenCh,
+			EnableExecTokenCh:            enableEnvTemplateTokenCh,
 			Token:                        previousToken,
 			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
+			UserAgent:                    useragent.AgentAutoAuthString(),
+			MetricsSignifier:             "agent",
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -889,6 +728,18 @@ func (c *AgentCommand) Run(args []string) int {
 			Namespace:     templateNamespace,
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
+
+		es, err := exec.NewServer(&exec.ServerConfig{
+			AgentConfig: c.config,
+			Namespace:   templateNamespace,
+			Logger:      c.logger.Named("exec.server"),
+			LogLevel:    c.logger.GetLevel(),
+			LogWriter:   c.logWriter,
+		})
+		if err != nil {
+			c.logger.Error("could not create exec server", "error", err)
+			return 1
+		}
 
 		g.Add(func() error {
 			return ah.Run(ctx, method)
@@ -944,17 +795,30 @@ func (c *AgentCommand) Run(args []string) int {
 			ts.Stop()
 		})
 
+		g.Add(func() error {
+			return es.Run(ctx, ah.ExecTokenCh)
+		}, func(err error) {
+			// Let the lease cache know this is a shutdown; no need to evict
+			// everything
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
+			cancelFunc()
+			es.Close()
+		})
+
 	}
 
 	// Server configuration output
 	padding := 24
 	sort.Strings(infoKeys)
+	caser := cases.Title(language.English)
 	c.UI.Output("==> Vault Agent configuration:\n")
 	for _, k := range infoKeys {
 		c.UI.Output(fmt.Sprintf(
 			"%s%s: %s",
 			strings.Repeat(" ", padding-len(k)),
-			strings.Title(k),
+			caser.String(k),
 			info[k]))
 	}
 	c.UI.Output("")
@@ -979,11 +843,21 @@ func (c *AgentCommand) Run(args []string) int {
 
 	var exitCode int
 	if err := g.Run(); err != nil {
-		c.logger.Error("runtime error encountered", "error", err)
-		c.UI.Error("Error encountered during run, refer to logs for more details.")
-		exitCode = 1
+		var processExitError *exec.ProcessExitError
+		if errors.As(err, &processExitError) {
+			exitCode = processExitError.ExitCode
+		} else {
+			exitCode = 1
+		}
+
+		if exitCode != 0 {
+			c.logger.Error("runtime error encountered", "error", err, "exitCode", exitCode)
+			c.UI.Error("Error encountered during run, refer to logs for more details.")
+		}
 	}
+
 	c.notifySystemd(systemd.SdNotifyStopping)
+
 	return exitCode
 }
 
@@ -1162,19 +1036,6 @@ func (c *AgentCommand) removePidFile(pidPath string) error {
 	return os.Remove(pidPath)
 }
 
-// GetServiceAccountJWT reads the service account jwt from `tokenFile`. Default is
-// the default service account file path in kubernetes.
-func getServiceAccountJWT(tokenFile string) (string, error) {
-	if len(tokenFile) == 0 {
-		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	}
-	token, err := ioutil.ReadFile(tokenFile)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(token)), nil
-}
-
 func (c *AgentCommand) handleMetrics() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -1200,7 +1061,7 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
 		switch v := resp.Data[logical.HTTPRawBody].(type) {
 		case string:
-			w.WriteHeader((status))
+			w.WriteHeader(status)
 			w.Write([]byte(v))
 		case []byte:
 			w.WriteHeader(status)

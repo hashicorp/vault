@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -42,8 +42,8 @@ export default class PkiIssuerModel extends Model {
   @attr isDefault;
   @attr('string', { label: 'Issuer ID', detailLinkTo: 'issuers.issuer.details' }) issuerId;
   @attr('string', { label: 'Default key ID', detailLinkTo: 'keys.key.details' }) keyId;
-  @attr({ label: 'CA Chain', masked: true }) caChain;
-  @attr({ masked: true }) certificate;
+  @attr({ label: 'CA Chain', isCertificate: true }) caChain;
+  @attr({ isCertificate: true }) certificate;
   @attr('string') serialNumber;
 
   // parsed from certificate contents in serializer (see parse-pki-cert.js)

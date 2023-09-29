@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/xor"
@@ -92,23 +93,43 @@ func NodeSealed(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
 }
 
 func WaitForNCoresSealed(ctx context.Context, cluster VaultCluster, n int) error {
-	for ctx.Err() == nil {
-		sealed := 0
-		for i := range cluster.Nodes() {
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
-			if err := NodeSealed(ctx, cluster, i); err == nil {
-				sealed++
-			}
-			cancel()
-		}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-		if sealed >= n {
-			return nil
-		}
-		time.Sleep(time.Second)
+	errs := make(chan error)
+	for i := range cluster.Nodes() {
+		go func(i int) {
+			var err error
+			for ctx.Err() == nil {
+				err = NodeSealed(ctx, cluster, i)
+				if err == nil {
+					errs <- nil
+					return
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+			if err == nil {
+				err = ctx.Err()
+			}
+			errs <- err
+		}(i)
 	}
 
-	return fmt.Errorf("%d cores were not sealed", n)
+	var merr *multierror.Error
+	var sealed int
+	for range cluster.Nodes() {
+		err := <-errs
+		if err != nil {
+			merr = multierror.Append(merr, err)
+		} else {
+			sealed++
+			if sealed == n {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("%d cores were not sealed, errs: %v", n, merr.ErrorOrNil())
 }
 
 func NodeHealthy(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
@@ -137,6 +158,20 @@ func NodeHealthy(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
 }
 
 func LeaderNode(ctx context.Context, cluster VaultCluster) (int, error) {
+	// Be robust to multiple nodes thinking they are active. This is possible in
+	// certain network partition situations where the old leader has not
+	// discovered it's lost leadership yet. In tests this is only likely to come
+	// up when we are specifically provoking it, but it's possible it could happen
+	// at any point if leadership flaps of connectivity suffers transient errors
+	// etc. so be robust against it. The best solution would be to have some sort
+	// of epoch like the raft term that is guaranteed to be monotonically
+	// increasing through elections, however we don't have that abstraction for
+	// all HABackends in general. The best we have is the ActiveTime. In a
+	// distributed systems text book this would be bad to rely on due to clock
+	// sync issues etc. but for our tests it's likely fine because even if we are
+	// running separate Vault containers, they are all using the same hardware
+	// clock in the system.
+	leaderActiveTimes := make(map[int]time.Time)
 	for i, node := range cluster.Nodes() {
 		client := node.APIClient()
 		ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
@@ -145,9 +180,23 @@ func LeaderNode(ctx context.Context, cluster VaultCluster) (int, error) {
 		if err != nil || resp == nil || !resp.IsSelf {
 			continue
 		}
-		return i, nil
+		leaderActiveTimes[i] = resp.ActiveTime
 	}
-	return -1, fmt.Errorf("no leader found")
+	if len(leaderActiveTimes) == 0 {
+		return -1, fmt.Errorf("no leader found")
+	}
+	// At least one node thinks it is active. If multiple, pick the one with the
+	// most recent ActiveTime. Note if there is only one then this just returns
+	// it.
+	var newestLeaderIdx int
+	var newestActiveTime time.Time
+	for i, at := range leaderActiveTimes {
+		if at.After(newestActiveTime) {
+			newestActiveTime = at
+			newestLeaderIdx = i
+		}
+	}
+	return newestLeaderIdx, nil
 }
 
 func WaitForActiveNode(ctx context.Context, cluster VaultCluster) (int, error) {
@@ -168,7 +217,8 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	// A sleep before calling WaitForActiveNodeAndPerfStandbys seems to sort
 	// things out, but so apparently does this.  We should be able to eliminate
 	// this call to WaitForActiveNode by reworking the logic in this method.
-	if _, err := WaitForActiveNode(ctx, cluster); err != nil {
+	leaderIdx, err := WaitForActiveNode(ctx, cluster)
+	if err != nil {
 		return err
 	}
 
@@ -182,7 +232,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 	if err != nil {
 		return err
 	}
-	leaderClient := cluster.Nodes()[0].APIClient()
+	leaderClient := cluster.Nodes()[leaderIdx].APIClient()
 
 	for ctx.Err() == nil {
 		err = leaderClient.Sys().MountWithContext(ctx, mountPoint, &api.MountInput{
@@ -223,6 +273,7 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 				var leader *api.LeaderResponse
 				leader, err = client.Sys().LeaderWithContext(ctx)
 				if err != nil {
+					logger.Trace("waiting for core", "core", coreNo, "err", err)
 					continue
 				}
 				switch {
@@ -240,6 +291,12 @@ func WaitForActiveNodeAndPerfStandbys(ctx context.Context, cluster VaultCluster)
 						atomic.AddInt64(&standbys, 1)
 						return
 					}
+				default:
+					logger.Trace("waiting for core", "core", coreNo,
+						"ha_enabled", leader.HAEnabled,
+						"is_self", leader.IsSelf,
+						"perf_standby", leader.PerfStandby,
+						"perf_standby_remote_wal", leader.PerfStandbyLastRemoteWAL)
 				}
 			}
 		}(i)

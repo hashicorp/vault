@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -279,8 +278,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
 	dctx, cancelFunc := context.WithCancel(ctx)
-
-	opts := []grpc.DialOption{
+	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host,
 		grpc.WithDialer(clusterListener.GetDialerFunc(ctx, consts.RequestForwardingALPN)),
 		grpc.WithInsecure(), // it's not, we handle it in the dialer
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -289,15 +287,7 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
 			grpc.MaxCallSendMsgSize(math.MaxInt32),
-		),
-	}
-	if c.grpcMinConnectTimeout != 0 {
-		opts = append(opts, grpc.WithConnectParams(grpc.ConnectParams{
-			MinConnectTimeout: c.grpcMinConnectTimeout,
-			Backoff:           backoff.DefaultConfig,
-		}))
-	}
-	c.rpcClientConn, err = grpc.DialContext(dctx, clusterURL.Host, opts...)
+		))
 	if err != nil {
 		cancelFunc()
 		c.logger.Error("err setting up forwarding rpc client", "error", err)

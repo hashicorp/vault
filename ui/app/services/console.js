@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Low level service that allows users to input paths to make requests to vault
@@ -84,11 +84,22 @@ export default Service.extend({
     });
   },
 
-  read(path, data, wrapTTL) {
+  kvGet(path, data, flags = {}) {
+    const { wrapTTL, metadata } = flags;
+    // Split on first / to find backend and secret path
+    const pathSegment = metadata ? 'metadata' : 'data';
+    const [backend, secretPath] = path.split(/\/(.+)?/);
+    const kvPath = `${backend}/${pathSegment}/${secretPath}`;
+    return this.ajax('read', sanitizePath(kvPath), { wrapTTL });
+  },
+
+  read(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('read', sanitizePath(path), { wrapTTL });
   },
 
-  write(path, data, wrapTTL) {
+  write(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('write', sanitizePath(path), { data, wrapTTL });
   },
 
@@ -96,7 +107,8 @@ export default Service.extend({
     return this.ajax('delete', sanitizePath(path));
   },
 
-  list(path, data, wrapTTL) {
+  list(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     const listPath = ensureTrailingSlash(sanitizePath(path));
     return this.ajax('list', listPath, {
       data: {

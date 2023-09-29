@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::SideNav::Portal @ariaLabel="Access Navigation Links" data-test-sidebar-nav-panel="Access" as |Nav|>
   <Nav.BackLink
     @route="vault.cluster"
@@ -13,21 +18,21 @@
   {{#if (has-permission "access" routeParams="methods")}}
     <Nav.Link
       @route="vault.cluster.access.methods"
-      @current-when="vault.cluster.access.methods vault.cluster.access.method"
-      @text="Authentication methods"
-      data-test-sidebar-nav-link="Authentication methods"
+      @current-when="vault.cluster.access.methods vault.cluster.access.method vault.cluster.settings.auth"
+      @text="Authentication Methods"
+      data-test-sidebar-nav-link="Authentication Methods"
     />
   {{/if}}
   {{#if (has-permission "access" routeParams="mfa")}}
     <Nav.Link
       @route="vault.cluster.access.mfa.methods"
       @current-when="vault.cluster.access.mfa.methods vault.cluster.access.mfa.enforcements vault.cluster.access.mfa.index"
-      @text="Multi-factor authentication"
-      data-test-sidebar-nav-link="Multi-factor authentication"
+      @text="Multi-Factor Authentication"
+      data-test-sidebar-nav-link="Multi-Factor Authentication"
     />
   {{/if}}
   {{#if (has-permission "access" routeParams="oidc")}}
-    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC" data-test-sidebar-nav-link="OIDC" />
+    <Nav.Link @route="vault.cluster.access.oidc" @text="OIDC Provider" data-test-sidebar-nav-link="OIDC Provider" />
   {{/if}}
 
   {{#if (and (has-feature "Control Groups") (has-permission "access" routeParams="control-groups"))}}

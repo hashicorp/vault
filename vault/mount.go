@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
@@ -509,6 +508,11 @@ func (entry *MountEntry) Deserialize() map[string]interface{} {
 	}
 }
 
+// DecodeMountTable is used for testing
+func (c *Core) DecodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
+	return c.decodeMountTable(ctx, raw)
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
@@ -567,23 +571,21 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-
-		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
-			c.logger.Error("failed to unmount", "error", unmountInternalErr)
-		}
-		return err
-	}
-
 	return nil
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.authLock.Lock()
+	locked := true
+	unlock := func() {
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
+	}
+	defer unlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -660,11 +662,13 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
 	}
+	addKnownPath(c, viewPath)
 
 	nilMount, err := preprocessMount(c, entry, view)
 	if err != nil {
 		return err
 	}
+
 	origReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
@@ -732,13 +736,31 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
 	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, 1); err != nil {
+		c.logger.Error("failed to emit enabled ent builtin plugin metrics", "error", err)
+		return err
+	}
+
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		unlock()
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
+			c.logger.Error("failed to unmount", "error", unmountInternalErr)
+		}
+		return err
+	}
 
 	if !nilMount {
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
 		view.setReadOnlyErr(origReadOnlyErr)
+
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -812,7 +834,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+	if err := runFilteredPathsEvaluation(ctx, c, true); err != nil {
 		// Even we failed to evaluate filtered paths, the unmount operation was still successful
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 	}
@@ -853,9 +875,13 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 	if backend != nil && c.rollback != nil {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		if err := c.rollback.Rollback(rCtx, path); err != nil {
-			return err
+			c.logger.Error("ignoring rollback error during unmount", "error", err, "path", path)
+			err = nil
 		}
 	}
 	if backend != nil && c.expiration != nil && updateStorage {
@@ -904,6 +930,10 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(ctx, path); err != nil {
+		return err
+	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, -1); err != nil {
+		c.logger.Error("failed to emit disabled ent builtin plugin metrics", "error", err)
 		return err
 	}
 
@@ -1061,11 +1091,6 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-		return err
-	}
 	return nil
 }
 
@@ -1122,11 +1147,15 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	}
 
 	if !c.IsDRSecondary() {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 		if c.rollback != nil && c.router.MatchingBackend(ctx, srcRelativePath) != nil {
 			if err := c.rollback.Rollback(rCtx, srcRelativePath); err != nil {
-				return err
+				c.logger.Error("ignoring rollback error during remount", "error", err, "path", src.Namespace.Path+src.MountPath)
+				err = nil
 			}
 		}
 
@@ -1471,6 +1500,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			addFilterablePath(c, barrierPath)
 		}
+		addKnownPath(c, barrierPath)
 
 		// Determining the replicated state of the mount
 		nilMount, err := preprocessMount(c, entry, view)
@@ -1485,10 +1515,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origReadOnlyErr)
-			})
 		}
 
 		var backend logical.Backend
@@ -1574,8 +1600,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origReadOnlyErr)
+				}
 
-				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
@@ -1588,7 +1618,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
-			c.router.Taint(ctx, entry.Path)
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path := entry.Namespace().Path + entry.Path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
+			c.router.Taint(ctx, path)
 		}
 
 		// Ensure the cache is populated, don't need the result
@@ -1670,7 +1704,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
-	c.AddLogger(backendLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeSecrets.String(),
 		MountAccessor: entry.Accessor,
@@ -1683,16 +1716,15 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, "", err
 	}
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      backendLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-	}
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		config.EventsSender = pluginEventSender
+		StorageView:  view,
+		Logger:       backendLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
+	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {

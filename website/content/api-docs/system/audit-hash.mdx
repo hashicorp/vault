@@ -12,7 +12,9 @@ The `/sys/audit-hash` endpoint is used to calculate the hash of the data used by
 an audit device's hash function and salt. This can be used to search audit logs
 for a hashed value when the original value is known.
 
-## Calculate Hash
+## Calculate hash
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint hashes the given input data with the specified audit device's
 hash function and salt. This endpoint can be used to discover whether a given
@@ -35,7 +37,7 @@ should also be base64-encoded to supply into the `input` parameter.
 
 - `input` `(string: <required>)` – Specifies the input string to hash.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -43,7 +45,7 @@ should also be base64-encoded to supply into the `input` parameter.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -53,7 +55,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/audit-hash/example-audit
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

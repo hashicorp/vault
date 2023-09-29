@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -330,7 +331,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			return "", errors.New("missing time operand")
 
 		case 3:
-			duration, err := time.ParseDuration(opsSplit[2])
+			duration, err := parseutil.ParseDurationSecond(opsSplit[2])
 			if err != nil {
 				return "", errwrap.Wrapf("invalid duration: {{err}}", err)
 			}

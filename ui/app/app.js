@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Application from '@ember/application';
@@ -47,6 +47,30 @@ export default class App extends Application {
     kubernetes: {
       dependencies: {
         services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    ldap: {
+      dependencies: {
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    kv: {
+      dependencies: {
+        services: [
+          'download',
+          'namespace',
+          'router',
+          'store',
+          'secret-mount-path',
+          'flash-messages',
+          'control-group',
+        ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },

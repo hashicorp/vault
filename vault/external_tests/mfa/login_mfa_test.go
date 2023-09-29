@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mfa
 
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
@@ -18,18 +20,7 @@ import (
 
 // TestLoginMFA_Method_CRUD tests creating/reading/updating/deleting a method config for all the MFA providers
 func TestLoginMFA_Method_CRUD(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable userpass authentication
@@ -220,18 +211,7 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 }
 
 func TestLoginMFAMethodName(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable userpass authentication
@@ -444,18 +424,7 @@ func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_CRUD tests creating/reading/updating/deleting a login enforcement config
 func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// first create a few configs
@@ -603,14 +572,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_MethodIdsIsRequired ensures that login enforcements have method ids attached
 func TestLoginMFA_LoginEnforcement_MethodIdsIsRequired(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// create a login enforcement config, which should fail
@@ -626,14 +588,7 @@ func TestLoginMFA_LoginEnforcement_MethodIdsIsRequired(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_RequiredParameters validates that all of the required fields must be present
 func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// first create a few configs
@@ -669,14 +624,7 @@ func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
 }
 
 func TestLoginMFA_UpdateNonExistentConfig(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	_, err := client.Logical().Write("mfa/method/totp/a51884c6-51f2-bdc3-f4c5-0da64fe4d061", map[string]interface{}{

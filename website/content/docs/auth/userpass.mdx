@@ -6,7 +6,7 @@ description: >-
   username and password.
 ---
 
-# Userpass Auth Method
+# Userpass auth method
 
 The `userpass` auth method allows users to authenticate with Vault using
 a username and password combination.
@@ -68,9 +68,9 @@ management tool.
    ```shell-session
    $ vault auth enable userpass
    ```
-   
+
    This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
-   
+
    ```shell-session
    $ vault auth enable -path=<path> userpass
    ```
@@ -87,6 +87,9 @@ management tool.
    associated with the "admins" policy. This is the only configuration
    necessary.
 
+## User lockout
+
+@include 'user-lockout.mdx'
 
 ## API
 

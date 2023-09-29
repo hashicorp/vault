@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -28,14 +28,14 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
     await click('[data-test-replication-enable]');
 
-    await click(link('Performance Secondary'));
+    await click(link('Performance'));
     assert.strictEqual(
       currentURL(),
       '/vault/replication/performance',
       'Replication performance route renders'
     );
 
-    await click(link('DR Primary'));
+    await click(link('Disaster Recovery'));
     assert.strictEqual(currentURL(), '/vault/replication/dr', 'Replication dr route renders');
     // disable replication now that we have checked the links
     await click('[data-test-replication-link="manage"]');
@@ -43,7 +43,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', 'Disaster Recovery');
     await click('[data-test-confirm-button="Disable Replication?"]');
 
-    await click(link('Client count'));
+    await click(link('Client Count'));
     assert.strictEqual(currentURL(), '/vault/clients/dashboard', 'Client counts route renders');
 
     await click(link('License'));

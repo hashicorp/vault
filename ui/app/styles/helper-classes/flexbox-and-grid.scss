@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* Helpers that define anything with the CSS flexbox or CSS grid. */
@@ -20,6 +20,14 @@
   flex-direction: row;
 }
 
+.has-gap-m {
+  gap: $spacing-m;
+}
+
+.has-gap-l {
+  gap: $spacing-l;
+}
+
 // Alignment of the items
 .is-flex-v-centered {
   display: flex;
@@ -31,6 +39,11 @@
 .is-flex-center {
   display: flex;
   align-items: center;
+}
+
+.is-flex-align-start {
+  display: flex;
+  align-items: flex-start;
 }
 
 .is-flex-align-baseline {
@@ -68,11 +81,15 @@
   flex-basis: 100%;
 }
 
-.is-flex-1 {
+.is-flex-grow-1 {
   flex-grow: 1;
   &.basis-0 {
     flex-basis: 0;
   }
+}
+
+.is-flex-1 {
+  flex: 1;
 }
 
 .is-no-flex-grow {
@@ -97,13 +114,35 @@
   }
 }
 
+@include until($mobile) {
+  .is-flex-row {
+    flex-flow: column wrap;
+  }
+}
+
 /* CSS GRID */
 .is-grid {
   display: grid;
 }
 
+.grid-2-columns {
+  grid-template-columns: 2fr 2fr;
+
+  @include until($mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-gap-2 {
+  grid-gap: 2rem;
+}
+
 .is-grid-3-columns {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.align-self-center {
+  align-self: center;
 }
 
 .is-medium-height {
@@ -112,4 +151,8 @@
 
 .is-grid-column-span-3 {
   grid-column-end: span 3;
+}
+
+.grid-align-items-start {
+  align-items: start;
 }

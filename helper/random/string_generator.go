@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package random
 
@@ -70,7 +70,7 @@ func sortCharset(chars string) string {
 	return string(r)
 }
 
-// StringGenerator generats random strings from the provided charset & adhering to a set of rules. The set of rules
+// StringGenerator generates random strings from the provided charset & adhering to a set of rules. The set of rules
 // are things like CharsetRule which requires a certain number of characters from a sub-charset.
 type StringGenerator struct {
 	// Length of the string to generate.

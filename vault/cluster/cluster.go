@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cluster
 
@@ -75,10 +75,9 @@ type Listener struct {
 	logger                    log.Logger
 	l                         sync.RWMutex
 	tlsConnectionLoggingLevel log.Level
-	grpcMinConnectTimeout     time.Duration
 }
 
-func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout, grpcMinConnectTimeout time.Duration) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
 	var maxStreams uint32 = math.MaxUint32
 	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
 		i, err := strconv.ParseUint(override, 10, 32)
@@ -115,7 +114,6 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		cipherSuites:              cipherSuites,
 		logger:                    logger,
 		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
-		grpcMinConnectTimeout:     grpcMinConnectTimeout,
 	}
 }
 
@@ -466,21 +464,10 @@ func (cl *Listener) GetDialerFunc(ctx context.Context, alpn string) func(string,
 		}
 
 		tlsConfig.NextProtos = []string{alpn}
-		args := []interface{}{
-			"address", addr,
-			"alpn", alpn,
-			"host", tlsConfig.ServerName,
-			"timeout", fmt.Sprintf("%s", timeout),
-		}
-		if cl.grpcMinConnectTimeout != 0 {
-			args = append(args, "timeout_env_override", fmt.Sprintf("%s", cl.grpcMinConnectTimeout))
-		}
-		cl.logger.Debug("creating rpc dialer", args...)
+		cl.logger.Debug("creating rpc dialer", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName)
 
-		start := time.Now()
 		conn, err := cl.networkLayer.Dial(addr, timeout, tlsConfig)
 		if err != nil {
-			cl.logger.Debug("dial failure", "address", addr, "alpn", alpn, "host", tlsConfig.ServerName, "duration", fmt.Sprintf("%s", time.Since(start)), "error", err)
 			return nil, err
 		}
 		cl.logTLSSessionStart(conn.RemoteAddr().String(), conn.ConnectionState())

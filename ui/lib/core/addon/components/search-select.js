@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -26,22 +26,23 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *    @disallowNewItems={{true}}
  *    class={{if this.validationError "dropdown-has-error-border"}}
  * />
- * 
+ *
  // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
+ * @param {string} [nameKey="name"] - if shouldRenderName=true, you can use this arg to specify which key to use for the rendered name. Defaults to "name".
  * @param {array} [parentManageSelected] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings.
  * @param {array} [objectKeys] - Array of values that correlate to model attrs. Used to render attr other than 'id' beside the name if shouldRenderName=true. If passObject=true, objectKeys are added to the passed, selected object.
  * @param {number} [selectLimit] - Sets select limit
- 
+
 // * query params for dropdown items
  * @param {Array} models - An array of model types to fetch from the API.
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
- 
+
  // * template only/display args
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label for this form field
@@ -53,6 +54,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
  * @param {function} [renderInfoTooltip] - receives each inputValue string and list of dropdownOptions as args, so parent can determine when to render a tooltip beside a selectedOption and the tooltip text. see 'oidc/provider-form.js'
+ * @param {boolean} [disabled] - if true sets the disabled property on the ember-power-select component and makes it unusable.
  *
  // * advanced customization
  * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -86,11 +88,15 @@ export default class SearchSelect extends Component {
       : false;
   }
 
+  get nameKey() {
+    return this.args.nameKey || 'name';
+  }
+
   addSearchText(optionsToFormat) {
     // maps over array of objects or response from query
     return optionsToFormat.toArray().map((option) => {
       const id = option[this.idKey] ? option[this.idKey] : option.id;
-      option.searchText = `${option.name} ${id}`;
+      option.searchText = `${option[this.nameKey]} ${id}`;
       return option;
     });
   }
@@ -109,7 +115,7 @@ export default class SearchSelect extends Component {
       this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
-        name: matchingOption ? matchingOption.name : option,
+        name: matchingOption ? matchingOption[this.nameKey] : option,
         searchText: matchingOption ? matchingOption.searchText : option,
         addTooltip,
         // add additional attrs if we're using a dynamic idKey

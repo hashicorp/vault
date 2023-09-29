@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
@@ -12,11 +12,13 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   attrs = {
     caChain: { serialize: false },
     certificate: { serialize: false },
+    commonName: { serialize: false },
+    isDefault: { serialize: false },
+    isRoot: { serialize: false },
     issuerId: { serialize: false },
     keyId: { serialize: false },
     parsedCertificate: { serialize: false },
-    commonName: { serialize: false },
-    isRoot: { serialize: false },
+    serialNumber: { serialize: false },
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -24,7 +26,6 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
       const data = {
-        issuer_ref: payload.issuer_id,
         ...payload.data,
         parsed_certificate: parsedCert,
         common_name: parsedCert.common_name,

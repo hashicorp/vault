@@ -4,15 +4,19 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Vault UI](#vault-ui)
-  - [Ember CLI Version Matrix](#ember-cli-version-matrix)
+  - [Ember CLI Version Upgrade Matrix](#ember-cli-version-upgrade-matrix)
   - [Prerequisites](#prerequisites)
   - [Running a Vault Server](#running-a-vault-server)
-  - [Running / Development](#running--development)
+  - [Running the UI locally](#running-the-ui-locally)
+    - [Mirage](#mirage)
+  - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
+  - [Development](#development)
+    - [Quick commands](#quick-commands)
     - [Code Generators](#code-generators)
     - [Running Tests](#running-tests)
     - [Linting](#linting)
-    - [Building Vault UI into a Vault Binary](#building-vault-ui-into-a-vault-binary)
-  - [Further Reading / Useful Links](#further-reading--useful-links)
+    - [Contributing / Best Practices](#contributing--best-practices)
+    - [Further Reading / Useful Links](#further-reading--useful-links)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -20,25 +24,29 @@
 
 This README outlines the details of collaborating on this Ember application.
 
-## Ember CLI Version Matrix
+## Ember CLI Version Upgrade Matrix
 
 | Vault Version | Ember Version |
 | ------------- | ------------- |
+| 1.15.x        | 4.12.0        |
+| 1.14.x        | 4.4.0         |
 | 1.13.x        | 4.4.0         |
+| 1.12.x        | 3.28.5        |
+| 1.11.x        | 3.28.5        |
 | 1.10.x        | 3.28.5        |
 | 1.9.x         | 3.22.0        |
 | 1.8.x         | 3.22.0        |
-| 1.7.x         | 3.11          |
+| 1.7.x         | 3.11.0        |
 
 ## Prerequisites
 
 You will need the following things properly installed on your computer.
 
-* [Git](https://git-scm.com/)
-* [Node.js](https://nodejs.org/)
-* [Yarn](https://yarnpkg.com/)
-* [Ember CLI](https://cli.emberjs.com/release/)
-* [Google Chrome](https://google.com/chrome/)
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/)
+- [Yarn](https://yarnpkg.com/)
+- [Ember CLI](https://cli.emberjs.com/release/)
+- [Google Chrome](https://google.com/chrome/)
 
 In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
 in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).
@@ -46,57 +54,87 @@ in the `.yarn/releases` folder. To update to a different version of `yarn`, use 
 ## Running a Vault Server
 
 Before running Vault UI locally, a Vault server must be running. First, ensure
-Vault dev is built according the the instructions in `../README.md`. To start a
-single local Vault server:
+Vault dev is built according the the instructions in `../README.md`.
 
-- `yarn vault`
-
-To start a local Vault cluster:
-
-- `yarn vault:cluster`
+- To start a single local Vault server: `yarn vault`
+- To start a local Vault cluster: `yarn vault:cluster`
 
 These commands may also be [aliased on your local device](https://github.com/hashicorp/vault-tools/blob/master/users/noelle/vault_aliases).
 
-## Running / Development
+## Running the UI locally
 
-To get all of the JavaScript dependencies installed, run this in the `ui` directory:
+To spin up the UI, a Vault server must be running (see previous step).
+_All of the commands below assume you're in the `ui/` directory._
 
-- `yarn`
+> These steps will start an Ember CLI server that proxies requests to port 8200,
+> and enable live rebuilding of the application as you change the UI application code.
+> Visit your app at [http://localhost:4200](http://localhost:4200).
 
-If you want to run Vault UI and proxy back to a Vault server running
-on the default port, 8200, run the following in the `ui` directory:
+1. Install dependencies:
 
-- `yarn start`
+`yarn`
 
-This will start an Ember CLI server that proxies requests to port 8200,
-and enable live rebuilding of the application as you change the UI application code.
-Visit your app at [http://localhost:4200](http://localhost:4200).
+2. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
 
-If your Vault server is running on a different port you can use the
-long-form version of the npm script:
+`yarn start`
+
+> If your Vault server is running on a different port you can use the
+> long-form version of the npm script:
 
 `ember server --proxy=http://localhost:PORT`
 
-To run yarn with mirage, do:
+### Mirage
 
-- `yarn start:mirage handlername`
+[Mirage](https://miragejs.com/docs/getting-started/introduction/) can be helpful for mocking backend endpoints.
+Look in [mirage/handlers](mirage/handlers/) for existing mocked backends.
 
-Where `handlername` is one of the options exported in `mirage/handlers/index`
+Run yarn with mirage: `yarn start:mirage handlername`
+
+Where `handlername` is one of the options exported in [mirage/handlers/index](mirage/handlers/index.js)
+
+## Building Vault UI into a Vault Binary
+
+We use the [embed](https://golang.org/pkg/embed/) package from Go >1.20 to build
+the static assets of the Ember application into a Vault binary.
+
+This can be done by running these commands from the root directory:
+`make static-dist`
+`make dev-ui`
+
+This will result in a Vault binary that has the UI built-in - though in
+a non-dev setup it will still need to be enabled via the `ui` config or
+setting `VAULT_UI` environment variable.
+
+## Development
+
+### Quick commands
+
+| Command                               | Description                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| `yarn start`                          | start the app with live reloading                                       |
+| `yarn start:mirage <handler>`         | start the app with the mocked mirage backend, with handler provided     |
+| `make static-dist && make dev-ui`     | build a Vault binary with UI assets (run from root directory not `/ui`) |
+| `ember g component foo -ir core`      | generate a component in the /addon engine                               |
+| `yarn test:quick -f='<test name>'` -s | run tests in the browser, filtering by test name                        |
+| `yarn lint:js`                        | lint javascript files                                                   |
 
 ### Code Generators
 
 Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
-eg. a reusable component named foo that you'd like in the core engine
+eg. a reusable component named foo that you'd like in the core engine (read more about Ember engines [here](https://ember-engines.com/docs)).
 
-- `ember g component foo --in lib/core`
-- `echo "export { default } from 'core/components/foo';" > lib/core/app/components/foo.js`
+- `ember g component foo -ir core`
+
+The above command creates a template-only component by default. If you'd like to add a backing class, add the `-gc` flag:
+
+- `ember g component foo -gc -ir core`
 
 ### Running Tests
 
-Running tests will spin up a Vault dev server on port 9200 via a
+Running tests will spin up a Vault dev server on port :9200 via a
 pretest script that testem (the test runner) executes. All of the
-acceptance tests then run, proxing requests back to that server.
+acceptance tests then run, which proxy requests back to that server.
 
 - `yarn run test:oss`
 - `yarn run test:oss -s` to keep the test server running after the initial run.
@@ -105,26 +143,28 @@ acceptance tests then run, proxing requests back to that server.
 
 ### Linting
 
-- `yarn lint`
+- `yarn lint:js`
+- `yarn lint:hbs`
 - `yarn lint:fix`
 
-### Building Vault UI into a Vault Binary
+### Contributing / Best Practices
 
-We use the [embed](https://golang.org/pkg/embed/) package from Go 1.16+ to build
-the static assets of the Ember application into a Vault binary.
+Hello and thank you for contributing to the Vault UI! Below is a list of patterns we follow on the UI team to keep in mind when contributing to the UI codebase. This is an ever-evolving process, so we welcome any comments, questions or general feedback.
 
-This can be done by running these commands from the root directory run:
-`make static-dist`
-`make dev-ui`
+> **Remember** prefixing your branch name with `ui/` will run UI tests and skip the go tests. If your PR includes backend changes, _do not_ prefix your branch, instead add the `ui` label on github. This will trigger the UI test suite to run, in addition to the backend Go tests.
 
-This will result in a Vault binary that has the UI built-in - though in
-a non-dev setup it will still need to be enabled via the `ui` config or
-setting `VAULT_UI` environment variable.
+- [routing](docs/routing.md)
+- [serializers/adapters](docs/serializers-adapters.md)
+- [models](docs/models.md)
+- [components](docs/components.md)
+- [forms](docs/forms.md)
+- [css](docs/css.md)
+- [ember engines](docs/engines.md)
 
 ## Further Reading / Useful Links
 
-* [ember.js](https://emberjs.com/)
-* [ember-cli](https://cli.emberjs.com/release/)
-* Development Browser Extensions
-  * [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
-  * [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
+- [ember.js](https://emberjs.com/)
+- [ember-cli](https://cli.emberjs.com/release/)
+- Development Browser Extensions
+  - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
+  - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)

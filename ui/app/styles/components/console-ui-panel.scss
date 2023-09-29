@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 $console-close-height: 35px;
@@ -66,13 +66,6 @@ $console-close-height: 35px;
   }
 }
 
-.console-ui-panel-content.hover-copy-button,
-.console-ui-panel-content.hover-copy-button-static {
-  top: auto;
-  bottom: 0;
-  right: 0;
-}
-
 .console-ui-input {
   align-items: center;
   display: flex;
@@ -123,6 +116,10 @@ $console-close-height: 35px;
 .panel-open .console-ui-panel {
   box-shadow: $box-shadow-highest;
   min-height: 400px;
+}
+
+.main--console-open {
+  padding-bottom: 400px;
 }
 
 .panel-open .console-ui-panel.fullscreen {

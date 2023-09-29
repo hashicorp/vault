@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -55,11 +55,11 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 }
 
 func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) (*FailedLoginInfo, error) {
-	return c.GetUserFailedLoginInfo(ctx, userInfo), nil
+	return c.LocalGetUserFailedLoginInfo(ctx, userInfo), nil
 }
 
 func updateUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
-	return c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
+	return c.LocalUpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
 }
 
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {

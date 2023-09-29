@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // taken from https://github.com/yargs/yargs-parser/blob/v13.1.0/lib/tokenize-arg-string.js to get around import issue

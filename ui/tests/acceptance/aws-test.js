@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | aws secret backend', function (hooks) {
@@ -20,20 +19,6 @@ module('Acceptance | aws secret backend', function (hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(function () {
-    return logout.visit();
-  });
-
-  const POLICY = {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: 'iam:*',
-        Resource: '*',
-      },
-    ],
-  };
   test('aws backend', async function (assert) {
     assert.expect(12);
     const path = `aws-${this.uid}`;
@@ -81,8 +66,6 @@ module('Acceptance | aws secret backend', function (hooks) {
     );
 
     await fillIn('[data-test-input="name"]', roleName);
-
-    findAll('.CodeMirror')[0].CodeMirror.setValue(JSON.stringify(POLICY));
 
     // save the role
     await click('[data-test-role-aws-create]');

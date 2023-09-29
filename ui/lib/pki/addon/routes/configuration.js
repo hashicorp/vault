@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -14,8 +14,10 @@ export default class PkiConfigurationRoute extends Route {
     const engine = this.modelFor('application');
     return hash({
       engine,
-      urls: this.store.findRecord('pki/urls', engine.id).catch((e) => e.httpStatus),
-      crl: this.store.findRecord('pki/crl', engine.id).catch((e) => e.httpStatus),
+      acme: this.store.findRecord('pki/config/acme', engine.id).catch((e) => e.httpStatus),
+      cluster: this.store.findRecord('pki/config/cluster', engine.id).catch((e) => e.httpStatus),
+      urls: this.store.findRecord('pki/config/urls', engine.id).catch((e) => e.httpStatus),
+      crl: this.store.findRecord('pki/config/crl', engine.id).catch((e) => e.httpStatus),
     });
   }
 }

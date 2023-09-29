@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -53,9 +53,9 @@ func pathRoles(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policy Name",
+					Name: "Role Name",
 				},
 			},
 

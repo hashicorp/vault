@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -70,7 +70,60 @@ var (
 
 	// OIDs for X.509 certificate extensions used below.
 	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
+
+	// Cloned from https://github.com/golang/go/blob/82c713feb05da594567631972082af2fcba0ee4f/src/crypto/x509/x509.go#L327-L379
+	oidSignatureMD2WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 2}
+	oidSignatureMD5WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 4}
+	oidSignatureSHA1WithRSA     = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 5}
+	oidSignatureSHA256WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
+	oidSignatureSHA384WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 12}
+	oidSignatureSHA512WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 13}
+	oidSignatureRSAPSS          = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 10}
+	oidSignatureDSAWithSHA1     = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 3}
+	oidSignatureDSAWithSHA256   = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 2}
+	oidSignatureECDSAWithSHA1   = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 1}
+	oidSignatureECDSAWithSHA256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
+	oidSignatureECDSAWithSHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
+	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
+	oidSignatureEd25519         = asn1.ObjectIdentifier{1, 3, 101, 112}
+	oidISOSignatureSHA1WithRSA  = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 29}
+
+	signatureAlgorithmDetails = []struct {
+		algo       x509.SignatureAlgorithm
+		name       string
+		oid        asn1.ObjectIdentifier
+		pubKeyAlgo x509.PublicKeyAlgorithm
+		hash       crypto.Hash
+	}{
+		{x509.MD2WithRSA, "MD2-RSA", oidSignatureMD2WithRSA, x509.RSA, crypto.Hash(0) /* no value for MD2 */},
+		{x509.MD5WithRSA, "MD5-RSA", oidSignatureMD5WithRSA, x509.RSA, crypto.MD5},
+		{x509.SHA1WithRSA, "SHA1-RSA", oidSignatureSHA1WithRSA, x509.RSA, crypto.SHA1},
+		{x509.SHA1WithRSA, "SHA1-RSA", oidISOSignatureSHA1WithRSA, x509.RSA, crypto.SHA1},
+		{x509.SHA256WithRSA, "SHA256-RSA", oidSignatureSHA256WithRSA, x509.RSA, crypto.SHA256},
+		{x509.SHA384WithRSA, "SHA384-RSA", oidSignatureSHA384WithRSA, x509.RSA, crypto.SHA384},
+		{x509.SHA512WithRSA, "SHA512-RSA", oidSignatureSHA512WithRSA, x509.RSA, crypto.SHA512},
+		{x509.SHA256WithRSAPSS, "SHA256-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA256},
+		{x509.SHA384WithRSAPSS, "SHA384-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA384},
+		{x509.SHA512WithRSAPSS, "SHA512-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA512},
+		{x509.DSAWithSHA1, "DSA-SHA1", oidSignatureDSAWithSHA1, x509.DSA, crypto.SHA1},
+		{x509.DSAWithSHA256, "DSA-SHA256", oidSignatureDSAWithSHA256, x509.DSA, crypto.SHA256},
+		{x509.ECDSAWithSHA1, "ECDSA-SHA1", oidSignatureECDSAWithSHA1, x509.ECDSA, crypto.SHA1},
+		{x509.ECDSAWithSHA256, "ECDSA-SHA256", oidSignatureECDSAWithSHA256, x509.ECDSA, crypto.SHA256},
+		{x509.ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, x509.ECDSA, crypto.SHA384},
+		{x509.ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, x509.ECDSA, crypto.SHA512},
+		{x509.PureEd25519, "Ed25519", oidSignatureEd25519, x509.Ed25519, crypto.Hash(0) /* no pre-hashing */},
+	}
 )
+
+func doesPublicKeyAlgoMatchSignatureAlgo(pubKey x509.PublicKeyAlgorithm, algo x509.SignatureAlgorithm) bool {
+	for _, detail := range signatureAlgorithmDetails {
+		if detail.algo == algo {
+			return pubKey == detail.pubKeyAlgo
+		}
+	}
+
+	return false
+}
 
 func getFormat(data *framework.FieldData) string {
 	format := data.Get("format").(string)
@@ -606,7 +659,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, name) {
+					glob.Glob(strings.ToLower(currDomain), strings.ToLower(name)) {
 					valid = true
 					break
 				}
@@ -773,7 +826,26 @@ func generateCert(sc *storageContext,
 
 			uris, err := entries.toURLEntries(sc, issuerID(""))
 			if err != nil {
-				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+				// When generating root issuers, don't err on missing issuer
+				// ID; there is little value in including AIA info on a root,
+				// as this info would point back to itself; though RFC 5280 is
+				// a touch vague on this point, this seems to be consensus
+				// from public CAs such as DigiCert Global Root G3, ISRG Root
+				// X1, and others.
+				//
+				// This is a UX bug if we do err here, as it requires AIA
+				// templating to not include issuer id (a best practice for
+				// child certs issued from root and intermediate mounts
+				// however), and setting this before root generation (or, on
+				// root renewal) could cause problems.
+				if _, nonEmptyIssuerErr := entries.toURLEntries(sc, issuerID("empty-issuer-id")); nonEmptyIssuerErr != nil {
+					return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse AIA URL information: %v\nUsing templated AIA URL's {{issuer_id}} field when generating root certificates is not supported.", err)}
+				}
+
+				uris = &certutil.URLEntries{}
+
+				msg := "When generating root CA, found global AIA configuration with issuer_id template unsuitable for root generation. This AIA configuration has been ignored. To include AIA on this root CA, set the global AIA configuration to not include issuer_id and instead to refer to a static issuer name."
+				warnings = append(warnings, msg)
 			}
 
 			data.Params.URLs = uris
@@ -1002,6 +1074,12 @@ func signCert(b *backend,
 
 	if isCA {
 		creation.Params.PermittedDNSDomains = data.apiData.Get("permitted_dns_domains").([]string)
+	} else {
+		for _, ext := range csr.Extensions {
+			if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+				warnings = append(warnings, "specified CSR contained a Basic Constraints extension that was ignored during issuance")
+			}
+		}
 	}
 
 	parsedBundle, err := certutil.SignCertificate(creation)
@@ -1373,71 +1451,11 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	}
 
 	// Get the TTL and verify it against the max allowed
-	var ttl time.Duration
-	var maxTTL time.Duration
-	var notAfter time.Time
-	var err error
-	{
-		ttl = time.Duration(data.apiData.Get("ttl").(int)) * time.Second
-		notAfterAlt := data.role.NotAfter
-		if notAfterAlt == "" {
-			notAfterAltRaw, ok := data.apiData.GetOk("not_after")
-			if ok {
-				notAfterAlt = notAfterAltRaw.(string)
-			}
-
-		}
-		if ttl > 0 && notAfterAlt != "" {
-			return nil, nil, errutil.UserError{
-				Err: "Either ttl or not_after should be provided. Both should not be provided in the same request.",
-			}
-		}
-
-		if ttl == 0 && data.role.TTL > 0 {
-			ttl = data.role.TTL
-		}
-
-		if data.role.MaxTTL > 0 {
-			maxTTL = data.role.MaxTTL
-		}
-
-		if ttl == 0 {
-			ttl = b.System().DefaultLeaseTTL()
-		}
-		if maxTTL == 0 {
-			maxTTL = b.System().MaxLeaseTTL()
-		}
-		if ttl > maxTTL {
-			warnings = append(warnings, fmt.Sprintf("TTL %q is longer than permitted maxTTL %q, so maxTTL is being used", ttl, maxTTL))
-			ttl = maxTTL
-		}
-
-		if notAfterAlt != "" {
-			notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
-			if err != nil {
-				return nil, nil, errutil.UserError{Err: err.Error()}
-			}
-		} else {
-			notAfter = time.Now().Add(ttl)
-		}
-		if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
-			// If it's not self-signed, verify that the issued certificate
-			// won't be valid past the lifetime of the CA certificate, and
-			// act accordingly. This is dependent based on the issuer's
-			// LeafNotAfterBehavior argument.
-			switch caSign.LeafNotAfterBehavior {
-			case certutil.PermitNotAfterBehavior:
-				// Explicitly do nothing.
-			case certutil.TruncateNotAfterBehavior:
-				notAfter = caSign.Certificate.NotAfter
-			case certutil.ErrNotAfterBehavior:
-				fallthrough
-			default:
-				return nil, nil, errutil.UserError{Err: fmt.Sprintf(
-					"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
-			}
-		}
+	notAfter, ttlWarnings, err := getCertificateNotAfter(b, data, caSign)
+	if err != nil {
+		return nil, warnings, err
 	}
+	warnings = append(warnings, ttlWarnings...)
 
 	// Parse SKID from the request for cross-signing.
 	var skid []byte
@@ -1551,6 +1569,83 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	}
 
 	return creation, warnings, nil
+}
+
+// getCertificateNotAfter compute a certificate's NotAfter date based on the mount ttl, role, signing bundle and input
+// api data being sent. Returns a NotAfter time, a set of warnings or an error.
+func getCertificateNotAfter(b *backend, data *inputBundle, caSign *certutil.CAInfoBundle) (time.Time, []string, error) {
+	var warnings []string
+	var maxTTL time.Duration
+	var notAfter time.Time
+	var err error
+
+	ttl := time.Duration(data.apiData.Get("ttl").(int)) * time.Second
+	notAfterAlt := data.role.NotAfter
+	if notAfterAlt == "" {
+		notAfterAltRaw, ok := data.apiData.GetOk("not_after")
+		if ok {
+			notAfterAlt = notAfterAltRaw.(string)
+		}
+	}
+	if ttl > 0 && notAfterAlt != "" {
+		return time.Time{}, warnings, errutil.UserError{Err: "Either ttl or not_after should be provided. Both should not be provided in the same request."}
+	}
+
+	if ttl == 0 && data.role.TTL > 0 {
+		ttl = data.role.TTL
+	}
+
+	if data.role.MaxTTL > 0 {
+		maxTTL = data.role.MaxTTL
+	}
+
+	if ttl == 0 {
+		ttl = b.System().DefaultLeaseTTL()
+	}
+	if maxTTL == 0 {
+		maxTTL = b.System().MaxLeaseTTL()
+	}
+	if ttl > maxTTL {
+		warnings = append(warnings, fmt.Sprintf("TTL %q is longer than permitted maxTTL %q, so maxTTL is being used", ttl, maxTTL))
+		ttl = maxTTL
+	}
+
+	if notAfterAlt != "" {
+		notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
+		if err != nil {
+			return notAfter, warnings, errutil.UserError{Err: err.Error()}
+		}
+	} else {
+		notAfter = time.Now().Add(ttl)
+	}
+	notAfter, err = applyIssuerLeafNotAfterBehavior(caSign, notAfter)
+	if err != nil {
+		return time.Time{}, warnings, err
+	}
+	return notAfter, warnings, nil
+}
+
+// applyIssuerLeafNotAfterBehavior resets a certificate's notAfter time or errors out based on the
+// issuer's notAfter date along with the LeafNotAfterBehavior configuration
+func applyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter time.Time) (time.Time, error) {
+	if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
+		// If it's not self-signed, verify that the issued certificate
+		// won't be valid past the lifetime of the CA certificate, and
+		// act accordingly. This is dependent based on the issuer's
+		// LeafNotAfterBehavior argument.
+		switch caSign.LeafNotAfterBehavior {
+		case certutil.PermitNotAfterBehavior:
+			// Explicitly do nothing.
+		case certutil.TruncateNotAfterBehavior:
+			notAfter = caSign.Certificate.NotAfter
+		case certutil.ErrNotAfterBehavior:
+			fallthrough
+		default:
+			return time.Time{}, errutil.UserError{Err: fmt.Sprintf(
+				"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
+		}
+	}
+	return notAfter, nil
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {

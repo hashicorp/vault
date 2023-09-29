@@ -6,11 +6,13 @@ description: The `/sys/audit` endpoint is used to enable and disable audit devic
 
 # `/sys/audit`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/audit` endpoint is used to list, enable, and disable audit devices.
 Audit devices must be enabled before use, and more than one device may be
 enabled at a time.
 
-## List Enabled Audit Devices
+## List enabled audit devices
 
 This endpoint lists only the enabled audit devices (it does not list all
 available audit devices).
@@ -22,7 +24,7 @@ available audit devices).
 | :----- | :----------- |
 | `GET`  | `/sys/audit` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -30,7 +32,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/audit
 ```
 
-### Sample Response
+### Sample response
 
 ```javascript
 {
@@ -44,7 +46,7 @@ $ curl \
 }
 ```
 
-## Enable Audit Device
+## Enable audit device
 
 This endpoint enables a new audit device at the supplied path. The path can be a
 single word name or a more complex, nested path.
@@ -76,7 +78,7 @@ relevant functionality is only supported in Vault Enterprise:
 - `local` `(bool: false)` – Specifies if the audit device is local within the cluster only. Local
   audit devices are not replicated nor (if a secondary) removed by replication.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -87,7 +89,7 @@ relevant functionality is only supported in Vault Enterprise:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -97,9 +99,13 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/audit/example-audit
 ```
 
-## Disable Audit Device
+## Disable audit device
 
 This endpoint disables the audit device at the given path.
+
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
@@ -113,7 +119,7 @@ This endpoint disables the audit device at the given path.
 - `path` `(string: <required>)` – Specifies the path of the audit device to
   delete. This is part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -57,6 +57,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathImportVersion(),
 			b.pathKeys(),
 			b.pathListKeys(),
+			b.pathBYOKExportKeys(),
 			b.pathExportKeys(),
 			b.pathKeysConfig(),
 			b.pathEncrypt(),
@@ -72,6 +73,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathTrim(),
 			b.pathCacheConfig(),
 			b.pathConfigKeys(),
+			b.pathCreateCsr(),
+			b.pathImportCertChain(),
 		},
 
 		Secrets:      []*framework.Secret{},

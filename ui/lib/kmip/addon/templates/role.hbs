@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <HeaderCredentials @role={{this.role}} @scope={{this.scope}} />
 <Toolbar>
   <ToolbarActions>
@@ -23,7 +28,7 @@
   <FieldGroupShow @model={{this.model}} @showAllFields={{false}} />
   <div class="box is-fullwidth is-shadowless">
     <h2 class="title is-5">
-      Allowed Operations
+      Allowed operations
     </h2>
     <OperationFieldDisplay @model={{this.model}} />
   </div>

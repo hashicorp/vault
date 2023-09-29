@@ -1,0 +1,3 @@
+```release-note:bug 
+core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this.
+```

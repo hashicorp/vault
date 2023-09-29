@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -22,27 +23,29 @@ import (
 	"golang.org/x/net/idna"
 )
 
-func pathAcmeListOrders(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
+var maxAcmeCertTTL = 90 * (24 * time.Hour)
+
+func pathAcmeListOrders(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeListOrders(b, baseUrl+"/orders", opts)
 }
 
-func pathAcmeGetOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeGetOrder, "/order/"+uuidNameRegex("order_id"))
+func pathAcmeGetOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeGetOrder(b, baseUrl+"/order/"+uuidNameRegex("order_id"), opts)
 }
 
-func pathAcmeNewOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewOrder, "/new-order")
+func pathAcmeNewOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewOrder(b, baseUrl+"/new-order", opts)
 }
 
-func pathAcmeFinalizeOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeFinalizeOrder, "/order/"+uuidNameRegex("order_id")+"/finalize")
+func pathAcmeFinalizeOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeFinalizeOrder(b, baseUrl+"/order/"+uuidNameRegex("order_id")+"/finalize", opts)
 }
 
-func pathAcmeFetchOrderCert(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeFetchOrderCert, "/order/"+uuidNameRegex("order_id")+"/cert")
+func pathAcmeFetchOrderCert(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeFetchOrderCert(b, baseUrl+"/order/"+uuidNameRegex("order_id")+"/cert", opts)
 }
 
-func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeNewOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -52,18 +55,18 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeNewOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeNewOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
+func patternAcmeListOrders(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -73,18 +76,18 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeListOrdersHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeListOrdersHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeGetOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -95,18 +98,18 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeGetOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeGetOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeFinalizeOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -117,18 +120,18 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFinalizeOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeFinalizeOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
+func patternAcmeFetchOrderCert(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -139,14 +142,14 @@ func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFetchCertOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeFetchCertOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
@@ -221,7 +224,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request,
 	}, nil
 }
 
-func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
+func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
 	csr, err := parseCsrFromFinalize(data)
@@ -234,18 +237,17 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	if order.Status != ACMEOrderReady {
 		return nil, fmt.Errorf("%w: order is status %s, needs to be in ready state", ErrOrderNotReady, order.Status)
 	}
 
-	if !order.Expires.IsZero() && time.Now().After(order.Expires) {
+	now := time.Now()
+	if !order.Expires.IsZero() && now.After(order.Expires) {
 		return nil, fmt.Errorf("%w: order %s is expired", ErrMalformed, orderId)
 	}
 
@@ -257,16 +259,27 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	signedCertBundle, issuerId, err := issueCertFromCsr(ac, csr)
-	if err != nil {
-		return nil, err
-	}
+	var signedCertBundle *certutil.ParsedCertBundle
+	var issuerId issuerID
+	if ac.runtimeOpts.isCiepsEnabled {
+		// Note that issueAcmeCertUsingCieps enforces storage requirements and
+		// does the certificate storage for us
+		signedCertBundle, issuerId, err = issueAcmeCertUsingCieps(b, ac, r, fields, uc, account, order, csr)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signedCertBundle, issuerId, err = issueCertFromCsr(ac, csr)
+		if err != nil {
+			return nil, err
+		}
 
-	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
-	err = storeCertificate(ac.sc, signedCertBundle)
-	if err != nil {
-		return nil, err
+		err = storeCertificate(ac.sc, signedCertBundle)
+		if err != nil {
+			return nil, err
+		}
 	}
+	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 
 	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving account->cert->order reference", "serial_number", hyphenSerialNumber, "error", err)
@@ -284,26 +297,70 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
 	}
 
+	if err := b.doTrackBilling(ac.sc.Context, order.Identifiers); err != nil {
+		b.Logger().Error("failed to track billing for order", "order", orderId, "error", err)
+		err = nil
+	}
+
 	return formatOrderResponse(ac, order), nil
 }
 
-func requiredAuthorizationsCompleted(b *backend, ac *acmeContext, uc *jwsCtx, order *acmeOrder) bool {
-	if len(order.AuthorizationIds) == 0 {
-		return false
+func computeOrderStatus(ac *acmeContext, uc *jwsCtx, order *acmeOrder) (ACMEOrderStatusType, error) {
+	// If we reached a final stage, no use computing anything else
+	if order.Status == ACMEOrderInvalid || order.Status == ACMEOrderValid {
+		return order.Status, nil
 	}
 
+	// We aren't in a final state yet, check for expiry
+	if time.Now().After(order.Expires) {
+		return ACMEOrderInvalid, nil
+	}
+
+	// Intermediary steps passed authorizations should short circuit us as well
+	if order.Status == ACMEOrderReady || order.Status == ACMEOrderProcessing {
+		return order.Status, nil
+	}
+
+	// If we have no authorizations attached to the order, nothing to compute either
+	if len(order.AuthorizationIds) == 0 {
+		return ACMEOrderPending, nil
+	}
+
+	anyFailed := false
+	allPassed := true
 	for _, authId := range order.AuthorizationIds {
-		authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+		authorization, err := ac.getAcmeState().LoadAuthorization(ac, uc, authId)
 		if err != nil {
-			return false
+			return order.Status, fmt.Errorf("failed loading authorization: %s: %w", authId, err)
+		}
+
+		if authorization.Status == ACMEAuthorizationPending {
+			allPassed = false
+			continue
 		}
 
 		if authorization.Status != ACMEAuthorizationValid {
-			return false
+			// Per RFC 8555 - 7.1.6. Status Changes
+			// The order also moves to the "invalid" state if it expires or
+			// one of its authorizations enters a final state other than
+			// "valid" ("expired", "revoked", or "deactivated").
+			allPassed = false
+			anyFailed = true
+			break
 		}
 	}
 
-	return true
+	if anyFailed {
+		return ACMEOrderInvalid, nil
+	}
+
+	if allPassed {
+		return ACMEOrderReady, nil
+	}
+
+	// The order has not expired, no authorizations have yet to be marked as failed
+	// nor have we passed them all.
+	return ACMEOrderPending, nil
 }
 
 func validateCsrNotUsingAccountKey(csr *x509.CertificateRequest, uc *jwsCtx) error {
@@ -435,6 +492,34 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 	return nil
 }
 
+func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
+	// Role doesn't require a CN, so we don't care.
+	if !ac.role.RequireCN {
+		return
+	}
+
+	// CSR contains a CN, so use that one.
+	if csr.Subject.CommonName != "" {
+		return
+	}
+
+	// Choose a CN in the order wildcard -> DNS -> IP -> fail.
+	for _, name := range csr.DNSNames {
+		if strings.Contains(name, "*") {
+			data.Raw["common_name"] = name
+			return
+		}
+	}
+	if len(csr.DNSNames) > 0 {
+		data.Raw["common_name"] = csr.DNSNames[0]
+		return
+	}
+	if len(csr.IPAddresses) > 0 {
+		data.Raw["common_name"] = csr.IPAddresses[0].String()
+		return
+	}
+}
+
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -450,9 +535,20 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		Schema: getCsrSignVerbatimSchemaFields(),
 	}
 
+	// XXX: Usability hack: by default, minimalist roles have require_cn=true,
+	// but some ACME clients do not provision one in the certificate as modern
+	// (TLS) clients are mostly verifying against server's DNS SANs.
+	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
+
 	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
+	}
+
+	// ACME issued cert will override the TTL values to truncate to the issuer's
+	// expiration if we go beyond, no matter the setting
+	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
+		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
 	}
 
 	input := &inputBundle{
@@ -461,17 +557,55 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		role:    ac.role,
 	}
 
+	normalNotAfter, _, err := getCertificateNotAfter(ac.sc.Backend, input, signingBundle)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed computing certificate TTL from role/mount: %v: %w", err, ErrMalformed)
+	}
+
+	// Force a maximum 90 day TTL or lower for ACME
+	if time.Now().Add(maxAcmeCertTTL).Before(normalNotAfter) {
+		input.apiData.Raw["ttl"] = maxAcmeCertTTL
+	}
+
 	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
 		return nil, "", fmt.Errorf("%w: Refusing to sign CSR with empty PublicKey", ErrBadCSR)
 	}
 
-	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false, true)
+	// UseCSRValues as defined in certutil/helpers.go accepts the following
+	// fields off of the CSR:
+	//
+	// 1. Subject fields,
+	// 2. SANs,
+	// 3. Extensions (except for a BasicConstraint extension)
+	//
+	// Because we have stricter validation of subject parameters, and no way
+	// to validate or allow extensions, we do not wish to use the CSR's
+	// parameters for these values. If a CSR sets, e.g., an organizational
+	// unit, we have no way of validating this (via ACME here, without perhaps
+	// an external policy engine), and thus should not be setting it on our
+	// final issued certificate.
+	parsedBundle, _, err := signCert(ac.sc.Backend, input, signingBundle, false /* is_ca=false */, false /* use_csr_values */)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
 
 	if err = parsedBundle.Verify(); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
+	}
+
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.acmeState.getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	if !config.AllowRoleExtKeyUsage {
+		for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
+			if usage != x509.ExtKeyUsageServerAuth {
+				return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+			}
+		}
 	}
 
 	return parsedBundle, issuerId, err
@@ -501,6 +635,20 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 	if csr.PublicKey == nil || csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm {
 		return nil, fmt.Errorf("%w: failed to parse csr no public key info or unknown key algorithm used", ErrBadCSR)
 	}
+
+	for _, ext := range csr.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			isCa, _, err := certutil.ParseBasicConstraintExtension(ext)
+			if err != nil {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension: %v", ErrBadCSR, err.Error())
+			}
+
+			if isCa {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension with CA set to true", ErrBadCSR)
+			}
+		}
+	}
+
 	return csr, nil
 }
 
@@ -512,11 +660,9 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		return nil, err
 	}
 
-	if order.Status == ACMEOrderPending {
-		// Lets see if we can update our order status to ready if all the authorizations have been completed.
-		if requiredAuthorizationsCompleted(b, ac, uc, order) {
-			order.Status = ACMEOrderReady
-		}
+	order.Status, err = computeOrderStatus(ac, uc, order)
+	if err != nil {
+		return nil, err
 	}
 
 	// Per RFC 8555 -> 7.1.3.  Order Objects
@@ -546,7 +692,7 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 }
 
 func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
-	orderIds, err := b.acmeState.ListOrderIds(ac, acct.KeyId)
+	orderIds, err := b.acmeState.ListOrderIds(ac.sc, acct.KeyId)
 	if err != nil {
 		return nil, err
 	}
@@ -685,11 +831,16 @@ func formatOrderResponse(acmeCtx *acmeContext, order *acmeOrder) *logical.Respon
 		authorizationUrls = append(authorizationUrls, buildAuthorizationUrl(acmeCtx, authId))
 	}
 
+	var identifiers []map[string]interface{}
+	for _, identifier := range order.Identifiers {
+		identifiers = append(identifiers, identifier.NetworkMarshal( /* use original value */ true))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"status":         order.Status,
 			"expires":        order.Expires.Format(time.RFC3339),
-			"identifiers":    order.Identifiers,
+			"identifiers":    identifiers,
 			"authorizations": authorizationUrls,
 			"finalize":       baseOrderUrl + "/finalize",
 		},
@@ -720,7 +871,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 	// Certain challenges have certain restrictions: DNS challenges cannot
 	// be used to validate IP addresses, and only DNS challenges can be used
 	// to validate wildcards.
-	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge, ACMEALPNChallenge}
 	if identifier.Type == ACMEIPIdentifier {
 		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
 	} else if identifier.IsWildcard {
@@ -878,4 +1029,75 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 	}
 
 	return identifiers, nil
+}
+
+func (b *backend) acmeTidyOrder(sc *storageContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, time.Time, error) {
+	// First we get the order; note that the orderPath includes the account
+	// It's only accessed at acme/orders/<order_id> with the account context
+	// It's saved at acme/<account_id>/orders/<orderId>
+	entry, err := sc.Storage.Get(sc.Context, orderPath)
+	if err != nil {
+		return false, time.Time{}, fmt.Errorf("error loading order: %w", err)
+	}
+	if entry == nil {
+		return false, time.Time{}, fmt.Errorf("order does not exist: %w", ErrMalformed)
+	}
+	var order acmeOrder
+	err = entry.DecodeJSON(&order)
+	if err != nil {
+		return false, time.Time{}, fmt.Errorf("error decoding order: %w", err)
+	}
+
+	// Determine whether we should tidy this order
+	shouldTidy := false
+
+	// Track either the order expiry or certificate expiry to return to the caller, this
+	// can be used to influence the account's expiry
+	orderExpiry := order.CertificateExpiry
+
+	// It is faster to check certificate information on the order entry rather than fetch the cert entry to parse:
+	if !order.CertificateExpiry.IsZero() {
+		// This implies that a certificate exists
+		// When a certificate exists, we want to expire and tidy the order when we tidy the certificate:
+		if time.Now().After(order.CertificateExpiry.Add(certTidyBuffer)) { // It's time to clean
+			shouldTidy = true
+		}
+	} else {
+		// This implies that no certificate exists
+		// In this case, we want to expire the order after it has expired (+ some safety buffer)
+		if time.Now().After(order.Expires) {
+			shouldTidy = true
+		}
+		orderExpiry = order.Expires
+	}
+	if shouldTidy == false {
+		return shouldTidy, orderExpiry, nil
+	}
+
+	// Tidy this Order
+	// That includes any certificate acme/<account_id>/orders/orderPath/cert
+	// That also includes any related authorizations: acme/<account_id>/authorizations/<auth_id>
+
+	// First Authorizations
+	for _, authorizationId := range order.AuthorizationIds {
+		err = sc.Storage.Delete(sc.Context, getAuthorizationPath(accountId, authorizationId))
+		if err != nil {
+			return false, orderExpiry, err
+		}
+	}
+
+	// Normal Tidy will Take Care of the Certificate, we need to clean up the certificate to account tracker though
+	err = sc.Storage.Delete(sc.Context, getAcmeSerialToAccountTrackerPath(accountId, order.CertificateSerialNumber))
+	if err != nil {
+		return false, orderExpiry, err
+	}
+
+	// And Finally, the order:
+	err = sc.Storage.Delete(sc.Context, orderPath)
+	if err != nil {
+		return false, orderExpiry, err
+	}
+	b.tidyStatusIncDelAcmeOrderCount()
+
+	return true, orderExpiry, nil
 }

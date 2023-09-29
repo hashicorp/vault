@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .namespace-picker {
@@ -25,11 +25,6 @@
   margin-right: $spacing-xxs;
 }
 
-.namespace-name {
-  font-size: 1rem;
-  margin-left: $spacing-xs;
-}
-
 .namespace-picker-content {
   width: 250px;
   max-height: 300px;
@@ -46,7 +41,6 @@
   max-width: 210px;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  word-break: break-all;
   word-break: break-word;
 }
 

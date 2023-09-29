@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -54,12 +54,14 @@ locals {
 resource "enos_remote_exec" "smoke-verify-autopilot" {
   for_each = local.public_ips
 
-  content = templatefile("${path.module}/templates/smoke-verify-autopilot.sh", {
-    vault_install_dir               = var.vault_install_dir
-    vault_token                     = var.vault_root_token
-    vault_autopilot_upgrade_status  = var.vault_autopilot_upgrade_status,
-    vault_autopilot_upgrade_version = var.vault_autopilot_upgrade_version,
-  })
+  environment = {
+    VAULT_INSTALL_DIR               = var.vault_install_dir,
+    VAULT_TOKEN                     = var.vault_root_token,
+    VAULT_AUTOPILOT_UPGRADE_STATUS  = var.vault_autopilot_upgrade_status,
+    VAULT_AUTOPILOT_UPGRADE_VERSION = var.vault_autopilot_upgrade_version,
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-autopilot.sh")]
 
   transport = {
     ssh = {

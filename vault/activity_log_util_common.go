@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -75,7 +75,7 @@ func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time,
 }
 
 func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Context, byMonth map[int64]*processMonth, hllGetFunc HLLGetter, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
-	if timeutil.IsCurrentMonth(startTime, time.Now().UTC()) {
+	if timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
 		monthlyComputation := a.transformMonthBreakdowns(byMonth)
 		if len(monthlyComputation) > 1 {
 			a.logger.Warn("monthly in-memory activitylog computation returned multiple months of data", "months returned", len(byMonth))

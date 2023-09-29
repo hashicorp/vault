@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -16,7 +16,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -218,6 +217,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
+			pathAcmeEabList(&b),
+			pathAcmeEabDelete(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -232,52 +233,33 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	// Add ACME paths to backend
-	var acmePaths []*framework.Path
-	acmePaths = append(acmePaths, pathAcmeDirectory(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNonce(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNewAccount(&b)...)
-	acmePaths = append(acmePaths, pathAcmeUpdateAccount(&b)...)
-	acmePaths = append(acmePaths, pathAcmeGetOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeListOrders(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNewOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeFinalizeOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
-	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
-	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
-	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
-
-	for _, acmePath := range acmePaths {
-		b.Backend.Paths = append(b.Backend.Paths, acmePath)
-	}
-
-	// Add specific un-auth'd paths for ACME APIs
-	for _, acmePrefix := range []string{"", "issuer/+/", "roles/+/", "issuer/+/roles/+/"} {
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/directory")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-nonce")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-account")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/orders")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
-	}
-
-	if constants.IsEnterprise {
-		// Unified CRL/OCSP paths are ENT only
-		entOnly := []*framework.Path{
-			pathGetIssuerUnifiedCRL(&b),
-			pathListCertsRevocationQueue(&b),
-			pathListUnifiedRevoked(&b),
-			pathFetchUnifiedCRL(&b),
-			buildPathUnifiedOcspGet(&b),
-			buildPathUnifiedOcspPost(&b),
-		}
-		b.Backend.Paths = append(b.Backend.Paths, entOnly...)
+	for _, prefix := range []struct {
+		acmePrefix   string
+		unauthPrefix string
+		opts         acmeWrapperOpts
+	}{
+		{
+			"acme",
+			"acme",
+			acmeWrapperOpts{true, false},
+		},
+		{
+			"roles/" + framework.GenericNameRegex("role") + "/acme",
+			"roles/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/acme",
+			"issuer/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/roles/" + framework.GenericNameRegex("role") + "/acme",
+			"issuer/+/roles/+/acme",
+			acmeWrapperOpts{},
+		},
+	} {
+		setupAcmeDirectory(&b, prefix.acmePrefix, prefix.unauthPrefix, prefix.opts)
 	}
 
 	b.tidyCASGuard = new(uint32)
@@ -311,11 +293,14 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
 	b.acmeState = NewACMEState()
+
+	b.SetupEnt()
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	entBackend
 
 	backendUUID       string
 	storage           logical.Storage
@@ -345,7 +330,8 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acmeState
+	acmeState       *acmeState
+	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -415,7 +401,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
 	sc := b.makeStorageContext(ctx, b.storage)
 	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
 		return err
@@ -435,15 +421,19 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
-		b.Logger().Error("Could not initialize stored certificate counts", err)
+		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
 		b.certCountError = err.Error()
 	}
 
-	return nil
+	return b.initializeEnt(sc, ir)
 }
 
-func (b *backend) cleanup(_ context.Context) {
-	b.acmeState.validator.Closing <- struct{}{}
+func (b *backend) cleanup(ctx context.Context) {
+	sc := b.makeStorageContext(ctx, b.storage)
+
+	b.acmeState.Shutdown(b)
+
+	b.cleanupEnt(sc)
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
@@ -574,6 +564,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		serial := split[len(split)-1]
 		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
+
+	b.invalidateEnt(ctx, key)
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
@@ -689,9 +681,14 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	// First tidy any ACME nonces to free memory.
+	b.acmeState.DoTidyNonces()
+
+	// Then run unified transfer.
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
 	go runUnifiedTransfer(backgroundSc)
 
+	// Then run the CRL rebuild and tidy operation.
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
@@ -722,7 +719,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	}
 
 	// All good!
-	return nil
+	return b.periodicFuncEnt(backgroundSc, request)
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {

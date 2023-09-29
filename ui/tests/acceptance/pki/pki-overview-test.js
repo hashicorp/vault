@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -49,7 +49,6 @@ module('Acceptance | pki overview', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('navigates to view issuers when link is clicked on issuer card', async function (assert) {
@@ -113,5 +112,14 @@ module('Acceptance | pki overview', function (hooks) {
       currentRouteName(),
       'vault.cluster.secrets.backend.pki.certificates.certificate.details'
     );
+  });
+
+  test('navigates to issuer details page for View Issuer card', async function (assert) {
+    await authPage.login(this.pkiAdminToken);
+    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await click(SELECTORS.viewIssuerPowerSearch);
+    await click(SELECTORS.firstPowerSelectOption);
+    await click(SELECTORS.viewIssuerButton);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
   });
 });

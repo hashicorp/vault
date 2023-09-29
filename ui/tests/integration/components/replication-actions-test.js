@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { run } from '@ember/runloop';
@@ -181,7 +181,7 @@ module('Integration | Component | replication actions', function (hooks) {
         `
       );
 
-      const selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
+      const selector = oldVersion ? 'h3' : `[data-test-${action}-replication] h3`;
       assert
         .dom(selector)
         .hasText(headerText, `${testKey}: renders the correct component header (${oldVersion})`);

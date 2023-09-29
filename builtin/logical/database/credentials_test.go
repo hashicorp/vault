@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -16,6 +16,252 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+// Test_newClientCertificateGenerator tests the ClientCertificateGenerator struct based on the config
+func Test_newClientCertificateGenerator(t *testing.T) {
+	type args struct {
+		config map[string]interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    ClientCertificateGenerator
+		wantErr bool
+	}{
+		{
+			name: "newClientCertificateGenerator with nil config",
+			args: args{
+				config: nil,
+			},
+			want: ClientCertificateGenerator{
+				CommonNameTemplate: "",
+				CAPrivateKey:       "",
+				CACert:             "",
+				KeyType:            "",
+				KeyBits:            0,
+				SignatureBits:      0,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with zero value key_type",
+			args: args{
+				config: map[string]interface{}{
+					"key_type": "",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyType: "",
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with rsa value key_type",
+			args: args{
+				config: map[string]interface{}{
+					"key_type": "rsa",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyType:       "rsa",
+				KeyBits:       2048,
+				SignatureBits: 256,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with ec value key_type",
+			args: args{
+				config: map[string]interface{}{
+					"key_type": "ec",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyType:       "ec",
+				KeyBits:       256,
+				SignatureBits: 256,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with ed25519 value key_type",
+			args: args{
+				config: map[string]interface{}{
+					"key_type": "ed25519",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyType:       "ed25519",
+				SignatureBits: 256,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with invalid key_type",
+			args: args{
+				config: map[string]interface{}{
+					"key_type": "ece",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "newClientCertificateGenerator with zero value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "0",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 0,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 2048 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "2048",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 2048,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 3072 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "3072",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 3072,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 4096 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "4096",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 4096,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 224 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "224",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 224,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 256 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "256",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 256,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 384 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "384",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 384,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 521 value key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "521",
+				},
+			},
+			want: ClientCertificateGenerator{
+				KeyBits: 521,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with invalid key_bits",
+			args: args{
+				config: map[string]interface{}{
+					"key_bits": "4097",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "newClientCertificateGenerator with zero value signature_bits",
+			args: args{
+				config: map[string]interface{}{
+					"signature_bits": "0",
+				},
+			},
+			want: ClientCertificateGenerator{
+				SignatureBits: 0,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 256 value signature_bits",
+			args: args{
+				config: map[string]interface{}{
+					"signature_bits": "256",
+				},
+			},
+			want: ClientCertificateGenerator{
+				SignatureBits: 256,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 384 value signature_bits",
+			args: args{
+				config: map[string]interface{}{
+					"signature_bits": "384",
+				},
+			},
+			want: ClientCertificateGenerator{
+				SignatureBits: 384,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with 512 value signature_bits",
+			args: args{
+				config: map[string]interface{}{
+					"signature_bits": "512",
+				},
+			},
+			want: ClientCertificateGenerator{
+				SignatureBits: 512,
+			},
+		},
+		{
+			name: "newClientCertificateGenerator with invalid signature_bits",
+			args: args{
+				config: map[string]interface{}{
+					"signature_bits": "612",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newClientCertificateGenerator(tt.args.config)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
 
 func Test_newPasswordGenerator(t *testing.T) {
 	type args struct {

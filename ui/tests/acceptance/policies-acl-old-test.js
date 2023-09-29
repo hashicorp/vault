@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, find, currentURL, waitUntil } from '@ember/test-helpers';
@@ -31,7 +31,7 @@ module('Acceptance | policies (old)', function (hooks) {
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');

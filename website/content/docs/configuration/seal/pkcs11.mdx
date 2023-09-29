@@ -6,9 +6,19 @@ description: |-
   wrapping mechanism.
 ---
 
-# `pkcs11` Seal
+# `pkcs11` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
+
+<Note title="Auto-unseal and seal wrapping requires Vault Enterprise">
+
+  Auto-unseal **and** seal wrapping for PKCS11 require Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal wrapping
 mechanism. Vault Enterprise's HSM PKCS11 support is activated by one of the
@@ -16,7 +26,7 @@ following:
 
 - The presence of a `seal "pkcs11"` block in Vault's configuration file
 - The presence of the environment variable `VAULT_HSM_LIB` set to the library's
-  path as well as `VAULT_HSM_TYPE` set to `pkcs11`. If enabling via environment
+  path as well as `VAULT_SEAL_TYPE` set to `pkcs11`. If enabling via environment
   variable, all other required values (i.e. `VAULT_HSM_SLOT`) must be also
   supplied.
 
@@ -37,7 +47,7 @@ The following software packages are required for Vault Enterprise HSM:
   library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl.html)
   — ensure that it is installed for the correct architecture of your servers
 
-## `pkcs11` Example
+## `pkcs11` example
 
 This example shows configuring HSM PKCS11 seal through the Vault configuration
 file by providing all the required values:
@@ -52,7 +62,7 @@ seal "pkcs11" {
 }
 ```
 
-## `pkcs11` Parameters
+## `pkcs11` parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
@@ -156,7 +166,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
   
-### Mechanism Specific Flags
+### Mechanism specific flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption
   for RSA keys, perform encryption locally. Available for mechanisms
@@ -172,14 +182,14 @@ Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) document
 `VAULT_HSM_PIN` as part of the seal's parameters, it is _strongly_ recommended
 to set this value via environment variables.
 
-## `pkcs11` Environment Variables
+## `pkcs11` environment variables
 
 Alternatively, the HSM seal can be activated by providing the following
 environment variables:
 
 ```text
+VAULT_SEAL_TYPE
 VAULT_HSM_LIB
-VAULT_HSM_TYPE
 VAULT_HSM_SLOT
 VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
@@ -197,12 +207,12 @@ VAULT_HSM_RSA_OAEP_HASH
 VAULT_HSM_FORCE_RW_SESSION
 ```
 
-## Vault Key Generation Attributes
+## Vault key generation attributes
 
 If Vault generates the HSM key for you, the following is the list of attributes
 it uses. These identifiers correspond to official PKCS#11 identifiers.
 
-### AES Key
+### AES key
 
 - `CKA_CLASS`: `CKO_SECRET_KEY` (It's a secret key)
 - `CKA_KEY_TYPE`: `CKK_AES` (Key type is AES)
@@ -219,7 +229,7 @@ it uses. These identifiers correspond to official PKCS#11 identifiers.
 - `CKA_UNWRAP`: `true` (Key can be used for unwrapping)
 - `CKA_EXTRACTABLE`: `false` (Key cannot be exported)
 
-### RSA Key
+### RSA key
 
 _Public Key_
 
@@ -246,7 +256,7 @@ _Private Key_
   session only)
 - `CKA_EXTRACTABLE`: `false` (Key cannot be exported)
 
-### HMAC Key
+### HMAC key
 
 - `CKA_CLASS`: `CKO_SECRET_KEY` (It's a secret key)
 - `CKA_KEY_TYPE`: `CKK_GENERIC_SECRET_KEY` (Key type is a generic secret key)
@@ -261,7 +271,7 @@ _Private Key_
 - `CKA_VERIFY`: `true` (Key can be used for verifying)
 - `CKA_EXTRACTABLE`: `false` (Key cannot be exported)
 
-## Key Rotation
+## Key rotation
 
 This seal supports rotating keys by using different key labels to track key versions. To rotate
 the key value, generate a new key in a different key label in the HSM and update Vault's

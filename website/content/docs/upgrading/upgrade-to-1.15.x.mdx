@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.15.x - Guides
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.15.x from Vault 1.14.x.
+---
+
+# Overview
+
+The Vault 1.15.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.14. **Please read carefully**.
+
+## Consul service registration
+
+As of version 1.15, `service_tags` supplied to Vault for the purpose of [Consul
+service registration](/vault/docs/configuration/service-registration/consul#service_tags)
+will be **case-sensitive**.
+
+In previous versions of Vault tags were converted to lowercase which led to issues,
+for example when tags contained Traefik rules which use case-sensitive method names
+such as `Host()`.
+
+If you previously used Consul service registration tags ignoring case, or relied
+on the lowercase tags created by Vault, then this change may cause unexpected behavior.
+
+Please audit your Consul storage stanza to ensure that you either:
+
+* Manually convert your `service_tags` to lowercase if required
+* Ensure that any system that relies on the tags is aware of the new case-preserving behavior
+
+## Rollback metrics
+
+Vault no longer measures and reports the metrics `vault.rollback.attempts.{MOUNTPOINT}` and `vault.route.rollback.{MOUNTPOINT}` by default. The new default metrics are `vault.rollback.attempts`
+and `vault.route.rollback`, which **do not** contain the mount point in the metric name.
+
+To continue measuring `vault.rollback.attempts.{MOUNTPOINT}` and
+`vault.route.rollback.{MOUNTPOINT}`, you must explicitly enable mount-specific
+metrics in the `telemetry` stanza of your Vault configuration with the
+[`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
+option.
+
+## Application of Sentinel Role Governing Policies (RGPs) via identity groups
+
+@include 'application-of-sentinel-rgps-via-identity-groups.mdx'
+
+## Known issues and workarounds
+
+@include 'known-issues/transit-managed-keys-panics.mdx'
+
+@include 'known-issues/transit-managed-keys-sign-fails.mdx'

@@ -1,79 +1,108 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 import { inject as service } from '@ember/service';
-import { alias, and, equal, gte, not, or } from '@ember/object/computed';
-import { get, computed } from '@ember/object';
+import { get } from '@ember/object';
 
-export default Model.extend({
-  version: service(),
+export default class ClusterModel extends Model {
+  @service version;
 
-  nodes: hasMany('nodes', { async: false }),
-  name: attr('string'),
-  status: attr('string'),
-  standby: attr('boolean'),
-  type: attr('string'),
-  license: attr('object'),
+  @hasMany('nodes', { async: false, inverse: null }) nodes;
+  @attr('string') name;
+  @attr('string') status;
+  @attr('boolean') standby;
+  @attr('string') type;
+  @attr('object') license;
 
   /* Licensing concerns */
-  licenseExpiry: alias('license.expiry_time'),
-  licenseState: alias('license.state'),
+  get licenseExpiry() {
+    return this.license?.expiry_time;
+  }
+  get licenseState() {
+    return this.license?.state;
+  }
 
-  needsInit: computed('nodes', 'nodes.@each.initialized', function () {
-    // needs init if no nodes are initialized
-    return this.nodes.isEvery('initialized', false);
-  }),
+  get needsInit() {
+    return this.nodes.every((node) => {
+      return node.initialized === false;
+    });
+  }
 
-  unsealed: computed('nodes', 'nodes.{[],@each.sealed}', function () {
-    // unsealed if there's at least one unsealed node
-    return !!this.nodes.findBy('sealed', false);
-  }),
+  get unsealed() {
+    return !!this.nodes.find((node) => {
+      return node.sealed === false;
+    });
+  }
 
-  sealed: not('unsealed'),
+  get sealed() {
+    return !this.unsealed;
+  }
 
-  leaderNode: computed('nodes', 'nodes.[]', function () {
+  get leaderNode() {
     const nodes = this.nodes;
-    if (nodes.get('length') === 1) {
-      return nodes.get('firstObject');
+    if (nodes.length === 1) {
+      return nodes[0];
     } else {
-      return nodes.findBy('isLeader');
+      return nodes.find((node) => node.isLeader === true);
     }
-  }),
+  }
 
-  sealThreshold: alias('leaderNode.sealThreshold'),
-  sealProgress: alias('leaderNode.progress'),
-  sealType: alias('leaderNode.type'),
-  storageType: alias('leaderNode.storageType'),
-  hcpLinkStatus: alias('leaderNode.hcpLinkStatus'),
-  hasProgress: gte('sealProgress', 1),
-  usingRaft: equal('storageType', 'raft'),
+  get sealThreshold() {
+    return this.leaderNode?.sealThreshold;
+  }
+  get sealProgress() {
+    return this.leaderNode?.progress;
+  }
+  get sealType() {
+    return this.leaderNode?.type;
+  }
+  get storageType() {
+    return this.leaderNode?.storageType;
+  }
+  get hcpLinkStatus() {
+    return this.leaderNode?.hcpLinkStatus;
+  }
+  get hasProgress() {
+    return this.sealProgress >= 1;
+  }
+  get usingRaft() {
+    return this.storageType === 'raft';
+  }
 
   //replication mode - will only ever be 'unsupported'
   //otherwise the particular mode will have the relevant mode attr through replication-attributes
-  mode: attr('string'),
-  allReplicationDisabled: and('{dr,performance}.replicationDisabled'),
-  anyReplicationEnabled: or('{dr,performance}.replicationEnabled'),
+  @attr('string') mode;
+  get allReplicationDisabled() {
+    return this.dr?.replicationDisabled && this.performance?.replicationDisabled;
+  }
+  get anyReplicationEnabled() {
+    return this.dr?.replicationEnabled || this.performance?.replicationEnabled;
+  }
 
-  dr: belongsTo('replication-attributes', { async: false, inverse: null }),
-  performance: belongsTo('replication-attributes', { async: false, inverse: null }),
+  @belongsTo('replication-attributes', { async: false, inverse: null }) dr;
+  @belongsTo('replication-attributes', { async: false, inverse: null }) performance;
   // this service exposes what mode the UI is currently viewing
   // replicationAttrs will then return the relevant `replication-attributes` model
-  rm: service('replication-mode'),
-  drMode: alias('dr.mode'),
-  replicationMode: alias('rm.mode'),
-  replicationModeForDisplay: computed('replicationMode', function () {
+  @service('replication-mode') rm;
+  get drMode() {
+    return this.dr.mode;
+  }
+  get replicationMode() {
+    return this.rm.mode;
+  }
+  get replicationModeForDisplay() {
     return this.replicationMode === 'dr' ? 'Disaster Recovery' : 'Performance';
-  }),
-  replicationIsInitializing: computed('dr.mode', 'performance.mode', function () {
+  }
+  get replicationIsInitializing() {
     // a mode of null only happens when a cluster is being initialized
     // otherwise the mode will be 'disabled', 'primary', 'secondary'
-    return !this.dr.mode || !this.performance.mode;
-  }),
-  replicationAttrs: computed('dr.mode', 'performance.mode', 'replicationMode', function () {
+    return !this.dr?.mode || !this.performance?.mode;
+  }
+  get replicationAttrs() {
     const replicationMode = this.replicationMode;
     return replicationMode ? get(this, replicationMode) : null;
-  }),
-});
+  }
+}

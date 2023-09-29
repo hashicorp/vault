@@ -6,12 +6,12 @@ description: The '/sys/config/control-group' endpoint configures control groups.
 
 # `/sys/config/control-group`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 The `/sys/config/control-group` endpoint is used to configure Control Group
 settings.
 
-## Read Control Group Settings
+## Read control group settings
 
 This endpoint returns the current Control Group configuration.
 
@@ -19,7 +19,7 @@ This endpoint returns the current Control Group configuration.
 | :----- | :-------------------------- |
 | `GET`  | `/sys/config/control-group` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -27,7 +27,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/control-group
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -35,7 +35,7 @@ $ curl \
 }
 ```
 
-## Configure Control Group Settings
+## Configure control group settings
 
 This endpoint allows configuring control groups.
 
@@ -47,7 +47,7 @@ This endpoint allows configuring control groups.
 
 - `max_ttl` `int` – The maximum ttl for a control group wrapping token. This can be provided in seconds or duration (2h).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -55,7 +55,7 @@ This endpoint allows configuring control groups.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -65,7 +65,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/control-group
 ```
 
-## Delete Control Group Settings
+## Delete control group settings
 
 This endpoint removes any control group configuration.
 
@@ -73,7 +73,7 @@ This endpoint removes any control group configuration.
 | :------- | :-------------------------- |
 | `DELETE` | `/sys/config/control-group` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

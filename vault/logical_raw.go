@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -296,7 +296,7 @@ func (b *RawBackend) existenceCheck(ctx context.Context, request *logical.Reques
 func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: prefix + "(raw/?$|raw/(?P<path>.+))",
+			Pattern: prefix + "raw/" + framework.MatchAllRegex("path"),
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -322,7 +322,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "raw",
 						OperationVerb:   "read",
-						OperationSuffix: "|path",
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -342,7 +341,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "raw",
 						OperationVerb:   "write",
-						OperationSuffix: "|path",
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
@@ -353,11 +351,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
-					DisplayAttrs: &framework.DisplayAttributes{
-						OperationPrefix: "raw",
-						OperationVerb:   "write",
-						OperationSuffix: "|path",
-					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -370,7 +363,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "raw",
 						OperationVerb:   "delete",
-						OperationSuffix: "|path",
 					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
@@ -384,18 +376,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "raw",
 						OperationVerb:   "list",
-						OperationSuffix: "|path",
-					},
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
 					},
 					Summary: "Return a list keys for a given path prefix.",
 				},

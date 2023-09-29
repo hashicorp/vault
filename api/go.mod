@@ -9,6 +9,7 @@ go 1.19
 
 require (
 	github.com/cenkalti/backoff/v3 v3.0.0
+	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/go-test/deep v1.0.2
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -22,7 +23,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	golang.org/x/net v0.7.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
-	gopkg.in/square/go-jose.v2 v2.5.1
 )
 
 require (

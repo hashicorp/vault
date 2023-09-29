@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
@@ -49,11 +50,12 @@ var (
 	_ testcluster.VaultClusterNode = &DockerClusterNode{}
 )
 
+const MaxClusterNameLength = 52
+
 // DockerCluster is used to managing the lifecycle of the test Vault cluster
 type DockerCluster struct {
 	ClusterName string
 
-	RaftStorage  bool
 	ClusterNodes []*DockerClusterNode
 
 	// Certificate fields
@@ -67,10 +69,12 @@ type DockerCluster struct {
 	// rootToken is the initial root token created when the Vault cluster is
 	// created.
 	rootToken string
-	dockerAPI *docker.Client
+	DockerAPI *docker.Client
 	ID        string
 	Logger    log.Logger
 	builtTags map[string]struct{}
+
+	storage testcluster.ClusterStorage
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -144,13 +148,13 @@ func (dc *DockerCluster) cleanup() error {
 	return result.ErrorOrNil()
 }
 
-// RootToken returns the root token of the cluster, if set
-func (dc *DockerCluster) RootToken() string {
+// GetRootToken returns the root token of the cluster, if set
+func (dc *DockerCluster) GetRootToken() string {
 	return dc.rootToken
 }
 
 func (dc *DockerCluster) SetRootToken(s string) {
-	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", s))
 	dc.rootToken = s
 }
 
@@ -405,9 +409,6 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if opts.NetworkName == "" {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
 	}
-	if opts.VaultLicense == "" {
-		opts.VaultLicense = os.Getenv(testcluster.EnvVaultLicenseCI)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	t.Cleanup(cancel)
@@ -416,7 +417,7 @@ func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerClust
 	if err != nil {
 		t.Fatal(err)
 	}
-	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.RootToken()))
+	dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
 	return dc
 }
 
@@ -432,14 +433,17 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	if opts.Logger == nil {
 		opts.Logger = log.NewNullLogger()
 	}
+	if opts.VaultLicense == "" {
+		opts.VaultLicense = os.Getenv(testcluster.EnvVaultLicenseCI)
+	}
 
 	dc := &DockerCluster{
-		dockerAPI:   api,
-		RaftStorage: true,
+		DockerAPI:   api,
 		ClusterName: opts.ClusterName,
 		Logger:      opts.Logger,
 		builtTags:   map[string]struct{}{},
 		CA:          opts.CA,
+		storage:     opts.Storage,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -466,7 +470,7 @@ type DockerClusterNode struct {
 	WorkDir              string
 	Cluster              *DockerCluster
 	Container            *types.ContainerJSON
-	dockerAPI            *docker.Client
+	DockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
 	cleanupContainer     func()
@@ -477,6 +481,7 @@ type DockerClusterNode struct {
 	ImageTag             string
 	DataVolumeName       string
 	cleanupVolume        func()
+	AllClients           []*api.Client
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -502,6 +507,30 @@ func (n *DockerClusterNode) APIClient() *api.Client {
 	}
 	client.SetToken(n.Cluster.rootToken)
 	return client
+}
+
+func (n *DockerClusterNode) APIClientN(listenerNumber int) (*api.Client, error) {
+	// We clone to ensure that whenever this method is called, the caller gets
+	// back a pristine client, without e.g. any namespace or token changes that
+	// might pollute a shared client.  We clone the config instead of the
+	// client because (1) Client.clone propagates the replicationStateStore and
+	// the httpClient pointers, (2) it doesn't copy the tlsConfig at all, and
+	// (3) if clone returns an error, it doesn't feel as appropriate to panic
+	// below.  Who knows why clone might return an error?
+	if listenerNumber >= len(n.AllClients) {
+		return nil, fmt.Errorf("invalid listener number %d", listenerNumber)
+	}
+	cfg := n.AllClients[listenerNumber].CloneConfig()
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		// It seems fine to panic here, since this should be the same input
+		// we provided to NewClient when we were setup, and we didn't panic then.
+		// Better not to completely ignore the error though, suppose there's a
+		// bug in CloneConfig?
+		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
+	}
+	client.SetToken(n.Cluster.rootToken)
+	return client, nil
 }
 
 // NewAPIClient creates and configures a Vault API client to communicate with
@@ -538,7 +567,21 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.SetToken(n.Cluster.RootToken())
+	client.SetToken(n.Cluster.GetRootToken())
+	return client, nil
+}
+
+func (n *DockerClusterNode) newAPIClientForAddress(address string) (*api.Client, error) {
+	config, err := n.apiConfig()
+	if err != nil {
+		return nil, err
+	}
+	config.Address = fmt.Sprintf("https://%s", address)
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+	client.SetToken(n.Cluster.GetRootToken())
 	return client, nil
 }
 
@@ -561,51 +604,83 @@ func (n *DockerClusterNode) cleanup() error {
 	return nil
 }
 
+func (n *DockerClusterNode) createDefaultListenerConfig() map[string]interface{} {
+	return map[string]interface{}{"tcp": map[string]interface{}{
+		"address":       fmt.Sprintf("%s:%d", "0.0.0.0", 8200),
+		"tls_cert_file": "/vault/config/cert.pem",
+		"tls_key_file":  "/vault/config/key.pem",
+		"telemetry": map[string]interface{}{
+			"unauthenticated_metrics_access": true,
+		},
+	}}
+}
+
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
-		vol, err := n.dockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
+		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
 		if err != nil {
 			return err
 		}
 		n.DataVolumeName = vol.Name
 		n.cleanupVolume = func() {
-			_ = n.dockerAPI.VolumeRemove(ctx, vol.Name, false)
+			_ = n.DockerAPI.VolumeRemove(ctx, vol.Name, false)
 		}
 	}
 	vaultCfg := map[string]interface{}{}
-	vaultCfg["listener"] = map[string]interface{}{
-		"tcp": map[string]interface{}{
-			"address":       fmt.Sprintf("%s:%d", "0.0.0.0", 8200),
-			"tls_cert_file": "/vault/config/cert.pem",
-			"tls_key_file":  "/vault/config/key.pem",
-			"telemetry": map[string]interface{}{
-				"unauthenticated_metrics_access": true,
-			},
-		},
+	var listenerConfig []map[string]interface{}
+	listenerConfig = append(listenerConfig, n.createDefaultListenerConfig())
+	ports := []string{"8200/tcp", "8201/tcp"}
+
+	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
+		for _, config := range opts.VaultNodeConfig.AdditionalListeners {
+			cfg := n.createDefaultListenerConfig()
+			listener := cfg["tcp"].(map[string]interface{})
+			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
+			listener["chroot_namespace"] = config.ChrootNamespace
+			listenerConfig = append(listenerConfig, cfg)
+			portStr := fmt.Sprintf("%d/tcp", config.Port)
+			if strutil.StrListContains(ports, portStr) {
+				return fmt.Errorf("duplicate port %d specified", config.Port)
+			}
+			ports = append(ports, portStr)
+		}
 	}
+	vaultCfg["listener"] = listenerConfig
 	vaultCfg["telemetry"] = map[string]interface{}{
 		"disable_hostname": true,
 	}
-	raftOpts := map[string]interface{}{
+
+	// Setup storage. Default is raft.
+	storageType := "raft"
+	storageOpts := map[string]interface{}{
 		// TODO add options from vnc
 		"path":    "/vault/file",
 		"node_id": n.NodeID,
 	}
-	vaultCfg["storage"] = map[string]interface{}{
-		"raft": raftOpts,
+
+	if opts.Storage != nil {
+		storageType = opts.Storage.Type()
+		storageOpts = opts.Storage.Opts()
 	}
-	if opts != nil && opts.VaultNodeConfig != nil && len(opts.VaultNodeConfig.StorageOptions) > 0 {
+
+	if opts != nil && opts.VaultNodeConfig != nil {
 		for k, v := range opts.VaultNodeConfig.StorageOptions {
-			if _, ok := raftOpts[k].(string); !ok {
-				raftOpts[k] = v
+			if _, ok := storageOpts[k].(string); !ok {
+				storageOpts[k] = v
 			}
 		}
 	}
+	vaultCfg["storage"] = map[string]interface{}{
+		storageType: storageOpts,
+	}
+
 	//// disable_mlock is required for working in the Docker environment with
 	//// custom plugins
 	vaultCfg["disable_mlock"] = true
 	vaultCfg["api_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`
 	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
+
+	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
 
 	systemJSON, err := json.Marshal(vaultCfg)
 	if err != nil {
@@ -671,6 +746,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 		testcluster.JSONLogNoTimestamp(n.Logger, s)
 	}}
+
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ImageRepo: n.ImageRepo,
 		ImageTag:  n.ImageTag,
@@ -685,7 +761,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			"VAULT_LOG_FORMAT=json",
 			"VAULT_LICENSE=" + opts.VaultLicense,
 		},
-		Ports:           []string{"8200/tcp", "8201/tcp"},
+		Ports:           ports,
 		ContainerName:   n.Name(),
 		NetworkName:     opts.NetworkName,
 		CopyFromTo:      copyFromTo,
@@ -768,6 +844,127 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+
+	n.AllClients = append(n.AllClients, client)
+
+	for _, addr := range svc.StartResult.Addrs[2:] {
+		// The second element of this list of addresses is the cluster address
+		// We do not want to create a client for the cluster address mapping
+		client, err := n.newAPIClientForAddress(addr)
+		if err != nil {
+			return err
+		}
+		client.SetToken(n.Cluster.rootToken)
+		n.AllClients = append(n.AllClients, client)
+	}
+	return nil
+}
+
+func (n *DockerClusterNode) Pause(ctx context.Context) error {
+	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
+}
+
+func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
+	ip := net.ParseIP(targetIP)
+	if ip == nil {
+		return fmt.Errorf("targetIP %q is not an IP address", targetIP)
+	}
+	// Let's attempt to get a unique handle for the filter rule; we'll assume that
+	// every targetIP has a unique last octet, which is true currently for how
+	// we're doing docker networking.
+	lastOctet := ip.To4()[3]
+
+	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
+		"/bin/sh",
+		"-xec", strings.Join([]string{
+			fmt.Sprintf("echo isolating node %s", targetIP),
+			"apk add iproute2",
+			// If we're running this script a second time on the same node,
+			// the add dev will fail; since we only want to run the netem
+			// command once, we'll do so in the case where the add dev doesn't fail.
+			"tc qdisc add dev eth0 root handle 1: prio && " +
+				fmt.Sprintf("tc qdisc add dev eth0 parent 1:1 handle 2: netem delay %dms", delay/time.Millisecond),
+			// Here we create a u32 filter as per https://man7.org/linux/man-pages/man8/tc-u32.8.html
+			// Its parent is 1:0 (which I guess is the root?)
+			// Its handle must be unique, so we base it on targetIP
+			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::%x u32 match ip dst %s flowid 2:1", lastOctet, targetIP),
+		}, "; "),
+	})
+	if err != nil {
+		return err
+	}
+
+	n.Logger.Trace(string(stdout))
+	n.Logger.Trace(string(stderr))
+	if exitCode != 0 {
+		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
+	}
+	return nil
+}
+
+// PartitionFromCluster will cause the node to be disconnected at the network
+// level from the rest of the docker cluster. It does so in a way that the node
+// will not see TCP RSTs and all packets it sends will be "black holed". It
+// attempts to keep packets to and from the host intact which allows docker
+// daemon to continue streaming logs and any test code to continue making
+// requests from the host to the partitioned node.
+func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
+	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
+		"/bin/sh",
+		"-xec", strings.Join([]string{
+			fmt.Sprintf("echo partitioning container from network"),
+			"apk add iproute2",
+			// Get the gateway address for the bridge so we can allow host to
+			// container traffic still.
+			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
+			// First delete the rules in case this is called twice otherwise we'll add
+			// multiple copies and only remove one in Unpartition (yay iptables).
+			// Ignore the error if it didn't exist.
+			"iptables -D INPUT -i eth0 ! -s \"$GW\" -j DROP | true",
+			"iptables -D OUTPUT -o eth0 ! -d \"$GW\" -j DROP | true",
+			// Add rules to drop all packets in and out of the docker network
+			// connection.
+			"iptables -I INPUT -i eth0 ! -s \"$GW\" -j DROP",
+			"iptables -I OUTPUT -o eth0 ! -d \"$GW\" -j DROP",
+		}, "; "),
+	})
+	if err != nil {
+		return err
+	}
+
+	n.Logger.Trace(string(stdout))
+	n.Logger.Trace(string(stderr))
+	if exitCode != 0 {
+		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
+	}
+	return nil
+}
+
+// UnpartitionFromCluster reverses a previous call to PartitionFromCluster and
+// restores full connectivity. Currently assumes the default "bridge" network.
+func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
+	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
+		"/bin/sh",
+		"-xec", strings.Join([]string{
+			fmt.Sprintf("echo un-partitioning container from network"),
+			// Get the gateway address for the bridge so we can allow host to
+			// container traffic still.
+			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
+			// Remove the rules, ignore if they are not present or iptables wasn't
+			// installed yet (i.e. no-one called PartitionFromCluster yet).
+			"iptables -D INPUT -i eth0 ! -s \"$GW\" -j DROP | true",
+			"iptables -D OUTPUT -o eth0 ! -d \"$GW\" -j DROP | true",
+		}, "; "),
+	})
+	if err != nil {
+		return err
+	}
+
+	n.Logger.Trace(string(stdout))
+	n.Logger.Trace(string(stderr))
+	if exitCode != 0 {
+		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
+	}
 	return nil
 }
 
@@ -798,6 +995,7 @@ type DockerClusterOptions struct {
 	VaultBinary string
 	Args        []string
 	StartProbe  func(*api.Client) error
+	Storage     testcluster.ClusterStorage
 }
 
 func ensureLeaderMatches(ctx context.Context, client *api.Client, ready func(response *api.LeaderResponse) error) error {
@@ -858,6 +1056,12 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 	dc.RootCAs = x509.NewCertPool()
 	dc.RootCAs.AddCert(dc.CA.CACert)
 
+	if dc.storage != nil {
+		if err := dc.storage.Start(ctx, &opts.ClusterOptions); err != nil {
+			return err
+		}
+	}
+
 	for i := 0; i < numCores; i++ {
 		if err := dc.addNode(ctx, opts); err != nil {
 			return err
@@ -899,7 +1103,7 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 	i := len(dc.ClusterNodes)
 	nodeID := fmt.Sprintf("core-%d", i)
 	node := &DockerClusterNode{
-		dockerAPI: dc.dockerAPI,
+		DockerAPI: dc.DockerAPI,
 		NodeID:    nodeID,
 		Cluster:   dc,
 		WorkDir:   filepath.Join(dc.tmpDir, nodeID),
@@ -918,6 +1122,11 @@ func (dc *DockerCluster) addNode(ctx context.Context, opts *DockerClusterOptions
 }
 
 func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx int) error {
+	if dc.storage != nil && dc.storage.Type() != "raft" {
+		// Storage is not raft so nothing to do but unseal.
+		return testcluster.UnsealNode(ctx, dc, nodeIdx)
+	}
+
 	leader := dc.ClusterNodes[leaderIdx]
 
 	if nodeIdx >= len(dc.ClusterNodes) {
@@ -987,7 +1196,7 @@ FROM %s:%s
 COPY vault /bin/vault
 `, opts.ImageRepo, sourceTag)
 
-	_, err = dockhelper.BuildImage(ctx, dc.dockerAPI, containerFile, bCtx,
+	_, err = dockhelper.BuildImage(ctx, dc.DockerAPI, containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{opts.ImageRepo + ":" + tag}))

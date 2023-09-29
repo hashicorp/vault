@@ -6,7 +6,7 @@ description: |-
   port.
 ---
 
-# `tcp` Listener
+# `tcp` listener
 
 The TCP listener configures Vault to listen on a TCP address/port.
 
@@ -46,7 +46,7 @@ For example, the `"Content-Security-Policy"` header is defined by default in the
 the value in the configuration file is set in the response headers instead of the
 default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui).
 
-## `tcp` Listener Parameters
+## `tcp` listener parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
   listening. This can be dynamically defined with a
@@ -62,6 +62,14 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
   that is resolved at runtime.
 
+- `chroot_namespace` `(string: "")` – Specifies an alternate top-level namespace
+  for the listener. Vault appends namespaces provided in the `X-Vault-Namespace`
+  header or the `-namespace` field in a CLI command to the top-level namespace
+  to determine the full namespace path for the request. For example, if
+  `chroot_namespace` is set to `admin` and the `X-Vault-Namespace` header is
+  `ns1`, the full namespace path is `admin/ns1`. Calls to the listener will fail
+   with a 4XX error if the top-level namespace provided for `chroot_namespace`
+   does not exist.
 - `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
   wait for the next request when keep-alives are enabled. If `http_idle_timeout`
   is zero, the value of `http_read_timeout` is used. If both are zero, the value
@@ -174,10 +182,10 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
   will be trusted. Comma-separated list or JSON array. This turns on
-  X-Forwarded-For support.  If for example Vault receives connections from the 
-  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs` 
-  will result in the `remote_address` field in the audit log being populated with the 
-  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer 
+  X-Forwarded-For support.  If for example Vault receives connections from the
+  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs`
+  will result in the `remote_address` field in the audit log being populated with the
+  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer
   to send the connecting client's IP in the `X-Forwarded-For` header.
 
 - `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
@@ -194,19 +202,22 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   there is no X-Forwarded-For header or it is empty, the client address will be
   used as-is, rather than the client connection rejected.
 
-### `telemetry` Parameters
+### `telemetry` parameters
 
 - `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/metrics` endpoint.
 
-### `profiling` Parameters
+### `profiling` parameters
 
 - `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/pprof` endpoint.
-- `unauthenticated_in_flight_request_access` `(bool: false)` - If set to true, allows
+
+### `inflight_requests_logging` parameters
+
+- `unauthenticated_in_flight_requests_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/in-flight-req` endpoint.
 
-### `custom_response_headers` Parameters
+### `custom_response_headers` parameters
 
 - `default` `(key-value-map: {})` - A map of string header names to an array of
   string values. The default headers are set on all endpoints regardless of
@@ -224,7 +235,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
   is set when the http response status code is `"200"`, `"204"`, etc.
 
-## `tcp` Listener Examples
+## `tcp` listener examples
 
 ### Configuring TLS
 
@@ -237,7 +248,7 @@ listener "tcp" {
 }
 ```
 
-### Listening on Multiple Interfaces
+### Listening on multiple interfaces
 
 This example shows Vault listening on a private interface, as well as localhost.
 
@@ -332,7 +343,7 @@ listener "tcp" {
 }
 ```
 
-### Listening on all IPv6 & IPv4 Interfaces
+### Listening on all IPv6 & IPv4 interfaces
 
 This example shows Vault listening on all IPv4 & IPv6 interfaces including localhost.
 

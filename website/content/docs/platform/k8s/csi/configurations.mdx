@@ -16,19 +16,31 @@ Most settings support being set by, in ascending order of precedence:
 If installing via the helm chart, they can be set using e.g.
 `--set "csi.extraArgs={-debug=true}"`.
 
+- `-cache-size` `(int: 1000)` - Set the maximum number of Vault tokens that will
+  be cached in-memory. One Vault token will be stored for each pod on the same
+  node that mounts secrets. Setting to 0 will disable the cache and force each
+  volume mount request to reauthenticate to Vault.
+
 - `-debug` `(bool: false)` - Set to true to enable debug level logging.
 
 - `-endpoint` `(string: "/tmp/vault.sock")` - Path to unix socket on which the
   provider will listen for gRPC calls from the driver.
 
-- `-health-addr` `(string: ":8080")` - (v0.3.0+) The address of the HTTP listener
+- `-health-addr` `(string: ":8080")` - The address of the HTTP listener
   for reporting health.
 
-- `-vault-addr` `(string: "https://127.0.0.1:8200")` - (v0.3.0+) Default address
-  for connecting to Vault. Can also be specified via the `VAULT_ADDR` environment
-  variable.
+- `-hmac-secret-name` `(string: "vault-csi-provider-hmac-key")` - Configure the
+  Kubernetes secret name that the provider creates to store an HMAC key for
+  generating secret version hashes.
 
-- `-vault-mount` `(string: "kubernetes")` - (v0.3.0+) Default Vault mount path
+- `-vault-addr` `(string: "https://127.0.0.1:8200")` - Default address
+  for connecting to Vault. Can also be specified via the `VAULT_ADDR` environment
+  variable. **Note:** It is highly recommended to only set the Vault address when
+  installing the helm chart. The helm chart will install Vault Agent as a sidecar
+  to the Vault CSI Provider for caching and renewals, but setting `-vault-addr`
+  here will cause the Vault CSI Provider to bypass the Agent's cache.
+
+- `-vault-mount` `(string: "kubernetes")` - Default Vault mount path
   for Kubernetes authentication. Can be overridden per Secret Provider Class
   object.
 
@@ -65,7 +77,7 @@ If installing via the helm chart, they can be set using e.g.
 - `-version` `(bool: false)` - print version information and exit.
 
 
-# Secret Provider Class Parameters
+# Secret provider class parameters
 
 The following parameters are supported by the Vault provider. Each parameter is
 an entry under `spec.parameters` in a SecretProviderClass object. The full
@@ -73,7 +85,11 @@ structure is illustrated in the [examples](/vault/docs/platform/k8s/csi/examples
 
 - `roleName` `(string: "")` - Name of the role to be used during login with Vault.
 
-- `vaultAddress` `(string: "")` - The address of the Vault server.
+- `vaultAddress` `(string: "")` - The address of the Vault server. **Note:** It is
+  highly recommended to only set the Vault address when installing the helm chart.
+  The helm chart will install Vault Agent as a sidecar to the Vault CSI Provider
+  for caching and renewals, but setting `vaultAddress` here will cause the Vault
+  CSI Provider to bypass the Agent's cache.
 
 - `vaultNamespace` `(string: "")` - The Vault [namespace](/vault/docs/enterprise/namespaces) to use.
 
@@ -94,8 +110,11 @@ structure is illustrated in the [examples](/vault/docs/platform/k8s/csi/examples
 
 - `vaultTLSServerName` `(string: "")` - The name to use as the SNI host when connecting via TLS.
 
+- `vaultAuthMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
+  Can be a Kubernetes or JWT auth mount. Mutually exclusive with `vaultKubernetesMountPath`.
+
 - `vaultKubernetesMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
-  At this time only the Kubernetes auth method is supported.
+  Can be a Kubernetes or JWT auth mount. Mutually exclusive with `vaultAuthMountPath`.
 
 - `audience` `(string: "")` - Specifies a custom audience for the requesting pod's service account token,
   generated using the

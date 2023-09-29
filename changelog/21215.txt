@@ -1,0 +1,4 @@
+```release-note:change
+core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
+which will have access to some system backend paths that were previously only accessible in the root namespace.
+```

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
@@ -13,7 +13,6 @@ import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
-import logout from 'vault/tests/pages/logout';
 
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
@@ -27,13 +26,11 @@ module('Acceptance | auth', function (hooks) {
       shouldAdvanceTime: true,
     });
     this.server = apiStub({ usePassthrough: true });
-    return logout.visit();
   });
 
   hooks.afterEach(function () {
     this.clock.restore();
     this.server.shutdown();
-    return logout.visit();
   });
 
   test('auth query params', async function (assert) {
@@ -53,7 +50,6 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
-    assert.strictEqual(currentURL(), '/vault/auth?with=token');
     await component.token('token').selectMethod('github');
     await component.selectMethod('token');
     assert.strictEqual(component.tokenValue, '', 'it clears the token value when toggling methods');

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package dnstest
 
 import (
@@ -5,9 +8,11 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
@@ -16,10 +21,13 @@ import (
 type TestServer struct {
 	t   *testing.T
 	ctx context.Context
+	log hclog.Logger
 
 	runner  *docker.Runner
+	network string
 	startup *docker.Service
 
+	lock       sync.Mutex
 	serial     int
 	forwarders []string
 	domains    []string
@@ -38,9 +46,11 @@ func SetupResolverOnNetwork(t *testing.T, domain string, network string) *TestSe
 	ts.ctx = context.Background()
 	ts.domains = []string{domain}
 	ts.records = map[string]map[string][]string{}
+	ts.network = network
+	ts.log = hclog.L()
 
 	ts.setupRunner(domain, network)
-	ts.startContainer()
+	ts.startContainer(network)
 	ts.PushConfig()
 
 	return &ts
@@ -54,14 +64,15 @@ func (ts *TestServer) setupRunner(domain string, network string) {
 		ContainerName: "bind9-dns-" + strings.ReplaceAll(domain, ".", "-"),
 		NetworkName:   network,
 		Ports:         []string{"53/udp"},
-		LogConsumer: func(s string) {
-			ts.t.Logf(s)
-		},
+		// DNS container logging was disabled to reduce content within CI logs.
+		//LogConsumer: func(s string) {
+		//	ts.log.Info(s)
+		//},
 	})
 	require.NoError(ts.t, err)
 }
 
-func (ts *TestServer) startContainer() {
+func (ts *TestServer) startContainer(network string) {
 	connUpFunc := func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		// Perform a simple connection to this resolver, even though the
 		// default configuration doesn't do anything useful.
@@ -85,9 +96,26 @@ func (ts *TestServer) startContainer() {
 		return docker.NewServiceHostPort(host, port), nil
 	}
 
-	result, err := ts.runner.StartService(ts.ctx, connUpFunc)
+	result, _, err := ts.runner.StartNewService(ts.ctx, true, true, connUpFunc)
 	require.NoError(ts.t, err, "failed to start dns resolver for "+ts.domains[0])
 	ts.startup = result
+
+	if ts.startup.StartResult.RealIP == "" {
+		mapping, err := ts.runner.GetNetworkAndAddresses(ts.startup.Container.ID)
+		require.NoError(ts.t, err, "failed to fetch network addresses to correct missing real IP address")
+		if len(network) == 0 {
+			require.Equal(ts.t, 1, len(mapping), "expected exactly one network address")
+			for network = range mapping {
+				// Because mapping is a map of network name->ip, we need
+				// to use the above range's assignment to get the name,
+				// as there is no other way of getting the keys of a map.
+			}
+		}
+		require.Contains(ts.t, mapping, network, "expected network to be part of the mapping")
+		ts.startup.StartResult.RealIP = mapping[network]
+	}
+
+	ts.log.Info(fmt.Sprintf("[dnsserv] Addresses of DNS resolver: local=%v / container=%v", ts.GetLocalAddr(), ts.GetRemoteAddr()))
 }
 
 func (ts *TestServer) buildNamedConf() string {
@@ -150,14 +178,21 @@ func (ts *TestServer) buildZoneFile(target string) string {
 	return zone
 }
 
-func (ts *TestServer) PushConfig() {
+func (ts *TestServer) pushNamedConf() {
 	contents := docker.NewBuildContext()
 	cfgPath := "/etc/bind/named.conf.options"
 	namedCfg := ts.buildNamedConf()
 	contents[cfgPath] = docker.PathContentsFromString(namedCfg)
 	contents[cfgPath].SetOwners(0, 142) // root, bind
 
-	ts.t.Logf("Generated bind9 config (%s):\n%v\n", cfgPath, namedCfg)
+	ts.log.Info(fmt.Sprintf("Generated bind9 config (%s):\n%v\n", cfgPath, namedCfg))
+
+	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)
+	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
+}
+
+func (ts *TestServer) pushZoneFiles() {
+	contents := docker.NewBuildContext()
 
 	for _, domain := range ts.domains {
 		path := "/var/cache/bind/" + domain + ".zone"
@@ -165,14 +200,35 @@ func (ts *TestServer) PushConfig() {
 		contents[path] = docker.PathContentsFromString(zoneFile)
 		contents[path].SetOwners(0, 142) // root, bind
 
-		ts.t.Logf("Generated bind9 zone file for %v (%s):\n%v\n", domain, path, zoneFile)
+		ts.log.Info(fmt.Sprintf("Generated bind9 zone file for %v (%s):\n%v\n", domain, path, zoneFile))
 	}
 
 	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)
-	require.NoError(ts.t, err, "failed pushing updated configuration to container")
+	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
+}
+
+func (ts *TestServer) PushConfig() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	_, _, _, err := ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "freeze"})
+	require.NoError(ts.t, err, "failed to freeze DNS config")
+
+	// There's two cases here:
+	//
+	// 1. We've added a new top-level domain name. Here, we want to make
+	//    sure the new zone file is pushed before we push the reference
+	//    to it.
+	// 2. We've just added a new. Here, the order doesn't matter, but
+	//    mostly likely the second push will be a no-op.
+	ts.pushZoneFiles()
+	ts.pushNamedConf()
+
+	_, _, _, err = ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "thaw"})
+	require.NoError(ts.t, err, "failed to thaw DNS config")
 
 	// Wait until our config has taken.
-	corehelpers.RetryUntil(ts.t, 3*time.Second, func() error {
+	corehelpers.RetryUntil(ts.t, 15*time.Second, func() error {
 		// bind reloads based on file mtime, touch files before starting
 		// to make sure it has been updated more recently than when the
 		// last update was written. Then issue a new SIGHUP.
@@ -229,6 +285,9 @@ func (ts *TestServer) GetRemoteAddr() string {
 }
 
 func (ts *TestServer) AddDomain(domain string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	for _, existing := range ts.domains {
 		if existing == domain {
 			return
@@ -239,6 +298,9 @@ func (ts *TestServer) AddDomain(domain string) {
 }
 
 func (ts *TestServer) AddRecord(domain string, record string, value string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	foundDomain := false
 	for _, existing := range ts.domains {
 		if strings.HasSuffix(domain, existing) {
@@ -258,7 +320,8 @@ func (ts *TestServer) AddRecord(domain string, record string, value string) {
 	if values, present := ts.records[domain][record]; present {
 		for _, candidate := range values {
 			if candidate == value {
-				break
+				// Already present; skip adding.
+				return
 			}
 		}
 	}
@@ -266,7 +329,92 @@ func (ts *TestServer) AddRecord(domain string, record string, value string) {
 	ts.records[domain][record] = append(ts.records[domain][record], value)
 }
 
+func (ts *TestServer) RemoveRecord(domain string, record string, value string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	value = strings.TrimSpace(value)
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	var remaining []string
+	if values, present := ts.records[domain][record]; present {
+		for _, candidate := range values {
+			if candidate != value {
+				remaining = append(remaining, candidate)
+			}
+		}
+	}
+
+	ts.records[domain][record] = remaining
+}
+
+func (ts *TestServer) RemoveRecordsOfTypeForDomain(domain string, record string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	delete(ts.records[domain], record)
+}
+
+func (ts *TestServer) RemoveRecordsForDomain(domain string) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	foundDomain := false
+	for _, existing := range ts.domains {
+		if strings.HasSuffix(domain, existing) {
+			foundDomain = true
+			break
+		}
+	}
+	if !foundDomain {
+		// Not found.
+		return
+	}
+
+	if _, present := ts.records[domain]; !present {
+		// Not found.
+		return
+	}
+
+	ts.records[domain] = map[string][]string{}
+}
+
 func (ts *TestServer) RemoveAllRecords() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
 	ts.records = map[string]map[string][]string{}
 }
 

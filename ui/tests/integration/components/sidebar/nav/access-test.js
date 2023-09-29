@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -44,9 +49,9 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Back to main navigation',
-      'Authentication methods',
-      'Multi-factor authentication',
-      'OIDC',
+      'Authentication Methods',
+      'Multi-Factor Authentication',
+      'OIDC Provider',
       'Control Groups',
       'Namespaces',
       'Groups',

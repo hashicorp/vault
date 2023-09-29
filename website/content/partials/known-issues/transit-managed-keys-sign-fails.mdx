@@ -1,0 +1,23 @@
+### Transit Sign API calls with managed keys fail
+
+#### Affected versions
+
+- 1.14.0+ up to 1.14.4 inclusively
+- 1.15.0
+
+#### Issue
+
+Vault responds to Transit sign API calls with the following error when the request uses a managed key:
+
+`requested version for signing does not contain a private part`
+
+<Note>
+The issue does not affect signing with the following key types:
+
+- Transit native keys
+
+</Note>
+
+#### Workaround
+
+None at this time

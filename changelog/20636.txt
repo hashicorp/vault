@@ -1,0 +1,3 @@
+```release-note:bug
+api: Properly Handle nil identity_policies in Secret Data
+```

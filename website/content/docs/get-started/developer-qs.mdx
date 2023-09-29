@@ -4,7 +4,7 @@ page_title: Developer Quick Start
 description: Learn how to store and retrieve your first secret.
 ---
 
-# Developer Quick Start
+# Developer quick start
 
 This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
@@ -27,7 +27,7 @@ For an out-of-the-box runnable demo application showcasing these concepts and mo
 
 -> **Note**: Make sure you are using the [latest version](https://docs.docker.com/engine/release-notes/) of Docker. Older versions may not work. As of 1.12.0, the recommended version of Docker is 20.10.17 or higher.
 
-## Step 1: Start Vault
+## Step 1: start Vault
 
 !> **Warning**: This in-memory “dev” server is useful for practicing with Vault locally for the first time, but is insecure and **should never be used in production**. For developers who need to manage their own production Vault installations, this [page](/vault/tutorials/operations/production-hardening) provides some guidance on how to make your setup more production-friendly.
 
@@ -35,7 +35,7 @@ Run the Vault server in a non-production "dev" mode in one of the following ways
 
 **For Docker users, run this command**:
 
-```shell-session 
+```shell-session
 $ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault
 ```
 
@@ -51,7 +51,7 @@ The `-dev-root-token-id` flag for dev servers tells the Vault server to allow fu
 
 Vault is now listening over HTTP on port **8200**. With all the setup out of the way, it's time to get coding!
 
-## Step 2: Install a client library
+## Step 2: install a client library
 
 To read and write secrets in your application, you need to first configure a client to connect to Vault.
 Let's install the Vault client library for your language of choice.
@@ -62,8 +62,8 @@ Let's install the Vault client library for your language of choice.
 <Tab heading="Go" group="go">
 
 [Go](https://pkg.go.dev/github.com/hashicorp/vault/api) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ go get github.com/hashicorp/vault/api
 ```
 
@@ -80,10 +80,10 @@ import vault "github.com/hashicorp/vault/api"
 </Tab>
 <Tab heading="Ruby" group="ruby">
 
-   
+
 [Ruby](https://github.com/hashicorp/vault-ruby) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ gem install vault
 ```
 
@@ -100,9 +100,9 @@ require "vault"
 </Tab>
 <Tab heading="C#" group="cs">
 
-   
+
 [C#](https://github.com/rajanadar/VaultSharp) client library:
-   
+
 ```shell-session
 $ dotnet add package VaultSharp
 ```
@@ -123,10 +123,10 @@ using VaultSharp.V1.Commons;
 </Tab>
 <Tab heading="Python" group="python">
 
-   
+
 [Python](https://github.com/hvac/hvac) client library:
 
-```shell-session 
+```shell-session
 $ pip install hvac
 ```
 
@@ -143,9 +143,9 @@ import hvac
 </Tab>
 <Tab heading="Java" group="java">
 
-   
+
 [Java (Spring)](https://spring.io/projects/spring-vault) client library:
-   
+
 Add the following to pom.xml:
 
 ```xml
@@ -209,7 +209,7 @@ $ nuget install HashiCorp.Vault -Version "0.1.0-beta"
 **Or:**
 
 ```shell-session
-$ dotnet add package Hashicorp.Vault -version "0.1.0-beta" 
+$ dotnet add package Hashicorp.Vault -version "0.1.0-beta"
 ```
 
 Now, let's add the import statements for the client library to the top of the file.
@@ -227,7 +227,7 @@ using Vault.Client;
 </Tabs>
 
 
-## Step 3: Authenticate to Vault
+## Step 3: authenticate to Vault
 
 A variety of [authentication methods](/vault/docs/auth) can be used to prove your application's identity to the Vault server. To explore more secure authentication methods, such as via Kubernetes or your cloud provider, see the auth code snippets in the [vault-examples](https://github.com/hashicorp/vault-examples) repository.
 
@@ -335,7 +335,7 @@ vaultClient.SetToken("dev-only-token");
 </Tab>
 </Tabs>
 
-## Step 4: Store a secret
+## Step 4: store a secret
 
 Secrets are sensitive data like API keys and passwords that we shouldn’t be storing in our code or configuration files. Instead, we want to store values like this in Vault.
 
@@ -457,7 +457,7 @@ We also provided the path to our secret in Vault. We will reference this path in
 
 Run the code now, and you should see `Secret written successfully`. If not, check that you've used the correct value for the root token and Vault server address.
 
-## Step 5: Retrieve a secret
+## Step 5: retrieve a secret
 
 Now that we know how to write a secret, let's practice reading one.
 
@@ -628,4 +628,4 @@ For more secure examples of client authentication, see the auth snippets in the 
 
 For a runnable demo app that demonstrates more features, for example, how to keep your connection to Vault alive and how to connect to a database using Vault's dynamic database credentials, see the sample application hello-vault ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
 
-To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent) documentation.
+To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent-and-proxy/agent) documentation.

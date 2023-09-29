@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -18,7 +18,7 @@ import (
 func (b *SystemBackend) pprofPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "pprof/$",
+			Pattern: "pprof/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "pprof",

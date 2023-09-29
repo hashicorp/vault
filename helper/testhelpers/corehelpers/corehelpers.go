@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package corehelpers contains testhelpers that don't depend on package vault,
 // and thus can be used within vault (as well as elsewhere.)
@@ -9,15 +9,20 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/internal/observability/event"
+
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -25,6 +30,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/go-testing-interface"
 )
+
+var externalPlugins = []string{"transform", "kmip", "keymgmt"}
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
@@ -180,8 +187,21 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"pending-removal-test-plugin",
 			"approle",
 		}
+
+	case consts.PluginTypeSecrets:
+		return append(externalPlugins, "kv")
 	}
+
 	return []string{}
+}
+
+func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	for _, i := range externalPlugins {
+		if i == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
@@ -229,14 +249,49 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 			Config: config,
 		},
 	}
-	n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-		SaltFunc: n.Salt,
+
+	cfg, err := audit.NewFormatterConfig()
+	if err != nil {
+		return nil, err
 	}
+
+	f, err := audit.NewEntryFormatter(cfg, n)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+
+	fw, err := audit.NewEntryFormatterWriter(cfg, f, &audit.JSONWriter{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+
+	n.formatter = fw
+
+	n.nodeIDList = make([]eventlogger.NodeID, 2)
+	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+	formatterNodeID, err := event.GenerateNodeID()
+	if err != nil {
+		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+	}
+
+	n.nodeIDList[0] = formatterNodeID
+	n.nodeMap[formatterNodeID] = f
+
+	sinkNode := event.NewNoopSink()
+	sinkNodeID, err := event.GenerateNodeID()
+	if err != nil {
+		return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+	}
+
+	n.nodeIDList[1] = sinkNodeID
+	n.nodeMap[sinkNodeID] = sinkNode
+
 	return n, nil
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err
@@ -244,6 +299,7 @@ func NoopAuditFactory(records **[][]byte) audit.Factory {
 		if records != nil {
 			*records = &n.records
 		}
+
 		return n, nil
 	}
 }
@@ -265,19 +321,22 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter audit.AuditFormatter
+	formatter *audit.EntryFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt
 	saltMutex sync.RWMutex
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
 		if err != nil {
 			return err
 		}
@@ -297,9 +356,9 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	n.l.Lock()
 	defer n.l.Unlock()
 
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteResponse(ctx, &w, in)
 		if err != nil {
 			return err
 		}
@@ -323,12 +382,19 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	n.l.Lock()
 	defer n.l.Unlock()
 	var w bytes.Buffer
-	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+
+	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
 	if err != nil {
 		return err
 	}
+
+	err = tempFormatter.FormatAndWriteResponse(ctx, &w, in)
+	if err != nil {
+		return err
+	}
+
 	n.records = append(n.records, w.Bytes())
+
 	return nil
 }
 
@@ -344,37 +410,81 @@ func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	if n.salt != nil {
 		return n.salt, nil
 	}
-	salt, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
+	s, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
 	if err != nil {
 		return nil, err
 	}
-	n.salt = salt
-	return salt, nil
+	n.salt = s
+	return s, nil
 }
 
 func (n *NoopAudit) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := n.Salt(ctx)
+	s, err := n.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
-	return salt.GetIdentifiedHMAC(data), nil
+	return s.GetIdentifiedHMAC(data), nil
 }
 
-func (n *NoopAudit) Reload(ctx context.Context) error {
+func (n *NoopAudit) Reload(_ context.Context) error {
 	return nil
 }
 
-func (n *NoopAudit) Invalidate(ctx context.Context) {
+func (n *NoopAudit) Invalidate(_ context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
 }
 
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
+}
+
 type TestLogger struct {
-	hclog.Logger
+	hclog.InterceptLogger
 	Path string
 	File *os.File
 	sink hclog.SinkAdapter
+	// For managing temporary start-up state
+	sync.RWMutex
+	AllLoggers []hclog.Logger
+	logging.SubloggerAdder
+}
+
+// RegisterSubloggerAdder checks to see if the provided logger interface is a
+// TestLogger and re-assigns the SubloggerHook implementation if so.
+func RegisterSubloggerAdder(logger hclog.Logger, adder logging.SubloggerAdder) {
+	if l, ok := logger.(*TestLogger); ok {
+		l.Lock()
+		l.SubloggerAdder = adder
+		l.Unlock()
+	}
+}
+
+// AppendToAllLoggers appends the sub logger to allLoggers, or if the TestLogger
+// is assigned to a SubloggerAdder implementation, it calls the underlying hook.
+func (l *TestLogger) AppendToAllLoggers(sub hclog.Logger) hclog.Logger {
+	l.Lock()
+	defer l.Unlock()
+	if l.SubloggerAdder == nil {
+		l.AllLoggers = append(l.AllLoggers, sub)
+		return sub
+	}
+	return l.SubloggerHook(sub)
 }
 
 func NewTestLogger(t testing.T) *TestLogger {
@@ -398,26 +508,33 @@ func NewTestLogger(t testing.T) *TestLogger {
 		output = logFile
 	}
 
-	// We send nothing on the regular logger, that way we can later deregister
-	// the sink to stop logging during cluster cleanup.
-	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            ioutil.Discard,
-		IndependentLevels: true,
-	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
 		Level:             hclog.Trace,
 		IndependentLevels: true,
 	})
-	logger.RegisterSink(sink)
-	return &TestLogger{
-		Path:   logPath,
-		File:   logFile,
-		Logger: logger,
-		sink:   sink,
+
+	testLogger := &TestLogger{
+		Path: logPath,
+		File: logFile,
+		sink: sink,
 	}
+
+	// We send nothing on the regular logger, that way we can later deregister
+	// the sink to stop logging during cluster cleanup.
+	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
+		Output:            io.Discard,
+		IndependentLevels: true,
+		Name:              t.Name(),
+		SubloggerHook:     testLogger.AppendToAllLoggers,
+	})
+
+	logger.RegisterSink(sink)
+	testLogger.InterceptLogger = logger
+
+	return testLogger
 }
 
 func (tl *TestLogger) StopLogging() {
-	tl.Logger.(hclog.InterceptLogger).DeregisterSink(tl.sink)
+	tl.InterceptLogger.DeregisterSink(tl.sink)
 }

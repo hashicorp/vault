@@ -46,7 +46,7 @@ $ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.
 
-### Output Options
+### Output options
 
 - `-field` `(string: "")` - Print only the field with the given name. Specifying
   this option will take precedence over other formatting directives. The result
@@ -57,7 +57,7 @@ included on all commands.
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-cas` `(int: 0)` - Specifies to use a Check-And-Set operation. If not set the
   write will be allowed. In order for a write to be successful, `cas` must be set to 

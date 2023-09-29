@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package misc
 
@@ -8,18 +8,16 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"go.uber.org/atomic"
 )
 
 func TestRecovery(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
-	inm, err := inmem.NewTransactionalInmemHA(nil, logger)
+	inm, err := inmem.NewTransactionalInmemHA(nil, corehelpers.NewTestLogger(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +28,6 @@ func TestRecovery(t *testing.T) {
 	{
 		conf := vault.CoreConfig{
 			Physical: inm,
-			Logger:   logger,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,
@@ -73,7 +70,6 @@ func TestRecovery(t *testing.T) {
 		var tokenRef atomic.String
 		conf := vault.CoreConfig{
 			Physical:     inm,
-			Logger:       logger,
 			RecoveryMode: true,
 		}
 		opts := vault.TestClusterOptions{
@@ -117,7 +113,6 @@ func TestRecovery(t *testing.T) {
 		// Now go back to regular mode and verify that our changes are present
 		conf := vault.CoreConfig{
 			Physical: inm,
-			Logger:   logger,
 		}
 		opts := vault.TestClusterOptions{
 			HandlerFunc: http.Handler,

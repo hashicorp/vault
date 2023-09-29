@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <h3 class="title is-4">Intermediates</h3>
 <div class="box is-fullwidth has-only-top-shadow">
   <p class="has-bottom-margin-l">
@@ -15,7 +20,7 @@
     </p>
     <div class="is-flex-start">
       {{#each this.inputFields as |column|}}
-        <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+        <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
           <h2 data-test-info-table-label={{column.key}}>
             {{column.label}}
             {{#if column.helpText}}
@@ -35,7 +40,7 @@
             />
             {{#each (map-by "key" this.inputFields) as |columnAttr|}}
               {{#let (get crossSignRow columnAttr) as |data|}}
-                <div data-test-info-table-column={{columnAttr}} class="is-flex-1 basis-0 has-bottom-margin-xs">
+                <div data-test-info-table-column={{columnAttr}} class="is-flex-grow-1 basis-0 has-bottom-margin-xs">
                   {{#if (eq columnAttr "intermediateMount")}}
                     <LinkTo class="has-text-black has-text-weight-semibold" @route="overview" @model={{data}}>
                       {{data}}
@@ -58,12 +63,14 @@
             {{/each}}
           </div>
           {{#if crossSignRow.hasError}}
-            <AlertBanner
-              @type="danger"
-              @title={{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
-              @message={{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
-              class="message-marginless"
-            />
+            <Hds::Alert @type="inline" @color="critical" as |A|>
+              <A.Title data-test-cross-sign-alert-title>
+                {{if crossSignRow.hasUnsupportedParams crossSignRow.hasError "Cross-sign failed"}}
+              </A.Title>
+              <A.Description data-test-cross-sign-alert-message>
+                {{if crossSignRow.hasUnsupportedParams crossSignRow.hasUnsupportedParams crossSignRow.hasError}}
+              </A.Description>
+            </Hds::Alert>
           {{/if}}
         </div>
       {{/each}}

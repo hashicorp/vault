@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   @params={{array
     (concat "vault.cluster.secrets.backend." (if @item.isFolder "list" "show") (unless @item.id "-root"))
@@ -41,7 +46,7 @@
                     </button>
                   </li>
                 {{else}}
-                  {{#if (or @item.canReadSecretData @item.canRead)}}
+                  {{#if @item.canRead}}
                     <li class="action">
                       <SecretLink
                         @mode="show"
@@ -52,15 +57,8 @@
                         Details
                       </SecretLink>
                     </li>
-                    {{#if @backendModel.isV2KV}}
-                      <li class="action">
-                        <SecretLink @mode="versions" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
-                          View version history
-                        </SecretLink>
-                      </li>
-                    {{/if}}
                   {{/if}}
-                  {{#if (or @item.canEditSecretData @item.canEdit)}}
+                  {{#if @item.canEdit}}
                     <li class="action">
                       <SecretLink
                         @mode="edit"
@@ -68,16 +66,16 @@
                         @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
                         class="has-text-black has-text-weight-semibold"
                       >
-                        {{if @backendModel.isV2KV "Create new version" "Edit"}}
+                        Edit
                       </SecretLink>
                     </li>
                   {{/if}}
-                  {{#if (or @item.canDeleteSecretData @item.canDelete)}}
+                  {{#if @item.canDelete}}
                     <li class="action">
                       <c.Message
                         @id={{@item.id}}
-                        @triggerText={{if @backendModel.isV2KV "Permanently delete" "Delete"}}
-                        @message="This will permanently delete this secret and all its versions."
+                        @triggerText="Delete"
+                        @message="This will permanently delete this secret."
                         @onConfirm={{@delete}}
                       />
                     </li>

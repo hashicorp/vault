@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -100,7 +100,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
-		return nil, nil
+		return b.formatKeyPolicy(p, nil)
 	}
 }
 

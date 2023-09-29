@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 # This script is sourced into the shell running in a Github Actions workflow.
 
@@ -22,31 +22,17 @@
 # Here, it is used to check if a deprecated function, variable, constant or field is used.
 
 # Run staticcheck 
+set -e
 echo "Performing deprecations check: running staticcheck"
 
-# Identify repository name
-if [ -z $2 ]; then
-    # local repository name
-    repositoryName=$(basename `git rev-parse --show-toplevel`)
-else
-    # github repository name from deprecated-functions-checker.yml
-    repositoryName=$2
-fi
-
-# Modify the command with the correct build tag based on repository
-if [ $repositoryName == "vault-enterprise" ]; then
-    staticcheckCommand=$(echo "staticcheck ./... -tags=enterprise")
-else
-    staticcheckCommand=$(echo "staticcheck ./...")
-fi
 
 # If no compare branch name is specified, output all deprecations
 # Else only output the deprecations from the changes added
 if [ -z $1 ]
     then
-        $staticcheckCommand | grep deprecated
+        staticcheck -checks="SA1019" -tags="$BUILD_TAGS"
     else
         # GitHub Actions will use this to find only changes wrt PR's base ref branch
         # revgrep CLI tool will return an exit status of 1 if any issues match, else it will return 0
-        $staticcheckCommand | grep deprecated 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
+        staticcheck  -checks="SA1019" -tags="$BUILD_TAGS" 2>&1 | revgrep origin/"$1" 
 fi

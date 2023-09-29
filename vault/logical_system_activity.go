@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -29,6 +30,10 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 		},
 
 		Fields: map[string]*framework.FieldSchema{
+			"current_billing_period": {
+				Type:        framework.TypeBool,
+				Description: "Query utilization for configured billing period",
+			},
 			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
@@ -203,7 +208,9 @@ func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time
 
 // This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
 func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -216,7 +223,7 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 	// This is to avoid the default 90s context timeout.
 	timeout := 10 * time.Minute
 	if durationRaw := os.Getenv("VAULT_ACTIVITY_EXPORT_DURATION"); durationRaw != "" {
-		d, err := time.ParseDuration(durationRaw)
+		d, err := parseutil.ParseDurationSecond(durationRaw)
 		if err == nil {
 			timeout = d
 		}
@@ -234,14 +241,23 @@ func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var startTime, endTime time.Time
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
 
-	startTime, endTime, err := parseStartEndTimes(a, d)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if d.Get("current_billing_period").(bool) {
+		startTime = b.Core.BillingStart()
+		endTime = time.Now().UTC()
+	} else {
+		var err error
+		startTime, endTime, err = parseStartEndTimes(a, d)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
 	var limitNamespaces int
@@ -264,7 +280,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 }
 
 func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -283,7 +301,9 @@ func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *log
 }
 
 func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -308,15 +328,17 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 			"retention_months":         config.RetentionMonths,
 			"enabled":                  config.Enabled,
 			"queries_available":        qa,
-			"reporting_enabled":        b.Core.censusLicensingEnabled,
-			"billing_start_timestamp":  b.Core.billingStart,
+			"reporting_enabled":        b.Core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  b.Core.BillingStart(),
 			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
 	}, nil
 }
 
 func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -367,7 +389,7 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
 
 				// if census is enabled, the activity log cannot be disabled
-				if a.core.censusLicensingEnabled {
+				if a.core.CensusLicensingEnabled() {
 					return logical.ErrorResponse("cannot disable the activity log while Reporting is enabled"), logical.ErrInvalidRequest
 				}
 				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
@@ -382,6 +404,9 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		}
 	}
 
+	a.core.activityLogLock.RLock()
+	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
+	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -391,8 +416,8 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
 	}
 
-	if a.core.censusLicensingEnabled && config.RetentionMonths < a.configOverrides.MinimumRetentionMonths {
-		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", a.configOverrides.MinimumRetentionMonths), logical.ErrInvalidRequest
+	if a.core.CensusLicensingEnabled() && config.RetentionMonths < minimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config

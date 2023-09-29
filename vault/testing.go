@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,7 +41,6 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -186,12 +186,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		if err != nil {
 			t.Logf("shutdown returned error: %v", err)
 		}
+		if tl, ok := c.Logger().(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 	})
 	return c
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -201,6 +204,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
+
+	corehelpers.RegisterSubloggerAdder(logger, conf)
 
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
@@ -217,8 +222,11 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
-	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
+	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.AllLoggers = logger.AllLoggers
+	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -238,6 +246,12 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
 	}
+	if opts.RollbackPeriod != time.Duration(0) {
+		conf.RollbackPeriod = opts.RollbackPeriod
+	}
+	if opts.NumRollbackWorkers != 0 {
+		conf.NumRollbackWorkers = opts.NumRollbackWorkers
+	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	testApplyEntBaseConfig(conf, opts)
@@ -247,6 +261,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Switch the SubloggerHook over to core
+	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -292,6 +308,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		NumRollbackWorkers: 10,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
@@ -441,7 +458,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
@@ -582,7 +599,15 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, pluginType, version, fileName, args, env, sum)
+	err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    name,
+		Type:    pluginType,
+		Version: version,
+		Command: fileName,
+		Args:    args,
+		Env:     env,
+		Sha256:  sum,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1217,11 +1242,15 @@ type TestClusterOptions struct {
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
-	Typ      consts.PluginType
-	Versions []string
+	Typ       consts.PluginType
+	Versions  []string
+	Container bool
 }
 
 var DefaultNumCores = 3
@@ -1261,21 +1290,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
 	}
-	var baseAddr *net.TCPAddr
-	if opts != nil && opts.BaseListenAddress != "" {
-		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
 
-		if err != nil {
-			t.Fatal("could not parse given base IP")
-		}
-		certIPs = append(certIPs, baseAddr.IP)
-	} else {
-		baseAddr = &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 0,
-		}
-	}
-
+	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
 	testCluster.base = base
 
@@ -1347,7 +1363,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 	testCluster.CACertPEM = pem.EncodeToMemory(caCertPEMBlock)
 	testCluster.CACertPEMFile = filepath.Join(testCluster.TempDir, "ca_cert.pem")
-	err = ioutil.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0o755)
+	err = os.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1360,7 +1376,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		Bytes: marshaledCAKey,
 	}
 	testCluster.CAKeyPEM = pem.EncodeToMemory(caKeyPEMBlock)
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0o755)
+	err = os.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1450,11 +1466,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
-		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
+		err = os.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
+		err = os.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1515,6 +1531,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
+	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
+
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1540,6 +1558,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
+		coreConfig.ServiceRegistration = base.ServiceRegistration
+		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1656,6 +1677,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if opts != nil && opts.Plugins != nil {
+		if opts.Plugins.Container && runtime.GOOS != "linux" {
+			t.Skip("Running plugins in containers is only supported on linux")
+		}
+
 		var pluginDir string
 		var cleanup func(t testing.T)
 
@@ -1667,7 +1692,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		var plugins []pluginhelpers.TestPlugin
 		for _, version := range opts.Plugins.Versions {
-			plugins = append(plugins, pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory))
+			plugin := pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory)
+			if opts.Plugins.Container {
+				plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+			}
+			plugins = append(plugins, plugin)
 		}
 		testCluster.Plugins = plugins
 	}
@@ -1679,6 +1708,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
+
+		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1790,7 +1821,28 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	cluster.cleanupFuncs[idx]()
 }
 
-// Restart a TestClusterCore that was stopped, by replacing the
+func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.IP) (*net.TCPAddr, []net.IP) {
+	var baseAddr *net.TCPAddr
+	var err error
+
+	if opts != nil && opts.BaseListenAddress != "" {
+		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
+
+		if err != nil {
+			t.Fatal("could not parse given base IP")
+		}
+		certIPs = append(certIPs, baseAddr.IP)
+	} else {
+		baseAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 0,
+		}
+	}
+
+	return baseAddr, certIPs
+}
+
+// StartCore restarts a TestClusterCore that was stopped, by replacing the
 // underlying Core.
 func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
 	t.Helper()
@@ -2016,6 +2068,10 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.SetClusterHandler(handler)
 }
 
+func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+	tc.initCores(t, opts, addAuditBackend)
+}
+
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
 	leader := tc.Cores[0]
 
@@ -2033,7 +2089,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 	}
 	var buf bytes.Buffer
 	for i, key := range tc.BarrierKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.BarrierKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2043,7 +2099,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	for i, key := range tc.RecoveryKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.RecoveryKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2261,6 +2317,10 @@ func (c *TestCluster) GetRecoveryKeys() [][]byte {
 
 func (c *TestCluster) NamedLogger(name string) log.Logger {
 	return c.Logger.Named(name)
+}
+
+func (c *TestCluster) GetRootToken() string {
+	return c.RootToken
 }
 
 func (c *TestClusterCore) Name() string {

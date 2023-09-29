@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -35,10 +35,16 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     assert.deepEqual(
       this.spy.lastCall.args[0],
       { foo: 'bar' },
-      'calls onChange with the JSON respresentation of the data'
+      'calls onChange with the JSON representation of the data'
     );
     await component.addRow();
-    assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');
+    await assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');
+    await component.rows.objectAt(1).kvKey('another').kvVal('row');
+    assert.propEqual(
+      this.spy.lastCall.args[0],
+      { foo: 'bar', another: 'row' },
+      'calls onChange with second row of data'
+    );
   });
 
   test('it renders passed data', async function (assert) {

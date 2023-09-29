@@ -1,19 +1,37 @@
-<SecretListHeader
-  @model={{this.model.engine}}
-  @backendCrumb={{hash
-    label=this.model.engine.id
-    text=this.model.engine.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.engine.id
-  }}
-  @isEngine={{true}}
-/>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<Page::PkiConfigurationDetails
-  @urls={{this.model.urls}}
-  @crl={{this.model.crl}}
-  @mountConfig={{this.model.mountConfig}}
-  @currentPath={{this.model.engine.id}}
-  @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
-  @hasConfig={{this.model.hasConfig}}
+<PkiPageHeader @backend={{this.model.engine}} />
+
+{{#if this.model.hasConfig}}
+  <Page::PkiConfigurationDetails
+    @acme={{this.model.acme}}
+    @cluster={{this.model.cluster}}
+    @urls={{this.model.urls}}
+    @crl={{this.model.crl}}
+    @backend={{this.model.engine.id}}
+    @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
+    @hasConfig={{this.model.hasConfig}}
+  />
+{{else}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @route="configuration.create" data-test-configure-pki-button>
+        Configure
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+    <LinkTo @route="configuration.create">
+      Configure PKI
+    </LinkTo>
+  </EmptyState>
+{{/if}}
+
+<SecretsEngineMountConfig
+  @model={{this.model.mountConfig}}
+  class="has-top-margin-m has-bottom-margin-xl"
+  data-test-mount-config
 />

@@ -1,19 +1,24 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.id}}
   {{! Model only has ID once form has been submitted and saved }}
   <Toolbar />
   <main data-test-sign-intermediate-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="The CA Chain and Issuing CA values will only be available once. Make sure you copy and save it now."
-      />
-
+      <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          The CA Chain and Issuing CA values will only be available once. Make sure you copy and save it now.
+        </A.Description>
+      </Hds::Alert>
       {{#each this.showFields as |fieldName|}}
         {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
           <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @model attr.name}}>
-            {{#if (and attr.options.masked (get @model attr.name))}}
-              <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+            {{#if (and attr.options.isCertificate (get @model attr.name))}}
+              <CertificateCard @data={{get @model attr.name}} />
             {{else if (eq attr.name "serialNumber")}}
               <LinkTo
                 @route="certificates.certificate.details"

@@ -1,20 +1,37 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.save this.model) on="submit"}}>
   <MessageError @model={{this.model}} data-test-edit-form-error />
   <div class={{if this.includeBox "box is-sideless is-fullwidth is-marginless"}}>
     <NamespaceReminder @mode="save" />
     {{#if (or this.model.fields this.model.attrs)}}
       {{#each (or this.model.fields this.model.attrs) as |attr|}}
-        <FormField data-test-field @attr={{attr}} @model={{this.model}} @mode={{@mode}} />
+        <FormField
+          data-test-field
+          @attr={{attr}}
+          @model={{this.model}}
+          @mode={{@mode}}
+          @modelValidations={{this.modelValidations}}
+        />
       {{/each}}
     {{else if this.model.fieldGroups}}
-      <FormFieldGroups @model={{this.model}} @mode={{@mode}} />
+      <FormFieldGroups @model={{this.model}} @mode={{@mode}} @modelValidations={{this.modelValidations}} />
     {{/if}}
   </div>
   <FormSaveButtons
     @isSaving={{this.save.isRunning}}
     @saveButtonText={{this.saveButtonText}}
-    @canceLinkParams={{@canceLinkParams}}
+    @cancelLinkParams={{@cancelLinkParams}}
     @includeBox={{this.includeBox}}
     @onCancel={{@onCancel}}
-  />
+  >
+    <:error>
+      {{#if this.invalidFormAlert}}
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+      {{/if}}
+    </:error>
+  </FormSaveButtons>
 </form>

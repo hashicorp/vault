@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
@@ -8,7 +13,7 @@
         {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
-            {{#if (eq attr.name "issuerRef")}}
+            {{#if (and (eq attr.name "issuerRef") @issuers)}}
               <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
                 <FormFieldLabel
                   for={{attr.name}}

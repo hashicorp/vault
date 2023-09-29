@@ -56,6 +56,17 @@ type Path struct {
 	// This should be a valid regular expression. Named captures will be
 	// exposed as fields that should map to a schema in Fields. If a named
 	// capture is not a field in the Fields map, then it will be ignored.
+	//
+	// The pattern will automatically have a ^ prepended and a $ appended before
+	// use, if these are not already present, so these may be omitted for clarity.
+	//
+	// If a ListOperation is being defined, the pattern must end with /? to match
+	// a trailing slash optionally, as ListOperations are always processed with a
+	// trailing slash added to the path if not already present. The match must not
+	// require the presence of a trailing slash, as HelpOperations, even for a
+	// path which only implements ListOperation, are processed without a trailing
+	// slash - so failure to make the trailing slash optional will break the
+	// `vault path-help` command for the path.
 	Pattern string
 
 	// Fields is the mapping of data fields to a schema describing that
@@ -374,7 +385,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			}
 		}
 		doc := NewOASDocument(vaultVersion)
-		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, b.BackendType, doc); err != nil {
+		if err := documentPath(p, b, requestResponsePrefix, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

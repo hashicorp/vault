@@ -1,0 +1,37 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      {{#if @mountName}}
+        <Icon @name="kv" @size="24" class="has-text-grey-light" />
+        {{@mountName}}
+        <span class="tag">Version 2</span>
+      {{else}}
+        {{@pageTitle}}
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (has-block "tabLinks")}}
+  <div class="tabs-container box is-bottomless is-marginless is-paddingless">
+    <nav class="tabs" aria-label="kv tabs">
+      <ul>
+        {{yield to="tabLinks"}}
+      </ul>
+    </nav>
+  </div>
+{{/if}}
+
+{{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+  <Toolbar>
+    <ToolbarFilters>
+      {{yield to="toolbarFilters"}}
+    </ToolbarFilters>
+    <ToolbarActions>
+      {{yield to="toolbarActions"}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}

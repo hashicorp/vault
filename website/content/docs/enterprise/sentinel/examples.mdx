@@ -6,13 +6,15 @@ description: An overview of how Sentinel interacts with Vault Enterprise.
 
 # Examples
 
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+
 Following are some examples that help to introduce concepts. If you are
 unfamiliar with writing Sentinel policies in Vault, please read through to
 understand some best practices.
 
 Additional examples can be found [here](https://github.com/hashicorp/vault-guides/tree/master/governance).
 
-## MFA and CIDR Check on Login
+## MFA and CIDR check on login
 
 The following Sentinel policy requires the incoming user to successfully
 validate with an Okta MFA push request before authenticating with LDAP.
@@ -29,7 +31,7 @@ cidrcheck = rule {
     sockaddr.is_contained("10.20.0.0/16", request.connection.remote_addr)
 }
 
-# Require Ping MFA validation to succeed
+# Require ping MFA validation to succeed
 ping_valid = rule {
     mfa.methods.ping.valid
 }
@@ -53,7 +55,7 @@ describes the conditions under which a matching request is successful. This
 keeps the default-deny feeling of Vault; if the evaluation condition isn't met,
 the policy is simply a no-op.
 
-## Allow Only Specific Identity Entities or Groups
+## Allow only specific identity entities or groups
 
 ```python
 main = rule {
@@ -73,7 +75,7 @@ constraint is that they must be unique. Using IDs guarantees that only that
 specific entity or group is sufficient; if the group or entity are deleted and
 recreated with the same name, the match will fail.
 
-## Instantly Disallow All Previously-Generated Tokens
+## Instantly disallow all Previously-Generated tokens
 
 Imagine a break-glass scenario where it is discovered that there have been
 compromises of some unknown number of previously-generated tokens.
@@ -106,7 +108,7 @@ operates on with a token created before the given time. Tokens created after
 this time, since they were not a part of the compromise, will not be subject to
 this restriction.
 
-## Delegate EGP Policy Management Under a Path
+## Delegate EGP policy management under a path
 
 The following policy gives token holders with this policy (via their tokens or
 their Identity entities/groups) the ability to write EGP policies that can only

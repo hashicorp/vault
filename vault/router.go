@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -39,8 +39,9 @@ type Router struct {
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
-	storagePrefix *radix.Tree
-	logger        hclog.Logger
+	storagePrefix            *radix.Tree
+	logger                   hclog.Logger
+	rollbackMetricsMountName bool
 }
 
 // NewRouter returns a new router
@@ -58,7 +59,7 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       bool
+	tainted       atomic.Bool
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
@@ -125,7 +126,7 @@ func (entry *routeEntry) Deserialize() map[string]interface{} {
 	entry.l.RLock()
 	defer entry.l.RUnlock()
 	ret := map[string]interface{}{
-		"tainted":        entry.tainted,
+		"tainted":        entry.tainted.Load(),
 		"storage_prefix": entry.storagePrefix,
 	}
 	for k, v := range entry.mountEntry.Deserialize() {
@@ -189,12 +190,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:       mountEntry.Tainted,
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
+	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
 	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
 	if err != nil {
@@ -290,7 +291,7 @@ func (r *Router) Taint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = true
+		raw.(*routeEntry).tainted.Store(true)
 	}
 	return nil
 }
@@ -307,7 +308,7 @@ func (r *Router) Untaint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = false
+		raw.(*routeEntry).tainted.Store(false)
 	}
 	return nil
 }
@@ -581,10 +582,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	req.Path = adjustedPath
 	if !existenceCheck {
-		defer metrics.MeasureSince([]string{
-			"route", string(req.Operation),
-			strings.ReplaceAll(mount, "/", "-"),
-		}, time.Now())
+		metricName := []string{"route", string(req.Operation)}
+		if req.Operation != logical.RollbackOperation || r.rollbackMetricsMountName {
+			metricName = append(metricName, strings.ReplaceAll(mount, "/", "-"))
+		}
+		defer metrics.MeasureSince(metricName, time.Now())
 	}
 	re := raw.(*routeEntry)
 
@@ -605,7 +607,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
-	if re.tainted {
+	if re.tainted.Load() {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:

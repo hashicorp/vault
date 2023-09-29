@@ -1,33 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.importedResponse}}
   <div class="is-flex-start has-top-margin-xs">
-    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Issuer
       </h2>
     </div>
-    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Key
       </h2>
     </div>
   </div>
   <div class="box is-fullwidth is-sideless is-marginless is-paddingless" data-test-imported-bundle-mapping>
-    {{#each-in this.importedResponse as |issuer key|}}
-      <div class="box is-marginless no-top-shadow has-slim-padding" data-test-import-pair={{concat issuer "_" key}}>
+    {{#each this.importedResponse as |imported|}}
+      <div
+        class="box is-marginless no-top-shadow has-slim-padding"
+        data-test-import-pair={{concat imported.issuer "_" imported.key}}
+      >
         <div class="is-flex-start">
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
-            {{#if issuer}}
-              <LinkTo @route="issuers.issuer.details" @model={{issuer}}>
-                {{issuer}}
+          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
+            {{#if imported.issuer}}
+              <LinkTo @route="issuers.issuer.details" @model={{imported.issuer}}>
+                {{imported.issuer}}
               </LinkTo>
             {{else}}
               None
             {{/if}}
           </div>
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
-            {{#if key}}
-              <LinkTo @route="keys.key.details" @model={{key}}>
-                {{key}}
+          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
+            {{#if imported.key}}
+              <LinkTo @route="keys.key.details" @model={{imported.key}}>
+                {{imported.key}}
               </LinkTo>
             {{else}}
               None
@@ -35,7 +43,7 @@
           </div>
         </div>
       </div>
-    {{/each-in}}
+    {{/each}}
   </div>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
@@ -53,7 +61,7 @@
         Certificate parameters
       </label>
       <form {{on "submit" (perform this.submitForm)}} data-test-pki-import-pem-bundle-form>
-        <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+        <MessageError @errorMessage={{this.errorBanner}} />
         <div class="box is-sideless is-fullwidth is-marginless has-top-padding-l">
           <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" />
           <p class="has-top-margin-m has-bottom-margin-l">

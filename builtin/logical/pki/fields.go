@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -16,6 +16,7 @@ const (
 	keyIdParam     = "key_id"
 	keyTypeParam   = "key_type"
 	keyBitsParam   = "key_bits"
+	skidParam      = "subject_key_id"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -491,6 +492,23 @@ this removes ALL issuers within the mount (and is thus not desirable
 in most operational scenarios).`,
 	}
 
+	fields["tidy_acme"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying ACME accounts,
+orders and authorizations.  ACME orders are tidied (deleted) 
+safety_buffer after the certificate associated with them expires,
+or after the order and relevant authorizations have expired if no 
+certificate was produced.  Authorizations are tidied with the 
+corresponding order.
+
+When a valid ACME Account is at least acme_account_safety_buffer
+old, and has no remaining orders associated with it, the account is
+marked as revoked.  After another acme_account_safety_buffer has 
+passed from the revocation or deactivation date, a revoked or 
+deactivated ACME account is deleted.`,
+		Default: false,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -509,6 +527,14 @@ Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
+	fields["acme_account_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass after creation
+that an account with no orders is marked revoked, and the amount of time
+after being marked revoked or deactivated.`,
+		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
 	fields["pause_duration"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The amount of time to wait between processing
@@ -519,23 +545,6 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
-	}
-
-	fields["maintain_stored_certificate_counts"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `This configures whether stored certificates 
-are counted upon initialization of the backend, and whether during 
-normal operation, a running count of certificates stored is maintained.`,
-		Default: false,
-	}
-
-	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `This configures whether the stored certificate 
-count is published to the metrics consumer.  It does not affect if the
-stored certificate count is maintained, and if maintained, it will be
-available on the tidy-status endpoint.`,
-		Default: false,
 	}
 
 	fields["tidy_revocation_queue"] = &framework.FieldSchema{

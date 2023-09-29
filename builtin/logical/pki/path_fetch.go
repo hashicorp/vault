@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -28,7 +28,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeInt64,
 				Description: `Revocation time`,
 				Required:    false,
 			},
@@ -43,7 +43,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"ca_chain": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeString,
 				Description: `Issuing CA Chain`,
 				Required:    false,
 			},
@@ -239,18 +239,6 @@ func pathFetchListCerts(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFetchCertList,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: `A list of keys`,
-								Required:    true,
-							},
-						},
-					}},
-				},
 			},
 		},
 

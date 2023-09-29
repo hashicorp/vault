@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -12,9 +12,11 @@ export default class PkiConfigurationEditRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const { urls, crl, engine } = this.modelFor('configuration');
+    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return {
       engineId: engine.id,
+      acme,
+      cluster,
       urls,
       crl,
     };

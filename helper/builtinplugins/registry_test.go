@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package builtinplugins
 
@@ -242,10 +242,10 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 
 		var (
 			credentialBackends   []string
-			credentialBackendsRe = regexp.MustCompile(`^vault auth enable (?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			credentialBackendsRe = regexp.MustCompile(`^vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 
 			secretsBackends   []string
-			secretsBackendsRe = regexp.MustCompile(`^vault secrets enable (?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			secretsBackendsRe = regexp.MustCompile(`^vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 		)
 
 		scanner := bufio.NewScanner(f)

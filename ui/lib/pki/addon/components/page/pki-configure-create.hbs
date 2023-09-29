@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -54,11 +59,14 @@
 {{else if (eq @config.actionType "generate-root")}}
   {{#if @config.privateKey}}
     <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="The private_key is only available once. Make sure you copy and save it now."
-      />
+      <Hds::Alert data-test-config-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          The
+          <code>private_key</code>
+          is only available once. Make sure you copy and save it now.
+        </A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   <PkiGenerateRoot
@@ -66,14 +74,14 @@
     @urls={{@urls}}
     @onCancel={{@onCancel}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
-    @onSave={{fn (mut this.title) "View root certificate"}}
+    @onSave={{fn (mut this.title) "View Root Certificate"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else if (eq @config.actionType "generate-csr")}}
   <PkiGenerateCsr
     @model={{@config}}
     @onCancel={{@onCancel}}
-    @onSave={{fn (mut this.title) "View generated CSR"}}
+    @onSave={{fn (mut this.title) "View Generated CSR"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}

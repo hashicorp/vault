@@ -1,34 +1,45 @@
-<Sidebar::Nav::Cluster />
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<LicenseBanners
-  @expiry={{this.activeCluster.licenseExpiry}}
-  @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
-/>
+<Sidebar::Nav::Cluster />
+{{! Only show license banners for Enterprise }}
+{{#if this.activeCluster.version.isEnterprise}}
+  <LicenseBanners
+    @expiry={{this.activeCluster.licenseExpiry}}
+    @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
+  />
+{{/if}}
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
       {{#if flash.componentName}}
         {{component flash.componentName content=flash.content}}
       {{else}}
-        <AlertPopup
-          @type={{message-types flash.type}}
-          @message={{flash.message}}
-          @close={{close}}
-          @isPreformatted={{flash.preformatted}}
-        />
+        {{#let (hash info="highlight" success="success" danger="critical" warning="warning") as |color|}}
+          <Hds::Alert @type="inline" @color={{get color flash.type}} class="has-bottom-margin-s" @onDismiss={{close}} as |A|>
+            {{#let (hash info="Info" success="Success" danger="Error" warning="Warning") as |title|}}
+              <A.Title class="alert-title">{{get title flash.type}}</A.Title>
+            {{/let}}
+            <A.Description data-test-flash-message-body>
+              {{#if flash.preformatted}}
+                <p class="is-word-break">{{flash.message}}</p>
+              {{else}}
+                {{flash.message}}
+              {{/if}}
+            </A.Description>
+          </Hds::Alert>
+        {{/let}}
       {{/if}}
     </FlashMessage>
   {{/each}}
 </div>
 
 {{#if this.auth.isActiveSession}}
-  <section class="section">
-    <div class="container is-widescreen">
-      <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
-        {{outlet}}
-      </TokenExpireWarning>
-    </div>
-  </section>
+  <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+    {{outlet}}
+  </TokenExpireWarning>
 {{else}}
   {{outlet}}
 {{/if}}

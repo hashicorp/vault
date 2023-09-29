@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -53,15 +53,6 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 
-	if !status.lastRun.IsZero() {
-		// We have run before, we only run again if we have
-		// been requested to forceRerun, and we haven't run since our
-		// minimum delay
-		if !(status.forceRerun.Load() && time.Since(status.lastRun) < minUnifiedTransferDelay) {
-			return
-		}
-	}
-
 	if !config.UnifiedCRL {
 		// Feature is disabled, no need to run
 		return
@@ -79,6 +70,17 @@ func runUnifiedTransfer(sc *storageContext) {
 		return
 	}
 	defer status.isRunning.Store(false)
+
+	// Because access to lastRun is not locked, we need to delay this check
+	// until after we grab the isRunning CAS lock.
+	if !status.lastRun.IsZero() {
+		// We have run before, we only run again if we have
+		// been requested to forceRerun, and we haven't run since our
+		// minimum delay.
+		if !(status.forceRerun.Load() && time.Since(status.lastRun) < minUnifiedTransferDelay) {
+			return
+		}
+	}
 
 	// Reset our flag before we begin, we do this before we start as
 	// we can't guarantee that we can properly parse/fix the error from an

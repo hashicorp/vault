@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -21,7 +21,7 @@ export default class Breadcrumbs extends Component {
   constructor() {
     super(...arguments);
     this.args.breadcrumbs.forEach((breadcrumb) => {
-      assert('breadcrumb has a label key', Object.keys(breadcrumb).includes('label'));
+      assert('breadcrumb must have a label key', Object.keys(breadcrumb).includes('label'));
     });
   }
 }

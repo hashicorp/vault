@@ -18,14 +18,14 @@ There are several options to install Vault:
 1. [Helm for Kubernetes](/vault/docs/platform/k8s/helm)
 
 
-## Package Manager
+## Package manager
 
 HashiCorp manages packages for Ubuntu, Debian, Fedora, RHEL, Amazon
 Linux, and other distributions. Follow the instructions at [HashiCorp
 Tutorials][learn-vault-install] to add our PGP key, add a repository, and
 install.
 
-## Precompiled Binaries
+## Precompiled binaries
 
 To install the precompiled binary, [download](/vault/downloads) the applicable
 package for your system. Vault is packaged as a zip file.
@@ -40,7 +40,7 @@ command-line, ensure that you place the binary somewhere on your `PATH`.
 Refer to the [HashiCorp Tutorials][learn-vault-dev-server] to start a server, `put`
 your first secret, and use other features of Vault.
 
-## Compiling from Source
+## Compiling from source
 
 To compile from source, you will need [Go](https://golang.org) installed and
 properly configured (including a `GOPATH` environment variable set), as well as
@@ -69,7 +69,7 @@ for only your local build environment (no cross-compiled targets).
 $ make dev
 ```
 
-## Verifying the Installation
+## Verifying the installation
 
 To verify Vault is installed, run `vault -h` on your system. You should
 see the help output. If you are executing it from the command line, ensure it is

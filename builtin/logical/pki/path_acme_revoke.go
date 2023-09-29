@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -15,11 +15,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRevoke(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeRevoke, "/revoke-cert")
+func pathAcmeRevoke(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeRevoke(b, baseUrl+"/revoke-cert", opts)
 }
 
-func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
+func patternAcmeRevoke(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -29,18 +29,18 @@ func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeRevocationHandler),
+				Callback:                    b.acmeParsedWrapper(opts, b.acmeRevocationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, _ *logical.Request, _ *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
 	var cert *x509.Certificate
 
 	rawCertificate, present := data["certificate"]
@@ -127,23 +127,29 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, r *logical.Request
 	// Finally, do the relevant permissions/authorization check as
 	// appropriate based on the type of revocation happening.
 	if !userCtx.Existing {
-		return b.acmeRevocationByPoP(acmeCtx, r, fields, userCtx, data, cert, config)
+		return b.acmeRevocationByPoP(acmeCtx, userCtx, cert, config)
 	}
 
-	return b.acmeRevocationByAccount(acmeCtx, r, fields, userCtx, data, cert, config)
+	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config)
 }
 
-func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
-	// matching the certificate's public key.
-	signer, ok := userCtx.Key.Key.(crypto.Signer)
+	// matching the certificate's public key. This private key isn't
+	// explicitly provided, but instead provided by proxy (public key,
+	// signature over message). That signature is validated by an earlier
+	// wrapper (VerifyJWS called by ParseRequestParams). What still remains
+	// is validating that this implicit private key (with given public key
+	// and valid JWS signature) matches the certificate's public key.
+	givenPublic, ok := userCtx.Key.Key.(crypto.PublicKey)
 	if !ok {
-		return nil, fmt.Errorf("unable to revoke certificate: unable to parse JWS key of type (%T): %w", userCtx.Key.Key, ErrMalformed)
+		return nil, fmt.Errorf("unable to revoke certificate: unable to parse message header's JWS key of type (%T): %w", userCtx.Key.Key, ErrMalformed)
 	}
 
-	// Ensure that our PoP is indeed valid.
-	if err := validatePrivateKeyMatchesCert(signer, cert); err != nil {
-		return nil, fmt.Errorf("unable to revoke certificate: unable to verify proof of possession: %v: %w", err, ErrMalformed)
+	// Ensure that our PoP's implicit private key matches this certificate's
+	// public key.
+	if err := validatePublicKeyMatchesCert(givenPublic, cert); err != nil {
+		return nil, fmt.Errorf("unable to revoke certificate: unable to verify proof of possession of private key provided by proxy: %v: %w", err, ErrMalformed)
 	}
 
 	// Now it is safe to revoke.
@@ -153,15 +159,11 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, r *logical.Request, 
 	return revokeCert(acmeCtx.sc, config, cert)
 }
 
-func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
-	// Fetch the account; disallow revocations from non-valid-status
-	// accounts.
-	account, err := b.acmeState.LoadAccount(acmeCtx, userCtx.Kid)
+func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *crlConfig) (*logical.Response, error) {
+	// Fetch the account; disallow revocations from non-valid-status accounts.
+	_, err := requireValidAcmeAccount(acmeCtx, userCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup account: %w", err)
-	}
-	if account.Status != StatusValid {
-		return nil, fmt.Errorf("account isn't presently valid: %w", ErrUnauthorized)
 	}
 
 	// We only support certificates issued by this user, we don't support

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* General sizing in rem values used largely for text sizing.*/
@@ -34,8 +34,6 @@ $radius-large: 4px;
 $mobile: 769px;
 // 960px container + 4rem
 $desktop: 960px + (2 * 32px);
-// 1344px container + 4rem
-$fullhd: 1344px + (2 * 32px);
 
 /* Animations and transitions */
 $speed: 150ms;

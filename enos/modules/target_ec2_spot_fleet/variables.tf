@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "ami_id" {
   description = "The machine image identifier"
   type        = string
@@ -13,6 +16,12 @@ variable "cluster_name" {
   type        = string
   description = "A unique cluster identifier"
   default     = null
+}
+
+variable "cluster_tag_key" {
+  type        = string
+  description = "The key name for the cluster tag"
+  default     = "TargetCluster"
 }
 
 variable "common_tags" {
@@ -53,22 +62,15 @@ variable "instance_count" {
   default     = 3
 }
 
-variable "instance_type" {
-  description = "Shim variable for target module variable compatibility that is not used. The spot fleet determines instance sizes"
-  type        = string
-  default     = null
-}
-
 variable "project_name" {
   description = "A unique project name"
   type        = string
 }
 
-variable "spot_price_max" {
+variable "max_price" {
   description = "The maximum hourly price to pay for each target instance"
   type        = string
-  // Current on-demand cost of linux t3.medium in us-east.
-  default = "0.0416"
+  default     = "0.0416"
 }
 
 variable "ssh_allow_ips" {

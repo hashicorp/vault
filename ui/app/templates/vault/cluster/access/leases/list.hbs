@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -31,19 +36,16 @@
       @placeholder="Filter leases"
     />
     {{#if this.filterFocused}}
-      {{! template-lint-disable no-whitespace-for-layout }}
-      &nbsp; &nbsp;
-      {{! template-lint-enable no-whitespace-for-layout }}
       {{#if this.filterMatchesKey}}
         {{#unless this.filterIsFolder}}
-          <p class="help has-text-grey is-size-8">
+          <p class="help has-text-grey is-size-8 has-left-padding-xs">
             <kbd>ENTER</kbd>
             to go to see details
           </p>
         {{/unless}}
       {{/if}}
       {{#if this.firstPartialMatch}}
-        <p class="help has-text-grey is-size-8">
+        <p class="help has-text-grey is-size-8 has-left-padding-xs">
           <kbd>TAB</kbd>
           to complete
         </p>
@@ -97,14 +99,16 @@
   {{else}}
     <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
   {{/each}}
+  {{#unless this.filter}}
+    <Hds::Pagination::Numbered
+      @currentPage={{this.model.meta.currentPage}}
+      @currentPageSize={{this.model.meta.pageSize}}
+      @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
+      @showSizeSelector={{false}}
+      @totalItems={{this.model.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+    />
+  {{/unless}}
 {{else}}
   <EmptyState @title={{this.emptyTitle}} />
-{{/if}}
-{{#if (gt this.model.meta.lastPage 1)}}
-  <ListPagination
-    @page={{this.model.meta.currentPage}}
-    @lastPage={{this.model.meta.lastPage}}
-    @link={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
-    @models={{compact (array (if this.baseKey.id this.baseKey.id))}}
-  />
 {{/if}}

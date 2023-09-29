@@ -13,6 +13,8 @@ some log lines will be dropped.
 
 ## Monitor system logs
 
+- @include 'alerts/restricted-admin.mdx'
+
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
 does not return JSON by default. This will send back data in whatever log format Vault has been configured with. By
 default, this is text.
@@ -29,7 +31,7 @@ default, this is text.
 - `log_format` `(string: "standard")` – Specifies the log format to emit when streaming logs. Supported values are "standard" and "json". The default is `standard`,
 if not specified.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -37,7 +39,7 @@ $ curl \
     'http://127.0.0.1:8200/v1/sys/monitor?log_level=debug'
 ```
 
-### Sample Response
+### Sample response
 
 ```
 2020-09-15T11:28:09.188-0700 [INFO]  core: successful mount: namespace= path=foo/ type=kv

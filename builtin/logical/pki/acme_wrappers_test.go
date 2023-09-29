@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -80,7 +81,7 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			f := b.acmeWrapper(func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+			f := b.acmeWrapper(acmeWrapperOpts{}, func(acmeCtx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 				if tt.roleName != acmeCtx.role.Name {
 					return nil, fmt.Errorf("expected role %s but got %s", tt.roleName, acmeCtx.role.Name)
 				}
@@ -92,15 +93,20 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 				return nil, nil
 			})
 
+			var acmePath string
 			fieldRaw := map[string]interface{}{}
-			if tt.roleName != "" {
-				fieldRaw["role"] = tt.roleName
-			}
 			if tt.issuerName != "" {
 				fieldRaw[issuerRefParam] = tt.issuerName
+				acmePath = "issuer/" + tt.issuerName + "/"
+			}
+			if tt.roleName != "" {
+				fieldRaw["role"] = tt.roleName
+				acmePath = acmePath + "roles/" + tt.roleName + "/"
 			}
 
-			resp, err := f(context.Background(), &logical.Request{Storage: s}, &framework.FieldData{
+			acmePath = strings.TrimLeft(acmePath+"/acme/directory", "/")
+
+			resp, err := f(context.Background(), &logical.Request{Path: acmePath, Storage: s}, &framework.FieldData{
 				Raw:    fieldRaw,
 				Schema: getCsrSignVerbatimSchemaFields(),
 			})

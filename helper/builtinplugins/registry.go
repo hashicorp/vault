@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package builtinplugins
 
@@ -104,10 +104,13 @@ func newRegistry() *registry {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"approle":    {Factory: credAppRole.Factory},
-			"aws":        {Factory: credAws.Factory},
-			"azure":      {Factory: credAzure.Factory},
-			"centrify":   {Factory: credCentrify.Factory},
+			"approle": {Factory: credAppRole.Factory},
+			"aws":     {Factory: credAws.Factory},
+			"azure":   {Factory: credAzure.Factory},
+			"centrify": {
+				Factory:           credCentrify.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"cert":       {Factory: credCert.Factory},
 			"cf":         {Factory: credCF.Factory},
 			"gcp":        {Factory: credGcp.Factory},

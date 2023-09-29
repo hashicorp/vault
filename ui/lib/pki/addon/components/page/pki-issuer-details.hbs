@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if (and @isRotatable @canRotate)}}
@@ -94,14 +99,9 @@
           </h2>
         {{/if}}
         {{#each fields as |attr|}}
-          {{#if attr.options.masked}}
+          {{#if attr.options.isCertificate}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              <MaskedInput
-                @name={{or attr.options.label (humanize (dasherize attr.name))}}
-                @value={{get @issuer attr.name}}
-                @displayOnly={{true}}
-                @allowCopy={{true}}
-              />
+              <CertificateCard @data={{get @issuer attr.name}} />
             </InfoTableRow>
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
@@ -128,6 +128,24 @@
     {{/each-in}}
   {{/each}}
 </main>
+{{#if (or (eq @issuer.parsedCertificate.can_parse false) this.parsingErrors)}}
+  <Hds::Alert
+    data-test-parsing-error-alert-banner
+    @type="inline"
+    @color="neutral"
+    class="has-top-margin-m has-bottom-margin-s"
+    as |A|
+  >
+    <A.Title>There was an error parsing certificate metadata</A.Title>
+    <A.Description>
+      Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you
+      wish to cross-sign this issuer it must be done manually using the CLI.
+      {{#if this.parsingErrors}}
+        <p class="sub-text is-font-mono">Parsing error(s): {{this.parsingErrors}} </p>
+      {{/if}}
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
 
 {{! ROOT ROTATION MODAL }}
 <Modal

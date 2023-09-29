@@ -1,13 +1,15 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -144,6 +146,11 @@ func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAtt
 								Description: `Key Type`,
 								Required:    true,
 							},
+							"subject_key_id": {
+								Type:        framework.TypeString,
+								Description: `RFC 5280 Subject Key Identifier of the public counterpart`,
+								Required:    false,
+							},
 							"managed_key_id": {
 								Type:        framework.TypeString,
 								Description: `Managed Key Id`,
@@ -247,6 +254,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		keyTypeParam: string(key.PrivateKeyType),
 	}
 
+	var pkForSkid crypto.PublicKey
 	if key.isManagedPrivateKey() {
 		managedKeyUUID, err := key.getManagedKeyUUID()
 		if err != nil {
@@ -258,12 +266,28 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
+		pkForSkid, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		if err != nil {
+			return nil, err
+		}
+
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
 		respData[keyTypeParam] = string(keyInfo.keyType)
 		respData[managedKeyIdArg] = string(keyInfo.uuid)
 		respData[managedKeyNameArg] = string(keyInfo.name)
+	} else {
+		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
 	return &logical.Response{Data: respData}, nil
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Mixin from '@ember/object/mixin';
@@ -19,7 +19,6 @@ export default Mixin.create({
       return;
     }
     removeRecord(this.store, model);
-    model.destroy();
     // it's important to unset the model on the controller since controllers are singletons
     this.controller.set(modelPath, null);
   },

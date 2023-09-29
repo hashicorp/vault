@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -64,9 +64,10 @@ func TestLogical(t *testing.T) {
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
-		"auth":      nil,
-		"wrap_info": nil,
-		"warnings":  nilWarnings,
+		"auth":       nil,
+		"wrap_info":  nil,
+		"warnings":   nilWarnings,
+		"mount_type": "kv",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -181,9 +182,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"entity_id":        "",
 			"type":             "service",
 		},
-		"warnings":  nilWarnings,
-		"wrap_info": nil,
-		"auth":      nil,
+		"warnings":   nilWarnings,
+		"wrap_info":  nil,
+		"auth":       nil,
+		"mount_type": "token",
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -222,6 +224,7 @@ func TestLogical_CreateToken(t *testing.T) {
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
 		"data":           nil,
+		"mount_type":     "token",
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":        []interface{}{"root"},
@@ -465,12 +468,12 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 		t.Fatalf("Bad Status code: %d", w.Code)
 	}
 
-	bodyRaw, err := ioutil.ReadAll(w.Body)
+	bodyRaw, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := `{"request_id":"id","lease_id":"","renewable":false,"lease_duration":0,"data":{"test-data":"foo"},"wrap_info":null,"warnings":null,"auth":null}`
+	expected := `{"request_id":"id","lease_id":"","renewable":false,"lease_duration":0,"data":{"test-data":"foo"},"wrap_info":null,"warnings":null,"auth":null,"mount_type":""}`
 
 	if string(bodyRaw[:]) != strings.Trim(expected, "\n") {
 		t.Fatalf("bad response: %s", string(bodyRaw[:]))
@@ -478,11 +481,13 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
 	noop := corehelpers.TestNoopAudit(t, nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

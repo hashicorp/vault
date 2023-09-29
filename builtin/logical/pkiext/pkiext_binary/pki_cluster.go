@@ -1,25 +1,25 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pkiext_binary
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"testing"
-
-	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
-
-	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
+	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 )
 
 type VaultPkiCluster struct {
 	cluster *docker.DockerCluster
+	Dns     *dnstest.TestServer
 }
 
 func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
@@ -38,7 +38,7 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
 			},
-			NumCores: 1,
+			NumCores: 3,
 		},
 	}
 
@@ -47,12 +47,50 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 	return &VaultPkiCluster{cluster: cluster}
 }
 
+func NewVaultPkiClusterWithDNS(t *testing.T) *VaultPkiCluster {
+	cluster := NewVaultPkiCluster(t)
+	dns := dnstest.SetupResolverOnNetwork(t, "dadgarcorp.com", cluster.GetContainerNetworkName())
+	cluster.Dns = dns
+	return cluster
+}
+
 func (vpc *VaultPkiCluster) Cleanup() {
 	vpc.cluster.Cleanup()
+	if vpc.Dns != nil {
+		vpc.Dns.Cleanup()
+	}
+}
+
+func (vpc *VaultPkiCluster) GetActiveClusterNode() *docker.DockerClusterNode {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	node, err := testcluster.WaitForActiveNode(ctx, vpc.cluster)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	return vpc.cluster.ClusterNodes[node]
+}
+
+func (vpc *VaultPkiCluster) GetNonActiveNodes() []*docker.DockerClusterNode {
+	nodes := []*docker.DockerClusterNode{}
+	for _, node := range vpc.cluster.ClusterNodes {
+		leader, err := node.APIClient().Sys().Leader()
+		if err != nil {
+			continue
+		}
+
+		if !leader.IsSelf {
+			nodes = append(nodes, node)
+		}
+	}
+
+	return nodes
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerHostPort() string {
-	return vpc.cluster.ClusterNodes[0].HostPort
+	return vpc.GetActiveClusterNode().HostPort
 }
 
 func (vpc *VaultPkiCluster) GetContainerNetworkName() string {
@@ -60,38 +98,40 @@ func (vpc *VaultPkiCluster) GetContainerNetworkName() string {
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerIP() string {
-	return vpc.cluster.ClusterNodes[0].ContainerIPAddress
+	return vpc.GetActiveClusterNode().ContainerIPAddress
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerID() string {
-	return vpc.cluster.ClusterNodes[0].Container.ID
+	return vpc.GetActiveClusterNode().Container.ID
 }
 
 func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
-	return vpc.cluster.Nodes()[0].APIClient()
+	return vpc.GetActiveClusterNode().APIClient()
 }
 
-func (vpc *VaultPkiCluster) AddNameToHostsFile(ip, hostname string, logConsumer func(string), logStdout, logStderr io.Writer) error {
+// GetListenerCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
+func (vpc *VaultPkiCluster) GetListenerCACertPEM() []byte {
+	return vpc.cluster.CACertPEM
+}
+
+func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {
+	if vpc.Dns != nil {
+		vpc.Dns.AddRecord(hostname, "A", ip)
+		vpc.Dns.PushConfig()
+		return nil
+	} else {
+		return vpc.AddNameToHostFiles(hostname, ip)
+	}
+}
+
+func (vpc *VaultPkiCluster) AddNameToHostFiles(hostname, ip string) error {
 	updateHostsCmd := []string{
 		"sh", "-c",
 		"echo '" + ip + " " + hostname + "' >> /etc/hosts",
 	}
 	for _, node := range vpc.cluster.ClusterNodes {
 		containerID := node.Container.ID
-		runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
-			ImageRepo:     node.ImageRepo,
-			ImageTag:      node.ImageTag,
-			ContainerName: containerID,
-			NetworkName:   node.ContainerNetworkName,
-			LogConsumer:   logConsumer,
-			LogStdout:     logStdout,
-			LogStderr:     logStderr,
-		})
-		if err != nil {
-			return err
-		}
-
-		_, _, retcode, err := runner.RunCmdWithOutput(context.Background(), containerID, updateHostsCmd)
+		_, _, retcode, err := dockhelper.RunCmdWithOutput(vpc.cluster.DockerAPI, context.Background(), containerID, updateHostsCmd)
 		if err != nil {
 			return fmt.Errorf("failed updating container %s host file: %w", containerID, err)
 		}
@@ -101,6 +141,52 @@ func (vpc *VaultPkiCluster) AddNameToHostsFile(ip, hostname string, logConsumer 
 		}
 	}
 
+	return nil
+}
+
+func (vpc *VaultPkiCluster) AddDNSRecord(hostname, recordType, ip string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to provision custom records")
+	}
+
+	vpc.Dns.AddRecord(hostname, recordType, ip)
+	vpc.Dns.PushConfig()
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveDNSRecord(domain string, record string, value string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove specific record")
+	}
+
+	vpc.Dns.RemoveRecord(domain, record, value)
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveDNSRecordsOfTypeForDomain(domain string, record string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove all records of type")
+	}
+
+	vpc.Dns.RemoveRecordsOfTypeForDomain(domain, record)
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveDNSRecordsForDomain(domain string) error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove records for domain")
+	}
+
+	vpc.Dns.RemoveRecordsForDomain(domain)
+	return nil
+}
+
+func (vpc *VaultPkiCluster) RemoveAllDNSRecords() error {
+	if vpc.Dns == nil {
+		return fmt.Errorf("no DNS server was provisioned on this cluster group; unable to remove all records")
+	}
+
+	vpc.Dns.RemoveAllRecords()
 	return nil
 }
 
@@ -137,7 +223,14 @@ func (vpc *VaultPkiCluster) CreateAcmeMount(mountName string) (*VaultPkiMount, e
 		return nil, fmt.Errorf("failed updating cluster config: %w", err)
 	}
 
-	err = pki.UpdateAcmeConfig(true, nil)
+	cfg := map[string]interface{}{
+		"eab_policy": "not-required",
+	}
+	if vpc.Dns != nil {
+		cfg["dns_resolver"] = vpc.Dns.GetRemoteAddr()
+	}
+
+	err = pki.UpdateAcmeConfig(true, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed updating acme config: %w", err)
 	}

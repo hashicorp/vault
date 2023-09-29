@@ -6,13 +6,15 @@ description: An overview of how Sentinel interacts with Vault Enterprise.
 
 # Properties
 
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+
 Vault injects a rich set of data into the running Sentinel environment,
 allowing for very fine-grained controls. The set of available properties are
 enumerated on this page.
 
 The following properties are available for use in Sentinel policies.
 
-## Namespace Properties
+## Namespace properties
 
 The `namespace` (Sentinel) namespace gives access to information about the
 namespace in which the request is running. (This may or may not match the
@@ -23,7 +25,7 @@ client's chosen namespace, if a request reaches into a child namespace).
 | `id`   | `string` | The namespace ID               |
 | `path` | `string` | The root path of the namespace |
 
-## Request Properties
+## Request properties
 
 The following properties are available in the `request` namespace.
 
@@ -38,7 +40,7 @@ The following properties are available in the `request` namespace.
 | `wrapping.ttl`           | `duration`            | The requested response-wrapping TTL in nanoseconds, suitable for use with the `time` import |
 | `wrapping.ttl_seconds`   | `int`                 | The requested response-wrapping TTL in seconds                                              |
 
-### Replication Properties
+### Replication properties
 
 The following properties exists at the `replication.mode` namespace.
 
@@ -47,7 +49,7 @@ The following properties exists at the `replication.mode` namespace.
 | `dr`          | `string` | The state of DR replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary"          |
 | `replication` | `string` | The state of performance replication. Valid values are "disabled", "bootstrapping", "primary", and "secondary" |
 
-## Token Properties
+## Token properties
 
 The following properties, if available, are in the `token` namespace. The
 namespace will not exist if there is no token information attached to a
@@ -72,7 +74,7 @@ request, e.g. when logging in.
 | `role`                     | `string`                 | If created via a token role, the role that created the token                                                                       |
 | `type`                     | `string`                 | The type of token, currently will be either `batch` or `service`                                                                   |
 
-## Token Namespace Properties
+## Token namespace properties
 
 The following properties, if available, are in the `token.namespace` namespace.
 The (Sentinel) namespace will not exist if there is no token information attached to a
@@ -83,7 +85,7 @@ request, e.g. when logging in.
 | `id`   | `string` | The namespace ID               |
 | `path` | `string` | The root path of the namespace |
 
-## Identity Properties
+## Identity properties
 
 The following properties, if available, are in the `identity` namespace. The
 namespace may not exist if there is no token information attached to the
@@ -91,7 +93,7 @@ request; however, at login time the user's request data will be used to attempt
 to find any existing Identity information, or create some information to pass
 to MFA functions.
 
-### Entity Properties
+### Entity properties
 
 These exist at the `identity.entity` namespace.
 
@@ -106,7 +108,7 @@ These exist at the `identity.entity` namespace.
 | `aliases`           | `list (alias)`           | List of aliases associated with this entity                   |
 | `policies`          | `list (string)`          | List of the policies set on this entity                       |
 
-### Alias Properties
+### Alias properties
 
 These can be retrieved from `identity.entity.aliases`.
 
@@ -123,7 +125,7 @@ These can be retrieved from `identity.entity.aliases`.
 | `mount_type`             | `string`                 | The type of the mount that created this alias                                                                                                 |
 | `name`                   | `string`                 | The alias's name                                                                                                                              |
 
-### Groups Properties
+### Groups properties
 
 These exist at the `identity.groups` namespace.
 
@@ -132,7 +134,7 @@ These exist at the `identity.groups` namespace.
 | `by_id`   | `map (string -> group)` | A map of group ID to group information                                                                                                          |
 | `by_name` | `map (string -> group)` | A map of group name to group information; unlike the group ID, there is no guarantee that the current name will always represent the same group |
 
-### Group Properties
+### Group properties
 
 These can be retrieved from the `identity.groups` maps.
 
@@ -147,7 +149,7 @@ These can be retrieved from the `identity.groups` maps.
 | `parent_group_ids`  | `list (string)`          | A list of IDs of groups that are parents of this group             |
 | `policies`          | `list (string)`          | List of the policies set on this group                             |
 
-## MFA Properties
+## MFA properties
 
 These properties exist at the `mfa` namespace.
 
@@ -155,7 +157,7 @@ These properties exist at the `mfa` namespace.
 | :-------- | :----------------------- | :---------------------------------------- |
 | `methods` | `map (string -> method)` | A map of method name to method properties |
 
-### MFA Method Properties
+### MFA method properties
 
 These properties can be accessed via the `mfa.methods` selector.
 
@@ -163,7 +165,7 @@ These properties can be accessed via the `mfa.methods` selector.
 | :------ | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `valid` | `bool` | Whether the method has successfully been validated; if validation has not been attempted, this will trigger the validation attempt. The result of the validation attempt will be used for this method for all policies for the given request. |
 
-## Control Group Properties
+## Control group properties
 
 These properties exist at the `controlgroup` namespace.
 
@@ -172,7 +174,7 @@ These properties exist at the `controlgroup` namespace.
 | `time`, `request_time` | `string`               | The original request time in RFC3339 format |
 | `authorizations`       | `list (authorization)` | List of control group authorizations        |
 
-### Control Group Authorization
+### Control group authorization
 
 These properties can be accessed via the `controlgroup.authorizations` selector.
 

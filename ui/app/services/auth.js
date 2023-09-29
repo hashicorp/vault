@@ -1,32 +1,34 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
-import { resolve, reject } from 'rsvp';
-import { assign } from '@ember/polyfills';
+import { task, timeout } from 'ember-concurrency';
+import { getOwner } from '@ember/application';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
-import { capitalize } from '@ember/string';
-
-import fetch from 'fetch';
-import { getOwner } from '@ember/application';
+import { alias } from '@ember/object/computed';
+import { assign } from '@ember/polyfills';
 import Service, { inject as service } from '@ember/service';
-import getStorage from '../lib/token-storage';
+import { capitalize } from '@ember/string';
+import fetch from 'fetch';
+import { resolve, reject } from 'rsvp';
+
+import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
-import { task, timeout } from 'ember-concurrency';
+import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = supportedAuthBackends();
+const BACKENDS = allSupportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
-  store: service(),
+  currentCluster: service(),
   router: service(),
   namespaceService: service('namespace'),
 
@@ -40,9 +42,7 @@ export default Service.extend({
     return expiration ? this.now() >= expiration : null;
   },
 
-  get activeCluster() {
-    return this.activeClusterId ? this.store.peekRecord('cluster', this.activeClusterId) : null;
-  },
+  activeCluster: alias('currentCluster.cluster'),
 
   // eslint-disable-next-line
   tokens: computed({

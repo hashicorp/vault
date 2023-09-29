@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -29,12 +29,12 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
-	// The key version to be used for encryption
+	// The key version to be used for signing
 	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while signing a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -58,7 +58,7 @@ type batchResponseVerifyItem struct {
 	// Valid indicates whether signature matches the signature derived from the input string
 	Valid bool `json:"valid" mapstructure:"valid"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while verifying a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -259,7 +259,7 @@ none on signing path.`,
 
 			"signature_algorithm": {
 				Type: framework.TypeString,
-				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
+				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
@@ -366,7 +366,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
@@ -619,7 +619,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)

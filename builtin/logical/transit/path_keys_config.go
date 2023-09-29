@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -97,6 +97,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	}
 	defer p.Unlock()
 
+	var warning string
+
 	originalMinDecryptionVersion := p.MinDecryptionVersion
 	originalMinEncryptionVersion := p.MinEncryptionVersion
 	originalDeletionAllowed := p.DeletionAllowed
@@ -113,8 +115,6 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		}
 	}()
 
-	resp = &logical.Response{}
-
 	persistNeeded := false
 
 	minDecryptionVersionRaw, ok := d.GetOk("min_decryption_version")
@@ -127,7 +127,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 
 		if minDecryptionVersion == 0 {
 			minDecryptionVersion = 1
-			resp.AddWarning("since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
+			warning = "since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1"
 		}
 
 		if minDecryptionVersion != p.MinDecryptionVersion {
@@ -221,7 +221,14 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if !persistNeeded {
-		return nil, nil
+		resp, err := b.formatKeyPolicy(p, nil)
+		if err != nil {
+			return nil, err
+		}
+		if warning != "" {
+			resp.AddWarning(warning)
+		}
+		return resp, nil
 	}
 
 	switch {
@@ -231,11 +238,18 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("min decryption version should not be less then min available version"), nil
 	}
 
-	if len(resp.Warnings) == 0 {
-		return nil, p.Persist(ctx, req.Storage)
+	if err := p.Persist(ctx, req.Storage); err != nil {
+		return nil, err
 	}
 
-	return resp, p.Persist(ctx, req.Storage)
+	resp, err = b.formatKeyPolicy(p, nil)
+	if err != nil {
+		return nil, err
+	}
+	if warning != "" {
+		resp.AddWarning(warning)
+	}
+	return resp, nil
 }
 
 const pathKeysConfigHelpSyn = `Configure a named encryption key`

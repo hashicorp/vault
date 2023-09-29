@@ -14,7 +14,7 @@ will be derived from the policies that are on the token, and from the policies
 to which the token is entitled to through the entity and entity's group
 memberships.
 
-## Query Self Capabilities
+## Query self capabilities
 
 This endpoint returns the capabilities of client token on the given paths. The
 client token is the Vault token with which this API call is made. Multiple
@@ -30,7 +30,7 @@ returned. For backwards compatibility, if a single path is supplied, a
 
 - `paths` `(list: <required>)` – Paths on which capabilities are being queried.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -38,7 +38,7 @@ returned. For backwards compatibility, if a single path is supplied, a
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -48,7 +48,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/capabilities-self
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

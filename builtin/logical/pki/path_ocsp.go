@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -19,13 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
-	"golang.org/x/crypto/ocsp"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -476,7 +475,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 
 func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
-	duration, err := time.ParseDuration(cfg.OcspExpiry)
+	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {
 		return nil, err
 	}

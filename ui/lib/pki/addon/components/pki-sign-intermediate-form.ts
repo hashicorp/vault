@@ -1,18 +1,18 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
-import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
-import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
-import { ValidationMap } from 'vault/vault/app-types';
+import type PkiCertificateSignIntermediate from 'vault/models/pki/certificate/sign-intermediate';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type { ValidationMap } from 'vault/vault/app-types';
 
 interface Args {
   onCancel: CallableFunction;
@@ -40,6 +40,7 @@ export default class PkiSignIntermediateFormComponent extends Component<Args> {
     try {
       yield this.args.model.save();
       this.flashMessages.success('Successfully signed CSR.');
+      window?.scrollTo(0, 0);
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.inlineFormAlert = 'There was a problem signing the CSR.';

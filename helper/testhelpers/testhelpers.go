@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package testhelpers
 
@@ -1046,4 +1046,10 @@ func WaitForNodesExcludingSelectedStandbys(t testing.T, cluster *vault.TestClust
 			WaitForStandbyNode(t, core)
 		}
 	}
+}
+
+// IsLocalOrRegressionTests returns true when the tests are running locally (not in CI), or when
+// the regression test env var (VAULT_REGRESSION_TESTS) is provided.
+func IsLocalOrRegressionTests() bool {
+	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
 }

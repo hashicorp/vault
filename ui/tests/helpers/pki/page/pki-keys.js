@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SELECTORS = {
@@ -22,4 +22,5 @@ export const SELECTORS = {
   downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   confirmDelete: '[data-test-confirm-button]',
+  nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

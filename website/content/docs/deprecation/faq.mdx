@@ -6,7 +6,7 @@ description: |-
   An FAQ page to communicate frequently asked questions concerning feature deprecations.
 ---
 
-# Feature Deprecation FAQ
+# Feature deprecation FAQ
 
 This page provides frequently asked questions concerning decisions made about Vault feature deprecations. If you are looking for information about Vault licensing, refer to the [Licensing FAQ](/vault/docs/enterprise/license/faq) page. Pleaser refer to the [Feature Deprecation Notice and Plans](/vault/docs/deprecation) document for up-to-date information on Vault feature deprecations and notice.
 
@@ -16,19 +16,19 @@ This page provides frequently asked questions concerning decisions made about Va
 - [Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?](#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
 - [Q: What are the phases of deprecation?](#q-what-are-the-phases-of-deprecation)
 
-### Q: What is the impact on anyone using the legacy MFA feature?
+### Q: what is the impact on anyone using the legacy MFA feature?
 
 If you are an Enterprise Vault user, there is no impact. There are no changes to the Enterprise MFA offering.
 
-If you are an OSS user and use the legacy MFA, this will impact you since we plan to deprecate the legacy MFA feature. However, while we will continue to provide support for MFA in Vault OSS in the upcoming Vault 1.10 release, our target is to remove the legacy MFA feature from the product in the following Vault 1.11 release. Therefore, you should plan to migrate to the new MFA feature when Vault OSS supports it.
+If you use Vault Community Edition and use the legacy MFA, this will impact you since we plan to deprecate the legacy MFA feature. However, while we will continue to provide support for MFA in Vault Community Edition in the upcoming Vault 1.10 release, our target is to remove the legacy MFA feature from the product in the following Vault 1.11 release. Therefore, you should plan to migrate to the new MFA feature when Vault Community Edition supports it.
 
-### Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?
+### Q: i'm currently using the etcd storage backend feature. how does the deprecation impact me?
 
 The Etcd v2 has been deprecated with the release of Etcd v3.5 and will be decommissioned by Etcd v3.6. Etcd v2 API will be removed in Vault 1.10. The Etcd storage backend users should migrate Vault storage to an Etcd V3 cluster before upgrading to Vault 1.10. We recommend that you back up all storage migrations before upgrading.
 
 If you are an Enterprise user, we recommend that you consider migrating to HashiCorp supported storage backends: **Integrated Storage** or **Consul** (if your use case requires you to use this). Your HashiCorp sales or support representative can assist you with this decision.
 
-### Q: What should I do if I use Mount Filters, AppID, or any of the standalone DB engines?
+### Q: what should i do if i use mount filters, AppID, or any of the standalone DB engines?
 
 These features were deprecated in prior releases of Vault. We are targeting the removal of these features from the product in the Vault 1.12 release. Please plan to upgrade to these features before the release of Vault 1.12. Refer to the table below for a list of alternative features.
 
@@ -40,7 +40,7 @@ These features were deprecated in prior releases of Vault. We are targeting the 
 
 **Note:** After upgrading to 1.12, any attempt to unseal a core with one of the following features enabled will result in a core shutdown. This may temporarily be overridden using the `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` environment variable when launching the Vault server. These features will be officially removed from Vault in version 1.13 and this environment variable will not work. In order to upgrade to 1.13, you will have to completely disable all removed features.
 
-### Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?
+### Q: what is the impact of removing support for x.509 certificates with signatures that use SHA-1?
 
 Starting with Vault 1.12.0, Vault will be built with Go 1.18 or later.
 The standard library in Go 1.18 and later [rejects X.509 signatures](https://go.dev/doc/go1.18#sha1) that use a SHA-1 hash.
@@ -61,7 +61,7 @@ Any signature algorithms that contain `sha1` will be potentially problematic.
 
 Here are the use cases that may still use certificates with SHA-1:
 
-#### Auth Methods
+#### Auth methods
 
 - [AWS Auth Method](/vault/docs/auth/aws): [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
 - [Cloud Foundry (CF) Auth Method ](/vault/docs/auth/cf)
@@ -71,7 +71,7 @@ Here are the use cases that may still use certificates with SHA-1:
 - [JWT/OIDC Auth Method](/vault/docs/auth/jwt/)
 - [TLS Certificates Auth Method](/vault/docs/auth/cert)
 
-#### Database Secrets Engines
+#### Database secrets engines
 
 - [Cassandra Database Secrets Engine](/vault/docs/secrets/databases/cassandra)
 - [Couchbase Database Secrets Engine](/vault/docs/secrets/databases/couchbase)
@@ -80,7 +80,7 @@ Here are the use cases that may still use certificates with SHA-1:
 - [MongoDB Database Secrets Engine](/vault/docs/secrets/databases/mongodb)
 - [MySQL/MariaDB Database Secrets Engine](/vault/docs/secrets/databases/mysql-maria)
 
-#### Secrets Engines
+#### Secrets engines
 
 - [Active Directory Secrets Engine](/vault/docs/secrets/ad)
 - [Consul Secrets Engine](/vault/docs/secrets/consul)
@@ -89,7 +89,7 @@ Here are the use cases that may still use certificates with SHA-1:
 - [LDAP Secrets Engine](/vault/docs/secrets/ldap)
 - [PKI Secrets Engine](/vault/docs/secrets/pki/)
 
-### Q: What are the phases of deprecation?
+### Q: what are the phases of deprecation?
 
 As of version 1.12, Vault implements a multi-phased approach to deprecation. The intent of this approach is to provide sufficient warning that a feature will be removed and safe handling of stored data when the associated feature has been removed.
 
@@ -113,7 +113,7 @@ This status reflects a feature which has been marked for deprecation in a later 
 
 3. All `POST/GET/LIST` endpoints associated with this feature will return `warnings` in response data.
 
-#### Pending Removal
+#### Pending removal
 
 This status reflects a feature which has been officially deprecated in this release of Vault. This is the first phase in the process that fundamentally alters the behavior of Vault. The effects are two-fold:
 
@@ -133,7 +133,7 @@ This status reflects a feature which has been officially removed from Vault. `Re
 
 2. Any new `Removed` features will fail and log `Error`-level messages to the Vault log and CLI/API.
 
-#### Migration Path
+#### Migration path
 
 In order to successfully upgrade, use of the `Removed` feature must be discontinued. To accomplish this:
 

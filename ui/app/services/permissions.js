@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service, { inject as service } from '@ember/service';
@@ -97,13 +97,15 @@ export default Service.extend({
 
   hasNavPermission(navItem, routeParams, requireAll) {
     if (routeParams) {
-      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
-      const capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
       // check that the user has permission to access all (requireAll = true) or any of the routes when array is passed
       // useful for hiding nav headings when user does not have access to any of the links
       const params = Array.isArray(routeParams) ? routeParams : [routeParams];
       const evalMethod = !Array.isArray(routeParams) || requireAll ? 'every' : 'some';
-      return params[evalMethod]((param) => this.hasPermission(API_PATHS[navItem][param], capability));
+      return params[evalMethod]((param) => {
+        // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+        const capability = param === 'entities' || param === 'groups' ? ['list'] : [null];
+        return this.hasPermission(API_PATHS[navItem][param], capability);
+      });
     }
     return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   },

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault_test
 
@@ -9,27 +9,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/approle"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestExpiration_RenewToken_TestCluster(t *testing.T) {
-	// Use a TestCluster and the approle backend to test renewal
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"approle": approle.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Mount the auth backend

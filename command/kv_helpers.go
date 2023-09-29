@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -128,15 +128,15 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 	return mountPath, version == 2, nil
 }
 
-func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
-	if p == mountPath || p == strings.TrimSuffix(mountPath, "/") {
+func addPrefixToKVPath(path, mountPath, apiPrefix string, skipIfExists bool) string {
+	if path == mountPath || path == strings.TrimSuffix(mountPath, "/") {
 		return paths.Join(mountPath, apiPrefix)
 	}
 
-	tp := strings.TrimPrefix(p, mountPath)
+	pathSuffix := strings.TrimPrefix(path, mountPath)
 	for {
 		// If the entire mountPath is included in the path, we are done
-		if tp != p {
+		if pathSuffix != path {
 			break
 		}
 		// Trim the parts of the mountPath that are not included in the
@@ -147,10 +147,16 @@ func addPrefixToKVPath(p, mountPath, apiPrefix string) string {
 			break
 		}
 		mountPath = strings.TrimSuffix(partialMountPath[1], "/")
-		tp = strings.TrimPrefix(tp, mountPath)
+		pathSuffix = strings.TrimPrefix(pathSuffix, mountPath)
 	}
 
-	return paths.Join(mountPath, apiPrefix, tp)
+	if skipIfExists {
+		if strings.HasPrefix(pathSuffix, apiPrefix) || strings.HasPrefix(pathSuffix, "/"+apiPrefix) {
+			return paths.Join(mountPath, pathSuffix)
+		}
+	}
+
+	return paths.Join(mountPath, apiPrefix, pathSuffix)
 }
 
 func getHeaderForMap(header string, data map[string]interface{}) string {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <p class="has-bottom-margin-xl">
     This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
@@ -18,40 +23,24 @@
       <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
     {{/if}}
   </div>
-  <p class="is-8 has-text-grey has-bottom-margin-xl">
+  <p class="is-8 has-text-grey has-bottom-margin-l">
     {{this.versionText.description}}
   </p>
   {{#if this.noActivityData}}
-    {{#if (eq @model.config.enabled "On")}}
-      <EmptyState
-        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
-        @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
-      />
-    {{else}}
-      <EmptyState
-        @title="Data tracking is disabled"
-        @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
-      >
-        {{#if @model.config.canEdit}}
-          <p>
-            <LinkTo @route="vault.cluster.clients.config">
-              Go to configuration
-            </LinkTo>
-          </p>
-        {{/if}}
-      </EmptyState>
-    {{/if}}
+    <Clients::NoData @config={{@model.config}} @dateRangeMessage={{this.dateRangeMessage}} />
   {{else if this.errorObject}}
     <Clients::Error @error={{this.errorObject}} />
   {{else}}
     {{#if (eq @model.config.enabled "Off")}}
-      <AlertBanner data-test-tracking-disabled @type="warning" @title="Tracking is disabled">
-        Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need to
-        <LinkTo @route="vault.cluster.clients.edit">
-          edit the configuration
-        </LinkTo>
-        to enable tracking again.
-      </AlertBanner>
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Tracking is disabled</A.Title>
+        <A.Description>
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
+          to
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+          to enable tracking again.
+        </A.Description>
+      </Hds::Alert>
     {{/if}}
     {{#if (or this.totalUsageCounts this.hasAttributionData)}}
       <div class="is-subtitle-gray has-bottom-margin-m">
@@ -93,24 +82,27 @@
       </div>
 
       {{#if (or this.upgradeDuringActivity this.startTimeDiscrepancy)}}
-        <AlertBanner @type="warning" @title="Warning">
-          <ul class={{if (and this.versionUpdateText this.startTimeDiscrepancy) "bullet"}}>
-            {{#if this.startTimeDiscrepancy}}
-              <li>{{this.startTimeDiscrepancy}}</li>
-            {{/if}}
-            {{#if this.upgradeDuringActivity}}
-              <li>
-                {{this.upgradeVersionAndDate}}
-                {{this.upgradeExplanation}}
-                <DocLink
-                  @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
-                >
-                  Learn more here.
-                </DocLink>
-              </li>
-            {{/if}}
-          </ul>
-        </AlertBanner>
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            <ul class={{if (and this.upgradeDuringActivity this.startTimeDiscrepancy) "bullet"}}>
+              {{#if this.startTimeDiscrepancy}}
+                <li>{{this.startTimeDiscrepancy}}</li>
+              {{/if}}
+              {{#if this.upgradeDuringActivity}}
+                <li>
+                  {{this.upgradeVersionAndDate}}
+                  {{this.upgradeExplanation}}
+                  <DocLink
+                    @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+                  >
+                    Learn more here.
+                  </DocLink>
+                </li>
+              {{/if}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
       {{/if}}
       {{#if this.isLoadingQuery}}
         <LayoutLoading />

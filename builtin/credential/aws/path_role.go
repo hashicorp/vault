@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -233,7 +233,7 @@ func (b *backend) pathListRoles() *framework.Path {
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixAWS,
-			OperationSuffix: "roles2",
+			OperationSuffix: "auth-roles2",
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{

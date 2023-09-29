@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -156,7 +156,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	var fullPath string
 	if v2 {
 		secret, err = c.deleteV2(partialPath, mountPath, client)
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 	} else {
 		// v1
 		if mountFlagSyntax {
@@ -195,13 +195,13 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToKVPath(path, mountPath, "delete")
+		path = addPrefixToKVPath(path, mountPath, "delete", false)
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 		secret, err = client.Logical().Write(path, data)
 	default:
-		path = addPrefixToKVPath(path, mountPath, "data")
+		path = addPrefixToKVPath(path, mountPath, "data", false)
 		secret, err = client.Logical().Delete(path)
 	}
 

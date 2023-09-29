@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -482,7 +482,7 @@ func TestCore_RunLockedUserUpdatesForValidEntry(t *testing.T) {
 		mountAccessor: "mountAccessor1",
 	}
 
-	failedLoginInfoFromMap := core.GetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
+	failedLoginInfoFromMap := core.LocalGetUserFailedLoginInfo(context.Background(), loginUserInfoKey)
 	if failedLoginInfoFromMap == nil {
 		t.Fatalf("err: entry must exist for locked user in userFailedLoginInfo map")
 	}
@@ -1134,10 +1134,12 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
 	noop := &corehelpers.NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
@@ -1198,10 +1200,12 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
 	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}
@@ -1302,6 +1306,8 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a badass credential backend that always logs in as armon
 	noop := &corehelpers.NoopAudit{}
 	noopBack := &NoopBackend{
@@ -1323,7 +1329,7 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		noop = &corehelpers.NoopAudit{
 			Config: config,
 		}

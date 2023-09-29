@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fixed issue with some durations not being properly parsed to include days.
+```

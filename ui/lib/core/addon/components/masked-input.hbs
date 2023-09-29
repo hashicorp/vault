@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   class="masked-input {{if @displayOnly 'display-only'}} {{if @allowCopy 'allow-copy'}}"
   data-test-masked-input
@@ -6,7 +11,12 @@
 >
   {{#if @displayOnly}}
     {{#if this.showValue}}
-      <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{! Show minus icon if there is no value }}
+      {{#if (eq @value "")}}
+        <Icon class="masked-value" @name="minus" />
+      {{else}}
+        <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{/if}}
     {{else}}
       <pre class="masked-value display-only masked-font">***********</pre>
     {{/if}}
@@ -25,34 +35,57 @@
     />
   {{/if}}
   {{#if @allowCopy}}
-    <CopyButton
-      @clipboardText={{@value}}
-      @success={{action (set-flash-message "Data copied!")}}
-      class="copy-button button {{if @displayOnly 'is-compact'}}"
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@value}}
+      class="transparent icon-only is-paddingless"
       data-test-copy-button
-    >
-      <Icon @name="clipboard-copy" aria-hidden="Copy value" />
-    </CopyButton>
+    />
   {{/if}}
   {{#if @allowDownload}}
-    <DownloadButton
-      class="button download-button"
-      @filename={{or @name "secret-value"}}
-      @data={{@value}}
-      @stringify={{true}}
-      aria-label="Download secret value"
-    >
-      <Icon @name="download" />
-    </DownloadButton>
+    <button type="button" class="button download-button" {{on "click" (fn (mut this.modalOpen) true)}}>
+      <Icon data-test-download-icon @name="download" />
+    </button>
   {{/if}}
   <button
     onclick={{this.toggleMask}}
     type="button"
     aria-label={{if this.showValue "mask value" "show value"}}
     title={{if this.showValue "mask value" "show value"}}
-    class="{{if (eq @value '') 'has-text-grey'}} masked-input-toggle button"
+    class="masked-input-toggle button"
     data-test-button="toggle-masked"
   >
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
   </button>
 </div>
+
+{{! CONFIRM DOWNLOAD MODAL }}
+{{#if @allowDownload}}
+  <Modal
+    @title="Download secret value?"
+    @onClose={{action (mut this.modalOpen) false}}
+    @isActive={{this.modalOpen}}
+    @type="warning"
+  >
+    <section class="modal-card-body">
+      This download is
+      <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <DownloadButton
+        class="button is-primary"
+        @filename={{or @name "secret-value"}}
+        @data={{@value}}
+        @stringify={{true}}
+        aria-label="Download secret value"
+        @onSuccess={{fn (mut this.modalOpen) false}}
+      >
+        Download
+      </DownloadButton>
+      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

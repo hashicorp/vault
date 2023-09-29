@@ -4,7 +4,7 @@ page_title: OIDC Provider Setup - Auth Methods - Azure Active Directory
 description: OIDC provider configuration for Azure Active Directory
 ---
 
-## Azure Active Directory (AAD)
+## Azure active directory (AAD)
 
 ~> **Note:** Azure Active Directory Applications that have custom signing keys as a result of using
 the [claims-mapping](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-claims-mapping)
@@ -64,7 +64,7 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
 1. Configure the [OIDC Role](/vault/api-docs/auth/jwt#create-role) with the following:
 
    - `user_claim` should be `"sub"` or `"oid"` following the
-   [recommendation](https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens#using-claims-to-reliably-identify-a-user-subject-and-object-id)
+   [recommendation](https://learn.microsoft.com/en-us/azure/active-directory/develop/id-token-claims-reference#use-claims-to-reliably-identify-a-user)
   from Azure.
    - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
    - `groups_claim` should be set to `"groups"`.
@@ -97,7 +97,7 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
       canonical_id="vault_external_group_id"
    ```
 
-### Optional Azure-specific Configuration
+### Optional azure-specific configuration
 
 If a user is a member of more than 200 groups (directly or indirectly), Azure will
 send `_claim_names` and `_claim_sources`. For example, returned claims might look like:

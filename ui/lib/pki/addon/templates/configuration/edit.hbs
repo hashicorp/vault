@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
@@ -5,9 +10,15 @@
   <p.levelLeft>
     <h1 class="title is-3">
       <Icon @name="file-text" @size="24" class="has-text-grey-light" />
-      Edit PKI configuration
+      Edit PKI Configuration
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<Page::PkiConfigurationEdit @urls={{this.model.urls}} @crl={{this.model.crl}} @backend={{this.model.engineId}} />
+<Page::PkiConfigurationEdit
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
+  @urls={{this.model.urls}}
+  @crl={{this.model.crl}}
+  @backend={{this.model.engineId}}
+/>

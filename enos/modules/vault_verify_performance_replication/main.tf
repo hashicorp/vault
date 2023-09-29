@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -47,18 +47,19 @@ variable "wrapping_token" {
 }
 
 locals {
-  primary_replication_status   = jsondecode(enos_remote_exec.replication_status_on_primary.stdout)
-  secondary_replication_status = jsondecode(enos_remote_exec.replication_status_on_secondary.stdout)
+  primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_status_on_primary.stdout)
+  secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_status_on_secondary.stdout)
 }
 
-resource "enos_remote_exec" "replication_status_on_primary" {
+resource "enos_remote_exec" "verify_replication_status_on_primary" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_INSTALL_DIR = var.vault_install_dir
-    REPLICATION_MODE  = "primary"
+    VAULT_ADDR               = "http://127.0.0.1:8200"
+    VAULT_INSTALL_DIR        = var.vault_install_dir
+    PRIMARY_LEADER_PRIV_IP   = var.primary_leader_private_ip
+    SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
   }
 
-  scripts = ["${path.module}/scripts/get-replication-status.sh"]
+  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
@@ -67,23 +68,15 @@ resource "enos_remote_exec" "replication_status_on_primary" {
   }
 }
 
-output "primary_replication_status" {
-  value = local.primary_replication_status
-
-  precondition {
-    condition     = local.primary_replication_status.data.mode == "primary" && local.primary_replication_status.data.state != "idle"
-    error_message = "Vault primary cluster mode must be \"primary\" and state must not be \"idle\"."
-  }
-}
-
-resource "enos_remote_exec" "replication_status_on_secondary" {
+resource "enos_remote_exec" "verify_replication_status_on_secondary" {
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_INSTALL_DIR = var.vault_install_dir
-    REPLICATION_MODE  = "secondary"
+    VAULT_ADDR               = "http://127.0.0.1:8200"
+    VAULT_INSTALL_DIR        = var.vault_install_dir
+    PRIMARY_LEADER_PRIV_IP   = var.primary_leader_private_ip
+    SECONDARY_LEADER_PRIV_IP = var.secondary_leader_private_ip
   }
 
-  scripts = ["${path.module}/scripts/get-replication-status.sh"]
+  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
 
   transport = {
     ssh = {
@@ -92,52 +85,22 @@ resource "enos_remote_exec" "replication_status_on_secondary" {
   }
 }
 
+output "primary_replication_status" {
+  value = local.primary_replication_status
+}
+
 output "known_primary_cluster_addrs" {
   value = local.secondary_replication_status.data.known_primary_cluster_addrs
-
-  precondition {
-    condition     = contains(local.secondary_replication_status.data.known_primary_cluster_addrs, "https://${var.primary_leader_private_ip}:8201")
-    error_message = "Vault secondary cluster known_primary_cluster_addrs must include ${var.primary_leader_private_ip}."
-  }
 }
 
 output "secondary_replication_status" {
   value = local.secondary_replication_status
-
-  precondition {
-    condition     = local.secondary_replication_status.data.mode == "secondary" && local.secondary_replication_status.data.state != "idle"
-    error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
-  }
 }
 
 output "primary_replication_data_secondaries" {
   value = local.primary_replication_status.data.secondaries
-
-  # The secondaries connection_status should be "connected"
-  precondition {
-    condition     = local.primary_replication_status.data.secondaries[0].connection_status == "connected"
-    error_message = "connection status to primaries must be \"connected\"."
-  }
-
-  # The secondaries cluster address must have the secondary leader address
-  precondition {
-    condition     = local.primary_replication_status.data.secondaries[0].cluster_address == "https://${var.secondary_leader_private_ip}:8201"
-    error_message = "Vault secondaries cluster_address must be with ${var.secondary_leader_private_ip}."
-  }
 }
 
 output "secondary_replication_data_primaries" {
   value = local.secondary_replication_status.data.primaries
-
-  # The primaries connection_status should be "connected"
-  precondition {
-    condition     = local.secondary_replication_status.data.primaries[0].connection_status == "connected"
-    error_message = "connection status to primaries must be \"connected\"."
-  }
-
-  # The primaries cluster address must have the primary leader address
-  precondition {
-    condition     = local.secondary_replication_status.data.primaries[0].cluster_address == "https://${var.primary_leader_private_ip}:8201"
-    error_message = "Vault primaries cluster_address must be ${var.primary_leader_private_ip}."
-  }
 }

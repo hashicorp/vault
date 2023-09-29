@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"golang.org/x/exp/maps"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 
@@ -2400,6 +2401,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId1 := resp.Data["key_id"]
 	issuerId1 := resp.Data["issuer_id"]
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId1.(keyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
@@ -2414,6 +2423,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId2 := resp.Data["key_id"]
 	issuerId2 := resp.Data["issuer_id"]
+	cert = parseCert(t, resp.Data["certificate"].(string))
+	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId2.(keyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	// Make sure that we actually generated different issuer and key values
 	require.NotEqual(t, keyId1, keyId2)
@@ -2516,7 +2533,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 }
 
-func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+func TestBackend_SignIntermediate_AllowedPastCAValidity(t *testing.T) {
 	t.Parallel()
 	b_root, s_root := CreateBackendWithStorage(t)
 	b_int, s_int := CreateBackendWithStorage(t)
@@ -2534,6 +2551,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
+		"allow_any_name":     true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -2543,21 +2561,25 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"common_name": "myint.com",
 	})
 	schema.ValidateResponse(t, schema.GetResponseSchema(t, b_root.Route("intermediate/generate/internal"), logical.UpdateOperation), resp, true)
+	require.Contains(t, resp.Data, "key_id")
+	intKeyId := resp.Data["key_id"].(keyID)
+	csr := resp.Data["csr"]
+
+	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	intSkid := resp.Data["subject_key_id"].(string)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	csr := resp.Data["csr"]
 
 	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2565,9 +2587,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		"csr":         csr,
 		"ttl":         "60h",
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	require.ErrorContains(t, err, "that is beyond the expiration of the CA certificate")
 
 	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2584,6 +2604,10 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warnings, got %#v", *resp)
 	}
+
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+	require.Equal(t, intSkid, certSkid)
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -4030,6 +4054,12 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
 			"internal_backend_uuid":                 backendUUID,
+			"tidy_acme":                             false,
+			"acme_account_safety_buffer":            json.Number("2592000"),
+			"acme_orders_deleted_count":             json.Number("0"),
+			"acme_account_revoked_count":            json.Number("0"),
+			"acme_account_deleted_count":            json.Number("0"),
+			"total_acme_account_count":              json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -6096,22 +6126,23 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	_, err = CBWrite(b, s, "config/urls", aiaData)
 	require.NoError(t, err)
 
-	// But root generation will fail.
+	// Root generation should succeed, but without AIA info.
 	rootData := map[string]interface{}{
 		"common_name": "Long-Lived Root X1",
 		"issuer_name": "long-root-x1",
 		"key_type":    "ec",
 	}
-	_, err = CBWrite(b, s, "root/generate/internal", rootData)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unable to parse AIA URL")
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.NoError(t, err)
+	_, err = CBDelete(b, s, "root")
+	require.NoError(t, err)
 
-	// Clearing the config and regenerating the root should succeed.
+	// Clearing the config and regenerating the root should still succeed.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "",
-		"issuing_certificates":    "",
-		"ocsp_servers":            "",
-		"enable_templating":       false,
+		"crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/my-root-id/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
@@ -6715,7 +6746,7 @@ func TestProperAuthing(t *testing.T) {
 		t.Fatal(err)
 	}
 	serial := resp.Data["serial_number"].(string)
-
+	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
 	paths := map[string]pathAuthChecker{
 		"ca_chain":                               shouldBeUnauthedReadList,
 		"cert/ca_chain":                          shouldBeUnauthedReadList,
@@ -6736,10 +6767,10 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs":                                  shouldBeAuthed,
-		"certs/revoked":                          shouldBeAuthed,
-		"certs/revocation-queue":                 shouldBeAuthed,
-		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/":                                 shouldBeAuthed,
+		"certs/revoked/":                         shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
@@ -6786,7 +6817,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuer/default/sign-verbatim":           shouldBeAuthed,
 		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
 		"issuer/default/sign/test":               shouldBeAuthed,
-		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/":                               shouldBeUnauthedReadList,
 		"issuers/generate/intermediate/exported": shouldBeAuthed,
 		"issuers/generate/intermediate/internal": shouldBeAuthed,
 		"issuers/generate/intermediate/existing": shouldBeAuthed,
@@ -6798,7 +6829,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuers/import/cert":                    shouldBeAuthed,
 		"issuers/import/bundle":                  shouldBeAuthed,
 		"key/default":                            shouldBeAuthed,
-		"keys":                                   shouldBeAuthed,
+		"keys/":                                  shouldBeAuthed,
 		"keys/generate/internal":                 shouldBeAuthed,
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
@@ -6808,7 +6839,7 @@ func TestProperAuthing(t *testing.T) {
 		"revoke":                                 shouldBeAuthed,
 		"revoke-with-key":                        shouldBeAuthed,
 		"roles/test":                             shouldBeAuthed,
-		"roles":                                  shouldBeAuthed,
+		"roles/":                                 shouldBeAuthed,
 		"root":                                   shouldBeAuthed,
 		"root/generate/exported":                 shouldBeAuthed,
 		"root/generate/internal":                 shouldBeAuthed,
@@ -6833,22 +6864,32 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
+		"eab/":                                   shouldBeAuthed,
+		"eab/" + eabKid:                          shouldBeAuthed,
 	}
 
+	entPaths := getEntProperAuthingPaths(serial)
+	maps.Copy(paths, entPaths)
+
 	// Add ACME based paths to the test suite
-	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
-		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/revoke-cert"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/new-order"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/orders"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+	ossAcmePrefixes := []string{"acme/", "issuer/default/acme/", "roles/test/acme/", "issuer/default/roles/test/acme/"}
+	entAcmePrefixes := getEntAcmePrefixes()
+	for _, acmePrefix := range append(ossAcmePrefixes, entAcmePrefixes...) {
+		paths[acmePrefix+"directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-nonce"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"revoke-cert"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"new-order"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"orders"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+
+		// Make sure this new-eab path is auth'd
+		paths[acmePrefix+"new-eab"] = shouldBeAuthed
 	}
 
 	for path, checkerType := range paths {
@@ -6906,10 +6947,19 @@ func TestProperAuthing(t *testing.T) {
 		if strings.Contains(raw_path, "acme/") && strings.Contains(raw_path, "{order_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{order_id}", "13b80844-e60d-42d2-b7e9-152a8e834b90")
 		}
+		if strings.Contains(raw_path, "eab") && strings.Contains(raw_path, "{key_id}") {
+			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
+		}
+		if strings.Contains(raw_path, "external-policy/") && strings.Contains(raw_path, "{policy}") {
+			raw_path = strings.ReplaceAll(raw_path, "{policy}", "a-policy")
+		}
+
+		raw_path = entProperAuthingPathReplacer(raw_path)
 
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports PKI mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})
@@ -7059,6 +7109,33 @@ func TestPatchIssuer(t *testing.T) {
 			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
 		}
 	}
+}
+
+func TestGenerateRootCAWithAIA(t *testing.T) {
+	// Generate a root CA at /pki-root
+	b_root, s_root := CreateBackendWithStorage(t)
+
+	// Setup templated AIA information
+	_, err := CBWrite(b_root, s_root, "config/cluster", map[string]interface{}{
+		"path":     "https://localhost:8200",
+		"aia_path": "https://localhost:8200",
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	_, err = CBWrite(b_root, s_root, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	// Write a root issuer, this should succeed.
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 }
 
 var (

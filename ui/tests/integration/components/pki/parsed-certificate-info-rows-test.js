@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
@@ -36,5 +41,8 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     assert.dom('[data-test-row-value="Subject Alternative Names (SANs)"]').hasText('something,here');
     assert.dom('[data-test-value-div="Use PSS"]').hasText('No', 'Booleans are rendered');
     assert.dom('[data-test-value-div="ttl"]').doesNotExist('ttl is not rendered because value undefined');
+    assert
+      .dom('[data-test-parsing-error-alert-banner]')
+      .doesNotExist('does not render parsing error info banner');
   });
 });

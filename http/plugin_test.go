@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -45,7 +45,6 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
-		Logger:      logger.Named("testclusteroptions"),
 	})
 	cluster.Start()
 

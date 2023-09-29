@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package consul
 
@@ -135,7 +135,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		}
 		token, _, err := client.ACL().Bootstrap()
 		if err != nil {
-			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
+			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs: %s", err), nil
 		}
 		config.Token = token.SecretID
 	}

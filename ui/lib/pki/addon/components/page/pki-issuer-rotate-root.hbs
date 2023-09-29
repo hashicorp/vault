@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-pki-page-title>
-      {{if @newRootModel.id "View issuer certificate" "Generate new root"}}
+      {{if @newRootModel.id "View Issuer Certificate" "Generate New Root"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -76,20 +81,26 @@
 
 {{#if @newRootModel.id}}
   <div class="has-top-margin-m">
-    <AlertBanner @title="Next steps" @type="warning">
-      Your new root has been generated.
-      {{#if @newRootModel.privateKey}}
-        Make sure to copy and save the
-        <strong>private_key</strong>
-        as it is only available once.
-      {{/if}}
-      If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
-      this certificate.
-      <br />
-      <LinkTo class="is-marginless" @route="issuers.issuer.cross-sign" @model={{@newRootModel.issuerId}}>
-        Cross-sign issuers
-      </LinkTo>
-    </AlertBanner>
+    <Hds::Alert data-test-rotate-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+      <A.Title>Next steps</A.Title>
+      <A.Description>
+        Your new root has been generated.
+        {{#if @newRootModel.privateKey}}
+          Make sure to copy and save the
+          <code>private_key</code>
+          as it is only available once.
+        {{/if}}
+        If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use
+        this certificate.
+      </A.Description>
+      <A.Link::Standalone
+        @icon="arrow-right"
+        @iconPosition="trailing"
+        @text="Cross-sign issuers"
+        @route="issuers.issuer.cross-sign"
+      />
+
+    </Hds::Alert>
   </div>
 {{else}}
   <div class="box is-bottomless is-marginless is-flex-start">
@@ -126,15 +137,16 @@
     </h2>
     <form {{on "submit" (perform this.save)}} data-test-pki-rotate-old-settings-form>
       {{#if @parsingErrors}}
-        <AlertBanner
-          @title="Not all of the certificate values could be parsed and transferred to new root"
-          @type="warning"
-          @message={{@parsingErrors}}
-          data-test-warning-banner
-        />
+        <Hds::Alert data-test-parsing-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Not all of the certificate values can be parsed and transferred to a new root</A.Title>
+          <A.Description>{{@parsingErrors}}</A.Description>
+        </Hds::Alert>
       {{/if}}
       {{#if this.alertBanner}}
-        <AlertBanner @type="danger" @message={{this.alertBanner}} data-test-error-banner />
+        <Hds::Alert data-test-rotate-error @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
+          <A.Title>Error</A.Title>
+          <A.Description>{{this.alertBanner}}</A.Description>
+        </Hds::Alert>
       {{/if}}
       {{#let (find-by "name" "commonName" @newRootModel.allFields) as |attr|}}
         <FormField @attr={{attr}} @model={{@newRootModel}} @modelValidations={{this.modelValidations}} />

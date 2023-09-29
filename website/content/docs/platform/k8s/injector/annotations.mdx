@@ -10,7 +10,7 @@ The following are the available annotations for the injector. These annotations
 are organized into two sections: agent and vault. All of the annotations below
 change the configurations of the Vault Agent containers injected into the pod.
 
-## Agent Annotations
+## Agent annotations
 
 Agent annotations change the Vault Agent containers templating configuration. For
 example, agent annotations allow users to define what secrets they want, how to render
@@ -95,11 +95,11 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/template-config-exit-on-retry-failure` - controls whether
   Vault Agent exits after it has exhausted its number of template retry attempts
   due to failures. Defaults to `true`. See [Vault Agent Template
-  Config](/vault/docs/agent/template#template-configurations) for more details.
+  Config](/vault/docs/agent-and-proxy/agent/template#template-configurations) for more details.
 
 - `vault.hashicorp.com/template-static-secret-render-interval` - If specified,
   configures how often Vault Agent Template should render non-leased secrets such as KV v2.
-  See [Vault Agent Template Config](/vault/docs/agent/template#template-configurations) for more details.
+  See [Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#template-configurations) for more details.
 
 - `vault.hashicorp.com/agent-extra-secret` - mounts Kubernetes secret as a volume at
   `/vault/custom` in the sidecar/init containers. Useful for custom Agent configs with
@@ -197,7 +197,7 @@ them, optional commands to run, etc.
   Defaults to `false`.
 
 - `vault.hashicorp.com/agent-cache-enable` - configures Vault Agent to enable
-  [caching](/vault/docs/agent/caching). In Vault 1.7+ this annotation will also enable
+  [caching](/vault/docs/agent-and-proxy/agent/caching). In Vault 1.7+ this annotation will also enable
   a Vault Agent persistent cache. This persistent cache will be shared between the init
   and sidecar container to reuse tokens and leases retrieved by the init container.
   Defaults to `false`.
@@ -215,7 +215,7 @@ them, optional commands to run, etc.
 
 - `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
 
-- `vault.hashicorp.com/agent-enable-quit` - enable the [`/agent/v1/quit` endpoint](/vault/docs/agent#quit) on an injected agent. This option defaults to false, and if true will be set on the existing cache listener, or a new localhost listener with a basic cache stanza configured. The [agent-cache-listener-port annotation](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-cache-listener-port) can be used to change the port.
+- `vault.hashicorp.com/agent-enable-quit` - enable the [`/agent/v1/quit` endpoint](/vault/docs/agent-and-proxy/agent#quit) on an injected agent. This option defaults to false, and if true will be set on the existing cache listener, or a new localhost listener with a basic cache stanza configured. The [agent-cache-listener-port annotation](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-cache-listener-port) can be used to change the port.
 
 - `vault.hashicorp.com/agent-telemetry` - specifies the [telemetry](/vault/docs/configuration/telemetry) configuration for the
   Vault Agent sidecar. The name of the config is any unique string after
@@ -232,7 +232,7 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-init-json-patch` - same as `vault.hashicorp.com/agent-json-patch`, except that the JSON patch will be applied to the
   injected init container instead.
 
-## Vault Annotations
+## Vault annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault. For
 example, Vault's address, TLS certificates to use, client parameters such as timeouts,
@@ -244,20 +244,20 @@ etc.
   This annotation can be reused multiple times to configure multiple settings for the authentication
   method. Some authentication methods may require additional secrets and should be mounted via the
   `vault.hashicorp.com/agent-extra-secret` annotation. For a list of valid authentication configurations,
-  see the Vault Agent [auto-auth documentation](/vault/docs/agent/autoauth/methods).
+  see the Vault Agent [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
 
 - `vault.hashicorp.com/auth-path` - configures the authentication path for the Kubernetes
   auth method. Defaults to `auth/kubernetes`.
 
 - `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
   Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent
-  [auto-auth documentation](/vault/docs/agent/autoauth/methods).
+  [auto-auth documentation](/vault/docs/agent-and-proxy/autoauth/methods).
 
-- `vault.hashicorp.com/auth-min-backoff` - set the [min_backoff](/vault/docs/agent/autoauth#min_backoff) option in the auto-auth config. Requires Vault 1.11+.
+- `vault.hashicorp.com/auth-min-backoff` - set the [min_backoff](/vault/docs/agent-and-proxy/autoauth#min_backoff) option in the auto-auth config. Requires Vault 1.11+.
 
-- `vault.hashicorp.com/auth-max-backoff` - set the [max_backoff](/vault/docs/agent/autoauth#max_backoff) option in the auto-auth config
+- `vault.hashicorp.com/auth-max-backoff` - set the [max_backoff](/vault/docs/agent-and-proxy/autoauth#max_backoff) option in the auto-auth config
 
-- `vault.hashicorp.com/agent-auto-auth-exit-on-err` - set the [exit_on_err](/vault/docs/agent/autoauth#exit_on_err) option in the auto-auth config
+- `vault.hashicorp.com/agent-auto-auth-exit-on-err` - set the [exit_on_err](/vault/docs/agent-and-proxy/autoauth#exit_on_err) option in the auto-auth config
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -314,14 +314,14 @@ etc.
   value to true in a production environment.
 
 - `vault.hashicorp.com/agent-disable-idle-connections` - Comma-separated [list
-  of Vault Agent features](/vault/docs/agent#disable_idle_connections) where idle
+  of Vault Agent features](/vault/docs/agent-and-proxy/agent#disable_idle_connections) where idle
   connections should be disabled. Also available as a command-line option
   (`-disable-idle-connections`) or environment variable
   (`AGENT_INJECT_DISABLE_IDLE_CONNECTIONS`) to set the default for all injected
   Agents.
 
 - `vault.hashicorp.com/agent-disable-keep-alives` - Comma-separated [list of
-  Vault Agent features](/vault/docs/agent#disable_keep_alives) where keep-alives
+  Vault Agent features](/vault/docs/agent-and-proxy/agent#disable_keep_alives) where keep-alives
   should be disabled. Also available as a command-line option
   (`-disable-keep-alives`) or environment variable
   (`AGENT_INJECT_DISABLE_KEEP_ALIVES`) to set the default for all injected

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -128,7 +128,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
   });
 
   test('it shows the bundle mapping on success', async function (assert) {
-    assert.expect(7);
+    assert.expect(9);
     this.server.post(`/${this.backend}/issuers/import/bundle`, () => {
       return {
         data: {
@@ -161,7 +161,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
 
     assert
       .dom('[data-test-import-pair]')
-      .exists({ count: 2 }, 'Shows correct number of rows for imported items');
+      .exists({ count: 3 }, 'Shows correct number of rows for imported items');
     // Check that each row has expected values
     assert.dom('[data-test-import-pair="issuer-id_key-id"] [data-test-imported-issuer]').hasText('issuer-id');
     assert.dom('[data-test-import-pair="issuer-id_key-id"] [data-test-imported-key]').hasText('key-id');
@@ -169,9 +169,8 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
       .dom('[data-test-import-pair="another-issuer_"] [data-test-imported-issuer]')
       .hasText('another-issuer');
     assert.dom('[data-test-import-pair="another-issuer_"] [data-test-imported-key]').hasText('None');
-    // TODO VAULT-14791
-    // assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-issuer]').hasText('None');
-    // assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-key]').hasText('another-key');
+    assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-issuer]').hasText('None');
+    assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-key]').hasText('another-key');
     await click('[data-test-done]');
   });
 

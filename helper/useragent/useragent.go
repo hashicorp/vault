@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package useragent
 
@@ -72,5 +72,39 @@ func AgentProxyStringWithProxiedUserAgent(proxiedUserAgent string) string {
 // e.g. Vault Agent Auto-Auth/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
 func AgentAutoAuthString() string {
 	return fmt.Sprintf("Vault Agent Auto-Auth/%s (+%s; %s)",
+		versionFunc(), projectURL, rt)
+}
+
+// ProxyString returns the consistent user-agent string for Vault Proxy.
+//
+// e.g. Vault Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+func ProxyString() string {
+	return fmt.Sprintf("Vault Proxy/%s (+%s; %s)",
+		versionFunc(), projectURL, rt)
+}
+
+// ProxyAPIProxyString returns the consistent user-agent string for Vault Proxy API Proxying.
+//
+// e.g. Vault Proxy API Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+func ProxyAPIProxyString() string {
+	return fmt.Sprintf("Vault Proxy API Proxy/%s (+%s; %s)",
+		versionFunc(), projectURL, rt)
+}
+
+// ProxyStringWithProxiedUserAgent returns the consistent user-agent
+// string for Vault Proxy API Proxying, keeping the User-Agent of the proxied
+// client as an extension to this UserAgent
+//
+// e.g. Vault Proxy API Proxy/0.10.4 (+https://www.vaultproject.io/; go1.10.1); proxiedUserAgent
+func ProxyStringWithProxiedUserAgent(proxiedUserAgent string) string {
+	return fmt.Sprintf("Vault Proxy API Proxy/%s (+%s; %s); %s",
+		versionFunc(), projectURL, rt, proxiedUserAgent)
+}
+
+// ProxyAutoAuthString returns the consistent user-agent string for Vault Agent Auto-Auth.
+//
+// e.g. Vault Proxy Auto-Auth/0.10.4 (+https://www.vaultproject.io/; go1.10.1)
+func ProxyAutoAuthString() string {
+	return fmt.Sprintf("Vault Proxy Auto-Auth/%s (+%s; %s)",
 		versionFunc(), projectURL, rt)
 }

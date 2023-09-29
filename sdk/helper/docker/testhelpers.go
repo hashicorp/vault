@@ -561,6 +561,10 @@ func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
 }
 
 func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
+	return RunCmdWithOutput(d.DockerAPI, ctx, container, cmd, opts...)
+}
+
+func RunCmdWithOutput(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
 	runCfg := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
@@ -573,12 +577,12 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 		}
 	}
 
-	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
 	}
 
-	resp, err := d.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	resp, err := api.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -594,7 +598,7 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 	stderr := stderrB.Bytes()
 
 	// Fetch return code.
-	info, err := d.DockerAPI.ContainerExecInspect(ctx, ret.ID)
+	info, err := api.ContainerExecInspect(ctx, ret.ID)
 	if err != nil {
 		return stdout, stderr, -1, fmt.Errorf("error reading command exit code: %v", err)
 	}
@@ -603,6 +607,10 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 }
 
 func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
+	return RunCmdInBackground(d.DockerAPI, ctx, container, cmd, opts...)
+}
+
+func RunCmdInBackground(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
 	runCfg := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
@@ -615,12 +623,12 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 		}
 	}
 
-	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
 		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
 	}
 
-	err = d.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	err = api.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
 		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}

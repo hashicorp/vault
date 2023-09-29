@@ -4,19 +4,19 @@ page_title: Agent Injector vs. Vault CSI Provider
 description: This section compares Sidecar Injector and Vault CSI Provider for Kubernetes and Vault integration.
 ---
 
-# Agent Injector vs. Vault CSI Provider
+# Agent injector vs. Vault CSI provider
 
 This document explores two different methods for integrating HashiCorp Vault with Kubernetes. The information provided is intended for DevOps practitioners who understand secret management concepts and are familiar with HashiCorp Vault and Kubernetes. This document also offers practical guidance to help you understand and choose the best method for your use case.
 
 Information contained within this document details the contrast between the Agent Injector, also referred as _Vault Sidecar_ or _Sidecar_ in this document, and the Vault Container Storage Interface (CSI) provider used to integrate Vault and Kubernetes.
 
-## Vault Sidecar Agent Injector
+## Vault sidecar agent injector
 
 The [Vault Sidecar Agent Injector](/vault/docs/platform/k8s/injector) leverages the [sidecar pattern](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar) to alter pod specifications to include a Vault Agent container that renders Vault secrets to a shared memory volume. By rendering secrets to a shared volume, containers within the pod can consume Vault secrets without being Vault-aware. The injector is a Kubernetes mutating webhook controller. The controller intercepts pod events and applies mutations to the pod if annotations exist within the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s) project and can be automatically installed and configured using the Vault Helm chart.
 
 ![Vault Sidecar Injection Workflow](/img/vault-sidecar-inject-workflow.png)
 
-## Vault CSI Provider
+## Vault CSI provider
 
 The [Vault CSI provider](/vault/docs/platform/k8s/csi) allows pods to consume Vault secrets by using ephemeral [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes. At a high level, the CSI Secrets Store driver enables users to create `SecretProviderClass` objects. These objects define which secret provider to use and what secrets to retrieve. When pods requesting CSI volumes are made, the CSI Secrets Store driver sends the request to the Vault CSI provider if the provider is `vault`. The Vault CSI provider then uses the specified `SecretProviderClass` and the pod’s service account to retrieve the secrets from Vault and mount them into the pod’s CSI volume. Note that the secret is retrieved from Vault and populated to the CSI secrets store volume during the `ContainerCreation` phase. Therefore, pods are blocked from starting until the secrets are read from Vault and written to the volume.
 
@@ -81,7 +81,7 @@ Now that you understand the similarities, there are differences between these tw
 
 - In contrast, the Vault CSI Driver is deployed as a daemonset on every node in the Kubernetes cluster and uses the Secret Provider Class specified and the pod’s service account to retrieve the secrets from Vault and mount them into the pod’s CSI volume.
 
-- The Sidecar Agent Injector supports [all](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-path) Vault [auto-auth](/vault/docs/agent/autoauth/methods) methods. The Sidecar CSI driver supports only Vault’s [Kubernetes auth method](/vault/docs/platform/k8s/csi/configurations#vaultkubernetesmountpath).
+- The Sidecar Agent Injector supports [all](/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-path) Vault [auto-auth](/vault/docs/agent-and-proxy/autoauth/methods) methods. The Sidecar CSI driver supports only Vault’s [Kubernetes auth method](/vault/docs/platform/k8s/csi/configurations#vaultkubernetesmountpath).
 
 - The Sidecar container launched with every application pod uses [Vault Agent](https://www.hashicorp.com/blog/why-use-the-vault-agent-for-secrets-management), which provides a powerful set of capabilities such as auto-auth, templating, and caching. The CSI driver does not use the Vault Agent and therefore lacks these functionalities.
 
@@ -89,7 +89,7 @@ Now that you understand the similarities, there are differences between these tw
 
 - The CSI driver uses `hostPath` to mount ephemeral volumes into the pods, which some container platforms (e.g., OpenShift) disable by default. On the other hand, Sidecar Agent Service uses in-memory _tmpfs_ volumes.
 
-- Sidecar Injector Service [automatically](/vault/docs/agent/template#renewals-and-updating-secrets) renews, rotates, and fetches secrets/tokens while the CSI Driver does not support that.
+- Sidecar Injector Service [automatically](/vault/docs/agent-and-proxy/agent/template#renewals-and-updating-secrets) renews, rotates, and fetches secrets/tokens while the CSI Driver does not support that.
 
 ## Comparison chart
 
@@ -99,7 +99,7 @@ The below chart provides a high-level comparison between the two solutions.
 
 ![Comparison Chart](/img/comparison-table.png)
 
-## Going Beyond the Native Kubernetes Secrets
+## Going beyond the native kubernetes secrets
 
 On the surface, Kubernetes native secrets might seem similar to the two approaches presented above, but there are significant differences between them:
 
@@ -113,7 +113,7 @@ On the surface, Kubernetes native secrets might seem similar to the two approach
 
 Designing secrets management in Kubernetes is an intricate task. There are multiple approaches, each with its own set of attributes. We recommend exploring the options presented in this document to increase your understanding of the internals and decide on the best option for your use case.
 
-## Additional Resources
+## Additional resources
 
 - [HashiCorp Vault: Delivering Secrets with Kubernetes](https://medium.com/hashicorp-engineering/hashicorp-vault-delivering-secrets-with-kubernetes-1b358c03b2a3)
 

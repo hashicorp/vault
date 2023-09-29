@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package raft
 
@@ -21,8 +21,8 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
@@ -36,7 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	bolt "go.etcd.io/bbolt"
 )
@@ -371,7 +370,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	if delayRaw, ok := conf["apply_delay"]; ok {
-		delay, err := time.ParseDuration(delayRaw)
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
 		if err != nil {
 			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
 		}
@@ -428,7 +427,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	if delayRaw, ok := conf["snapshot_delay"]; ok {
-		delay, err := time.ParseDuration(delayRaw)
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
 		if err != nil {
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
@@ -447,7 +446,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var reconcileInterval time.Duration
 	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
-		interval, err := time.ParseDuration(interval)
+		interval, err := parseutil.ParseDurationSecond(interval)
 		if err != nil {
 			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
 		}
@@ -456,7 +455,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var updateInterval time.Duration
 	if interval := conf["autopilot_update_interval"]; interval != "" {
-		interval, err := time.ParseDuration(interval)
+		interval, err := parseutil.ParseDurationSecond(interval)
 		if err != nil {
 			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
 		}
@@ -624,10 +623,13 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	var stats map[string]string
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 	fsmStats := b.fsm.Stats()
-	stats := b.raft.Stats()
+	if b.raft != nil {
+		stats = b.raft.Stats()
+	}
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
@@ -637,10 +639,12 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			Value: b.localID,
 		},
 	}
-	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
-		n, err := strconv.ParseUint(stats[key], 10, 64)
-		if err == nil {
-			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+	if stats != nil {
+		for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+			n, err := strconv.ParseUint(stats[key], 10, 64)
+			if err == nil {
+				sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+			}
 		}
 	}
 }
@@ -654,18 +658,18 @@ func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsuti
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime.Milliseconds()), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime.Milliseconds()), labels)
-	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime.Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.GetPageCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.GetPageAlloc()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.GetCursorCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.GetNodeCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.GetNodeDeref()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.GetRebalance()), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.GetRebalanceTime().Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.GetSplit()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.GetSpill()), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.GetSpillTime().Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.GetWrite()), labels)
+	sink.IncrCounterWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.GetWriteTime().Milliseconds()), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -812,7 +816,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
 	if ok {
 		var err error
-		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		snapshotInterval, err := parseutil.ParseDurationSecond(snapshotIntervalRaw)
 		if err != nil {
 			return err
 		}
@@ -1367,17 +1371,17 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
 // response.
-func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, sealer snapshot.Sealer) error {
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Type", "application/gzip")
 
-	return b.Snapshot(out, access)
+	return b.Snapshot(out, sealer)
 }
 
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same root keys or not.
-func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
+func (b *RaftBackend) Snapshot(out io.Writer, sealer snapshot.Sealer) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1385,15 +1389,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 		return errors.New("raft storage is sealed")
 	}
 
-	// If we have access to the seal create a sealer object
-	var s snapshot.Sealer
-	if access != nil {
-		s = &sealer{
-			access: access,
-		}
-	}
-
-	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
+	return snapshot.Write(b.logger.Named("snapshot"), b.raft, sealer, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
@@ -1401,7 +1397,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, sealer snapshot.Sealer) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1410,15 +1406,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 		return nil, nil, metadata, errors.New("raft storage is sealed")
 	}
 
-	// If we have access to the seal create a sealer object
-	var s snapshot.Sealer
-	if access != nil {
-		s = &sealer{
-			access: access,
-		}
-	}
-
-	snap, cleanup, err := snapshot.WriteToTempFileWithSealer(b.logger.Named("snapshot"), in, &metadata, s)
+	snap, cleanup, err := snapshot.WriteToTempFileWithSealer(b.logger.Named("snapshot"), in, &metadata, sealer)
 	return snap, cleanup, metadata, err
 }
 
@@ -1889,40 +1877,6 @@ func (l *RaftLock) Value() (bool, string, error) {
 	value := string(e.Value)
 	// TODO: how to tell if held?
 	return true, value, nil
-}
-
-// sealer implements the snapshot.Sealer interface and is used in the snapshot
-// process for encrypting/decrypting the SHASUM file in snapshot archives.
-type sealer struct {
-	access *seal.Access
-}
-
-// Seal encrypts the data with using the seal access object.
-func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
-	if s.access == nil {
-		return nil, errors.New("no seal access available")
-	}
-	eblob, err := s.access.Encrypt(ctx, pt, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return proto.Marshal(eblob)
-}
-
-// Open decrypts the data using the seal access object.
-func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
-	if s.access == nil {
-		return nil, errors.New("no seal access available")
-	}
-
-	var eblob wrapping.BlobInfo
-	err := proto.Unmarshal(ct, &eblob)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.access.Decrypt(ctx, &eblob, nil)
 }
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
