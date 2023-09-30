@@ -51,7 +51,4 @@ option.
 
 @include 'known-issues/transit-managed-keys-sign-fails.mdx'
 
-## Panic in AWS auth method during IAM-based login
-
-A panic can occur in the AWS auth method during IAM-based login when a [client config](/vault/api-docs/auth/aws#configure-client)
-does not exist. This issue is only present in Vault 1.15.0 and has been fixed in 1.15.1.
+@include 'known-issues/aws-auth-panics.mdx'
