@@ -103,7 +103,11 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 	case identityAliasCommonName:
 		certAlias = clientCerts[0].Subject.CommonName
 	case identityAliasOrganizationalUnit:
-		certAlias = clientCerts[0].Subject.OrganizationalUnit[0]
+		orgUnits := clientCerts[0].Subject.OrganizationalUnit
+		if len(orgUnits) == 0 {
+			return nil, fmt.Errorf("no organizational units found")
+		}
+		certAlias = orgUnits[0]
 	default:
 		certAlias = clientCerts[0].Subject.CommonName
 	}
@@ -175,7 +179,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	case identityAliasCommonName:
 		certAlias = clientCerts[0].Subject.CommonName
 	case identityAliasOrganizationalUnit:
-		certAlias = clientCerts[0].Subject.OrganizationalUnit[0]
+		orgUnits := clientCerts[0].Subject.OrganizationalUnit
+		if len(orgUnits) == 0 {
+			return logical.ErrorResponse("no organizational units found"), nil
+		}
+		certAlias = orgUnits[0]
 	default:
 		certAlias = clientCerts[0].Subject.CommonName
 	}
