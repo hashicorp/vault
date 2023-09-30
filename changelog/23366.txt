@@ -1,3 +1,3 @@
 ```release-note:bug
-auth/aws: Fixes a panic that can occur when an IAM-based login is attempted after config deletion.
+auth/aws: Fixes a panic that can occur in IAM-based login when a [client config](https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-client) does not exist.
 ```
