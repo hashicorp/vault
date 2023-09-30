@@ -308,8 +308,10 @@ func TestBackend_validateVaultPostRequestValues(t *testing.T) {
 	}
 }
 
-// TestBackend_pathLogin_NoClientConfig tests that logging via IAM auth is
-// not possible without a client configuration.
+// TestBackend_pathLogin_NoClientConfig covers logging in via IAM auth when the
+// client config does not exist. This is a regression test to cover potential
+// panics when referencing the potentially-nil config in the login handler. For
+// details see https://github.com/hashicorp/vault/issues/23361.
 func TestBackend_pathLogin_NoClientConfig(t *testing.T) {
 	storage := new(logical.InmemStorage)
 	config := logical.TestBackendConfig()
@@ -323,9 +325,6 @@ func TestBackend_pathLogin_NoClientConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	ts := setupIAMTestServer()
-	defer ts.Close()
 
 	// Intentionally left out the client configuration
 

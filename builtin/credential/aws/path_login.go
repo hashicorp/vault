@@ -294,49 +294,48 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	if err != nil {
 		return "", nil, nil, nil, fmt.Errorf("error getting configuration: %w", err)
 	}
-	if config == nil {
-		return "", nil, nil, logical.ErrorResponse("configuration does not exist"), nil
-	}
 
 	endpoint := "https://sts.amazonaws.com"
+
 	maxRetries := awsClient.DefaultRetryerMaxNumRetries
-
-	if config.IAMServerIdHeaderValue != "" {
-		err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
-		if err != nil {
-			return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
+	if config != nil {
+		if config.IAMServerIdHeaderValue != "" {
+			err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
+			if err != nil {
+				return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
+			}
 		}
-	}
-	if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
-		return "", nil, nil, logical.ErrorResponse(err.Error()), nil
-	}
-	if method == http.MethodGet {
-		if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
+		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 		}
-	}
-	if config.STSEndpoint != "" {
-		endpoint = config.STSEndpoint
-	}
-	if config.MaxRetries >= 0 {
-		maxRetries = config.MaxRetries
-	}
-
-	// Extract and use a regional STS endpoint
-	// based on the region set in the Authorization header.
-	if config.UseSTSRegionFromClient {
-		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
-		if err != nil {
-			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+		if method == http.MethodGet {
+			if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
+				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+			}
+		}
+		if config.STSEndpoint != "" {
+			endpoint = config.STSEndpoint
+		}
+		if config.MaxRetries >= 0 {
+			maxRetries = config.MaxRetries
 		}
 
-		url, err := stsRegionalEndpoint(clientSpecifiedRegion)
-		if err != nil {
-			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
-		}
+		// Extract and use a regional STS endpoint
+		// based on the region set in the Authorization header.
+		if config.UseSTSRegionFromClient {
+			clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
+			if err != nil {
+				return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+			}
 
-		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
-		endpoint = url
+			url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+			if err != nil {
+				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+			}
+
+			b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+			endpoint = url
+		}
 	}
 
 	b.Logger().Debug("submitting caller identity request", "endpoint", endpoint)
