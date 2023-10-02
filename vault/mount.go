@@ -376,6 +376,7 @@ type MountConfig struct {
 	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
+	DelegatedAuthAccessors    []string              `json:"delegated_auth_accessors,omitempty" mapstructure:"delegated_auth_accessors"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//

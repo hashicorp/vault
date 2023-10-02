@@ -5,6 +5,7 @@ package transit
 
 import (
 	"context"
+	paths "path"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -40,8 +41,10 @@ func (b *backend) pathPreauthTest() *framework.Path {
 }
 
 func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if req.ClientTokenSource == logical.NoClientToken {
-		return nil, logical.NewDelegatedAuthenticationError(d.Get("accessor").(string), d.Get("path").(string))
+	if req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+		da := logical.NewDelegatedAuthenticationError(d.Get("accessor").(string), paths.Join(d.Get("path").(string), req.Data["username"].(string)), nil)
+		delete(req.Data, "username")
+		return nil, da
 	}
 	return &logical.Response{}, nil
 }

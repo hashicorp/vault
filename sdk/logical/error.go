@@ -65,12 +65,14 @@ var (
 type DelegatedAuthenticationError struct {
 	mountAccessor string
 	path          string
+	extraData     map[string]interface{}
 }
 
-func NewDelegatedAuthenticationError(mountAccessor, path string) *DelegatedAuthenticationError {
+func NewDelegatedAuthenticationError(mountAccessor, path string, extraData map[string]interface{}) *DelegatedAuthenticationError {
 	return &DelegatedAuthenticationError{
 		mountAccessor: mountAccessor,
 		path:          path,
+		extraData:     extraData,
 	}
 }
 
@@ -84,6 +86,10 @@ func (d *DelegatedAuthenticationError) MountAccessor() string {
 
 func (d *DelegatedAuthenticationError) Path() string {
 	return d.path
+}
+
+func (d *DelegatedAuthenticationError) ExtraData() map[string]interface{} {
+	return d.extraData
 }
 
 type HTTPCodedError interface {

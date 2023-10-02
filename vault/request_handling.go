@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	paths "path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1373,6 +1374,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Return the response and error
 	if routeErr != nil {
+		if _, ok := routeErr.(*logical.DelegatedAuthenticationError); ok {
+			routeErr = fmt.Errorf("delegated authentication requested but authentication token present")
+		}
+
 		retErr = multierror.Append(retErr, routeErr)
 	}
 
@@ -1505,33 +1510,52 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if routeErr == logical.ErrInvalidCredentials {
 			return handleInvalidCreds()
 		} else if da, ok := routeErr.(*logical.DelegatedAuthenticationError); ok {
+			// Backend has requested internally delegated authentication
+
+			requestedAccessor := da.MountAccessor()
+			// First, is this allowed
+			if !slices.Contains(entry.Config.DelegatedAuthAccessors, requestedAccessor) {
+				return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
+			}
+
 			// If the route is requesting delegated authentication...
 			mount, err := c.auth.findByAccessor(ctx, da.MountAccessor())
 			if err != nil {
 				return nil, nil, err
 			}
 			if mount == nil {
-				return nil, nil, fmt.Errorf("backend requested delegate authentication but mount with accessor '%s' not found", da.MountAccessor())
+				return nil, nil, fmt.Errorf("backend requested delegate authentication but mount with accessor '%s' not found", requestedAccessor)
 			}
+
+			// Found it, now form the login path and issue the request
 			path := paths.Join("auth", mount.Path, da.Path())
 			req2, err := req.Clone()
 			if err != nil {
 				return nil, nil, err
 			}
-			req2.MountAccessor = da.MountAccessor()
+			req2.MountAccessor = requestedAccessor
 			req2.Path = path
+			if da.ExtraData() != nil {
+				// Add any other data fields the auth method might need, provided dynamically by the source mount
+				for k, v := range da.ExtraData() {
+					req2.Data[k] = v
+				}
+			}
+
 			resp, auth, err = c.handleLoginRequest(ctx, req2)
 			if err == logical.ErrInvalidCredentials {
 				return handleInvalidCreds()
 			} else if err != nil {
 				return nil, nil, err
 			}
+
+			// Authentication successful, use the resulting ClientToken to reissue the original request
 			req2, err = req.Clone()
 			if err != nil {
 				return nil, nil, err
 			}
 			req2.ClientToken = resp.Auth.ClientToken
-			req2.ClientTokenSource = logical.ClientTokenFromVaultHeader // TODO: From internal
+			req2.ClientTokenSource = logical.ClientTokenFromInternalAuth
 			resp2, err := c.handleCancelableRequest(ctx, req2)
 			return resp2, nil, err
 		}
