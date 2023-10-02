@@ -80,7 +80,8 @@ export default Service.extend({
     } catch (err) {
       if (throwOn403 && err.httpStatus === 403) {
         // 403 on this endpoint means you are in the wrong namespace
-        err.message = 'Resultant ACL check failed. This might mean you are in the wrong namespace.';
+        err.message =
+          'Resultant ACL check failed. This might mean you are in the wrong namespace. Reauthenticate to gain access to the intended namespace.';
         err.promptLogin = true;
         throw err;
       }
