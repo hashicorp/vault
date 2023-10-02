@@ -103,7 +103,6 @@
     <M.Footer as |F|>
       <Hds::ButtonSet>
         <Hds::Button
-          @text="Update"
           {{on
             "click"
             (fn
@@ -120,6 +119,7 @@
             )
           }}
           data-test-confirm-action-trigger
+          @text="Update"
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-update-primary-cancel-button />
       </Hds::ButtonSet>
