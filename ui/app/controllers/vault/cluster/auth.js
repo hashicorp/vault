@@ -7,6 +7,7 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
+import { sanitizePath } from 'vault/services/path-help';
 
 export default Controller.extend({
   flashMessages: service(),
@@ -39,13 +40,11 @@ export default Controller.extend({
   },
 
   fullNamespaceFromInput(value) {
+    const strippedNs = sanitizePath(value);
     if (this.managedNamespaceRoot) {
-      if (value.startsWith('/')) {
-        return `${this.managedNamespaceRoot}${value}`;
-      }
-      return `${this.managedNamespaceRoot}/${value}`;
+      return `${this.managedNamespaceRoot}/${strippedNs}`;
     }
-    return value;
+    return strippedNs;
   },
 
   updateNamespace: task(function* (value) {

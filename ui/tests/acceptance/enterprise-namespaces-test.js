@@ -79,12 +79,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       .dom('[data-test-managed-namespace-root]')
       .doesNotExist('Managed namespace indicator does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
-    await fillIn('input#namespace', '/foo');
-    const encodedNamespace = encodeURIComponent('/foo');
+    await fillIn('input#namespace', '/foo/bar ');
+    const encodedNamespace = encodeURIComponent('foo/bar');
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,
-      'Does not prepend root to namespace'
+      'correctly sanitizes namespace'
     );
   });
 });
