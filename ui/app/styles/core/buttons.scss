@@ -335,9 +335,8 @@ a.button.disabled {
 // TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
 // Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
-  font-weight: $font-weight-semibold;
-  box-shadow: $box-shadow-low;
-  border-radius: $radius;
+  font-weight: $font-weight-semibold; // TODO delete
+  box-shadow: $box-shadow-low; // TODO delete
 
   &.white-icon svg {
     color: $white;
@@ -351,15 +350,14 @@ a.button.disabled {
     color: $ui-gray-500;
   }
 
-  &.icon-only {
-    margin-right: $spacing-xxs;
-    margin-left: $spacing-xxs;
-  }
-
   &.transparent {
     background: none;
-    border: none;
     box-shadow: none;
+    border: 1px solid transparent;
+    &:hover {
+      border: 1px solid $grey-light;
+      border-color: var(--token-color-border-strong);
+    }
   }
 
   &.primary {
@@ -390,7 +388,9 @@ a.button.disabled {
 
 // Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
 .hds-button {
+  // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
+    color: $black;
     font-weight: $font-weight-semibold;
     background: none;
     border: none;

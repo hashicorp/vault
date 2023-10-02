@@ -48,9 +48,9 @@
                   @data={{@pem}}
                   @extension="pem"
                   data-test-issuer-download-type="pem"
-                >
-                  PEM format
-                </DownloadButton>
+                  @text="PEM format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
             {{#if @der}}
@@ -62,9 +62,9 @@
                   @data={{@der}}
                   @extension="der"
                   data-test-issuer-download-type="der"
-                >
-                  DER format
-                </DownloadButton>
+                  @text="DER format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
           </ul>
