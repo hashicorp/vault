@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds warning before downloading KV v2 secret values 
+```

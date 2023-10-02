@@ -1,11 +1,10 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
-variable "vault_install_dir" {
+variable "vault_addr" {
   type        = string
-  description = "The directory where the Vault binary will be installed"
-  default     = null
+  description = "The vault cluster address"
+  default     = "http://localhost:8200"
 }
 
 variable "vault_instance_count" {

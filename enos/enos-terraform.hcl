@@ -11,7 +11,7 @@ terraform_cli "default" {
   /*
   provider_installation {
     dev_overrides = {
-      "app.terraform.io/hashicorp-qti/enos" = abspath("../../enos-provider")
+      "app.terraform.io/hashicorp-qti/enos" = abspath("../../enos-provider/dist")
     }
     direct {}
   }

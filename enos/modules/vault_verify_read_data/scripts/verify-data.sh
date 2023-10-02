@@ -24,21 +24,16 @@ function retry {
   return 0
 }
 
-function fail {
-	echo "$1" 1>&2
-	exit 1
-}
-
-binpath=${VAULT_INSTALL_DIR}/vault
-
 fail() {
   echo "$1" 1>&2
   return 1
 }
 
+binpath="${VAULT_INSTALL_DIR}/vault"
+
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 # To keep the authentication method and module verification consistent between all
 # Enos scenarios we authenticate using testuser created by vault_verify_write_data module
-retry 5 $binpath login -method=userpass username=testuser password=passuser1
-retry 5 $binpath kv get secret/test
+retry 5 "$binpath" login -method=userpass username=testuser password=passuser1
+retry 5 "$binpath" kv get secret/test
