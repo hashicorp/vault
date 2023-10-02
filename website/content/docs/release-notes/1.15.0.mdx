@@ -16,6 +16,7 @@ description: |-
 Version | Issue
 ------- | -----
 1.15.0+ | [Vault no longer reports rollback metrics by mountpoint](/vault/docs/upgrading/upgrade-to-1.15.x#rollback-metrics)
+1.15.0  | [Panic in AWS auth method during IAM-based login](/vault/docs/upgrading/upgrade-to-1.15.x#panic-in-aws-auth-method-during-iam-based-login)
 
 ## Vault companion updates
 
@@ -59,7 +60,7 @@ Follow the learn more links for more information, or browse the list of
     </tr>
   </thead>
   <tbody>
-  
+
   <tr>
     <td rowSpan={2} style={{verticalAlign: 'middle'}}>
       Vault Agent
@@ -76,7 +77,7 @@ Follow the learn more links for more information, or browse the list of
   <tr>
     <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
     <td style={{verticalAlign: 'middle'}}>
-      Fetch secrets directly into your application as environment variables. 
+      Fetch secrets directly into your application as environment variables.
       <br /><br />
       Learn more: <a href="/vault/docs/agent-and-proxy/agent/process-supervisor">Process Supervisor Mode</a>
     </td>
@@ -218,7 +219,7 @@ Follow the learn more links for more information, or browse the list of
       Enables Vault administrators to configure multiple KMS for seal keys to
       ensure Vault availability in the event a single KMS becomes unavailable.
       <br /><br />
-      Learn more: <a href="/vault/docs/enterprise/sealwrap">Seal wrap</a>
+      Learn more: <a href="/vault/docs/configuration/seal/seal-ha">Seal wrap</a>
     </td>
   </tr>
 
