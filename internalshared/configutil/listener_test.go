@@ -4,49 +4,52 @@
 package configutil
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+// TestParseSingleIPTemplate exercises the ParseSingleIPTemplate function to
+// ensure that we only attempt to parse templates when the input contains a
+// template placeholder (see: go-sockaddr/template).
 func TestParseSingleIPTemplate(t *testing.T) {
-	type args struct {
-		ipTmpl string
-	}
-	tests := []struct {
-		name    string
-		arg     string
-		want    string
-		wantErr assert.ErrorAssertionFunc
+	tests := map[string]struct {
+		arg             string
+		want            string
+		isErrorExpected bool
+		errorMessage    string
 	}{
-		{
-			name:    "test https addr",
-			arg:     "https://vaultproject.io:8200",
-			want:    "https://vaultproject.io:8200",
-			wantErr: assert.NoError,
+		"test https addr": {
+			arg:             "https://vaultproject.io:8200",
+			want:            "https://vaultproject.io:8200",
+			isErrorExpected: false,
 		},
-		{
-			name:    "test invalid template func",
-			arg:     "{{FooBar}}",
-			want:    "",
-			wantErr: assert.Error,
+		"test invalid template func": {
+			arg:             "{{ FooBar }}",
+			want:            "",
+			isErrorExpected: true,
+			errorMessage:    "unable to parse address template",
 		},
-		{
-			name:    "test partial template",
-			arg:     "{{FooBar",
-			want:    "{{FooBar",
-			wantErr: assert.NoError,
+		"test partial template": {
+			arg:             "{{FooBar",
+			want:            "{{FooBar",
+			isErrorExpected: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseSingleIPTemplate(tt.arg)
-			if !tt.wantErr(t, err, fmt.Sprintf("ParseSingleIPTemplate(%v)", tt.arg)) {
-				return
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			got, err := ParseSingleIPTemplate(tc.arg)
+
+			if tc.isErrorExpected {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errorMessage)
+			} else {
+				require.NoError(t, err)
 			}
 
-			assert.Equalf(t, tt.want, got, "ParseSingleIPTemplate(%v)", tt.arg)
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
