@@ -76,8 +76,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
     assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
     assert
-      .dom('[data-test-managed-namespace-toolbar]')
-      .doesNotExist('Managed namespace toolbar does not exist');
+      .dom('[data-test-managed-namespace-root]')
+      .doesNotExist('Managed namespace indicator does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
     await fillIn('input#namespace', '/foo');
     const encodedNamespace = encodeURIComponent('/foo');
