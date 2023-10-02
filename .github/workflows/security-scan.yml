@@ -35,14 +35,6 @@ jobs:
       with:
         python-version: 3.x
 
-    - name: Clone Security Scanner repo
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      with:
-        repository: hashicorp/security-scanner
-        token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
-        path: security-scanner
-        ref: 52d94588851f38a416f11c1e727131b3c8b0dd4d
-
     - name: Install dependencies
       shell: bash
       env:
@@ -71,22 +63,10 @@ jobs:
 
     - name: Scan
       id: scan
-      uses: ./security-scanner
-      # env:
-        # Note: this _should_ work, but causes some issues with Semgrep.
-        # Instead, rely on filtering in the SARIF Output step.
-        #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
+      uses: hashicorp/security-scanner@main
       with:
         repository: "$PWD"
-        cache-build: true
         cache-go-modules: false
-
-    - name: SARIF Output
-      shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        cat results.sarif
 
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@46a6823b81f2d7c67ddf123851eea88365bc8a67 # codeql-bundle-v2.13.5
