@@ -56,6 +56,7 @@ const (
 	NoClientToken ClientTokenSource = iota
 	ClientTokenFromVaultHeader
 	ClientTokenFromAuthzHeader
+	ClientTokenFromInternalAuth
 )
 
 type WALState struct {
