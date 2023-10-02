@@ -390,6 +390,7 @@ a.button.disabled {
 .hds-button {
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
+    color: $black;
     font-weight: $font-weight-semibold;
     background: none;
     border: none;

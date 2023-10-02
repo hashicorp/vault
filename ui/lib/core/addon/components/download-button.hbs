@@ -5,11 +5,11 @@
 
 <Hds::Button
   data-test-download-button
+  @icon={{if @hideIcon "" "download"}}
   @text={{or @text "Download"}}
-  @icon={{if @isIconOnly "download" @icon}}
   @color={{@color}}
+  @iconPosition={{or @iconPosition "leading"}}
   @isIconOnly={{@isIconOnly}}
-  @iconPosition="trailing"
   {{on "click" this.handleDownload}}
   ...attributes
 />

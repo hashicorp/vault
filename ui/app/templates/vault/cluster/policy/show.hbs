@@ -34,7 +34,6 @@
       @filename={{this.model.name}}
       @data={{this.model.policy}}
       @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
-      @icon="chevron-right"
       @text="Download policy"
     />
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}

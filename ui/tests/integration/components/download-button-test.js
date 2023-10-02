@@ -28,7 +28,7 @@ module('Integration | Component | download button', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
-     <DownloadButton class="button">
+     <DownloadButton>
       <Icon @name="download" />
         Download
      </DownloadButton>
@@ -42,7 +42,7 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
 
     await render(hbs`
-      <DownloadButton class="button"
+      <DownloadButton
         @data={{this.data}}
       >
         Download
@@ -59,7 +59,7 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
 
     await render(hbs`
-      <DownloadButton class="button"
+      <DownloadButton
         @data={{this.data}}
         @filename={{this.filename}}
         @mime={{this.mime}}
@@ -80,7 +80,7 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
-      <DownloadButton class="button" @fetchData={{this.fetchData}} >
+      <DownloadButton @fetchData={{this.fetchData}} >
         Download
       </DownloadButton>
     `);
@@ -103,7 +103,7 @@ module('Integration | Component | download button', function (hooks) {
     });
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
-        <DownloadButton class="button" @data={{this.data}} @fetchData={{this.fetchData}} />
+        <DownloadButton @data={{this.data}} @fetchData={{this.fetchData}} />
       `);
     resetOnerror();
   });
