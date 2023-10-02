@@ -6,7 +6,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render, resetOnerror, setupOnerror } from '@ember/test-helpers';
-import { isPresent } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -28,25 +27,23 @@ module('Integration | Component | download button', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
-     <DownloadButton>
-      <Icon @name="download" />
-        Download
-     </DownloadButton>
-   `);
-    assert.dom(SELECTORS.button).hasClass('button');
-    assert.ok(isPresent(SELECTORS.icon), 'renders yielded icon');
-    assert.dom(SELECTORS.button).hasTextContaining('Download', 'renders yielded text');
+     <DownloadButton /> `);
+    assert.exists(SELECTORS.icon, 'renders download icon');
+    assert.dom(SELECTORS.button).hasText('Download', 'renders default text');
+  });
+
+  test('it renders passed args', async function (assert) {
+    await render(hbs`
+     <DownloadButton @text"I do something" @hideIcon={{true}} /> `);
+    assert.doesNotExist(SELECTORS.icon, 'hides icon');
+    assert.dom(SELECTORS.button).hasText('I do something', 'renders passed text');
   });
 
   test('it downloads with defaults when only passed @data arg', async function (assert) {
     assert.expect(3);
 
     await render(hbs`
-      <DownloadButton
-        @data={{this.data}}
-      >
-        Download
-      </DownloadButton>
+      <DownloadButton @data={{this.data}} />
     `);
     await click(SELECTORS.button);
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
@@ -64,9 +61,7 @@ module('Integration | Component | download button', function (hooks) {
         @filename={{this.filename}}
         @mime={{this.mime}}
         @extension={{this.extension}}
-      >
-        Download
-      </DownloadButton>
+      />
     `);
 
     await click(SELECTORS.button);
@@ -80,9 +75,7 @@ module('Integration | Component | download button', function (hooks) {
     assert.expect(3);
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
-      <DownloadButton @fetchData={{this.fetchData}} >
-        Download
-      </DownloadButton>
+      <DownloadButton @fetchData={{this.fetchData}} />
     `);
 
     await click(SELECTORS.button);
