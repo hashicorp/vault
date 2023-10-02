@@ -7,7 +7,7 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
-import { sanitizePath } from 'vault/services/path-help';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
   flashMessages: service(),

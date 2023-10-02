@@ -23,10 +23,6 @@ import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
-export function sanitizePath(path) {
-  // remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
 
 export default Service.extend({
   attrs: null,
