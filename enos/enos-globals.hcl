@@ -20,7 +20,9 @@ globals {
     rhel   = ["nc"]
   }
   sample_attributes = {
-    aws_region = ["us-east-1", "us-west-2"]
+    # NOTE(9/28/23): Temporarily use us-east-2 due to another networking in us-east-1
+    # aws_region = ["us-east-1", "us-west-2"]
+    aws_region = ["us-east-2", "us-west-2"]
   }
   tags = merge({
     "Project Name" : var.project_name

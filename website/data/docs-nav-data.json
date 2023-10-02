@@ -269,7 +269,12 @@
       },
       {
         "title": "Events",
-        "path": "concepts/events"
+        "path": "concepts/events",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       }
     ]
   },
@@ -308,11 +313,11 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
-          { "title": "High Availability (Beta)",
+          { "title": "High Availability",
            "badge": {
-              "text": "ENT",
+              "text": "ENTERPRISE | BETA",
               "type": "outlined",
-              "color": "neutral"
+              "color": "highlight"
             },
             "path": "configuration/seal/seal-ha"
           },
@@ -339,7 +344,7 @@
           {
             "title": "HSM PKCS11",
             "badge": {
-              "text": "ENT",
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "neutral"
             },
@@ -492,7 +497,7 @@
       {
         "title": "<code>Entropy Augmentation</code>",
         "badge": {
-          "text": "ENT",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
@@ -501,7 +506,7 @@
       {
         "title": "<code>kms_library</code>",
         "badge": {
-          "text": "ENT",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
@@ -1512,7 +1517,7 @@
   {
     "title": "Secrets Sync",
     "badge": {
-      "text": "ENT",
+      "text": "ENTERPRISE",
       "type": "outlined",
       "color": "neutral"
     },
@@ -1523,7 +1528,7 @@
         "badge": {
           "text": "BETA",
           "type": "outlined",
-          "color": "neutral"
+          "color": "highlight"
         }
       },
       {
@@ -1746,7 +1751,12 @@
       },
       {
         "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins"
+        "path": "plugins/containerized-plugins",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Integrations Library",
@@ -1960,6 +1970,23 @@
               {
                 "title": "Installation",
                 "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Secret Sources",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/vso/sources"
+                  },
+                  {
+                    "title": "Vault",
+                    "path": "platform/k8s/vso/sources/vault"
+                  },
+                  {
+                    "title": "HCP Vault Secrets",
+                    "path": "platform/k8s/vso/sources/hvs"
+                  }
+                ]
               },
               {
                 "title": "Examples",
