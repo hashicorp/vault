@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestParseSingleIPTemplate exercises the ParseSingleIPTemplate function to
+// TestListener_ParseSingleIPTemplate exercises the ParseSingleIPTemplate function to
 // ensure that we only attempt to parse templates when the input contains a
 // template placeholder (see: go-sockaddr/template).
-func TestParseSingleIPTemplate(t *testing.T) {
+func TestListener_ParseSingleIPTemplate(t *testing.T) {
 	tests := map[string]struct {
 		arg             string
 		want            string
