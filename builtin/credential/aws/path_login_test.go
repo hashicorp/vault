@@ -308,56 +308,6 @@ func TestBackend_validateVaultPostRequestValues(t *testing.T) {
 	}
 }
 
-// TestBackend_pathLogin_NoClientConfig covers logging in via IAM auth when the
-// client config does not exist. This is a regression test to cover potential
-// panics when referencing the potentially-nil config in the login handler. For
-// details see https://github.com/hashicorp/vault/issues/23361.
-func TestBackend_pathLogin_NoClientConfig(t *testing.T) {
-	storage := new(logical.InmemStorage)
-	config := logical.TestBackendConfig()
-	config.StorageView = storage
-	b, err := Backend(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = b.Setup(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Intentionally left out the client configuration
-
-	roleEntry := &awsRoleEntry{
-		RoleID:   "foo",
-		Version:  currentRoleStorageVersion,
-		AuthType: iamAuthType,
-	}
-	err = b.setRole(context.Background(), storage, testValidRoleName, roleEntry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	loginData, err := defaultLoginData()
-	if err != nil {
-		t.Fatal(err)
-	}
-	loginRequest := &logical.Request{
-		Operation:  logical.UpdateOperation,
-		Path:       "login",
-		Storage:    storage,
-		Data:       loginData,
-		Connection: &logical.Connection{},
-	}
-	resp, err := b.HandleRequest(context.Background(), loginRequest)
-	if err != nil {
-		t.Fatalf("expected nil error, got: %v", err)
-	}
-	if !resp.IsError() {
-		t.Fatalf("expected error response, got: %+v", resp)
-	}
-}
-
 // TestBackend_pathLogin_IAMHeaders tests login with iam_request_headers,
 // supporting both base64 encoded string and JSON headers
 func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
