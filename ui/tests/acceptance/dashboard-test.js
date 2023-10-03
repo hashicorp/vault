@@ -33,6 +33,8 @@ import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-se
 
 const consoleComponent = create(consoleClass);
 
+const createNS = async (name) => consoleComponent.runCommands(`write sys/namespaces/${name} -force`);
+
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -388,6 +390,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .dom(SELECTORS.emptyStateMessage('replication'))
         .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
       assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
+    });
+
+    test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
+      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('replication')).exists();
+      createNS('blah');
+      await visit('/vault/dashboard?namespace=blah');
+      assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
