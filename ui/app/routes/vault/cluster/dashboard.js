@@ -17,6 +17,8 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   async getVaultConfiguration() {
     try {
+      if (!this.namespace.inRootNamespace) return null;
+
       const adapter = this.store.adapterFor('application');
       const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
       return configState.data;
