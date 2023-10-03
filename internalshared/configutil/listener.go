@@ -139,6 +139,10 @@ type Listener struct {
 	RedactClusterName    bool `hcl:"-"`
 	RedactVersionRaw     any  `hcl:"redact_version"`
 	RedactVersion        bool `hcl:"-"`
+
+	// DisableReplicationStatusEndpoint disables the unauthenticated replication status endpoints
+	DisableReplicationStatusEndpointsRaw interface{} `hcl:"disable_replication_status_endpoints"`
+	DisableReplicationStatusEndpoints    bool        `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -256,6 +260,18 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		err := parser()
 		if err != nil {
 			return nil, err
+		}
+
+		// Disable Replication Status Endpoint
+		{
+			// If a valid DisableReplicationStatusEndpoints value exists, then canonicalize the value
+			if l.DisableReplicationStatusEndpointsRaw != nil {
+				if l.DisableReplicationStatusEndpoints, err = parseutil.ParseBool(l.DisableReplicationStatusEndpointsRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.DisableReplicationStatusEndpointsRaw = nil
+			}
 		}
 	}
 
