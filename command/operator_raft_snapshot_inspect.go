@@ -251,7 +251,6 @@ func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotIn
 
 	handler := func(s *pb.StorageEntry) error {
 		c.kvEnhance(s, &info)
-
 		return nil
 	}
 
