@@ -172,6 +172,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await authPage.login();
     });
 
+    test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
+      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('configuration-details')).exists();
+      createNS('world');
+      await visit('/vault/dashboard?namespace=world');
+      assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
+    });
+
     test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
         data: this.data,
