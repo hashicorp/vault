@@ -8,7 +8,7 @@ description: >-
 
 # `/sys/replication/performance`
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 ## Check performance status
 
@@ -40,6 +40,8 @@ primary, it will look something like:
     "known_secondaries": ["2"],
     "last_wal": 87,
     "merkle_root": "c31e40f6ff02f32c37b70e6a4d58732ac812abf0",
+    "corrupted_merkle_tree": false,
+    "last_corruption_check_epoch": "1694456090",
     "mode": "primary",
     "secondaries": [
       {
@@ -540,8 +542,20 @@ $ curl \
 
 ## Update performance secondary's primary
 
-This endpoint changes a performance secondary cluster's assigned primary cluster using a
-secondary activation token. This does not wipe all data in the cluster.
+The update endpoint changes the primary cluster assigned to a
+performance secondary cluster. Changing the primary cluster assignment
+does not wipe data in the secondary cluster.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**.
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+   During the update, cluster addresses are pinged one at a time via gRPC. The
+   first cluster to respond successfully is assigned as the new primary address.
+
+The two update methods are mutually exclusive. You may use one or the other,
+but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                                    |
 | :----- | :------------------------------------------------------ |
@@ -571,14 +585,31 @@ secondary activation token. This does not wipe all data in the cluster.
   primary clusters. These addresses will be pinged in sequence, and if any of them
   respond successfully, these will be recorded as the new primary addresses. This is
   a lighter weight version of specifying a token and should result in less disruption
-  of replication. Note that it's invalid to specify this and `token` in the same API call.
-  They are mutually exclusive.
+  of replication.
 
 ### Sample payload
 
 ```json
 {
   "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/performance/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "update_primary_addrs": ["10.0.0.2:8201"]
 }
 ```
 

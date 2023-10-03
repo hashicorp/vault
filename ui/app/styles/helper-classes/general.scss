@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: box-shadow, border, transition, pointer, grouped css in one helper, and screen-reader only.*/
@@ -8,10 +8,6 @@
 // box-shadow helpers
 .has-only-top-shadow {
   box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
-}
-
-.has-bottom-shadow {
-  box-shadow: $box-shadow !important;
 }
 
 .is-shadowless {
@@ -34,6 +30,10 @@
 
 .is-borderless {
   border: none !important;
+}
+
+.has-border-collapse {
+  border-collapse: collapse;
 }
 
 // pointer helpers
@@ -85,6 +85,20 @@
   overflow: hidden;
 }
 
+.truncate-first-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.text-overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 // screen reader only
 .sr-only {
   border: 0;
@@ -102,4 +116,13 @@
 // border-radius
 .border-radius-2 {
   border-radius: $radius;
+}
+
+.border-radius-4 {
+  border-radius: $radius-large;
+}
+
+// border-spacing
+.is-border-spacing-revert {
+  border-spacing: revert;
 }

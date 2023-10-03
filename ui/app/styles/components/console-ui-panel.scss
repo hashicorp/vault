@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 $console-close-height: 35px;
@@ -64,13 +64,6 @@ $console-close-height: 35px;
     margin-left: $size-4;
     padding: $size-8 $size-4;
   }
-}
-
-.console-ui-panel-content.hover-copy-button,
-.console-ui-panel-content.hover-copy-button-static {
-  top: auto;
-  bottom: 0;
-  right: 0;
 }
 
 .console-ui-input {

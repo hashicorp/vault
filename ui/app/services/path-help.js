@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /*
@@ -244,7 +244,7 @@ export default Service.extend({
 
     return generatedItemAdapter.extend({
       urlForItem(id, isList, dynamicApiPath) {
-        const itemType = getPath.path.slice(1);
+        const itemType = sanitizePath(getPath.path);
         let url;
         id = encodePath(id);
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded

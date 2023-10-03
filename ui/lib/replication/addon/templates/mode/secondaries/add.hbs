@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action "onSubmit" "secondary-token" "primary" (hash ttl=this.ttl id=this.id) on="submit"}}>
   <div class="box is-fullwidth is-shadowless is-marginless">
     <h4 class="title is-5">
@@ -76,16 +81,12 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <CopyButton
-        class="button is-primary copy-close"
-        data-test-button="modal-copy-close"
-        @clipboardText={{this.token}}
-        @buttonType="button"
-        @type="copy"
-        @success={{action "copyClose" "Token copied!"}}
-      >
-        Copy &amp; Close
-      </CopyButton>
+      <Hds::Copy::Button
+        @text="Copy & Close"
+        @textToCopy={{this.token}}
+        class="primary"
+        {{on "click" (action "copyClose" "Token copied!")}}
+      />
     </footer>
   </Modal>
 {{/if}}

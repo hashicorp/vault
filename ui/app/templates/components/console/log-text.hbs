@@ -1,4 +1,14 @@
-<div class="console-ui-output has-copy-button">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="console-ui-output has-text-grey">
   <pre>{{@content}}</pre>
-  <HoverCopyButton @copyValue={{this.content}} @alwaysShow={{true}} />
+  <Hds::Copy::Button
+    @text="Copy"
+    @isIconOnly={{true}}
+    @textToCopy={{@content}}
+    class="transparent icon-grey-500 top-right-absolute"
+  />
 </div>

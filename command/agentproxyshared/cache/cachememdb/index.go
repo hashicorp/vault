@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cachememdb
 
@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,12 @@ type Index struct {
 	// Token is the token that fetched the response held by this index
 	// Required: true, Unique: true
 	Token string
+
+	// Tokens is a list of tokens that can access this cached response,
+	// which is used for static secret caching, and enabling multiple
+	// tokens to be able to access the same cache entry for static secrets.
+	// Required: false, Unique: false
+	Tokens []string
 
 	// TokenParent is the parent token of the token held by this index
 	// Required: false, Unique: false
@@ -71,6 +78,10 @@ type Index struct {
 
 	// Type is the index type (token, auth-lease, secret-lease)
 	Type string
+
+	// IndexLock is a lock held for some indexes to prevent data
+	// races upon update.
+	IndexLock sync.Mutex
 }
 
 type IndexName uint32

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .button {
@@ -14,10 +14,9 @@
   display: inline-block;
   font-size: $size-8;
   font-weight: $font-weight-semibold;
-  height: 2.5rem;
-  line-height: 1.6;
+  min-height: 2.25rem;
   min-width: 6rem;
-  padding: $size-10 $size-8;
+  padding: 0.5625rem 0.9375rem;
   position: relative;
   text-align: center;
   text-decoration: none;
@@ -90,6 +89,12 @@
   &.is-danger-outlined {
     border: 1px solid $red-500;
     color: $red-500;
+  }
+
+  &.is-warning-outlined {
+    background-color: $yellow-010;
+    border: 1px solid $yellow-700;
+    color: $yellow-700;
   }
 
   &.is-flat {
@@ -320,4 +325,64 @@ a.button.disabled {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+
+  &:disabled {
+    color: $grey-light;
+    cursor: not-allowed;
+  }
+}
+
+// Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
+.hds-copy-button {
+  font-weight: $font-weight-semibold;
+  box-shadow: $box-shadow-low;
+  border-radius: $radius;
+
+  &.white-icon svg {
+    color: $white;
+  }
+
+  &.icon-grey-300 svg {
+    color: $ui-gray-300;
+  }
+
+  &.icon-grey-500 svg {
+    color: $ui-gray-500;
+  }
+
+  &.icon-only {
+    margin-right: $spacing-xxs;
+    margin-left: $spacing-xxs;
+  }
+
+  &.transparent {
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  &.primary {
+    background-color: $blue;
+    border-color: darken($blue, 2%);
+    color: $white;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+    svg {
+      color: $white;
+    }
+  }
+
+  &.secondary {
+    background-color: $grey-lightest;
+    border: 1px solid $grey-light;
+  }
+
+  &.in-dropdown {
+    div {
+      font-size: $size-7;
+    }
+    svg {
+      color: transparent;
+    }
+  }
 }

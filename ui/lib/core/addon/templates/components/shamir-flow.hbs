@@ -1,45 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.encoded_token}}
   <div class="box is-marginless is-shadowless">
-    <div class="message is-list has-copy-button" tabindex="-1">
-      <HoverCopyButton @copyValue={{this.encoded_token}} />
-      <div class="message-body">
-        <h4 class="title is-7 is-marginless">
-          Encoded Operation Token
-        </h4>
-        <code class="is-word-break">{{this.encoded_token}}</code>
-      </div>
+    <div class="message">
+      <h4 class="title is-7 is-marginless">
+        Encoded Operation Token
+      </h4>
+      <Hds::Copy::Snippet @textToCopy={{this.encoded_token}} />
     </div>
+
     {{#if this.otp}}
-      <div class="message is-list has-copy-button" tabindex="-1">
-        <HoverCopyButton @copyValue={{this.otp}} />
-        <div class="message-body">
-          <h4 class="title is-7 is-marginless">
-            One Time Password (otp)
-          </h4>
-          <code class="is-word-break">{{this.otp}}</code>
-        </div>
+      <div class="message">
+        <h4 class="title is-7 is-marginless">
+          One Time Password (otp)
+        </h4>
+        <Hds::Copy::Snippet @textToCopy={{this.otp}} />
       </div>
     {{/if}}
-    <div class="message is-list has-copy-button" tabindex="-1">
-      {{! template-lint-disable quotes }}
-      {{#let
-        (if
-          this.otp
-          (concat 'vault operator generate-root -otp="' this.otp '" -decode="' this.encoded_token '"')
-          (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' this.encoded_token '"')
-        )
-        as |cmd|
-      }}
-        <HoverCopyButton @copyValue={{cmd}} />
-        <div class="message-body">
-          <h4 class="title is-7 is-marginless">
-            DR Operation Token Command
-          </h4>
-          <code class="is-word-break">{{cmd}}</code>
-        </div>
-      {{/let}}
-      {{! template-lint-enable quotes }}
-    </div>
+
+    {{! template-lint-disable quotes }}
+    {{#let
+      (if
+        this.otp
+        (concat 'vault operator generate-root -otp="' this.otp '" -decode="' this.encoded_token '"')
+        (concat 'vault operator generate-root -otp="<enter your otp here>" -decode="' this.encoded_token '"')
+      )
+      as |cmd|
+    }}
+      <h4 class="title is-7 is-marginless">
+        DR Operation Token Command
+      </h4>
+      <CodeSnippet @codeBlock={{cmd}} />
+    {{/let}}
+    {{! template-lint-enable quotes }}
   </div>
   <div class="box is-marginless is-shadowless">
     <button type="button" class="button" {{action "reset"}}>
@@ -102,15 +98,12 @@
           Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token. Next we'll enter
           portions of the root key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
         </p>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{this.pgp_key}} />
-          <div class="message-body">
-            <h4 class="title is-7 is-marginless">
-              PGP Key
-              {{this.pgpKeyFile.filename}}
-            </h4>
-            <code class="is-word-break">{{this.pgp_key}}</code>
-          </div>
+        <div class="message">
+          <h4 class="title is-7 is-marginless">
+            PGP Key
+            {{this.pgpKeyFile.filename}}
+          </h4>
+          <Hds::Copy::Snippet @textToCopy={{this.pgp_key}} />
         </div>
       </div>
       <div class="field is-grouped box is-marginless is-shadowless">
@@ -140,19 +133,18 @@
           <p>
             <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
               <A.Title>Info</A.Title>
-              <A.Description>
+              <A.Description class="has-bottom-margin-s">
                 Below is the generated OTP. This will be used to encode the generated Operation Token. Make sure to save
                 this, as you will need it later to decode the Operation Token.
               </A.Description>
+              <A.Description>
+                <h4 class="hds-alert__title hds-font-weight-semibold">
+                  One Time Password (otp)
+                </h4>
+                <Hds::Copy::Snippet @textToCopy={{this.otp}} @color="secondary" />
+              </A.Description>
             </Hds::Alert>
           </p>
-          <div class="has-background-gray-100 box has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{this.otp}} />
-            <h4 class="title is-7 is-marginless">
-              One Time Password (otp)
-            </h4>
-            <code class="is-word-break">{{this.otp}}</code>
-          </div>
         {{/if}}
         {{#if (has-block)}}
           {{yield}}

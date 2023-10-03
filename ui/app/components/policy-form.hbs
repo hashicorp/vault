@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}} data-test-policy-form>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
@@ -20,7 +25,7 @@
     <div class="field">
       {{#if @model.isNew}}
         <Toolbar>
-          <label class="is-label">Policy</label>
+          <label class="has-text-weight-bold">Policy</label>
           <ToolbarActions>
             <div class="toolbar-separator"></div>
             <div class="control is-flex">

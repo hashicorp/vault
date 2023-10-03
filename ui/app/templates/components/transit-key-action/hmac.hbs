@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -50,29 +55,10 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">HMAC</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="hmac">{{@hmac}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{@hmac}}
-          @buttonType="button"
-          @success={{action (set-flash-message "HMAC copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
+      <Hds::Copy::Snippet @textToCopy={{@hmac}} @color="secondary" data-test-encrypted-value="hmac" />
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{@hmac}}
-      @buttonType="button"
-      @success={{action @toggleModal "HMAC copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+    <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
   </footer>
 </Modal>

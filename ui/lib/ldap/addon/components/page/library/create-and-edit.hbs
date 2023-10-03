@@ -1,0 +1,46 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{if @model.isNew "Create Library" "Edit Library"}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<form {{on "submit" (perform this.save)}} class="has-top-margin-m">
+  <MessageError @errorMessage={{this.error}} />
+
+  {{#each @model.formFields as |field|}}
+    <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+  {{/each}}
+
+  <hr class="has-background-gray-200 has-top-margin-l" />
+
+  <div class="has-top-margin-l has-bottom-margin-l is-flex">
+    <button data-test-save class="button is-primary" type="submit" disabled={{this.save.isRunning}}>
+      {{if @model.isNew "Create library" "Save"}}
+    </button>
+    <button
+      data-test-cancel
+      class="button has-left-margin-xs"
+      type="button"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.cancel}}
+    >
+      Cancel
+    </button>
+    {{#if this.invalidFormMessage}}
+      <AlertInline
+        @type="danger"
+        @paddingTop={{true}}
+        @message={{this.invalidFormMessage}}
+        @mimicRefresh={{true}}
+        data-test-invalid-form-message
+      />
+    {{/if}}
+  </div>
+</form>

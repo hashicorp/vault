@@ -1,0 +1,37 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      {{@model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="ldap tabs">
+    <ul>
+      <LinkTo @route="libraries.library.details.accounts" data-test-tab="accounts">Accounts</LinkTo>
+      <LinkTo @route="libraries.library.details.configuration" data-test-tab="config">Configuration</LinkTo>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.canDelete}}
+      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
+        Delete library
+      </ConfirmAction>
+      {{#if @model.canEdit}}
+        <div class="toolbar-separator"></div>
+      {{/if}}
+    {{/if}}
+    {{#if @model.canEdit}}
+      <ToolbarLink @route="libraries.library.edit" data-test-edit>
+        Edit library
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>

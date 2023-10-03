@@ -1,9 +1,10 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -50,16 +51,16 @@ func TestOptions_WithFormat(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithFormat(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withFormat)
+				require.Equal(t, tc.ExpectedValue, opts.withFormat)
 			}
 		})
 	}
@@ -95,16 +96,16 @@ func TestOptions_WithSubtype(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithSubtype(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withSubtype)
+				require.Equal(t, tc.ExpectedValue, opts.withSubtype)
 			}
 		})
 	}
@@ -136,16 +137,16 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &options{}
+			opts := &options{}
 			applyOption := WithNow(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withNow)
+				require.Equal(t, tc.ExpectedValue, opts.withNow)
 			}
 		})
 	}
@@ -181,16 +182,16 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithID(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withID)
+				require.Equal(t, tc.ExpectedValue, opts.withID)
 			}
 		})
 	}
@@ -210,9 +211,9 @@ func TestOptions_WithPrefix(t *testing.T) {
 			ExpectedValue:   "",
 		},
 		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      false,
-			ExpectedErrorMessage: "",
+			Value:           "     ",
+			IsErrorExpected: false,
+			ExpectedValue:   "     ",
 		},
 		"valid": {
 			Value:           "test",
@@ -226,16 +227,16 @@ func TestOptions_WithPrefix(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithPrefix(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withPrefix)
+				require.Equal(t, tc.ExpectedValue, opts.withPrefix)
 			}
 		})
 	}
@@ -262,11 +263,11 @@ func TestOptions_WithRaw(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithRaw(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withRaw)
+			require.Equal(t, tc.ExpectedValue, opts.withRaw)
 		})
 	}
 }
@@ -292,11 +293,11 @@ func TestOptions_WithElision(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithElision(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withElision)
+			require.Equal(t, tc.ExpectedValue, opts.withElision)
 		})
 	}
 }
@@ -322,11 +323,11 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithHMACAccessor(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withHMACAccessor)
+			require.Equal(t, tc.ExpectedValue, opts.withHMACAccessor)
 		})
 	}
 }
@@ -352,11 +353,50 @@ func TestOptions_WithOmitTime(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithOmitTime(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withOmitTime)
+			require.Equal(t, tc.ExpectedValue, opts.withOmitTime)
+		})
+	}
+}
+
+// TestOptions_WithHeaderFormatter exercises the WithHeaderFormatter Option to
+// ensure it applies the option as expected under various circumstances.
+func TestOptions_WithHeaderFormatter(t *testing.T) {
+	tests := map[string]struct {
+		Value                    HeaderFormatter
+		ExpectedValue            HeaderFormatter
+		ShouldLeaveUninitialized bool
+	}{
+		"nil": {
+			Value:         nil,
+			ExpectedValue: nil,
+		},
+		"unassigned-interface": {
+			ShouldLeaveUninitialized: true,
+		},
+		"happy-path": {
+			Value:         &testHeaderFormatter{},
+			ExpectedValue: &testHeaderFormatter{},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			var f HeaderFormatter
+			if !tc.ShouldLeaveUninitialized {
+				f = tc.Value
+			}
+			applyOption := WithHeaderFormatter(f)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withHeaderFormatter)
 		})
 	}
 }
@@ -484,4 +524,13 @@ func TestOptions_Opts(t *testing.T) {
 			}
 		})
 	}
+}
+
+// testHeaderFormatter is a stub to prevent the need to import the vault package
+// to bring in vault.AuditedHeadersConfig for testing.
+type testHeaderFormatter struct{}
+
+// ApplyConfig satisfied the HeaderFormatter interface for testing.
+func (f *testHeaderFormatter) ApplyConfig(ctx context.Context, headers map[string][]string, salter Salter) (result map[string][]string, retErr error) {
+	return nil, nil
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -45,11 +45,6 @@ export default class KeymgmtKeyEdit extends Component {
 
   get isCreating() {
     return this.args.mode === 'create';
-  }
-
-  @action
-  toggleModal(bool) {
-    this.isDeleteModalOpen = bool;
   }
 
   @task

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -23,6 +23,7 @@ const MODEL_TYPES = {
 };
 
 export default Component.extend({
+  controlGroup: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -89,10 +90,23 @@ export default Component.extend({
     create() {
       const model = this.model;
       this.set('loading', true);
-      this.model.save().finally(() => {
-        model.set('hasGenerated', true);
-        this.set('loading', false);
-      });
+      this.model
+        .save()
+        .then(() => {
+          model.set('hasGenerated', true);
+        })
+        .catch((error) => {
+          // Handle control group AdapterError
+          if (error.message === 'Control Group encountered') {
+            this.controlGroup.saveTokenFromError(error);
+            const err = this.controlGroup.logFromError(error);
+            error.errors = [err.content];
+          }
+          throw error;
+        })
+        .finally(() => {
+          this.set('loading', false);
+        });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

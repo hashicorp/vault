@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package config
 
@@ -101,8 +101,9 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist      *agentproxyshared.PersistConfig `hcl:"persist"`
-	InProcDialer transportDialer                 `hcl:"-"`
+	Persist            *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer       transportDialer                 `hcl:"-"`
+	CacheStaticSecrets bool                            `hcl:"cache_static_secrets"`
 }
 
 // AutoAuth is the configured authentication method and sinks

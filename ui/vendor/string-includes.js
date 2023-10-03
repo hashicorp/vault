@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // By Mozilla Contributors licensed under CC-BY-SA 2.5 (http://creativecommons.org/licenses/by-sa/2.5/)

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .sidebar-user-menu {
@@ -16,6 +16,12 @@
     .token-alert {
       padding: $spacing-xs;
     }
+  }
+
+  .confirm-action-message p {
+    padding-top: $size-10;
+    font-weight: $font-weight-semibold;
+    color: $black;
   }
 }
 

@@ -1,0 +1,246 @@
+---
+layout: docs
+page_title: "1.15.0 release notes"
+description: |-
+  Key updates for  Vault 1.15.0
+---
+
+# Vault 1.15.0 release notes
+
+**GA date:** 2023-09-27
+
+@include 'release-notes/intro.mdx'
+
+## Known issues and breaking changes
+
+Version | Issue
+------- | -----
+1.15.0+ | [Vault no longer reports rollback metrics by mountpoint](/vault/docs/upgrading/upgrade-to-1.15.x#rollback-metrics)
+
+## Vault companion updates
+
+Companion updates are Vault updates that live outside the main Vault binary.
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault Secrets Operator
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Run the Vault Secrets Operator (v0.3.0) on Red Hat OpenShift.
+      <br /><br />
+      Learn more: <a href="/vault/docs/platform/k8s/vso/openshift">Vault Secrets Operator</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+## Core updates
+
+Follow the learn more links for more information, or browse the list of
+[Vault tutorials updated to highlight changes for the most recent GA release](/vault/tutorials/new-release).
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  
+  <tr>
+    <td rowSpan={2} style={{verticalAlign: 'middle'}}>
+      Vault Agent
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Updated to use the latest Azure SDK version and Workload Identity
+      Federation (WIF).
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/agent-and-proxy/agent">What is Vault Agent?</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Fetch secrets directly into your application as environment variables. 
+      <br /><br />
+      Learn more: <a href="/vault/docs/agent-and-proxy/agent/process-supervisor">Process Supervisor Mode</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      External plugins
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Run external plugins in their own container with native container platform
+      controls.
+      <br /><br />
+      Learn more: <a href="/vault/docs/plugins/containerized-plugins">Containerize Vault plugins</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Eventing
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Subscribe to notifications for various events in Vault. Includes support
+      for filtering, permissions, and cluster configurations with K-V secrets.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/events">Events</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowSpan={2} style={{verticalAlign: 'middle'}}>
+    Vault GUI
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      New LDAP secrets engine GUI.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration/ui">Vault UI guide</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      &bull; New landing page dashboard.<br />
+      &bull; View secrets you have read access to under your directory.<br />
+      &bull; View diffs between previous and new secret versions.<br />
+      &bull; Copy and paste secret paths from the GUI to the Vault CLI or API.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration/ui">Vault UI guide</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td rowSpan={2} style={{verticalAlign: 'middle'}}>
+      Secrets management
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Connect to Google Cloud Platform (GCP) Cloud SQL instances using native
+      IAM credentials.
+      <br /><br />
+      Learn more:&nbsp;
+      <a href="/vault/docs/sync/gcpsm">Google Cloud Platform Secret Manager</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Improved TTL management for database credentials with configurable
+      credential rotation.
+      <br /><br />
+      Learn more: <a href="/vault/api-docs/secret">Secrets engines</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Enterprise updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Release</th>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Secrets syncing
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Sync Key/Value (KV) v2 data between Vault and secrets managers from AWS,
+      Azure, Google Cloud Platform (GCP), GitHub, and Vercel.
+      <br /><br />
+      Learn more: <a href="/vault/docs/sync">Secrets Sync</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Public Key Infrastructure (PKI)
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Control Vault PKI issued certificates with the Certificate Issuance
+      External Policy Service (CIEPS) to ensure consistency and compliance to
+      enterprise standards.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/pki/cieps">Certificate Issuance External Policy Service (CIEPS)</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Replication
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Holistic improvements to cluster replication including problem detection
+      and remediation.
+      <br /><br />
+      Learn more: <a href="/vault/docs/enterprise/replication">Vault Enterprise replication</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Seal High Availability
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>BETA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Enables Vault administrators to configure multiple KMS for seal keys to
+      ensure Vault availability in the event a single KMS becomes unavailable.
+      <br /><br />
+      Learn more: <a href="/vault/docs/configuration/seal/seal-ha">Seal wrap</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Authentication
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Authenticate to Vault with your SAML identity provider.
+      <br /><br />
+      Learn more: <a href="/vault/docs/auth/saml">SAML auth method</a>
+    </td>
+  </tr>
+
+  </tbody>
+</table>
+
+## Feature deprecations and EOL
+
+Deprecated in 1.15 | Retired in 1.15
+------------------ | ---------------
+None | None
+
+@include 'release-notes/deprecation-note.mdx'

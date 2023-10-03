@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <EmberWormhole @to="modal-wormhole">
-  <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" data-test-modal-div>
+  <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" data-test-modal-div ...attributes>
     <div class="modal-background" role="button" {{on "click" @onClose}} data-test-modal-background={{@title}}></div>
     <div class="modal-card">
       <header class="modal-card-head">

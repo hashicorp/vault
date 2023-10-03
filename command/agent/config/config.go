@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package config
 
@@ -171,6 +171,8 @@ type ExecConfig struct {
 	Command                []string  `hcl:"command,attr" mapstructure:"command"`
 	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
 	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
+	ChildProcessStdout     string    `mapstructure:"child_process_stdout"`
+	ChildProcessStderr     string    `mapstructure:"child_process_stderr"`
 }
 
 func NewConfig() *Config {

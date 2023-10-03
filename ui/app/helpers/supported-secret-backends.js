@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
@@ -18,6 +18,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'transform',
   'keymgmt',
   'kubernetes',
+  'ldap',
 ];
 
 export function supportedSecretBackends() {

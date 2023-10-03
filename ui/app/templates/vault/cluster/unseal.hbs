@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.showLicenseError}}
-  <div class="section is-flex-v-centered-tablet is-flex-1 is-fullwidth">
+  <div class="section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
     <div class="columns is-centered is-gapless is-fullwidth">
       <EmptyState
         class="empty-state-transparent"
@@ -56,7 +61,7 @@
     <Page.footer>
       <div class="box is-borderless is-shadowless">
         <p>
-          <ExternalLink @href="https://www.vaultproject.io/docs/concepts/seal">
+          <ExternalLink @href="https://developer.hashicorp.com/vault/docs/concepts/seal">
             Seal/unseal documentation
           </ExternalLink>
         </p>

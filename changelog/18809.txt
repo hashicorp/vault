@@ -1,0 +1,3 @@
+```release-note:bug
+activity (enterprise): Fix misattribution of entities to no or child namespace auth methods
+```

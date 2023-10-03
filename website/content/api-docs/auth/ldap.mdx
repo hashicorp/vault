@@ -74,7 +74,8 @@ This endpoint configures the LDAP auth method.
 - `userfilter` `(string: "")` – An optional LDAP user search filter.
   The template can access the following context variables: UserAttr, Username.
   The default is `({{.UserAttr}}={{.Username}})`, or `({{.UserAttr}}={{.Username@.upndomain}})`
-  if `upndomain` is set.
+  if `upndomain` is set. In order for the `userfilter` to be applied,
+  both `binddn` and `bindpass` must be set, or `discoverdn` must be set to `true`.
 - `anonymous_group_search` `(bool: false)` - Use anonymous binds when performing
   LDAP group searches (note: even when `true`, the initial credentials will still
   be used for the initial connection test).
@@ -447,8 +448,8 @@ This endpoint allows you to log in with LDAP credentials
 ### Parameters
 
 - `username` `(string: <required>)` – The username of the LDAP user
-- `password` `(string: <required>)` – The password for the LDAP user. 
-When authenticating with the Vault CLI, i.e. `vault login -method=ldap username=mitchellh` 
+- `password` `(string: <required>)` – The password for the LDAP user.
+When authenticating with the Vault CLI, i.e. `vault login -method=ldap username=mitchellh`
 the password can alternatively be supplied via the `VAULT_LDAP_PASSWORD` environment variable.
 
 ### Sample payload

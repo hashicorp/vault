@@ -65,9 +65,9 @@ flags](/vault/docs/commands) included on all commands.
 
 ### Output options
 
-- `-field` `(string: "")` - Print only the field with the given name. Specifying
-  this option will take precedence over other formatting directives. The result
-  will not have a trailing newline making it ideal for piping to other processes.
+- `-field` `(string: "")` - Print only the field with the given name, in the format
+  specified in the `-format` directive. The result will not have a trailing
+  newline making it ideal for piping to other processes.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", "yaml", or "raw". This can also be specified

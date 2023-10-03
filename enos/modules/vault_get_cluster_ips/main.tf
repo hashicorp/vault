@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -19,124 +19,97 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "node_public_ip" {
-  type        = string
-  description = "The primary node public ip"
-  default     = ""
+variable "vault_instance_count" {
+  type        = number
+  description = "The number of instances in the vault cluster"
 }
 
-variable "vault_instances" {
+variable "vault_hosts" {
   type = map(object({
     private_ip = string
     public_ip  = string
   }))
-  description = "The vault cluster instances that were created"
-}
-
-variable "added_vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster instances that were added"
-  default     = {}
+  description = "The vault cluster hosts. These are required to map private ip addresses to public addresses."
 }
 
 locals {
-  leftover_primary_instances = var.node_public_ip != "" ? {
-    for k, v in var.vault_instances : k => v if contains(values(v), trimspace(var.node_public_ip))
-  } : null
-  all_instances          = var.node_public_ip != "" ? merge(var.added_vault_instances, local.leftover_primary_instances) : var.vault_instances
-  updated_instance_count = length(local.all_instances)
-  updated_instances = {
-    for idx in range(local.updated_instance_count) : idx => {
-      public_ip  = values(local.all_instances)[idx].public_ip
-      private_ip = values(local.all_instances)[idx].private_ip
+  follower_hosts_list = [for idx in range(var.vault_instance_count - 1) : {
+    private_ip = local.follower_private_ips[idx]
+    public_ip  = local.follower_public_ips[idx]
     }
+  ]
+  follower_hosts = {
+    for idx in range(var.vault_instance_count - 1) : idx => try(local.follower_hosts_list[idx], null)
   }
-  node_ip = var.node_public_ip != "" ? var.node_public_ip : local.updated_instances[0].public_ip
-  instance_private_ips = [
-    for k, v in values(tomap(local.updated_instances)) :
-    tostring(v["private_ip"])
+  follower_private_ips = jsondecode(enos_remote_exec.get_follower_private_ips.stdout)
+  follower_public_ips = [for idx in range(var.vault_instance_count) : var.vault_hosts[idx].public_ip if contains(
+    local.follower_private_ips, var.vault_hosts[idx].private_ip)
   ]
-  follower_public_ips = [
-    for k, v in values(tomap(local.updated_instances)) :
-    tostring(v["public_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-  ]
-  follower_private_ips = [
-    for k, v in values(tomap(local.updated_instances)) :
-    tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-  ]
+  leader_host = {
+    private_ip = local.leader_private_ip
+    public_ip  = local.leader_public_ip
+  }
+  leader_private_ip = trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+  leader_public_ip = element([
+    for idx in range(var.vault_instance_count) : var.vault_hosts[idx].public_ip if var.vault_hosts[idx].private_ip == local.leader_private_ip
+  ], 0)
+  private_ips = [for k, v in values(tomap(var.vault_hosts)) : tostring(v["private_ip"])]
 }
 
 resource "enos_remote_exec" "get_leader_private_ip" {
   environment = {
-    VAULT_ADDR                 = "http://127.0.0.1:8200"
-    VAULT_TOKEN                = var.vault_root_token
-    VAULT_INSTALL_DIR          = var.vault_install_dir
-    VAULT_INSTANCE_PRIVATE_IPS = jsonencode(local.instance_private_ips)
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.vault_root_token
+    VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/scripts/get-leader-private-ip.sh")]
 
   transport = {
     ssh = {
-      host = local.node_ip
+      host = var.vault_hosts[0].public_ip
     }
   }
 }
 
-output "leftover_primary_instances" {
-  value = local.leftover_primary_instances
+resource "enos_remote_exec" "get_follower_private_ips" {
+  environment = {
+    VAULT_ADDR                 = "http://127.0.0.1:8200"
+    VAULT_TOKEN                = var.vault_root_token
+    VAULT_LEADER_PRIVATE_IP    = local.leader_private_ip
+    VAULT_INSTANCE_PRIVATE_IPS = jsonencode(local.private_ips)
+    VAULT_INSTALL_DIR          = var.vault_install_dir
+  }
+
+  scripts = [abspath("${path.module}/scripts/get-follower-private-ips.sh")]
+
+  transport = {
+    ssh = {
+      host = var.vault_hosts[0].public_ip
+    }
+  }
 }
 
-output "all_instances" {
-  value = local.all_instances
-}
-
-output "updated_instance_count" {
-  value = local.updated_instance_count
-}
-
-output "updated_instances" {
-  value = local.updated_instances
-}
-
-output "leader_private_ip" {
-  value = trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-}
-
-output "leader_public_ip" {
-  value = element([
-    for k, v in values(tomap(local.all_instances)) :
-    tostring(v["public_ip"]) if v["private_ip"] == trimspace(enos_remote_exec.get_leader_private_ip.stdout)
-  ], 0)
-}
-
-output "vault_instance_private_ips" {
-  value = jsonencode(local.instance_private_ips)
-}
-
-output "follower_public_ips" {
-  value = local.follower_public_ips
-}
-
-output "follower_public_ip_1" {
-  value = element(local.follower_public_ips, 0)
-}
-
-output "follower_public_ip_2" {
-  value = element(local.follower_public_ips, 1)
+output "follower_hosts" {
+  value = local.follower_hosts
 }
 
 output "follower_private_ips" {
   value = local.follower_private_ips
 }
 
-output "follower_private_ip_1" {
-  value = element(local.follower_private_ips, 0)
+output "follower_public_ips" {
+  value = local.follower_public_ips
 }
 
-output "follower_private_ip_2" {
-  value = element(local.follower_private_ips, 1)
+output "leader_host" {
+  value = local.leader_host
+}
+
+output "leader_private_ip" {
+  value = local.leader_private_ip
+}
+
+output "leader_public_ip" {
+  value = local.leader_public_ip
 }

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: display, width, height, float, visibility, position, alignment. */
@@ -23,6 +23,13 @@
 }
 
 // position
+.top-right-absolute {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
 .is-in-bottom-right {
   position: absolute;
   bottom: 1rem;
@@ -34,6 +41,10 @@
   position: relative;
 }
 
+.top-xxs {
+  top: $spacing-xxs;
+}
+
 // visibility
 .is-invisible {
   visibility: hidden;
@@ -42,6 +53,10 @@
 // width and height
 .is-fullwidth {
   width: 100%;
+}
+
+.is-three-fourths-width {
+  width: 75%;
 }
 
 .is-auto-width {

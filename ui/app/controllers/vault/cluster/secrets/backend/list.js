@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { or } from '@ember/object/computed';
@@ -17,6 +17,15 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
   queryParams: ['page', 'pageFilter', 'tab'],
 
   tab: '',
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   filterIsFolder: computed('filter', function () {
     return !!keyIsFolder(this.filter);

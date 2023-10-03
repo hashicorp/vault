@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import sinon from 'sinon';
@@ -11,43 +11,6 @@ module('Unit | Model | secret-engine', function (hooks) {
   setupTest(hooks);
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-  });
-
-  module('modelTypeForKV', function () {
-    test('is secret by default', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine');
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret');
-    });
-
-    test('is secret-v2 for kv v2', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'kv',
-      });
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
-    });
-
-    test('is secret-v2 for generic v2', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'kv',
-      });
-
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
-    });
-
-    test('is secret when v2 if not kv or generic', function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {
-        version: 2,
-        type: 'ssh',
-      });
-
-      assert.strictEqual(model.get('modelTypeForKV'), 'secret');
-    });
   });
 
   module('formFields', function () {

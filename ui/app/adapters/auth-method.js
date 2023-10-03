@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -66,6 +66,12 @@ export default ApplicationAdapter.extend({
 
   exchangeOIDC(path, state, code) {
     return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
+  },
+
+  pollSAMLToken(path, token_poll_id, client_verifier) {
+    return this.ajax(`/v1/auth/${encodePath(path)}/token`, 'PUT', {
+      data: { token_poll_id, client_verifier },
+    });
   },
 
   tune(path, data) {

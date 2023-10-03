@@ -12,11 +12,12 @@ The Remount documentation details the endpoints required to trigger and monitor 
 
 ## Move backend
 
-The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This process works for both secret 
+The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. Remounting works for both secret
 engines and auth methods.
 
-The remount operation returns a migration ID to the user. The user may utilize the migration ID to look up 
-the status of the mount migration. More details about the remount operation are described in 
+Vault returns a migration ID when the remount operation completes. You
+can use the migration ID to look up the status of the mount migration.
+More details about the remount operation are described in
 [Mount Migration](/vault/docs/concepts/mount-migration).
 
 ~> Note: This endpoint requires a policy with both `sudo` and `update` capabilities to `sys/remount`

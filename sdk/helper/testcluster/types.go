@@ -4,6 +4,7 @@
 package testcluster
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -53,7 +54,8 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions map[string]string
+	StorageOptions      map[string]string
+	AdditionalListeners []VaultNodeListenerConfig
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -102,6 +104,11 @@ type ClusterOptions struct {
 	AdministrativeNamespacePath string
 }
 
+type VaultNodeListenerConfig struct {
+	Port            int
+	ChrootNamespace string
+}
+
 type CA struct {
 	CACert        *x509.Certificate
 	CACertBytes   []byte
@@ -109,4 +116,11 @@ type CA struct {
 	CACertPEMFile string
 	CAKey         *ecdsa.PrivateKey
 	CAKeyPEM      []byte
+}
+
+type ClusterStorage interface {
+	Start(context.Context, *ClusterOptions) error
+	Cleanup() error
+	Opts() map[string]interface{}
+	Type() string
 }

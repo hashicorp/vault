@@ -126,7 +126,12 @@ These are the currently-available general configuration options:
 
 - `exit_after_auth` `(bool: false)` - If set to `true`, the agent will exit
   with code `0` after a single successful auth, where success means that a
-  token was retrieved and all sinks successfully wrote it
+  token was retrieved and all sinks successfully wrote it. If you have
+  `template` stanzas defined in your agent configuration, the agent
+  waits for the configured templates to render successfully before
+  exiting. If you use environment templates (`env_template` ) and set
+  `exit_after_auth` to true, Vault agent will not run the child processes
+  defined in your `exec` stanza.
 
 - `disable_idle_connections` `(string array: [])` - A list of strings that disables idle connections for various features in Vault Agent.
   Valid values include: `auto-auth`, `caching`, `proxying`, and `templating`. `proxying` configures this for the API proxy, which is

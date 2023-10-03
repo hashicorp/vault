@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -117,6 +117,30 @@ func TestWriteCommand_Run(t *testing.T) {
 			}
 		})
 	}
+
+	// If we ask for a field and get an empty result, do not output "Success!" or anything else
+	t.Run("field_from_nothing", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testWriteCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-field", "somefield",
+			"secret/write/foo", "foo=bar",
+		})
+		if exp := 0; code != exp {
+			t.Fatalf("expected %d to be %d: %q", code, exp, ui.ErrorWriter.String())
+		}
+
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if combined != "" {
+			t.Errorf("expected %q to be empty", combined)
+		}
+	})
 
 	t.Run("force", func(t *testing.T) {
 		t.Parallel()

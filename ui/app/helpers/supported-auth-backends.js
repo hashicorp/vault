@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
@@ -72,8 +72,23 @@ const SUPPORTED_AUTH_BACKENDS = [
   },
 ];
 
+const ENTERPRISE_AUTH_METHODS = [
+  {
+    type: 'saml',
+    typeDisplay: 'SAML',
+    description: 'Authenticate using SAML provider.',
+    tokenPath: 'client_token',
+    displayNamePath: 'display_name',
+    formAttributes: ['role'],
+  },
+];
+
 export function supportedAuthBackends() {
   return SUPPORTED_AUTH_BACKENDS;
+}
+
+export function allSupportedAuthBackends() {
+  return [...SUPPORTED_AUTH_BACKENDS, ...ENTERPRISE_AUTH_METHODS];
 }
 
 export default buildHelper(supportedAuthBackends);

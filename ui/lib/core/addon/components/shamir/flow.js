@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { A } from '@ember/array';
 import { action } from '@ember/object';
 import { service } from '@ember/service';

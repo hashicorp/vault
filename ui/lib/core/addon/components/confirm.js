@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@ember/component';
@@ -32,9 +32,6 @@ export default Component.extend({
   openTrigger: null,
   height: 0,
   focusTrigger: null,
-  style: computed('height', function () {
-    return `height: ${this.height}px`;
-  }),
   wormholeReference: null,
   wormholeId: computed('elementId', function () {
     return `confirm-${this.elementId}`;
@@ -51,7 +48,7 @@ export default Component.extend({
     const height = this.openTrigger
       ? this.element.querySelector('.confirm-overlay').clientHeight
       : this.element.querySelector('.confirm').clientHeight;
-    this.set('height', height);
+    this.element.querySelector('.confirm-wrapper').style = `height: ${height}px;`;
   },
   actions: {
     onTrigger: function (itemId, e) {

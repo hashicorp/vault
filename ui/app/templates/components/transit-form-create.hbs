@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form data-test-transit-create-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="create" @noun="transit key" />
     <div class="field">
       <label for="key-name" class="is-label">Name</label>
-      <Input id="key-name" @value={{@key.name}} class="input" data-test-transit-key-name={{true}} />
+      <Input id="key-name" @value={{@key.name}} class="input" data-test-transit-key="name" />
     </div>
     <div class="field">
       <TtlPicker
@@ -25,7 +30,7 @@
             name="key-type"
             id="key-type"
             onchange={{action (mut @key.type) value="target.value"}}
-            data-test-transit-key-type={{true}}
+            data-test-transit-key="type"
           >
             <option selected={{eq @key.type "aes128-gcm96"}} value="aes128-gcm96">
               aes128-gcm96
@@ -69,7 +74,7 @@
           class="styled"
           checked={{@key.exportable}}
           onchange={{@setValueOnKey}}
-          data-test-transit-key-exportable={{true}}
+          data-test-transit-key="exportable"
         />
         <label for="key-exportable" class="is-label">
           Exportable
@@ -92,7 +97,7 @@
             class="styled"
             checked={{@key.derived}}
             onchange={{@derivedChange}}
-            data-test-transit-key-derived={{true}}
+            data-test-transit-key="derived"
           />
           <label for="key-derived" class="is-label">
             Derived
@@ -105,7 +110,7 @@
         <div class="b-checkbox">
           <input
             type="checkbox"
-            data-test-transit-key-convergent-encryption
+            data-test-transit-key="convergent-encryption"
             id="key-convergent"
             class="styled"
             checked={{@key.convergentEncryption}}
@@ -121,7 +126,7 @@
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
-        data-test-transit-key-create
+        data-test-transit-key="create"
         type="submit"
         disabled={{@requestInFlight}}
         class="button is-primary {{if @requestInFlight 'is-loading'}}"

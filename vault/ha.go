@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -520,6 +520,20 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			continue
 		}
 
+		// If the backend is a FencingHABackend, register the lock with it so it can
+		// correctly fence all writes from now on  (i.e. assert that we still hold
+		// the lock atomically with each write).
+		if fba, ok := c.ha.(physical.FencingHABackend); ok {
+			err := fba.RegisterActiveNodeLock(lock)
+			if err != nil {
+				// Can't register lock, bail out
+				c.heldHALock = nil
+				lock.Unlock()
+				c.logger.Error("failed registering lock with fencing backend, giving up active state")
+				continue
+			}
+		}
+
 		c.logger.Info("acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
@@ -571,9 +585,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(activeCtx, nil)
+			c.seal.ClearBarrierConfig(activeCtx)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(activeCtx, nil)
+				c.seal.ClearRecoveryConfig(activeCtx)
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
@@ -825,7 +839,18 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 			go func() {
 				// Bind locally, as the race detector is tripping here
 				lopCount := opCount
-				isLeader, _, newClusterAddr, _ := c.Leader()
+				isLeader, _, newClusterAddr, err := c.Leader()
+				if err != nil {
+					// This is debug level because it's not really something the user
+					// needs to see typically. This will only really fail if we are sealed
+					// or the HALock fails (e.g. can't connect to Consul or elect raft
+					// leader) and other things in logs should make those kinds of
+					// conditions obvious. However when debugging, it is useful to know
+					// for sure why a standby is not seeing the leadership update which
+					// could be due to errors being returned or could be due to some other
+					// bug.
+					c.logger.Debug("periodicLeaderRefresh fail to fetch leader info", "err", err)
+				}
 
 				// If we are the leader reset the clusterAddr since the next
 				// failover might go to the node that was previously active.
@@ -951,10 +976,13 @@ func (c *Core) reloadRootKey(ctx context.Context) error {
 }
 
 func (c *Core) reloadShamirKey(ctx context.Context) error {
-	_ = c.seal.SetBarrierConfig(ctx, nil)
-	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+	_ = c.seal.ClearBarrierConfig(ctx)
+
+	cfg, _ := c.seal.BarrierConfig(ctx)
+	if cfg == nil {
 		return nil
 	}
+
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
@@ -975,11 +1003,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	shamirWrapper, err := c.seal.GetShamirWrapper()
-	if err != nil {
-		return err
-	}
-	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
+	return c.seal.GetAccess().SetShamirSealKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <section class="modal-card-body">
   {{#if this.encodedToken}}
     <p class="has-bottom-margin-l" data-test-dr-token-flow-step="show-token">
@@ -11,10 +16,7 @@
         <p class="help has-text-grey has-bottom-margin-xs">
           This is a one-time token that will be used to generate the operation token. Please save it.
         </p>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          <HoverCopyButton @copyValue={{this.encodedToken}} />
-          <code class="is-word-break" data-test-shamir-encoded-token>{{this.encodedToken}}</code>
-        </div>
+        <Hds::Copy::Snippet @textToCopy={{this.encodedToken}} data-test-shamir-encoded-token />
       </div>
       {{#if this.otp}}
         <div class="has-bottom-margin-xl">
@@ -24,10 +26,7 @@
           <p class="help has-text-grey has-bottom-margin-xs">
             This OTP will be used to decode the generated operation token. Please save it.
           </p>
-          <div class="message is-list has-copy-button" tabindex="-1">
-            <HoverCopyButton @copyValue={{this.otp}} />
-            <code class="is-word-break">{{this.otp}}</code>
-          </div>
+          <Hds::Copy::Snippet @textToCopy={{this.otp}} />
         </div>
       {{/if}}
       <div class="has-bottom-margin-xl">
@@ -43,21 +42,18 @@
             the operation token.
           {{/if}}
         </p>
-        <div class="message is-list has-copy-button" tabindex="-1">
-          {{! template-lint-disable quotes }}
-          {{#let
-            (if
-              this.otp
-              (concat 'vault operator generate-root -dr-token -otp="' this.otp '" -decode="' this.encodedToken '"')
-              (concat 'vault operator generate-root -dr-token -otp="<enter your otp here>" -decode="' this.encodedToken '"')
-            )
-            as |cmd|
-          }}
-            <HoverCopyButton @copyValue={{cmd}} />
-            <code class="is-word-break">{{cmd}}</code>
-          {{/let}}
-          {{! template-lint-enable quotes }}
-        </div>
+        {{! template-lint-disable quotes }}
+        {{#let
+          (if
+            this.otp
+            (concat 'vault operator generate-root -dr-token -otp="' this.otp '" -decode="' this.encodedToken '"')
+            (concat 'vault operator generate-root -dr-token -otp="<enter your otp here>" -decode="' this.encodedToken '"')
+          )
+          as |cmd|
+        }}
+          <CodeSnippet @codeBlock={{cmd}} />
+        {{/let}}
+        {{! template-lint-enable quotes }}
       </div>
     </div>
     <div>

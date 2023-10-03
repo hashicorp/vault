@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -422,7 +422,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	}
 
 	// Remount auth method using registered shadow plugin
-	unmountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	unmountPlugin(t, c.systemBackend, consts.PluginTypeCredential, "")
 	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
 
 	// Verify auth table has changed
@@ -439,7 +439,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 	}
 
 	// Remount auth method
-	unmountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
+	unmountPlugin(t, c.systemBackend, consts.PluginTypeCredential, "")
 	mountPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential, "", "")
 
 	// Verify auth table has changed
@@ -935,23 +935,15 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 	}
 }
 
-func unmountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
+func unmountPlugin(t *testing.T, sys *SystemBackend, pluginType consts.PluginType, path string) {
 	t.Helper()
 	var mountPath string
 	if path == "" {
 		mountPath = mountTable(pluginType)
 	} else {
-		mountPath = mountTableWithPath(consts.PluginTypeSecrets, path)
+		mountPath = mountTableWithPath(pluginType, path)
 	}
 	req := logical.TestRequest(t, logical.DeleteOperation, mountPath)
-	req.Data = map[string]interface{}{
-		"type": pluginName,
-	}
-	if version != "" {
-		req.Data["config"] = map[string]interface{}{
-			"plugin_version": version,
-		}
-	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)

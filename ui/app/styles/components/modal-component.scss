@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .modal {
@@ -110,6 +110,16 @@ pre {
   }
 }
 
+.is-danger {
+  .modal-card-head {
+    background: $red-010;
+    border: 1px solid $red-100;
+  }
+  .modal-card-title {
+    color: $red-dark;
+  }
+}
+
 .modal-confirm-section {
   margin: $spacing-xl 0 $spacing-m;
 }
@@ -117,20 +127,6 @@ pre {
 .modal-card-foot-outlined {
   background: $ui-gray-050;
   border-top: $base-border;
-}
-
-.modal-radio-button {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: $spacing-xs;
-
-  input {
-    top: 2px;
-  }
-
-  .helper-text {
-    margin-left: 10px;
-  }
 }
 
 // customize spacing (.modal-card-body is restricted to padding: 20px)

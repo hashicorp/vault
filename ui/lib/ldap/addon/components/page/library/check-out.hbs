@@ -1,0 +1,50 @@
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      Check-out
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<Hds::Alert @type="inline" @color="warning" class="has-top-margin-m" as |Alert|>
+  <Alert.Title>Warning</Alert.Title>
+  <Alert.Description data-test-alert-description>
+    You won’t be able to access these credentials later, so please copy them now.
+  </Alert.Description>
+</Hds::Alert>
+
+<div class="has-top-margin-m">
+  <InfoTableRow @label="Account name" @value={{@credentials.account}} />
+  <InfoTableRow @label="Password">
+    <MaskedInput @value={{@credentials.password}} @displayOnly={{true}} @allowCopy={{true}} />
+  </InfoTableRow>
+  <InfoTableRow @label="Lease ID" @value={{@credentials.lease_id}} />
+  <InfoTableRow @label="Lease duration" @value={{@credentials.lease_duration}} @formatTtl={{true}} />
+  <InfoTableRow @label="Lease renewable">
+    <div class="is-flex-v-centered">
+      <Icon
+        @name={{if @credentials.renewable "check-circle" "x-circle"}}
+        class="is-marginless {{if @credentials.renewable 'has-text-success' 'has-text-danger'}}"
+      />
+      <span class="has-left-margin-xs">
+        {{if @credentials.renewable "True" "False"}}
+      </span>
+    </div>
+  </InfoTableRow>
+</div>
+
+<div class="has-top-margin-xl has-bottom-margin-l">
+  <button
+    data-test-done
+    class="button is-primary"
+    type="button"
+    {{on "click" (transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts")}}
+  >
+    Done
+  </button>
+</div>

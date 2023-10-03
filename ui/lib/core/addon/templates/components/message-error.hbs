@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.displayErrors}}
   {{#each this.displayErrors as |error|}}
     <Hds::Alert data-test-message-error @type="inline" @color="critical" class="has-top-margin-s has-bottom-margin-s" as |A|>
