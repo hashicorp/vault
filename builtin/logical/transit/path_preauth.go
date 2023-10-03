@@ -45,6 +45,8 @@ func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d
 		da := logical.NewDelegatedAuthenticationError(d.Get("accessor").(string), paths.Join(d.Get("path").(string), req.Data["username"].(string)), nil)
 		delete(req.Data, "username")
 		return nil, da
+	} else {
+		delete(req.Data, "password")
 	}
 	return &logical.Response{}, nil
 }
