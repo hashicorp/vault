@@ -67,6 +67,11 @@ on:
         required: false
         default: go-test-reports
         type: string
+      checkout-ref:
+        description: The ref to use for checkout.
+        required: false
+        default: ${{ github.ref }}
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -78,6 +83,8 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -214,6 +221,8 @@ jobs:
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}

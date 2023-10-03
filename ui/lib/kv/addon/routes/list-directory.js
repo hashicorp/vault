@@ -30,7 +30,6 @@ export default class KvSecretsListRoute extends Route {
         backend,
         responsePath: 'data.keys',
         page: Number(params.page) || 1,
-        size: Number(params.currentPageSize),
         pageFilter: params.pageFilter,
         pathToSecret,
       })

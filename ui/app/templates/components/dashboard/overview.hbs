@@ -7,7 +7,7 @@
         {{#if @license}}
           <Dashboard::ClientCountCard @license={{@license}} />
         {{/if}}
-        {{#if @isRootNamespace}}
+        {{#if (and @isRootNamespace (has-permission "status" routeParams="replication"))}}
           <Dashboard::ReplicationCard
             @replication={{@replication}}
             @version={{@version}}

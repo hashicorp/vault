@@ -1,46 +1,47 @@
 ---
 layout: docs
-page_title: Secrets Sync
+page_title: Secrets sync
 description: Secrets sync allows you to safely sync Vault-managed secrets with external destinations.
 ---
 
-# Secrets Sync
 
-Secrets sync enables users to manage their secrets with Vault while syncing a subset of them into
-external secret store destinations. Secrets that will be synced must be individually associated
-with each desired destination. This means that associating a secret named `my-secret` with a
-destinated named `my-aws` will not automatically sync to second destination named `my-gcp`.
+# Secrets sync
 
-<Note>
-	Unsyncing a secret either by deleting the secret from Vault or from deleting its association
-	is a hard-delete option. This means it is immediately removed from the external system and bypasses
-	any soft-deletion states or recovery mechanisms.
-</Note>
+<EnterpriseAlert product="vault" />
+
+@include 'alerts/beta.mdx'
+
+In certain circumstances, fetching secrets directly from Vault is impossible or impractical. To help with this challenge,
+Vault can maintain a one-way sync for KVv2 secrets into various destinations that are easier to access for some clients.
+With this, Vault remains the system of records but can cache a subset of secrets on various external systems acting as
+trusted last-mile delivery systems.
+
+A secret that is associated from a Vault KVv2 Secrets Engine into an external destination is actively managed by a continuous
+process. If the secret value is updated in Vault, the secret is updated in the destination as well. If the secret is deleted
+from Vault, it is deleted on the external system as well. This process is asynchronous and event-based. Vault propagates
+modifications into the proper destinations automatically in a handful of seconds.
 
 ## Destinations
 
-Secrets can be synced into various external stores, called destinations. Destinations are configured
-separately for each type of external system. The supported destinations are listed:
+Secrets can be synced into various external systems, called destinations. The supported destinations are:
 * [AWS Secrets Manager](/vault/docs/sync/awssm)
 * [Azure Key Vault](/vault/docs/sync/azurekv)
 * [GCP Secret Manager](/vault/docs/sync/gcpsm)
 * [GitHub Repository Actions](/vault/docs/sync/github)
 * [Vercel Projects](/vault/docs/sync/vercelproject)
 
-## Assocations
+## Associations
 
-Choosing the secrets you want synced to a given destination is done by creating links between them,
-called associations. Once a destination has been successfully configured, you can begin making the
-associations to it by providing the secret's name and its mount. Each secret's association keeps
-track of its current sync status, the timestamp of its last status change, and the error code of
-the last sync or unsync operation, if it failed.
-
+Syncing a secret into one of the external systems is done by creating a connection between it and a destination, which is
+called an association. These associations are created via Vault's API by adding a KVv2 secret target to one of the configured
+destinations. Each association keeps track of that secret's current sync status, the timestamp of its last status change, and
+the error code of the last sync or unsync operation if it failed. Each destination can have any number of secret associations.
 
 ## Sync Statuses
 
-There are several sync statuses which relay information about the outcome of the last sync
+There are several sync statuses which relay information about the outcome of the latest sync
 operation to have occurred on that secret. The status information is stored inside each
-association object returned by the endpoint and, upon failure, includes an error code explaining why.
+association object returned by the endpoint and, upon failure, includes an error code describing the cause of the failure.
 
 * `SYNCING` - The sync operation for the secret is currently in-progress.
 * `SYNCED` - The sync operation was successful and sent the secret to the external destination.
@@ -53,3 +54,7 @@ association object returned by the endpoint and, upon failure, includes an error
 * `EXTERNAL_SERVICE_ERROR` - The sync or unsync operation failed due to an issue with the
 	external service provider's side.
 * `UNKNOWN` - Vault is unable to determine the current state of the secret in regards to the external service.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

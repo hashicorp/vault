@@ -430,7 +430,8 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 
 func (b *backend) cleanup(ctx context.Context) {
 	sc := b.makeStorageContext(ctx, b.storage)
-	b.acmeState.validator.Closing <- struct{}{}
+
+	b.acmeState.Shutdown(b)
 
 	b.cleanupEnt(sc)
 }

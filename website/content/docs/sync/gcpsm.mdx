@@ -4,7 +4,7 @@ page_title: Google Cloud Platform Secret Manager - Secrets Sync Destination
 description: The Google Cloud Platform Secret Manager destination syncs secrets from Vault to GCP.
 ---
 
-# Google Cloud Platform Secret Manager sync destination
+# Google Cloud Platform Secret Manager
 
 The Google Cloud Platform (GCP) Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
@@ -22,11 +22,19 @@ Prerequisites:
   [necessary permissions](/vault/docs/sync/gcpsm#permissions). [Instructions](/vault/docs/sync/gcpsm#provision-service-account)
   to provision this Service Account via Terraform can be found below.
 
-1. Configure a sync destination with the Service Account json credentials created in the previous step. See docs for
-[alternative ways](/vault/docs/secrets/gcp#authentication) to pass in the `credentials` parameter.
+1. Configure a sync destination with the Service Account JSON credentials created in the previous step. See docs for
+  [alternative ways](/vault/docs/secrets/gcp#authentication) to pass in the `credentials` parameter.
 
   ```shell-session
-  $ vault write sys/sync/destinations/gcp-sm/my-dest credentials=@path/to/credentials.json
+  $ vault write sys/sync/destinations/gcp-sm/my-dest \
+      credentials='@path/to/credentials.json'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   Key                   Value
   ---                   -----
   connection_details    map[credentials:*****]
@@ -34,19 +42,37 @@ Prerequisites:
   type                  gcp-sm
   ```
 
+  </CodeBlockConfig>
+
 ## Usage
 
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
   $ vault secrets enable -path=my-kv kv-v2
+  ```
+
+  **Output**:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   Success! Enabled the kv-v2 secrets engine at: my-kv/
   ```
+
+  </CodeBlockConfig>
 
 1. Create secrets you wish to sync with a target GCP Secret Manager.
 
   ```shell-session
-  $ vault kv put -mount=my-kv my-secret foo=bar
+  $ vault kv put -mount=my-kv my-secret foo='bar'
+  ```
+
+  **Output**:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   ==== Secret Path ====
   my-kv/data/my-secret
 
@@ -60,12 +86,14 @@ Prerequisites:
   version            1
   ```
 
-1. Create an association between your GCP Secret Manager destination and the secret to synchronize.
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
-  $ vault write sys/sync/destinations/aws-sm/my-dest/associations/set \
-      mount=my-kv \
-      secret_name=my-secret
+  $ vault write sys/sync/destinations/gcp-sm/my-dest/associations/set \
+      mount='my-kv' \
+      secret_name='my-secret'
   ```
 
   **Output:**
@@ -83,7 +111,7 @@ Prerequisites:
   </CodeBlockConfig>
 
 1. Navigate to the [Secret Manager](https://console.cloud.google.com/security/secret-manager) in the Google Cloud console
-to confirm your secret was successfully created in your GCP project.
+  to confirm your secret was successfully created in your GCP project.
 
 Moving forward, any modification on the Vault secret will be propagated in near real time to its GCP Secret Manager
 counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
@@ -179,14 +207,30 @@ to provision a GCP Service Account with the appropriate policies.
 
   ```shell-session
   $ terraform init && terraform plan
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   (...)
   Plan: 4 to add, 0 to change, 0 to destroy.
   ```
+
+  </CodeBlockConfig>
 
 1. Execute an apply to provision the Service Account.
 
   ```shell-session
   $ terraform apply
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   (...)
   Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
 
@@ -195,5 +239,11 @@ to provision a GCP Service Account with the appropriate policies.
   sync_service_account_credentials_file = "/path/to/credentials/file/gcp-sm-sync-service-account-credentials.json"
   ```
 
+  </CodeBlockConfig>
+
 The generated Service Account credentials file can then be used to configure the Vault GCP Secret Manager destination
 following the [setup](/vault/docs/sync/gcpsm#setup) steps.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

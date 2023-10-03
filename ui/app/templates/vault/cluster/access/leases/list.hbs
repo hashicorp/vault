@@ -99,15 +99,16 @@
   {{else}}
     <EmptyState @title="There are no leases matching &quot;{{this.filter}}&quot;" />
   {{/each}}
+  {{#unless this.filter}}
+    <Hds::Pagination::Numbered
+      @currentPage={{this.model.meta.currentPage}}
+      @currentPageSize={{this.model.meta.pageSize}}
+      @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
+      @showSizeSelector={{false}}
+      @totalItems={{this.model.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+    />
+  {{/unless}}
 {{else}}
   <EmptyState @title={{this.emptyTitle}} />
 {{/if}}
-
-<Hds::Pagination::Numbered
-  @currentPage={{this.model.meta.currentPage}}
-  @currentPageSize={{this.model.meta.pageSize}}
-  @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
-  @showSizeSelector={{false}}
-  @totalItems={{this.model.meta.total}}
-  @queryFunction={{this.paginationQueryParams}}
-/>

@@ -22,12 +22,12 @@ Prerequisites:
 
 1. Next you need to locate your project ID. It can be found under the `Settings` tab in your project's overview page.
 
-1. Configure a sync destination with the access token & project ID obtained in the previous steps.
+1. Configure a sync destination with the access token and project ID obtained in the previous steps.
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest \
-      access_token=<token> \
-      project_id=<project-id> \
+      access_token="$TOKEN" \
+      project_id="$PROJECT_ID" \
       deployment_environments=development \
       deployment_environments=preview \
       deployment_environments=production
@@ -52,14 +52,30 @@ Prerequisites:
 1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
 
   ```shell-session
-  $ vault secrets enable -path=my-kv kv-v2
+  $ vault secrets enable -path='my-kv' kv-v2
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   Success! Enabled the kv-v2 secrets engine at: my-kv/
   ```
 
-1. Store any KV secret into Vault.
+  </CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target Vercel project.
 
   ```shell-session
-  $ vault kv put -mount=my-kv my-secret foo=bar
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
   ==== Secret Path ====
   my-kv/data/my-secret
 
@@ -73,12 +89,14 @@ Prerequisites:
   version            1
   ```
 
-1. Create an association between your Vercel Project destination and the secret to synchronize.
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize.
 
   ```shell-session
   $ vault write sys/sync/destinations/vercel-project/my-dest/associations/set \
-      mount=my-kv \
-      secret_name=my-secret
+    mount='my-kv' \
+    secret_name='my-secret'
   ```
 
   **Output:**
@@ -88,7 +106,7 @@ Prerequisites:
   ```plaintext
   Key                   Value
   ---                   -----
-  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>]]
   store_name            my-dest
   store_type            vercel-project
   ```
@@ -102,5 +120,13 @@ Moving forward, any modification on the Vault secret will be propagated in near 
 counterpart. Creating a new secret version in Vault will overwrite the value in your Vercel Project. Deleting the secret
 or the association in Vault will delete the secret on Vercel as well.
 
-Note that Vault KVv2 secrets are multi-values while Vercel environment variables are single value. As such the secret values
-from Vault are exported as a json string.
+<Note>
+
+Vercel Project environment variables only support single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
+In the example above, the value for secret "my-secret" will be synced to Vercel as the JSON string `{"foo":"bar"}`.
+
+</Note>
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.
