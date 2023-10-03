@@ -289,7 +289,6 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 			handler(s)
 
 			var value interface{} = struct{}{}
-
 			value = s.Value
 
 			txn.Insert([]byte(s.Key), value)
