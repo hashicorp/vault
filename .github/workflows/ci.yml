@@ -28,6 +28,7 @@ jobs:
       compute-xlarge: ${{ steps.setup-outputs.outputs.compute-xlarge }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
       go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
+      checkout-ref: ${{ steps.checkout-ref-output.outputs.checkout-ref }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - id: setup-outputs
@@ -59,6 +60,14 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+      # control checking out head instead of ref by a GH label
+      # if checkout-head label is added to a PR, checkout HEAD otherwise checkout ref
+      - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.ref }}" >> "$GITHUB_ENV"
+      - if: ${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+      - id: checkout-ref-output
+        run: echo "checkout-ref=${{ env.CHECKOUT_REF }}" >> "$GITHUB_OUTPUT"
 
   diff-oss-ci:
     name: Diff OSS
@@ -117,6 +126,7 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-testonly:
@@ -161,6 +171,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-fips:
@@ -186,6 +197,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-ui:
