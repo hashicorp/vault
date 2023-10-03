@@ -60,7 +60,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
-      # control checking out head instead of ref by a GH label
+      # control checking out head instead of default ref by a GH label
       # if checkout-head label is added to a PR, checkout HEAD otherwise checkout ref
       - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
         run: echo "CHECKOUT_REF=${{ github.ref }}" >> "$GITHUB_ENV"
