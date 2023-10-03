@@ -300,9 +300,7 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 		return nil, err
 	}
 
-	data := txn.Commit()
-
-	return data, nil
+	return txn.Commit(), nil
 }
 
 // Read a snapshot into a temporary file. Return file and metadata from snapshot.
