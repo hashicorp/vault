@@ -5,6 +5,7 @@ package consul
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -14,9 +15,16 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
+// LatestConsulVersion is the most recent version of Consul which is used unless
+// another version is specified in the test config or environment. This will
+// probably go stale as we don't always update it on every release but we rarely
+// rely on specific new Consul functionality so that's probably not a problem.
+const LatestConsulVersion = "1.15.3"
+
 type Config struct {
 	docker.ServiceHostPort
-	Token string
+	Token             string
+	ContainerHTTPAddr string
 }
 
 func (c *Config) APIConfig() *consulapi.Config {
@@ -26,19 +34,39 @@ func (c *Config) APIConfig() *consulapi.Config {
 	return apiConfig
 }
 
-// PrepareTestContainer creates a Consul docker container.  If version is empty,
-// the Consul version used will be given by the environment variable
-// CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
-// the latest Consul version.
+// PrepareTestContainer is a test helper that creates a Consul docker container
+// or fails the test if unsuccessful. See RunContainer for more details on the
+// configuration.
 func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBootstrapSetup bool) (func(), *Config) {
 	t.Helper()
 
+	cleanup, config, err := RunContainer(context.Background(), "", version, isEnterprise, doBootstrapSetup)
+	if err != nil {
+		t.Fatalf("failed starting consul: %s", err)
+	}
+	return cleanup, config
+}
+
+// RunContainer runs Consul in a Docker container unless CONSUL_HTTP_ADDR is
+// already found in the environment. Consul version is determined by the version
+// argument. If version is empty string, the CONSUL_DOCKER_VERSION environment
+// variable is used and if that is empty too, LatestConsulVersion is used
+// (defined above). If namePrefix is provided we assume you have chosen a unique
+// enough prefix to avoid collision with other tests that may be running in
+// parallel and so _do not_ add an additional unique ID suffix. We will also
+// ensure previous instances are deleted and leave the container running for
+// debugging. This is useful for using Consul as part of at testcluster (i.e.
+// when Vault is in Docker too). If namePrefix is empty then a unique suffix is
+// added since many older tests rely on a uniq instance of the container. This
+// is used by `PrepareTestContainer` which is used typically in tests that rely
+// on Consul but run tested code within the test process.
+func RunContainer(ctx context.Context, namePrefix, version string, isEnterprise bool, doBootstrapSetup bool) (func(), *Config, error) {
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
-			t.Fatal(err)
+			return nil, nil, err
 		}
-		return func() {}, &Config{ServiceHostPort: *shp, Token: os.Getenv("CONSUL_HTTP_TOKEN")}
+		return func() {}, &Config{ServiceHostPort: *shp, Token: os.Getenv("CONSUL_HTTP_TOKEN")}, nil
 	}
 
 	config := `acl { enabled = true default_policy = "deny" }`
@@ -47,7 +75,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 		if consulVersion != "" {
 			version = consulVersion
 		} else {
-			version = "1.11.3" // Latest Consul version, update as new releases come out
+			version = LatestConsulVersion
 		}
 	}
 	if strings.HasPrefix(version, "1.3") {
@@ -66,15 +94,18 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 		envVars = append(envVars, "CONSUL_LICENSE="+license)
 
 		if !hasLicense {
-			t.Fatalf("Failed to find enterprise license")
+			return nil, nil, fmt.Errorf("Failed to find enterprise license")
 		}
+	}
+	if namePrefix != "" {
+		name = namePrefix + name
 	}
 
 	if dockerRepo, hasEnvRepo := os.LookupEnv("CONSUL_DOCKER_REPO"); hasEnvRepo {
 		repo = dockerRepo
 	}
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
+	dockerOpts := docker.RunOptions{
 		ContainerName: name,
 		ImageRepo:     repo,
 		ImageTag:      version,
@@ -83,12 +114,25 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 		Ports:         []string{"8500/tcp"},
 		AuthUsername:  os.Getenv("CONSUL_DOCKER_USERNAME"),
 		AuthPassword:  os.Getenv("CONSUL_DOCKER_PASSWORD"),
-	})
-	if err != nil {
-		t.Fatalf("Could not start docker Consul: %s", err)
 	}
 
-	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+	// Add a unique suffix if there is no per-test prefix provided
+	addSuffix := true
+	if namePrefix != "" {
+		// Don't add a suffix if the caller already provided a prefix
+		addSuffix = false
+		// Also enable predelete and non-removal to make debugging easier for test
+		// cases with named containers).
+		dockerOpts.PreDelete = true
+		dockerOpts.DoNotAutoRemove = true
+	}
+
+	runner, err := docker.NewServiceRunner(dockerOpts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Could not start docker Consul: %s", err)
+	}
+
+	svc, _, err := runner.StartNewService(ctx, addSuffix, false, func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		shp := docker.NewServiceHostPort(host, port)
 		apiConfig := consulapi.DefaultNonPooledConfig()
 		apiConfig.Address = shp.Address()
@@ -165,7 +209,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 				}
 			}
 
-			// Configure a namespace and parition if testing enterprise Consul
+			// Configure a namespace and partition if testing enterprise Consul
 			if isEnterprise {
 				// Namespaces require Consul 1.7 or newer
 				namespaceVersion, _ := goversion.NewVersion("1.7")
@@ -229,8 +273,20 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 		}, nil
 	})
 	if err != nil {
-		t.Fatalf("Could not start docker Consul: %s", err)
+		return nil, nil, err
 	}
 
-	return svc.Cleanup, svc.Config.(*Config)
+	// Find the container network info.
+	if len(svc.Container.NetworkSettings.Networks) < 1 {
+		svc.Cleanup()
+		return nil, nil, fmt.Errorf("failed to find any network settings for container")
+	}
+	cfg := svc.Config.(*Config)
+	for _, eps := range svc.Container.NetworkSettings.Networks {
+		// Just pick the first network, we assume only one for now.
+		// Pull out the real container IP and set that up
+		cfg.ContainerHTTPAddr = fmt.Sprintf("http://%s:8500", eps.IPAddress)
+		break
+	}
+	return svc.Cleanup, cfg, nil
 }

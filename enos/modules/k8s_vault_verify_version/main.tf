@@ -12,7 +12,7 @@ terraform {
 
 locals {
   instances        = toset([for idx in range(var.vault_instance_count) : tostring(idx)])
-  expected_version = var.vault_edition == "oss" ? var.vault_product_version : "${var.vault_product_version}-ent"
+  expected_version = var.vault_edition == "ce" ? var.vault_product_version : "${var.vault_product_version}-ent"
 }
 
 resource "enos_remote_exec" "release_info" {
@@ -38,13 +38,13 @@ resource "enos_local_exec" "smoke-verify-version" {
   for_each = enos_remote_exec.release_info
 
   environment = {
-    VAULT_STATUS     = jsonencode(jsondecode(each.value.stdout).status)
     ACTUAL_VERSION   = jsondecode(each.value.stdout).version
+    BUILD_DATE       = var.vault_build_date
+    CHECK_BUILD_DATE = var.check_build_date
     EXPECTED_VERSION = var.vault_product_version,
     VAULT_EDITION    = var.vault_edition,
     VAULT_REVISION   = var.vault_product_revision,
-    CHECK_BUILD_DATE = var.check_build_date
-    BUILD_DATE       = var.vault_build_date
+    VAULT_STATUS     = jsonencode(jsondecode(each.value.stdout).status)
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-version.sh")]
