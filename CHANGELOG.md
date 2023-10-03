@@ -7,7 +7,8 @@
 
 SECURITY:
 
-* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8.[[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
 
 CHANGES:
 
@@ -246,6 +247,10 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.14.4
 ### September 27, 2023
 
+SECURITY:
+
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8. [[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
+
 CHANGES:
 
 * core (enterprise): Ensure Role Governing Policies are only applied down the namespace hierarchy
@@ -271,7 +276,7 @@ BUG FIXES:
 
 SECURITY:
 
-* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
 
 CHANGES:
 
@@ -355,9 +360,15 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.14.1
 ### July 25, 2023
 
+SECURITY
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
+
+
+
 CHANGES:
 
-* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
 * core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
 which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
 * secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
@@ -406,6 +417,10 @@ respects `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_SESSION_NA
 
 ## 1.14.0
 ### June 21, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 BREAKING CHANGES:
 
@@ -667,6 +682,10 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.13.8
 ### September 27, 2023
 
+SECURITY:
+
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8. [[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
+
 CHANGES:
 
 * core (enterprise): Ensure Role Governing Policies are only applied down the namespace hierarchy
@@ -688,7 +707,7 @@ BUG FIXES:
 
 SECURITY:
 
-* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
 
 CHANGES:
 
@@ -759,9 +778,13 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.13.5
 ### July 25, 2023
 
+SECURITY:
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
+
 CHANGES:
 
-* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
 * core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
 which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
 * secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
@@ -1352,6 +1375,10 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.12.9
 ### July 25, 2023
 
+SECURITY:
+
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
+
 CHANGES:
 
 * secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
@@ -1436,6 +1463,10 @@ have its own changelog entry.  Fix wrong lock used in ListAuths link meta interf
 
 ## 1.12.7
 ### June 08, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 CHANGES:
 
@@ -1980,6 +2011,10 @@ have its own changelog entry. [[GH-21260](https://github.com/hashicorp/vault/pul
 
 ## 1.11.11
 ### June 08, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 CHANGES:
 
