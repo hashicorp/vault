@@ -54,7 +54,7 @@ export default Model.extend({
     editType: 'json',
     helpText:
       'A policy is an object in AWS that, when associated with an identity or resource, defines their permissions.',
-    defaultValue: '{\n}',
+    // Cannot have a default_value on policy_document because in some cases AWS expects this value to be empty.
   }),
   fields: computed('credentialType', function () {
     const credentialType = this.credentialType;
