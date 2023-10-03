@@ -1527,6 +1527,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			// Found it, now form the login path and issue the request
+			// TODO: Prevent recursive loops
 			path := paths.Join("auth", mount.Path, da.Path())
 			req2, err := req.Clone()
 			if err != nil {
@@ -1541,7 +1542,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				}
 			}
 
-			resp, auth, err = c.handleLoginRequest(ctx, req2)
+			resp, err = c.handleCancelableRequest(ctx, req2)
 			if err == logical.ErrInvalidCredentials {
 				return handleInvalidCreds()
 			} else if err != nil {
