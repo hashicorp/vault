@@ -344,12 +344,18 @@ func (updater *StaticSecretCacheUpdater) Run(ctx context.Context) error {
 		updater.logger.Info("static secret cache updater subsystem stopped")
 	}()
 
+tokenLoop:
 	for {
-		// Wait for the auto-auth token to be populated...
-		if updater.tokenSink.(sink.SinkReader).Token() != "" {
-			break
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			// Wait for the auto-auth token to be populated...
+			if updater.tokenSink.(sink.SinkReader).Token() != "" {
+				break tokenLoop
+			}
+			time.Sleep(100 * time.Millisecond)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	shouldBackoff := false

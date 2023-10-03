@@ -254,6 +254,10 @@ func (c *Config) ValidateConfig() error {
 		}
 	}
 
+	if c.Cache != nil && c.Cache.CacheStaticSecrets && c.AutoAuth == nil {
+		return fmt.Errorf("cache.cache_static_secrets=true requires an auto-auth block configured, to use the token to connect with Vault's event system")
+	}
+
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
 	}

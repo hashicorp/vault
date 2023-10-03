@@ -433,6 +433,9 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	return token, keys
 }
 
+// testCoreAddSecretMount adds a secret mount to a Core as part of test cluster setup.
+// Note that this added secret mount does not produce events for the event system, and
+// is something.
 func testCoreAddSecretMount(t testing.T, core *Core, token string, kvVersion string) {
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,

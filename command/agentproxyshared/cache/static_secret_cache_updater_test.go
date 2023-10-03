@@ -167,6 +167,7 @@ func TestOpenWebSocketConnection(t *testing.T) {
 // logic. It's still important coverage, though.
 func TestOpenWebSocketConnectionReceivesEvents(t *testing.T) {
 	t.Parallel()
+	t.Skip("This test won't finish, as the default KVV1 mount does not send events. See the godocs for testCoreAddSecretMount for more information")
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,

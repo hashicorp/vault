@@ -703,6 +703,20 @@ func TestProxy_Cache_StaticSecret(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+	// We need auto-auth so that the event system can run.
+	// For ease, we use the token file path with the root token.
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
 	cacheConfig := `
 cache {
 	cache_static_secrets = true
@@ -723,13 +737,14 @@ vault {
 }
 %s
 %s
+%s
 log_level = "trace"
-`, serverClient.Address(), cacheConfig, listenConfig)
+`, serverClient.Address(), cacheConfig, listenConfig, autoAuthConfig)
 	configPath := makeTempFile(t, "config.hcl", config)
 	defer os.Remove(configPath)
 
 	// Start proxy
-	_, cmd := testProxyCommand(t, logger)
+	ui, cmd := testProxyCommand(t, logger)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}
@@ -743,6 +758,8 @@ log_level = "trace"
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
+		t.Errorf("stdout: %s", ui.OutputWriter.String())
+		t.Errorf("stderr: %s", ui.ErrorWriter.String())
 	}
 
 	proxyClient, err := api.NewClient(api.DefaultConfig())
@@ -804,154 +821,10 @@ log_level = "trace"
 	wg.Wait()
 }
 
-// TestProxy_Cache_StaticSecretInvalidation Tests that the cache successfully caches a static secret
-// going through the Proxy, and that it gets invalidated by a POST.
-// N.B. This does not have permissions to use the event system, and will get a 403.
-func TestProxy_Cache_StaticSecretInvalidation(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	serverClient := cluster.Cores[0].Client
-
-	// Unset the environment variable so that proxy picks up the right test
-	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
-
-	cacheConfig := `
-cache {
-	cache_static_secrets = true
-}
-`
-
-	listenAddr := generateListenerAddress(t)
-	listenConfig := fmt.Sprintf(`
-listener "tcp" {
-  address = "%s"
-  tls_disable = true
-}
-`, listenAddr)
-
-	config := fmt.Sprintf(`
-vault {
-  address = "%s"
-  tls_skip_verify = true
-}
-%s
-%s
-log_level = "trace"
-`, serverClient.Address(), cacheConfig, listenConfig)
-	configPath := makeTempFile(t, "config.hcl", config)
-	defer os.Remove(configPath)
-
-	// Start proxy
-	_, cmd := testProxyCommand(t, logger)
-	cmd.startedCh = make(chan struct{})
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		cmd.Run([]string{"-config", configPath})
-		wg.Done()
-	}()
-
-	select {
-	case <-cmd.startedCh:
-	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
-	}
-
-	proxyClient, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		t.Fatal(err)
-	}
-	proxyClient.SetToken(serverClient.Token())
-	proxyClient.SetMaxRetries(0)
-	err = proxyClient.SetAddress("http://" + listenAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	secretData := map[string]interface{}{
-		"foo": "bar",
-	}
-
-	secretData2 := map[string]interface{}{
-		"bar": "baz",
-	}
-
-	// Create kvv1 secret
-	err = serverClient.KVv1("secret").Put(context.Background(), "my-secret", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// We use raw requests so we can check the headers for cache hit/miss.
-	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
-	resp1, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue := resp1.Header.Get("X-Cache")
-	require.Equal(t, "MISS", cacheValue)
-
-	// Update the secret using the proxy client
-	err = proxyClient.KVv1("secret").Put(context.Background(), "my-secret", secretData2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp2, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue = resp2.Header.Get("X-Cache")
-	// This should miss too, as we just updated it
-	require.Equal(t, "MISS", cacheValue)
-
-	resp3, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cacheValue = resp3.Header.Get("X-Cache")
-	// This should hit, as the third request should get the cached value
-	require.Equal(t, "HIT", cacheValue)
-
-	// Lastly, we check to make sure the actual data we received is
-	// as we expect. We must use ParseSecret due to the raw requests.
-	secret1, err := api.ParseSecret(resp1.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secretData, secret1.Data)
-
-	secret2, err := api.ParseSecret(resp2.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secretData2, secret2.Data)
-
-	secret3, err := api.ParseSecret(resp3.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, secret2.Data, secret3.Data)
-
-	close(cmd.ShutdownCh)
-	wg.Wait()
-}
-
-// TestProxy_Cache_EventSystemUpdatesCache Tests that the cache successfully caches a static secret
-// going through the Proxy, and then the cache gets updated on a POST to the secret due to an
+// TestProxy_Cache_EventSystemUpdatesCacheKVV1 Tests that the cache successfully caches a static secret
+// going through the Proxy, and then the cache gets updated on a POST to the KVV1 secret due to an
 // event.
-func TestProxy_Cache_EventSystemUpdatesCache(t *testing.T) {
+func TestProxy_Cache_EventSystemUpdatesCacheKVV1(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -1044,14 +917,26 @@ log_level = "trace"
 		"bar": "baz",
 	}
 
+	// TODO Violet I think we can remove this.
+	// Give some time for the event system to connect to the proxy.
+	time.Sleep(5 * time.Second)
+
+	// Mount the KVV2 engine
+	err = serverClient.Sys().Mount("secret-v1", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Create kvv1 secret
-	err = serverClient.KVv1("secret").Put(context.Background(), "my-secret", secretData)
+	err = serverClient.KVv1("secret-v1").Put(context.Background(), "my-secret", secretData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We use raw requests so we can check the headers for cache hit/miss.
-	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret/my-secret")
+	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret-v1/my-secret")
 	resp1, err := proxyClient.RawRequest(req)
 	if err != nil {
 		t.Fatal(err)
@@ -1061,12 +946,15 @@ log_level = "trace"
 	require.Equal(t, "MISS", cacheValue)
 
 	// Update the secret using the proxy client
-	err = proxyClient.KVv1("secret").Put(context.Background(), "my-secret", secretData2)
+	// TODO Violet: Update this so that it uses proxy client. We're accidentally caching KV PUTs. Whoops!
+	err = proxyClient.KVv1("secret-v1").Put(context.Background(), "my-secret", secretData2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Give some time for the event to actually get sent and the cache to be updated.
+	// This is longer than it needs to be to account for unnatural slowness/avoiding
+	// flakiness.
 	time.Sleep(5 * time.Second)
 
 	// We expect this to be a cache hit, with the new value
@@ -1225,7 +1113,7 @@ log_level = "trace"
 	require.Equal(t, "MISS", cacheValue)
 
 	// Update the secret using the proxy client
-	// TODO Violet: Update this so that it uses proxy client. We're accidentally caching KV PUTs. Whops!
+	// TODO Violet: Update this so that it uses proxy client. We're accidentally caching KV PUTs. Whoops!
 	_, err = serverClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData2)
 	if err != nil {
 		t.Fatal(err)
