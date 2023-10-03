@@ -269,7 +269,6 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
 
 	errCh := make(chan error, 1)
-
 	txn := iradix.New().Txn()
 
 	go func() {
