@@ -14,1242 +14,1015 @@ Each value has a default tuned for an optimal getting started experience
 with Vault. Before going into production, please review the parameters below
 and consider if they're appropriate for your deployment.
 
-- `global` - These global values affect multiple components of the chart.
+<!-- codegen: start -->
 
-  - `enabled` (`boolean: true`) - The master enabled/disabled configuration. If this is true, most components will be installed by default. If this is false, no components will be installed by default and manually opting-in is required, such as by setting `server.enabled` to true.
+## Top-Level Stanzas
 
-  - `imagePullSecrets` (`array: []`) - References secrets to be used when pulling images from private registries. See [Pull an Image from a Private Registry](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for more details. May be specified as an array of name map entries or just as an array of names:
+Use these links to navigate to a particular top-level stanza.
 
-    ```yaml
-    imagePullSecrets:
-      - name: image-pull-secret
-    # or
-    imagePullSecrets:
-      - image-pull-secret
-    ```
+- [`global`](#h-global)
+- [`injector`](#h-injector)
+- [`server`](#h-server)
+- [`ui`](#h-ui)
+- [`csi`](#h-csi)
+- [`serverTelemetry`](#h-servertelemetry)
 
-  - `tlsDisable` (`boolean: true`) - When set to `true`, changes URLs from `https` to `http` (such as the `VAULT_ADDR=http://127.0.0.1:8200` environment variable set on the Vault pods).
+## All Values
 
-  - `externalVaultAddr` (`string: ""`) - External vault server address for the injector and CSI provider to use. Setting this will disable deployment of a vault server. A service account with token review permissions is automatically created if `server.serviceAccount.create=true` is set for the external Vault server to use.
+### global ((#h-global))
 
-  - `openshift` (`boolean: false`) - If `true`, enables configuration specific to OpenShift such as NetworkPolicy, SecurityContext, and Route.
+- `global` ((#v-global))
 
-  - `psp` - Values that configure Pod Security Policy.
+  - `enabled` ((#v-global-enabled)) (`boolean: true`) - enabled is the master enabled switch. Setting this to true or false
+    will enable or disable all the components within this chart by default.
 
-    - `enable` (`boolean: false`) - When set to `true`, enables Pod Security Policies for Vault and Vault Agent Injector.
+  - `namespace` ((#v-global-namespace)) (`string: ""`) - The namespace to deploy to. Defaults to the `helm` installation namespace.
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Pod Security Policies. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+  - `imagePullSecrets` ((#v-global-imagepullsecrets)) (`map`) - Image pull secret to use for registry authentication.
+    Alternatively, the value may be specified as an array of strings.
 
-      ```yaml
-      annotations:
-        seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
-        apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
-        seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
-        apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
-      # or
-      annotations: |
-        seccomp.security.alpha.kubernetes.io/allowedProfileNames: docker/default,runtime/default
-        apparmor.security.beta.kubernetes.io/allowedProfileNames: runtime/default
-        seccomp.security.alpha.kubernetes.io/defaultProfileName:  runtime/default
-        apparmor.security.beta.kubernetes.io/defaultProfileName:  runtime/default
-      ```
-  - `serverTelemetry` - Values that configure metrics and telemetry
+  - `tlsDisable` ((#v-global-tlsdisable)) (`boolean: true`) - TLS for end-to-end encrypted transport
 
-    - `prometheusOperator` (`boolean: false`) - When set to `true`, enables integration with the
-      Prometheus Operator. Be sure to configure the top-level [`serverTelemetry`](/vault/docs/platform/k8s/helm/configuration#servertelemetry-1) section for more details
-      and required configuration values.
+  - `externalVaultAddr` ((#v-global-externalvaultaddr)) (`string: ""`) - External vault server address for the injector and CSI provider to use.
+    Setting this will disable deployment of a vault server.
 
-- `injector` - Values that configure running a Vault Agent Injector Admission Webhook Controller within Kubernetes.
+  - `openshift` ((#v-global-openshift)) (`boolean: false`) - If deploying to OpenShift
 
-  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault Agent Injector Admission Webhook controller will be created. When set to `"-"`, defaults to the value of `global.enabled`.
+  - `psp` ((#v-global-psp)) - Create PodSecurityPolicy for pods
 
-  - `externalVaultAddr` (`string: ""`) - Deprecated: Please use [global.externalVaultAddr](/vault/docs/platform/k8s/helm/configuration#externalvaultaddr) instead.
+    - `enable` ((#v-global-psp-enable)) (`boolean: false`)
 
-  - `replicas` (`int: 1`) - The number of pods to deploy to create a highly available cluster of Vault Agent Injectors. Requires Vault K8s 0.7.0 to have more than 1 replica.
+    - `annotations` ((#v-global-psp-annotations)) (`string`) - Annotation for PodSecurityPolicy.
+      This is a multi-line templated string map, and can also be set as YAML.
 
-  - `leaderElector` - Values that configure the Vault Agent Injector leader election for HA deployments.
+  - `serverTelemetry` ((#v-global-servertelemetry))
 
-    - `enabled` (`boolean: true`) - When set to `true`, enables leader election for Vault Agent Injector. This is required when using auto-tls and more than 1 replica.
+    - `prometheusOperator` ((#v-global-servertelemetry-prometheusoperator)) (`boolean: false`) - Enable integration with the Prometheus Operator
+      See the top level serverTelemetry section below before enabling this feature.
 
-  - `image` - Values that configure the Vault Agent Injector Docker image.
+### injector ((#h-injector))
 
-    - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
+- `injector` ((#v-injector))
 
-    - `tag` (`string: "1.2.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+  - `enabled` ((#v-injector-enabled)) (`string: global.enabled`) - True if you want to enable vault agent injection.
 
-    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+  - `replicas` ((#v-injector-replicas)) (`integer: 1`)
 
-  - `agentImage` - Values that configure the Vault Agent sidecar image.
+  - `port` ((#v-injector-port)) (`integer: 8080`) - Configures the port the injector should listen on
 
-    - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
+  - `leaderElector` ((#v-injector-leaderelector)) - If multiple replicas are specified, by default a leader will be determined
+    so that only one injector attempts to create TLS certificates.
 
-    - `tag` (`string: "1.13.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar. **Vault 1.3.1+ is required by the admission controller**.
+    - `enabled` ((#v-injector-leaderelector-enabled)) (`boolean: true`)
 
-  - `agentDefaults` - Values that configure the injected Vault Agent containers default values.
+  - `metrics` ((#v-injector-metrics)) - If true, will enable a node exporter metrics endpoint at /metrics.
 
-    - `cpuLimit` (`string: "500m"`) - The default CPU limit for injected Vault Agent containers.
+    - `enabled` ((#v-injector-metrics-enabled)) (`boolean: false`)
 
-    - `cpuRequest` (`string: "250m"`) - The default CPU request for injected Vault Agent containers.
+  - `externalVaultAddr` ((#v-injector-externalvaultaddr)) (`string: ""`) - Deprecated: Please use global.externalVaultAddr instead.
 
-    - `memLimit` (`string: "128Mi"`) - The default memory limit for injected Vault Agent containers.
+  - `image` ((#v-injector-image)) - image sets the repo and tag of the vault-k8s image to use for the injector.
 
-    - `memRequest` (`string: "64Mi"`) - The default memory request for injected Vault Agent containers.
+    - `repository` ((#v-injector-image-repository)) (`string: hashicorp/vault-k8s`)
 
-    - `template` (`string: "map"`) - The default template type for rendered secrets if no custom templates are defined.
-      Possible values include `map` and `json`.
+    - `tag` ((#v-injector-image-tag)) (`string: 1.2.1`)
 
-    - `templateConfig` - Default values within Agent's [`template_config` stanza](/vault/docs/agent-and-proxy/agent/template).
+    - `pullPolicy` ((#v-injector-image-pullpolicy)) (`string: IfNotPresent`)
 
-      - `exitOnRetryFailure` (`boolean: true`) - Controls whether Vault Agent exits after it has exhausted its number of template retry attempts due to failures.
+  - `agentImage` ((#v-injector-agentimage)) - agentImage sets the repo and tag of the Vault image to use for the Vault Agent
+    containers.  This should be set to the official Vault image.  Vault 1.3.1+ is
+    required.
 
-      - `staticSecretRenderInterval` (`string: ""`) - Configures how often Vault Agent Template should render non-leased secrets such as KV v2. See the [Vault Agent Templates documentation](/vault/docs/agent-and-proxy/agent/template#non-renewable-secrets) for more details.
+    - `repository` ((#v-injector-agentimage-repository)) (`string: hashicorp/vault`)
 
-  - `metrics` - Values that configure the Vault Agent Injector metric exporter.
+    - `tag` ((#v-injector-agentimage-tag)) (`string: 1.14.0`)
 
-    - `enabled` (`boolean: false`) - When set to `true`, the Vault Agent Injector exports Prometheus metrics at the `/metrics` path.
+  - `agentDefaults` ((#v-injector-agentdefaults)) - The default values for the injected Vault Agent containers.
 
-  - `authPath` (`string: "auth/kubernetes"`) - Mount path of the Vault Kubernetes Auth Method.
+    - `cpuLimit` ((#v-injector-agentdefaults-cpulimit)) (`string: 500m`) - For more information on configuring resources, see the K8s documentation:
+      https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
-  - `logLevel` (`string: "info"`) - Configures the log verbosity of the injector. Supported log levels: trace, debug, error, warn, info.
+    - `cpuRequest` ((#v-injector-agentdefaults-cpurequest)) (`string: 250m`)
 
-  - `logFormat` (`string: "standard"`) - Configures the log format of the injector. Supported log formats: "standard", "json".
+    - `memLimit` ((#v-injector-agentdefaults-memlimit)) (`string: 128Mi`)
 
-  - `revokeOnShutdown` (`boolean: false`) - Configures all Vault Agent sidecars to revoke their token when shutting down.
+    - `memRequest` ((#v-injector-agentdefaults-memrequest)) (`string: 64Mi`)
 
-  - `securityContext` - Security context for the pod template and the injector container
+    - `template` ((#v-injector-agentdefaults-template)) (`string: map`) - Default template type for secrets when no custom template is specified.
+      Possible values include: "json" and "map".
 
-    - `pod` (`dictionary: {}`) - Defines the securityContext for the injector Pod, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
+    - `templateConfig` ((#v-injector-agentdefaults-templateconfig)) - Default values within Agent's template_config stanza.
 
-      ```yaml
+      - `exitOnRetryFailure` ((#v-injector-agentdefaults-templateconfig-exitonretryfailure)) (`boolean: true`)
+
+      - `staticSecretRenderInterval` ((#v-injector-agentdefaults-templateconfig-staticsecretrenderinterval)) (`string: ""`)
+
+  - `livenessProbe` ((#v-injector-livenessprobe)) - Used to define custom livenessProbe settings
+
+    - `failureThreshold` ((#v-injector-livenessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+
+    - `initialDelaySeconds` ((#v-injector-livenessprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
+
+    - `periodSeconds` ((#v-injector-livenessprobe-periodseconds)) (`integer: 2`) - How often (in seconds) to perform the probe
+
+    - `successThreshold` ((#v-injector-livenessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+
+    - `timeoutSeconds` ((#v-injector-livenessprobe-timeoutseconds)) (`integer: 5`) - Number of seconds after which the probe times out.
+
+  - `readinessProbe` ((#v-injector-readinessprobe)) - Used to define custom readinessProbe settings
+
+    - `failureThreshold` ((#v-injector-readinessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+
+    - `initialDelaySeconds` ((#v-injector-readinessprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
+
+    - `periodSeconds` ((#v-injector-readinessprobe-periodseconds)) (`integer: 2`) - How often (in seconds) to perform the probe
+
+    - `successThreshold` ((#v-injector-readinessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+
+    - `timeoutSeconds` ((#v-injector-readinessprobe-timeoutseconds)) (`integer: 5`) - Number of seconds after which the probe times out.
+
+  - `startupProbe` ((#v-injector-startupprobe)) - Used to define custom startupProbe settings
+
+    - `failureThreshold` ((#v-injector-startupprobe-failurethreshold)) (`integer: 12`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
+
+    - `initialDelaySeconds` ((#v-injector-startupprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
+
+    - `periodSeconds` ((#v-injector-startupprobe-periodseconds)) (`integer: 5`) - How often (in seconds) to perform the probe
+
+    - `successThreshold` ((#v-injector-startupprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
+
+    - `timeoutSeconds` ((#v-injector-startupprobe-timeoutseconds)) (`integer: 5`) - Number of seconds after which the probe times out.
+
+  - `authPath` ((#v-injector-authpath)) (`string: auth/kubernetes`) - Mount Path of the Vault Kubernetes Auth Method.
+
+  - `logLevel` ((#v-injector-loglevel)) (`string: info`) - Configures the log verbosity of the injector.
+    Supported log levels include: trace, debug, info, warn, error
+
+  - `logFormat` ((#v-injector-logformat)) (`string: standard`) - Configures the log format of the injector. Supported log formats: "standard", "json".
+
+  - `revokeOnShutdown` ((#v-injector-revokeonshutdown)) (`boolean: false`) - Configures all Vault Agent sidecars to revoke their token when shutting down
+
+  - `webhook` ((#v-injector-webhook))
+
+    - `failurePolicy` ((#v-injector-webhook-failurepolicy)) (`string: Ignore`) - Configures failurePolicy of the webhook. The "unspecified" default behaviour depends on the
+      API Version of the WebHook.
+      To block pod creation while the webhook is unavailable, set the policy to `Fail` below.
+      See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy
+
+    - `matchPolicy` ((#v-injector-webhook-matchpolicy)) (`string: Exact`) - matchPolicy specifies the approach to accepting changes based on the rules of
+      the MutatingWebhookConfiguration.
+      See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy
+      for more details.
+
+    - `timeoutSeconds` ((#v-injector-webhook-timeoutseconds)) (`integer: 30`) - timeoutSeconds is the amount of seconds before the webhook request will be ignored
+      or fails.
+      If it is ignored or fails depends on the failurePolicy
+      See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts
+      for more details.
+
+    - `namespaceSelector` ((#v-injector-webhook-namespaceselector)) - namespaceSelector is the selector for restricting the webhook to only
+      specific namespaces.
+      See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector
+      for more details.
+      Example:
+      namespaceSelector:
+         matchLabels:
+           sidecar-injector: enabled
+
+    - `objectSelector` ((#v-injector-webhook-objectselector)) (`string`) - objectSelector is the selector for restricting the webhook to only
+      specific labels.
+      See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector
+      for more details.
+      Example:
+      objectSelector:
+         matchLabels:
+           vault-sidecar-injector: enabled
+
+    - `annotations` ((#v-injector-webhook-annotations)) - Extra annotations to attach to the webhook
+
+  - `failurePolicy` ((#v-injector-failurepolicy)) (`string: Ignore`) - Deprecated: please use 'webhook.failurePolicy' instead
+    Configures failurePolicy of the webhook. The "unspecified" default behaviour depends on the
+    API Version of the WebHook.
+    To block pod creation while webhook is unavailable, set the policy to `Fail` below.
+    See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy
+
+  - `namespaceSelector` ((#v-injector-namespaceselector)) - Deprecated: please use 'webhook.namespaceSelector' instead
+    namespaceSelector is the selector for restricting the webhook to only
+    specific namespaces.
+    See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector
+    for more details.
+    Example:
+    namespaceSelector:
+       matchLabels:
+         sidecar-injector: enabled
+
+  - `objectSelector` ((#v-injector-objectselector)) - Deprecated: please use 'webhook.objectSelector' instead
+    objectSelector is the selector for restricting the webhook to only
+    specific labels.
+    See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector
+    for more details.
+    Example:
+    objectSelector:
+       matchLabels:
+         vault-sidecar-injector: enabled
+
+  - `webhookAnnotations` ((#v-injector-webhookannotations)) - Deprecated: please use 'webhook.annotations' instead
+    Extra annotations to attach to the webhook
+
+  - `certs` ((#v-injector-certs))
+
+    - `secretName` ((#v-injector-certs-secretname)) (`string: null`) - secretName is the name of the secret that has the TLS certificate and
+      private key to serve the injector webhook. If this is null, then the
+      injector will default to its automatic management mode that will assign
+      a service account to the injector to generate its own certificates.
+
+    - `caBundle` ((#v-injector-certs-cabundle)) (`string: ""`) - caBundle is a base64-encoded PEM-encoded certificate bundle for the CA
+      that signed the TLS certificate that the webhook serves. This must be set
+      if secretName is non-null unless an external service like cert-manager is
+      keeping the caBundle updated.
+
+    - `certName` ((#v-injector-certs-certname)) (`string: tls.crt`) - certName and keyName are the names of the files within the secret for
+      the TLS cert and private key, respectively. These have reasonable
+      defaults but can be customized if necessary.
+
+    - `keyName` ((#v-injector-certs-keyname)) (`string: tls.key`)
+
+  - `securityContext` ((#v-injector-securitycontext)) - Security context for the pod template and the injector container
+    The default pod securityContext is:
       runAsNonRoot: true
       runAsGroup: {{ .Values.injector.gid | default 1000 }}
       runAsUser: {{ .Values.injector.uid | default 100 }}
       fsGroup: {{ .Values.injector.gid | default 1000 }}
-      ```
+    and for container is
+       allowPrivilegeEscalation: false
+       capabilities:
+         drop:
+           - ALL
 
-    - `container` (`dictionary: {}`) - Defines the securityContext for the injector container, as YAML or a YAML-formatted multi-line templated string. Default if not specified:
+    - `pod` ((#v-injector-securitycontext-pod))
 
-      ```yaml
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      ```
+    - `container` ((#v-injector-securitycontext-container))
 
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the injector. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
+  - `resources` ((#v-injector-resources))
 
-    ```yaml
-    resources:
-      requests:
-        memory: '256Mi'
-        cpu: '250m'
-      limits:
-        memory: '256Mi'
-        cpu: '250m'
-    ```
+  - `extraEnvironmentVars` ((#v-injector-extraenvironmentvars)) - extraEnvironmentVars is a list of extra environment variables to set in the
+    injector deployment.
 
-  - `webhook` - Values that control the Mutating Webhook Configuration.
+  - `affinity` ((#v-injector-affinity)) (`string`) - Affinity Settings for injector pods
+    This can either be a multi-line string or YAML matching the PodSpec's affinity field.
+    Commenting out or setting as empty the affinity variable, will allow
+    deployment of multiple replicas to single node services such as Minikube.
 
-    - `failurePolicy` (`string: "Ignore"`) - Configures failurePolicy of the webhook. To block pod creation while the webhook is unavailable, set the policy to `"Fail"`. See [Failure Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy).
+  - `topologySpreadConstraints` ((#v-injector-topologyspreadconstraints)) (`map`) - Topology settings for injector pods
+    ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    This should be either a multi-line string or YAML matching the topologySpreadConstraints array
+    in a PodSpec.
 
-    - `matchPolicy` (`string: "Exact"`) - Specifies the approach to accepting changes based on the rules of the MutatingWebhookConfiguration. See [Match Policy](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-matchpolicy).
+  - `tolerations` ((#v-injector-tolerations)) (`map`) - Toleration Settings for injector pods
+    This should be either a multi-line string or YAML matching the Toleration array
+    in a PodSpec.
 
-    - `timeoutSeconds` (`int: 30`) - Specifies the number of seconds before the webhook request will be ignored or fails. If it is ignored or fails depends on the `failurePolicy`. See [timeouts](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts).
+  - `nodeSelector` ((#v-injector-nodeselector)) - nodeSelector labels for server pod assignment, formatted as a multi-line string or YAML map.
+    ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    Example:
+    nodeSelector:
+      beta.kubernetes.io/arch: amd64
 
-    - `namespaceSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what namespaces where injection can happen. If unset, all non-system namespaces are eligible for injection. See [Matching requests: namespace selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-namespaceselector).
+  - `priorityClassName` ((#v-injector-priorityclassname)) (`string: ""`) - Priority class for injector pods
 
-      ```yaml
-      namespaceSelector:
-        matchLabels:
-          sidecar-injector: enabled
-      ```
+  - `annotations` ((#v-injector-annotations)) - Extra annotations to attach to the injector pods
+    This can either be YAML or a YAML-formatted multi-line templated string map
+    of the annotations to apply to the injector pods
 
-    - `objectSelector` (`object: {}`) - The selector used by the admission webhook controller to limit what objects can be affected by mutation. See [Matching requests: object selector](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector).
+  - `extraLabels` ((#v-injector-extralabels)) - Extra labels to attach to the agent-injector
+    This should be a YAML map of the labels to apply to the injector
 
-      ```yaml
-      objectSelector:
-        matchLabels:
-          sidecar-injector: enabled
-      ```
+  - `hostNetwork` ((#v-injector-hostnetwork)) (`boolean: false`) - Should the injector pods run on the host network (useful when using
+    an alternate CNI in EKS)
 
-    - `annotations` (`string or object: {}`) - Defines additional annotations to attach to the webhook. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `service` ((#v-injector-service)) - Injector service specific config
 
-  - `namespaceSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.namespaceSelector`](/vault/docs/platform/k8s/helm/configuration#namespaceselector) instead.
+    - `annotations` ((#v-injector-service-annotations)) - Extra annotations to attach to the injector service
 
-  - `objectSelector` (`dictionary: {}`) - Deprecated: please use [`webhook.objectSelector`](/vault/docs/platform/k8s/helm/configuration#objectselector) instead.
+  - `serviceAccount` ((#v-injector-serviceaccount)) - Injector serviceAccount specific config
 
-  - `extraLabels` (`dictionary: {}`) - This value defines additional labels for Vault Agent Injector pods.
+    - `annotations` ((#v-injector-serviceaccount-annotations)) - Extra annotations to attach to the injector serviceAccount
 
-    ```yaml
-    extraLabels:
-      'sample/label1': 'foo'
-      'sample/label2': 'bar'
-    ```
+  - `podDisruptionBudget` ((#v-injector-poddisruptionbudget)) - A disruption budget limits the number of pods of a replicated application
+    that are down simultaneously from voluntary disruptions
 
-  - `certs` - The certs section configures how the webhook TLS certs are configured. These are the TLS certs for the Kube apiserver communicating to the webhook. By default, the injector will generate and manage its own certs, but this requires the ability for the injector to update its own `MutatingWebhookConfiguration`. In a production environment, custom certs should probably be used. Configure the values below to enable this.
+  - `strategy` ((#v-injector-strategy)) - strategy for updating the deployment. This can be a multi-line string or a
+    YAML map.
 
-    - `secretName` (`string: ""`) - secretName is the name of the Kubernetes secret that has the TLS certificate and private key to serve the injector webhook. If this is null, then the injector will default to its automatic management mode.
+### server ((#h-server))
 
-    - `caBundle` (`string: ""`) - The PEM-encoded CA public certificate bundle for the TLS certificate served by the injector. This must be specified as a string and can't come from a secret because it must be statically configured on the Kubernetes `MutatingAdmissionWebhook` resource. This only needs to be specified if `secretName` is not null.
+- `server` ((#v-server))
 
-    - `certName` (`string: "tls.crt"`) - The name of the certificate file within the `secretName` secret.
+  - `enabled` ((#v-server-enabled)) (`string: -`) - If true, or "-" with global.enabled true, Vault server will be installed.
+    See vault.mode in _helpers.tpl for implementation details.
 
-    - `keyName` (`string: "tls.key"`) - The name of the key file within the `secretName` secret.
+  - `enterpriseLicense` ((#v-server-enterpriselicense)) - <EnterpriseAlert inline /> This value refers to a Kubernetes secret that you have
+    created that contains your enterprise license. If you are not using an
+    enterprise image or if you plan to introduce the license key via another
+    route, then leave secretName blank ("") or set it to null.
+    Requires Vault Enterprise 1.8 or later.
 
-  - `extraEnvironmentVars` (`dictionary: {}`) - Extra environment variables to set in the injector deployment.
+    - `secretName` ((#v-server-enterpriselicense-secretname)) (`string: ""`) - The name of the Kubernetes secret that holds the enterprise license. The
+      secret must be in the same namespace that Vault is installed into.
 
-    ```yaml
-    # Example setting injector TLS options in a deployment:
-    extraEnvironmentVars:
-      AGENT_INJECT_TLS_MIN_VERSION: tls13
-      AGENT_INJECT_TLS_CIPHER_SUITES: ...
-    ```
+    - `secretKey` ((#v-server-enterpriselicense-secretkey)) (`string: license`) - The key within the Kubernetes secret that holds the enterprise license.
 
-  - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for Vault Agent Injector pods. This can either be multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
+  - `image` ((#v-server-image)) - Resource requests, limits, etc. for the server cluster placement. This
+    should map directly to the value of the resources field for a PodSpec.
+    By default no direct resource request is made.
 
-    ```yaml
-    # Recommended default server affinity:
-    affinity: |
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchLabels:
-              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
-              app.kubernetes.io/instance: "{{ .Release.Name }}"
-              component: webhook
-          topologyKey: kubernetes.io/hostname
-    ```
+    - `repository` ((#v-server-image-repository)) (`string: hashicorp/vault`)
 
-  - `topologySpreadConstraints` (`array: []`) - [Topology settings](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
-    for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `tag` ((#v-server-image-tag)) (`string: 1.14.0`)
 
-  - `tolerations` (`array: []`) - Toleration Settings for injector pods. This should be either a multi-line string or YAML matching the Toleration array.
+    - `pullPolicy` ((#v-server-image-pullpolicy)) (`string: IfNotPresent`) - Overrides the default Image Pull Policy
 
-  - `nodeSelector` (`dictionary: {}`) - nodeSelector labels for injector pod assignment, formatted as a muli-line string or YAML map.
+  - `updateStrategyType` ((#v-server-updatestrategytype)) (`string: OnDelete`) - Configure the Update Strategy Type for the StatefulSet
+    See https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies
 
-  - `priorityClassName` (`string: ""`) - Priority class for injector pods
+  - `logLevel` ((#v-server-loglevel)) (`string: ""`) - Configure the logging verbosity for the Vault server.
+    Supported log levels include: trace, debug, info, warn, error
 
-  - `annotations` (`dictionary: {}`) - This value defines additional annotations for injector pods. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `logFormat` ((#v-server-logformat)) (`string: ""`) - Configure the logging format for the Vault server.
+    Supported log formats include: standard, json
 
-    ```yaml
-    annotations:
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    # or
-    annotations: |
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    ```
+  - `resources` ((#v-server-resources))
 
-  - `failurePolicy` (`string: "Ignore"`) - Deprecated: please use [`webhook.failurePolicy`](/vault/docs/platform/k8s/helm/configuration#failurepolicy) instead.
+  - `ingress` ((#v-server-ingress)) - Ingress allows ingress services to be created to allow external access
+    from Kubernetes to access Vault pods.
+    If deployment is on OpenShift, the following block is ignored.
+    In order to expose the service, use the route section below
 
-  - `webhookAnnotations` (`dictionary: {}`) - Deprecated: please use [`webhook.annotations`](/vault/docs/platform/k8s/helm/configuration#annotations-1) instead.
+    - `enabled` ((#v-server-ingress-enabled)) (`boolean: false`)
 
-  - `service` - The service section configures the Kubernetes service for the Vault Agent Injector.
+    - `labels` ((#v-server-ingress-labels))
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault Agent Injector service. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+    - `annotations` ((#v-server-ingress-annotations)) - traffic: external
 
-      ```yaml
-      annotations:
-        "sample/annotation1": "foo"
-        "sample/annotation2": "bar"
-      # or
-      annotations: |
-        "sample/annotation1": "foo"
-        "sample/annotation2": "bar"
-      ```
+    - `ingressClassName` ((#v-server-ingress-ingressclassname)) (`string: ""`) - Optionally use ingressClassName instead of deprecated annotation.
+      See: https://kubernetes.io/docs/concepts/services-networking/ingress/#deprecated-annotation
 
-  - `serviceAccount` - Injector serviceAccount specific config
+    - `pathType` ((#v-server-ingress-pathtype)) (`string: Prefix`) - As of Kubernetes 1.19, all Ingress Paths must have a pathType configured. The default value below should be sufficient in most cases.
+      See: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types for other possible values.
 
-    - `annotations` (`dictionary: {}`) - Extra annotations to attach to the injector serviceAccount. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `activeService` ((#v-server-ingress-activeservice)) (`boolean: true`) - When HA mode is enabled and K8s service registration is being used,
+      configure the ingress to point to the Vault active service.
 
-  - `hostNetwork` (`boolean: false`) - When set to true, configures the Vault Agent Injector to run on the host network. This is useful
-    when alternative cluster networking is used.
+    - `hosts` ((#v-server-ingress-hosts)) (`map`)
 
-  - `port` (`int: 8080`) - Configures the port the Vault Agent Injector listens on.
+      - `host` ((#v-server-ingress-hosts-host)) (`string: chart-example.local`)
 
-  - `podDisruptionBudget` (`dictionary: {}`) - A disruption budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions.
+      - `paths` ((#v-server-ingress-hosts-paths)) (`map`)
 
-    ```yaml
-    podDisruptionBudget:
-      maxUnavailable: 1
-    ```
+    - `extraPaths` ((#v-server-ingress-extrapaths)) (`map`) - # Extra paths to prepend to the host configuration. This is useful when working with annotation based services.
 
-  - `strategy` (`dictionary: {}`) - Strategy for updating the deployment. This can be a multi-line string or a YAML map.
+    - `tls` ((#v-server-ingress-tls)) (`map`) - - path: /*
+        backend:
+          service:
+            name: ssl-redirect
+            port:
+              number: use-annotation
 
-    ```yaml
-    strategy:
-      rollingUpdate:
-        maxSurge: 25%
-        maxUnavailable: 25%
-      type: RollingUpdate
-    # or
-    strategy: |
-      rollingUpdate:
-        maxSurge: 25%
-        maxUnavailable: 25%
-      type: RollingUpdate
-    ```
+  - `hostAliases` ((#v-server-hostaliases)) (`map`) - hostAliases is a list of aliases to be added to /etc/hosts. Specified as a YAML list.
 
-  - `livenessProbe` - Values that configure the liveness probe for the injector.
+  - `route` ((#v-server-route)) - OpenShift only - create a route to expose the service
+    By default the created route will be of type passthrough
 
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+    - `enabled` ((#v-server-route-enabled)) (`boolean: false`)
 
-    - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveness probe when the container starts.
+    - `activeService` ((#v-server-route-activeservice)) (`boolean: true`) - When HA mode is enabled and K8s service registration is being used,
+      configure the route to point to the Vault active service.
 
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `labels` ((#v-server-route-labels))
 
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `annotations` ((#v-server-route-annotations))
 
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `host` ((#v-server-route-host)) (`string: chart-example.local`)
 
-  - `readinessProbe` - Values that configure the readiness probe for the injector.
+    - `tls` ((#v-server-route-tls)) - tls will be passed directly to the route's TLS config, which
+      can be used to configure other termination methods that terminate
+      TLS at the router
 
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+      - `termination` ((#v-server-route-tls-termination)) (`string: passthrough`)
 
-    - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the readiness probe when the container starts.
+  - `authDelegator` ((#v-server-authdelegator)) - authDelegator enables a cluster role binding to be attached to the service
+    account.  This cluster role binding can be used to setup Kubernetes auth
+    method. See https://developer.hashicorp.com/vault/docs/auth/kubernetes
 
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `enabled` ((#v-server-authdelegator-enabled)) (`boolean: true`)
 
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+  - `extraInitContainers` ((#v-server-extrainitcontainers)) (`map`) - extraInitContainers is a list of init containers. Specified as a YAML list.
+    This is useful if you need to run a script to provision TLS certificates or
+    write out configuration files in a dynamic way.
 
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+  - `extraContainers` ((#v-server-extracontainers)) (`map`) - extraContainers is a list of sidecar containers. Specified as a YAML list.
 
-  - `startupProbe` - Values that configure the startup probe for the injector.
+  - `shareProcessNamespace` ((#v-server-shareprocessnamespace)) (`boolean: false`) - shareProcessNamespace enables process namespace sharing between Vault and the extraContainers
+    This is useful if Vault must be signaled, e.g. to send a SIGHUP for a log rotation
 
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+  - `extraArgs` ((#v-server-extraargs)) (`string: ""`) - extraArgs is a string containing additional Vault server arguments.
 
-    - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the startup probe when the container starts.
+  - `extraPorts` ((#v-server-extraports)) (`map`) - extraPorts is a list of extra ports. Specified as a YAML list.
+    This is useful if you need to add additional ports to the statefulset in dynamic way.
 
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+  - `readinessProbe` ((#v-server-readinessprobe)) - Used to define custom readinessProbe settings
 
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `enabled` ((#v-server-readinessprobe-enabled)) (`boolean: true`)
 
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `port` ((#v-server-readinessprobe-port)) (`integer: 8200`) - Port number on which readinessProbe will be checked.
 
-- `server` - Values that configure running a Vault server within Kubernetes.
+    - `failureThreshold` ((#v-server-readinessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-  - `enabled` (`boolean or string: "-"`) - When set to `true`, the Vault server will be created. When set to `"-"`, defaults to the value of `global.enabled`.
+    - `initialDelaySeconds` ((#v-server-readinessprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
 
-  - `enterpriseLicense` - This value refers to a Kubernetes secret that you have created that contains your enterprise license. If you are not using an enterprise image or if you plan to introduce the license key via another route, then leave secretName blank ("") or set it to null. Requires Vault Enterprise 1.8 or later.
+    - `periodSeconds` ((#v-server-readinessprobe-periodseconds)) (`integer: 5`) - How often (in seconds) to perform the probe
 
-    - `secretName` (`string: ""`) - The name of the Kubernetes secret that holds the enterprise license. The secret must be in the same namespace that Vault is installed into.
+    - `successThreshold` ((#v-server-readinessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `secretKey` (`string: "license"`) - The key within the Kubernetes secret that holds the enterprise license.
+    - `timeoutSeconds` ((#v-server-readinessprobe-timeoutseconds)) (`integer: 3`) - Number of seconds after which the probe times out.
 
-  - `image` - Values that configure the Vault Docker image.
+  - `livenessProbe` ((#v-server-livenessprobe)) - Used to enable a livenessProbe for the pods
 
-    - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the containers running Vault.
+    - `enabled` ((#v-server-livenessprobe-enabled)) (`boolean: false`)
 
-    - `tag` (`string: "1.13.1"`) - The tag of the Docker image for the containers running Vault. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `path` ((#v-server-livenessprobe-path)) (`string: /v1/sys/health?standbyok=true`)
 
-    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
+    - `port` ((#v-server-livenessprobe-port)) (`integer: 8200`) - Port number on which livenessProbe will be checked.
 
-  - `updateStrategyType` (`string: "OnDelete"`) - Configure the [Update Strategy Type](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) for the StatefulSet.
+    - `failureThreshold` ((#v-server-livenessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-  - `logLevel` (`string: ""`) - Configures the Vault server logging verbosity. If set this will override values defined in the Vault configuration file.
-    Supported log levels include: `trace`, `debug`, `info`, `warn`, `error`.
+    - `initialDelaySeconds` ((#v-server-livenessprobe-initialdelayseconds)) (`integer: 60`) - Number of seconds after the container has started before probe initiates
 
-  - `logFormat` (`string: ""`) - Configures the Vault server logging format. If set this will override values defined in the Vault configuration file.
-    Supported log formats include: `standard`, `json`.
+    - `periodSeconds` ((#v-server-livenessprobe-periodseconds)) (`integer: 5`) - How often (in seconds) to perform the probe
 
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the server. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources. **Setting this is highly recommended.**
+    - `successThreshold` ((#v-server-livenessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    ```yaml
-    resources:
-      requests:
-        memory: '10Gi'
-      limits:
-        memory: '10Gi'
-    ```
+    - `timeoutSeconds` ((#v-server-livenessprobe-timeoutseconds)) (`integer: 3`) - Number of seconds after which the probe times out.
 
-  - `ingress` - Values that configure Ingress services for Vault.
+  - `terminationGracePeriodSeconds` ((#v-server-terminationgraceperiodseconds)) (`integer: 10`) - Optional duration in seconds the pod needs to terminate gracefully.
+    See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
 
-    ~> If deploying on OpenShift, these ingress settings are ignored. Use the [`route`](#route) configuration to expose Vault on OpenShift. <br/> <br/>
-    If [`ha`](#ha) is enabled the Ingress will point to the active vault server via the `active` Service. This requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config.
+  - `preStopSleepSeconds` ((#v-server-prestopsleepseconds)) (`integer: 5`) - Used to set the sleep time during the preStop step
 
-    - `enabled` (`boolean: false`) - When set to `true`, an [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) service will be created.
+  - `postStart` ((#v-server-poststart)) (`map`) - Used to define commands to run after the pod is ready.
+    This can be used to automate processes such as initialization
+    or boostrapping auth methods.
 
-    - `labels` (`dictionary: {}`) - Labels for the ingress service.
+  - `extraEnvironmentVars` ((#v-server-extraenvironmentvars)) - extraEnvironmentVars is a list of extra environment variables to set with the stateful set. These could be
+    used to include variables required for auto-unseal.
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Ingress service. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+  - `extraSecretEnvironmentVars` ((#v-server-extrasecretenvironmentvars)) (`map`) - extraSecretEnvironmentVars is a list of extra environment variables to set with the stateful set.
+    These variables take value from existing Secret objects.
 
-      ```yaml
-      annotations:
-        kubernetes.io/ingress.class: nginx
-        kubernetes.io/tls-acme: "true"
-      # or
-      annotations: |
-        kubernetes.io/ingress.class: nginx
-        kubernetes.io/tls-acme: "true"
-      ```
+  - `extraVolumes` ((#v-server-extravolumes)) (`map`) - Deprecated: please use 'volumes' instead.
+    extraVolumes is a list of extra volumes to mount. These will be exposed
+    to Vault in the path `/vault/userconfig/<name>/`. The value below is
+    an array of objects, examples are shown below.
 
-    - `ingressClassName` (`string: ""`) - Specify the [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) that should be used to implement the Ingress
+  - `volumes` ((#v-server-volumes)) (`map`) - volumes is a list of volumes made available to all containers. These are rendered
+    via toYaml rather than pre-processed like the extraVolumes value.
+    The purpose is to make it easy to share volumes between containers.
 
-    - `activeService` (`boolean: true`) - When HA mode is enabled and K8s service registration is being used, configure the ingress to point to the Vault active service.
+  - `volumeMounts` ((#v-server-volumemounts)) (`map`) - volumeMounts is a list of volumeMounts for the main server container. These are rendered
+    via toYaml rather than pre-processed like the extraVolumes value.
+    The purpose is to make it easy to share volumes between containers.
 
-    - `extraPaths` (`array: []`) - Configures extra paths to prepend to the host configuration.
-      This is useful when working with annotation based services.
+  - `affinity` ((#v-server-affinity)) (`string`) - Affinity Settings
+    Commenting out or setting as empty the affinity variable, will allow
+    deployment to single node services such as Minikube
+    This should be either a multi-line string or YAML matching the PodSpec's affinity field.
 
-      ```yaml
-      extraPaths:
-        - path: /*
-          backend:
-            service:
-              name: ssl-redirect
-              port:
-                number: use-annotation
-      ```
+  - `topologySpreadConstraints` ((#v-server-topologyspreadconstraints)) (`map`) - Topology settings for server pods
+    ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    This should be either a multi-line string or YAML matching the topologySpreadConstraints array
+    in a PodSpec.
 
-    - `tls` (`array: []`) - Configures the TLS portion of the [Ingress spec](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls), where `hosts` is a list of the hosts defined in the Common Name of the TLS certificate, and `secretName` is the name of the Secret containing the required TLS files such as certificates and keys.
+  - `tolerations` ((#v-server-tolerations)) (`map`) - Toleration Settings for server pods
+    This should be either a multi-line string or YAML matching the Toleration array
+    in a PodSpec.
 
-      ```yaml
-      tls:
-        - hosts:
-            - sslexample.foo.com
-            - sslexample.bar.com
-          secretName: testsecret-tls
-      ```
+  - `nodeSelector` ((#v-server-nodeselector)) - nodeSelector labels for server pod assignment, formatted as a multi-line string or YAML map.
+    ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    Example:
+    nodeSelector:
+      beta.kubernetes.io/arch: amd64
 
-    - `hosts` - Values that configure the Ingress host rules.
+  - `networkPolicy` ((#v-server-networkpolicy)) - Enables network policy for server pods
 
-      - `host` (`string: "chart-example.local"`): Name of the host to use for Ingress.
+    - `enabled` ((#v-server-networkpolicy-enabled)) (`boolean: false`)
 
-      - `paths` (`array: []`): Deprecated: `server.ingress.extraPaths` should be used instead. A list of paths that will be directed to the Vault service. At least one path is required.
+    - `egress` ((#v-server-networkpolicy-egress)) (`map`)
 
-      ```yaml
-      paths:
-        - /
-        - /vault
-      ```
+  - `priorityClassName` ((#v-server-priorityclassname)) (`string: ""`) - Priority class for server pods
 
-  - `route` - Values that configure Route services for Vault in OpenShift
+  - `extraLabels` ((#v-server-extralabels)) - Extra labels to attach to the server pods
+    This should be a YAML map of the labels to apply to the server pods
 
-    ~> If [`ha`](#ha) is enabled the Route will point to the active vault server via the `active` Service (requires vault 1.4+ and [service_registration](/vault/docs/configuration/service-registration/kubernetes) to be set in the vault config).
+  - `annotations` ((#v-server-annotations)) - Extra annotations to attach to the server pods
+    This can either be YAML or a YAML-formatted multi-line templated string map
+    of the annotations to apply to the server pods
 
-    - `enabled` (`boolean: false`) - When set to `true`, a Route for Vault will be created.
+  - `service` ((#v-server-service)) - Enables a headless service to be used by the Vault Statefulset
 
-    - `activeService` (`boolean: true`) - When HA mode is enabled and K8s service registration is being used, configure the route to point to the Vault active service.
+    - `enabled` ((#v-server-service-enabled)) (`boolean: true`)
 
-    - `labels` (`dictionary: {}`) - Labels for the Route
+    - `active` ((#v-server-service-active)) - Enable or disable the vault-active service, which selects Vault pods that
+      have labeled themselves as the cluster leader with `vault-active: "true"`.
 
-    - `annotations` (`dictionary: {}`) - Annotations to add to the Route. This can either be YAML or a YAML-formatted multi-line templated string.
+      - `enabled` ((#v-server-service-active-enabled)) (`boolean: true`)
 
-    - `host` (`string: "chart-example.local"`) - Sets the hostname for the Route.
+      - `annotations` ((#v-server-service-active-annotations)) - Extra annotations for the service definition. This can either be YAML or a
+        YAML-formatted multi-line templated string map of the annotations to apply
+        to the active service.
 
-    - `tls` (`dictionary: {termination: passthrough}`) - TLS config that will be passed directly to the route's TLS config, which can be used to configure other termination methods that terminate TLS at the router.
+    - `standby` ((#v-server-service-standby)) - Enable or disable the vault-standby service, which selects Vault pods that
+      have labeled themselves as a cluster follower with `vault-active: "false"`.
 
-  - `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
+      - `enabled` ((#v-server-service-standby-enabled)) (`boolean: true`)
 
-    - `enabled` (`boolean: true`) - When set to `true`, a Cluster Role Binding will be bound to the Vault service account. This Cluster Role Binding has the necessary privileges for Vault to use the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
+      - `annotations` ((#v-server-service-standby-annotations)) - Extra annotations for the service definition. This can either be YAML or a
+        YAML-formatted multi-line templated string map of the annotations to apply
+        to the standby service.
 
-  - `readinessProbe` - Values that configure the readiness probe for the Vault pods.
+    - `instanceSelector` ((#v-server-service-instanceselector)) - If enabled, the service selectors will include `app.kubernetes.io/instance: {{ .Release.Name }}`
+      When disabled, services may select Vault pods not deployed from the chart.
+      Does not affect the headless vault-internal service with `ClusterIP: None`
 
-    - `enabled` (`boolean: true`) - When set to `true`, a readiness probe will be applied to the Vault pods.
+      - `enabled` ((#v-server-service-instanceselector-enabled)) (`boolean: true`)
 
-    - `path` (`string: ""`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
+    - `ipFamilyPolicy` ((#v-server-service-ipfamilypolicy)) (`string: ""`) - Configures the service type for the main Vault service.  Can be ClusterIP
+      or NodePort.
+      type: ClusterIP
 
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+      The IP family and IP families options are to set the behaviour in a dual-stack environment.
+      Omitting these values will let the service fall back to whatever the CNI dictates the defaults
+      should be.
+      These are only supported for kubernetes versions >=1.23.0
 
-    - `initialDelaySeconds` (`int: 5`) - When set to a value, configures the number of seconds after the container has started before probe initiates.
+      Configures the service's supported IP family policy, can be either:
+          SingleStack: Single-stack service. The control plane allocates a cluster IP for the Service, using the first configured service cluster IP range.
+          PreferDualStack: Allocates IPv4 and IPv6 cluster IPs for the Service.
+          RequireDualStack: Allocates Service .spec.ClusterIPs from both IPv4 and IPv6 address ranges.
 
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `ipFamilies` ((#v-server-service-ipfamilies)) (`map`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well.
+      Can be IPv4 and/or IPv6.
 
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `publishNotReadyAddresses` ((#v-server-service-publishnotreadyaddresses)) (`boolean: true`) - Do not wait for pods to be ready before including them in the services'
+      targets. Does not apply to the headless service, which is used for
+      cluster-internal communication.
 
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `externalTrafficPolicy` ((#v-server-service-externaltrafficpolicy)) (`string: Cluster`) - The externalTrafficPolicy can be set to either Cluster or Local
+      and is only valid for LoadBalancer and NodePort service types.
+      The default value is Cluster.
+      ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
-    - `port` (`int: 8200`) - When set to a value, overrides the default port used for the server readiness probe.
+    - `port` ((#v-server-service-port)) (`integer: 8200`) - If type is set to "NodePort", a specific nodePort value can be configured,
+      will be random if left blank.
+      nodePort: 30000
 
-    ```yaml
-    readinessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      failureThreshold: 2
-      initialDelaySeconds: 5
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-      port: 8200
-    ```
+      When HA mode is enabled
+      If type is set to "NodePort", a specific nodePort value can be configured,
+      will be random if left blank.
+      activeNodePort: 30001
 
-  - `livenessProbe` - Values that configure the liveness probe for the Vault pods.
+      When HA mode is enabled
+      If type is set to "NodePort", a specific nodePort value can be configured,
+      will be random if left blank.
+      standbyNodePort: 30002
 
-    - `enabled` (`boolean: false`) - When set to `true`, a liveness probe will be applied to the Vault pods.
+      Port on which Vault server is listening
 
-    - `path` (`string: "/v1/sys/health?standbyok=true"`) - When set to a value, enables HTTP/HTTPS probes instead of using the default `exec` probe. The http/https scheme is controlled by the `tlsDisable` value.
+    - `targetPort` ((#v-server-service-targetport)) (`integer: 8200`) - Target port to which the service should be mapped to
 
-    - `initialDelaySeconds` (`int: 60`) - Sets the initial delay of the liveness probe when the container starts.
+    - `annotations` ((#v-server-service-annotations)) - Extra annotations for the service definition. This can either be YAML or a
+      YAML-formatted multi-line templated string map of the annotations to apply
+      to the service.
 
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
+  - `dataStorage` ((#v-server-datastorage)) - This configures the Vault Statefulset to create a PVC for data
+    storage when using the file or raft backend storage engines.
+    See https://developer.hashicorp.com/vault/docs/configuration/storage to know more
 
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
+    - `enabled` ((#v-server-datastorage-enabled)) (`boolean: true`)
 
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
+    - `size` ((#v-server-datastorage-size)) (`string: 10Gi`) - Size of the PVC created
 
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
+    - `mountPath` ((#v-server-datastorage-mountpath)) (`string: /vault/data`) - Location where the PVC will be mounted.
 
-    - `port` (`int: 8200`) - When set to a value, overrides the default port used for the server liveness probe.
+    - `storageClass` ((#v-server-datastorage-storageclass)) (`string: null`) - Name of the storage class to use.  If null it will use the
+      configured default Storage Class.
 
-    ```yaml
-    livenessProbe:
-      enabled: true
-      path: /v1/sys/health?standbyok=true
-      initialDelaySeconds: 60
-      failureThreshold: 2
-      periodSeconds: 5
-      successThreshold: 1
-      timeoutSeconds: 3
-      port: 8200
-    ```
+    - `accessMode` ((#v-server-datastorage-accessmode)) (`string: ReadWriteOnce`) - Access Mode of the storage device being used for the PVC
 
-  - `terminationGracePeriodSeconds` (`int: 10`) - Optional duration in seconds the pod needs to terminate gracefully. See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+    - `annotations` ((#v-server-datastorage-annotations)) - Annotations to apply to the PVC
 
-  - `preStopSleepSeconds` (`int: 5`) - Used to set the sleep time during the preStop step.
+  - `auditStorage` ((#v-server-auditstorage)) - This configures the Vault Statefulset to create a PVC for audit
+    logs.  Once Vault is deployed, initialized, and unsealed, Vault must
+    be configured to use this for audit logs.  This will be mounted to
+    /vault/audit
+    See https://developer.hashicorp.com/vault/docs/audit to know more
 
-  - `postStart` (`array: []`) - Used to define commands to run after the pod is ready. This can be used to automate processes such as initialization or bootstrapping auth methods.
+    - `enabled` ((#v-server-auditstorage-enabled)) (`boolean: false`)
 
-  ```yaml
-  postStart:
-    - /bin/sh
-    - -c
-    - /vault/userconfig/myscript/run.sh
-  ```
+    - `size` ((#v-server-auditstorage-size)) (`string: 10Gi`) - Size of the PVC created
 
-  - `extraInitContainers` (`array: null`) - extraInitContainers is a list of init containers. Specified as a YAML list. This is useful if you need to run a script to provision TLS certificates or write out configuration files in a dynamic way.
+    - `mountPath` ((#v-server-auditstorage-mountpath)) (`string: /vault/audit`) - Location where the PVC will be mounted.
 
-  - `extraContainers` (`array: null`) - The extra containers to be applied to the Vault server pods.
+    - `storageClass` ((#v-server-auditstorage-storageclass)) (`string: null`) - Name of the storage class to use.  If null it will use the
+      configured default Storage Class.
 
-  ```yaml
-  extraContainers:
-    - name: mycontainer
-      image: 'app:0.0.0'
-      env: ...
-  ```
+    - `accessMode` ((#v-server-auditstorage-accessmode)) (`string: ReadWriteOnce`) - Access Mode of the storage device being used for the PVC
 
-  - `extraEnvironmentVars` (`dictionary: {}`) - The extra environment variables to be applied to the Vault server.
+    - `annotations` ((#v-server-auditstorage-annotations)) - Annotations to apply to the PVC
 
-  ```yaml
-  # Extra Environment Variables are defined as key/value strings.
-  extraEnvironmentVars:
-    GOOGLE_REGION: global
-    GOOGLE_PROJECT: myproject
-    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/myproject/myproject-creds.json
-  ```
+  - `dev` ((#v-server-dev)) - Run Vault in "dev" mode. This requires no further setup, no state management,
+    and no initialization. This is useful for experimenting with Vault without
+    needing to unseal, store keys, et. al. All data is lost on restart - do not
+    use dev mode for anything other than experimenting.
+    See https://developer.hashicorp.com/vault/docs/concepts/dev-server to know more
 
-  - `shareProcessNamespace` (`boolean: false`) - Enables process namespace sharing between Vault and the extraContainers. This is useful if Vault must be signaled, e.g. to send a SIGHUP for log rotation.
+    - `enabled` ((#v-server-dev-enabled)) (`boolean: false`)
 
-  - `extraArgs` (`string: null`) - The extra arguments to be applied to the Vault server startup command.
+    - `devRootToken` ((#v-server-dev-devroottoken)) (`string: root`) - Set VAULT_DEV_ROOT_TOKEN_ID value
 
-    ```yaml
-    extraArgs: '-config=/path/to/extra/config.hcl -log-format=json'
-    ```
+  - `standalone` ((#v-server-standalone)) - Run Vault in "standalone" mode. This is the default mode that will deploy if
+    no arguments are given to helm. This requires a PVC for data storage to use
+    the "file" backend.  This mode is not highly available and should not be scaled
+    past a single replica.
 
-  - `extraPorts` (`array: []`) - additional ports to add to the server statefulset
+    - `enabled` ((#v-server-standalone-enabled)) (`string: -`)
 
-  ```yaml
-  extraPorts:
-    - containerPort: 8300
-      name: http-monitoring
-  ```
+    - `config` ((#v-server-standalone-config)) (`string`) - config is a raw string of default configuration when using a Stateful
+      deployment. Default is to use a PersistentVolumeClaim mounted at /vault/data
+      and store data there. This is only used when using a Replica count of 1, and
+      using a stateful set. This should be HCL.
 
-  - `extraSecretEnvironmentVars` (`array: []`) - The extra environment variables populated from a secret to be applied to the Vault server.
+      Note: Configuration files are stored in ConfigMaps so sensitive data
+      such as passwords should be either mounted through extraSecretEnvironmentVars
+      or through a Kube secret.  For more information see:
+      https://developer.hashicorp.com/vault/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
 
-    - `envName` (`string: required`) -
-      Name of the environment variable to be populated in the Vault container.
+  - `ha` ((#v-server-ha)) - Run Vault in "HA" mode. There are no storage requirements unless the audit log
+    persistence is required.  In HA mode Vault will configure itself to use Consul
+    for its storage backend.  The default configuration provided will work the Consul
+    Helm project by default.  It is possible to manually configure Vault to use a
+    different HA backend.
 
-    - `secretName` (`string: required`) -
-      Name of Kubernetes secret used to populate the environment variable defined by `envName`.
+    - `enabled` ((#v-server-ha-enabled)) (`boolean: false`)
 
-    - `secretKey` (`string: required`) -
-      Name of the key where the requested secret value is located in the Kubernetes secret.
+    - `replicas` ((#v-server-ha-replicas)) (`integer: 3`)
 
-    ```yaml
-    # Extra Environment Variables populated from a secret.
-    extraSecretEnvironmentVars:
-      - envName: AWS_SECRET_ACCESS_KEY
-        secretName: vault
-        secretKey: AWS_SECRET_ACCESS_KEY
-    ```
+    - `apiAddr` ((#v-server-ha-apiaddr)) (`string: null`) - Set the api_addr configuration for Vault HA
+      See https://developer.hashicorp.com/vault/docs/configuration#api_addr
+      If set to null, this will be set to the Pod IP Address
 
-  - `extraVolumes` (`array: []`) - Deprecated: please use `volumes` instead. A list of extra volumes to mount to Vault servers. This is useful for bringing in extra data that can be referenced by other configurations at a well known path, such as TLS certificates. The value of this should be a list of objects. Each object supports the following keys:
+    - `clusterAddr` ((#v-server-ha-clusteraddr)) (`string: null`) - Set the cluster_addr confuguration for Vault HA
+      See https://developer.hashicorp.com/vault/docs/configuration#cluster_addr
+      If set to null, this will be set to https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201
 
-    - `type` (`string: required`) -
-      Type of the volume, must be one of "configMap" or "secret". Case sensitive.
+    - `raft` ((#v-server-ha-raft)) - Enables Vault's integrated Raft storage.  Unlike the typical HA modes where
+      Vault's persistence is external (such as Consul), enabling Raft mode will create
+      persistent volumes for Vault to store data according to the configuration under server.dataStorage.
+      The Vault cluster will coordinate leader elections and failovers internally.
 
-    - `name` (`string: required`) -
-      Name of the configMap or secret to be mounted. This also controls the path
-      that it is mounted to. The volume will be mounted to `/vault/userconfig/<name>` by default
-      unless `path` is configured.
+      - `enabled` ((#v-server-ha-raft-enabled)) (`boolean: false`) - Enables Raft integrated storage
 
-    - `path` (`string: /vault/userconfigs`) -
-      Name of the path where a configMap or secret is mounted. If not specified
-      the volume will be mounted to `/vault/userconfig/<name of volume>`.
+      - `setNodeId` ((#v-server-ha-raft-setnodeid)) (`boolean: false`) - Set the Node Raft ID to the name of the pod
 
-    - `defaultMode` (`string: "420"`) -
-      Default mode of the mounted files.
+      - `config` ((#v-server-ha-raft-config)) (`string`) - Note: Configuration files are stored in ConfigMaps so sensitive data
+        such as passwords should be either mounted through extraSecretEnvironmentVars
+        or through a Kube secret.  For more information see:
+        https://developer.hashicorp.com/vault/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
 
-    ```yaml
-    extraVolumes:
-      - type: 'secret'
-        name: 'vault-certs'
-        path: '/etc/pki'
-    ```
+    - `config` ((#v-server-ha-config)) (`string`) - config is a raw string of default configuration when using a Stateful
+      deployment. Default is to use a Consul for its HA storage backend.
+      This should be HCL.
 
-  - `volumes` (`array: null`) - A list of volumes made available to all containers. This takes
-    standard Kubernetes volume definitions.
+      Note: Configuration files are stored in ConfigMaps so sensitive data
+      such as passwords should be either mounted through extraSecretEnvironmentVars
+      or through a Kube secret.  For more information see:
+      https://developer.hashicorp.com/vault/docs/platform/k8s/helm/run#protecting-sensitive-vault-configurations
 
-    ```yaml
-    volumes:
-      - name: plugins
-        emptyDir: {}
-    ```
+    - `disruptionBudget` ((#v-server-ha-disruptionbudget)) - A disruption budget limits the number of pods of a replicated application
+      that are down simultaneously from voluntary disruptions
 
-  - `volumeMounts` (`array: null`) - A list of volumes mounts made available to all containers. This takes
-    standard Kubernetes volume definitions.
+      - `enabled` ((#v-server-ha-disruptionbudget-enabled)) (`boolean: true`)
 
-    ```yaml
-    volumeMounts:
-      - mountPath: /usr/local/libexec/vault
-        name: plugins
-        readOnly: true
-    ```
+      - `maxUnavailable` ((#v-server-ha-disruptionbudget-maxunavailable)) (`integer: null`) - maxUnavailable will default to (n/2)-1 where n is the number of
+        replicas. If you'd like a custom value, you can specify an override here.
 
-  - `affinity` - This value defines the [affinity](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity) for server pods. This should be either a multi-line string or YAML matching the PodSpec's affinity field. It defaults to allowing only a single pod on each node, which minimizes risk of the cluster becoming unusable if a node is lost. If you need to run more pods per node (for example, testing on Minikube), set this value to `null`.
+  - `serviceAccount` ((#v-server-serviceaccount)) - Definition of the serviceAccount used to run Vault.
+    These options are also used when using an external Vault server to validate
+    Kubernetes tokens.
 
-  ```yaml
-  # Recommended default server affinity:
-  affinity: |
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-        matchLabels:
-          app.kubernetes.io/name: {{ template "vault.name" . }}
-          app.kubernetes.io/instance: "{{ .Release.Name }}"
-          component: server
-        topologyKey: kubernetes.io/hostname
-  ```
+    - `create` ((#v-server-serviceaccount-create)) (`boolean: true`) - Specifies whether a service account should be created
 
-  - `topologySpreadConstraints` (`array: []`) - [Topology settings](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/)
-    for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `name` ((#v-server-serviceaccount-name)) (`string: ""`) - The name of the service account to use.
+      If not set and create is true, a name is generated using the fullname template
 
-  - `tolerations` (`array: []`) - This value defines the [tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) that are acceptable when being scheduled. This should be either a multi-line string or YAML matching the Toleration array in a PodSpec.
+    - `createSecret` ((#v-server-serviceaccount-createsecret)) (`boolean: false`) - Create a Secret API object to store a non-expiring token for the service account.
+      Prior to v1.24.0, Kubernetes used to generate this secret for each service account by default.
+      Kubernetes now recommends using short-lived tokens from the TokenRequest API or projected volumes instead if possible.
+      For more details, see https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets
+      serviceAccount.create must be equal to 'true' in order to use this feature.
 
-  ```yaml
-  tolerations: |
-    - key: 'node.kubernetes.io/unreachable'
-      operator: 'Exists'
-      effect: 'NoExecute'
-      tolerationSeconds: 6000
-  ```
+    - `annotations` ((#v-server-serviceaccount-annotations)) - Extra annotations for the serviceAccount definition. This can either be
+      YAML or a YAML-formatted multi-line templated string map of the
+      annotations to apply to the serviceAccount.
 
-  - `nodeSelector` (`dictionary: {}`) - This value defines additional node selection criteria for more control over where the Vault servers are deployed. This should be formatted as a multi-line string or YAML map.
+    - `extraLabels` ((#v-server-serviceaccount-extralabels)) - Extra labels to attach to the serviceAccount
+      This should be a YAML map of the labels to apply to the serviceAccount
 
-  ```yaml
-  nodeSelector: |
-    disktype: ssd
-  ```
+    - `serviceDiscovery` ((#v-server-serviceaccount-servicediscovery)) - Enable or disable a service account role binding with the permissions required for
+      Vault's Kubernetes service_registration config option.
+      See https://developer.hashicorp.com/vault/docs/configuration/service-registration/kubernetes
 
-  - `networkPolicy` - Values that configure the Vault Network Policy.
+      - `enabled` ((#v-server-serviceaccount-servicediscovery-enabled)) (`boolean: true`)
 
-    - `enabled` (`boolean: false`) - When set to `true`, enables a Network Policy for the Vault cluster.
+  - `statefulSet` ((#v-server-statefulset)) - Settings for the statefulSet used to run Vault.
 
-    - `egress` (`array: []`) - This value configures the [egress](https://kubernetes.io/docs/concepts/services-networking/network-policies/) network policy rules.
+    - `annotations` ((#v-server-statefulset-annotations)) - Extra annotations for the statefulSet. This can either be YAML or a
+      YAML-formatted multi-line templated string map of the annotations to apply
+      to the statefulSet.
 
-    ```yaml
-    egress:
-      - to:
-          - ipBlock:
-              cidr: 10.0.0.0/24
-        ports:
-          - protocol: TCP
-            port: 8200
-    ```
+    - `securityContext` ((#v-server-statefulset-securitycontext)) - Set the pod and container security contexts.
+      If not set, these will default to, and for *not* OpenShift:
+      pod:
+        runAsNonRoot: true
+        runAsGroup: {{ .Values.server.gid | default 1000 }}
+        runAsUser: {{ .Values.server.uid | default 100 }}
+        fsGroup: {{ .Values.server.gid | default 1000 }}
+      container:
+        allowPrivilegeEscalation: false
 
-  - `priorityClassName` (`string: ""`) - Priority class for server pods
+      If not set, these will default to, and for OpenShift:
+      pod: {}
+      container: {}
 
-  - `extraLabels` (`dictionary: {}`) - This value defines additional labels for server pods.
+      - `pod` ((#v-server-statefulset-securitycontext-pod))
 
-  ```yaml
-  extraLabels:
-    'sample/label1': 'foo'
-    'sample/label2': 'bar'
-  ```
+      - `container` ((#v-server-statefulset-securitycontext-container))
 
-  - `annotations` (`dictionary: {}`) - This value defines additional annotations for server pods. This can either be YAML or a YAML-formatted multi-line templated string.
+  - `hostNetwork` ((#v-server-hostnetwork)) (`boolean: false`) - Should the server pods run on the host network
 
-  ```yaml
-  annotations:
-    "sample/annotation1": "foo"
-    "sample/annotation2": "bar"
-  # or
-  annotations: |
-    "sample/annotation1": "foo"
-    "sample/annotation2": "bar"
-  ```
+### ui ((#h-ui))
 
-  - `service` - Values that configure the Kubernetes service created for Vault. These options are also used for the `active` and `standby` services when [`ha`](#ha) is enabled.
+- `ui` ((#v-ui)) - Vault UI
 
-    - `enabled` (`boolean: true`) - When set to `true`, a Kubernetes service will be created for Vault.
+  - `enabled` ((#v-ui-enabled)) (`boolean: false`) - True if you want to create a Service entry for the Vault UI.
 
-    - `active` - Values that apply only to the vault-active service.
+    serviceType can be used to control the type of service created. For
+    example, setting this to "LoadBalancer" will create an external load
+    balancer (for supported K8S installations) to access the UI.
 
-      - `enabled` (`boolean: true`) - When set to `true`, the vault-active Kubernetes service will be created for Vault, selecting pods which label themselves as the cluster leader with `vault-active: "true"`.
+  - `publishNotReadyAddresses` ((#v-ui-publishnotreadyaddresses)) (`boolean: true`)
 
-    - `standby` - Values that apply only to the vault-standby service.
+  - `activeVaultPodOnly` ((#v-ui-activevaultpodonly)) (`boolean: false`) - The service should only contain selectors for active Vault pod
 
-      - `enabled` (`boolean: true`) - When set to `true`, the vault-standby Kubernetes service will be created for Vault, selecting pods which label themselves as a cluster follower with `vault-active: "false"`.
+  - `serviceType` ((#v-ui-servicetype)) (`string: ClusterIP`)
 
-    - `clusterIP` (`string`) - ClusterIP controls whether an IP address (cluster IP) is attached to the Vault service within Kubernetes. By default the Vault service will be given a Cluster IP address, set to `None` to disable. When disabled Kubernetes will create a "headless" service. Headless services can be used to communicate with pods directly through DNS instead of a round robin load balancer.
+  - `serviceNodePort` ((#v-ui-servicenodeport)) (`integer: null`)
 
-    - `type` (`string: "ClusterIP"`) - Sets the type of service to create, such as `NodePort`.
+  - `externalPort` ((#v-ui-externalport)) (`integer: 8200`)
 
-    - `externalTrafficPolicy` (`string: "Cluster"`) - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
+  - `targetPort` ((#v-ui-targetport)) (`integer: 8200`)
 
-    - `port` (`int: 8200`) - Port on which Vault server is listening inside the pod.
+  - `serviceIPFamilyPolicy` ((#v-ui-serviceipfamilypolicy)) (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment.
+    Omitting these values will let the service fall back to whatever the CNI dictates the defaults
+    should be.
+    These are only supported for kubernetes versions >=1.23.0
 
-    - `targetPort` (`int: 8200`) - Port on which the service is listening.
+    Configures the service's supported IP family, can be either:
+        SingleStack: Single-stack service. The control plane allocates a cluster IP for the Service, using the first configured service cluster IP range.
+        PreferDualStack: Allocates IPv4 and IPv6 cluster IPs for the Service.
+        RequireDualStack: Allocates Service .spec.ClusterIPs from both IPv4 and IPv6 address ranges.
 
-    - `nodePort` (`int:`) - When type is set to `NodePort`, the bound node port can be configured using this value. A random port will be assigned if this is left blank.
+  - `serviceIPFamilies` ((#v-ui-serviceipfamilies)) (`map`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well
+    Can be IPv4 and/or IPv6.
 
-    - `activeNodePort` (`int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `active` service, and will be random if left blank.
+  - `externalTrafficPolicy` ((#v-ui-externaltrafficpolicy)) (`string: Cluster`) - The externalTrafficPolicy can be set to either Cluster or Local
+    and is only valid for LoadBalancer and NodePort service types.
+    The default value is Cluster.
+    ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy
 
-    - `standbyNodePort` (`int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `standby` service, will be random if left blank.
+  - `annotations` ((#v-ui-annotations)) - loadBalancerSourceRanges:
+      - 10.0.0.0/16
+      - 1.78.23.3/32
 
-    - `publishNotReadyAddresses` (`boolean: true`) - If true, do not wait for server pods to be ready before adding them to the service pool.
+    loadBalancerIP:
 
-    - `instanceSelector`
+    Extra annotations to attach to the ui service
+    This can either be YAML or a YAML-formatted multi-line templated string map
+    of the annotations to apply to the ui service
 
-      - `enabled` (`boolean: true`) - When set to false, the service selector used for the vault, vault-active, and vault-standby services will not filter on `app.kubernetes.io/instance`. This means they may select pods from outside this deployment of the Helm chart. Does not affect the headless vault-internal service with `ClusterIP: None`.
+### csi ((#h-csi))
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service. This can either be YAML or a YAML-formatted multi-line templated string.
+- `csi` ((#v-csi)) - secrets-store-csi-driver-provider-vault
 
-    ```yaml
-    annotations:
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    # or
-    annotations: |
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    ```
+  - `enabled` ((#v-csi-enabled)) (`boolean: false`) - True if you want to install a secrets-store-csi-driver-provider-vault daemonset.
 
-  - `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
+    Requires installing the secrets-store-csi-driver separately, see:
+    https://github.com/kubernetes-sigs/secrets-store-csi-driver#install-the-secrets-store-csi-driver
 
-    - `create` (`boolean: true`): If set to true, creates a service account used by Vault.
+    With the driver and provider installed, you can mount Vault secrets into volumes
+    similar to the Vault Agent injector, and you can also sync those secrets into
+    Kubernetes secrets.
 
-    - `name` (`string: ""`): Name of the service account to use. If not set and create is true, a name is generated using the name of the installation (default is "vault").
+  - `image` ((#v-csi-image))
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
+    - `repository` ((#v-csi-image-repository)) (`string: hashicorp/vault-csi-provider`)
 
-    ```yaml
-    annotations:
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    # or
-    annotations: |
-      "sample/annotation1": "foo"
-      "sample/annotation2": "bar"
-    ```
+    - `tag` ((#v-csi-image-tag)) (`string: 1.4.0`)
 
-    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the Vault Server service account.
+    - `pullPolicy` ((#v-csi-image-pullpolicy)) (`string: IfNotPresent`)
 
-    ```yaml
-    extraLabels:
-      'sample/label1': 'foo'
-      'sample/label2': 'bar'
-    ```
+  - `volumes` ((#v-csi-volumes)) (`map`) - volumes is a list of volumes made available to all containers. These are rendered
+    via toYaml rather than pre-processed like the extraVolumes value.
+    The purpose is to make it easy to share volumes between containers.
 
-    - `serviceDiscovery` - Values that configure permissions required for Vault Server to automatically discover and join a Vault cluster using pod metadata.
+  - `volumeMounts` ((#v-csi-volumemounts)) (`map`) - volumeMounts is a list of volumeMounts for the main server container. These are rendered
+    via toYaml rather than pre-processed like the extraVolumes value.
+    The purpose is to make it easy to share volumes between containers.
 
-      - `enabled` (`boolean: true`) - Enable or disable a service account role binding with the permissions required for Vault's Kubernetes [`service_registration`](/vault/docs/configuration/service-registration/kubernetes) config option.
+  - `resources` ((#v-csi-resources))
 
-  - `dataStorage` - This configures the volume used for storing Vault data when not using external storage such as Consul.
+  - `hmacSecretName` ((#v-csi-hmacsecretname)) (`string: ""`) - Override the default secret name for the CSI Provider's HMAC key used for
+    generating secret versions.
 
-    - `enabled` (`boolean: true`) -
-      Enables a persistent volume to be created for storing Vault data when not using an external storage service.
+  - `daemonSet` ((#v-csi-daemonset)) - Settings for the daemonSet used to run the provider.
 
-    - `size` (`string: 10Gi`) -
-      Size of the volume to be created for Vault's data storage when not using an external storage service.
+    - `updateStrategy` ((#v-csi-daemonset-updatestrategy))
 
-    - `storageClass` (`string: null`) -
-      Name of the storage class to use when creating the data storage volume.
+      - `type` ((#v-csi-daemonset-updatestrategy-type)) (`string: RollingUpdate`)
 
-    - `mountPath` (`string: /vault/data`) -
-      Configures the path in the Vault pod where the data storage will be mounted.
+      - `maxUnavailable` ((#v-csi-daemonset-updatestrategy-maxunavailable)) (`string: ""`)
 
-    - `accessMode` (`string: ReadWriteOnce`) -
-      Type of access mode of the storage device. See the [official Kubernetes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) for more information.
+    - `annotations` ((#v-csi-daemonset-annotations)) - Extra annotations for the daemonSet. This can either be YAML or a
+      YAML-formatted multi-line templated string map of the annotations to apply
+      to the daemonSet.
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the data PVCs. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+    - `providersDir` ((#v-csi-daemonset-providersdir)) (`string: /etc/kubernetes/secrets-store-csi-providers`) - Provider host path (must match the CSI provider's path)
 
-    ```yaml
-    annotations:
-      kubernetes.io/my-pvc: foobar
-    # or
-    annotations: |
-      kubernetes.io/my-pvc: foobar
-    ```
+    - `kubeletRootDir` ((#v-csi-daemonset-kubeletrootdir)) (`string: /var/lib/kubelet`) - Kubelet host path
 
-  - `auditStorage` - This configures the volume used for storing Vault's audit logs. See the [Vault documentation](/vault/docs/audit) for more information.
+    - `extraLabels` ((#v-csi-daemonset-extralabels)) - Extra labels to attach to the vault-csi-provider daemonSet
+      This should be a YAML map of the labels to apply to the csi provider daemonSet
 
-    - `enabled` (`boolean: false`) -
-      Enables a persistent volume to be created for storing Vault's audit logs.
+    - `securityContext` ((#v-csi-daemonset-securitycontext)) - security context for the pod template and container in the csi provider daemonSet
 
-    - `size` (`string: 10Gi`) -
-      Size of the volume to be created for Vault's audit logs.
+      - `pod` ((#v-csi-daemonset-securitycontext-pod))
 
-    - `storageClass` (`string: null`) -
-      Name of the storage class to use when creating the audit storage volume.
+      - `container` ((#v-csi-daemonset-securitycontext-container))
 
-    - `mountPath` (`string: /vault/audit`) -
-      Configures the path in the Vault pod where the audit storage will be mounted.
+  - `pod` ((#v-csi-pod))
 
-    - `accessMode` (`string: ReadWriteOnce`) -
-      Type of access mode of the storage device.
+    - `annotations` ((#v-csi-pod-annotations)) - Extra annotations for the provider pods. This can either be YAML or a
+      YAML-formatted multi-line templated string map of the annotations to apply
+      to the pod.
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the audit PVCs. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+    - `tolerations` ((#v-csi-pod-tolerations)) (`map`) - Toleration Settings for provider pods
+      This should be either a multi-line string or YAML matching the Toleration array
+      in a PodSpec.
 
-    ```yaml
-    annotations:
-      kubernetes.io/my-pvc: foobar
-    # or
-    annotations: |
-      kubernetes.io/my-pvc: foobar
-    ```
+    - `nodeSelector` ((#v-csi-pod-nodeselector)) - nodeSelector labels for csi pod assignment, formatted as a multi-line string or YAML map.
+      ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+      Example:
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
 
-  - `dev` - This configures `dev` mode for the Vault server.
+    - `affinity` ((#v-csi-pod-affinity)) - Affinity Settings
+      This should be either a multi-line string or YAML matching the PodSpec's affinity field.
 
-    - `enabled` (`boolean: false`) -
-      Enables `dev` mode for the Vault server. This mode is useful for experimenting with Vault without needing to unseal.
+    - `extraLabels` ((#v-csi-pod-extralabels)) - Extra labels to attach to the vault-csi-provider pod
+      This should be a YAML map of the labels to apply to the csi provider pod
 
-    - `devRootToken` (`string: "root"`) - Configures the root token for the Vault development server.
+  - `agent` ((#v-csi-agent))
 
-    ~> **Security Warning:** Never, ever, ever run a "dev" mode server in production. It is insecure and will lose data on every restart (since it stores data in-memory). It is only made for development or experimentation.
+    - `enabled` ((#v-csi-agent-enabled)) (`boolean: true`)
 
-  - `standalone` - This configures `standalone` mode for the Vault server.
+    - `extraArgs` ((#v-csi-agent-extraargs)) (`map`)
 
-    - `enabled` (`boolean: true`) -
-      Enables `standalone` mode for the Vault server. This mode uses the `file` storage backend and requires a volume for persistence (`dataStorage`).
+    - `image` ((#v-csi-agent-image))
 
-    - `config` (`string or object: "{}"`) -
-      A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
-      This will be saved as-is into a ConfigMap that is read by the Vault servers.
-      This can be used to add additional configuration that isn't directly exposed by the chart.
-      If an object is provided, it will be written as JSON.
+      - `repository` ((#v-csi-agent-image-repository)) (`string: hashicorp/vault`)
 
-    ```yaml
-    # ExtraConfig values are formatted as a multi-line string:
-    config: |
-      api_addr = "http://POD_IP:8200"
+      - `tag` ((#v-csi-agent-image-tag)) (`string: 1.14.0`)
 
-      listener "tcp" {
-        tls_disable = 1
-        address     = "0.0.0.0:8200"
-      }
+      - `pullPolicy` ((#v-csi-agent-image-pullpolicy)) (`string: IfNotPresent`)
 
-      storage "file" {
-        path = "/vault/data"
-      }
-    ```
+    - `logFormat` ((#v-csi-agent-logformat)) (`string: standard`)
 
-    This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
+    - `logLevel` ((#v-csi-agent-loglevel)) (`string: info`)
 
-    ```shell
-    --set server.standalone.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
-    ```
+    - `resources` ((#v-csi-agent-resources))
 
-  - `ha` - This configures `ha` mode for the Vault server.
+  - `priorityClassName` ((#v-csi-priorityclassname)) (`string: ""`) - Priority class for csi pods
 
-    - `enabled` (`boolean: false`) -
-      Enables `ha` mode for the Vault server. This mode uses a highly available backend storage (such as Consul) to store Vault's data. By default this is configured to use [Consul Helm](https://github.com/hashicorp/consul-helm). For a complete list of storage backends, see the [Vault documentation](/vault/docs/configuration).
+  - `serviceAccount` ((#v-csi-serviceaccount))
 
-    - `apiAddr`: (`string: "{}"`) -
-      Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
+    - `annotations` ((#v-csi-serviceaccount-annotations)) - Extra annotations for the serviceAccount definition. This can either be
+      YAML or a YAML-formatted multi-line templated string map of the
+      annotations to apply to the serviceAccount.
 
-    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](/vault/docs/configuration#cluster_addr) configuration for Vault HA.
-      If null, defaults to `https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201`.
+    - `extraLabels` ((#v-csi-serviceaccount-extralabels)) - Extra labels to attach to the vault-csi-provider serviceAccount
+      This should be a YAML map of the labels to apply to the csi provider serviceAccount
 
-    - `raft` - This configures `raft` integrated storage mode for the Vault server.
+  - `readinessProbe` ((#v-csi-readinessprobe)) - Used to configure readinessProbe for the pods.
 
-      - `enabled` (`boolean: false`) -
-        Enables `raft` integrated storage mode for the Vault server. This mode uses persistent volumes for storage.
+    - `failureThreshold` ((#v-csi-readinessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-      - `setNodeId` (`boolean: false`) - Set the Node Raft ID to the name of the pod.
+    - `initialDelaySeconds` ((#v-csi-readinessprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
 
-      - `config` (`string or object: "{}"`) -
-        A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
-        This will be saved as-is into a ConfigMap that is read by the Vault servers.
-        This can be used to add additional configuration that isn't directly exposed by the chart.
-        If an object is provided, it will be written as JSON.
+    - `periodSeconds` ((#v-csi-readinessprobe-periodseconds)) (`integer: 5`) - How often (in seconds) to perform the probe
 
-    - `replicas` (`int: 3`) -
-      The number of pods to deploy to create a highly available cluster of Vault servers.
+    - `successThreshold` ((#v-csi-readinessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-    - `updatePartition` (`int: 0`) -
-      If an updatePartition is specified, all Pods with an ordinal that is greater than or equal to the partition will be updated when the StatefulSet’s `.spec.template` is updated. If set to `0`, this disables partition updates. For more information see the [official Kubernetes documentation](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
+    - `timeoutSeconds` ((#v-csi-readinessprobe-timeoutseconds)) (`integer: 3`) - Number of seconds after which the probe times out.
 
-    - `config` (`string or object: "{}"`) -
-      A raw string of extra HCL or JSON [configuration](/vault/docs/configuration) for Vault servers.
-      This will be saved as-is into a ConfigMap that is read by the Vault servers.
-      This can be used to add additional configuration that isn't directly exposed by the chart.
-      If an object is provided, it will be written as JSON.
+  - `livenessProbe` ((#v-csi-livenessprobe)) - Used to configure livenessProbe for the pods.
 
-    ```yaml
-    # ExtraConfig values are formatted as a multi-line string:
-    config: |
-      ui = true
-      api_addr = "http://POD_IP:8200"
-      listener "tcp" {
-          tls_disable = 1
-          address     = "0.0.0.0:8200"
-      }
+    - `failureThreshold` ((#v-csi-livenessprobe-failurethreshold)) (`integer: 2`) - When a probe fails, Kubernetes will try failureThreshold times before giving up
 
-      storage "consul" {
-          path = "vault/"
-          address = "HOST_IP:8500"
-      }
-    ```
+    - `initialDelaySeconds` ((#v-csi-livenessprobe-initialdelayseconds)) (`integer: 5`) - Number of seconds after the container has started before probe initiates
 
-    This can also be set using Helm's `--set` flag (vault-helm v0.1.0 and later), using the following syntax:
+    - `periodSeconds` ((#v-csi-livenessprobe-periodseconds)) (`integer: 5`) - How often (in seconds) to perform the probe
 
-    ```shell
-    --set server.ha.config='{ listener "tcp" { address = "0.0.0.0:8200" }'
-    ```
+    - `successThreshold` ((#v-csi-livenessprobe-successthreshold)) (`integer: 1`) - Minimum consecutive successes for the probe to be considered successful after having failed
 
-  - `disruptionBudget` - Values that configures the disruption budget policy. See the [official Kubernetes documentation](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) for more information.
+    - `timeoutSeconds` ((#v-csi-livenessprobe-timeoutseconds)) (`integer: 3`) - Number of seconds after which the probe times out.
 
-    - `enabled` (`boolean: true`) -
-      Enables disruption budget policy to limit the number of pods that are down simultaneously from voluntary disruptions.
+  - `debug` ((#v-csi-debug)) (`boolean: false`) - Enables debug logging.
 
-    - `maxUnavailable` (`int: null`) -
-      The maximum number of unavailable pods. By default, this will be automatically
-      computed based on the `server.replicas` value to be `(n/2)-1`. If you need to set
-      this to `0`, you will need to add a `--set 'server.disruptionBudget.maxUnavailable=0'`
-      flag to the helm chart installation command because of a limitation in the Helm
-      templating language.
+  - `extraArgs` ((#v-csi-extraargs)) (`map`) - Pass arbitrary additional arguments to vault-csi-provider.
+    See https://developer.hashicorp.com/vault/docs/platform/k8s/csi/configurations#command-line-arguments
+    for the available command line flags.
 
-  - `statefulSet` - This configures settings for the Vault Statefulset.
+### serverTelemetry ((#h-servertelemetry))
 
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault statefulset. This can either be YAML or a YAML-formatted
-      multi-line templated string.
+- `serverTelemetry` ((#v-servertelemetry)) - Vault is able to collect and publish various runtime metrics.
+  Enabling this feature requires setting adding `telemetry{}` stanza to
+  the Vault configuration. There are a few examples included in the `config` sections above.
 
-      ```yaml
-      annotations:
-        kubernetes.io/my-statefulset: foobar
-      # or
-      annotations: |
-        kubernetes.io/my-statefulset: foobar
-      ```
+  For more information see:
+  https://developer.hashicorp.com/vault/docs/configuration/telemetry
+  https://developer.hashicorp.com/vault/docs/internals/telemetry
 
-  - `securityContext` - Set the Pod and container security contexts
+  - `serviceMonitor` ((#v-servertelemetry-servicemonitor)) - Enable support for the Prometheus Operator. Currently, this chart does not support
+    authenticating to Vault's metrics endpoint, so the following `telemetry{}` must be included
+    in the `listener "tcp"{}` stanza
+     telemetry {
+       unauthenticated_metrics_access = "true"
+     }
 
-    - `pod` (`dictionary: {}`) - Defines the securityContext for the server Pods, as YAML or a YAML-formatted multi-line templated string.
+    See the `standalone.config` for a more complete example of this.
 
-      Default if not specified and `global.openshift=false`:
+    In addition, a top level `telemetry{}` stanza must also be included in the Vault configuration:
 
-      ```yaml
-      runAsNonRoot: true
-      runAsGroup: {{ .Values.server.gid | default 1000 }}
-      runAsUser: {{ .Values.server.uid | default 100 }}
-      fsGroup: {{ .Values.server.gid | default 1000 }}
-      ```
+    example:
+     telemetry {
+       prometheus_retention_time = "30s"
+       disable_hostname = true
+     }
 
-      Defaults to empty if not specified and `global.openshift=true`.
+    Configuration for monitoring the Vault server.
 
-    - `container` (`dictionary: {}`) - Defines the securityContext for the server containers, as YAML or a YAML-formatted multi-line templated string.
+    - `enabled` ((#v-servertelemetry-servicemonitor-enabled)) (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature,
+      if not the chart will fail to install due to missing CustomResourceDefinitions
+      provided by the operator.
 
-      Default if not specified and `global.openshift=false`:
+      Instructions on how to install the Helm chart can be found here:
+       https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack
+      More information can be found here:
+       https://github.com/prometheus-operator/prometheus-operator
+       https://github.com/prometheus-operator/kube-prometheus
 
-      ```yaml
-      allowPrivilegeEscalation: false
-      ```
+      Enable deployment of the Vault Server ServiceMonitor CustomResource.
 
-      Defaults to empty if not specified and `global.openshift=true`.
+    - `selectors` ((#v-servertelemetry-servicemonitor-selectors)) - Selector labels to add to the ServiceMonitor.
+      When empty, defaults to:
+       release: prometheus
 
-- `ui` - Values that configure the Vault UI.
+    - `interval` ((#v-servertelemetry-servicemonitor-interval)) (`string: 30s`) - Interval at which Prometheus scrapes metrics
 
-  - `enabled` (`boolean: false`) - If true, the UI will be enabled. The UI will only be enabled on Vault servers. If `server.enabled` is false, then this setting has no effect. To expose the UI in some way, you must configure `ui.service`.
+    - `scrapeTimeout` ((#v-servertelemetry-servicemonitor-scrapetimeout)) (`string: 10s`) - Timeout for Prometheus scrapes
 
-  - `serviceType` (`string: ClusterIP`) - The service type to register. This defaults to `ClusterIP`.
-    The available service types are documented on
-    [the Kubernetes website](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types).
+  - `prometheusRules` ((#v-servertelemetry-prometheusrules))
 
-  - `publishNotReadyAddresses` (`boolean: true`) - If set to true, will route traffic to Vault pods that aren't ready (if they're sealed or uninitialized.
+      - `enabled` ((#v-servertelemetry-prometheusrules-enabled)) (`boolean: false`) - The Prometheus operator *must* be installed before enabling this feature,
+        if not the chart will fail to install due to missing CustomResourceDefinitions
+        provided by the operator.
 
-  - `activeVaultPodOnly` (`boolean: false`) - If set to true, the UI service will only route to the active pod in a Vault HA cluster.
+        Deploy the PrometheusRule custom resource for AlertManager based alerts.
+        Requires that AlertManager is properly deployed.
 
-  - `serviceNodePort` (`int: null`) - Sets the Node Port value when using `serviceType: NodePort` on the Vault UI service.
+      - `selectors` ((#v-servertelemetry-prometheusrules-selectors)) - Selector labels to add to the PrometheusRules.
+        When empty, defaults to:
+         release: prometheus
 
-  - `externalPort` (`int: 8200`) - Sets the external port value of the service.
+      - `rules` ((#v-servertelemetry-prometheusrules-rules)) (`map`) - Some example rules.
 
-  - `targetPort` (`int: 8200`) - Sets the target port value of the service.
-
-  - `externalTrafficPolicy` (`string: "Cluster"`) - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
-
-  - `loadBalancerSourceRanges` (`array`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`.
-
-  ```yaml
-  loadBalancerSourceRanges:
-    - 10.0.0.0/16
-    - 120.78.23.3/32
-  ```
-
-  - `loadBalancerIP` (`string`) - This value defines the IP address of the load balancer when using `serviceType: LoadBalancer`.
-
-  - `annotations` (`dictionary: {}`) - This value defines additional annotations for the UI service. This can either be YAML or a YAML-formatted multi-line templated string.
-
-  ```yaml
-  annotations:
-    "sample/annotation1": "foo"
-    "sample/annotation2": "bar"
-  # or
-  annotations: |
-    "sample/annotation1": "foo"
-    "sample/annotation2": "bar"
-  ```
-
-- `csi` - Values that configure running the Vault CSI Provider.
-
-  - `enabled` (`boolean: false`) - When set to `true`, the Vault CSI Provider daemonset will be created.
-
-  - `image` - Values that configure the Vault CSI Provider Docker image.
-
-    - `repository` (`string: "hashicorp/vault-csi-provider"`) - The name of the Docker image for the Vault CSI Provider.
-
-    - `tag` (`string: "1.3.0"`) - The tag of the Docker image for the Vault CSI Provider.. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your CSI provider.
-
-    - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
-
-  - `volumes` (`array: null`) - A list of volumes made available to all containers. This takes
-    standard Kubernetes volume definitions.
-
-    ```yaml
-    volumes:
-      - name: plugins
-        emptyDir: {}
-    ```
-
-  - `volumeMounts` (`array: null`) - A list of volumes mounts made available to all containers. This takes
-    standard Kubernetes volume mount definitions.
-
-    ```yaml
-    volumeMounts:
-      - mountPath: /usr/local/libexec/vault
-        name: plugins
-        readOnly: true
-    ```
-
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each of the CSI containers. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) objects. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
-
-    ```yaml
-    resources:
-      requests:
-        memory: '10Gi'
-      limits:
-        memory: '10Gi'
-    ```
-
-  - `daemonSet` - Values that configure the Vault CSI Provider daemonSet.
-
-    - `updateStrategy` - Values that configure the Vault CSI Provider update strategy.
-
-      - `type` (`string: "RollingUpdate"`) - The [type of update strategy](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies) to be used when the daemonset is updated using Helm upgrades.
-
-      - `maxUnavailable` (`int: null`) - The maximum number of unavailable pods during an upgrade.
-
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault CSI Provider daemonset. This can either be YAML or a YAML-formatted
-      multi-line templated string.
-
-      ```yaml
-      annotations:
-        foo: bar
-      # or
-      annotations: |
-        foo: bar
-      ```
-
-    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the CSI provider daemonset.
-
-    - `providersDir` (`string: "/etc/kubernetes/secrets-store-csi-providers"`) - Provider host path (must match the CSI provider's path)
-
-    - `kubeletRootDir` (`string: "/var/lib/kubelet"`) - Kubelet host path
-
-    - `securityContext` - Security context for the pod template and container in the csi provider daemonSet
-
-      - `pod` (`dictionary: {}`) - Pod-level securityContext. May be specified as YAML or a YAML-formatted multi-line templated string.
-
-      - `container` (`dictionary: {}`) - Container-level securityContext. May be specified as YAML or a YAML-formatted multi-line templated string.
-
-  - `pod` - Values that configure the Vault CSI Provider pod.
-
-    - `annotations` (`dictionary: {}`) - This value defines additional annotations to
-      add to the Vault CSI Provider pods. This can either be YAML or a YAML-formatted
-      multi-line templated string.
-
-      ```yaml
-      annotations:
-        foo: bar
-      # or
-      annotations: |
-        foo: bar
-      ```
-
-    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for CSI provider pods.
-
-    - `tolerations` (`array: []`) - Toleration Settings for CSI pods. This should be a multi-line string or YAML matching the Toleration array in a PodSpec.
-
-  - `priorityClassName` (`string: ""`) - Priority class for CSI Provider pods
-
-  - `serviceAccount` - Values that configure the Vault CSI Provider's serviceaccount.
-
-    - `annotations` (`dictionary: {}`) - This value defines additional
-      annotations for the serviceAccount definition. This can either be YAML or
-      a YAML-formatted multi-line templated string.
-
-      ```yaml
-      annotations:
-        foo: bar
-      # or
-      annotations: |
-        foo: bar
-      ```
-
-    - `extraLabels` (`dictionary: {}`) - This value defines additional labels for the CSI provider service account.
-
-  - `readinessProbe` - Values that configure the readiness probe for the Vault CSI Provider pods.
-
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
-
-    - `initialDelaySeconds` (`int: 5`) - When set to a value, configures the number of seconds after the container has started before probe initiates.
-
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
-
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
-
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
-
-  - `livenessProbe` - Values that configure the liveness probe for the Vault CSI Provider pods.
-
-    - `initialDelaySeconds` (`int: 5`) - Sets the initial delay of the liveness probe when the container starts.
-
-    - `failureThreshold` (`int: 2`) - When set to a value, configures how many probe failures will be tolerated by Kubernetes.
-
-    - `periodSeconds` (`int: 5`) - When set to a value, configures how often (in seconds) to perform the probe.
-
-    - `successThreshold` (`int: 1`) - When set to a value, configures the minimum consecutive successes for the probe to be considered successful after having failed.
-
-    - `timeoutSeconds` (`int: 3`) - When set to a value, configures the number of seconds after which the probe times out.
-
-  - `debug` (`bool: false`) - When set to true, enables debug logging on the Vault CSI Provider daemonset.
-
-  - `extraArgs` (`array: []`) - The extra arguments to be applied to the CSI pod startup command. See [here](/vault/docs/platform/k8s/csi/configurations#command-line-arguments) for available flags.
-
-  - `agent` - Configures the Vault Agent sidecar for the CSI Provider
-    - `enabled` (`bool: true`) - whether to enable the agent sidecar for the CSI provider
-    - `extraArgs` (`array: []`) - The extra arguments to be applied to the agent startup command.
-
-    - `image` - Values that configure the Vault Agent sidecar image for the CSI Provider.
-      - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for agent image. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
-
-      - `repository` (`string: "hashicorp/vault"`) - The name of the Docker image for the Vault Agent sidecar. This should be set to the official Vault Docker image.
-
-      - `tag` (`string: "1.13.1"`) - The tag of the Vault Docker image to use for the Vault Agent Sidecar.
-
-    - `logFormat` (`string: "standard"`) -
-    - `logLevel` (`string: "info"`) -
-    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for the agent. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object.
-    ```yaml
-    resources:
-      requests:
-        memory: '256Mi'
-        cpu: '250m'
-      limits:
-        memory: '256Mi'
-        cpu: '250m'
-    ```
-
-- `serverTelemetry` - Values the configure metrics and telemetry. Enabling these features requires setting
-  the `telemetry {}` stanza in the Vault configuration. See the [telemetry](/vault/docs/configuration/telemetry)
-  [docs](/vault/docs/internals/telemetry) for more on the Vault configuration.
-
-  Currently, this chart does not support authenticating to Vault's metrics endpoint, so the following `telemetry {}` block must be included in the `listener "tcp" {}` stanza of the Vault configuration:
-
-  ```yaml
-  listener "tcp" {
-    tls_disable = 1
-    address     = "0.0.0.0:8200"
-
-    telemetry {
-      unauthenticated_metrics_access = "true"
-    }
-  }
-  ```
-
-  In addition, a top level `telemetry {}` stanza must also be included in the Vault configuration, such as:
-
-  ```yaml
-  telemetry {
-    prometheus_retention_time = "30s",
-    disable_hostname = true
-  }
-  ```
-
-  - `serviceMonitor` - Values that configure monitoring the Vault server
-
-    - `enabled` (`boolean: false`) - When set to `true`, enable deployment of the Vault Server
-      ServiceMonitor CustomResource. The Prometheus operator *must* be installed before enabling this
-      feature. If not, the chart will fail to install due to missing CustomResourceDefinitions provided by
-      the operator.
-
-      Instructions on how to install the Helm chart can be found [here](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack).
-
-      More information can be found here in the
-      [these](https://github.com/prometheus-operator/prometheus-operator)
-      [repositories](https://github.com/prometheus-operator/kube-prometheus)
-
-    - `selectors` (`dictionary: {}`) - Selector labels to add to the ServiceMonitor.
-
-    - `interval` (`string: "30s"`) - Interval at which Prometheus scrapes metrics.
-
-    - `scrapeTimeout` (`string: "10s"`) - Timeout for Prometheus scrapes.
-
-  - `prometheusRules` - Values that configure Prometheus rules.
-
-    - `enabled` (`boolean: false`) - Deploy the PrometheusRule custom resource for AlertManager-based
-      alerts. Requires that AlertManager is properly deployed.
-
-    - `selectors` (`dictionary: {}`) - Selector labels to add to the Prometheus rules.
-
-    - `rules`: (`dictionary: {}`) - Prometheus rules to create.
-
-      For example:
-      ```yaml
-      rules:
-        - alert: vault-HighResponseTime
-          annotations:
-            message: The response time of Vault is over 500ms on average over the last 5 minutes.
-          expr: vault_core_handle_request{quantile="0.5", namespace="mynamespace"} > 500
-          for: 5m
-          labels:
-            severity: warning
-        - alert: vault-HighResponseTime
-          annotations:
-            message: The response time of Vault is over 1s on average over the last 5 minutes.
-          expr: vault_core_handle_request{quantile="0.5", namespace="mynamespace"} > 1000
-          for: 5m
-          labels:
-            severity: critical
-      ```
+  <!-- codegen: end -->
