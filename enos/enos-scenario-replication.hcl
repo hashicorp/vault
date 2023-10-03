@@ -446,6 +446,7 @@ scenario "replication" {
     module = module.vault_setup_perf_primary
     depends_on = [
       step.get_primary_cluster_ips,
+      step.get_secondary_cluster_ips,
       step.write_test_data_on_primary
     ]
 
@@ -809,6 +810,11 @@ scenario "replication" {
   output "secondary_cluster_root_token" {
     description = "The Vault secondary cluster root token"
     value       = step.create_secondary_cluster.root_token
+  }
+
+  output "performance_secondary_token" {
+    description = "The performance secondary replication token"
+    value       = step.generate_secondary_token.secondary_token
   }
 
   output "remaining_hosts" {
