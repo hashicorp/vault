@@ -542,7 +542,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	if index.Type != cacheboltdb.StaticSecretType {
 		// Store the index in the cache
-		c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+		c.logger.Debug("storing dynamic secret response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path, "id", index.ID)
 		err = c.Set(ctx, index)
 		if err != nil {
 			c.logger.Error("failed to cache the proxied response", "error", err)
@@ -609,7 +609,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 
 func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendRequest, index *cachememdb.Index) error {
 	// Store the index in the cache
-	c.logger.Debug("storing response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+	c.logger.Debug("storing static secret response into the cache", "method", req.Request.Method, "path", req.Request.URL.Path, "id", index.ID)
 	err := c.Set(ctx, index)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)

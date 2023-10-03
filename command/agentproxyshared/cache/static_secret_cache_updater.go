@@ -146,8 +146,8 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 		if !ok {
 			return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 		}
-		modified, ok := metadata["modified"].(bool)
-		if ok && modified {
+		modified, ok := metadata["modified"].(string)
+		if ok && modified == "true" {
 			path, ok := metadata["path"].(string)
 			if !ok {
 				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
@@ -188,6 +188,9 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	if err != nil {
 		return err
 	}
+
+	// TODO Violet delete, this should work once I get the next PR!
+	updater.logger.Info("Violet updating static secret", "path", path, "index", index, "id", computeStaticSecretCacheIndex(req))
 	if index == nil {
 		// This event doesn't correspond to a secret in our cache
 		// so this is a no-op.

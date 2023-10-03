@@ -417,8 +417,6 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
-	b.logger.Info("Setting up backend...", "b.BackendType",
-		b.BackendType, "b.system", b.system, "EventsSender", config.EventsSender)
 	b.events = config.EventsSender
 	return nil
 }
@@ -735,8 +733,6 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 // SendEvent is used to send events through the underlying EventSender.
 // It returns ErrNoEvents if the events system has not been configured or enabled.
 func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
-	// TODO Violet: Delete this
-	b.logger.Debug("Entering SendEvent", "b.events", b.events, "type", eventType)
 	if b.events == nil {
 		return ErrNoEvents
 	}
