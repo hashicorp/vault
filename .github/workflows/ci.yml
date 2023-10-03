@@ -63,7 +63,7 @@ jobs:
       # control checking out head instead of base ref by a GH label
       # if checkout-head label is added to a PR, checkout HEAD otherwise checkout base_ref
       - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
-        run: echo "CHECKOUT_REF=${{ github.base_ref }}" >> "$GITHUB_ENV"
+        run: echo "CHECKOUT_REF=${{ github.ref }}" >> "$GITHUB_ENV"
       - if: ${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
         run: echo "CHECKOUT_REF=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
       - id: checkout-ref-output
