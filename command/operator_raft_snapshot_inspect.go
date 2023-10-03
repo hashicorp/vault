@@ -279,7 +279,6 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 			err := protoReader.ReadMsg(s)
 			if err != nil {
 				if err == io.EOF {
-
 					errCh <- nil
 					return
 				}
