@@ -170,3 +170,10 @@ form {
 label {
   cursor: pointer;
 }
+
+// HDS modifications
+.hds-modal {
+  // if a component contains a modal, the modal inherits styling from the parent container
+  // i.e. if a toolbar button opens a modal
+  white-space: wrap;
+}

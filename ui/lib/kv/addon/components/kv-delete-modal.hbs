@@ -1,16 +1,23 @@
-<button type="button" class="toolbar-link" {{on "click" (fn (mut this.modalOpen) true)}} data-test-kv-delete={{@mode}}>
-  {{yield}}
-</button>
+<Hds::Button
+  @text={{or @text (capitalize @mode)}}
+  @color="secondary"
+  class="toolbar-button"
+  {{on "click" (fn (mut this.modalOpen) true)}}
+  data-test-kv-delete={{@mode}}
+/>
+
 {{#if this.modalOpen}}
-  <Modal
-    @title={{this.modalDisplay.title}}
+  <Hds::Modal
+    id="kv-delete-modal-{{@mode}}"
+    @color={{this.modalDisplay.color}}
     @onClose={{fn (mut this.modalOpen) false}}
-    @isActive={{this.modalOpen}}
-    @type={{this.modalDisplay.type}}
-    @showCloseButton={{true}}
     data-test-delete-modal
+    as |M|
   >
-    <section class="modal-card-body">
+    <M.Header @icon="trash">
+      {{this.modalDisplay.title}}
+    </M.Header>
+    <M.Body>
       <p class="has-bottom-margin-s">
         {{this.modalDisplay.intro}}
       </p>
@@ -45,19 +52,19 @@
           {{/each}}
         </div>
       {{/if}}
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button {{if (eq this.modalDisplay.type 'danger') 'is-danger-outlined' 'is-warning-outlined'}}"
-        {{on "click" this.onDelete}}
-        data-test-delete-modal-confirm
-      >
-        Confirm
-      </button>
-      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Confirm"
+          {{on "click" this.onDelete}}
+          @color={{if (eq this.modalDisplay.color "critical") this.modalDisplay.color}}
+          data-test-delete-modal-confirm
+        />
+
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}
