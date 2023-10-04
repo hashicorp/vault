@@ -223,12 +223,11 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 	}
 
 	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	if err == cachememdb.ErrCacheItemNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
-	}
-
-	if index == nil {
-		return nil, nil
 	}
 
 	index.IndexLock.RLock()
@@ -476,14 +475,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			// If the lease belongs to a token that is not managed by the lease cache,
+			// return the response without caching it.
+			c.logger.Debug("pass-through lease response; token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+			return resp, nil
+		}
 		if err != nil {
 			return nil, err
-		}
-		// If the lease belongs to a token that is not managed by the agent,
-		// return the response without caching it.
-		if entry == nil {
-			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
-			return resp, nil
 		}
 
 		// Derive a context for renewal using the token's context
@@ -502,14 +501,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
+			if err == cachememdb.ErrCacheItemNotFound {
+				// If the lease belongs to a token that is not managed by the lease cache,
+				// return the response without caching it.
+				c.logger.Debug("pass-through lease response; parent token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+				return resp, nil
+			}
 			if err != nil {
 				return nil, err
-			}
-			// If parent token is not managed by the agent, child shouldn't be
-			// either.
-			if entry == nil {
-				c.logger.Debug("pass-through auth response; parent token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
-				return resp, nil
 			}
 
 			c.logger.Debug("setting parent context", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -583,7 +582,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// If a cached version of this secret exists, we now have access, so
 	// we don't need to re-cache, just update index.Tokens
 	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, index.ID)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
 
@@ -666,7 +665,7 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 	// The index ID is a hash of the token.
 	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
 	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return nil, err
 	}
 
@@ -779,7 +778,7 @@ func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb.In
 	defer idLock.Unlock()
 
 	getIndex, err := c.db.Get(cachememdb.IndexNameID, index.ID)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
 	index.LastRenewed = t
@@ -974,11 +973,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Get the context for the given token and cancel its context
 		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to token")
@@ -993,11 +992,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to accessor")
@@ -1012,11 +1011,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to accessor")
@@ -1148,11 +1147,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Kill the lifetime watchers of the revoked token
 		index, err := c.db.Get(cachememdb.IndexNameToken, token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return true, nil
+		}
 		if err != nil {
 			return false, err
-		}
-		if index == nil {
-			return true, nil
 		}
 
 		// Indicate the lifetime watcher goroutine for this index to return.
@@ -1396,12 +1395,11 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 	switch {
 	case secret.LeaseID != "":
 		entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
+		}
 		if err != nil {
 			return err
-		}
-
-		if entry == nil {
-			return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
 		}
 
 		// Derive a context for renewal using the token's context
@@ -1411,13 +1409,15 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
+			if err == cachememdb.ErrCacheItemNotFound {
+				// If parent token is not managed by the cache, child shouldn't be
+				// either.
+				if entry == nil {
+					return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
+				}
+			}
 			if err != nil {
 				return err
-			}
-			// If parent token is not managed by the agent, child shouldn't be
-			// either.
-			if entry == nil {
-				return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
 			}
 
 			c.logger.Debug("setting parent context", "method", index.RequestMethod, "path", index.RequestPath)
@@ -1510,7 +1510,7 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	// Get the token from the cache
 	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
 

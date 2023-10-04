@@ -538,7 +538,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
-	require.NoError(t, err)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 	require.Nil(t, expectedClearedIndex)
 }
 
@@ -590,7 +590,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 
 	capabilitiesIndexFromDB, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
 	if err != nil {
-		return
+		t.Fatal(err)
 	}
 
 	require.NotNil(t, capabilitiesIndexFromDB)
@@ -603,11 +603,11 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
-	require.NoError(t, err)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 	require.Nil(t, expectedClearedIndex)
 
 	expectedClearedCapabilitiesIndex, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, capabilitiesIndexFromDB.ID)
-	require.NoError(t, err)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 	require.Nil(t, expectedClearedCapabilitiesIndex)
 }
 
@@ -776,12 +776,9 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
-	idx, err := lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != nil {
-		t.Fatalf("expected nil entry, got: %#v", idx)
+	_, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 
 	// Verify that the response is not cached by sending the same request and
@@ -798,12 +795,9 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
-	idx, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != nil {
-		t.Fatalf("expected nil entry, got: %#v", idx)
+	_, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 }
 

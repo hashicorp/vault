@@ -16,6 +16,10 @@ const (
 	tableNameCapabilitiesIndexer = "capabilities-indexer"
 )
 
+// ErrCacheItemNotFound is returned on Get and GetCapabilitiesIndex calls
+// when the entry is not found in the cache.
+var ErrCacheItemNotFound = errors.New("cache item not found")
+
 // CacheMemDB is the underlying cache database for storing indexes.
 type CacheMemDB struct {
 	db *atomic.Value
@@ -146,6 +150,7 @@ func newDB() (*memdb.MemDB, error) {
 }
 
 // Get returns the index based on the indexer and the index values provided.
+// If the capabilities index isn't present, it will return nil, ErrCacheItemNotFound
 func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, error) {
 	if !validIndexName(indexName) {
 		return nil, fmt.Errorf("invalid index name %q", indexName)
@@ -159,7 +164,7 @@ func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, 
 	}
 
 	if raw == nil {
-		return nil, nil
+		return nil, ErrCacheItemNotFound
 	}
 
 	index, ok := raw.(*Index)
@@ -189,6 +194,7 @@ func (c *CacheMemDB) Set(index *Index) error {
 }
 
 // GetCapabilitiesIndex returns the CapabilitiesIndex from the cache.
+// If the capabilities index isn't present, it will return nil, ErrCacheItemNotFound
 func (c *CacheMemDB) GetCapabilitiesIndex(indexName string, indexValues ...interface{}) (*CapabilitiesIndex, error) {
 	if !validCapabilitiesIndexName(indexName) {
 		return nil, fmt.Errorf("invalid index name %q", indexName)
@@ -202,7 +208,7 @@ func (c *CacheMemDB) GetCapabilitiesIndex(indexName string, indexValues ...inter
 	}
 
 	if raw == nil {
-		return nil, nil
+		return nil, ErrCacheItemNotFound
 	}
 
 	index, ok := raw.(*CapabilitiesIndex)
@@ -268,12 +274,11 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 // Evict removes an index from the cache based on index name and value.
 func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 	index, err := c.Get(indexName, indexValues...)
+	if err == ErrCacheItemNotFound {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("unable to fetch index on cache deletion: %v", err)
-	}
-
-	if index == nil {
-		return nil
 	}
 
 	txn := c.db.Load().(*memdb.MemDB).Txn(true)
