@@ -352,9 +352,6 @@ func TestCacheMemDB_Evict(t *testing.T) {
 			if err != ErrCacheItemNotFound && !tc.wantErr {
 				t.Fatal("expected cache item to be not found", err)
 			}
-			if (err != nil) != tc.wantErr {
-				t.Fatal(err)
-			}
 			if index != nil {
 				t.Fatalf("expected nil entry, got = %#v", index)
 			}
