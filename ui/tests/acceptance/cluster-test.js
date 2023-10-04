@@ -4,7 +4,7 @@
  */
 
 import { create } from 'ember-cli-page-object';
-import { settled, click, visit } from '@ember/test-helpers';
+import { settled, click, visit, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -81,5 +81,25 @@ module('Acceptance | cluster', function (hooks) {
     await visit('/vault/access');
 
     assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
+  });
+
+  test('shows error banner if resultant-acl check fails', async function (assert) {
+    const login_only = `
+      path "auth/token/lookup-self" {
+        capabilities = ["read"]
+      },
+    `;
+    await consoleComponent.runCommands([
+      `write sys/policies/acl/login-only policy=${btoa(login_only)}`,
+      `write -field=client_token auth/token/create no_default_policy=true policies="login-only"`,
+    ]);
+    const noDefaultPolicyUser = consoleComponent.lastLogOutput;
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Resultant ACL banner does not show as root');
+    await logout.visit();
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Does not show on login page');
+    await authPage.login(noDefaultPolicyUser);
+    assert.dom('[data-test-resultant-acl-banner]').includesText('Resultant ACL check failed');
+    await click('[data-test-resultant-acl-reauthenticate]');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'Reauth link goes to login page');
   });
 });
