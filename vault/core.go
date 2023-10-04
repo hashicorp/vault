@@ -705,7 +705,7 @@ func (c *Core) HAState() consts.HAState {
 
 func (c *Core) HAStateWithLock() consts.HAState {
 	c.stateLock.RLock()
-	c.stateLock.RUnlock()
+	defer c.stateLock.RUnlock()
 
 	return c.HAState()
 }
