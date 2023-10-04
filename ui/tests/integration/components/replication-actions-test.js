@@ -171,8 +171,7 @@ module('Integration | Component | replication actions', function (hooks) {
       this.set('storeService.capabilitiesReturnVal', ['root']);
       await render(
         hbs`
-        <div id="modal-wormhole"></div>
-        <ReplicationActions
+                <ReplicationActions
           @model={{this.model}}
           @replicationMode={{this.replicationMode}}
           @selectedAction={{this.selectedAction}}

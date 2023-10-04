@@ -208,8 +208,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');

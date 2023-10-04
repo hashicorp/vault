@@ -64,8 +64,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('key', { backend: 'transit', supportedActions: ['sign'] });
     await render(hbs`
-      {{transit-key-actions selectedAction="sign" key=this.key}}
-      <div id="modal-wormhole"></div>`);
+      {{transit-key-actions selectedAction="sign" key=this.key}}`);
     assert.dom('[data-test-transit-action="sign"]').exists({ count: 1 }, 'renders sign');
   });
 

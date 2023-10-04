@@ -18,8 +18,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     this.set('onConfirm', confirmAction);
     this.set('onClose', closeAction);
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <ConfirmationModal
+            <ConfirmationModal
         @title="Confirmation Modal"
         @isActive={{true}}
         @onConfirm={{this.onConfirm}}

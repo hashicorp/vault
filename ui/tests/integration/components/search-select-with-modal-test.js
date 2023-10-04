@@ -74,8 +74,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @excludeOptions={{array "root"}}
       @subText="Some modal subtext"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
     assert.dom('[data-test-modal-subtext]').hasText('Some modal subtext', 'renders modal text');
     assert.strictEqual(component.labelText, 'Policies', 'label text is correct');
@@ -127,8 +126,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
 
     await clickTrigger();
     assert.strictEqual(component.options.length, 4, 'dropdown renders all options');
@@ -177,8 +175,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     await clickTrigger();
     await typeInSearch('acl-test-new');
     assert.strictEqual(
@@ -230,8 +227,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
 
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
     assert.dom('[data-test-component="string-list"]').doesNotExist('does not render fallback component');
@@ -268,8 +264,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @fallbackComponent="string-list"
       @modalFormTemplate="modal-form/policy-template"
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
     assert.dom('[data-test-component="string-list"]').exists('renders fallback component');
     assert.false(component.hasTrigger, 'does not render power select trigger');
     await fillIn('[data-test-string-list-input="0"]', 'string-list-policy');

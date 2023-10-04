@@ -91,6 +91,7 @@
     <M.Footer>
       <Hds::ButtonSet>
         <Hds::Copy::Button
+          data-test-modal-copy
           @text="Copy token"
           @textToCopy={{this.token}}
           class="primary"
@@ -98,6 +99,7 @@
           {{on "click" (action "onCopy")}}
         />
         <Hds::Button
+          data-test-modal-close
           disabled={{not this.isTokenCopied}}
           @text="Close"
           @color="secondary"
