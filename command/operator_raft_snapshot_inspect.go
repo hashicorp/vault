@@ -68,7 +68,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:    "details",
 		Target:  &c.details,
-		Default: false,
+		Default: true,
 		Usage:   "Provides information about usage for KV data stored in Vault.",
 	})
 
