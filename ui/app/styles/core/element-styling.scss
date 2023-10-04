@@ -171,9 +171,26 @@ label {
   cursor: pointer;
 }
 
-// HDS modifications
+// HDS modifications and overrides
+// * ONLY for universal changes (i.e. to address component functionality)
+
+// <Hds::Modal>
 .hds-modal {
-  // if a component contains a modal, the modal inherits styling from the parent container
-  // i.e. if a toolbar button opens a modal
-  white-space: wrap;
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+.hds-modal__body {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+
+// <Hds::Dropdown>
+.hds-dropdown-list-item {
+  > button:disabled {
+    color: $black;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

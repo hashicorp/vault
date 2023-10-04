@@ -129,23 +129,6 @@ pre {
   border-top: $base-border;
 }
 
-// customize spacing (.modal-card-body is restricted to padding: 20px)
-.modal-card-custom {
-  background-color: white;
-  flex-grow: 1;
-  flex-shrink: 1;
-  overflow: auto;
-
-  &.has-padding-m {
-    padding: $spacing-m;
-  }
-
-  &.has-padding-btm-left {
-    padding-bottom: $spacing-m;
-    padding-left: $spacing-m;
-  }
-}
-
 // responsive css
 @media screen and (min-width: 769px), print {
   .modal-card,

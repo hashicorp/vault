@@ -3,89 +3,36 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="modal-card-custom has-padding-btm-left">
-  <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-    <D.Trigger
-      data-test-popup-menu-trigger="month"
-      class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-      @htmlTag="button"
-    >
-      {{or this.selectedMonth.name "Month"}}
-      <Chevron @direction="down" @isButton={{true}} />
-    </D.Trigger>
-    <D.Content @defaultClass="popup-menu-content is-wide">
-      <nav class="box menu scroll" aria-label="months">
-        <ul data-test-month-list class="menu-list">
-          {{#each this.dropdownMonths as |month|}}
-            <button
-              data-test-dropdown-month={{month.name}}
-              type="button"
-              class="button link"
-              disabled={{if (gt month.index this.maxMonthIdx) true false}}
-              {{on "click" (fn this.selectMonth month D.actions)}}
-            >
-              {{month.name}}
-            </button>
-          {{/each}}
-        </ul>
-      </nav>
-    </D.Content>
-  </BasicDropdown>
-  <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-    <D.Trigger
-      data-test-popup-menu-trigger="year"
-      class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-      @htmlTag="button"
-    >
-      {{or this.selectedYear "Year"}}
-      <Chevron @direction="down" @isButton={{true}} />
-    </D.Trigger>
-    <D.Content @defaultClass="popup-menu-content is-wide">
-      <nav class="box menu" aria-label="years">
-        <ul data-test-year-list class="menu-list">
-          {{#each this.dropdownYears as |year|}}
-            <button
-              data-test-dropdown-year={{year}}
-              type="button"
-              class="button link"
-              disabled={{if (eq year this.disabledYear) true false}}
-              {{on "click" (fn this.selectYear year D.actions)}}
-            >
-              {{year}}
-            </button>
-          {{/each}}
-        </ul>
-      </nav>
-    </D.Content>
-  </BasicDropdown>
-  {{#unless @handleCancel}}
-    <button
-      data-test-date-dropdown-submit
-      type="button"
-      class="button is-primary"
-      disabled={{if (and this.selectedMonth this.selectedYear) false true}}
-      {{on "click" this.handleSubmit}}
-    >
-      {{or @submitText "Submit"}}
-    </button>
-  {{/unless}}
-  {{#if this.invalidDate}}
-    <AlertInline @type="danger" @message={{this.invalidDate}} @paddingTop={{true}} @mimicRefresh={{true}} />
-  {{/if}}
-</div>
-{{#if @handleCancel}}
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      data-test-date-dropdown-submit
-      type="button"
-      class="button is-primary"
-      disabled={{if (and this.selectedMonth this.selectedYear) false true}}
-      {{on "click" this.handleSubmit}}
-    >
-      {{or @submitText "Submit"}}
-    </button>
-    <button data-test-date-dropdown-cancel type="button" class="button is-secondary" {{on "click" this.handleCancel}}>
-      Cancel
-    </button>
-  </footer>
+<Hds::SegmentedGroup ...attributes as |S|>
+  <S.Dropdown data-test-month-list @height="200px" as |dd|>
+    <dd.ToggleButton @text={{or this.selectedMonth.name "Month"}} @color="secondary" />
+    {{#each this.dropdownMonths as |month|}}
+      <dd.Interactive
+        data-test-dropdown-month={{month.name}}
+        disabled={{if (gt month.index this.maxMonthIdx) true false}}
+        {{on "click" (fn this.selectMonth month dd)}}
+        @text={{month.name}}
+      />
+    {{/each}}
+  </S.Dropdown>
+  <S.Dropdown data-test-year-list @height="200px" as |dd|>
+    <dd.ToggleButton @text={{or this.selectedYear "Year"}} @color="secondary" />
+    {{#each this.dropdownYears as |year|}}
+      <dd.Interactive
+        data-test-dropdown-year={{year}}
+        disabled={{if (eq year this.disabledYear) true false}}
+        {{on "click" (fn this.selectYear year dd)}}
+        @text={{year}}
+      />
+    {{/each}}
+  </S.Dropdown>
+  <S.Button
+    data-test-date-dropdown-submit
+    disabled={{if (and this.selectedMonth this.selectedYear) false true}}
+    {{on "click" this.handleSubmit}}
+    @text={{or @submitText "Submit"}}
+  />
+</Hds::SegmentedGroup>
+{{#if this.invalidDate}}
+  <AlertInline @type="danger" @message={{this.invalidDate}} @paddingTop={{true}} @mimicRefresh={{true}} />
 {{/if}}

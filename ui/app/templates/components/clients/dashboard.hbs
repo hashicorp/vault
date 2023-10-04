@@ -175,26 +175,29 @@
       </EmptyState>
     {{/if}}
   {{/if}}
+</div>
 
-  {{! BILLING START DATE MODAL }}
-
-  <Modal
-    @title="Edit start month"
-    @onClose={{action (mut this.showBillingStartModal) false}}
-    @isActive={{this.showBillingStartModal}}
-    @showCloseButton={{true}}
-  >
-    <section class="modal-card-custom has-padding-m">
+{{! BILLING START DATE MODAL }}
+{{#if this.showBillingStartModal}}
+  <Hds::Modal id="clients-edit-date-modal" @onClose={{fn (mut this.showBillingStartModal) false}} as |M|>
+    <M.Header>
+      Edit start month
+    </M.Header>
+    <M.Body>
       <p class="has-bottom-margin-s">
         {{this.versionText.description}}
       </p>
       <p><strong>{{this.versionText.label}}</strong></p>
-    </section>
-    <DateDropdown
-      @handleSubmit={{this.handleClientActivityQuery}}
-      @dateType="startDate"
-      @submitText="Save"
-      @handleCancel={{fn this.handleClientActivityQuery (hash dateType="cancel")}}
-    />
-  </Modal>
-</div>
+      <DateDropdown
+        class="has-padding-s"
+        @handleSubmit={{this.handleClientActivityQuery}}
+        @dateType="startDate"
+        @submitText="Save"
+        @handleCancel={{fn this.handleClientActivityQuery (hash dateType="cancel")}}
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button data-test-date-dropdown-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
