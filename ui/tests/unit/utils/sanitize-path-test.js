@@ -6,7 +6,7 @@ module('Unit | Utility | sanitize-path', function () {
     assert.strictEqual(
       sanitizePath(' /foo/bar/baz/ '),
       'foo/bar/baz',
-      'removes spaces and slashs on either side'
+      'removes spaces and slashes on either side'
     );
     assert.strictEqual(sanitizePath('//foo/bar/baz/'), 'foo/bar/baz', 'removes more than one slash');
   });

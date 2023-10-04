@@ -23,6 +23,7 @@ import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Service.extend({
   attrs: null,
