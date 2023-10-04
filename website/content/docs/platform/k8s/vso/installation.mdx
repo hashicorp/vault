@@ -48,7 +48,7 @@ Upgrades may be performed with `helm upgrade` on an existing installation. Pleas
 always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
-Update the `hashicorp` Helm repo.
+Update the `hashicorp` Helm repo:
 ```shell-session
 $ helm repo update hashicorp
 
@@ -57,7 +57,7 @@ Hang tight while we grab the latest from your chart repositories...
 Update Complete. ⎈Happy Helming!⎈
 ```
 
-Upgrade the VSO release
+Upgrade the VSO release:
 ```shell-session
 $ helm upgrade --version 0.3.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
@@ -67,10 +67,10 @@ All CRDs will need to be updated manually after upgrading VSO.
 Refer to [Updating the CRDs](#updating-the-crds) for the proper update procedure.
 
 
-## Updating the CRDs
+## Updating CRDs
 
-Updating VSO's CRDs is a manual step that should be executed after upgrading to a newer version of the operator.
-Applicable when VSO is managed by Helm.
+You must update CRDs for VSO manually **after** you upgrade the
+ operator when the operator is managed by Helm.
 
 ~> **Note:** Make sure that the Helm chart version used in command below matches the currently
 deployed VSO release.
@@ -89,4 +89,5 @@ customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashico
 
 ## Chart values
 
-All supported chart values are documented [here](/vault/docs/platform/k8s/vso/helm)
+Refer to the [VSO helm chart](/vault/docs/platform/k8s/vso/helm)
+ overview for a full list of supported chart values.
