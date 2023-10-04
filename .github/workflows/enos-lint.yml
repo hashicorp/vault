@@ -41,6 +41,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
+          terraform_version: 1.5.7 # QT-623: pin to terraform 1.5.x until a tfjson bug is resolved
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
