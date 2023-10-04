@@ -100,7 +100,7 @@ func TestOperatorRaftSnapshotInspectCommand_Run(t *testing.T) {
 		},
 		{
 			"all_flags",
-			[]string{"-kvdetails", "-kvdepth", "10", "-kvfilter", "key", file2.Name()},
+			[]string{"-details", "-depth", "10", "-filter", "key", file2.Name()},
 			"Key Name      Count",
 			0,
 			cleanup2,
