@@ -41,6 +41,7 @@ type OperatorRaftSnapshotInspectCommand struct {
 	kvDetails bool
 	kvDepth   int
 	kvFilter  string
+	format    string
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Synopsis() string {
@@ -55,15 +56,13 @@ func (c *OperatorRaftSnapshotInspectCommand) Help() string {
 	
 	$ vault operator raft snapshot inspect raft.snap
 	
-	`
-	c.Flags().Help()
+	` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
-
+	set := c.flagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -85,6 +84,14 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Target:  &c.kvFilter,
 		Default: "",
 		Usage:   "Can only be used with -kvdetails. Limits KV key breakdown using this prefix filter.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "format",
+		Target:  &c.format,
+		Default: TableFormat,
+		Usage: `Print the output in the given format. Valid formats
+		are "table" and "json".`,
 	})
 
 	return set
@@ -175,7 +182,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		return 1
 	}
 
-	formatter, err := NewFormatter(c.flagFormat)
+	formatter, err := NewFormatter(c.format)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error outputting enhanced snapshot data: %s", err))
 		return 1
