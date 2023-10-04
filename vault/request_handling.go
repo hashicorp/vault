@@ -951,7 +951,7 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 }
 
 func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
-	return c.router.LoginPath(ctx, req.Path) && req.ClientToken == ""
+	return c.router.LoginPath(ctx, req.Path)
 }
 
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
