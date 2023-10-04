@@ -38,10 +38,10 @@ var (
 
 type OperatorRaftSnapshotInspectCommand struct {
 	*BaseCommand
-	kvDetails bool
-	kvDepth   int
-	kvFilter  string
-	format    string
+	details bool
+	depth   int
+	filter  string
+	format  string
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Synopsis() string {
@@ -66,22 +66,22 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
-		Name:    "kvdetails",
-		Target:  &c.kvDetails,
+		Name:    "details",
+		Target:  &c.details,
 		Default: false,
 		Usage:   "Provides information about usage for KV data stored in Vault.",
 	})
 
 	f.IntVar(&IntVar{
-		Name:    "kvdepth",
-		Target:  &c.kvDepth,
+		Name:    "depth",
+		Target:  &c.depth,
 		Default: 2,
 		Usage:   "Can only be used with -kvdetails. The key prefix depth used to breakdown KV store data. Defaults to 2.",
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "kvfilter",
-		Target:  &c.kvFilter,
+		Name:    "filter",
+		Target:  &c.filter,
 		Default: "",
 		Usage:   "Can only be used with -kvdetails. Limits KV key breakdown using this prefix filter.",
 	})
@@ -222,14 +222,14 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, info *SnapshotInfo) {
-	if c.kvDetails {
+	if c.details {
 		if val.Key == "" {
 			return
 		}
 
 		// check for whether a filter is specified. if it is, skip
 		// any keys that don't match.
-		if len(c.kvFilter) > 0 && !strings.HasPrefix(val.Key, c.kvFilter) {
+		if len(c.filter) > 0 && !strings.HasPrefix(val.Key, c.filter) {
 			return
 		}
 
@@ -237,8 +237,8 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 
 		// handle the situation where the key is shorter than
 		// the specified depth.
-		actualDepth := c.kvDepth
-		if c.kvDepth > len(split) {
+		actualDepth := c.depth
+		if c.depth > len(split) {
 			actualDepth = len(split)
 		}
 
