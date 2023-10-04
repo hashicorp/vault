@@ -110,7 +110,6 @@ func (c *OperatorRaftSnapshotInspectCommand) AutocompleteFlags() complete.Flags 
 type SnapshotInfo struct {
 	Meta         MetadataInfo
 	StatsKV      map[string]typeStats
-	TotalSize    int
 	TotalCountKV int
 }
 
@@ -257,7 +256,6 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotInfo, error) {
 	info := SnapshotInfo{
 		StatsKV:      make(map[string]typeStats),
-		TotalSize:    0,
 		TotalCountKV: 0,
 	}
 
