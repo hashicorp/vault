@@ -329,6 +329,18 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 					return multierror.Prefix(fmt.Errorf("error parsing x_forwarded_for_authorized_addrs: %w", err), fmt.Sprintf("listeners.%d", i))
 				}
 
+				for _, m := range l.XForwardedForAuthorizedAddrs {
+					if _, ok := m.SockAddr.(sockaddr.UnixSock); ok {
+						// X-Forwarded-For headers should only be used with proxies/load balancers, and these mechanisms
+						// are TCP based, not unix socket based. If any of our parsed addresses type check as unix
+						// sockets, that almost certainly means they are malformed, because the parsing logic in
+						// the sockaddr library tries IPv4 first, then IPv6, then assumes it's a unix socket if it
+						// has a / in it (which any IPv4 address in CIDR notation will). Therefore, error here, rather
+						// than accepting it and letting Vault panic at run time.
+						return multierror.Prefix(fmt.Errorf("error parsing x_forwarded_for_authorized_addrs: %v does not appear to be valid", m), fmt.Sprintf("listeners.%d", i))
+					}
+				}
+
 				l.XForwardedForAuthorizedAddrsRaw = nil
 			}
 

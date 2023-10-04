@@ -1,0 +1,3 @@
+```release-note:bug
+http: Error when parsing malformed x_forwarded_for_authorized_addrs instead of panicking at run time.
+```

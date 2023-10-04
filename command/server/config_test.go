@@ -43,6 +43,7 @@ func TestConfig_Sanitized(t *testing.T) {
 
 func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
+	testParseListenersWithErrors(t)
 }
 
 func TestParseUserLockouts(t *testing.T) {

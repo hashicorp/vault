@@ -893,7 +893,10 @@ listener "tcp" {
 	}
 	list, _ := obj.Node.(*ast.ObjectList)
 	objList := list.Filter("listener")
-	configutil.ParseListeners(config.SharedConfig, objList)
+	err := configutil.ParseListeners(config.SharedConfig, objList)
+	if err != nil {
+		t.Fatal(err)
+	}
 	listeners := config.Listeners
 	if len(listeners) == 0 {
 		t.Fatalf("expected at least one listener in the config")
@@ -938,6 +941,27 @@ listener "tcp" {
 	config.Prune()
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testParseListenersWithErrors(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+listener "tcp" {
+  address = "127.0.0.1:443"
+  x_forwarded_for_authorized_addrs = "$10.69.0.0/16"
+}`))
+
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("listener")
+	err := configutil.ParseListeners(config.SharedConfig, objList)
+	if err == nil {
+		t.Fatal("should have errored but didn't")
+	}
+	if !strings.Contains(err.Error(), "error parsing x_forwarded_for_authorized_addrs") {
+		t.Fatal("should have received an error about parsing x_forwarded_for_authorized_addrs but didn't")
 	}
 }
 
