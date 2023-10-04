@@ -34,7 +34,7 @@ module('Integration | Component | download button', function (hooks) {
 
   test('it renders passed args', async function (assert) {
     await render(hbs`
-     <DownloadButton @text"I do something" @hideIcon={{true}} /> `);
+     <DownloadButton @text="I do something" @hideIcon={{true}} /> `);
     assert.doesNotExist(SELECTORS.icon, 'hides icon');
     assert.dom(SELECTORS.button).hasText('I do something', 'renders passed text');
   });
