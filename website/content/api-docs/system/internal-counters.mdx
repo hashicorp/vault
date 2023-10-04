@@ -11,8 +11,6 @@ The `/sys/internal/counters` endpoints are used to return data about the number 
 
 ## Entities
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint returns the total number of Entities.
 
 | Method | Path                              |
@@ -51,8 +49,6 @@ $ curl \
 
 ## Tokens
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint returns the total number of Tokens.
 
 | Method | Path                            |
@@ -90,8 +86,6 @@ $ curl \
 ```
 
 ## Client count
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns client activity information for a given billing
 period, which is represented by the `start_time` and `end_time` parameters.
@@ -726,8 +720,6 @@ $ curl \
 
 ## Partial month client count
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint returns the client activity in the current month. The response
 will have activity attributions per namespace, per mount within each namespaces,
 and new clients information.
@@ -913,8 +905,6 @@ $ curl \
 
 ## Read the client count configuration
 
-@include 'alerts/restricted-admin.mdx'
-
 Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
 
 - `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
@@ -951,8 +941,6 @@ $ curl \
 ```
 
 ## Activity export
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns an export of the clients that had activity within the
 provided start and end times. The returned set of client information will be
