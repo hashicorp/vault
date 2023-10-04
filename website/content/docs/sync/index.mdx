@@ -1,12 +1,15 @@
 ---
 layout: docs
-page_title: Secrets Sync
+page_title: Secrets sync
 description: Secrets sync allows you to safely sync Vault-managed secrets with external destinations.
 ---
 
-<EnterpriseAlert />
 
-# Secrets Sync
+# Secrets sync
+
+<EnterpriseAlert product="vault" />
+
+@include 'alerts/beta.mdx'
 
 In certain circumstances, fetching secrets directly from Vault is impossible or impractical. To help with this challenge,
 Vault can maintain a one-way sync for KVv2 secrets into various destinations that are easier to access for some clients.
