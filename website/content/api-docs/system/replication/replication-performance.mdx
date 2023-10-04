@@ -86,6 +86,8 @@ secondary, it will look something like:
 
 ## Enable performance primary replication
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint enables replication in primary mode. This is used when replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
@@ -123,6 +125,8 @@ $ curl \
 
 ## Demote performance primary
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint demotes a performance primary cluster to a performance secondary.
 This secondary cluster will not attempt to connect to a primary (see the update-primary call),
 but will maintain knowledge of its cluster ID and can be reconnected to the same
@@ -142,6 +146,8 @@ $ curl \
 ```
 
 ## Disable performance primary
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint disables Performance Replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
@@ -165,11 +171,11 @@ $ curl \
 
 ## Generate performance secondary token
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint generates a performance secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
 identifier can later be used to revoke a secondary's access.
-
-**This endpoint requires 'sudo' capability.**
 
 | Method | Path                                                   |
 | :----- | :----------------------------------------------------- |
@@ -225,6 +231,8 @@ $ curl \
 
 ## Revoke performance secondary token
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes a performance secondary's ability to connect to the
 performance primary cluster; the secondary will immediately be disconnected and
 will not be allowed to connect again unless given a new activation token.
@@ -256,6 +264,8 @@ $ curl \
 ```
 
 ## Create paths filter
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to modify the mounts and namespaces that are filtered to a secondary.
 Filtering can be specified in allow mode or deny mode. In allow
@@ -301,6 +311,8 @@ $ curl \
 
 ## Read paths filter
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to read the mode and the mount/namespace paths that are filtered
 for a secondary.
 
@@ -331,6 +343,8 @@ $ curl \
 
 ## Delete paths filter
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to delete the mount and namespace filters for a secondary.
 
 | Method   | Path                                                    |
@@ -351,6 +365,8 @@ $ curl \
 ```
 
 ## Read dynamically generated filter (PRIMARY)
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the primary.
@@ -382,6 +398,8 @@ $ curl \
 
 ## Read dynamically generated filter (SECONDARY)
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint is used to read the namespace and the mount paths that are dynamically
 filtered for a secondary on the secondary.
 
@@ -412,7 +430,7 @@ $ curl \
 
 ## Fetch performance secondary public key
 
-(Vault 1.3+)
+@include 'alerts/restricted-root.mdx'
 
 This endpoint allows fetching a public key that is used to encrypt the returned
 credential information (instead of using a response wrapped token). This avoids
@@ -432,6 +450,8 @@ $ curl \
 ```
 
 ## Enable performance secondary
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint enables Performance Replication on a secondary using a secondary activation
 token.
@@ -481,6 +501,8 @@ $ curl \
 
 ## Promote performance secondary
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint promotes the performance secondary cluster to performance primary.
 For data safety and security reasons, new secondary tokens will need to be
 issued to other secondaries, and there should never be more than one performance
@@ -518,6 +540,8 @@ $ curl \
 
 ## Disable performance secondary
 
+@include 'alerts/restricted-root.mdx'
+
 This endpoint disables Performance Replication entirely on the cluster. The cluster will no
 longer be able to connect to the performance primary.
 
@@ -541,6 +565,8 @@ $ curl \
 ```
 
 ## Update performance secondary's primary
+
+@include 'alerts/restricted-root.mdx'
 
 The update endpoint changes the primary cluster assigned to a
 performance secondary cluster. Changing the primary cluster assignment
