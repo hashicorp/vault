@@ -173,7 +173,7 @@ func (m *MongoDB) changeUserPassword(ctx context.Context, username, password str
 	}
 
 	database := cs.Database
-	if username == m.Username || database == "" {
+	if database == "" {
 		database = "admin"
 	}
 
