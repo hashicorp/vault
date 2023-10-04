@@ -212,6 +212,21 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		if err != nil {
 			return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", config.Name, err)
 		}
+	} else {
+		// creds already exist, so all we need to do is update the rotation
+		// what here stays the same and what changes? Can we change the name?
+		i, err := b.credRotationQueue.PopByKey(config.Name)
+		if err != nil {
+			return nil, fmt.Errorf("expected an item with name %q, but got an error: %w", config.Name, err)
+		}
+		i.Value = config
+		// a few options for updating the priority - the most straightforward is to just say it's rotation period + now.
+		// this might not be ideal since it would allow infinite postponing of the deadline.
+		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
+		err = b.credRotationQueue.Push(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add updated item into the rotation queue for role %q: %w", config.Name, err)
+		}
 	}
 
 	return &logical.Response{
