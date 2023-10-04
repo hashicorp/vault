@@ -4,8 +4,8 @@
 ~}}
 
 <Hds::SegmentedGroup ...attributes as |S|>
-  <S.Dropdown data-test-month-list @height="200px" as |dd|>
-    <dd.ToggleButton @text={{or this.selectedMonth.name "Month"}} @color="secondary" />
+  <S.Dropdown @height="200px" as |dd|>
+    <dd.ToggleButton date-dropdown-toggle-month @text={{or this.selectedMonth.name "Month"}} @color="secondary" />
     {{#each this.dropdownMonths as |month|}}
       <dd.Interactive
         data-test-dropdown-month={{month.name}}
@@ -16,7 +16,7 @@
     {{/each}}
   </S.Dropdown>
   <S.Dropdown data-test-year-list @height="200px" as |dd|>
-    <dd.ToggleButton @text={{or this.selectedYear "Year"}} @color="secondary" />
+    <dd.ToggleButton date-dropdown-toggle-year @text={{or this.selectedYear "Year"}} @color="secondary" />
     {{#each this.dropdownYears as |year|}}
       <dd.Interactive
         data-test-dropdown-year={{year}}
