@@ -33,24 +33,17 @@ API path                                  | Root | Admin
 `sys/metrics`                             | YES  | NO
 `sys/mfa/method/*`                        | YES  | NO
 `sys/monitor`                             | YES  | YES
-`sys/pprof/allocs`                        | YES  | NO
-`sys/pprof/block`                         | YES  | NO
-`sys/pprof/cmdline`                       | YES  | NO
-`sys/pprof/goroutine`                     | YES  | NO
-`sys/pprof/heap`                          | YES  | NO
-`sys/pprof/mutex`                         | YES  | NO
-`sys/pprof/profile`                       | YES  | NO
-`sys/pprof/symbol`                        | YES  | NO
-`sys/pprof/threadcreate`                  | YES  | NO
-`sys/pprof/trace`                         | YES  | NO
-`sys/pprof`                               | YES  | NO
+`sys/pprof/*`                             | YES  | NO
 `sys/quotas/config`                       | YES  | NO
 `sys/quotas/lease-count`                  | YES  | NO
 `sys/quotas/rate-limit`                   | YES  | NO
 `sys/raw`                                 | YES  | NO
 `sys/rekey/*`                             | YES  | NO
 `sys/rekey-recovery-key`                  | YES  | NO
-`sys/replication`                         | YES  | NO
+`sys/replication/recover                  | YES  | NO
+`sys/replication/reindex                  | YES  | NO
+`sys/replication/status                   | YES  | NO
+`sys/replication/merkle-check             | YES  | NO
 `sys/rotate/config`                       | YES  | NO
 `sys/rotate`                              | YES  | NO
 `sys/seal`                                | YES  | NO
@@ -58,9 +51,3 @@ API path                                  | Root | Admin
 `sys/step-down`                           | YES  | NO
 `sys/storage`                             | YES  | NO
 `sys/unseal`                              | YES  | NO
-
-Privileged CLI commands without public API endpoints:
-
-CLI command             | Root | Admin
------------------------ | ---- | -----
-`vault plugin runtime`  | YES  | NO
