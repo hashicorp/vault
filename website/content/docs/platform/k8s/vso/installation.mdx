@@ -5,7 +5,7 @@ description: >-
   The Vault Secrets Operator can be installed using Helm.
 ---
 
-# Installing the Vault Secrets Operator
+# Installing and upgrading the Vault Secrets Operator
 
 ## Prerequisites
 
@@ -24,9 +24,13 @@ HashiCorp helm repository and ensure you have access to the chart:
 
 ```shell-session
 $ helm repo add hashicorp https://helm.releases.hashicorp.com
-"hashicorp" has been added to your repositories
 
+"hashicorp" has been added to your repositories
+```
+
+```shell-session
 $ helm search repo hashicorp/vault-secrets-operator
+
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
 hashicorp/vault-secrets-operator	0.3.1       	0.3.1     	Official HashiCorp Vault Secrets Operator Chart
 ```
@@ -34,16 +38,55 @@ hashicorp/vault-secrets-operator	0.3.1       	0.3.1     	Official HashiCorp Vaul
 Then install the Operator:
 
 ```shell-session
-$ helm install --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator --version 0.3.1
+$ helm install --version 0.3.1 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
 ```
 
 
 ## Upgrading using helm
 
-Upgrades may be performed with `helm upgrade` on an existing install. Please
+Upgrades may be performed with `helm upgrade` on an existing installation. Please
 always run Helm with `--dry-run` before any install or upgrade to verify
 changes.
 
+Update the `hashicorp` Helm repo.
+```shell-session
+$ helm repo update hashicorp
 
-### Helm chart values
-All supported Helm chart values can be found [here](/vault/docs/platform/k8s/vso/helm)
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "hashicorp" chart repository
+Update Complete. ⎈Happy Helming!⎈
+```
+
+Upgrade the VSO release
+```shell-session
+$ helm upgrade --version 0.3.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
+
+~> **Note:** Helm does not automatically update the Operator's CRDs.
+All CRDs will need to be updated manually after upgrading VSO.
+Refer to [Updating the CRDs](#updating-the-crds) for the proper update procedure.
+
+
+## Updating the CRDs
+
+Updating VSO's CRDs is a manual step that should be executed after upgrading to a newer version of the operator.
+Applicable when VSO is managed by Helm.
+
+~> **Note:** Make sure that the Helm chart version used in command below matches the currently
+deployed VSO release.
+
+```shell-session
+$ helm show crds --version 0.3.1 hashicorp/vault-secrets-operator | kubectl apply -f -
+
+customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/vaultauths.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/vaultconnections.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/vaultdynamicsecrets.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/vaultpkisecrets.secrets.hashicorp.com unchanged
+customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashicorp.com unchanged
+```
+
+## Chart values
+
+All supported chart values are documented [here](/vault/docs/platform/k8s/vso/helm)
