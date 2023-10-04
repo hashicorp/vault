@@ -70,7 +70,7 @@ on:
       checkout-ref:
         description: The ref to use for checkout.
         required: false
-        default: ${{ github.base_ref }}
+        default: ${{ github.ref }}
         type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
@@ -350,6 +350,9 @@ jobs:
             fi
           fi
 
+          export VAULT_TEST_LOG_DIR=test-results/go-test/logs
+          mkdir -p $VAULT_TEST_LOG_DIR
+          
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \

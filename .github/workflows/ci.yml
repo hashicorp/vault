@@ -60,10 +60,10 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
-      # control checking out head instead of base ref by a GH label
-      # if checkout-head label is added to a PR, checkout HEAD otherwise checkout base_ref
+      # control checking out head instead of default ref by a GH label
+      # if checkout-head label is added to a PR, checkout HEAD otherwise checkout ref
       - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
-        run: echo "CHECKOUT_REF=${{ github.base_ref }}" >> "$GITHUB_ENV"
+        run: echo "CHECKOUT_REF=${{ github.ref }}" >> "$GITHUB_ENV"
       - if: ${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
         run: echo "CHECKOUT_REF=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
       - id: checkout-ref-output
