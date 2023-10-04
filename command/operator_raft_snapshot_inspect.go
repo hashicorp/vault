@@ -135,7 +135,12 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Fetch snapshot filename
+	// Validate flags
+	if c.depth < 0 {
+		c.UI.Error("Depth must be equal to or greater than 0")
+		return 1
+	}
+
 	var file string
 	args = c.flags.Args()
 
