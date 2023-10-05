@@ -207,7 +207,6 @@
             "description": "successful operation",
             "schema": {
               "type": "array",
-              "properties": {},
               "items": {
                 "$ref": "#/definitions/Pet"
               }
@@ -257,7 +256,6 @@
             "description": "successful operation",
             "schema": {
               "type": "array",
-              "properties": {},
               "items": {
                 "$ref": "#/definitions/Pet"
               }
@@ -544,8 +542,7 @@
             "description": "successful operation",
             "schema": {
               "type": "object",
-              "properties": {},
-              "additionalProperties": {
+              "properties": {
                 "type": "integer",
                 "format": "int32"
               }
