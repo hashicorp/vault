@@ -51,10 +51,7 @@ func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d
 				"password": d.Get("password").(string),
 			},
 			nil)
-		delete(req.Data, "username")
 		return nil, da
-	} else {
-		delete(req.Data, "password")
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{

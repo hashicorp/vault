@@ -762,7 +762,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1563,13 +1563,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			// Authentication successful, use the resulting ClientToken to reissue the original request
-			authReq, err = req.Clone()
+			secondReq, err := req.Clone()
 			if err != nil {
 				return nil, nil, err
 			}
-			authReq.ClientToken = authResp.Auth.ClientToken
-			authReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
-			resp2, err := c.handleCancelableRequest(ctx, authReq)
+			secondReq.ClientToken = authResp.Auth.ClientToken
+			secondReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
+			resp2, err := c.handleCancelableRequest(ctx, secondReq)
 			return resp2, nil, err
 		}
 	}
