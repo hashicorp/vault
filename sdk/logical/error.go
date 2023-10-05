@@ -3,7 +3,10 @@
 
 package logical
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 var (
 	// ErrUnsupportedOperation is returned if the operation is not supported
@@ -61,35 +64,43 @@ var (
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
 )
 
+type DelegatedAuthErrorHandler func(ctx context.Context, initiatingRequest, authRequest *Request, authResponse *Response, err error) (*Response, error)
+
 // Special error indicating the backend wants to delegate authentication elsewhere
-type DelegatedAuthenticationError struct {
+type RequestDelegatedAuth struct {
 	mountAccessor string
 	path          string
-	extraData     map[string]interface{}
+	data          map[string]interface{}
+	errHandler    DelegatedAuthErrorHandler
 }
 
-func NewDelegatedAuthenticationError(mountAccessor, path string, extraData map[string]interface{}) *DelegatedAuthenticationError {
-	return &DelegatedAuthenticationError{
+func NewDelegatedAuthenticationRequest(mountAccessor, path string, data map[string]interface{}, errHandler DelegatedAuthErrorHandler) *RequestDelegatedAuth {
+	return &RequestDelegatedAuth{
 		mountAccessor: mountAccessor,
 		path:          path,
-		extraData:     extraData,
+		data:          data,
+		errHandler:    errHandler,
 	}
 }
 
-func (d *DelegatedAuthenticationError) Error() string {
+func (d *RequestDelegatedAuth) Error() string {
 	return "authentication delegation requested"
 }
 
-func (d *DelegatedAuthenticationError) MountAccessor() string {
+func (d *RequestDelegatedAuth) MountAccessor() string {
 	return d.mountAccessor
 }
 
-func (d *DelegatedAuthenticationError) Path() string {
+func (d *RequestDelegatedAuth) Path() string {
 	return d.path
 }
 
-func (d *DelegatedAuthenticationError) ExtraData() map[string]interface{} {
-	return d.extraData
+func (d *RequestDelegatedAuth) Data() map[string]interface{} {
+	return d.data
+}
+
+func (d *RequestDelegatedAuth) AuthErrorHandler() DelegatedAuthErrorHandler {
+	return d.errHandler
 }
 
 type HTTPCodedError interface {
