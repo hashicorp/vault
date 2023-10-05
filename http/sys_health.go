@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/version"
 )
 
-func handleSysHealth(core *vault.Core, opt ...Option) http.Handler {
+func handleSysHealth(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
@@ -43,7 +43,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 	return statusCode, false, true
 }
 
-func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...Option) {
+func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)

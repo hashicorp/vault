@@ -11,7 +11,7 @@ import (
 
 // This endpoint is needed to answer queries before Vault unseals
 // or becomes the leader.
-func handleSysLeader(core *vault.Core, opt ...Option) http.Handler {
+func handleSysLeader(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
@@ -22,7 +22,7 @@ func handleSysLeader(core *vault.Core, opt ...Option) http.Handler {
 	})
 }
 
-func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, opt ...Option) {
+func handleSysLeaderGet(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
 	resp, err := core.GetLeaderStatus()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
