@@ -544,6 +544,7 @@
             "description": "successful operation",
             "schema": {
               "type": "object",
+              "properties": {},
               "additionalProperties": {
                 "type": "integer",
                 "format": "int32"
@@ -783,7 +784,8 @@
               }
             },
             "schema": {
-              "type": "string"
+              "type": "string",
+              "properties": {}
             }
           },
           "400": {
