@@ -27,6 +27,10 @@ import { action } from '@ember/object';
  * @param {String} [value] - Value within the display. Generally, a json string.
  * @param {String} [viewportMargin] - Size of viewport. Often set to "Infinity" to load/show all text regardless of length.
  * @param {string} [example] - Example to show when value is null -- when example is provided a restore action will render in the toolbar to clear the current value and show the example after input
+ * * REQUIRED if rendering within a modal *
+ * @container gives context for the <Hd::Copy::Button> and sets autoRefresh=true so JsonEditor renders content (without this property @value only renders if editor is focused)
+ * @param {string} [container] - Selector string or element object of containing element, set the focused element as the container value. This is for the Hds::Copy::Button and to set autoRefresh=true so content renders https://hds-website-hashicorp.vercel.app/components/copy/button?tab=code
+ *
  */
 
 export default class JsonEditorComponent extends Component {

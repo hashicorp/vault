@@ -5,14 +5,16 @@ description: >-
   The Vault Secrets Operator can be installed using Helm.
 ---
 
-# Installing the Vault secrets operator
+# Installing the Vault Secrets Operator
 
 ## Prerequisites
 
-- Kubernetes 1.22+
-- Vault 1.11+ or [HCP Vault](https://www.hashicorp.com/cloud)
+- A Kubernetes cluster running 1.23+
+- Helm 3.7+
 
 ## Installation using helm
+
+[Install Helm](https://helm.sh/docs/intro/install) before beginning.
 
 The [Vault Secrets Operator Helm chart](/vault/docs/platform/k8s/vso/helm) is the recommended way of
 installing and configuring the Vault Secrets Operator.
@@ -26,13 +28,13 @@ $ helm repo add hashicorp https://helm.releases.hashicorp.com
 
 $ helm search repo hashicorp/vault-secrets-operator
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault-secrets-operator	0.1.0       	0.1.0     	Official HashiCorp Vault Secrets Operator Chart
+hashicorp/vault-secrets-operator	0.3.1       	0.3.1     	Official HashiCorp Vault Secrets Operator Chart
 ```
 
 Then install the Operator:
 
 ```shell-session
-$ helm install --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator --version 0.1.0
+$ helm install --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator --version 0.3.1
 ```
 
 
