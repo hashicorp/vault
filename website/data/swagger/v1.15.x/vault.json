@@ -582,10 +582,11 @@
             "required": true,
             "schema": {
               "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              },
               "properties": {
-                "items": {
-                  "$ref": "#/definitions/User"
-                }
+                "$ref": "#/definitions/User"
               }
             }
           }
@@ -620,10 +621,11 @@
             "required": true,
             "schema": {
               "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              },
               "properties": {
-                "items": {
                   "$ref": "#/definitions/User"
-                }
               }
             }
           }
