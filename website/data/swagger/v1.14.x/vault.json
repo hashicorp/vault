@@ -3,7 +3,7 @@
   "info": {
     "title": "HashiCorp Cloud Platform Vault Secrets",
     "description": "API for managing Secrets on Cloud Services.",
-    "version": "2023-06-13"
+    "version": "1.14.0"
   },
   "tags": [
     {
