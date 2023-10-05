@@ -1,0 +1,206 @@
+---
+layout: api
+page_title: 'HTTP API: Libraries'
+description: >-
+  List of official and community contributed libraries for interacting with the
+  Vault HTTP API.
+---
+
+# Libraries
+
+The programming libraries listed on this page can be used to consume the API more conveniently.
+Some are officially maintained while others are provided by the community.
+
+For a step-by-step walkthrough on using these client libraries, see the [developer quickstart](/vault/docs/get-started/developer-qs).
+For copy-pastable code examples, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo.
+
+## Official
+
+These libraries are officially maintained by HashiCorp.
+
+### Go
+
+- [Vault Go Client](https://github.com/hashicorp/vault/tree/main/api)
+
+```shell-session
+$ go get github.com/hashicorp/vault/api
+```
+
+[Example application](https://github.com/hashicorp/hello-vault-go)
+
+### Ruby
+
+- [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
+
+```shell-session
+$ gem install vault
+```
+
+## C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+
+## Community
+
+These libraries are provided by the community.
+
+### Ansible
+
+- [ansible-vault](https://github.com/jhaals/ansible-vault) - Lookup plugin without third-party dependencies.
+- [Ansible Modules Hashivault](https://pypi.python.org/pypi/ansible-modules-hashivault)
+
+```shell-session
+$ pip install ansible-modules-hashivault
+```
+
+### C&#35;
+
+- [VaultSharp](https://github.com/rajanadar/VaultSharp)
+  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0 and 7.0.
+
+```shell-session
+$ Install-Package VaultSharp
+```
+
+- [Vault.NET](https://github.com/Chatham/Vault.NET)
+
+```shell-session
+$ Install-Package Vault
+```
+
+[Example application](https://github.com/hashicorp/hello-vault-dotnet)
+
+### C++
+
+- [libvault](https://github.com/abedra/libvault)
+
+### Clojure
+
+- [vault-clj](https://github.com/amperity/vault-clj)
+
+### Elixir
+
+- [libvault](https://hex.pm/packages/libvault)
+- [vaultex](https://hex.pm/packages/vaultex)
+
+### Erlang
+
+- [canal](https://github.com/rkallos/canal)
+
+### Go
+
+- [vaultgo](https://github.com/mittwald/vaultgo)
+
+```shell-session
+$ go get github.com/mittwald/vaultgo
+```
+
+### Haskell
+
+- [vault-tool](https://hackage.haskell.org/package/vault-tool)
+
+```shell-session
+$ cabal install vault-tool
+```
+
+- [gothic](http://hackage.haskell.org/package/gothic)
+
+```shell-session
+$ stack install gothic
+```
+
+### Java
+
+- [Spring Vault](https://github.com/spring-projects/spring-vault)
+- [vault-java-driver](https://github.com/jopenlibs/vault-java-driver)
+
+### Kotlin
+
+- [vault-kotlin](https://github.com/kunickiaj/vault-kotlin)
+
+### Node.js
+
+- [node-vault](https://github.com/kr1sp1n/node-vault)
+
+```shell-session
+$ npm install node-vault
+```
+
+- [vaulTS](https://github.com/mittwald/vaulTS) (Github NPM Registry)
+
+```shell-session
+$ npm install @mittwald/vaults
+```
+
+- [vault-api](https://github.com/SaiHemanthBR/vault-api) (Typescript. Axios-like API)
+
+```shell-session
+$ npm install vault-api
+```
+
+- [loopback4-vault](https://github.com/sourcefuse/loopback4-vault) (LoopBack 4 Extension)
+
+```shell-session
+$ npm i @sourceloop/vault
+```
+
+### PHP
+
+- [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
+
+```shell-session
+$ composer require jippi/vault-php-sdk
+```
+
+- [vault-php-sdk](https://github.com/violuke/vault-php-sdk) extended from jipppi
+
+```shell-session
+$ composer require violuke/vault-php-sdk
+```
+
+- [vault-php](https://github.com/CSharpRU/vault-php)
+
+```shell-session
+$ composer require csharpru/vault-php
+```
+
+- [vault-php](https://github.com/mittwald/vaultPHP)
+
+```shell-session
+$ composer require mittwald/vault-php
+```
+
+### PowerShell
+
+- [Zyborg.Vault](https://github.com/zyborg/Zyborg.Vault)
+
+```PowerShell
+Install-Module Zyborg.Vault
+```
+
+### Python
+
+- [HVAC](https://github.com/ianunruh/hvac)
+
+```shell-session
+$ pip install hvac
+```
+
+### R
+
+- [vaultr](https://github.com/vimc/vaultr)
+
+### Rust
+
+- [HashicorpVault](https://crates.io/crates/hashicorp_vault)
+- [vaultrs](https://crates.io/crates/vaultrs)
+
+### Scala
+
+- [scala-vault](https://github.com/janstenpickle/scala-vault)
