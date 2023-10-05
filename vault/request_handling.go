@@ -1529,46 +1529,46 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			// Found it, now form the login path and issue the request
 			// TODO: Prevent recursive loops
 			path := paths.Join("auth", mount.Path, da.Path())
-			req2, err := req.Clone()
+			authReq, err := req.Clone()
 			if err != nil {
 				return nil, nil, err
 			}
-			req2.MountAccessor = requestedAccessor
-			req2.Path = path
+			authReq.MountAccessor = requestedAccessor
+			authReq.Path = path
 			// Clear the data fields for the new request
-			req2.Data = make(map[string]interface{})
+			authReq.Data = make(map[string]interface{})
 			if da.Data() != nil {
 				// Add any other data fields the auth method might need, provided dynamically by the source mount
 				for k, v := range da.Data() {
-					req2.Data[k] = v
+					authReq.Data[k] = v
 				}
 			}
 
-			resp, err = c.handleCancelableRequest(ctx, req2)
+			authResp, err := c.handleCancelableRequest(ctx, authReq)
 			if err != nil || resp.IsError() {
 				// see if the backend wishes to handle the failed auth
 				if da.AuthErrorHandler() != nil {
-					resp, err = da.AuthErrorHandler()(ctx, req, req2, resp, err)
+					resp, err := da.AuthErrorHandler()(ctx, req, authReq, authResp, err)
 					return resp, nil, err
 				}
 				switch err {
 				case nil:
-					return resp, nil, nil
+					return authResp, nil, nil
 				case logical.ErrInvalidCredentials:
 					return handleInvalidCreds(err)
 				default:
-					return resp, nil, err
+					return authResp, nil, err
 				}
 			}
 
 			// Authentication successful, use the resulting ClientToken to reissue the original request
-			req2, err = req.Clone()
+			authReq, err = req.Clone()
 			if err != nil {
 				return nil, nil, err
 			}
-			req2.ClientToken = resp.Auth.ClientToken
-			req2.ClientTokenSource = logical.ClientTokenFromInternalAuth
-			resp2, err := c.handleCancelableRequest(ctx, req2)
+			authReq.ClientToken = authResp.Auth.ClientToken
+			authReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
+			resp2, err := c.handleCancelableRequest(ctx, authReq)
 			return resp2, nil, err
 		}
 	}
