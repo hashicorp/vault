@@ -1,0 +1,23 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  license:
+    name: MPL
+servers:
+  - url: http://petstore.swagger.io/v1
+paths:
+  /pets:
+    $ref: './paths/pets.yml'
+  /pets/{petId}:
+    $ref: './paths/pet.yml'
+components:
+  schemas:
+    Pet:
+      $ref: './components/pet.yml'
+    Pets:
+      $ref: './components/pets.yml'
+    Error:
+      $ref: './components/error.yml'
+
+      
