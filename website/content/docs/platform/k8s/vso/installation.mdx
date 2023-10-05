@@ -76,7 +76,7 @@ $ helm upgrade --version 0.3.1 --namespace vault-secrets-operator vault-secrets-
 You must update the CRDs for VSO manually **before** you upgrade the
  operator when the operator is managed by Helm.
 
-*Any kubectl warnings related to `last-applied-configuration` should be safe to ignore.*
+**Any `kubectl` warnings related to `last-applied-configuration` should be safe to ignore.**
 
 To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
 ```shell-session
