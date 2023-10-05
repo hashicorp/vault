@@ -1101,7 +1101,8 @@
       },
       "Pet": {
         "required": [
-          "name"
+          "name",
+          "photoUrls"
         ],
         "type": "object",
         "properties": {
@@ -1116,6 +1117,18 @@
           },
           "category": {
             "$ref": "#/components/schemas/Category"
+          },
+          "photoUrls": {
+            "type": "array",
+            "xml": {
+              "wrapped": true
+            },
+            "items": {
+              "type": "string",
+              "xml": {
+                "name": "photoUrl"
+              }
+            }
           },
           "tags": {
             "type": "array",
