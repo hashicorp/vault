@@ -1373,7 +1373,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Return the response and error
 	if routeErr != nil {
-		if _, ok := routeErr.(*logical.DelegatedAuthenticationError); ok {
+		if _, ok := routeErr.(*logical.RequestDelegatedAuth); ok {
 			routeErr = fmt.Errorf("delegated authentication requested but authentication token present")
 		}
 
@@ -1494,21 +1494,21 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 
-	handleInvalidCreds := func() (*logical.Response, *logical.Auth, error) {
+	handleInvalidCreds := func(err error) (*logical.Response, *logical.Auth, error) {
 		if !isUserLockoutDisabled {
 			err := c.failedUserLoginProcess(ctx, entry, req)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
-		return resp, nil, routeErr
+		return resp, nil, err
 	}
 
 	if routeErr != nil {
 		// if routeErr has invalid credentials error, update the userFailedLoginMap
 		if routeErr == logical.ErrInvalidCredentials {
-			return handleInvalidCreds()
-		} else if da, ok := routeErr.(*logical.DelegatedAuthenticationError); ok {
+			return handleInvalidCreds(routeErr)
+		} else if da, ok := routeErr.(*logical.RequestDelegatedAuth); ok {
 			// Backend has requested internally delegated authentication
 
 			requestedAccessor := da.MountAccessor()
@@ -1535,18 +1535,30 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 			req2.MountAccessor = requestedAccessor
 			req2.Path = path
-			if da.ExtraData() != nil {
+			// Clear the data fields for the new request
+			req2.Data = make(map[string]interface{})
+			if da.Data() != nil {
 				// Add any other data fields the auth method might need, provided dynamically by the source mount
-				for k, v := range da.ExtraData() {
+				for k, v := range da.Data() {
 					req2.Data[k] = v
 				}
 			}
 
 			resp, err = c.handleCancelableRequest(ctx, req2)
-			if err == logical.ErrInvalidCredentials {
-				return handleInvalidCreds()
-			} else if err != nil {
-				return nil, nil, err
+			if err != nil || resp.IsError() {
+				// see if the backend wishes to handle the failed auth
+				if da.AuthErrorHandler() != nil {
+					resp, err = da.AuthErrorHandler()(ctx, req, req2, resp, err)
+					return resp, nil, err
+				}
+				switch err {
+				case nil:
+					return resp, nil, nil
+				case logical.ErrInvalidCredentials:
+					return handleInvalidCreds(err)
+				default:
+					return resp, nil, err
+				}
 			}
 
 			// Authentication successful, use the resulting ClientToken to reissue the original request

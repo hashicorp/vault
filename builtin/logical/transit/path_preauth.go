@@ -42,7 +42,7 @@ func (b *backend) pathPreauthTest() *framework.Path {
 
 func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
-		da := logical.NewDelegatedAuthenticationError(d.Get("accessor").(string), paths.Join(d.Get("path").(string), req.Data["username"].(string)), nil)
+		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), req.Data["username"].(string)), nil)
 		delete(req.Data, "username")
 		return nil, da
 	} else {
