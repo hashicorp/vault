@@ -21,11 +21,10 @@ import (
 	"text/tabwriter"
 
 	iradix "github.com/hashicorp/go-immutable-radix"
-
-	protoio "github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/raft"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/raft"
+	protoio "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -111,6 +110,7 @@ type SnapshotInfo struct {
 	Meta         MetadataInfo
 	StatsKV      map[string]typeStats
 	TotalCountKV int
+	TotalSizeKV  int
 }
 
 type MetadataInfo struct {
@@ -124,6 +124,7 @@ type MetadataInfo struct {
 type typeStats struct {
 	Name  string
 	Count int
+	Size  int
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
@@ -208,6 +209,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		Meta:         metaformat,
 		StatsKV:      formattedStatsKV,
 		TotalCountKV: info.TotalCountKV,
+		TotalSizeKV:  info.TotalSizeKV,
 	}
 
 	out, err := formatter.Format(in)
@@ -220,7 +222,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, info *SnapshotInfo) {
+func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, info *SnapshotInfo, read int) {
 	if c.details {
 		if val.Key == "" {
 			return
@@ -248,7 +250,9 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 		}
 
 		kvs.Count++
+		kvs.Size += read
 		info.TotalCountKV++
+		info.TotalSizeKV += read
 		info.StatsKV[prefix] = kvs
 	}
 }
@@ -257,10 +261,11 @@ func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotIn
 	info := SnapshotInfo{
 		StatsKV:      make(map[string]typeStats),
 		TotalCountKV: 0,
+		TotalSizeKV:  0,
 	}
 
-	handler := func(s *pb.StorageEntry) error {
-		c.kvEnhance(s, &info)
+	handler := func(s *pb.StorageEntry, read int) error {
+		c.kvEnhance(s, &info, read)
 		return nil
 	}
 
@@ -274,8 +279,8 @@ func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotIn
 
 // ReadSnapshot decodes each message type and utilizes the handler function to
 // process each message type individually
-func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.Tree, error) {
-	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
+func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry, read int) error) (*iradix.Tree, error) {
+	reader := protoio.NewDelimitedReader(r, math.MaxInt32)
 
 	errCh := make(chan error, 1)
 	txn := iradix.New().Txn()
@@ -284,7 +289,7 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 		for {
 			s := new(pb.StorageEntry)
 
-			err := protoReader.ReadMsg(s)
+			err := reader.ReadMsg(s)
 			if err != nil {
 				if err == io.EOF {
 					errCh <- nil
@@ -294,7 +299,9 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry) error) (*iradix.
 				return
 			}
 
-			handler(s)
+			size := reader.GetLastReadSize()
+
+			handler(s, size)
 
 			var value interface{} = struct{}{}
 			value = s.Value
@@ -405,15 +412,15 @@ func (_ *tableFormatter) Format(info *OutputFormat) (string, error) {
 
 	if info.StatsKV != nil {
 		fmt.Fprintf(tw, "\n")
-		fmt.Fprintln(tw, "\n Key Name\tCount")
-		fmt.Fprintf(tw, " %s\t%s", "----", "----")
+		fmt.Fprintln(tw, "\n Key Name\tCount\tSize")
+		fmt.Fprintf(tw, " %s\t%s\t%s", "----", "----", "----")
 
 		for _, s := range info.StatsKV {
-			fmt.Fprintf(tw, "\n %s\t%d", s.Name, s.Count)
+			fmt.Fprintf(tw, "\n %s\t%d\t%s", s.Name, s.Count, ByteSize(uint64(s.Size)))
 		}
 
 		fmt.Fprintf(tw, "\n %s\t%s", "----", "----")
-		fmt.Fprintf(tw, "\n Total\t%d", info.TotalCountKV)
+		fmt.Fprintf(tw, "\n Total Size\t\t%s", ByteSize(uint64(info.TotalSizeKV)))
 	}
 
 	if err := tw.Flush(); err != nil {
@@ -429,6 +436,7 @@ type OutputFormat struct {
 	Meta         *MetadataInfo
 	StatsKV      []typeStats
 	TotalCountKV int
+	TotalSizeKV  int
 }
 
 const (
