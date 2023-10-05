@@ -256,22 +256,11 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseHTTPHeaderSettings,
 		l.parseChrootNamespaceSettings,
 		l.parseRedactionSettings,
+		l.parseDisableReplicationStatusEndpointSettings,
 	} {
 		err := parser()
 		if err != nil {
 			return nil, err
-		}
-
-		// Disable Replication Status Endpoint
-		{
-			// If a valid DisableReplicationStatusEndpoints value exists, then canonicalize the value
-			if l.DisableReplicationStatusEndpointsRaw != nil {
-				if l.DisableReplicationStatusEndpoints, err = parseutil.ParseBool(l.DisableReplicationStatusEndpointsRaw); err != nil {
-					return multierror.Prefix(fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err), fmt.Sprintf("listeners.%d", i))
-				}
-
-				l.DisableReplicationStatusEndpointsRaw = nil
-			}
 		}
 	}
 
@@ -286,6 +275,22 @@ func (t ListenerType) Normalize() ListenerType {
 // String returns the string version of a listener type.
 func (t ListenerType) String() string {
 	return string(t.Normalize())
+// parseDisableReplicationStatusEndpointSettings attempts to parse the raw
+// disable_replication_status_endpoints setting. The receiving Listener's
+// DisableReplicationStatusEndpoints field will be set with the successfully
+// parsed value.
+func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
+	var err error
+
+	if l.DisableReplicationStatusEndpointsRaw != nil {
+		l.DisableReplicationStatusEndpoints, err = parseutil.ParseBool(l.DisableReplicationStatusEndpointsRaw)
+		if err != nil {
+			return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
+		}
+		l.DisableReplicationStatusEndpointsRaw = nil
+	}
+
+	return nil
 }
 
 // parseChrootNamespace attempts to parse the raw listener chroot namespace settings.
