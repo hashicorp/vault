@@ -33,9 +33,7 @@
     "https"
   ],
   "paths": {
-    "/pet/{petId}/uploadImage": {
-      "post": "./paths/pet"
-    },
+    "/pet/{petId}/uploadImage": "./paths/pet",
     "/pet": {
       "post": {
         "tags": [
