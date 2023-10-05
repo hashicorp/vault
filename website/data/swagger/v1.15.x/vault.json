@@ -1,12 +1,10 @@
 {
   "swagger": "2.0",
   "info": {
+    "title": "Swagger Petstore",
     "description": "This is a sample server Petstore server.  You can find out more about Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For this sample, you can use the api key `special-key` to test the authorization filters.",
-    "version": "1.0.6",
-    "title": "Swagger Petstore"
+    "version": "1.15.0"
   },
-  "host": "petstore.swagger.io",
-  "basePath": "/v2",
   "tags": [
     {
       "name": "pet",
@@ -21,8 +19,12 @@
       "description": "Operations about user"
     }
   ],
-  "schemes": [
-    "https"
+  "host": "api.cloud.hashicorp.com",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
   ],
   "paths": {
     "/pet/{petId}/uploadImage": {
