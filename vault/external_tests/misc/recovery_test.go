@@ -7,6 +7,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -77,8 +79,9 @@ func TestRecovery(t *testing.T) {
 			NumCores:    1,
 			SkipInit:    true,
 			DefaultHandlerProperties: vault.HandlerProperties{
-				RecoveryMode:  true,
-				RecoveryToken: &tokenRef,
+				RecoveryMode:   true,
+				RecoveryToken:  &tokenRef,
+				ListenerConfig: &configutil.Listener{},
 			},
 		}
 		cluster := vault.NewTestCluster(t, &conf, &opts)

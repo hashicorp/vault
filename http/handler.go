@@ -165,7 +165,9 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
-		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
+			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
+			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
 		mux.Handle("/v1/sys/seal", handleSysSeal(core))
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))

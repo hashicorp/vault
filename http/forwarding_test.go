@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"golang.org/x/net/http2"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -38,7 +40,8 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: Handler,
+		HandlerFunc:              Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{ListenerConfig: &configutil.Listener{}},
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -86,7 +89,8 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: Handler,
+		HandlerFunc:              Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{ListenerConfig: &configutil.Listener{}},
 	})
 	cluster.Start()
 	defer cluster.Cleanup()

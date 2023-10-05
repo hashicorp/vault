@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -331,7 +333,8 @@ func TestCanForwardEventConnections(t *testing.T) {
 			"nop": corehelpers.NoopAuditFactory(nil),
 		},
 	}, &vault.TestClusterOptions{
-		ClusterLayers: inmemCluster,
+		ClusterLayers:            inmemCluster,
+		DefaultHandlerProperties: vault.HandlerProperties{ListenerConfig: &configutil.Listener{}},
 	})
 	cores := testCluster.Cores
 	testCluster.Start()
