@@ -1,3148 +1,1045 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "HashiCorp Cloud Platform Vault Secrets",
-    "description": "API for managing Secrets on Cloud Services.",
-    "version": "1.14.0"
+    "description": "This is a sample server Petstore server.  You can find out more about Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For this sample, you can use the api key `special-key` to test the authorization filters.",
+    "version": "1.0.6",
+    "title": "Swagger Petstore",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "email": "apiteam@swagger.io"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
   },
+  "host": "petstore.swagger.io",
+  "basePath": "/v2",
   "tags": [
     {
-      "name": "SecretService"
+      "name": "pet",
+      "description": "Everything about your Pets"
+    },
+    {
+      "name": "store",
+      "description": "Access to Petstore orders"
+    },
+    {
+      "name": "user",
+      "description": "Operations about user"
     }
   ],
-  "host": "api.cloud.hashicorp.com",
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
+  "schemes": [
+    "https"
   ],
   "paths": {
-    "/secrets/2023-06-13/organizations/{location.organization_id}/billing/tier": {
-      "put": {
-        "operationId": "SetTier",
+    "/pet/{petId}/uploadImage": {
+      "post": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "uploads an image",
+        "description": "",
+        "operationId": "uploadFile",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "description": "ID of pet to update",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "additionalMetadata",
+            "in": "formData",
+            "description": "Additional data to pass to server",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "file",
+            "in": "formData",
+            "description": "file to upload",
+            "required": false,
+            "type": "file"
+          }
+        ],
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "successful operation",
             "schema": {
-              "type": "object",
-              "properties": {}
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/ApiResponse"
             }
           }
         },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      }
+    },
+    "/pet": {
+      "post": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Add a new pet to the store",
+        "description": "",
+        "operationId": "addPet",
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
         "parameters": [
           {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
+            "in": "body",
+            "name": "body",
+            "description": "Pet object that needs to be added to the store",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Update an existing pet",
+        "description": "",
+        "operationId": "updatePet",
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Pet object that needs to be added to the store",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "405": {
+            "description": "Validation exception"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      }
+    },
+    "/pet/findByStatus": {
+      "get": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Finds Pets by status",
+        "description": "Multiple status values can be provided with comma separated strings",
+        "operationId": "findPetsByStatus",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Status values that need to be considered for filter",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "available",
+                "pending",
+                "sold"
+              ],
+              "default": "available"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Pet"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status value"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      }
+    },
+    "/pet/findByTags": {
+      "get": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Finds Pets by tags",
+        "description": "Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.",
+        "operationId": "findPetsByTags",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "Tags to filter by",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Pet"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tag value"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ],
+        "deprecated": true
+      }
+    },
+    "/pet/{petId}": {
+      "get": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Find pet by ID",
+        "description": "Returns a single pet",
+        "operationId": "getPetById",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "petId",
             "in": "path",
+            "description": "ID of pet to return",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Pet"
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Updates a pet in the store with form data",
+        "description": "",
+        "operationId": "updatePetWithForm",
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "description": "ID of pet that needs to be updated",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "name",
+            "in": "formData",
+            "description": "Updated name of the pet",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "formData",
+            "description": "Updated status of the pet",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "pet"
+        ],
+        "summary": "Deletes a pet",
+        "description": "",
+        "operationId": "deletePet",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "api_key",
+            "in": "header",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "petId",
+            "in": "path",
+            "description": "Pet id to delete",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          }
+        },
+        "security": [
+          {
+            "petstore_auth": [
+              "write:pets",
+              "read:pets"
+            ]
+          }
+        ]
+      }
+    },
+    "/store/order": {
+      "post": {
+        "tags": [
+          "store"
+        ],
+        "summary": "Place an order for a pet",
+        "description": "",
+        "operationId": "placeOrder",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "order placed for purchasing the pet",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          },
+          "400": {
+            "description": "Invalid Order"
+          }
+        }
+      }
+    },
+    "/store/order/{orderId}": {
+      "get": {
+        "tags": [
+          "store"
+        ],
+        "summary": "Find purchase order by ID",
+        "description": "For valid response try integer IDs with value >= 1 and <= 10. Other values will generated exceptions",
+        "operationId": "getOrderById",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "description": "ID of pet that needs to be fetched",
+            "required": true,
+            "type": "integer",
+            "maximum": 10,
+            "minimum": 1,
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/Order"
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "store"
+        ],
+        "summary": "Delete purchase order by ID",
+        "description": "For valid response try integer IDs with positive integer value. Negative or non-integer values will generate API errors",
+        "operationId": "deleteOrder",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "description": "ID of the order that needs to be deleted",
+            "required": true,
+            "type": "integer",
+            "minimum": 1,
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      }
+    },
+    "/store/inventory": {
+      "get": {
+        "tags": [
+          "store"
+        ],
+        "summary": "Returns pet inventories by status",
+        "description": "Returns a map of status codes to quantities",
+        "operationId": "getInventory",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/user/createWithArray": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Creates list of users with given input array",
+        "description": "",
+        "operationId": "createUsersWithArrayInput",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "List of user object",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/user/createWithList": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Creates list of users with given input array",
+        "description": "",
+        "operationId": "createUsersWithListInput",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "List of user object",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/user/{username}": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Get user by user name",
+        "description": "",
+        "operationId": "getUserByName",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "The name that needs to be fetched. Use user1 for testing. ",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "400": {
+            "description": "Invalid username supplied"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Updated user",
+        "description": "This can only be done by the logged in user.",
+        "operationId": "updateUser",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "name that need to be updated",
             "required": true,
             "type": "string"
           },
           {
-            "name": "body",
             "in": "body",
+            "name": "body",
+            "description": "Updated user object",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "project_id": {
-                      "type": "string",
-                      "description": "project_id is the projects id."
-                    },
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "tier": {
-                  "$ref": "#/definitions/secrets_20230613Tier"
-                }
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid user supplied"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Delete user",
+        "description": "This can only be done by the logged in user.",
+        "operationId": "deleteUser",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "description": "The name that needs to be deleted",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Invalid username supplied"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/user/login": {
+      "get": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Logs user into the system",
+        "description": "",
+        "operationId": "loginUser",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "description": "The user name for login",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "description": "The password for login in clear text",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "X-Expires-After": {
+                "type": "string",
+                "format": "date-time",
+                "description": "date in UTC when token expires"
               },
-              "title": "Billing"
+              "X-Rate-Limit": {
+                "type": "integer",
+                "format": "int32",
+                "description": "calls per hour allowed by the user"
+              }
+            },
+            "schema": {
+              "type": "string"
             }
+          },
+          "400": {
+            "description": "Invalid username/password supplied"
           }
-        ],
-        "tags": [
-          "SecretService"
-        ]
+        }
       }
     },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps": {
+    "/user/logout": {
       "get": {
-        "operationId": "ListApps",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ListAppsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
         "tags": [
-          "SecretService"
-        ]
-      },
+          "user"
+        ],
+        "summary": "Logs out current logged in user session",
+        "description": "",
+        "operationId": "logoutUser",
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
+        "parameters": [],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/user": {
       "post": {
-        "operationId": "CreateApp",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613CreateAppResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
+        "tags": [
+          "user"
+        ],
+        "summary": "Create user",
+        "description": "This can only be done by the logged in user.",
+        "operationId": "createUser",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
         "parameters": [
           {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
             "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string"
-                },
-                "sync_integrations": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/kv": {
-      "post": {
-        "operationId": "CreateAppKVSecret",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613CreateAppKVSecretResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
             "name": "body",
-            "in": "body",
+            "description": "Created user object",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": "string"
-                }
-              }
+              "$ref": "#/definitions/User"
             }
           }
         ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/open": {
-      "get": {
-        "operationId": "OpenAppSecrets",
         "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613OpenAppSecretsResponse"
-            }
-          },
           "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/open/{secret_name}": {
-      "get": {
-        "operationId": "OpenAppSecret",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613OpenAppSecretResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/open/{secret_name}/versions": {
-      "get": {
-        "operationId": "ListOpenAppSecretVersions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ListOpenAppSecretVersionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/open/{secret_name}/versions/{version}": {
-      "get": {
-        "operationId": "OpenAppSecretVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613OpenAppSecretVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "format": "int64"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/secrets": {
-      "get": {
-        "operationId": "ListAppSecrets",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ListAppSecretsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/secrets/{secret_name}": {
-      "get": {
-        "operationId": "GetAppSecret",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetAppSecretResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "delete": {
-        "operationId": "DeleteAppSecret",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613DeleteAppSecretResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/secrets/{secret_name}/versions": {
-      "get": {
-        "operationId": "ListAppSecretVersions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ListAppSecretVersionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{app_name}/secrets/{secret_name}/versions/{version}": {
-      "get": {
-        "operationId": "GetAppSecretVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetAppSecretVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "format": "int64"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "delete": {
-        "operationId": "DeleteAppSecretVersion",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613DeleteAppSecretVersionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "app_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "secret_name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "version",
-            "in": "path",
-            "required": true,
-            "type": "string",
-            "format": "int64"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/apps/{name}": {
-      "get": {
-        "operationId": "GetApp",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetAppResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "delete": {
-        "operationId": "DeleteApp",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613DeleteAppResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "patch": {
-        "operationId": "UpdateApp",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpdateAppResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "description": {
-                  "type": "string"
-                },
-                "sync_integrations": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/aws-sm": {
-      "post": {
-        "operationId": "CreateAwsSmSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613CreateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "aws_sm_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613AwsSmConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "put": {
-        "operationId": "UpsertAwsSmSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpsertSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "aws_sm_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613AwsSmConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/aws-sm/{name}": {
-      "patch": {
-        "operationId": "UpdateAwsSmSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpdateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "aws_sm_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613AwsSmConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/force": {
-      "post": {
-        "operationId": "ForceSync",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ForceSyncResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "app_name": {
-                  "type": "string"
-                },
-                "sync_integration_name": {
-                  "type": "string"
-                },
-                "operation": {
-                  "$ref": "#/definitions/ForceSyncRequestOPERATION"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/gh-repo": {
-      "post": {
-        "operationId": "CreateGhRepoSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613CreateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "gh_repo_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613GhRepoConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "put": {
-        "operationId": "UpsertGhRepoSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpsertSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "gh_repo_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613GhRepoConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/gh-repo/{name}": {
-      "patch": {
-        "operationId": "UpdateGhRepoSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpdateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "gh_repo_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613GhRepoConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/github/links": {
-      "get": {
-        "operationId": "GetGitHubInstallLinks",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetGitHubInstallLinksResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/installations": {
-      "put": {
-        "operationId": "UpsertSyncInstallation",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpsertSyncInstallationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/installations/{name}": {
-      "get": {
-        "operationId": "GetSyncInstallation",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetSyncInstallationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "delete": {
-        "operationId": "DeleteSyncInstallation",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613DeleteSyncInstallationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/integrations": {
-      "get": {
-        "operationId": "ListSyncIntegrations",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613ListSyncIntegrationsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/integrations/{name}": {
-      "get": {
-        "operationId": "GetSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "delete": {
-        "operationId": "DeleteSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613DeleteSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/vercel-project": {
-      "post": {
-        "operationId": "CreateVercelProjectSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613CreateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "vercel_project_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613VercelProjectConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      },
-      "put": {
-        "operationId": "UpsertVercelProjectSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpsertSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "name": {
-                  "type": "string"
-                },
-                "vercel_project_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613VercelProjectConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/vercel-project/{name}": {
-      "patch": {
-        "operationId": "UpdateVercelProjectSyncIntegration",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613UpdateSyncIntegrationResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "location": {
-                  "type": "object",
-                  "properties": {
-                    "region": {
-                      "$ref": "#/definitions/locationRegion",
-                      "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-                    }
-                  },
-                  "description": "Location represents a target for an operation in HCP."
-                },
-                "vercel_project_connection_details": {
-                  "$ref": "#/definitions/secrets_20230613VercelProjectConnectionDetailsRequest"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/sync/vercel/link": {
-      "get": {
-        "operationId": "GetVercelInstallationLink",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetVercelInstallationLinkResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/projects/{location.project_id}/usage": {
-      "get": {
-        "operationId": "GetUsage",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetUsageResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/organizations/{location.organization_id}/usage": {
-      "get": {
-        "operationId": "GetUsage2",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/secrets_20230613GetUsageResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "location.organization_id",
-            "description": "organization_id is the id of the organization.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "location.project_id",
-            "description": "project_id is the projects id.",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.provider",
-            "description": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "location.region.region",
-            "description": "region is the cloud region (\"us-west1\", \"us-east1\")",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/sync/github/callback": {
-      "get": {
-        "operationId": "CompleteGitHubInstall",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "installation_id",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "format": "int64"
-          },
-          {
-            "name": "setup_action",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    },
-    "/secrets/2023-06-13/sync/vercel/callback": {
-      "get": {
-        "operationId": "CompleteVercelInstallation",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "code",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "configuration_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "SecretService"
-        ]
-      }
-    }
-  },
-  "definitions": {
-    "ForceSyncRequestOPERATION": {
-      "type": "string",
-      "enum": [
-        "UPLOAD",
-        "PURGE"
-      ],
-      "default": "UPLOAD"
-    },
-    "apiHttpBody": {
-      "type": "object",
-      "properties": {
-        "content_type": {
-          "type": "string",
-          "description": "The HTTP Content-Type header value specifying the content type of the body."
-        },
-        "data": {
-          "type": "string",
-          "format": "byte",
-          "description": "The HTTP request/response body as raw binary."
-        },
-        "extensions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/protobufAny"
-          },
-          "description": "Application specific response metadata. Must be set in the first response\nfor streaming APIs."
-        }
-      },
-      "description": "Message that represents an arbitrary HTTP body. It should only be used for\npayload formats that can't be represented as JSON, such as raw binary or\nan HTML page.\n\n\nThis message can be used both in streaming and non-streaming API methods in\nthe request as well as the response.\n\nIt can be used as a top-level request field, which is convenient if one\nwants to extract parameters from either the URL or HTTP template into the\nrequest fields and also want access to the raw HTTP body.\n\nExample:\n\n    message GetResourceRequest {\n      // A unique request id.\n      string request_id = 1;\n\n      // The raw HTTP body is bound to this field.\n      google.api.HttpBody http_body = 2;\n\n    }\n\n    service ResourceService {\n      rpc GetResource(GetResourceRequest)\n        returns (google.api.HttpBody);\n      rpc UpdateResource(google.api.HttpBody)\n        returns (google.protobuf.Empty);\n\n    }\n\nExample with streaming methods:\n\n    service CaldavService {\n      rpc GetCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n      rpc UpdateCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n\n    }\n\nUse of this type only changes how the request and response bodies are\nhandled, all other features will continue to work unchanged."
-    },
-    "cloudlocationLocation": {
-      "type": "object",
-      "properties": {
-        "organization_id": {
-          "type": "string",
-          "description": "organization_id is the id of the organization."
-        },
-        "project_id": {
-          "type": "string",
-          "description": "project_id is the projects id."
-        },
-        "region": {
-          "$ref": "#/definitions/locationRegion",
-          "description": "region is the region that the resource is located in. It is\noptional if the object being referenced is a global object."
-        }
-      },
-      "description": "Location represents a target for an operation in HCP."
-    },
-    "locationRegion": {
-      "type": "object",
-      "properties": {
-        "provider": {
-          "type": "string",
-          "title": "provider is the named cloud provider (\"aws\", \"gcp\", \"azure\")"
-        },
-        "region": {
-          "type": "string",
-          "title": "region is the cloud region (\"us-west1\", \"us-east1\")"
-        }
-      },
-      "description": "Region identifies a Cloud data-plane region."
-    },
-    "protobufAny": {
-      "type": "object",
-      "properties": {
-        "@type": {
-          "type": "string",
-          "description": "A URL/resource name that uniquely identifies the type of the serialized\nprotocol buffer message. This string must contain at least\none \"/\" character. The last segment of the URL's path must represent\nthe fully qualified name of the type (as in\n`path/google.protobuf.Duration`). The name should be in a canonical form\n(e.g., leading \".\" is not accepted).\n\nIn practice, teams usually precompile into the binary all types that they\nexpect it to use in the context of Any. However, for URLs which use the\nscheme `http`, `https`, or no scheme, one can optionally set up a type\nserver that maps type URLs to message definitions as follows:\n\n* If no scheme is provided, `https` is assumed.\n* An HTTP GET on the URL must yield a [google.protobuf.Type][]\n  value in binary format, or produce an error.\n* Applications are allowed to cache lookup results based on the\n  URL, or have them precompiled into a binary to avoid any\n  lookup. Therefore, binary compatibility needs to be preserved\n  on changes to types. (Use versioned type names to manage\n  breaking changes.)\n\nNote: this functionality is not currently available in the official\nprotobuf release, and it is not used for type URLs beginning with\ntype.googleapis.com.\n\nSchemes other than `http`, `https` (or the empty scheme) might be\nused with implementation specific semantics."
-        }
-      }
-    },
-    "rpcStatus": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "message": {
-          "type": "string"
-        },
-        "details": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/protobufAny"
-          }
-        }
-      }
-    },
-    "secrets_20230613App": {
-      "type": "object",
-      "properties": {
-        "location": {
-          "$ref": "#/definitions/cloudlocationLocation"
-        },
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "updated_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "sync_integrations": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "secrets_20230613AwsAssumeRoleMetadata": {
-      "type": "object",
-      "properties": {
-        "external_id": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613AwsSmConnectionDetailsRequest": {
-      "type": "object",
-      "properties": {
-        "access_key_id": {
-          "type": "string"
-        },
-        "secret_access_key": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        },
-        "role_arn": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613AwsSmConnectionDetailsResponse": {
-      "type": "object",
-      "properties": {
-        "region": {
-          "type": "string"
-        },
-        "role_arn": {
-          "type": "string"
-        },
-        "external_id": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613CreateAppKVSecretResponse": {
-      "type": "object",
-      "properties": {
-        "secret": {
-          "$ref": "#/definitions/secrets_20230613Secret"
-        }
-      }
-    },
-    "secrets_20230613CreateAppResponse": {
-      "type": "object",
-      "properties": {
-        "app": {
-          "$ref": "#/definitions/secrets_20230613App"
-        }
-      }
-    },
-    "secrets_20230613CreateSyncIntegrationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_integration": {
-          "$ref": "#/definitions/secrets_20230613SyncIntegration"
-        }
-      }
-    },
-    "secrets_20230613DeleteAppResponse": {
-      "type": "object"
-    },
-    "secrets_20230613DeleteAppSecretResponse": {
-      "type": "object"
-    },
-    "secrets_20230613DeleteAppSecretVersionResponse": {
-      "type": "object"
-    },
-    "secrets_20230613DeleteSyncInstallationResponse": {
-      "type": "object"
-    },
-    "secrets_20230613DeleteSyncIntegrationResponse": {
-      "type": "object"
-    },
-    "secrets_20230613ForceSyncResponse": {
-      "type": "object"
-    },
-    "secrets_20230613GetAppResponse": {
-      "type": "object",
-      "properties": {
-        "app": {
-          "$ref": "#/definitions/secrets_20230613App"
-        }
-      }
-    },
-    "secrets_20230613GetAppSecretResponse": {
-      "type": "object",
-      "properties": {
-        "secret": {
-          "$ref": "#/definitions/secrets_20230613Secret"
-        }
-      }
-    },
-    "secrets_20230613GetAppSecretVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/secrets_20230613SecretVersion"
-        }
-      }
-    },
-    "secrets_20230613GetGitHubInstallLinksResponse": {
-      "type": "object",
-      "properties": {
-        "installation_url": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613GetSyncInstallationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_installation": {
-          "$ref": "#/definitions/secrets_20230613SyncInstallation"
-        }
-      }
-    },
-    "secrets_20230613GetSyncIntegrationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_integration": {
-          "$ref": "#/definitions/secrets_20230613SyncIntegration"
-        }
-      }
-    },
-    "secrets_20230613GetUsageResponse": {
-      "type": "object",
-      "properties": {
-        "billing_tier": {
-          "$ref": "#/definitions/secrets_20230613Tier"
-        },
-        "apps": {
-          "$ref": "#/definitions/secrets_20230613Usage"
-        },
-        "secrets": {
-          "$ref": "#/definitions/secrets_20230613Usage"
-        },
-        "integrations": {
-          "$ref": "#/definitions/secrets_20230613Usage"
-        }
-      }
-    },
-    "secrets_20230613GetVercelInstallationLinkResponse": {
-      "type": "object",
-      "properties": {
-        "installation_url": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613GhAppMetadata": {
-      "type": "object",
-      "properties": {
-        "installation_id": {
-          "type": "string",
-          "format": "int64"
-        },
-        "owner": {
-          "type": "string"
-        },
-        "repositories": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "secrets_20230613GhRepoConnectionDetailsRequest": {
-      "type": "object",
-      "properties": {
-        "token": {
-          "type": "string"
-        },
-        "owner": {
-          "type": "string"
-        },
-        "repository": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613GhRepoConnectionDetailsResponse": {
-      "type": "object",
-      "properties": {
-        "owner": {
-          "type": "string"
-        },
-        "repository": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613ListAppSecretVersionsResponse": {
-      "type": "object",
-      "properties": {
-        "versions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613SecretVersion"
-          }
-        }
-      }
-    },
-    "secrets_20230613ListAppSecretsResponse": {
-      "type": "object",
-      "properties": {
-        "secrets": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613Secret"
-          }
-        }
-      }
-    },
-    "secrets_20230613ListAppsResponse": {
-      "type": "object",
-      "properties": {
-        "apps": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613App"
-          }
-        }
-      }
-    },
-    "secrets_20230613ListOpenAppSecretVersionsResponse": {
-      "type": "object",
-      "properties": {
-        "versions": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613OpenSecretVersion"
-          }
-        }
-      }
-    },
-    "secrets_20230613ListSyncIntegrationsResponse": {
-      "type": "object",
-      "properties": {
-        "sync_integrations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613SyncIntegration"
-          }
-        }
-      }
-    },
-    "secrets_20230613OpenAppSecretResponse": {
-      "type": "object",
-      "properties": {
-        "secret": {
-          "$ref": "#/definitions/secrets_20230613OpenSecret"
-        }
-      }
-    },
-    "secrets_20230613OpenAppSecretVersionResponse": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "$ref": "#/definitions/secrets_20230613OpenSecretVersion"
-        }
-      }
-    },
-    "secrets_20230613OpenAppSecretsResponse": {
-      "type": "object",
-      "properties": {
-        "secrets": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613OpenSecret"
-          }
-        }
-      }
-    },
-    "secrets_20230613OpenSecret": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "version": {
-          "$ref": "#/definitions/secrets_20230613OpenSecretVersion"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "latest_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "sync_status": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/secrets_20230613SyncStatus"
-          }
-        }
-      }
-    },
-    "secrets_20230613OpenSecretVersion": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "type": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "value": {
-          "type": "string"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        }
-      }
-    },
-    "secrets_20230613Principal": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        }
-      },
-      "title": "Information about the principal who created or updated the resource"
-    },
-    "secrets_20230613Secret": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "version": {
-          "$ref": "#/definitions/secrets_20230613SecretVersion"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "latest_version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "sync_status": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/secrets_20230613SyncStatus"
-          }
-        }
-      }
-    },
-    "secrets_20230613SecretVersion": {
-      "type": "object",
-      "properties": {
-        "version": {
-          "type": "string",
-          "format": "int64"
-        },
-        "type": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        }
-      }
-    },
-    "secrets_20230613SyncInstallation": {
-      "type": "object",
-      "properties": {
-        "location": {
-          "$ref": "#/definitions/cloudlocationLocation"
-        },
-        "name": {
-          "type": "string"
-        },
-        "aws_assume_role": {
-          "$ref": "#/definitions/secrets_20230613AwsAssumeRoleMetadata"
-        },
-        "gh_app": {
-          "$ref": "#/definitions/secrets_20230613GhAppMetadata"
-        },
-        "vercel_oauth": {
-          "$ref": "#/definitions/secrets_20230613VercelOAuthMetadata"
-        }
-      }
-    },
-    "secrets_20230613SyncIntegration": {
-      "type": "object",
-      "properties": {
-        "location": {
-          "$ref": "#/definitions/cloudlocationLocation"
-        },
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "created_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "updated_by": {
-          "$ref": "#/definitions/secrets_20230613Principal"
-        },
-        "aws_sm_connection_details": {
-          "$ref": "#/definitions/secrets_20230613AwsSmConnectionDetailsResponse"
-        },
-        "gh_repo_connection_details": {
-          "$ref": "#/definitions/secrets_20230613GhRepoConnectionDetailsResponse"
-        },
-        "vercel_project_connection_details": {
-          "$ref": "#/definitions/secrets_20230613VercelProjectConnectionDetailsResponse"
-        }
-      }
-    },
-    "secrets_20230613SyncStatus": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
-        },
-        "updated_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "last_error_code": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613Tier": {
-      "type": "string",
-      "enum": [
-        "UNKNOWN",
-        "FREE",
-        "STANDARD"
-      ],
-      "default": "UNKNOWN"
-    },
-    "secrets_20230613UpdateAppResponse": {
-      "type": "object",
-      "properties": {
-        "app": {
-          "$ref": "#/definitions/secrets_20230613App"
-        }
-      }
-    },
-    "secrets_20230613UpdateSyncIntegrationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_integration": {
-          "$ref": "#/definitions/secrets_20230613SyncIntegration"
-        }
-      }
-    },
-    "secrets_20230613UpsertSyncInstallationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_installation": {
-          "$ref": "#/definitions/secrets_20230613SyncInstallation"
-        }
-      }
-    },
-    "secrets_20230613UpsertSyncIntegrationResponse": {
-      "type": "object",
-      "properties": {
-        "sync_integration": {
-          "$ref": "#/definitions/secrets_20230613SyncIntegration"
-        }
-      }
-    },
-    "secrets_20230613Usage": {
-      "type": "object",
-      "properties": {
-        "active": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "limit": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "remaining": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "secrets_20230613VercelOAuthMetadata": {
-      "type": "object",
-      "properties": {
-        "configuration_id": {
-          "type": "string"
-        },
-        "user_or_team_id": {
-          "type": "string"
-        },
-        "user_or_team_name": {
-          "type": "string"
-        },
-        "is_team": {
-          "type": "boolean"
-        },
-        "projects": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/secrets_20230613VercelProject"
-          }
-        },
-        "user_or_team_display_name": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613VercelProject": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613VercelProjectConnectionDetailsRequest": {
-      "type": "object",
-      "properties": {
-        "access_token": {
-          "type": "string"
-        },
-        "project_id": {
-          "type": "string"
-        },
-        "project_name": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "deployment_environments": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "user_or_team_name": {
-          "type": "string"
-        }
-      }
-    },
-    "secrets_20230613VercelProjectConnectionDetailsResponse": {
-      "type": "object",
-      "properties": {
-        "configuration_id": {
-          "type": "string"
-        },
-        "project_id": {
-          "type": "string"
-        },
-        "project_name": {
-          "type": "string"
-        },
-        "team_id": {
-          "type": "string"
-        },
-        "deployment_environments": {
-          "type": "array",
-          "items": {
-            "type": "string"
+            "description": "successful operation"
           }
         }
       }
     }
   },
   "securityDefinitions": {
-    "bearer": {
+    "api_key": {
       "type": "apiKey",
-      "description": "Authentication token, prefixed by Bearer: Bearer \u003ctoken\u003e",
-      "name": "Authorization",
+      "name": "api_key",
       "in": "header"
+    },
+    "petstore_auth": {
+      "type": "oauth2",
+      "authorizationUrl": "https://petstore.swagger.io/oauth/authorize",
+      "flow": "implicit",
+      "scopes": {
+        "read:pets": "read your pets",
+        "write:pets": "modify pets in your account"
+      }
     }
   },
-  "security": [
-    {
-      "bearer": []
+  "definitions": {
+    "ApiResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "type": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "Category": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "xml": {
+        "name": "Category"
+      }
+    },
+    "Pet": {
+      "type": "object",
+      "required": [
+        "name",
+        "photoUrls"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "name": {
+          "type": "string",
+          "example": "doggie"
+        },
+        "photoUrls": {
+          "type": "array",
+          "xml": {
+            "wrapped": true
+          },
+          "items": {
+            "type": "string",
+            "xml": {
+              "name": "photoUrl"
+            }
+          }
+        },
+        "tags": {
+          "type": "array",
+          "xml": {
+            "wrapped": true
+          },
+          "items": {
+            "xml": {
+              "name": "tag"
+            },
+            "$ref": "#/definitions/Tag"
+          }
+        },
+        "status": {
+          "type": "string",
+          "description": "pet status in the store",
+          "enum": [
+            "available",
+            "pending",
+            "sold"
+          ]
+        }
+      },
+      "xml": {
+        "name": "Pet"
+      }
+    },
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "xml": {
+        "name": "Tag"
+      }
+    },
+    "Order": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "petId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "quantity": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "shipDate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Order Status",
+          "enum": [
+            "placed",
+            "approved",
+            "delivered"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      },
+      "xml": {
+        "name": "Order"
+      }
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "userStatus": {
+          "type": "integer",
+          "format": "int32",
+          "description": "User Status"
+        }
+      },
+      "xml": {
+        "name": "User"
+      }
     }
-  ]
+  },
+  "externalDocs": {
+    "description": "Find out more about Swagger",
+    "url": "http://swagger.io"
+  }
 }
