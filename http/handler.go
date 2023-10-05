@@ -173,7 +173,9 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 		mux.Handle("/v1/sys/leader", handleSysLeader(core))
-		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/health", handleSysHealth(core,
+			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
+			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))

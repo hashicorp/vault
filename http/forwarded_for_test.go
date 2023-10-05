@@ -49,8 +49,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc:              HandlerFunc(testHandler),
-			DefaultHandlerProperties: vault.HandlerProperties{ListenerConfig: &configutil.Listener{}},
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()

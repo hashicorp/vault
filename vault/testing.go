@@ -1279,6 +1279,13 @@ type certInfo struct {
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	var err error
 
+	if opts == nil {
+		opts = &TestClusterOptions{}
+	}
+	if opts.DefaultHandlerProperties.ListenerConfig == nil {
+		opts.DefaultHandlerProperties.ListenerConfig = &configutil.Listener{}
+	}
+
 	var numCores int
 	if opts == nil || opts.NumCores == 0 {
 		numCores = DefaultNumCores
