@@ -114,7 +114,8 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
-// The context passed in is currently ignored.
+// The context passed in is currently ignored to ensure that the event is sent if the context is short-lived,
+// such as with an HTTP request context.
 func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
