@@ -1,0 +1,3 @@
+```release-note:improvement
+config/listener: allow per-listener configuration settings to redact parts of response to unauthenticated endpoints.
+```
