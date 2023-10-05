@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -22,6 +23,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 const (
@@ -69,7 +72,8 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
-	tokenHelper token.TokenHelper
+	tokenHelper    token.TokenHelper
+	hcpTokenHelper hcpvlib.HCPTokenHelper
 
 	client *api.Client
 }
@@ -79,6 +83,10 @@ type BaseCommand struct {
 func (c *BaseCommand) Client() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
+		if err := c.applyHCPConfig(); err != nil {
+			return nil, err
+		}
+
 		return c.client, nil
 	}
 
@@ -195,7 +203,36 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	c.client = client
 
+	if err := c.applyHCPConfig(); err != nil {
+		return nil, err
+	}
+
 	return client, nil
+}
+
+func (c *BaseCommand) applyHCPConfig() error {
+	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
+	if err != nil {
+		return err
+	}
+
+	if hcpToken != nil {
+		cookie := &http.Cookie{
+			Name:    "hcp_access_token",
+			Value:   hcpToken.AccessToken,
+			Expires: hcpToken.AccessTokenExpiry,
+		}
+
+		if err := c.client.SetHCPCookie(cookie); err != nil {
+			return fmt.Errorf("unable to correctly connect to the HCP Vault cluster; please reconnect to HCP: %w", err)
+		}
+
+		if err := c.client.SetAddress(hcpToken.ProxyAddr); err != nil {
+			return fmt.Errorf("unable to correctly set the HCP address: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // SetAddress sets the token helper on the command; useful for the demo server and other outside cases.

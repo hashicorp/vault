@@ -71,6 +71,8 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
+
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 const (
@@ -250,10 +252,11 @@ var (
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
-			UI:          ui,
-			tokenHelper: runOpts.TokenHelper,
-			flagAddress: runOpts.Address,
-			client:      runOpts.Client,
+			UI:             ui,
+			tokenHelper:    runOpts.TokenHelper,
+			flagAddress:    runOpts.Address,
+			client:         runOpts.Client,
+			hcpTokenHelper: &hcpvlib.InternalHCPTokenHelper{},
 		}
 	}
 
@@ -915,7 +918,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 	}
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
+	initHCPCommands(ui, commands)
+
 	return commands
+}
+
+func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
+	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
+		commands[cmd] = cmdFactory
+	}
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

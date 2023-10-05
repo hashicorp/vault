@@ -1,0 +1,59 @@
+---
+layout: docs
+page_title: hcp - Command
+description: |-
+The "hcp" command groups subcommands for authentication of users or machines to HCP using
+either provided arguments or retrieved HCP token through browser login.
+---
+
+# hcp
+
+The `hcp` command groups subcommands for authentication of users or machines to HCP using
+either provided arguments or retrieved HCP token through browser login.
+
+A successful authentication results in an HCP token and an HCP Vault address being
+locally cached.
+
+The default authentication method is an interactive one, redirecting users to the HCP login browser.
+If a non-interactive option is supplied, it can be used if provided with a service principal credential
+generated through the HCP portal with the necessary capabilities to access the organization, project, and
+HCP Vault cluster chosen.
+
+## Examples
+
+Connect to HCP interactively:
+
+```shell-session
+$ vault hcp connect
+The default web browser has been opened at https://auth.idp.hashicorp.com/oauth2/auth. Please continue the login in the web browser.
+Success!
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+formats are "table", "json", or "yaml". This can also be specified via the
+`VAULT_FORMAT` environment variable.
+
+By default, the output is displayed in "table" format.
+
+#### Output fields
+
+1. The field for total shares is displayed as `"n"` instead of `n` in yaml outputs.
+2. The following fields in "table" format are displayed only when relevant:
+- "Unseal Progress" and "Unseal Nonce" are displayed when vault is sealed.
+- "HCP Link Status" and "HCP Link Resource ID" are displayed when HCP link is configured.
+- "Seal Migration in Progress" is displayed when it is in progress.
+- "Cluster Name" and "Cluster ID" are displayed if they have a value.
+- "Raft Committed Index", "Raft Applied Index", "Last WAL" are diplayed if they are non-zero.
+- "Warnings" are displayed if the warnings apply.
+- The following fields are displayed only when HA mode is enabled and is unsealed:
+- "HA Cluster".
+- "HA Mode".
+- "Active Since" is displayed if the node is active and has a valid active time.
+- "Performance Standby" Node and "Performance Standby Last Remote WAL" are displayed for performance standby nodes.
