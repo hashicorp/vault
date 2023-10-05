@@ -87,7 +87,7 @@
 
   {{#if this.showModal}}
     <Hds::Modal id="search-select-modal" @onClose={{fn (mut this.showModal) false}} as |M|>
-      <M.Header>
+      <M.Header data-test-modal-title>
         Create new
         {{singularize @id}}
       </M.Header>

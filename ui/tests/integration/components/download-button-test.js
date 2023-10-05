@@ -28,14 +28,14 @@ module('Integration | Component | download button', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`
      <DownloadButton /> `);
-    assert.exists(SELECTORS.icon, 'renders download icon');
+    assert.dom(SELECTORS.icon).exists('renders download icon');
     assert.dom(SELECTORS.button).hasText('Download', 'renders default text');
   });
 
   test('it renders passed args', async function (assert) {
     await render(hbs`
      <DownloadButton @text="I do something" @hideIcon={{true}} /> `);
-    assert.doesNotExist(SELECTORS.icon, 'hides icon');
+    assert.dom(SELECTORS.icon).doesNotExist('hides icon');
     assert.dom(SELECTORS.button).hasText('I do something', 'renders passed text');
   });
 
@@ -63,7 +63,6 @@ module('Integration | Component | download button', function (hooks) {
         @extension={{this.extension}}
       />
     `);
-
     await click(SELECTORS.button);
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
     assert.ok(filename.includes(`${this.filename}-`), 'filename added to ISO string');

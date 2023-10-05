@@ -213,10 +213,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
-    assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
+    assert.dom('.hds-modal#search-select-modal').exists('modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
     await click(SELECTORS.assignmentCancelButton);
-    assert.dom('[data-test-modal-div]').doesNotExist('modal disappears onCancel');
+    assert.dom('.hds-modal#search-select-modal').doesNotExist('modal disappears onCancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
