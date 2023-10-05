@@ -20,12 +20,16 @@ func (b *backend) pathPreauthTest() *framework.Path {
 		},
 		Fields: map[string]*framework.FieldSchema{
 			"accessor": {
-				Type:     framework.TypeString,
-				Required: false,
+				Type: framework.TypeString,
 			},
 			"path": {
-				Type:     framework.TypeString,
-				Required: false,
+				Type: framework.TypeString,
+			},
+			"username": {
+				Type: framework.TypeString,
+			},
+			"password": {
+				Type: framework.TypeString,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -42,11 +46,19 @@ func (b *backend) pathPreauthTest() *framework.Path {
 
 func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
-		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), req.Data["username"].(string)), nil)
+		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), d.Get("username").(string)),
+			map[string]interface{}{
+				"password": d.Get("password").(string),
+			},
+			nil)
 		delete(req.Data, "username")
 		return nil, da
 	} else {
 		delete(req.Data, "password")
 	}
-	return &logical.Response{}, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"success": true,
+		},
+	}, nil
 }
