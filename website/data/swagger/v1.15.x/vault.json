@@ -207,6 +207,7 @@
             "description": "successful operation",
             "schema": {
               "type": "array",
+              "properties": {},
               "items": {
                 "$ref": "#/definitions/Pet"
               }
@@ -256,6 +257,7 @@
             "description": "successful operation",
             "schema": {
               "type": "array",
+              "properties": {},
               "items": {
                 "$ref": "#/definitions/Pet"
               }
@@ -579,6 +581,7 @@
             "required": true,
             "schema": {
               "type": "array",
+              "properties": {},
               "items": {
                 "$ref": "#/definitions/User"
               }
@@ -615,6 +618,7 @@
             "required": true,
             "schema": {
               "type": "array",
+              "properties": {},
               "items": {
                 "$ref": "#/definitions/User"
               }
