@@ -67,6 +67,47 @@ func TestBusBasics(t *testing.T) {
 	}
 }
 
+// TestBusIgnoresSendContext tests that the context is ignored when sending to an event,
+// so that we do not give up too quickly.
+func TestBusIgnoresSendContext(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventType := logical.EventType("someType")
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bus.Start()
+
+	ch, subCancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCancel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Errorf("Expected no error sending: %v", err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
 	bus, err := NewEventBus(nil)
