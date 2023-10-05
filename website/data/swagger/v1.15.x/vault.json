@@ -29,18 +29,15 @@
   "paths": {
     "/pet/{petId}/uploadImage": {
       "post": {
-        "tags": [
-          "pet"
-        ],
-        "summary": "uploads an image",
-        "description": "",
         "operationId": "uploadFile",
-        "consumes": [
-          "multipart/form-data"
-        ],
-        "produces": [
-          "application/json"
-        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
         "parameters": [
           {
             "name": "petId",
@@ -65,14 +62,17 @@
             "type": "file"
           }
         ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "schema": {
-              "$ref": "#/definitions/ApiResponse"
-            }
-          }
-        },
+        "tags": [
+          "pet"
+        ],
+        "summary": "uploads an image",
+        "description": "",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
         "security": [
           {
             "petstore_auth": [
@@ -85,20 +85,12 @@
     },
     "/pet": {
       "post": {
-        "tags": [
-          "pet"
-        ],
-        "summary": "Add a new pet to the store",
-        "description": "",
         "operationId": "addPet",
-        "consumes": [
-          "application/json",
-          "application/xml"
-        ],
-        "produces": [
-          "application/json",
-          "application/xml"
-        ],
+        "responses": {
+          "405": {
+            "description": "Invalid input"
+          }
+        },
         "parameters": [
           {
             "in": "body",
@@ -110,11 +102,19 @@
             }
           }
         ],
-        "responses": {
-          "405": {
-            "description": "Invalid input"
-          }
-        },
+        "tags": [
+          "pet"
+        ],
+        "summary": "Add a new pet to the store",
+        "description": "",
+        "consumes": [
+          "application/json",
+          "application/xml"
+        ],
+        "produces": [
+          "application/json",
+          "application/xml"
+        ],
         "security": [
           {
             "petstore_auth": [
@@ -582,9 +582,10 @@
             "required": true,
             "schema": {
               "type": "array",
-              "properties": {},
-              "items": {
-                "$ref": "#/definitions/User"
+              "properties": {
+                "items": {
+                  "$ref": "#/definitions/User"
+                }
               }
             }
           }
@@ -619,9 +620,10 @@
             "required": true,
             "schema": {
               "type": "array",
-              "properties": {},
-              "items": {
-                "$ref": "#/definitions/User"
+              "properties": {
+                "items": {
+                  "$ref": "#/definitions/User"
+                }
               }
             }
           }
