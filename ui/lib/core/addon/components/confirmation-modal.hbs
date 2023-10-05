@@ -15,7 +15,7 @@
           Confirm
         </p>
         <p class="sub-text has-top-bottom-margin-xxs">Type
-          <strong>{{@confirmText}}</strong>
+          <strong>{{this.confirmText}}</strong>
           to confirm
           {{@toConfirmMsg}}
         </p>
@@ -35,7 +35,7 @@
         <Hds::Button
           @color="critical"
           type="button"
-          disabled={{not-eq this.confirmationInput @confirmText}}
+          disabled={{not-eq this.confirmationInput this.confirmText}}
           {{on "click" @onConfirm}}
           data-test-confirm-button={{@title}}
           @text={{or @buttonText "Confirm"}}
