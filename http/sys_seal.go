@@ -186,6 +186,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, opt ...Opti
 
 	if opts.withRedactVersion {
 		status.Version = opts.withRedactionValue
+		status.BuildDate = opts.withRedactionValue
 	}
 
 	if opts.withRedactClusterName {
