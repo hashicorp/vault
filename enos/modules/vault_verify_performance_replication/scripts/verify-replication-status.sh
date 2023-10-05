@@ -9,12 +9,18 @@
 
 set -e
 
-binpath=${VAULT_INSTALL_DIR}/vault
-
-function fail() {
-	echo "$1" 1>&2
-	exit 1
+fail() {
+  echo "$1" 1>&2
+  exit 1
 }
+
+[[ -z "$PRIMARY_LEADER_PRIV_IP" ]] && fail "PRIMARY_LEADER_PRIV_IP env variable has not been set"
+[[ -z "$SECONDARY_LEADER_PRIV_IP" ]] && fail "SECONDARY_LEADER_PRIV_IP env variable has not been set"
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
+[[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+
+binpath=${VAULT_INSTALL_DIR}/vault
+test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 retry() {
   local retries=$1
@@ -22,54 +28,58 @@ retry() {
   local count=0
 
   until "$@"; do
-    exit=$?
     wait=$((2 ** count))
     count=$((count + 1))
     if [ "$count" -lt "$retries" ]; then
       sleep "$wait"
     else
-      return "$exit"
+      fail "$($binpath read -format=json sys/replication/performance/status)"
     fi
   done
 }
 
-test -x "$binpath" || exit 1
-
 check_pr_status() {
   pr_status=$($binpath read -format=json sys/replication/performance/status)
-  cluster_state=$(echo $pr_status | jq -r '.data.state')
-  connection_mode=$(echo $pr_status | jq -r '.data.mode')
+  cluster_state=$(echo "$pr_status" | jq -r '.data.state')
+  connection_mode=$(echo "$pr_status" | jq -r '.data.mode')
 
   if [[ "$cluster_state" == 'idle' ]]; then
-    fail "replication cluster state is $cluster_state"
+    echo "replication cluster state is idle" 1>&2
+    return 1
   fi
 
   if [[ "$connection_mode" == "primary" ]]; then
-    connection_status=$(echo $pr_status | jq -r '.data.secondaries[0].connection_status')
+    connection_status=$(echo "$pr_status" | jq -r '.data.secondaries[0].connection_status')
     if [[ "$connection_status" == 'disconnected' ]]; then
-      fail "replication connection status of secondaries is $connection_status"
+      echo ".data.secondaries[0].connection_status from primary node is 'disconnected'" 1>&2
+      return 1
     fi
-    secondary_cluster_addr=$(echo $pr_status | jq -r '.data.secondaries[0].cluster_address')
-    if [[ "$secondary_cluster_addr" != "https://"${SECONDARY_LEADER_PRIV_IP}":8201" ]]; then
-      fail "Expected secondary cluster address $SECONDARY_LEADER_PRIV_IP got  $secondary_cluster_addr "
+    secondary_cluster_addr=$(echo "$pr_status" | jq -r '.data.secondaries[0].cluster_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")')
+    if [[ "$secondary_cluster_addr" != "$SECONDARY_LEADER_PRIV_IP" ]]; then
+      echo ".data.secondaries[0].cluster_address should have an IP address of $SECONDARY_LEADER_PRIV_IP, got: $secondary_cluster_addr" 1>&2
+      return 1
     fi
   else
-    connection_status=$(echo $pr_status | jq -r '.data.primaries[0].connection_status')
+    connection_status=$(echo "$pr_status" | jq -r '.data.primaries[0].connection_status')
     if [[ "$connection_status" == 'disconnected' ]]; then
-      fail "replication connection status of secondaries is $connection_status"
+      echo ".data.primaries[0].connection_status from secondary node is 'disconnected'" 1>&2
+      return 1
     fi
-    primary_cluster_addr=$(echo $pr_status | jq -r '.data.primaries[0].cluster_address')
-    if [[ "$primary_cluster_addr" != "https://"${PRIMARY_LEADER_PRIV_IP}":8201" ]]; then
-      fail "Expected primary cluster address $PRIMARY_LEADER_PRIV_IP got  $primary_cluster_addr"
+    primary_cluster_addr=$(echo "$pr_status" | jq -r '.data.primaries[0].cluster_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")')
+    if [[ "$primary_cluster_addr" != "$PRIMARY_LEADER_PRIV_IP" ]]; then
+      echo ".data.primaries[0].cluster_address should have an IP address of $PRIMARY_LEADER_PRIV_IP, got: $primary_cluster_addr" 1>&2
+      return 1
     fi
-    known_primary_cluster_addrs=$(echo $pr_status | jq -r '.data.known_primary_cluster_addrs')
-    # IFS="," read -a cluster_addr <<< ${known_primary_cluster_addrs}
-    if ! $(echo $known_primary_cluster_addrs |grep -q $PRIMARY_LEADER_PRIV_IP); then
-      fail "Primary leader address $PRIMARY_LEADER_PRIV_IP not found in Known primary cluster addresses $known_primary_cluster_addrs"
+    known_primary_cluster_addrs=$(echo "$pr_status" | jq -r '.data.known_primary_cluster_addrs')
+    if ! echo "$known_primary_cluster_addrs" | grep -q "$PRIMARY_LEADER_PRIV_IP"; then
+      echo "$PRIMARY_LEADER_PRIV_IP is not in .data.known_primary_cluster_addrs: $known_primary_cluster_addrs" 1>&2
+      return 1
     fi
   fi
-  echo $pr_status
+
+  echo "$pr_status"
+  return 0
 }
 
-# Retry a few times because it can take some time for replication to sync
-retry 5 check_pr_status
+# Retry for a while because it can take some time for replication to sync
+retry 10 check_pr_status
