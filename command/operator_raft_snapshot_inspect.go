@@ -75,7 +75,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Name:    "depth",
 		Target:  &c.depth,
 		Default: 2,
-		Usage:   "Can only be used with -kvdetails. The key prefix depth used to breakdown KV store data. Defaults to 2.",
+		Usage:   "Can only be used with -kvdetails. The key prefix depth used to breakdown KV store data. If set to 0, all keys will be returned. Defaults to 2.",
 	})
 
 	f.StringVar(&StringVar{
@@ -239,7 +239,9 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 		// handle the situation where the key is shorter than
 		// the specified depth.
 		actualDepth := c.depth
-		if c.depth > len(split) {
+		if c.depth == 0 {
+			actualDepth = len(split)
+		} else if c.depth > len(split) {
 			actualDepth = len(split)
 		}
 
