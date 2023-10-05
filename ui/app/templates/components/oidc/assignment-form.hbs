@@ -23,6 +23,7 @@
       @id="entities"
       @label="Entities"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/entity"}}
       @inputValue={{@model.entityIds}}
       @shouldRenderName={{true}}
@@ -35,6 +36,7 @@
       @id="groups"
       @label="Groups"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/group"}}
       @inputValue={{@model.groupIds}}
       @shouldRenderName={{true}}

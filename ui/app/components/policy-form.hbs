@@ -126,7 +126,7 @@
       Policy
     </M.Header>
     <M.Body>
-      <PolicyExample @policyType={{@model.policyType}} />
+      <PolicyExample @policyType={{@model.policyType}} @container="#policy-example-modal" />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-close-button />
