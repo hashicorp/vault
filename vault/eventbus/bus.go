@@ -86,7 +86,9 @@ func (bus *EventBus) Start() {
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
-func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+// The context passed in is currently ignored to ensure that the event is sent if the context is short-lived,
+// such as with an HTTP request context.
+func (bus *EventBus) SendInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -103,7 +105,7 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 
 	// We can't easily know when the Send is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
-	ctx, _ = context.WithTimeout(ctx, bus.timeout)
+	ctx, _ := context.WithTimeout(context.Background(), bus.timeout)
 	_, err := bus.broker.Send(ctx, eventTypeAll, eventReceived)
 	if err != nil {
 		// if no listeners for this event type are registered, that's okay, the event
@@ -128,6 +130,7 @@ func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logica
 
 // Send sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
+// The context passed in is currently ignored.
 func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
 	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
