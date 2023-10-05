@@ -79,7 +79,7 @@ require (
 	github.com/hashicorp/consul-template v0.33.0
 	github.com/hashicorp/consul/api v1.25.1
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/eventlogger v0.2.3
+	github.com/hashicorp/eventlogger v0.2.5
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20220714221025-1c234a67149a
