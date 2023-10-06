@@ -12,9 +12,9 @@ import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 
 const SELECTORS = {
-  monthDropdown: '[date-dropdown-toggle-month]',
+  monthDropdown: '[data-test-toggle-month]',
   specificMonth: (m) => `[data-test-dropdown-month="${m}"]`,
-  yearDropdown: '[date-dropdown-toggle-year]',
+  yearDropdown: '[data-test-toggle-year]',
   specificYear: (y) => `[data-test-dropdown-year="${y}"]`,
   submitButton: '[data-test-date-dropdown-submit]',
   monthOptions: '[data-test-dropdown-month]',

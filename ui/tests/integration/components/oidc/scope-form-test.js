@@ -138,8 +138,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       @onCancel={{this.onCancel}}
       @onSave={{this.onSave}}
     />
-    <div id="modal-wormhole"></div>
-  `);
+      `);
 
     await fillIn('[data-test-input="description"]', 'changed description attribute');
     await click(SELECTORS.scopeCancelButton);

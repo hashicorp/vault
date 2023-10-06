@@ -18,7 +18,7 @@
       type="button"
       class="button is-secondary"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="recover"
     >
       Recover
     </button>
@@ -37,7 +37,7 @@
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Recover" {{on "click" (fn this.onSubmit "recover")}} data-test-recover-confirm-button />
+        <Hds::Button @text="Recover" {{on "click" (fn this.onSubmit "recover")}} data-test-confirm-button />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-recover-cancel-button />
       </Hds::ButtonSet>
     </M.Footer>

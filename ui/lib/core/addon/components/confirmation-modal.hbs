@@ -5,17 +5,17 @@
 
 {{#if @isActive}}
   <Hds::Modal id="confirmation-modal" @onClose={{@onClose}} @color="critical" as |M|>
-    <M.Header @icon="alert-triangle">
+    <M.Header data-test-confirmation-modal-title @icon="alert-triangle">
       {{@title}}
     </M.Header>
     <M.Body>
       {{yield}}
-      <div class="modal-confirm-section">
+      <div class="has-top-padding-m">
         <p class="has-text-weight-semibold is-size-6">
           Confirm
         </p>
         <p class="sub-text has-top-bottom-margin-xxs">Type
-          <strong>{{@confirmText}}</strong>
+          <strong>{{this.confirmText}}</strong>
           to confirm
           {{@toConfirmMsg}}
         </p>
@@ -35,7 +35,7 @@
         <Hds::Button
           @color="critical"
           type="button"
-          disabled={{not-eq this.confirmationInput @confirmText}}
+          disabled={{not-eq this.confirmationInput this.confirmText}}
           {{on "click" @onConfirm}}
           data-test-confirm-button={{@title}}
           @text={{or @buttonText "Confirm"}}

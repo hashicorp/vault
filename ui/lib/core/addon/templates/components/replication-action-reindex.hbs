@@ -17,7 +17,7 @@
       type="button"
       class="button is-secondary"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="reindex"
     >
       Reindex
     </button>
@@ -41,7 +41,7 @@
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
-        <Hds::Button @text="Reindex" {{on "click" (fn this.onSubmit "reindex")}} data-test-reindex-confirm-button />
+        <Hds::Button @text="Reindex" {{on "click" (fn this.onSubmit "reindex")}} data-test-confirm-button />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-reindex-cancel-button />
       </Hds::ButtonSet>
     </M.Footer>

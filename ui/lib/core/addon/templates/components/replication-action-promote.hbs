@@ -20,7 +20,7 @@
       type="button"
       class="button is-tertiary"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="promote"
     >
       Promote
     </button>
@@ -115,7 +115,7 @@
               )
             )
           }}
-          data-test-promote-confirm-button
+          data-test-confirm-button
           @text="Promote"
         />
         <Hds::Button @color="secondary" @text="Cancel" {{on "click" F.close}} data-test-promote-cancel-button />

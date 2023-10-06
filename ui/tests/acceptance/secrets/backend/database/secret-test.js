@@ -418,7 +418,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     await connectionPage.delete();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
