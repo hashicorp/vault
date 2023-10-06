@@ -17,7 +17,7 @@ type listenerConfigOptions struct {
 // getDefaultOptions returns listenerConfigOptions with their default values.
 func getDefaultOptions() listenerConfigOptions {
 	return listenerConfigOptions{
-		withRedactionValue: "", // Redact using empty string.
+		withRedactionValue: "", // Redacted values will be set to an empty string by default.
 	}
 }
 
