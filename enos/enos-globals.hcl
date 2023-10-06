@@ -4,7 +4,7 @@
 globals {
   backend_tag_key = "VaultStorage"
   build_tags = {
-    "oss"              = ["ui"]
+    "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
     "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
@@ -15,8 +15,14 @@ globals {
     "ubuntu" = var.ubuntu_distro_version
   }
   packages = ["jq"]
+  distro_packages = {
+    ubuntu = ["netcat"]
+    rhel   = ["nc"]
+  }
   sample_attributes = {
-    aws_region = ["us-east-1", "us-west-2"]
+    # NOTE(9/28/23): Temporarily use us-east-2 due to another networking in us-east-1
+    # aws_region = ["us-east-1", "us-west-2"]
+    aws_region = ["us-east-2", "us-west-2"]
   }
   tags = merge({
     "Project Name" : var.project_name

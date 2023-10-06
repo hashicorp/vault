@@ -14,6 +14,15 @@ export default Controller.extend(ListController, {
   store: service(),
   clusterController: controller('vault.cluster'),
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
   backendCrumb: computed('clusterController.model.name', function () {
     return {
       label: 'leases',

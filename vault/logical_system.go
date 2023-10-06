@@ -869,7 +869,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
 		return nil, err
 	}
 	if conf == nil {
@@ -886,9 +886,22 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}}, nil
 }
 
-func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var data []map[string]any
-	for _, runtimeType := range consts.PluginRuntimeTypes {
+
+	var pluginRuntimeTypes []consts.PluginRuntimeType
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr != "" {
+		runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		pluginRuntimeTypes = []consts.PluginRuntimeType{runtimeType}
+	} else {
+		pluginRuntimeTypes = consts.PluginRuntimeTypes
+	}
+
+	for _, runtimeType := range pluginRuntimeTypes {
 		if runtimeType == consts.PluginRuntimeTypeUnsupported {
 			continue
 		}
@@ -3211,11 +3224,13 @@ const (
 
 // handlePoliciesPasswordList returns the list of password policies
 func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
-	keys, err := req.Storage.List(ctx, "password_policy/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "password_policy/")
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "password_policy/")
+	}
 	return logical.ListResponse(keys), nil
 }
 
@@ -5025,7 +5040,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
+		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
 			b := SealBackendStatus{
 				Name:    sealWrapper.Name,
 				Healthy: sealWrapper.IsHealthy(),

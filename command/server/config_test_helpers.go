@@ -887,6 +887,9 @@ listener "tcp" {
     enable_quit = true
   }
   chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
 }`))
 
 	config := Config{
@@ -894,12 +897,19 @@ listener "tcp" {
 	}
 	list, _ := obj.Node.(*ast.ObjectList)
 	objList := list.Filter("listener")
-	configutil.ParseListeners(config.SharedConfig, objList)
-	listeners := config.Listeners
-	if len(listeners) == 0 {
+	listeners, err := configutil.ParseListeners(objList)
+	require.NoError(t, err)
+	// Update the shared config
+	config.Listeners = listeners
+	// Track which types of listener were found.
+	for _, l := range config.Listeners {
+		config.found(l.Type, l.Type)
+	}
+
+	if len(config.Listeners) == 0 {
 		t.Fatalf("expected at least one listener in the config")
 	}
-	listener := listeners[0]
+	listener := config.Listeners[0]
 	if listener.Type != "tcp" {
 		t.Fatalf("expected tcp listener in the config")
 	}
@@ -932,6 +942,9 @@ listener "tcp" {
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
 				},
 			},
 		},

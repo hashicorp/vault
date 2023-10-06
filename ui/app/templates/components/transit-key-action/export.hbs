@@ -69,29 +69,29 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Wrapped Key</h2>
-      <div class="copy-text level">
-        <pre data-test-encrypted-value="export" class="level-left">{{if this.wrapTTL @wrappedToken (stringify @keys)}}</pre>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Token copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
+      {{#if this.wrapTTL}}
+        <Hds::Copy::Snippet
+          class="has-bottom-margin-m"
+          @textToCopy={{@wrappedToken}}
+          @color="secondary"
+          data-test-encrypted-value="export"
+        />
+      {{else}}
+        <div class="copy-text level is-relative">
+          <pre data-test-encrypted-value="export" class="level-left">
+            {{stringify @keys}}
+          </pre>
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{stringify @keys}}
+            class="transparent top-right-absolute"
+          />
+        </div>
+      {{/if}}
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-      @buttonType="button"
-      @success={{action @toggleModal "Token copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+    <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
   </footer>
 </Modal>

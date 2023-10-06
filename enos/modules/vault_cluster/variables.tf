@@ -92,12 +92,12 @@ variable "consul_release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.1"
-    edition = "oss"
+    edition = "ce"
   }
 }
 
-variable "enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+variable "enable_audit_devices" {
+  description = "If true every audit device will be enabled"
   type        = bool
   default     = true
 }

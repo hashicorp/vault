@@ -1279,6 +1279,13 @@ type certInfo struct {
 func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	var err error
 
+	if opts == nil {
+		opts = &TestClusterOptions{}
+	}
+	if opts.DefaultHandlerProperties.ListenerConfig == nil {
+		opts.DefaultHandlerProperties.ListenerConfig = &configutil.Listener{}
+	}
+
 	var numCores int
 	if opts == nil || opts.NumCores == 0 {
 		numCores = DefaultNumCores
@@ -1296,7 +1303,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.base = base
 
 	switch {
-	case opts != nil && opts.Logger != nil:
+	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
 		testCluster.Logger = opts.Logger
 	default:
 		testCluster.Logger = corehelpers.NewTestLogger(t)
@@ -1310,7 +1317,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 		testCluster.TempDir = opts.TempDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1363,7 +1370,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 	testCluster.CACertPEM = pem.EncodeToMemory(caCertPEMBlock)
 	testCluster.CACertPEMFile = filepath.Join(testCluster.TempDir, "ca_cert.pem")
-	err = ioutil.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0o755)
+	err = os.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1376,7 +1383,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		Bytes: marshaledCAKey,
 	}
 	testCluster.CAKeyPEM = pem.EncodeToMemory(caKeyPEMBlock)
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0o755)
+	err = os.WriteFile(filepath.Join(testCluster.TempDir, "ca_key.pem"), testCluster.CAKeyPEM, 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1466,11 +1473,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
 		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
-		err = ioutil.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
+		err = os.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
+		err = os.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}

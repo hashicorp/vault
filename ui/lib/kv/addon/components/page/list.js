@@ -42,11 +42,11 @@ export default class KvListPageComponent extends Component {
     return pathIsDirectory(path) ? 'View list' : 'View secret';
   }
 
-  // callback from HDS pagination to set the queryParams currentPage
+  // callback from HDS pagination to set the queryParams page
   get paginationQueryParams() {
     return (page) => {
       return {
-        currentPage: page,
+        page,
       };
     };
   }
