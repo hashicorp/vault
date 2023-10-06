@@ -1258,57 +1258,29 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	ctx := context.Background()
-	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
-		return 1
-	}
 
-	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
-		return 1
-	}
-	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
+	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, backend, infoKeys, info)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
-	if setSealResponse.sealConfigWarning != nil {
-		c.UI.Warn(fmt.Sprintf("Warnings during seal configuration: %v", setSealResponse.sealConfigWarning))
-	}
 
-	for _, seal := range setSealResponse.getCreatedSeals() {
-		seal := seal // capture range variable
-		// Ensure that the seal finalizer is called, even if using verify-only
+	if setSealResponse.barrierSeal != nil {
 		defer func(seal *vault.Seal) {
 			err = (*seal).Finalize(ctx)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
-		}(seal)
+		}(&setSealResponse.barrierSeal)
 	}
 
-	if setSealResponse.barrierSeal == nil {
-		c.UI.Error("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
-		return 1
-	}
-
-	// prepare a secure random reader for core
-	entropyAugLogger := c.logger.Named("entropy-augmentation")
-	var entropySources []*configutil.EntropySourcerInfo
-	for _, sealWrapper := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
-		if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
-			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
-				Sourcer: s,
-				Name:    sealWrapper.Name,
-			})
-		}
-	}
-	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, entropySources, entropyAugLogger)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
+	if setSealResponse.unwrapSeal != nil {
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(ctx)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&setSealResponse.unwrapSeal)
 	}
 
 	coreConfig := createCoreConfig(c, config, backend, configSR, setSealResponse.barrierSeal, setSealResponse.unwrapSeal, metricsHelper, metricSink, secureRandomReader)
@@ -1708,6 +1680,32 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Warn(cErr.String())
 			}
 
+			if !cmp.Equal(core.GetCoreConfigInternal().Seals, config.Seals) {
+				barrierSeal, unwrapSeal, err := c.reloadSeals(ctx, core, config)
+				if err != nil {
+					c.logger.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
+					config.Seals = core.GetCoreConfigInternal().Seals
+				}
+
+				if barrierSeal != nil {
+					defer func(seal *vault.Seal) {
+						err = (*seal).Finalize(context.Background())
+						if err != nil {
+							c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+						}
+					}(&barrierSeal)
+				}
+
+				if unwrapSeal != nil {
+					defer func(seal *vault.Seal) {
+						err = (*seal).Finalize(context.Background())
+						if err != nil {
+							c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+						}
+					}(&unwrapSeal)
+				}
+			}
+
 			core.SetConfig(config)
 
 			// reloading custom response headers to make sure we have
@@ -1860,6 +1858,47 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Config, backend physical.Backend, infoKeys []string, info map[string]string) (*SetSealResponse, io.Reader, error) {
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
+	}
+
+	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Cannot determine if there are partially seal wrapped entries in storage: %v", err)
+	}
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
+	if err != nil {
+		return nil, nil, err
+	}
+	if setSealResponse.sealConfigWarning != nil {
+		c.UI.Warn(fmt.Sprintf("Warnings during seal configuration: %v", setSealResponse.sealConfigWarning))
+	}
+
+	if setSealResponse.barrierSeal == nil {
+		return nil, nil, errors.New("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
+	}
+
+	// prepare a secure random reader for core
+	entropyAugLogger := c.logger.Named("entropy-augmentation")
+	var entropySources []*configutil.EntropySourcerInfo
+	for _, sealWrapper := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+		if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
+			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
+				Sourcer: s,
+				Name:    sealWrapper.Name,
+			})
+		}
+	}
+	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, entropySources, entropyAugLogger)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return setSealResponse, secureRandomReader, nil
 }
 
 // configureLogging takes the configuration and attempts to parse config values into 'log' friendly configuration values
@@ -3292,6 +3331,40 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 		go server.Serve(ln.Listener)
 	}
 	return nil
+}
+
+func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, config *server.Config) (vault.Seal, vault.Seal, error) {
+	if len(config.Seals) == 1 && config.Seals[0].Disabled {
+		return nil, nil, errors.New("moving from autoseal to shamir requires seal migration")
+	}
+
+	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
+		return nil, nil, errors.New("moving from shamir to autoseal requires seal migration")
+	}
+
+	infoKeysReload := make([]string, 0)
+	infoReload := make(map[string]string)
+
+	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, core.PhysicalAccess(), infoKeysReload, infoReload)
+	if err != nil {
+		return nil, nil, err
+	}
+	if setSealResponse.sealConfigError != nil {
+		return nil, nil, err
+	}
+
+	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error setting seal: %s", err)
+	}
+
+	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
+
+	if err := core.SetPhysicalSealGenInfo(ctx, newGen); err != nil {
+		c.logger.Warn("could not update seal information in storage", "err", err)
+	}
+
+	return setSealResponse.barrierSeal, setSealResponse.unwrapSeal, nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {

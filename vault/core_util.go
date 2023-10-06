@@ -8,6 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/replication"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 const (
@@ -198,4 +200,7 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 
 func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
+}
+
+func (c *Core) reloadSealsEnt(secureRandomReader io.Reader, sealAccess seal.Access, logger hclog.Logger) {
 }

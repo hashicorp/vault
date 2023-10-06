@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/sasha-s/go-deadlock"
 )
@@ -3022,5 +3023,46 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 	wg.Wait()
 	if atomic.LoadUint32(&deadlocks) != expected {
 		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
+	}
+}
+
+func TestSetSeals(t *testing.T) {
+	oldSeal := NewTestSeal(t, &seal.TestSealOpts{
+		StoredKeys:   seal.StoredKeysSupportedGeneric,
+		Name:         "old-seal",
+		WrapperCount: 1,
+		Generation:   1,
+	})
+	testCore := TestCoreWithSeal(t, oldSeal, false)
+	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore, nil)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(testCore, key); err != nil {
+			t.Fatalf("error unsealing core: %s", err)
+		}
+	}
+
+	if testCore.Sealed() {
+		t.Fatal("expected core to be unsealed, but it is sealed")
+	}
+
+	newSeal := NewTestSeal(t, &seal.TestSealOpts{
+		StoredKeys:   seal.StoredKeysSupportedGeneric,
+		Name:         "new-seal",
+		WrapperCount: 1,
+		Generation:   2,
+	})
+
+	err := testCore.SetSeals(newSeal, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wrappers := testCore.seal.GetAccess().GetAllSealWrappersByPriority()
+	if len(wrappers) != 1 {
+		t.Fatalf("expected 1 wrapper in seal access, got %d", len(wrappers))
+	}
+
+	if wrappers[0].Name != "new-seal-1" {
+		t.Fatalf("unexpected seal name: got %s, expected new-seal-1", wrappers[0].Name)
 	}
 }

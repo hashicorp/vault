@@ -4280,3 +4280,43 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
+
+func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
+	ctx, _ := c.GetContext()
+
+	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("error retrieving barrier config: %s", err)
+	}
+
+	barrierConfigCopy := currentSealBarrierConfig.Clone()
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+
+	barrierSeal.SetCore(c)
+
+	rootKey, err := c.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(rootKey) < 1 {
+		return errors.New("root key not found")
+	}
+
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+	if err != nil {
+		return fmt.Errorf("error setting barrier config for new seal: %s", err)
+	}
+
+	err = barrierSeal.SetStoredKeys(ctx, rootKey)
+	if err != nil {
+		return fmt.Errorf("error setting root key in new seal: %s", err)
+	}
+
+	c.seal = barrierSeal
+
+	c.reloadSealsEnt(secureRandomReader, barrierSeal.GetAccess(), c.logger)
+
+	return nil
+}
