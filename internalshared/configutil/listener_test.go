@@ -972,3 +972,90 @@ func TestListener_parseChrootNamespaceSettings(t *testing.T) {
 		})
 	}
 }
+
+// TestListener_parseRedactionSettings exercises the listener receiver parseRedactionSettings.
+// We check various inputs to ensure we can parse the values as expected and
+// assign the relevant value on the SharedConfig struct.
+func TestListener_parseRedactionSettings(t *testing.T) {
+	tests := map[string]struct {
+		rawRedactAddresses        any
+		expectedRedactAddresses   bool
+		rawRedactClusterName      any
+		expectedRedactClusterName bool
+		rawRedactVersion          any
+		expectedRedactVersion     bool
+		isErrorExpected           bool
+		errorMessage              string
+	}{
+		"missing": {
+			isErrorExpected:           false,
+			expectedRedactAddresses:   false,
+			expectedRedactClusterName: false,
+			expectedRedactVersion:     false,
+		},
+		"redact-addresses-bad": {
+			rawRedactAddresses: "juan",
+			isErrorExpected:    true,
+			errorMessage:       "invalid value for redact_addresses",
+		},
+		"redact-addresses-good": {
+			rawRedactAddresses:      "true",
+			expectedRedactAddresses: true,
+			isErrorExpected:         false,
+		},
+		"redact-cluster-name-bad": {
+			rawRedactClusterName: "juan",
+			isErrorExpected:      true,
+			errorMessage:         "invalid value for redact_cluster_name",
+		},
+		"redact-cluster-name-good": {
+			rawRedactClusterName:      "true",
+			expectedRedactClusterName: true,
+			isErrorExpected:           false,
+		},
+		"redact-version-bad": {
+			rawRedactVersion: "juan",
+			isErrorExpected:  true,
+			errorMessage:     "invalid value for redact_version",
+		},
+		"redact-version-good": {
+			rawRedactVersion:      "true",
+			expectedRedactVersion: true,
+			isErrorExpected:       false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Configure listener with raw values
+			l := &Listener{
+				RedactAddressesRaw:   tc.rawRedactAddresses,
+				RedactClusterNameRaw: tc.rawRedactClusterName,
+				RedactVersionRaw:     tc.rawRedactVersion,
+			}
+
+			err := l.parseRedactionSettings()
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errorMessage)
+			default:
+				// Assert we got the relevant values.
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedRedactAddresses, l.RedactAddresses)
+				require.Equal(t, tc.expectedRedactClusterName, l.RedactClusterName)
+				require.Equal(t, tc.expectedRedactVersion, l.RedactVersion)
+
+				// Ensure the state was modified for the raw values.
+				require.Nil(t, l.RedactAddressesRaw)
+				require.Nil(t, l.RedactClusterNameRaw)
+				require.Nil(t, l.RedactVersionRaw)
+			}
+		})
+	}
+}
