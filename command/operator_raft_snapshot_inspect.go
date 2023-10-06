@@ -75,7 +75,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Name:    "depth",
 		Target:  &c.depth,
 		Default: 2,
-		Usage:   "Can only be used with -kvdetails. The key prefix depth used to breakdown KV store data. If set to 0, all keys will be returned. Defaults to 2.",
+		Usage:   "Can only be used with -details. The key prefix depth used to breakdown KV store data. If set to 0, all keys will be returned. Defaults to 2.",
 	})
 
 	f.StringVar(&StringVar{
