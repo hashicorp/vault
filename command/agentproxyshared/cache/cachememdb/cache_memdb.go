@@ -12,8 +12,13 @@ import (
 )
 
 const (
-	tableNameIndexer = "indexer"
+	tableNameIndexer             = "indexer"
+	tableNameCapabilitiesIndexer = "capabilities-indexer"
 )
+
+// ErrCacheItemNotFound is returned on Get and GetCapabilitiesIndex calls
+// when the entry is not found in the cache.
+var ErrCacheItemNotFound = errors.New("cache item not found")
 
 // CacheMemDB is the underlying cache database for storing indexes.
 type CacheMemDB struct {
@@ -120,6 +125,20 @@ func newDB() (*memdb.MemDB, error) {
 					},
 				},
 			},
+			tableNameCapabilitiesIndexer: {
+				Name: tableNameCapabilitiesIndexer,
+				Indexes: map[string]*memdb.IndexSchema{
+					// This index enables fetching the cached item based on the
+					// identifier of the index.
+					CapabilitiesIndexNameID: {
+						Name:   CapabilitiesIndexNameID,
+						Unique: true,
+						Indexer: &memdb.StringFieldIndex{
+							Field: "ID",
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -131,6 +150,7 @@ func newDB() (*memdb.MemDB, error) {
 }
 
 // Get returns the index based on the indexer and the index values provided.
+// If the capabilities index isn't present, it will return nil, ErrCacheItemNotFound
 func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, error) {
 	if !validIndexName(indexName) {
 		return nil, fmt.Errorf("invalid index name %q", indexName)
@@ -144,7 +164,7 @@ func (c *CacheMemDB) Get(indexName string, indexValues ...interface{}) (*Index, 
 	}
 
 	if raw == nil {
-		return nil, nil
+		return nil, ErrCacheItemNotFound
 	}
 
 	index, ok := raw.(*Index)
@@ -165,6 +185,50 @@ func (c *CacheMemDB) Set(index *Index) error {
 	defer txn.Abort()
 
 	if err := txn.Insert(tableNameIndexer, index); err != nil {
+		return fmt.Errorf("unable to insert index into cache: %v", err)
+	}
+
+	txn.Commit()
+
+	return nil
+}
+
+// GetCapabilitiesIndex returns the CapabilitiesIndex from the cache.
+// If the capabilities index isn't present, it will return nil, ErrCacheItemNotFound
+func (c *CacheMemDB) GetCapabilitiesIndex(indexName string, indexValues ...interface{}) (*CapabilitiesIndex, error) {
+	if !validCapabilitiesIndexName(indexName) {
+		return nil, fmt.Errorf("invalid index name %q", indexName)
+	}
+
+	txn := c.db.Load().(*memdb.MemDB).Txn(false)
+
+	raw, err := txn.First(tableNameCapabilitiesIndexer, indexName, indexValues...)
+	if err != nil {
+		return nil, err
+	}
+
+	if raw == nil {
+		return nil, ErrCacheItemNotFound
+	}
+
+	index, ok := raw.(*CapabilitiesIndex)
+	if !ok {
+		return nil, errors.New("unable to parse capabilities index value from the cache")
+	}
+
+	return index, nil
+}
+
+// SetCapabilitiesIndex stores the CapabilitiesIndex index into the cache.
+func (c *CacheMemDB) SetCapabilitiesIndex(index *CapabilitiesIndex) error {
+	if index == nil {
+		return errors.New("nil capabilities index provided")
+	}
+
+	txn := c.db.Load().(*memdb.MemDB).Txn(true)
+	defer txn.Abort()
+
+	if err := txn.Insert(tableNameCapabilitiesIndexer, index); err != nil {
 		return fmt.Errorf("unable to insert index into cache: %v", err)
 	}
 
@@ -210,12 +274,11 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 // Evict removes an index from the cache based on index name and value.
 func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 	index, err := c.Get(indexName, indexValues...)
+	if err == ErrCacheItemNotFound {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("unable to fetch index on cache deletion: %v", err)
-	}
-
-	if index == nil {
-		return nil
 	}
 
 	txn := c.db.Load().(*memdb.MemDB).Txn(true)
