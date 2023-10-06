@@ -80,6 +80,7 @@ var (
 
 var memProfilerEnabled = false
 
+// TODO remove this once entEnableFourClusterDev has replaced it
 var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
 	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
 	return 1

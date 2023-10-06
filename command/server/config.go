@@ -35,6 +35,7 @@ const (
 )
 
 var (
+	// TODO remove once entValidateConfig has replaced it
 	entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
 		return nil
 	}
@@ -141,6 +142,7 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	return results
 }
 
+// TODO remove once entValidateConfig is present in both repos
 func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
 	return entConfigValidate(c, sourceFilePath)
 }
