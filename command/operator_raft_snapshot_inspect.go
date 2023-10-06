@@ -318,8 +318,8 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry, read int) error)
 	return txn.Commit(), nil
 }
 
-// Read a snapshot into a temporary file. Return file and metadata from snapshot.
-// The caller is responsible for removing the file.
+// Read a the snapshot's state.bin into a temporary file. Return file and metadata from snapshot.
+// The caller is responsible for removing the temporary file.
 func Read(logger hclog.Logger, in io.Reader) (*os.File, *raft.SnapshotMeta, error) {
 	// Wrap the reader in a gzip decompressor.
 	decomp, err := gzip.NewReader(in)
