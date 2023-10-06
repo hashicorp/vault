@@ -34,15 +34,8 @@ const (
 	VaultDevKeyFilename  = "vault-key.pem"
 )
 
-var (
-	// TODO remove once entValidateConfig has replaced it
-	entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
-		return nil
-	}
-
-	// Modified internally for testing.
-	validExperiments = experiments.ValidExperiments()
-)
+// Modified internally for testing.
+var validExperiments = experiments.ValidExperiments()
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -138,13 +131,8 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
 	}
-	results = append(results, c.validateEnt(sourceFilePath)...)
+	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
-}
-
-// TODO remove once entValidateConfig is present in both repos
-func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
-	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
