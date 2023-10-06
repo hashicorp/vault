@@ -1254,3 +1254,108 @@ func TestParseAndClearString(t *testing.T) {
 		testcase.rawAssertion(t, testcase.raw, testcase.name)
 	}
 }
+
+func TestParseAndClearInt(t *testing.T) {
+	testcases := []struct {
+		name           string
+		raw            any
+		rawAssertion   func(assert.TestingT, any, ...any) bool
+		expectedParsed int64
+		errorAssertion func(assert.TestingT, error, ...any) bool
+	}{
+		{
+			name:           "valid-as-int",
+			raw:            200,
+			rawAssertion:   assert.Nil,
+			expectedParsed: int64(200),
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-as-string",
+			raw:            "53",
+			rawAssertion:   assert.Nil,
+			expectedParsed: int64(53),
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "invalid-as-hex-string",
+			raw:            "0xa",
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+		{
+			name:           "not-set",
+			raw:            nil,
+			rawAssertion:   assert.Nil,
+			errorAssertion: assert.NoError,
+		},
+	}
+
+	for _, testcase := range testcases {
+		var parsed int64
+		err := parseAndClearInt(&testcase.raw, &parsed)
+
+		testcase.errorAssertion(t, err, testcase.name)
+		assert.Equal(t, testcase.expectedParsed, parsed, testcase.name)
+		testcase.rawAssertion(t, testcase.raw, testcase.name)
+	}
+}
+
+func TestParseAndClearDurationSecond(t *testing.T) {
+	testcases := []struct {
+		name           string
+		raw            any
+		rawAssertion   func(assert.TestingT, any, ...any) bool
+		expectedParsed time.Duration
+		errorAssertion func(assert.TestingT, error, ...any) bool
+	}{
+		{
+			name:           "valid-as-string",
+			raw:            "30s",
+			rawAssertion:   assert.Nil,
+			expectedParsed: time.Duration(30 * time.Second),
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-as-string-more-complex",
+			raw:            "29h24m49s",
+			rawAssertion:   assert.Nil,
+			expectedParsed: time.Duration((29 * time.Hour) + (24 * time.Minute) + (49 * time.Second)),
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "invalid-as-string-using-days",
+			raw:            "1d3s",
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+		{
+			name:           "valid-as-integer",
+			raw:            87,
+			rawAssertion:   assert.Nil,
+			expectedParsed: time.Duration(87 * time.Second),
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "not-set",
+			raw:            nil,
+			rawAssertion:   assert.Nil,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "invalid-as-struct",
+			raw:            struct{}{},
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+	}
+
+	for _, testcase := range testcases {
+		var parsed time.Duration
+
+		err := parseAndClearDurationSecond(&testcase.raw, &parsed)
+		testcase.errorAssertion(t, err, testcase.name)
+		assert.Equal(t, testcase.expectedParsed, parsed)
+		testcase.rawAssertion(t, testcase.raw, testcase.name)
+	}
+}
