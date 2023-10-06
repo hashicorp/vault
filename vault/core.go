@@ -105,6 +105,11 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
+	// defaultUserLockoutLogInterval is the default duration that Vault will
+	// emit a log informing that a user lockout is in effect when the value
+	// is not specified in the server config
+	defaultUserLockoutLogInterval = 1 * time.Minute
+
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
 	// number of failed totp passcode validations exceeds this max value, the
@@ -673,6 +678,9 @@ type Core struct {
 
 	updateLockedUserEntriesCancel context.CancelFunc
 
+	lockoutLoggerCancel    context.CancelFunc
+	userLockoutLogInterval time.Duration
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -888,6 +896,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
+
+	UserLockoutLogInterval time.Duration
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -933,6 +943,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	}
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
+	}
+
+	if conf.UserLockoutLogInterval == 0 {
+		conf.UserLockoutLogInterval = defaultUserLockoutLogInterval
 	}
 
 	// Validate the advertise addr if its given to us
@@ -1059,6 +1073,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
+		userLockoutLogInterval:         conf.UserLockoutLogInterval,
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
@@ -3615,6 +3630,51 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
+func (c *Core) startLockoutLogger() {
+	// Are we already running a logger
+	if c.lockoutLoggerCancel != nil {
+		return
+	}
+
+	ctx, cancelFunc := context.WithCancel(c.activeContext)
+	c.lockoutLoggerCancel = cancelFunc
+
+	// Perform first check for lockout entries
+	lockedUserCount := c.getUserFailedLoginCount(ctx)
+
+	if lockedUserCount > 0 {
+		c.Logger().Warn("user lockout(s) in effect")
+	} else {
+		// We shouldn't end up here
+		return
+	}
+
+	// Start lockout watcher
+	go func() {
+		ticker := time.NewTicker(c.userLockoutLogInterval)
+		for {
+			select {
+			case <-ticker.C:
+				// Check for lockout entries
+				lockedUserCount := c.getUserFailedLoginCount(ctx)
+
+				if lockedUserCount > 0 {
+					c.Logger().Warn("user lockout(s) in effect")
+					break
+				}
+				c.Logger().Info("user lockout(s) cleared")
+				ticker.Stop()
+				c.lockoutLoggerCancel = nil
+				return
+			case <-ctx.Done():
+				ticker.Stop()
+				c.lockoutLoggerCancel = nil
+				return
+			}
+		}
+	}()
+}
+
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
@@ -3643,7 +3703,13 @@ func (c *Core) updateLockedUserEntries() {
 			}
 		}
 	}()
-	return
+}
+
+func (c *Core) getUserFailedLoginCount(ctx context.Context) int {
+	c.userFailedLoginInfoLock.Lock()
+	defer c.userFailedLoginInfoLock.Unlock()
+
+	return len(c.userFailedLoginInfo)
 }
 
 // runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
