@@ -5,7 +5,7 @@
 
 {{#if @isActive}}
   <Hds::Modal id="confirmation-modal" @onClose={{@onClose}} @color="critical" as |M|>
-    <M.Header @icon="alert-triangle">
+    <M.Header data-test-confirmation-modal-title @icon="alert-triangle">
       {{@title}}
     </M.Header>
     <M.Body>
