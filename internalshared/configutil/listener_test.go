@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1093,5 +1094,163 @@ func TestListener_parseRedactionSettings(t *testing.T) {
 				require.Nil(t, l.RedactVersionRaw)
 			}
 		})
+func TestParseAndClearBool(t *testing.T) {
+	testcases := []struct {
+		name           string
+		raw            interface{}
+		rawAssertion   func(assert.TestingT, any, ...any) bool
+		expectedParsed bool
+		errorAssertion func(assert.TestingT, error, ...any) bool
+	}{
+		{
+			name:           "valid-true-as-string",
+			raw:            "true",
+			rawAssertion:   assert.Nil,
+			expectedParsed: true,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-false-as-string",
+			raw:            "false",
+			rawAssertion:   assert.Nil,
+			expectedParsed: false,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-true-as-bool",
+			raw:            true,
+			rawAssertion:   assert.Nil,
+			expectedParsed: true,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-false-as-bool",
+			raw:            false,
+			rawAssertion:   assert.Nil,
+			expectedParsed: false,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-true-as-string-mix-case",
+			raw:            "True",
+			rawAssertion:   assert.Nil,
+			expectedParsed: true,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-false-as-integer",
+			raw:            0,
+			rawAssertion:   assert.Nil,
+			expectedParsed: false,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-true-as-integer",
+			raw:            2,
+			rawAssertion:   assert.Nil,
+			expectedParsed: true,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-true-as-float",
+			raw:            3.14,
+			rawAssertion:   assert.Nil,
+			expectedParsed: true,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-false-as-float",
+			raw:            0.0,
+			rawAssertion:   assert.Nil,
+			expectedParsed: false,
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "invalid-as-string",
+			raw:            "0.0.0.0:8200",
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+		{
+			name:           "invalid-as-struct",
+			raw:            struct{}{},
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+		{
+			name:           "not-set",
+			raw:            nil,
+			rawAssertion:   assert.Nil,
+			errorAssertion: assert.NoError,
+		},
+	}
+
+	for _, testcase := range testcases {
+		var parsed bool
+		err := parseAndClearBool(&testcase.raw, &parsed)
+
+		testcase.errorAssertion(t, err, testcase.name)
+		assert.Equal(t, testcase.expectedParsed, parsed, testcase.name)
+		testcase.rawAssertion(t, testcase.raw, testcase.name)
+	}
+}
+
+func TestParseAndClearString(t *testing.T) {
+	testcases := []struct {
+		name           string
+		raw            any
+		rawAssertion   func(assert.TestingT, any, ...any) bool
+		expectedParsed string
+		errorAssertion func(assert.TestingT, error, ...any) bool
+	}{
+		{
+			name:           "valid-empty-string",
+			raw:            "",
+			rawAssertion:   assert.Nil,
+			expectedParsed: "",
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-some-string",
+			raw:            "blah blah",
+			rawAssertion:   assert.Nil,
+			expectedParsed: "blah blah",
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-as-integer",
+			raw:            8,
+			rawAssertion:   assert.Nil,
+			expectedParsed: "8",
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "valid-as-bool",
+			raw:            true,
+			rawAssertion:   assert.Nil,
+			expectedParsed: "1",
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "not-set",
+			raw:            nil,
+			rawAssertion:   assert.Nil,
+			expectedParsed: "",
+			errorAssertion: assert.NoError,
+		},
+		{
+			name:           "invalid-as-struct",
+			raw:            struct{}{},
+			rawAssertion:   assert.NotNil,
+			errorAssertion: assert.Error,
+		},
+	}
+	for _, testcase := range testcases {
+		var parsed string
+		err := parseAndClearString(&testcase.raw, &parsed)
+
+		testcase.errorAssertion(t, err, testcase.name)
+		assert.Equal(t, testcase.expectedParsed, parsed, testcase.name)
+		testcase.rawAssertion(t, testcase.raw, testcase.name)
 	}
 }

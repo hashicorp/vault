@@ -275,19 +275,49 @@ func (t ListenerType) Normalize() ListenerType {
 // String returns the string version of a listener type.
 func (t ListenerType) String() string {
 	return string(t.Normalize())
+// parseAndClearBool parses a raw setting as a bool configuration parameter. If
+// the raw value is successfully parsed, the parsedSetting argument is set to it
+// and the rawSetting argument is cleared.
+func parseAndClearBool(rawSetting *interface{}, parsedSetting *bool) error {
+	var err error
+
+	if rawSetting != nil && *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseBool(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
+// parseAndClearString parses a raw setting as a string configuration parameter.
+// If the raw value is successfully parsed, the parsedSetting argument is set to
+// it and the rawSetting argument is cleared.
+func parseAndClearString(rawSetting *interface{}, parsedSetting *string) error {
+	var err error
+
+	if rawSetting != nil && *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseString(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
 // parseDisableReplicationStatusEndpointSettings attempts to parse the raw
 // disable_replication_status_endpoints setting. The receiving Listener's
 // DisableReplicationStatusEndpoints field will be set with the successfully
 // parsed value.
 func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
-	var err error
-
-	if l.DisableReplicationStatusEndpointsRaw != nil {
-		l.DisableReplicationStatusEndpoints, err = parseutil.ParseBool(l.DisableReplicationStatusEndpointsRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
-		}
-		l.DisableReplicationStatusEndpointsRaw = nil
+	if err := parseAndClearBool(&l.DisableReplicationStatusEndpointsRaw, &l.DisableReplicationStatusEndpoints); err != nil {
+		return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
 	}
 
 	return nil
@@ -297,18 +327,17 @@ func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseChrootNamespaceSettings() error {
-	var err error
+	var (
+		err     error
+		setting string
+	)
 
-	// If a valid ChrootNamespace value exists, then canonicalize the namespace value
-	if l.ChrootNamespaceRaw != nil {
-		l.ChrootNamespace, err = parseutil.ParseString(l.ChrootNamespaceRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for chroot_namespace: %w", err)
-		}
-		l.ChrootNamespace = namespace.Canonicalize(l.ChrootNamespace)
+	err = parseAndClearString(&l.ChrootNamespaceRaw, &setting)
+	if err != nil {
+		return fmt.Errorf("invalid value for chroot_namespace: %w", err)
 	}
 
-	l.ChrootNamespaceRaw = nil
+	l.ChrootNamespace = namespace.Canonicalize(setting)
 
 	return nil
 }
@@ -370,13 +399,8 @@ func (l *Listener) parseRequestSettings() error {
 		l.MaxRequestDuration = maxRequestDuration
 	}
 
-	if l.RequireRequestHeaderRaw != nil {
-		requireRequestHeader, err := parseutil.ParseBool(l.RequireRequestHeaderRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for require_request_header: %w", err)
-		}
-
-		l.RequireRequestHeader = requireRequestHeader
+	if err := parseAndClearBool(&l.RequireRequestHeaderRaw, &l.RequireRequestHeader); err != nil {
+		return fmt.Errorf("invalid value for require_request_header: %w", err)
 	}
 
 	// Clear raw values after successful parsing.
@@ -391,12 +415,8 @@ func (l *Listener) parseRequestSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseTLSSettings() error {
-	if l.TLSDisableRaw != nil {
-		tlsDisable, err := parseutil.ParseBool(l.TLSDisableRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_disable: %w", err)
-		}
-		l.TLSDisable = tlsDisable
+	if err := parseAndClearBool(&l.TLSDisableRaw, &l.TLSDisable); err != nil {
+		return fmt.Errorf("invalid value for tls_disable: %w", err)
 	}
 
 	if l.TLSCipherSuitesRaw != "" {
@@ -407,27 +427,16 @@ func (l *Listener) parseTLSSettings() error {
 		l.TLSCipherSuites = tlsCipherSuites
 	}
 
-	if l.TLSRequireAndVerifyClientCertRaw != nil {
-		tlsRequireAndVerifyClientCert, err := parseutil.ParseBool(l.TLSRequireAndVerifyClientCertRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_require_and_verify_client_cert: %w", err)
-		}
-		l.TLSRequireAndVerifyClientCert = tlsRequireAndVerifyClientCert
+	if err := parseAndClearBool(&l.TLSRequireAndVerifyClientCertRaw, &l.TLSRequireAndVerifyClientCert); err != nil {
+		return fmt.Errorf("invalid value for tls_require_and_verify_client_cert: %w", err)
 	}
 
-	if l.TLSDisableClientCertsRaw != nil {
-		tlsDisableClientCerts, err := parseutil.ParseBool(l.TLSDisableClientCertsRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_disable_client_certs: %w", err)
-		}
-		l.TLSDisableClientCerts = tlsDisableClientCerts
+	if err := parseAndClearBool(&l.TLSDisableClientCertsRaw, &l.TLSDisableClientCerts); err != nil {
+		return fmt.Errorf("invalid value for tls_disable_client_certs: %w", err)
 	}
 
 	// Clear raw values after successful parsing.
-	l.TLSDisableRaw = nil
 	l.TLSCipherSuitesRaw = ""
-	l.TLSRequireAndVerifyClientCertRaw = nil
-	l.TLSDisableClientCertsRaw = nil
 
 	return nil
 }
@@ -547,10 +556,8 @@ func (l *Listener) parseForwardedForSettings() error {
 		}
 	}
 
-	if l.XForwardedForRejectNotAuthorizedRaw != nil {
-		if l.XForwardedForRejectNotAuthorized, err = parseutil.ParseBool(l.XForwardedForRejectNotAuthorizedRaw); err != nil {
-			return fmt.Errorf("invalid value for x_forwarded_for_reject_not_authorized: %w", err)
-		}
+	if err := parseAndClearBool(&l.XForwardedForRejectNotAuthorizedRaw, &l.XForwardedForRejectNotAuthorized); err != nil {
+		return fmt.Errorf("invalid value for x_forwarded_for_reject_not_authorized: %w", err)
 	}
 
 	if l.XForwardedForRejectNotPresentRaw != nil {
