@@ -20,10 +20,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/hashicorp/go-hclog"
 	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
-
-	"github.com/hashicorp/go-hclog"
 	protoio "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/mitchellh/cli"
@@ -89,8 +88,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Name:    "format",
 		Target:  &c.format,
 		Default: TableFormat,
-		Usage: `Print the output in the given format. Valid formats
-		are "table" and "json".`,
+		Usage:   `Print the output in the given format. Valid formats are "table" and "json".`,
 	})
 
 	return set
@@ -662,7 +660,8 @@ func concludeGzipRead(decomp *gzip.Reader) error {
 	extra, err := io.ReadAll(decomp) // ReadAll consumes the EOF
 	if err != nil {
 		return err
-	} else if len(extra) != 0 {
+	}
+	if len(extra) != 0 {
 		return fmt.Errorf("%d unread uncompressed bytes remain", len(extra))
 	}
 	return nil
