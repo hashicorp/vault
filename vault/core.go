@@ -150,26 +150,46 @@ var (
 	manualStepDownSleepPeriod = 10 * time.Second
 
 	// Functions only in the Enterprise version
-	enterprisePostUnseal         = enterprisePostUnsealImpl
-	enterprisePreSeal            = enterprisePreSealImpl
+	// TODO remove once entPostUnseal is implemented in ENT
+	enterprisePostUnseal = enterprisePostUnsealImpl
+	// TODO remove once entPreSeal is implemented in ENT
+	enterprisePreSeal = enterprisePreSealImpl
+	// TODO remove once entSetupFilteredPaths is implemented in ENT
 	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
-	enterpriseSetupQuotas        = enterpriseSetupQuotasImpl
-	enterpriseSetupAPILock       = setupAPILockImpl
-	startReplication             = startReplicationImpl
-	stopReplication              = stopReplicationImpl
-	LastWAL                      = lastWALImpl
-	LastPerformanceWAL           = lastPerformanceWALImpl
-	LastDRWAL                    = lastDRWALImpl
-	PerformanceMerkleRoot        = merkleRootImpl
-	DRMerkleRoot                 = merkleRootImpl
-	LastRemoteWAL                = lastRemoteWALImpl
-	LastRemoteUpstreamWAL        = lastRemoteUpstreamWALImpl
-	WaitUntilWALShipped          = waitUntilWALShippedImpl
-	storedLicenseCheck           = func(c *Core, conf *CoreConfig) error { return nil }
-	LicenseAutoloaded            = func(*Core) bool { return false }
-	LicenseInitCheck             = func(*Core) error { return nil }
-	LicenseSummary               = func(*Core) (*LicenseState, error) { return nil, nil }
-	LicenseReload                = func(*Core) error { return nil }
+	// TODO remove once entSetupQuotas is implemented in ENT
+	enterpriseSetupQuotas = enterpriseSetupQuotasImpl
+	// TODO remove once entSetupAPILock is implemented in ENT
+	enterpriseSetupAPILock = setupAPILockImpl
+	// TODO remove once entStartReplication is implemented in ENT
+	startReplication = startReplicationImpl
+	// TODO remove once entStopReplication is implemented in ENT
+	stopReplication = stopReplicationImpl
+	// TODO remove once EntLastWAL is implemented in ENT
+	LastWAL = lastWALImpl
+	// TODO remove once EntLastPerformanceWAL is implemented in ENT
+	LastPerformanceWAL = lastPerformanceWALImpl
+	// TODO remove once EntLastDRWAL is implemented in ENT
+	LastDRWAL = lastDRWALImpl
+	// TODO remove once EntPerformanceMerkleRoot is implemented in ENT
+	PerformanceMerkleRoot = merkleRootImpl
+	// TODO remove once EntDRMerkleRoot is implemented in ENT
+	DRMerkleRoot = merkleRootImpl
+	// TODO remove once EntLastRemoteWAL is implemented in ENT
+	LastRemoteWAL = lastRemoteWALImpl
+	// TODO remove once entLastRemoteUpstreamWAL is implemented in ENT
+	LastRemoteUpstreamWAL = lastRemoteUpstreamWALImpl
+	// TODO remove once EntWaitUntilWALShipped is implemented in ENT
+	WaitUntilWALShipped = waitUntilWALShippedImpl
+	// TODO remove once entCheckStoredLicense is implemented in ENT
+	storedLicenseCheck = func(c *Core, conf *CoreConfig) error { return nil }
+	// TODO remove once entIsLicenseAutoloaded is implemented in ENT
+	LicenseAutoloaded = func(*Core) bool { return false }
+	// TODO remove once entCheckLicenseInit is implemented in ENT
+	LicenseInitCheck = func(*Core) error { return nil }
+	// TODO remove once entGetLicenseState is implemented in ENT
+	LicenseSummary = func(*Core) (*LicenseState, error) { return nil, nil }
+	// TODO remove once entReloadLicense is implemented in ENT
+	LicenseReload = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be

@@ -21,16 +21,19 @@ import (
 )
 
 var (
+	// TODO remove once entGenericWrapping is implemented in ENT
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
 		return wrapGenericHandler(core, in, props)
 	}
 
+	// TODO remove once entAdditionalRoutes is implemented in ENT
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
 	nonVotersAllowed = false
 
+	// TODO remove once entAdjustResponse is implemented in ENT
 	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
 )
 

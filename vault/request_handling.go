@@ -58,6 +58,7 @@ var (
 
 	// if this returns an error, the request should be blocked and the error
 	// should be returned to the client
+	// TODO remove once entBlockRequestIfError is implemented in ENT
 	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
