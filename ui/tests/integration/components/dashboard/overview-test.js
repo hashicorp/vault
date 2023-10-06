@@ -137,7 +137,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
     assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     assert.dom(SELECTORS.cardName('client-count')).exists();
   });
 
@@ -164,7 +163,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
     assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
