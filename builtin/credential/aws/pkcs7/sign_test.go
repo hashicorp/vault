@@ -8,14 +8,17 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"os"
 	"os/exec"
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func TestSign(t *testing.T) {
+	logger := corehelpers.NewTestLogger(t)
 	content := []byte("Hello World")
 	sigalgs := []x509.SignatureAlgorithm{
 		x509.SHA256WithRSA,
@@ -25,63 +28,63 @@ func TestSign(t *testing.T) {
 		x509.ECDSAWithSHA512,
 	}
 	for _, sigalgroot := range sigalgs {
-		rootCert, err := createTestCertificateByIssuer("PKCS7 Test Root CA", nil, sigalgroot, true)
+		rootCert, err := createTestCertificateByIssuer(logger, "PKCS7 Test Root CA", nil, sigalgroot, true)
 		if err != nil {
 			t.Fatalf("test %s: cannot generate root cert: %s", sigalgroot, err)
 		}
 		truststore := x509.NewCertPool()
 		truststore.AddCert(rootCert.Certificate)
 		for _, sigalginter := range sigalgs {
-			interCert, err := createTestCertificateByIssuer("PKCS7 Test Intermediate Cert", rootCert, sigalginter, true)
+			interCert, err := createTestCertificateByIssuer(logger, "PKCS7 Test Intermediate Cert", rootCert, sigalginter, true)
 			if err != nil {
 				t.Fatalf("test %s/%s: cannot generate intermediate cert: %s", sigalgroot, sigalginter, err)
 			}
 			var parents []*x509.Certificate
 			parents = append(parents, interCert.Certificate)
 			for _, sigalgsigner := range sigalgs {
-				signerCert, err := createTestCertificateByIssuer("PKCS7 Test Signer Cert", interCert, sigalgsigner, false)
+				signerCert, err := createTestCertificateByIssuer(logger, "PKCS7 Test Signer Cert", interCert, sigalgsigner, false)
 				if err != nil {
 					t.Fatalf("test %s/%s/%s: cannot generate signer cert: %s", sigalgroot, sigalginter, sigalgsigner, err)
 				}
 				for _, testDetach := range []bool{false, true} {
-					log.Printf("test %s/%s/%s detached %t\n", sigalgroot, sigalginter, sigalgsigner, testDetach)
-					toBeSigned, err := NewSignedData(content)
-					if err != nil {
-						t.Fatalf("test %s/%s/%s: cannot initialize signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
-					}
+					t.Run(fmt.Sprintf("%s/%s/%s/%t", sigalgroot, sigalginter, sigalgsigner, testDetach), func(t *testing.T) {
+						toBeSigned, err := NewSignedData(content)
+						if err != nil {
+							t.Fatalf("test %s/%s/%s: cannot initialize signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
+						}
 
-					// Set the digest to match the end entity cert
-					signerDigest, _ := getDigestOIDForSignatureAlgorithm(signerCert.Certificate.SignatureAlgorithm)
-					toBeSigned.SetDigestAlgorithm(signerDigest)
+						// Set the digest to match the end entity cert
+						signerDigest, _ := getDigestOIDForSignatureAlgorithm(signerCert.Certificate.SignatureAlgorithm)
+						toBeSigned.SetDigestAlgorithm(signerDigest)
 
-					if err := toBeSigned.AddSignerChain(signerCert.Certificate, *signerCert.PrivateKey, parents, SignerInfoConfig{}); err != nil {
-						t.Fatalf("test %s/%s/%s: cannot add signer: %s", sigalgroot, sigalginter, sigalgsigner, err)
-					}
-					if testDetach {
-						toBeSigned.Detach()
-					}
-					signed, err := toBeSigned.Finish()
-					if err != nil {
-						t.Fatalf("test %s/%s/%s: cannot finish signing data: %s", sigalgroot, sigalginter, sigalgsigner, err)
-					}
-					pem.Encode(os.Stdout, &pem.Block{Type: "PKCS7", Bytes: signed})
-					p7, err := Parse(signed)
-					if err != nil {
-						t.Fatalf("test %s/%s/%s: cannot parse signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
-					}
-					if testDetach {
-						p7.Content = content
-					}
-					if !bytes.Equal(content, p7.Content) {
-						t.Errorf("test %s/%s/%s: content was not found in the parsed data:\n\tExpected: %s\n\tActual: %s", sigalgroot, sigalginter, sigalgsigner, content, p7.Content)
-					}
-					if err := p7.VerifyWithChain(truststore); err != nil {
-						t.Errorf("test %s/%s/%s: cannot verify signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
-					}
-					if !signerDigest.Equal(p7.Signers[0].DigestAlgorithm.Algorithm) {
-						t.Errorf("test %s/%s/%s: expected digest algorithm %q but got %q",
-							sigalgroot, sigalginter, sigalgsigner, signerDigest, p7.Signers[0].DigestAlgorithm.Algorithm)
-					}
+						if err := toBeSigned.AddSignerChain(signerCert.Certificate, *signerCert.PrivateKey, parents, SignerInfoConfig{}); err != nil {
+							t.Fatalf("cannot add signer: %s", err)
+						}
+						if testDetach {
+							toBeSigned.Detach()
+						}
+						signed, err := toBeSigned.Finish()
+						if err != nil {
+							t.Fatalf("cannot finish signing data: %s", err)
+						}
+						p7, err := Parse(signed)
+						if err != nil {
+							t.Fatalf("cannot parse signed data: %s", err)
+						}
+						if testDetach {
+							p7.Content = content
+						}
+						if !bytes.Equal(content, p7.Content) {
+							t.Errorf("test %s/%s/%s: content was not found in the parsed data:\n\tExpected: %s\n\tActual: %s", sigalgroot, sigalginter, sigalgsigner, content, p7.Content)
+						}
+						if err := p7.VerifyWithChain(truststore); err != nil {
+							t.Errorf("test %s/%s/%s: cannot verify signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
+						}
+						if !signerDigest.Equal(p7.Signers[0].DigestAlgorithm.Algorithm) {
+							t.Errorf("test %s/%s/%s: expected digest algorithm %q but got %q",
+								sigalgroot, sigalginter, sigalgsigner, signerDigest, p7.Signers[0].DigestAlgorithm.Algorithm)
+						}
+					})
 				}
 			}
 		}
@@ -161,7 +164,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 
 func ExampleSignedData() {
 	// generate a signing cert or load a key pair
-	cert, err := createTestCertificate(x509.SHA256WithRSA)
+	cert, err := createTestCertificate(hclog.NewNullLogger(), x509.SHA256WithRSA)
 	if err != nil {
 		fmt.Printf("Cannot create test certificates: %s", err)
 	}
@@ -190,7 +193,8 @@ func ExampleSignedData() {
 }
 
 func TestUnmarshalSignedAttribute(t *testing.T) {
-	cert, err := createTestCertificate(x509.SHA512WithRSA)
+	logger := corehelpers.NewTestLogger(t)
+	cert, err := createTestCertificate(logger, x509.SHA512WithRSA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +229,8 @@ func TestUnmarshalSignedAttribute(t *testing.T) {
 }
 
 func TestDegenerateCertificate(t *testing.T) {
-	cert, err := createTestCertificate(x509.SHA256WithRSA)
+	logger := corehelpers.NewTestLogger(t)
+	cert, err := createTestCertificate(logger, x509.SHA256WithRSA)
 	if err != nil {
 		t.Fatal(err)
 	}

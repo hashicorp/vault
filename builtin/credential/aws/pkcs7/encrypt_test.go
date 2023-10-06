@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"crypto/x509"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func TestEncrypt(t *testing.T) {
+	logger := corehelpers.NewTestLogger(t)
 	modes := []int{
 		EncryptionAlgorithmDESCBC,
 		EncryptionAlgorithmAES128CBC,
@@ -23,7 +26,7 @@ func TestEncrypt(t *testing.T) {
 			ContentEncryptionAlgorithm = mode
 
 			plaintext := []byte("Hello Secret World!")
-			cert, err := createTestCertificate(sigalg)
+			cert, err := createTestCertificate(logger, sigalg)
 			if err != nil {
 				t.Fatal(err)
 			}

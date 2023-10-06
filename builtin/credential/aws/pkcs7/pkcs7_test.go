@@ -11,10 +11,10 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"math/big"
-	"os"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 var test1024Key, test2048Key, test3072Key, test4096Key *rsa.PrivateKey
@@ -83,19 +83,19 @@ type certKeyPair struct {
 	PrivateKey  *crypto.PrivateKey
 }
 
-func createTestCertificate(sigAlg x509.SignatureAlgorithm) (certKeyPair, error) {
-	signer, err := createTestCertificateByIssuer("Eddard Stark", nil, sigAlg, true)
+func createTestCertificate(logger hclog.Logger, sigAlg x509.SignatureAlgorithm) (certKeyPair, error) {
+	signer, err := createTestCertificateByIssuer(logger, "Eddard Stark", nil, sigAlg, true)
 	if err != nil {
 		return certKeyPair{}, err
 	}
-	pair, err := createTestCertificateByIssuer("Jon Snow", signer, sigAlg, false)
+	pair, err := createTestCertificateByIssuer(logger, "Jon Snow", signer, sigAlg, false)
 	if err != nil {
 		return certKeyPair{}, err
 	}
 	return *pair, nil
 }
 
-func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509.SignatureAlgorithm, isCA bool) (*certKeyPair, error) {
+func createTestCertificateByIssuer(logger hclog.Logger, name string, issuer *certKeyPair, sigAlg x509.SignatureAlgorithm, isCA bool) (*certKeyPair, error) {
 	var (
 		err        error
 		priv       crypto.PrivateKey
@@ -206,7 +206,7 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 		issuerKey = priv
 	}
 
-	log.Println("creating cert", name, "issued by", issuerCert.Subject.CommonName, "with sigalg", sigAlg)
+	logger.Info("creating cert", "name", name, "issued_by", issuerCert.Subject.CommonName, "sigalg", sigAlg)
 	switch priv.(type) {
 	case *rsa.PrivateKey:
 		switch issuerKey.(type) {
@@ -247,7 +247,6 @@ func createTestCertificateByIssuer(name string, issuer *certKeyPair, sigAlg x509
 	if err != nil {
 		return nil, err
 	}
-	pem.Encode(os.Stdout, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	return &certKeyPair{
 		Certificate: cert,
 		PrivateKey:  &priv,
