@@ -331,6 +331,10 @@ this case). While seals are unavailable, seal wrapping and entropy augmentation 
 still occur using the remaining seals, and values produced while a seal is down will
 be re-wrapped with all the seals when all seals become healthy again.
 
+An operator should choose two seals that are unlikely to become unavailable at the 
+same time.  For example, they may choose KMS keys in two cloud regions, from
+two different providers; or a mix of HSM, KMS, or Transit seals.
+
 When an operator configures an additional seal or removes a seal (one at a time)
 and restarts Vault, Vault will automatically detect that it needs to re-wrap
 CSPs and seal wrapped values, and will start the process.  Seal re-wrapping can
