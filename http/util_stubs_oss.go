@@ -10,7 +10,7 @@ import (
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
-func entGenericWrapping(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
+func entWrapGenericHandler(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
 	return wrapGenericHandler(core, in, props)

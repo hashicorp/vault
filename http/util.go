@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	// TODO remove once entGenericWrapping is implemented in ENT
+	// TODO remove once entWrapGenericHandler is implemented in ENT
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
