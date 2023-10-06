@@ -67,19 +67,16 @@ func TestOptions_WithRedactAddresses(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		Value           bool
-		ExpectedValue   bool
-		IsErrorExpected bool
+		Value         bool
+		ExpectedValue bool
 	}{
 		"true": {
-			Value:           true,
-			ExpectedValue:   true,
-			IsErrorExpected: false,
+			Value:         true,
+			ExpectedValue: true,
 		},
 		"false": {
-			Value:           false,
-			ExpectedValue:   false,
-			IsErrorExpected: false,
+			Value:         false,
+			ExpectedValue: false,
 		},
 	}
 
@@ -91,13 +88,8 @@ func TestOptions_WithRedactAddresses(t *testing.T) {
 			opts := &listenerConfigOptions{}
 			applyOption := WithRedactAddresses(tc.Value)
 			err := applyOption(opts)
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-			default:
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, opts.withRedactAddresses)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withRedactAddresses)
 		})
 	}
 }
@@ -107,19 +99,16 @@ func TestOptions_WithRedactClusterName(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		Value           bool
-		ExpectedValue   bool
-		IsErrorExpected bool
+		Value         bool
+		ExpectedValue bool
 	}{
 		"true": {
-			Value:           true,
-			ExpectedValue:   true,
-			IsErrorExpected: false,
+			Value:         true,
+			ExpectedValue: true,
 		},
 		"false": {
-			Value:           false,
-			ExpectedValue:   false,
-			IsErrorExpected: false,
+			Value:         false,
+			ExpectedValue: false,
 		},
 	}
 
@@ -131,13 +120,8 @@ func TestOptions_WithRedactClusterName(t *testing.T) {
 			opts := &listenerConfigOptions{}
 			applyOption := WithRedactClusterName(tc.Value)
 			err := applyOption(opts)
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-			default:
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, opts.withRedactClusterName)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withRedactClusterName)
 		})
 	}
 }
@@ -147,19 +131,16 @@ func TestOptions_WithRedactVersion(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		Value           bool
-		ExpectedValue   bool
-		IsErrorExpected bool
+		Value         bool
+		ExpectedValue bool
 	}{
 		"true": {
-			Value:           true,
-			ExpectedValue:   true,
-			IsErrorExpected: false,
+			Value:         true,
+			ExpectedValue: true,
 		},
 		"false": {
-			Value:           false,
-			ExpectedValue:   false,
-			IsErrorExpected: false,
+			Value:         false,
+			ExpectedValue: false,
 		},
 	}
 
@@ -171,13 +152,8 @@ func TestOptions_WithRedactVersion(t *testing.T) {
 			opts := &listenerConfigOptions{}
 			applyOption := WithRedactVersion(tc.Value)
 			err := applyOption(opts)
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-			default:
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, opts.withRedactVersion)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withRedactVersion)
 		})
 	}
 }
