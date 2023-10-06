@@ -582,7 +582,7 @@ func (hl *hashList) DecodeAndVerify(r io.Reader) error {
 
 // read takes a reader and extracts the snapshot metadata and the snapshot
 // itself, and also checks the integrity of the data. You must arrange to call
-// Close() on the returned object or else you will leak a temporary file.
+// Close() on the writer (snap) or else you will leak a temporary file.
 func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 	// Start a new tar reader.
 	archive := tar.NewReader(in)
