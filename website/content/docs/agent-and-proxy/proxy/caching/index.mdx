@@ -7,21 +7,22 @@ description: |-
   newly created tokens.
 ---
 
-# Vault proxy caching
+# Vault Proxy caching
 
-Vault Proxy Caching allows client-side caching of responses containing newly
+Vault Proxy caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
 newly created tokens. The renewals of the cached tokens and leases are also
-managed by the proxy.
+managed by the proxy. Additionally, with `cache_static_secrets` set to `true`,
+Vault Proxy [can be configured to cache KVv1 and KVv2 secrets][static-secret-caching].
 
--> **Note:** Vault Proxy Caching works best with servers/clusters that are
+-> **Note:** Vault Proxy caching works best with servers/clusters that are
 running on Vault 1.1 and above due to changes that were introduced
 alongside this feature, such as the exposure of the `orphan` field in token
 creation responses.
 
 ## Caching and renewals
 
-Response caching and renewals are managed by the proxy only under these
+Response caching and renewals for dynamic secrets are managed by Proxy only under these
 specific scenarios.
 
 1. Token creation requests are made through the proxy. This means that any
@@ -36,6 +37,21 @@ specific scenarios.
    that are issued using the tokens managed by the proxy, will be cached and
    its renewals are taken care of.
 
+## Static secret caching
+
+Vault Proxy can be configured to cache KVv1 and KVv2 secrets as well as dynamic secrets described
+above. This means that, when enabled, subsequent requests to the same KV secret made via Proxy will
+only result in a single request made to Vault. Proxy will keep a single cache entry of the secret in its
+cache, and will only provide the cached response to requests made with tokens that can access the secret.
+
+This functionality off by default, as it requires [auto-auth](/vault/docs/agent-and-proxy/autoauth) to be configured,
+as well as the auto-auth token to have the permissions to subscribe to KV event updates via Vault's [event system](/vault/docs/concepts/events).
+Proxy uses the auto-auth token to connect to Vault's event system, and uses events to know when to update its cache
+with updated secrets.
+
+Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
+this functionality.
+
 ## Persistent cache
 
 Vault Proxy can restore tokens and leases from a persistent cache file created
@@ -47,7 +63,7 @@ this functionality.
 
 ## Cache evictions
 
-The eviction of cache entries pertaining to secrets will occur when the proxy
+The eviction of cache entries pertaining to dynamic secrets will occur when the proxy
 can no longer renew them. This can happen when the secrets hit their maximum
 TTL or if the renewals result in errors.
 
@@ -68,7 +84,7 @@ entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request uniqueness
 
-In order to detect repeat requests and return cached responses, proxy will need
+In order to detect repeat requests and return cached responses, Proxy will need
 to have a way to uniquely identify the requests. This computation as it stands
 today takes a simplistic approach (may change in future) of serializing and
 hashing the HTTP request along with all the headers and the request body. This
@@ -154,6 +170,10 @@ The top level `cache` block has the following configuration entry:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
+- `cache_static_secrets` `(bool: false)` - If set, Blah. Must TODO
+. Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
+this functionality.
+
 -> **Note:** When the `cache` block is defined, a [listener][proxy-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
 
@@ -217,7 +237,7 @@ Here is an example of a cache configuration with the optional `persist` block,
 alongside a regular listener, and a listener that only serves metrics.
 
 ```hcl
-# Other Vault proxy configuration blocks
+# Other Vault Proxy configuration blocks
 # ...
 
 cache {
@@ -241,3 +261,5 @@ listener "tcp" {
     role = "metrics_only"
 }
 ```
+
+[static-secret-caching]: /vault/docs/agent-and-proxy/proxy#listener-stanza
