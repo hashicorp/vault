@@ -68,7 +68,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Name:    "details",
 		Target:  &c.details,
 		Default: true,
-		Usage:   "Provides information about usage for KV data stored in Vault.",
+		Usage:   "Provides information about usage for data stored in the snapshot.",
 	})
 
 	f.IntVar(&IntVar{
