@@ -1,0 +1,3 @@
+```release-note:improvement
+core: emit logs when user(s) are locked out and when all lockouts have been cleared
+```

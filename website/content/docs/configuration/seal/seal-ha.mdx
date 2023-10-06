@@ -12,8 +12,8 @@ description: |-
 @include 'alerts/beta.mdx'
 
 [Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise-beta) 
-is the ability to configure more than one seal in order to have resilience against
-outage of a seal service or mechanism.   
+provides the means to configure at least two auto-seals (and no more than three)
+in order to have resilience against outage of a seal service or mechanism.   
 
 Using Seal HA involves configuring extra seals in Vault's server configuration file
 and restarting Vault, after having enabled the Seal HA beta feature by setting
