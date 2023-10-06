@@ -10,26 +10,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-	"github.com/hashicorp/vault/sdk/logical"
-
-	"nhooyr.io/websocket"
-
-	"go.uber.org/atomic"
-
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-
 	vaulthttp "github.com/hashicorp/vault/http"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/api"
-
-	"github.com/hashicorp/vault/vault"
-
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
+	"nhooyr.io/websocket"
 )
 
 // Avoiding a circular dependency in the test.

@@ -13,18 +13,12 @@ import (
 	"net/url"
 	"time"
 
-	"golang.org/x/exp/maps"
-
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-
-	"github.com/hashicorp/vault/helper/useragent"
-
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
-
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/useragent"
+	"golang.org/x/exp/maps"
 	"nhooyr.io/websocket"
 )
 
@@ -170,6 +164,8 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	return nil
 }
 
+// updateStaticSecret checks for updates for a static secret on the path given,
+// and updates the cache if appropriate
 func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context, path string) error {
 	// We clone the client, as we won't be using the same token.
 	client, err := updater.client.Clone()
@@ -265,6 +261,8 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	return nil
 }
 
+// openWebSocketConnection opens a websocket connection to the event system for
+// the events that the static secret cache updater is interested in.
 func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Context) (*websocket.Conn, error) {
 	// We parse this into a URL object to get the specific host and scheme
 	// information without nasty string parsing.
