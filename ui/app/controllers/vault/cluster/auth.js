@@ -2,11 +2,11 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
+import ENV from 'vault/config/environment';
 
 export default Controller.extend({
   flashMessages: service(),
@@ -62,9 +62,10 @@ export default Controller.extend({
     }
     transition.followRedirects().then(() => {
       if (isRoot) {
-        if (Ember.testing) return;
-
-        this.auth.set('showRootTokenWarning', true);
+        this.flashMessages.warning(
+          'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.',
+          ENV.environment !== 'development' ? { sticky: true } : {}
+        );
       }
     });
   },

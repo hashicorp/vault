@@ -36,7 +36,6 @@ export default Service.extend({
   expirationCalcTS: null,
   isRenewing: false,
   mfaErrors: null,
-  showRootTokenWarning: false,
 
   get tokenExpired() {
     const expiration = this.tokenExpirationDate;

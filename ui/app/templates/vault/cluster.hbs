@@ -2,41 +2,6 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
-{{#if this.auth.showRootTokenWarning}}
-  <Modal
-    @title="Warning"
-    @onClose={{fn (mut this.auth.showRootTokenWarning) false}}
-    @isActive={{this.auth.showRootTokenWarning}}
-    @type="warning"
-  >
-    <section class="modal-card-body">
-      {{#if this.namespaceService.inRootNamespace}}
-        You have logged in with a root token. As a security precaution, this root token will not be stored by your browser
-        and you will need to re-authenticate after the window is closed or refreshed. Click
-        <b>confirm</b>
-        to continue.
-      {{else}}
-        As a security precaution, you will be logged out and need to log in again to navigate to the
-        <code>{{this.namespaceService.currentNamespacePath}}</code>
-        namespace. Click
-        <b>confirm</b>
-        to continue.
-      {{/if}}
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary"
-        {{on "click" (fn (mut this.auth.showRootTokenWarning) false)}}
-        data-test-root-warning-confirm
-      >
-        Confirm
-      </button>
-    </footer>
-  </Modal>
-
-{{/if}}
 <Sidebar::Nav::Cluster />
 {{! Only show license banners for Enterprise }}
 {{#if this.activeCluster.version.isEnterprise}}
