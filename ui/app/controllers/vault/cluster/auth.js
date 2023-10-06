@@ -7,6 +7,7 @@ import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 import ENV from 'vault/config/environment';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
   flashMessages: service(),
@@ -24,30 +25,34 @@ export default Controller.extend({
   authMethod: '',
   oidcProvider: '',
 
-  get managedNamespaceChild() {
-    const fullParam = this.namespaceQueryParam;
-    const split = fullParam.split('/');
-    if (split.length > 1) {
-      split.shift();
-      return `/${split.join('/')}`;
+  get namespaceInput() {
+    const namespaceQP = this.clusterController.namespaceQueryParam;
+    if (this.managedNamespaceRoot) {
+      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
+      const split = namespaceQP.split('/');
+      if (split.length > 1) {
+        split.shift();
+        return `/${split.join('/')}`;
+      }
+      return '';
     }
-    return '';
+    return namespaceQP;
   },
 
-  updateManagedNamespace: task(function* (value) {
-    // debounce
-    yield timeout(500);
-    // TODO: Move this to shared fn
-    const newNamespace = `${this.managedNamespaceRoot}${value}`;
-    this.namespaceService.setNamespace(newNamespace, true);
-    this.set('namespaceQueryParam', newNamespace);
-  }).restartable(),
+  fullNamespaceFromInput(value) {
+    const strippedNs = sanitizePath(value);
+    if (this.managedNamespaceRoot) {
+      return `${this.managedNamespaceRoot}/${strippedNs}`;
+    }
+    return strippedNs;
+  },
 
   updateNamespace: task(function* (value) {
     // debounce
     yield timeout(500);
-    this.namespaceService.setNamespace(value, true);
-    this.set('namespaceQueryParam', value);
+    const ns = this.fullNamespaceFromInput(value);
+    this.namespaceService.setNamespace(ns, true);
+    this.set('namespaceQueryParam', ns);
   }).restartable(),
 
   authSuccess({ isRoot, namespace }) {
