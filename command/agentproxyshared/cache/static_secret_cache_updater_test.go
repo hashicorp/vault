@@ -6,8 +6,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -161,11 +159,13 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	require.NotNil(t, conn)
 }
 
-// TestOpenWebSocketConnectionReceivesEvents tests that the openWebSocketConnection function
-// works as expected with KVV1, and then the connection can be used to receive an event.
+// TestOpenWebSocketConnectionReceivesEventsDefaultMount tests that the openWebSocketConnection function
+// works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
-func TestOpenWebSocketConnectionReceivesEvents(t *testing.T) {
+// As of right now, it does not pass due to an issue with the event system and default KVV1 mounts.
+// See the godocs for testCoreAddSecretMount for more info.
+func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	t.Parallel()
 	t.Skip("This test won't finish, as the default KVV1 mount does not send events. See the godocs for testCoreAddSecretMount for more information")
 	// We need a valid cluster for the connection to succeed.
@@ -211,6 +211,68 @@ func TestOpenWebSocketConnectionReceivesEvents(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Log(string(message))
+	}
+}
+
+// TestOpenWebSocketConnectionReceivesEventsKVV1 tests that the openWebSocketConnection function
+// works as expected with KVV1, and then the connection can be used to receive an event.
+// This acts as more of an event system sanity check than a test of the updater
+// logic. It's still important coverage, though.
+func TestOpenWebSocketConnectionReceivesEventsKVV1(t *testing.T) {
+	t.Parallel()
+	// We need a valid cluster for the connection to succeed.
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+
+	conn, err := updater.openWebSocketConnection(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.NotNil(t, conn)
+
+	t.Cleanup(func() {
+		conn.Close(websocket.StatusNormalClosure, "")
+	})
+
+	err = client.Sys().Mount("secret-v1", &api.MountInput{
+		Type: "kv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	makeData := func(i int) map[string]interface{} {
+		return map[string]interface{}{
+			"foo": fmt.Sprintf("bar%d", i),
+		}
+	}
+	// Put a secret, which should trigger an event
+	err = client.KVv1("secret-v1").Put(context.Background(), "foo", makeData(100))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 5; i++ {
+		// Do a fresh PUT just to refresh the secret and send a new message
+		err = client.KVv1("secret-v1").Put(context.Background(), "foo", makeData(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// This method blocks until it gets a secret, so this test
+		// will only pass if we're receiving events correctly.
+		_, _, err := conn.Read(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -340,17 +402,9 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 	}
 	go runStreamStaticSecretEvents()
 
-	// TODO: Use the new function to make the ID from the path
 	// First, create the secret in the cache that we expect to be updated:
 	path := "secret-v2/data/foo"
-	req := &SendRequest{
-		Request: &http.Request{
-			URL: &url.URL{
-				Path: path,
-			},
-		},
-	}
-	indexId := computeStaticSecretCacheIndex(req)
+	indexId := hashStaticSecretIndex(path)
 	initialTime := time.Now().UTC()
 	// pre-populate the leaseCache with a secret to update
 	index := &cachememdb.Index{
@@ -359,7 +413,7 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 		LastRenewed: initialTime,
 		ID:          indexId,
 		// Valid token provided, so update should work.
-		Tokens:   []string{client.Token()},
+		Tokens:   map[string]struct{}{client.Token(): {}},
 		Response: []byte{},
 	}
 	err := leaseCache.db.Set(index)
@@ -415,17 +469,8 @@ func TestUpdateStaticSecret(t *testing.T) {
 	updater := testNewStaticSecretCacheUpdater(t, client)
 	leaseCache := updater.leaseCache
 
-	// TODO: avoid using req here make a new method
-	// that takes path and returns index
 	path := "secret/foo"
-	req := &SendRequest{
-		Request: &http.Request{
-			URL: &url.URL{
-				Path: path,
-			},
-		},
-	}
-	indexId := computeStaticSecretCacheIndex(req)
+	indexId := hashStaticSecretIndex(path)
 	initialTime := time.Now().UTC()
 	// pre-populate the leaseCache with a secret to update
 	index := &cachememdb.Index{
@@ -434,7 +479,7 @@ func TestUpdateStaticSecret(t *testing.T) {
 		LastRenewed: initialTime,
 		ID:          indexId,
 		// Valid token provided, so update should work.
-		Tokens:   []string{client.Token()},
+		Tokens:   map[string]struct{}{client.Token(): {}},
 		Response: []byte{},
 	}
 	err := leaseCache.db.Set(index)
@@ -482,17 +527,8 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 	updater := testNewStaticSecretCacheUpdater(t, client)
 	leaseCache := updater.leaseCache
 
-	// TODO: avoid using req here make a new method
-	// that takes path and returns index
 	path := "secret/foo"
-	req := &SendRequest{
-		Request: &http.Request{
-			URL: &url.URL{
-				Path: path,
-			},
-		},
-	}
-	indexId := computeStaticSecretCacheIndex(req)
+	indexId := hashStaticSecretIndex(path)
 	renewTime := time.Now().UTC()
 
 	// pre-populate the leaseCache with a secret to update
@@ -502,7 +538,7 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 		LastRenewed: renewTime,
 		ID:          indexId,
 		// Note: invalid Tokens value provided, so this secret cannot be updated, and must be evicted
-		Tokens: []string{"invalid token"},
+		Tokens: map[string]struct{}{"invalid token": {}},
 	}
 	err := leaseCache.db.Set(index)
 	if err != nil {
@@ -526,11 +562,7 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 	}
 
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	require.NotEqual(t, index, newIndex)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 	require.Nil(t, newIndex)
 }
 

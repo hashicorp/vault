@@ -369,7 +369,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Check if the response for this request is already in the static secret cache
-	if staticSecretCacheId != "" {
+	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
 		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
 		if err != nil {
 			return nil, err
@@ -434,7 +434,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 
 	// There shouldn't be a situation where secret.MountType == "kv" and
 	// staticSecretCacheId == "", but just in case.
-	if c.cacheStaticSecrets && secret.MountType == "kv" && staticSecretCacheId != "" {
+	// We restrict this to GETs as those are all we want to cache.
+	if c.cacheStaticSecrets && secret.MountType == "kv" &&
+		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		err := c.cacheStaticSecret(ctx, req, resp, index)
@@ -652,7 +654,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 // capabilities entry from the cache, or create a new, empty one.
 func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.CapabilitiesIndex, error) {
 	// The index ID is a hash of the token.
-	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexId := hashStaticSecretIndex(token)
 	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return nil, err
@@ -849,6 +851,12 @@ func getStaticSecretPathFromRequest(req *SendRequest) string {
 	return canonicalizeStaticSecretPath(path, namespace)
 }
 
+// hashStaticSecretIndex is a simple function that hashes the path into
+// a function. This is kept as a helper function for ease of use by downstream functions.
+func hashStaticSecretIndex(unhashedIndex string) string {
+	return hex.EncodeToString(cryptoutil.Blake2b256Hash(unhashedIndex))
+}
+
 // computeStaticSecretCacheIndex results in a value that uniquely identifies a static
 // secret's cached ID. Notably, we intentionally ignore headers (for example,
 // the X-Vault-Token header) to remain agnostic to which token is being
@@ -860,7 +868,7 @@ func computeStaticSecretCacheIndex(req *SendRequest) string {
 	if path == "" {
 		return path
 	}
-	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
+	return hashStaticSecretIndex(path)
 }
 
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.

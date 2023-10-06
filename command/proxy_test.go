@@ -826,11 +826,13 @@ log_level = "trace"
 // event.
 func TestProxy_Cache_EventSystemUpdatesCacheKVV1(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": logicalKv.Factory,
+		},
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -917,8 +919,9 @@ log_level = "trace"
 		"bar": "baz",
 	}
 
-	// TODO Violet I think we can remove this.
-	// Give some time for the event system to connect to the proxy.
+	// Wait for the event system to successfully connect.
+	// This is longer than it needs to be to account for unnatural slowness/avoiding
+	// flakiness.
 	time.Sleep(5 * time.Second)
 
 	// Mount the KVV2 engine
@@ -946,7 +949,6 @@ log_level = "trace"
 	require.Equal(t, "MISS", cacheValue)
 
 	// Update the secret using the proxy client
-	// TODO Violet: Update this so that it uses proxy client. We're accidentally caching KV PUTs. Whoops!
 	err = proxyClient.KVv1("secret-v1").Put(context.Background(), "my-secret", secretData2)
 	if err != nil {
 		t.Fatal(err)
@@ -996,8 +998,6 @@ func TestProxy_Cache_EventSystemUpdatesCacheKVV2(t *testing.T) {
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1084,8 +1084,9 @@ log_level = "trace"
 		"bar": "baz",
 	}
 
-	// TODO Violet I think we can remove this.
-	// Give some time for the event system to connect to the proxy.
+	// Wait for the event system to successfully connect.
+	// This is longer than it needs to be to account for unnatural slowness/avoiding
+	// flakiness.
 	time.Sleep(5 * time.Second)
 
 	// Mount the KVV2 engine
@@ -1113,8 +1114,7 @@ log_level = "trace"
 	require.Equal(t, "MISS", cacheValue)
 
 	// Update the secret using the proxy client
-	// TODO Violet: Update this so that it uses proxy client. We're accidentally caching KV PUTs. Whoops!
-	_, err = serverClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData2)
+	_, err = proxyClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData2)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"time"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 
 	"github.com/hashicorp/vault/helper/useragent"
@@ -175,26 +177,18 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		return err
 	}
 
-	// TODO: avoid using req here make a new method
-	// that takes path and returns index
-	req := &SendRequest{
-		Request: &http.Request{
-			URL: &url.URL{
-				Path: path,
-			},
-		},
-	}
-	index, err := updater.leaseCache.db.Get(cachememdb.IndexNameID, computeStaticSecretCacheIndex(req))
-	if err != nil {
-		return err
-	}
+	indexId := hashStaticSecretIndex(path)
 
-	// TODO Violet delete, this should work once I get the next PR!
-	updater.logger.Info("Violet updating static secret", "path", path, "index", index, "id", computeStaticSecretCacheIndex(req))
-	if index == nil {
+	updater.logger.Debug("received update static secret request", "path", path, "indexId", indexId)
+
+	index, err := updater.leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	if err == cachememdb.ErrCacheItemNotFound {
 		// This event doesn't correspond to a secret in our cache
 		// so this is a no-op.
 		return nil
+	}
+	if err != nil {
+		return err
 	}
 
 	// We use a raw request so that we can store all the
@@ -208,7 +202,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	var resp *api.Response
 	var tokensToRemove []string
 	var successfulAttempt bool
-	for _, token := range index.Tokens {
+	for _, token := range maps.Keys(index.Tokens) {
 		client.SetToken(token)
 		request.Headers.Set(api.AuthHeaderName, token)
 		resp, err = client.RawRequestWithContext(ctx, request)
@@ -231,10 +225,9 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		defer index.IndexLock.Unlock()
 
 		// First, remove the tokens we noted couldn't access the secret from the token index
-		// TODO, uncomment this once we get the map in this branch
-		//for _, token := range tokensToRemove {
-		//	delete(index.Tokens, token)
-		//}
+		for _, token := range tokensToRemove {
+			delete(index.Tokens, token)
+		}
 
 		sendResponse, err := NewSendResponse(resp, nil)
 		if err != nil {
@@ -263,7 +256,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		// No token could successfully update the secret, or secret was deleted.
 		// We should evict the cache instead of re-storing the secret.
 		updater.logger.Debug("evicting response from cache", "path", path)
-		err = updater.leaseCache.db.Evict(cachememdb.IndexNameID, computeStaticSecretCacheIndex(req))
+		err = updater.leaseCache.db.Evict(cachememdb.IndexNameID, indexId)
 		if err != nil {
 			return err
 		}
