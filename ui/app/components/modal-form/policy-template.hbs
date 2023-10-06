@@ -32,7 +32,7 @@
   </nav>
 {{/if}}
 {{#if this.showExamplePolicy}}
-  <PolicyExample @policyType={{this.policy.policyType}} />
+  <PolicyExample @policyType={{this.policy.policyType}} @container="#search-select-modal" />
 {{else}}
   <Select
     @name="policyType"

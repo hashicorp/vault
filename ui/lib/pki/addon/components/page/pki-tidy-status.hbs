@@ -14,15 +14,15 @@
         Perform manual tidy
       </ToolbarLink>
     {{else}}
-      <button
-        type="button"
-        class="toolbar-link"
+      <Hds::Button
+        class="toolbar-button"
+        @color="secondary"
+        @icon="chevron-right"
+        @iconPosition="trailing"
         {{on "click" (fn (mut this.tidyOptionsModal) true)}}
         data-test-pki-tidy-options-modal
-      >
-        Tidy
-        <Icon @name="chevron-right" />
-      </button>
+        @text="Tidy"
+      />
     {{/if}}
   </ToolbarActions>
 </Toolbar>
@@ -101,104 +101,75 @@
     @title="Tidy status unavailable"
     @message="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
   >
-    <button
-      type="button"
-      class="link"
+    <Hds::Button
+      @color="tertiary"
+      @icon="chevron-right"
+      @iconPosition="trailing"
       {{on "click" (fn (mut this.tidyOptionsModal) true)}}
       data-test-tidy-empty-state-configure
-    >
-      Tidy
-    </button>
+      @text="Tidy"
+    />
   </EmptyState>
 {{/if}}
 
 {{! TIDY OPTIONS MODAL }}
-<Modal
-  @title="Tidy this mount"
-  @onClose={{fn (mut this.tidyOptionsModal) false}}
-  @isActive={{this.tidyOptionsModal}}
-  @showCloseButton={{true}}
->
-  <section aria-label="tidy-options-modal-content" class="modal-card-body">
-    <h3 class="title is-5">How tidying will work</h3>
-    <p class="has-text-grey has-bottom-padding-s">
-      Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
-      buffer period beyond their expiration time.
-      <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
-        Documentation.
-      </DocLink>
-    </p>
-    <p class="has-text-grey">
-      <ol class="has-left-margin-m has-bottom-margin-s">
-        <li>Select a tidy operation:</li>
-        <ul class="bullet has-bottom-margin-xs">
-          <li><strong>Automatic tidy</strong>
-            periodically runs a tidy operation with saved configuration settings after waiting the specified interval
-            duration between tidies
-          </li>
-          <li><strong>Manual tidy</strong> runs a tidy operation once</li>
-        </ul>
-        <li>Configure the parameters that determine how to tidy and run the operation.</li>
-      </ol>
-    </p>
-    <div class="has-top-margin-l has-padding">
-      <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
-    </div>
-  </section>
-  <footer aria-label="tidy-option-buttons" class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.tidy.auto.configure")}}
-      data-test-tidy-modal-auto-button
-    >
-      Automatic tidy
-    </button>
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.tidy.manual")}}
-      data-test-tidy-modal-manual-button
-    >
-      Manual tidy
-    </button>
-    <button
-      type="button"
-      class="button is-secondary"
-      {{on "click" (fn (mut this.tidyOptionsModal) false)}}
-      data-test-tidy-modal-cancel-button
-    >
-      Cancel
-    </button>
-  </footer>
-</Modal>
+{{#if this.tidyOptionsModal}}
+  <Hds::Modal id="pki-tidy-modal" @size="large" @onClose={{fn (mut this.tidyOptionsModal) false}} as |M|>
+    <M.Header>
+      Tidy this mount
+    </M.Header>
+    <M.Body>
+      <h3 class="title is-5">How tidying will work</h3>
+      <p class="has-text-grey has-bottom-padding-s">
+        Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
+        buffer period beyond their expiration time.
+        <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
+          Documentation.
+        </DocLink>
+      </p>
+      <p class="has-text-grey">
+        <ol class="has-left-margin-m has-bottom-margin-s">
+          <li>Select a tidy operation:</li>
+          <ul class="bullet has-bottom-margin-xs">
+            <li><strong>Automatic tidy</strong>
+              periodically runs a tidy operation with saved configuration settings after waiting the specified interval
+              duration between tidies
+            </li>
+            <li><strong>Manual tidy</strong> runs a tidy operation once</li>
+          </ul>
+          <li>Configure the parameters that determine how to tidy and run the operation.</li>
+        </ol>
+      </p>
+      <div class="has-top-margin-l has-padding">
+        <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
+      </div>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Automatic tidy" @route="tidy.auto.configure" data-test-tidy-modal-auto-button />
+        <Hds::Button @text="Manual tidy" @route="tidy.manual" data-test-tidy-modal-manual-button />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-tidy-modal-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
 
 {{! CANCEL TIDY CONFIRMATION MODAL }}
 {{#if this.confirmCancelTidy}}
-  <Modal
-    @type="warning"
-    @title="Cancel tidy?"
-    @onClose={{fn (mut this.confirmCancelTidy) false}}
-    @isActive={{this.confirmCancelTidy}}
-    @showCloseButton={{true}}
-  >
-    <section aria-label="confirm-cancel-modal-content" class="modal-card-body">
+  <Hds::Modal id="pki-cancel-tidy-modal" @color="warning" @onClose={{fn (mut this.confirmCancelTidy) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Cancel tidy?
+    </M.Header>
+    <M.Body>
       This will cancel the tidy at the next available checkpoint, which may process additional certificates between when the
       operation was marked as cancelled and when the operation stopped.
       <p class="has-top-margin-s">Click “Confirm” to cancel the running tidy operation.</p>
-    </section>
-    <footer aria-label="confirm-cancel-buttons" class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary"
-        {{on "click" (perform this.cancelTidy)}}
-        data-test-tidy-modal-cancel-button
-      >
-        Confirm
-      </button>
-      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.confirmCancelTidy) false)}}>
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Confirm" {{on "click" (perform this.cancelTidy)}} data-test-tidy-modal-cancel-button />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}
