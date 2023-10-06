@@ -577,8 +577,7 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	}
 
 	// The index already exists, so all we need to do is add our token
-	// to the index's allowed token list, then re-store it, ensuring
-	// we mark it as no longer stale.
+	// to the index's allowed token list, then re-store it.
 	if indexFromCache != nil {
 		// We must hold a lock for the index while it's being updated.
 		// We keep the two locking mechanisms distinct, so that it's only writes
