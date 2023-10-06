@@ -253,7 +253,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// Add an extra wrapping handler if the DisableReplicationStatusEndpoints
 	// setting is true that will create a new request with a context that has
 	// a value indicating that the replication status endpoints are disabled.
-	if props.ListenerConfig.DisableReplicationStatusEndpoints {
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableReplicationStatusEndpoints {
 		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
 	}
 
