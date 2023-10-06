@@ -886,6 +886,9 @@ listener "tcp" {
     enable_quit = true
   }
   chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
 }`))
 
 	config := Config{
@@ -938,6 +941,9 @@ listener "tcp" {
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
 				},
 			},
 		},
