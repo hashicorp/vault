@@ -1,5 +1,7 @@
 {
-    "ui":false,
+    "ui_config": {
+        "enabled": false
+    },
 
     "listener": {
         "tcp": {

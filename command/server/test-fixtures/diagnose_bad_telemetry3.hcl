@@ -3,7 +3,10 @@
 
 disable_cache = true
 disable_mlock = true
-ui = true
+
+ui_config {
+  enabled = true
+}
 
 listener "tcp" {
 	address = "127.0.0.1:8200"

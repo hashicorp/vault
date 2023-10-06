@@ -1,0 +1,7 @@
+```release-note:feature
+UI: the Vault UI can now be replaced by setting the new `ui_config.dir` configuration parameter.
+```
+
+```release-note:change
+UI: the `ui` configuration parameter has been replaced by `ui_config.enabled`. The `ui` parameter will be removed in a future version.
+```

@@ -164,10 +164,11 @@ func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders ma
 	return testCoreUnsealed(t, core)
 }
 
-func TestCoreUI(t testing.T, enableUI bool) *Core {
+func TestCoreUI(t testing.T, enableUI bool, uiDir string) *Core {
 	conf := &CoreConfig{
 		EnableUI:        enableUI,
 		EnableRaw:       true,
+		UIDir:           uiDir,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 	return TestCoreWithSealAndUI(t, conf)
@@ -210,6 +211,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
+	conf.UIDir = opts.UIDir
 	conf.EnableIntrospection = opts.EnableIntrospection
 	conf.Seal = opts.Seal
 	conf.LicensingConfig = opts.LicensingConfig

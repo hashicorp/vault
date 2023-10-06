@@ -794,6 +794,8 @@ type CoreConfig struct {
 
 	EnableUI bool
 
+	UIDir string
+
 	// Enable the raw endpoint
 	EnableRaw bool
 
@@ -1249,7 +1251,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.auditBackends = auditBackends
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
-	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+	c.uiConfig = NewUIConfig(conf.EnableUI, conf.UIDir, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
@@ -2123,6 +2125,11 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 // UIEnabled returns if the UI is enabled
 func (c *Core) UIEnabled() bool {
 	return c.uiConfig.Enabled()
+}
+
+// UIDir returns configured UIDir
+func (c *Core) UIDir() string {
+	return c.uiConfig.dir
 }
 
 // UIHeaders returns configured UI headers

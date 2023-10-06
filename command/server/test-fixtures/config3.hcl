@@ -5,7 +5,9 @@ disable_cache = true
 disable_mlock = true
 log_requests_level = "Basic"
 
-ui = true
+ui_config {
+  enabled = true
+}
 
 api_addr = "top_level_api_addr"
 cluster_addr = "top_level_cluster_addr"

@@ -193,9 +193,9 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
 		if core.UIEnabled() {
-			if uiBuiltIn {
-				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
-				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
+			if uiDir := core.UIDir(); uiBuiltIn || uiDir != "" {
+				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS(uiDir)}))))))
+				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS(uiDir)})))))
 			} else {
 				mux.Handle("/ui/", handleUIHeaders(core, handleUIStub()))
 			}

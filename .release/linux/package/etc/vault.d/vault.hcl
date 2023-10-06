@@ -3,7 +3,9 @@
 
 # Full configuration options can be found at https://developer.hashicorp.com/vault/docs/configuration
 
-ui = true
+ui_config {
+  enabled = true
+}
 
 #mlock = true
 #disable_mlock = true

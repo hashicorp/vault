@@ -4,15 +4,19 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -644,7 +648,7 @@ func TestHandler_sealed(t *testing.T) {
 }
 
 func TestHandler_ui_default(t *testing.T) {
-	core := vault.TestCoreUI(t, false)
+	core := vault.TestCoreUI(t, false, "")
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -656,7 +660,7 @@ func TestHandler_ui_default(t *testing.T) {
 }
 
 func TestHandler_ui_enabled(t *testing.T) {
-	core := vault.TestCoreUI(t, true)
+	core := vault.TestCoreUI(t, true, "")
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -665,6 +669,44 @@ func TestHandler_ui_enabled(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	testResponseStatus(t, resp, 200)
+}
+
+func TestHandler_ui_dir(t *testing.T) {
+	dir, err := os.MkdirTemp("", "test-ui-dir")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.RemoveAll(dir)
+
+	{
+		f, err := os.Create(filepath.Join(dir, "index.html"))
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+		defer f.Close()
+		_, err = f.WriteString("hello world")
+		if err != nil {
+			t.Fatalf("err: %s", err)
+		}
+	}
+
+	core := vault.TestCoreUI(t, true, dir)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp, err := http.Get(addr + "/ui/")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+
+	body := new(bytes.Buffer)
+	io.Copy(body, resp.Body)
+	resp.Body.Close()
+
+	if body.String() != "hello world" {
+		t.Fatalf("wrong body: %s", body.String())
+	}
 }
 
 func TestHandler_error(t *testing.T) {
