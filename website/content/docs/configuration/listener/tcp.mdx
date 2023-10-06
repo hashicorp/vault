@@ -211,7 +211,10 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 
 - `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/pprof` endpoint.
-- `unauthenticated_in_flight_request_access` `(bool: false)` - If set to true, allows
+
+### `inflight_requests_logging` parameters
+
+- `unauthenticated_in_flight_requests_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/in-flight-req` endpoint.
 
 ### `custom_response_headers` parameters

@@ -40,8 +40,8 @@ func TestCacheMemDB_Get(t *testing.T) {
 
 	// Test on empty cache
 	index, err := cache.Get(IndexNameID, "foo")
-	if err != nil {
-		t.Fatal(err)
+	if err != ErrCacheItemNotFound {
+		t.Fatal("expected cache item to be not found", err)
 	}
 	if index != nil {
 		t.Fatalf("expected nil index, got: %v", index)
@@ -56,6 +56,7 @@ func TestCacheMemDB_Get(t *testing.T) {
 		TokenAccessor: "test_accessor",
 		Lease:         "test_lease",
 		Response:      []byte("hello world"),
+		Tokens:        map[string]struct{}{},
 	}
 
 	if err := cache.Set(in); err != nil {
@@ -97,7 +98,7 @@ func TestCacheMemDB_Get(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			out, err := cache.Get(tc.indexName, tc.indexValues...)
-			if err != nil {
+			if err != nil && err != ErrCacheItemNotFound {
 				t.Fatal(err)
 			}
 			if diff := deep.Equal(in, out); diff != nil {
@@ -169,22 +170,22 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 	}{
 		{
 			"by_request_path",
-			"request_path",
+			IndexNameRequestPath,
 			[]interface{}{"test_ns/", "/v1/request/path"},
 		},
 		{
 			"by_lease",
-			"lease",
+			IndexNameLease,
 			[]interface{}{"path/to/test_lease"},
 		},
 		{
 			"by_token_parent",
-			"token_parent",
+			IndexNameTokenParent,
 			[]interface{}{"test_token_parent"},
 		},
 		{
 			"by_lease_token",
-			"lease_token",
+			IndexNameLeaseToken,
 			[]interface{}{"test_lease_token"},
 		},
 	}
@@ -348,10 +349,9 @@ func TestCacheMemDB_Evict(t *testing.T) {
 
 			// Verify that the cache doesn't contain the entry any more
 			index, err := cache.Get(tc.indexName, tc.indexValues...)
-			if (err != nil) != tc.wantErr {
-				t.Fatal(err)
+			if err != ErrCacheItemNotFound && !tc.wantErr {
+				t.Fatal("expected cache item to be not found", err)
 			}
-
 			if index != nil {
 				t.Fatalf("expected nil entry, got = %#v", index)
 			}
@@ -386,8 +386,8 @@ func TestCacheMemDB_Flush(t *testing.T) {
 
 	// Check the cache doesn't contain inserted index
 	out, err := cache.Get(IndexNameID, "test_id")
-	if err != nil {
-		t.Fatal(err)
+	if err != ErrCacheItemNotFound {
+		t.Fatal("expected cache item to be not found", err)
 	}
 	if out != nil {
 		t.Fatalf("expected cache to be empty, got = %v", out)
