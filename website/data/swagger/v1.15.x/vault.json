@@ -963,7 +963,8 @@
               "placed",
               "approved",
               "delivered"
-            ]
+            ],
+            "default": "placed"
           },
           "complete": {
             "type": "boolean"
