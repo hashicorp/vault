@@ -82,7 +82,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Name:    "filter",
 		Target:  &c.filter,
 		Default: "",
-		Usage:   "Can only be used with -kvdetails. Limits KV key breakdown using this prefix filter.",
+		Usage:   "Can only be used with -details. Limits the key breakdown using this prefix filter.",
 	})
 
 	f.StringVar(&StringVar{
