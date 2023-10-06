@@ -1146,7 +1146,8 @@
               "available",
               "pending",
               "sold"
-            ]
+            ],
+            "default": "available"
           }
         },
         "xml": {
