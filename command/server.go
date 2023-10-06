@@ -2162,7 +2162,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	for _, core := range testCluster.Cores {
 		core.Server.Handler = vaulthttp.Handler.Handler(&vault.HandlerProperties{
-			Core: core.Core,
+			Core:           core.Core,
+			ListenerConfig: &configutil.Listener{},
 		})
 		core.SetClusterHandler(core.Server.Handler)
 	}
