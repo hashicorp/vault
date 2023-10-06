@@ -9,13 +9,16 @@ import (
 )
 
 var (
+	// TODO remove once entAdjustCoreConfig has replaced it
 	adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
+	// TODO remove once entCheckStorageType has replaced it
 	storageSupportedForEnt = checkStorageTypeForEntNoop
 )
 
 func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
 }
 
+// TODO remove once entGetFIPSInfoKey has replaced it
 var getFIPSInfoKey = getFIPSInfoKeyNoop
 
 func getFIPSInfoKeyNoop() string {
