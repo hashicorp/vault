@@ -963,8 +963,7 @@
               "placed",
               "approved",
               "delivered"
-            ],
-            "default": "placed"
+            ]
           },
           "complete": {
             "type": "boolean"
@@ -1147,8 +1146,7 @@
               "available",
               "pending",
               "sold"
-            ],
-            "default": "available"
+            ]
           }
         },
         "xml": {
