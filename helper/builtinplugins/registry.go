@@ -64,6 +64,7 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
+// TODO remove once entAddExtPlugins is implemented in ENT
 var addExternalPlugins = addExtPluginsImpl
 
 // BuiltinFactory is the func signature that should be returned by

@@ -98,7 +98,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 				return
 			}
 			core.ResetUnsealProcess()
-			handleSysSealStatusRaw(core, w, r)
+			handleSysSealStatusRaw(core, w)
 			return
 		}
 
@@ -148,18 +148,18 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		}
 
 		// Return the seal status
-		handleSysSealStatusRaw(core, w, r)
+		handleSysSealStatusRaw(core, w)
 	})
 }
 
-func handleSysSealStatus(core *vault.Core) http.Handler {
+func handleSysSealStatus(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
-		handleSysSealStatusRaw(core, w, r)
+		handleSysSealStatusRaw(core, w, opt...)
 	})
 }
 
@@ -174,12 +174,23 @@ func handleSysSealBackendStatus(core *vault.Core) http.Handler {
 	})
 }
 
-func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
 	ctx := context.Background()
 	status, err := core.GetSealStatus(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
+	}
+
+	opts, err := getOpts(opt...)
+
+	if opts.withRedactVersion {
+		status.Version = opts.withRedactionValue
+		status.BuildDate = opts.withRedactionValue
+	}
+
+	if opts.withRedactClusterName {
+		status.ClusterName = opts.withRedactionValue
 	}
 
 	respondOk(w, status)

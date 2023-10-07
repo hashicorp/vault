@@ -27,8 +27,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @hasActions="true"
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').exists(`Issuer field input renders`);
     assert.dom('[data-test-input="period"]').exists('Period field ttl renders');
     assert.dom('[data-test-input="key_size"]').exists('Key size field input renders');
@@ -53,8 +52,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @onSave={{fn (mut this.didSave) true}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
 
     await fillIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
@@ -76,8 +74,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @hasActions="true"
         @model={{this.model}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
     const checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
