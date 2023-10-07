@@ -780,6 +780,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
 		"log_requests_level":                  "basic",
+		"user_lockout_log_interval":           0 * time.Second,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
@@ -886,6 +887,9 @@ listener "tcp" {
     enable_quit = true
   }
   chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
 }`))
 
 	config := Config{
@@ -938,6 +942,9 @@ listener "tcp" {
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
 				},
 			},
 		},

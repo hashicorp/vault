@@ -8,13 +8,13 @@ description: |-
 
 # `/sys/audit-hash`
 
+@include 'alerts/restricted-admin.mdx'
+
 The `/sys/audit-hash` endpoint is used to calculate the hash of the data used by
 an audit device's hash function and salt. This can be used to search audit logs
 for a hashed value when the original value is known.
 
 ## Calculate hash
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint hashes the given input data with the specified audit device's
 hash function and salt. This endpoint can be used to discover whether a given

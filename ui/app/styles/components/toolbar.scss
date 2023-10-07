@@ -65,6 +65,10 @@
   display: flex;
   flex: 1;
   white-space: nowrap;
+  &:has(.hds-modal) {
+    // toolbar buttons that open/close a modal pass attrs to the modal content
+    white-space: wrap;
+  }
 }
 
 .toolbar-filters + .toolbar-actions {
