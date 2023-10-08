@@ -161,27 +161,12 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 	}
 	defer f.Close()
 
-	// Parse metadata and copy state.bin contents to temporary file
-	var readFile *os.File
+	// Extract metadata and snapshot info from snapshot file
+	var info *SnapshotInfo
 	var meta *raft.SnapshotMeta
-	readFile, meta, err = Read(hclog.New(nil), f)
+	info, meta, err = c.Read(hclog.New(nil), f)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading snapshot: %s", err))
-		return 1
-	}
-	defer func() {
-		if err := readFile.Close(); err != nil {
-			c.UI.Error(fmt.Sprintf("Failed to close temp snapshot: %v", err))
-		}
-		if err := os.Remove(readFile.Name()); err != nil {
-			c.UI.Error(fmt.Sprintf("Failed to clean up temp snapshot: %v", err))
-		}
-	}()
-
-	// Parse contents from temporary file
-	info, err := c.enhance(readFile)
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error extracting snapshot data: %s", err))
 		return 1
 	}
 
@@ -201,7 +186,11 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 	}
 
 	// Restructures stats given above to be human readable
-	formattedStatsKV := generateKVStats(info)
+	if info == nil {
+		c.UI.Error(fmt.Sprintf("Error calculating snapshot info: %s", err))
+		return 1
+	}
+	formattedStatsKV := generateKVStats(*info)
 
 	in := &OutputFormat{
 		Meta:         metaformat,
@@ -255,6 +244,44 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 		info.TotalSizeKV += read
 		info.StatsKV[prefix] = kvs
 	}
+}
+
+// Read from snapshot's state.bin and update the SnapshotInfo struct
+func (c *OperatorRaftSnapshotInspectCommand) parseState(r io.Reader) (SnapshotInfo, error) {
+	info := SnapshotInfo{
+		StatsKV:      make(map[string]typeStats),
+		TotalCountKV: 0,
+		TotalSizeKV:  0,
+	}
+	handler := func(s *pb.StorageEntry, read int) error {
+		c.kvEnhance(s, &info, read)
+		return nil
+	}
+	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
+	errCh := make(chan error, 1)
+
+	go func() {
+		for {
+			s := new(pb.StorageEntry)
+			if err := protoReader.ReadMsg(s); err != nil {
+				if err == io.EOF {
+					errCh <- nil
+					return
+				}
+				errCh <- err
+				return
+			}
+			size := protoReader.GetLastReadSize()
+			handler(s, size)
+		}
+	}()
+
+	err := <-errCh
+	if err != nil && err != io.EOF {
+		return info, err
+	}
+
+	return info, nil
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotInfo, error) {
@@ -318,9 +345,9 @@ func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry, read int) error)
 	return txn.Commit(), nil
 }
 
-// Read a the snapshot's state.bin into a temporary file. Return file and metadata from snapshot.
-// The caller is responsible for removing the temporary file.
-func Read(logger hclog.Logger, in io.Reader) (*os.File, *raft.SnapshotMeta, error) {
+// Read contents of snapshot. Parse metadata and snapshot info
+// Also, verify validity of snapshot
+func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Reader) (*SnapshotInfo, *raft.SnapshotMeta, error) {
 	// Wrap the reader in a gzip decompressor.
 	decomp, err := gzip.NewReader(in)
 	if err != nil {
@@ -332,16 +359,10 @@ func Read(logger hclog.Logger, in io.Reader) (*os.File, *raft.SnapshotMeta, erro
 		}
 	}()
 
-	// Make a scratch file to receive the contents of the snapshot data so
-	// we can avoid buffering in memory.
-	snap, err := os.CreateTemp("", "snapshot")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create temp snapshot file: %v", err)
-	}
-
 	// Read the archive.
 	var metadata raft.SnapshotMeta
-	if err := read(decomp, &metadata, snap); err != nil {
+	snapshotInfo, err := c.read(decomp, &metadata)
+	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
 
@@ -349,14 +370,7 @@ func Read(logger hclog.Logger, in io.Reader) (*os.File, *raft.SnapshotMeta, erro
 		return nil, nil, err
 	}
 
-	// Sync and rewind the file so it's ready to be read again.
-	if err := snap.Sync(); err != nil {
-		return nil, nil, fmt.Errorf("failed to sync temp snapshot: %v", err)
-	}
-	if _, err := snap.Seek(0, 0); err != nil {
-		return nil, nil, fmt.Errorf("failed to rewind temp snapshot: %v", err)
-	}
-	return snap, &metadata, nil
+	return snapshotInfo, &metadata, nil
 }
 
 const (
@@ -580,10 +594,9 @@ func (hl *hashList) DecodeAndVerify(r io.Reader) error {
 	return nil
 }
 
-// read takes a reader and extracts the snapshot metadata and the snapshot
-// itself, and also checks the integrity of the data. You must arrange to call
-// Close() on the writer (snap) or else you will leak a temporary file.
-func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
+// read takes a reader and extracts the snapshot metadata and snapshot
+// info. It also checks the integrity of the snapshot data.
+func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.SnapshotMeta) (*SnapshotInfo, error) {
 	// Start a new tar reader.
 	archive := tar.NewReader(in)
 
@@ -599,13 +612,14 @@ func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 
 	// Look through the archive for the pieces we care about.
 	var shaBuffer bytes.Buffer
+	var snapshotInfo SnapshotInfo
 	for {
 		hdr, err := archive.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed reading snapshot: %v", err)
+			return nil, fmt.Errorf("failed reading snapshot: %v", err)
 		}
 
 		switch hdr.Name {
@@ -620,18 +634,23 @@ func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 			// independent of how json.Decode works internally.
 			buf, err := io.ReadAll(io.TeeReader(archive, metaHash))
 			if err != nil {
-				return fmt.Errorf("failed to read snapshot metadata: %v", err)
+				return nil, fmt.Errorf("failed to read snapshot metadata: %v", err)
 			}
 			if err := json.Unmarshal(buf, &metadata); err != nil {
-				return fmt.Errorf("failed to decode snapshot metadata: %v", err)
+				return nil, fmt.Errorf("failed to decode snapshot metadata: %v", err)
 			}
 		case "state.bin":
-			if _, err := io.Copy(io.MultiWriter(snap, snapHash), archive); err != nil {
-				return fmt.Errorf("failed to read or write snapshot data: %v", err)
+			// create reader that writes to snapHash what it reads from archive
+			wrappedReader := io.TeeReader(archive, snapHash)
+			var err error
+			snapshotInfo, err = c.parseState(wrappedReader)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing snapshot state: %v", err)
 			}
+
 		case "SHA256SUMS":
 			if _, err := io.Copy(&shaBuffer, archive); err != nil {
-				return fmt.Errorf("failed to read snapshot hashes: %v", err)
+				return nil, fmt.Errorf("failed to read snapshot hashes: %v", err)
 			}
 
 		case "SHA256SUMS.sealed":
@@ -639,16 +658,16 @@ func read(in io.Reader, metadata *raft.SnapshotMeta, snap io.Writer) error {
 			continue
 
 		default:
-			return fmt.Errorf("unexpected file %q in snapshot", hdr.Name)
+			return nil, fmt.Errorf("unexpected file %q in snapshot", hdr.Name)
 		}
 	}
 
 	// Verify all the hashes.
 	if err := hl.DecodeAndVerify(&shaBuffer); err != nil {
-		return fmt.Errorf("failed checking integrity of snapshot: %v", err)
+		return nil, fmt.Errorf("failed checking integrity of snapshot: %v", err)
 	}
 
-	return nil
+	return &snapshotInfo, nil
 }
 
 // concludeGzipRead should be invoked after you think you've consumed all of
