@@ -34,12 +34,13 @@
                   </LinkTo>
                 </li>
               {{/if}}
-              <li class="action">
+              <li class="action" id="container">
                 <CopyButton
                   @clipboardText={{this.auth.currentToken}}
                   class="link"
                   @buttonType="button"
                   @success={{action (set-flash-message "Token copied!")}}
+                  @container="#container"
                 >
                   Copy token
                 </CopyButton>
