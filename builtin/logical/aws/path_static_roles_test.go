@@ -6,7 +6,6 @@ package aws
 import (
 	"context"
 	"errors"
-	"math"
 	"testing"
 	"time"
 
@@ -330,8 +329,16 @@ func TestStaticRolesWrite(t *testing.T) {
 				t.Fatalf("mismatched role name, expected %q, but got %q", en, an)
 			}
 
+			// one-off to avoid importing/casting
+			abs := func(x int64) int64 {
+				if x < 0 {
+					return -x
+				}
+				return x
+			}
+
 			if c.isUpdate {
-				if ep, ap := c.newPriority, actualItem.Priority; math.Abs(float64(ep-ap)) > 5 {
+				if ep, ap := c.newPriority, actualItem.Priority; abs(ep-ap) > 5 { // 5 second wiggle room for how long the test takes
 					t.Fatalf("mismatched updated prioirt, expected %d but got %d", ep, ap)
 				}
 			}
