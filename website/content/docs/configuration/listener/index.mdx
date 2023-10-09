@@ -9,7 +9,7 @@ description: |-
 # `listener` stanza
 
 The `listener` stanza configures the addresses and ports on which Vault will
-respond to requests. At this time, there are two listeners:
+respond to requests. At this time, there are two types of listeners:
 - [TCP][tcp]
 - [Unix Domain Socket][unix]
 
@@ -44,10 +44,23 @@ omitted when the value is empty (`""`).
 ~> Note: The Vault API is also consumed by the Vault CLI and UI, therefore enabling redaction
 settings will also affect them both.
 
+## Common configuration options
+
+The following options apply to both types of listener (`tcp`/`unix`), and can be configured
+for each individual listener stanza.
+
+Please see the [sensitive data redaction](/vault/docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
+
+### Redaction settings
+
+- `redact_addresses` `(bool: false)` - If enabled, will redact `leader_address` and `cluster_leader_address` values when applicable.
+- `redact_cluster_name` `(bool: false)` - If enabled, will redact `cluster_name` values when applicable.
+- `redact_version` `(bool: false)` - If enabled, will redact `version` and `build_date` values when applicable.
+
 ## Redaction examples
 
 Please see [redaction settings](/vault/docs/configuration/listener#redaction-settings)
-(below) for details on each redaction setting.
+(above) for details on each redaction setting.
 
 Example configuration for the [`tcp`](/vault/docs/configuration/listener/tcp) listener,
 enabling [`redact_addresses`](/vault/docs/configuration/listener#redact_addresses),
@@ -173,17 +186,3 @@ Raft Applied Index      219
 
 When examining the output of `vault status` we can see that `Version`, `Build Date`
 and `HA Cluster` show as `n/a`. Also, that `Active Node Address` shows as `<none>`.
-
-
-## Common configuration options
-
-The following options apply to both types of listener (see above), and can be configured
-for each individual listener stanza.
-
-Please see the [sensitive data redaction](/vault/docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
-
-### Redaction settings
-
-- `redact_addresses` `(bool: false)` - If enabled, will redact `leader_address` and `cluster_leader_address` values when applicable.
-- `redact_cluster_name` `(bool: false)` - If enabled, will redact `cluster_name` values when applicable.
-- `redact_version` `(bool: false)` - If enabled, will redact `version` and `build_date` values when applicable.
