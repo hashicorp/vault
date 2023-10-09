@@ -36,6 +36,14 @@ export default Service.extend({
     });
   },
 
+  /**
+   * getNewModel instantiates models which use OpenAPI fully or partially
+   * @param {string} modelType
+   * @param {string} backend
+   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {*} itemType (optional) used in getPaths for additional models
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
   getNewModel(modelType, backend, apiPath, itemType) {
     const owner = getOwner(this);
     const modelName = `model:${modelType}`;
@@ -99,6 +107,20 @@ export default Service.extend({
       });
   },
 
+  /**
+   * INTERNAL reducePathsByPathName is a reducer function that takes
+   * object entries from the OpenAPI response and formats them into a
+   * shape we expect
+   * @param {object} pathInfo same obj shape as returned
+   * @param {Array} currentPath object entry from OpenAPI path response
+   * @returns {
+        apiPath,
+        itemType,
+        itemTypes: [],
+        paths: [],
+        itemID,
+      }
+   */
   reducePathsByPathName(pathInfo, currentPath) {
     const pathName = currentPath[0];
     const pathDetails = currentPath[1];
@@ -148,6 +170,26 @@ export default Service.extend({
     return pathInfo;
   },
 
+  /**
+   * filterPathsByItemType
+   * @param {object} pathInfo {
+        apiPath,
+        itemType,
+        itemTypes: [],
+        paths: [],
+        itemID,
+      }
+   * @param {string} itemType
+   * @returns Array<{
+   *   path: string;
+   *   itemType: string;
+   *   itemName: string;
+   *   operations: string[];
+   *   action: string;
+   *   navigation: boolean
+   *   param: string || false;
+   * }>
+   */
   filterPathsByItemType(pathInfo, itemType) {
     if (!itemType) {
       return pathInfo.paths;
@@ -157,6 +199,15 @@ export default Service.extend({
     });
   },
 
+  /**
+   * getPaths is used to fetch all the openAPI paths available for an auth method,
+   * to populate the tab navigation in each specific method page
+   * @param {string} apiPath path of openApi
+   * @param {string} backend backend name, mostly for debug purposes
+   * @param {string} itemType optional
+   * @param {string} itemID optional - ID of specific item being fetched
+   * @returns PathsInfo
+   */
   getPaths(apiPath, backend, itemType, itemID) {
     const debugString =
       itemID && itemType
