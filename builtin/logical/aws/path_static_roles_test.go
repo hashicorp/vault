@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -130,6 +131,7 @@ func TestStaticRolesWrite(t *testing.T) {
 		expectedError bool
 		findUser      bool
 		isUpdate      bool
+		newPriority   int64 // update time of new item in queue, skip if isUpdate false
 	}{
 		{
 			name: "happy path",
@@ -187,9 +189,11 @@ func TestStaticRolesWrite(t *testing.T) {
 				"name":            "johnny",
 				"rotation_period": "19m",
 			},
-			findUser: true,
-			isUpdate: true,
+			findUser:    true,
+			isUpdate:    true,
+			newPriority: time.Now().Add(19 * time.Minute).Unix(),
 		},
+		{},
 	}
 
 	// if a user exists (user doesn't exist is tested in validation)
@@ -269,6 +273,11 @@ func TestStaticRolesWrite(t *testing.T) {
 				expectedData = staticRole
 			}
 
+			var actualItem *queue.Item
+			if c.isUpdate {
+				actualItem, _ = b.credRotationQueue.PopByKey(expectedData.Name)
+			}
+
 			if u, ok := fieldData.GetOk("username"); ok {
 				expectedData.Username = u.(string)
 			}
@@ -288,6 +297,13 @@ func TestStaticRolesWrite(t *testing.T) {
 			}
 			if en, an := expectedData.Name, actualData.Name; en != an {
 				t.Fatalf("mismatched role name, expected %q, but got %q", en, an)
+			}
+
+			if c.isUpdate {
+				fmt.Printf("%d vs %d\n", c.newPriority, actualItem.Priority)
+				if ep, ap := c.newPriority, actualItem.Priority; ep != ap {
+					t.Fatalf("mismatched updated prioirt, expected %d but got %d", ep, ap)
+				}
 			}
 		})
 	}
@@ -358,6 +374,29 @@ func TestStaticRoleRead(t *testing.T) {
 					t.Fatal("response should have been nil on a non-existent role")
 				}
 			}
+		})
+	}
+}
+
+// TestStaticRoleUpdate validates that an update, i.e., a create when a role with that name already exists, will
+// properly modify the queue.
+func TestStaticRoleUpdate(t *testing.T) {
+	// bgCTX := context.Background()
+
+	cases := []struct {
+		name string
+		data map[string]interface{}
+	}{
+		{
+			name: "increase duration",
+		},
+		{
+			name: "decrease duration",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 		})
 	}
 }
