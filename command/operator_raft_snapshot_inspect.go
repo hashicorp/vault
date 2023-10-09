@@ -360,8 +360,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Rea
 	}()
 
 	// Read the archive.
-	var metadata raft.SnapshotMeta
-	snapshotInfo, err := c.read(decomp, &metadata)
+	snapshotInfo, metadata, err := c.read(decomp)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read snapshot file: %v", err)
 	}
@@ -370,7 +369,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Rea
 		return nil, nil, err
 	}
 
-	return snapshotInfo, &metadata, nil
+	return snapshotInfo, metadata, nil
 }
 
 const (
@@ -596,7 +595,7 @@ func (hl *hashList) DecodeAndVerify(r io.Reader) error {
 
 // read takes a reader and extracts the snapshot metadata and snapshot
 // info. It also checks the integrity of the snapshot data.
-func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.SnapshotMeta) (*SnapshotInfo, error) {
+func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader) (*SnapshotInfo, *raft.SnapshotMeta, error) {
 	// Start a new tar reader.
 	archive := tar.NewReader(in)
 
@@ -613,13 +612,14 @@ func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.S
 	// Look through the archive for the pieces we care about.
 	var shaBuffer bytes.Buffer
 	var snapshotInfo SnapshotInfo
+	var metadata raft.SnapshotMeta
 	for {
 		hdr, err := archive.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed reading snapshot: %v", err)
+			return nil, nil, fmt.Errorf("failed reading snapshot: %v", err)
 		}
 
 		switch hdr.Name {
@@ -634,10 +634,10 @@ func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.S
 			// independent of how json.Decode works internally.
 			buf, err := io.ReadAll(io.TeeReader(archive, metaHash))
 			if err != nil {
-				return nil, fmt.Errorf("failed to read snapshot metadata: %v", err)
+				return nil, nil, fmt.Errorf("failed to read snapshot metadata: %v", err)
 			}
 			if err := json.Unmarshal(buf, &metadata); err != nil {
-				return nil, fmt.Errorf("failed to decode snapshot metadata: %v", err)
+				return nil, nil, fmt.Errorf("failed to decode snapshot metadata: %v", err)
 			}
 		case "state.bin":
 			// create reader that writes to snapHash what it reads from archive
@@ -645,12 +645,12 @@ func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.S
 			var err error
 			snapshotInfo, err = c.parseState(wrappedReader)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing snapshot state: %v", err)
+				return nil, nil, fmt.Errorf("error parsing snapshot state: %v", err)
 			}
 
 		case "SHA256SUMS":
 			if _, err := io.Copy(&shaBuffer, archive); err != nil {
-				return nil, fmt.Errorf("failed to read snapshot hashes: %v", err)
+				return nil, nil, fmt.Errorf("failed to read snapshot hashes: %v", err)
 			}
 
 		case "SHA256SUMS.sealed":
@@ -658,16 +658,16 @@ func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader, metadata *raft.S
 			continue
 
 		default:
-			return nil, fmt.Errorf("unexpected file %q in snapshot", hdr.Name)
+			return nil, nil, fmt.Errorf("unexpected file %q in snapshot", hdr.Name)
 		}
 	}
 
 	// Verify all the hashes.
 	if err := hl.DecodeAndVerify(&shaBuffer); err != nil {
-		return nil, fmt.Errorf("failed checking integrity of snapshot: %v", err)
+		return nil, nil, fmt.Errorf("failed checking integrity of snapshot: %v", err)
 	}
 
-	return &snapshotInfo, nil
+	return &snapshotInfo, &metadata, nil
 }
 
 // concludeGzipRead should be invoked after you think you've consumed all of
