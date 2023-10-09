@@ -4947,6 +4947,7 @@ type SealStatusResponse struct {
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings          []string `json:"warnings,omitempty"`
+	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -5000,6 +5001,9 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		return s, nil
 	}
 
+	var recoverySealType string
+	sealType := sealConfig.Type
+
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
@@ -5012,12 +5016,16 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
+		if core.SealAccess().RecoveryKeySupported() {
+			recoverySealType = sealType
+		}
+		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
 	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
+		Type:         sealType,
 		Initialized:  initialized,
 		Sealed:       sealed,
 		T:            sealConfig.SecretThreshold,
@@ -5030,6 +5038,7 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType: recoverySealType,
 		StorageType:  core.StorageType(),
 	}
 
@@ -5757,7 +5766,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",
