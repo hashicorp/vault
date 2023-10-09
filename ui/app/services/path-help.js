@@ -17,13 +17,13 @@ import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-at
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
-import { dasherize, capitalize } from '@ember/string';
+import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
-import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import { reducePathsByPathName } from 'vault/utils/openapi-helpers';
 
 export default Service.extend({
   attrs: null,
@@ -108,69 +108,6 @@ export default Service.extend({
   },
 
   /**
-   * INTERNAL reducePathsByPathName is a reducer function that takes
-   * object entries from the OpenAPI response and formats them into a
-   * shape we expect
-   * @param {object} pathInfo same obj shape as returned
-   * @param {Array} currentPath object entry from OpenAPI path response
-   * @returns {
-        apiPath,
-        itemType,
-        itemTypes: [],
-        paths: [],
-        itemID,
-      }
-   */
-  reducePathsByPathName(pathInfo, currentPath) {
-    const pathName = currentPath[0];
-    const pathDetails = currentPath[1];
-    const displayAttrs = pathDetails['x-vault-displayAttrs'];
-
-    if (!displayAttrs) {
-      return pathInfo;
-    }
-
-    let itemType, itemName;
-    if (displayAttrs.itemType) {
-      itemType = displayAttrs.itemType;
-      let items = itemType.split(':');
-      itemName = items[items.length - 1];
-      items = items.map((item) => dasherize(singularize(item.toLowerCase())));
-      itemType = items.join('~*');
-    }
-
-    if (itemType && !pathInfo.itemTypes.includes(itemType)) {
-      pathInfo.itemTypes.push(itemType);
-    }
-
-    const operations = [];
-    if (pathDetails.get) {
-      operations.push('get');
-    }
-    if (pathDetails.post) {
-      operations.push('post');
-    }
-    if (pathDetails.delete) {
-      operations.push('delete');
-    }
-    if (pathDetails.get && pathDetails.get.parameters && pathDetails.get.parameters[0].name === 'list') {
-      operations.push('list');
-    }
-
-    pathInfo.paths.push({
-      path: pathName,
-      itemType: itemType || displayAttrs.itemType,
-      itemName: itemName || pathInfo.itemType || displayAttrs.itemType,
-      operations,
-      action: displayAttrs.action,
-      navigation: displayAttrs.navigation === true,
-      param: pathName.includes('{') ? pathName.split('{')[1].split('}')[0] : false,
-    });
-
-    return pathInfo;
-  },
-
-  /**
    * filterPathsByItemType
    * @param {object} pathInfo {
         apiPath,
@@ -218,7 +155,7 @@ export default Service.extend({
       const pathInfo = help.openapi.paths;
       const paths = Object.entries(pathInfo);
 
-      return paths.reduce(this.reducePathsByPathName, {
+      return paths.reduce(reducePathsByPathName, {
         apiPath,
         itemType,
         itemTypes: [],
