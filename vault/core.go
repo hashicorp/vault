@@ -4282,6 +4282,9 @@ func (c *Core) Events() *eventbus.EventBus {
 }
 
 func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
 	ctx, _ := c.GetContext()
 
 	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
