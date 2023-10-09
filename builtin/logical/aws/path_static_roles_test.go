@@ -6,7 +6,6 @@ package aws
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -332,7 +331,6 @@ func TestStaticRolesWrite(t *testing.T) {
 			}
 
 			if c.isUpdate {
-				fmt.Printf("%d vs %d\n", c.newPriority, actualItem.Priority)
 				if ep, ap := c.newPriority, actualItem.Priority; math.Abs(float64(ep-ap)) > 5 {
 					t.Fatalf("mismatched updated prioirt, expected %d but got %d", ep, ap)
 				}
