@@ -52,6 +52,11 @@ on:
         required: false
         default: 60
         type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
       checkout-ref:
         description: The ref to use for checkout.
         required: false
@@ -115,16 +120,35 @@ jobs:
       - name: List cached results
         id: list-cached-results
         run: ls -lhR test-results/go-test
-      - name: Build matrix excluding binary and integration tests
+      - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
+        if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          # enable glob expansion
+          shopt -s nullglob
+          # testonly tagged tests need an additional tag to be included
+          # also running some extra tests for sanity checking with the testonly build tag
+          (
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+          # disable glob expansion
+          shopt -u nullglob
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
