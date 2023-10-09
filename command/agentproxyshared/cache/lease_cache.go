@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -224,18 +223,22 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 	}
 
 	index, err := c.db.Get(cachememdb.IndexNameID, id)
+	if err == cachememdb.ErrCacheItemNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	if index == nil {
-		return nil, nil
-	}
+	index.IndexLock.RLock()
+	defer index.IndexLock.RUnlock()
 
 	if token != "" {
 		// This is a static secret check. We need to ensure that this token
 		// has previously demonstrated access to this static secret.
-		if !slices.Contains(index.Tokens, token) {
+		// We could check the capabilities cache here, but since these
+		// indexes should be in sync, this saves us an extra cache get.
+		if _, ok := index.Tokens[token]; !ok {
 			// We don't have access to this static secret, so
 			// we do not return the cached response.
 			return nil, nil
@@ -293,7 +296,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// This is the last step, so we defer the call first
 		if inflight != nil && inflight.remaining.Load() == 0 {
 			c.inflightCache.Delete(dynamicSecretCacheId)
-			c.inflightCache.Delete(staticSecretCacheId)
+			if staticSecretCacheId != "" {
+				c.inflightCache.Delete(staticSecretCacheId)
+			}
 		}
 	}()
 
@@ -330,37 +335,39 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		idLockDynamicSecret.Unlock()
 	}
 
-	idLockStaticSecret := locksutil.LockForKey(c.idLocks, staticSecretCacheId)
+	if staticSecretCacheId != "" {
+		idLockStaticSecret := locksutil.LockForKey(c.idLocks, staticSecretCacheId)
 
-	// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
-	// and prevent concurrent cacheable requests from being proxied twice if
-	// they both miss the cache due to it being clean when peeking the cache
-	// entry.
-	idLockStaticSecret.Lock()
-	inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
-	if found {
-		idLockStaticSecret.Unlock()
-		inflight = inflightRaw.(*inflightRequest)
-		inflight.remaining.Inc()
-		defer inflight.remaining.Dec()
-
-		// If found it means that there's an inflight request being processed.
-		// We wait until that's finished before proceeding further.
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-inflight.ch:
-		}
-	} else {
-		if inflight == nil {
-			inflight = newInflightRequest()
+		// Briefly grab an ID-based lock in here to emulate a load-or-store behavior
+		// and prevent concurrent cacheable requests from being proxied twice if
+		// they both miss the cache due to it being clean when peeking the cache
+		// entry.
+		idLockStaticSecret.Lock()
+		inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
+		if found {
+			idLockStaticSecret.Unlock()
+			inflight = inflightRaw.(*inflightRequest)
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
-			defer close(inflight.ch)
-		}
 
-		c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
-		idLockStaticSecret.Unlock()
+			// If found it means that there's an inflight request being processed.
+			// We wait until that's finished before proceeding further.
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-inflight.ch:
+			}
+		} else {
+			if inflight == nil {
+				inflight = newInflightRequest()
+				inflight.remaining.Inc()
+				defer inflight.remaining.Dec()
+				defer close(inflight.ch)
+			}
+
+			c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
+			idLockStaticSecret.Unlock()
+		}
 	}
 
 	// Check if the response for this request is already in the dynamic secret cache
@@ -374,13 +381,15 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	}
 
 	// Check if the response for this request is already in the static secret cache
-	cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
-	if err != nil {
-		return nil, err
-	}
-	if cachedResp != nil {
-		c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
-		return cachedResp, nil
+	if staticSecretCacheId != "" {
+		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
+		if err != nil {
+			return nil, err
+		}
+		if cachedResp != nil {
+			c.logger.Debug("returning cached response", "id", staticSecretCacheId, "path", req.Request.URL.Path)
+			return cachedResp, nil
+		}
 	}
 
 	c.logger.Debug("forwarding request from cache", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -435,8 +444,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
-	// TODO: if secret.MountType == "kvv1" || secret.MountType == "kvv2"
-	if c.cacheStaticSecrets && secret != nil {
+	// There shouldn't be a situation where secret.MountType == "kv" and
+	// staticSecretCacheId == "", but just in case.
+	if c.cacheStaticSecrets && secret.MountType == "kv" && staticSecretCacheId != "" {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		err := c.cacheStaticSecret(ctx, req, resp, index)
@@ -465,14 +475,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			// If the lease belongs to a token that is not managed by the lease cache,
+			// return the response without caching it.
+			c.logger.Debug("pass-through lease response; token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+			return resp, nil
+		}
 		if err != nil {
 			return nil, err
-		}
-		// If the lease belongs to a token that is not managed by the agent,
-		// return the response without caching it.
-		if entry == nil {
-			c.logger.Debug("pass-through lease response; token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
-			return resp, nil
 		}
 
 		// Derive a context for renewal using the token's context
@@ -491,14 +501,14 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
+			if err == cachememdb.ErrCacheItemNotFound {
+				// If the lease belongs to a token that is not managed by the lease cache,
+				// return the response without caching it.
+				c.logger.Debug("pass-through lease response; parent token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
+				return resp, nil
+			}
 			if err != nil {
 				return nil, err
-			}
-			// If parent token is not managed by the agent, child shouldn't be
-			// either.
-			if entry == nil {
-				c.logger.Debug("pass-through auth response; parent token not managed by agent", "method", req.Request.Method, "path", req.Request.URL.Path)
-				return resp, nil
 			}
 
 			c.logger.Debug("setting parent context", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -572,20 +582,19 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// If a cached version of this secret exists, we now have access, so
 	// we don't need to re-cache, just update index.Tokens
 	indexFromCache, err := c.db.Get(cachememdb.IndexNameID, index.ID)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
-
-	// We must hold a lock for the index while it's being updated.
-	// We keep the two locking mechanisms distinct, so that it's only writes
-	// that have to be serial.
-	index.IndexLock.Lock()
-	defer index.IndexLock.Unlock()
 
 	// The index already exists, so all we need to do is add our token
 	// to the index's allowed token list, then re-store it
 	if indexFromCache != nil {
-		indexFromCache.Tokens = append(indexFromCache.Tokens, req.Token)
+		// We must hold a lock for the index while it's being updated.
+		// We keep the two locking mechanisms distinct, so that it's only writes
+		// that have to be serial.
+		indexFromCache.IndexLock.Lock()
+		defer indexFromCache.IndexLock.Unlock()
+		indexFromCache.Tokens[req.Token] = struct{}{}
 
 		return c.storeStaticSecretIndex(ctx, req, indexFromCache)
 	}
@@ -607,8 +616,8 @@ func (c *LeaseCache) cacheStaticSecret(ctx context.Context, req *SendRequest, re
 	// Set the index's Response
 	index.Response = respBytes.Bytes()
 
-	// Set the index's tokens
-	index.Tokens = []string{req.Token}
+	// Initialize the token map and add this token to it.
+	index.Tokens = map[string]struct{}{req.Token: {}}
 
 	// Set the index type
 	index.Type = cacheboltdb.StaticSecretType
@@ -625,11 +634,53 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	// TODO: We need to also update the cache for the token's permission capabilities.
-	// TODO: for this we'll need: req.Token, req.URL.Path
-	// TODO: we need to build a NEW index, with a hash of the token as the ID
+	capabilitiesIndex, err := c.retrieveOrCreateTokenCapabilitiesEntry(req.Token)
+	if err != nil {
+		c.logger.Error("failed to cache the proxied response", "error", err)
+		return err
+	}
+
+	path := getStaticSecretPathFromRequest(req)
+
+	// Extra caution -- avoid potential nil
+	if capabilitiesIndex.ReadablePaths == nil {
+		capabilitiesIndex.ReadablePaths = make(map[string]struct{})
+	}
+
+	// update the index with the new capability:
+	capabilitiesIndex.ReadablePaths[path] = struct{}{}
+
+	err = c.db.SetCapabilitiesIndex(capabilitiesIndex)
+	if err != nil {
+		c.logger.Error("failed to cache token capabilities as part of caching the proxied response", "error", err)
+		return err
+	}
 
 	return nil
+}
+
+// retrieveOrCreateTokenCapabilitiesEntry will either retrieve the token
+// capabilities entry from the cache, or create a new, empty one.
+func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.CapabilitiesIndex, error) {
+	// The index ID is a hash of the token.
+	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
+		return nil, err
+	}
+
+	if indexFromCache != nil {
+		return indexFromCache, nil
+	}
+
+	// Build the index to cache based on the response received
+	index := &cachememdb.CapabilitiesIndex{
+		ID:            indexId,
+		Token:         token,
+		ReadablePaths: make(map[string]struct{}),
+	}
+
+	return index, nil
 }
 
 func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
@@ -727,7 +778,7 @@ func (c *LeaseCache) updateLastRenewed(ctx context.Context, index *cachememdb.In
 	defer idLock.Unlock()
 
 	getIndex, err := c.db.Get(cachememdb.IndexNameID, index.ID)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
 	index.LastRenewed = t
@@ -764,12 +815,63 @@ func computeIndexID(req *SendRequest) (string, error) {
 	return hex.EncodeToString(cryptoutil.Blake2b256Hash(string(b.Bytes()))), nil
 }
 
+// canonicalizeStaticSecretPath takes an API request path such as
+// /v1/foo/bar and a namespace, and turns it into a canonical representation
+// of the secret's path in Vault.
+// We opt for this form as namespace.Canonicalize returns a namespace in the
+// form of "ns1/", so we keep consistent with path canonicalization.
+func canonicalizeStaticSecretPath(requestPath string, ns string) string {
+	// /sys/capabilities accepts both requests that look like foo/bar
+	// and /foo/bar but not /v1/foo/bar.
+	// We trim the /v1/ from the start of the URL to get the foo/bar form.
+	// This means that we can use the paths we retrieve from the
+	// /sys/capabilities endpoint to access this index
+	// without having to re-add the /v1/
+	path := strings.TrimPrefix(requestPath, "/v1/")
+	// Trim any leading slashes, as we never want those.
+	// This ensures /foo/bar gets turned to foo/bar
+	path = strings.TrimPrefix(path, "/")
+
+	// If a namespace was provided in a way that wasn't directly in the path,
+	// it must be added to the path.
+	path = namespace.Canonicalize(ns) + path
+
+	return path
+}
+
+// getStaticSecretPathFromRequest gets the canonical path for a
+// request, taking into account intricacies relating to /v1/ and namespaces
+// in the header.
+// Returns a path like foo/bar or ns1/foo/bar.
+// We opt for this form as namespace.Canonicalize returns a namespace in the
+// form of "ns1/", so we keep consistent with path canonicalization.
+func getStaticSecretPathFromRequest(req *SendRequest) string {
+	path := req.Request.URL.Path
+	// Static secrets always have /v1 as a prefix. This enables us to
+	// enable a pass-through and never attempt to cache or view-from-cache
+	// any request without the /v1 prefix.
+	if !strings.HasPrefix(path, "/v1") {
+		return ""
+	}
+	var namespace string
+	if header := req.Request.Header; header != nil {
+		namespace = header.Get(api.NamespaceHeaderName)
+	}
+	return canonicalizeStaticSecretPath(path, namespace)
+}
+
 // computeStaticSecretCacheIndex results in a value that uniquely identifies a static
 // secret's cached ID. Notably, we intentionally ignore headers (for example,
 // the X-Vault-Token header) to remain agnostic to which token is being
 // used in the request. We care only about the path.
+// This will return "" if the index does not have a /v1 prefix, and therefore
+// cannot be a static secret.
 func computeStaticSecretCacheIndex(req *SendRequest) string {
-	return hex.EncodeToString(cryptoutil.Blake2b256Hash(req.Request.URL.Path))
+	path := getStaticSecretPathFromRequest(req)
+	if path == "" {
+		return path
+	}
+	return hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
 }
 
 // HandleCacheClear returns a handlerFunc that can perform cache clearing operations.
@@ -848,9 +950,18 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 			return err
 		}
 		for _, index := range indexes {
-			if index.RenewCtxInfo != nil {
-				if index.RenewCtxInfo.CancelFunc != nil {
-					index.RenewCtxInfo.CancelFunc()
+			// If it's a static secret, we must remove directly, as there
+			// is no renew func to cancel.
+			if index.Type == cacheboltdb.StaticSecretType {
+				err = c.db.Evict(cachememdb.IndexNameID, index.ID)
+				if err != nil {
+					return err
+				}
+			} else {
+				if index.RenewCtxInfo != nil {
+					if index.RenewCtxInfo.CancelFunc != nil {
+						index.RenewCtxInfo.CancelFunc()
+					}
 				}
 			}
 		}
@@ -862,11 +973,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Get the context for the given token and cancel its context
 		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to token")
@@ -881,11 +992,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to accessor")
@@ -900,11 +1011,11 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return nil
+		}
 		if err != nil {
 			return err
-		}
-		if index == nil {
-			return nil
 		}
 
 		c.logger.Debug("canceling context of index attached to accessor")
@@ -1036,11 +1147,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Kill the lifetime watchers of the revoked token
 		index, err := c.db.Get(cachememdb.IndexNameToken, token)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return true, nil
+		}
 		if err != nil {
 			return false, err
-		}
-		if index == nil {
-			return true, nil
 		}
 
 		// Indicate the lifetime watcher goroutine for this index to return.
@@ -1284,12 +1395,11 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 	switch {
 	case secret.LeaseID != "":
 		entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
+		if err == cachememdb.ErrCacheItemNotFound {
+			return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
+		}
 		if err != nil {
 			return err
-		}
-
-		if entry == nil {
-			return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
 		}
 
 		// Derive a context for renewal using the token's context
@@ -1299,13 +1409,15 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
+			if err == cachememdb.ErrCacheItemNotFound {
+				// If parent token is not managed by the cache, child shouldn't be
+				// either.
+				if entry == nil {
+					return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
+				}
+			}
 			if err != nil {
 				return err
-			}
-			// If parent token is not managed by the agent, child shouldn't be
-			// either.
-			if entry == nil {
-				return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
 			}
 
 			c.logger.Debug("setting parent context", "method", index.RequestMethod, "path", index.RequestPath)
@@ -1398,7 +1510,7 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	// Get the token from the cache
 	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
-	if err != nil {
+	if err != nil && err != cachememdb.ErrCacheItemNotFound {
 		return err
 	}
 
