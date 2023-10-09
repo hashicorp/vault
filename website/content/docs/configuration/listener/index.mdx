@@ -31,9 +31,9 @@ these values will be redacted from responses.
 
 The following API endpoints support redaction based on `listener` stanza configuration:
 
-* [`/sys/health`](api-docs/system/health)
-* [`/sys/leader`](api-docs/system/leader)
-* [`/sys/seal-status`](api-docs/system/seal-status)
+* [`/sys/health`](/vault/api-docs/system/health)
+* [`/sys/leader`](/vault/api-docs/system/leader)
+* [`/sys/seal-status`](/vault/api-docs/system/seal-status)
 
 When a value is redacted by Vault, it will be replaced with an empty string (`""`).
 
@@ -46,13 +46,13 @@ settings will also affect them both.
 
 ## Redaction examples
 
-Please see [redaction settings](docs/configuration/listener#redaction-settings)
+Please see [redaction settings](/vault/docs/configuration/listener#redaction-settings)
 (below) for details on each redaction setting.
 
-Example configuration for the [`tcp`](docs/configuration/listener/tcp) listener,
-enabling [`redact_addresses`](docs/configuration/listener#redact_addresses),
-[`redact_cluster_name`](docs/configuration/listener#redact_cluster_name) and
-[`redact_version`](docs/configuration/listener#redact_version).
+Example configuration for the [`tcp`](/vault/docs/configuration/listener/tcp) listener,
+enabling [`redact_addresses`](/vault/docs/configuration/listener#redact_addresses),
+[`redact_cluster_name`](/vault/docs/configuration/listener#redact_cluster_name) and
+[`redact_version`](/vault/docs/configuration/listener#redact_version).
 
 ```hcl
 ui            = true
@@ -180,7 +180,7 @@ and `HA Cluster` show as `n/a`. Also, that `Active Node Address` shows as `<none
 The following options apply to both types of listener (see above), and can be configured
 for each individual listener stanza.
 
-Please see the [sensitive data redaction](docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
+Please see the [sensitive data redaction](/vault/docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
 
 ### Redaction settings
 
