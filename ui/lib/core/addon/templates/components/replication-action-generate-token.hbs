@@ -25,16 +25,14 @@
   </div>
 </div>
 
-<Modal
-  @title="Generate operation token"
-  @onClose={{action (mut this.isModalActive) false}}
-  @isActive={{this.isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  {{#if this.isModalActive}}
-    {{! Wrapped in if statement so the Shamir constructor fires on modal open }}
-    <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{action (mut this.isModalActive) false}} />
+{{#if this.isModalActive}}
+  <Hds::Modal id="shamir-flow-modal" @color="warning" @onClose={{action (mut this.isModalActive) false}} as |M|>
+    <M.Header>
+      Generate operation token
+    </M.Header>
+    <M.Body>
+      <Shamir::DrTokenFlow @action="generate-dr-operation-token" @onCancel={{action (mut this.isModalActive) false}} />
+    </M.Body>
     {{! Section & Footer is in child component since the form must do side effects on cancel }}
-  {{/if}}
-</Modal>
+  </Hds::Modal>
+{{/if}}
