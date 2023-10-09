@@ -83,32 +83,24 @@
         </li>
       {{/each}}
     </ul>
-
   {{/if}}
 
-  {{! wait until user has selected 'create a new item' before rendering modal}}
-  {{#if this.nameInput}}
-    <Modal
-      @title="Create new {{singularize @id}}"
-      @onClose={{action (mut this.showModal) false}}
-      @isActive={{this.showModal}}
-      @type="info"
-      @showCloseButton={{false}}
-    >
-      <section class="modal-card-body">
+  {{#if this.showModal}}
+    <Hds::Modal id="search-select-modal" @onClose={{fn (mut this.showModal) false}} as |M|>
+      <M.Header data-test-modal-title>
+        Create new
+        {{singularize @id}}
+      </M.Header>
+      <M.Body>
         {{#if @modalSubtext}}
           <p class="has-bottom-margin-s" data-test-modal-subtext>
             {{@modalSubtext}}
           </p>
         {{/if}}
-        {{#if (has-block)}}
-          {{yield}}
-        {{else}}
-          {{! dynamically render template from modal-form/ folder}}
-          {{! form must receive an @onSave and @onCancel arg that executes the callback}}
-          {{component @modalFormTemplate nameInput=this.nameInput onSave=this.resetModal onCancel=this.resetModal}}
-        {{/if}}
-      </section>
-    </Modal>
+        {{! dynamically render template from modal-form/ folder}}
+        {{! form must receive an @onSave and @onCancel arg that executes the callback}}
+        {{component @modalFormTemplate nameInput=this.nameInput onSave=this.resetModal onCancel=this.resetModal}}
+      </M.Body>
+    </Hds::Modal>
   {{/if}}
 </div>
