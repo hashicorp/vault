@@ -67,6 +67,7 @@ export default Controller.extend({
     }
     transition.followRedirects().then(() => {
       if (isRoot) {
+        this.auth.set('isRootToken', true);
         this.flashMessages.warning(
           'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.',
           ENV.environment !== 'development' ? { sticky: true } : {}
