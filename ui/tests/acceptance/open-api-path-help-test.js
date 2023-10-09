@@ -6,8 +6,9 @@ import { deleteAuthCmd, deleteEngineCmd, mountAuthCmd, mountEngineCmd, runCmd } 
 import openApiDrivenAttributes from '../helpers/openapi-driven-attributes';
 
 /**
- * This set of tests is for ensuring that backend changes, specifically to the OpenAPI spec,
- * are known by UI developers and adequately addressed in the UI.
+ * This set of tests is for ensuring that backend changes to the OpenAPI spec
+ * are known by UI developers and adequately addressed in the UI. In addition
+ * to updating the response
  */
 module('Acceptance | OpenAPI path help test', function (hooks) {
   setupApplicationTest(hooks);
@@ -104,7 +105,6 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
     hooks.afterEach(async function () {
       await runCmd(deleteAuthCmd(this.backend), false);
     });
-    // First we fetch the base openAPI to get relevant paths
     test('getPaths returns correct paths', async function (assert) {
       const helpUrl = `auth/${this.backend}/`;
       const baseResult = await this.pathHelp.getPaths(helpUrl, this.backend);
@@ -165,9 +165,44 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
     });
   });
 
-  /* TODO: fill in these other OpenAPI tests -- every auth type (extends AuthConfig model)
-    approle
-    azure
+  module('auth: approle', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.backend = 'approle-openapi';
+      await runCmd(mountAuthCmd('approle', this.backend), false);
+    });
+    hooks.afterEach(async function () {
+      await runCmd(deleteAuthCmd(this.backend), false);
+    });
+    test('getPaths returns correct paths', async function (assert) {
+      const helpUrl = `auth/${this.backend}`;
+      const result = await this.pathHelp.getPaths(helpUrl, this.backend);
+      assert.deepEqual(result.paths, [], 'correct paths');
+    });
+  });
+
+  module('auth: azure', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.backend = 'azure-openapi';
+      await runCmd(mountAuthCmd('azure', this.backend), false);
+    });
+    hooks.afterEach(async function () {
+      await runCmd(deleteAuthCmd(this.backend), false);
+    });
+    test('getPaths returns correct paths', async function (assert) {
+      const helpUrl = `auth/${this.backend}`;
+      const result = await this.pathHelp.getPaths(helpUrl, this.backend);
+      assert.deepEqual(result.paths, [], 'correct paths');
+      // No paths with navigation=true means they won't show up as tabs on the method page
+    });
+    test('getProps returns correct model attributes', async function (assert) {
+      const helpUrl = `/v1/auth/${this.backend}/config?help=1`;
+      const result = await this.pathHelp.getProps(helpUrl, this.backend);
+      assert.deepEqual(result, openApiDrivenAttributes.azureConfig);
+    });
+  });
+
+  /* TODO: fill in these other OpenAPI tests -- supported auth backends (extends AuthConfig model)
+
     cert
     gcp
     github

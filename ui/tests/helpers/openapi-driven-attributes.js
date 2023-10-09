@@ -1557,9 +1557,57 @@ const userpassUser = {
   },
 };
 
+const azureConfig = {
+  clientId: {
+    editType: 'string',
+    helpText:
+      'The OAuth2 client id to connection to Azure. This value can also be provided with the AZURE_CLIENT_ID environment variable.',
+    fieldGroup: 'default',
+    label: 'Client ID',
+    type: 'string',
+  },
+  clientSecret: {
+    editType: 'string',
+    helpText:
+      'The OAuth2 client secret to connection to Azure. This value can also be provided with the AZURE_CLIENT_SECRET environment variable.',
+    fieldGroup: 'default',
+    type: 'string',
+  },
+  environment: {
+    editType: 'string',
+    helpText:
+      'The Azure environment name. If not provided, AzurePublicCloud is used. This value can also be provided with the AZURE_ENVIRONMENT environment variable.',
+    fieldGroup: 'default',
+    type: 'string',
+  },
+  resource: {
+    editType: 'string',
+    helpText:
+      'The resource URL for the vault application in Azure Active Directory. This value can also be provided with the AZURE_AD_RESOURCE environment variable.',
+    fieldGroup: 'default',
+    type: 'string',
+  },
+  rootPasswordTtl: {
+    editType: 'ttl',
+    helpText:
+      'The TTL of the root password in Azure. This can be either a number of seconds or a time formatted duration (ex: 24h, 48ds)',
+    fieldGroup: 'default',
+  },
+  tenantId: {
+    editType: 'string',
+    helpText:
+      'The tenant id for the Azure Active Directory. This is sometimes referred to as Directory ID in AD. This value can also be provided with the AZURE_TENANT_ID environment variable.',
+    fieldGroup: 'default',
+    label: 'Tenant ID',
+    type: 'string',
+  },
+};
+
 export default {
-  sshRole,
+  // auth
+  azureConfig,
   userpassUser,
+  // secret engines
   kmipConfig,
   kmipRole,
   pkiAcme,
@@ -1570,4 +1618,5 @@ export default {
   pkiSignCsr,
   pkiTidy,
   pkiUrls,
+  sshRole,
 };
