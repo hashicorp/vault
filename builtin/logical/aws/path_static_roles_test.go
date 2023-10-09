@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -125,13 +126,21 @@ func TestStaticRolesWrite(t *testing.T) {
 	bgCTX := context.Background()
 
 	cases := []struct {
-		name          string
-		opts          []awsutil.MockIAMOption
+		name string
+		// objects to return from mock IAM.
+		// You'll need a GetUserOutput (to validate the existence of the user being written,
+		// the keys the user has already been assigned,
+		// and the new key vault requests.
+		opts []awsutil.MockIAMOption // objects to return from the mock IAM
+		// the name, username if updating, and rotation_period of the user. This is the inbound request the cod would get.
 		data          map[string]interface{}
 		expectedError bool
 		findUser      bool
-		isUpdate      bool
-		newPriority   int64 // update time of new item in queue, skip if isUpdate false
+		// if data is sent the name "johnny", then we'll match an existing user with rotation period 24 hours.
+		isUpdate    bool
+		newPriority int64 // update time of new item in queue, skip if isUpdate false. There is a wiggle room of 5 seconds
+		// so the deltas between the old and the new update time should be larger than that to ensure the difference
+		// can be detected.
 	}{
 		{
 			name: "happy path",
@@ -170,7 +179,7 @@ func TestStaticRolesWrite(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name: "update existing user",
+			name: "update existing user, decreased rotation duration",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
@@ -193,7 +202,30 @@ func TestStaticRolesWrite(t *testing.T) {
 			isUpdate:    true,
 			newPriority: time.Now().Add(19 * time.Minute).Unix(),
 		},
-		{},
+		{
+			name: "update existing user, increased rotation duration",
+			opts: []awsutil.MockIAMOption{
+				awsutil.WithGetUserOutput(&iam.GetUserOutput{User: &iam.User{UserName: aws.String("john-doe"), UserId: aws.String("unique-id")}}),
+				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+					IsTruncated:       aws.Bool(false),
+				}),
+				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+					AccessKey: &iam.AccessKey{
+						AccessKeyId:     aws.String("abcdefghijklmnopqrstuvwxyz"),
+						SecretAccessKey: aws.String("zyxwvutsrqponmlkjihgfedcba"),
+						UserName:        aws.String("john-doe"),
+					},
+				}),
+			},
+			data: map[string]interface{}{
+				"name":            "johnny",
+				"rotation_period": "40h",
+			},
+			findUser:    true,
+			isUpdate:    true,
+			newPriority: time.Now().Add(40 * time.Hour).Unix(),
+		},
 	}
 
 	// if a user exists (user doesn't exist is tested in validation)
@@ -301,7 +333,7 @@ func TestStaticRolesWrite(t *testing.T) {
 
 			if c.isUpdate {
 				fmt.Printf("%d vs %d\n", c.newPriority, actualItem.Priority)
-				if ep, ap := c.newPriority, actualItem.Priority; ep != ap {
+				if ep, ap := c.newPriority, actualItem.Priority; math.Abs(float64(ep-ap)) > 5 {
 					t.Fatalf("mismatched updated prioirt, expected %d but got %d", ep, ap)
 				}
 			}
@@ -374,29 +406,6 @@ func TestStaticRoleRead(t *testing.T) {
 					t.Fatal("response should have been nil on a non-existent role")
 				}
 			}
-		})
-	}
-}
-
-// TestStaticRoleUpdate validates that an update, i.e., a create when a role with that name already exists, will
-// properly modify the queue.
-func TestStaticRoleUpdate(t *testing.T) {
-	// bgCTX := context.Background()
-
-	cases := []struct {
-		name string
-		data map[string]interface{}
-	}{
-		{
-			name: "increase duration",
-		},
-		{
-			name: "decrease duration",
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
 		})
 	}
 }
