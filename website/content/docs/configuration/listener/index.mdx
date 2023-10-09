@@ -9,9 +9,181 @@ description: |-
 # `listener` stanza
 
 The `listener` stanza configures the addresses and ports on which Vault will
-respond to requests. At this time, there are two listeners: 
+respond to requests. At this time, there are two listeners:
 - [TCP][tcp]
 - [Unix Domain Socket][unix]
 
 [tcp]: /vault/docs/configuration/listener/tcp
 [unix]: /vault/docs/configuration/listener/unix
+
+## Unauthenticated endpoints - sensitive data redaction
+
+There are four different types of information deemed sensitive that can be returned
+by unauthenticated API endpoints:
+
+1. Version number
+2. Build date
+3. Cluster name
+4. IP address
+
+Vault offers the ability to configure each `listener` stanza such that when appropriate,
+these values will be redacted from responses.
+
+The following API endpoints support redaction based on `listener` stanza configuration:
+
+* [`/sys/health`](/vault/api-docs/system/health)
+* [`/sys/leader`](/vault/api-docs/system/leader)
+* [`/sys/seal-status`](/vault/api-docs/system/seal-status)
+
+When a value is redacted by Vault, it will be replaced with an empty string (`""`).
+
+~> Note: In certain situations, due to an empty string value, the related key may
+no longer be present in the response object returned from the API, as that field is
+omitted when the value is empty (`""`).
+
+~> Note: The Vault API is also consumed by the Vault CLI and UI, therefore enabling redaction
+settings will also affect them both.
+
+## Redaction examples
+
+Please see [redaction settings](/vault/docs/configuration/listener#redaction-settings)
+(below) for details on each redaction setting.
+
+Example configuration for the [`tcp`](/vault/docs/configuration/listener/tcp) listener,
+enabling [`redact_addresses`](/vault/docs/configuration/listener#redact_addresses),
+[`redact_cluster_name`](/vault/docs/configuration/listener#redact_cluster_name) and
+[`redact_version`](/vault/docs/configuration/listener#redact_version).
+
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+
+listener "tcp" {
+  address             = "127.0.0.1:8200",
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
+  redact_addresses    = "true"
+  redact_cluster_name = "true"
+  redact_version      = "true"
+}
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
+```
+
+### API: `/sys/health`
+
+`curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
+
+```json
+{
+  "initialized": true,
+  "sealed": false,
+  "standby": true,
+  "performance_standby": false,
+  "replication_performance_mode": "disabled",
+  "replication_dr_mode": "disabled",
+  "server_time_utc": 1696598650,
+  "version": "",
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e"
+}
+```
+
+When comparing the JSON response above to when redaction settings are not enabled,
+we can see that `cluster_name` is not present (it is now omitted due to being empty).
+Also, that `version` is now redacted and shown only as `""`.
+
+### API: `sys/leader`
+
+`curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
+
+```json
+{
+  "ha_enabled": true,
+  "is_self": false,
+  "active_time": "0001-01-01T00:00:00Z",
+  "leader_address": "",
+  "leader_cluster_address": "",
+  "performance_standby": false,
+  "performance_standby_last_remote_wal": 0,
+  "raft_committed_index": 164,
+  "raft_applied_index": 164
+}
+```
+
+When comparing the JSON response above to when redaction settings are not enabled,
+we can see that `leader_address` and `leader_cluster_address` are now redacted and
+shown only as `""`.
+
+### API: `sys/seal-status`
+
+`curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
+
+```json
+{
+  "type": "shamir",
+  "initialized": true,
+  "sealed": false,
+  "t": 1,
+  "n": 1,
+  "progress": 0,
+  "nonce": "",
+  "version": "",
+  "build_date": "",
+  "migration": false,
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e",
+  "recovery_seal": false,
+  "storage_type": "raft"
+}
+```
+
+When comparing the JSON response above to when redaction settings are not enabled,
+we can see that `cluster_name` is not present (it is now omitted due to being empty).
+Also, that `build_date` and `version` are now redacted and shown only as `""`.
+
+### CLI: `vault status`
+
+```
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+Total Shares            5
+Threshold               3
+Version                 n/a
+Build Date              n/a
+Storage Type            raft
+HA Enabled              true
+HA Cluster              n/a
+HA Mode                 standby
+Active Node Address     <none>
+Raft Committed Index    219
+Raft Applied Index      219
+```
+
+When examining the output of `vault status` we can see that `Version`, `Build Date`
+and `HA Cluster` show as `n/a`. Also, that `Active Node Address` shows as `<none>`.
+
+
+## Common configuration options
+
+The following options apply to both types of listener (see above), and can be configured
+for each individual listener stanza.
+
+Please see the [sensitive data redaction](/vault/docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
+
+### Redaction settings
+
+- `redact_addresses` `(bool: false)` - If enabled, will redact `leader_address` and `cluster_leader_address` values when applicable.
+- `redact_cluster_name` `(bool: false)` - If enabled, will redact `cluster_name` values when applicable.
+- `redact_version` `(bool: false)` - If enabled, will redact `version` and `build_date` values when applicable.
