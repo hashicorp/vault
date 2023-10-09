@@ -3,14 +3,97 @@ import Model from '@ember-data/model';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteAuthCmd, deleteEngineCmd, mountAuthCmd, mountEngineCmd, runCmd } from '../helpers/commands';
-import openapiDrivenAttributes from '../helpers/openapi-driven-attributes';
+import openApiDrivenAttributes from '../helpers/openapi-driven-attributes';
 
+/**
+ * This set of tests is for ensuring that backend changes, specifically to the OpenAPI spec,
+ * are known by UI developers and adequately addressed in the UI.
+ */
 module('Acceptance | OpenAPI path help test', function (hooks) {
   setupApplicationTest(hooks);
   hooks.beforeEach(function () {
     this.pathHelp = this.owner.lookup('service:pathHelp');
     this.newModel = Model.extend({});
     return authPage.login();
+  });
+
+  module('engine: ssh role', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.backend = 'ssh-openapi';
+      await runCmd(mountEngineCmd('ssh', this.backend), false);
+    });
+    hooks.afterEach(async function () {
+      await runCmd(deleteEngineCmd(this.backend), false);
+    });
+
+    test('getProps returns correct model attributes', async function (assert) {
+      const helpUrl = `/v1/${this.backend}/roles/example?help=1`;
+      const result = await this.pathHelp.getProps(helpUrl, this.backend);
+      assert.deepEqual(result, openApiDrivenAttributes.sshRole);
+    });
+  });
+
+  module('engine: kmip enterprise', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.backend = 'kmip-openapi';
+      await runCmd(mountEngineCmd('kmip', this.backend), false);
+    });
+    hooks.afterEach(async function () {
+      await runCmd(deleteEngineCmd(this.backend), false);
+    });
+
+    test('getProps returns correct model attributes', async function (assert) {
+      const config = await this.pathHelp.getProps(`/v1/${this.backend}/config?help=1`, this.backend);
+      assert.deepEqual(config, openApiDrivenAttributes.kmipConfig, 'kmip config');
+
+      const role = await this.pathHelp.getProps(
+        `/v1/${this.backend}/scope/example/role/example?help=1`,
+        this.backend
+      );
+      assert.deepEqual(role, openApiDrivenAttributes.kmipRole, 'kmip role');
+    });
+  });
+
+  module('engine: pki', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.backend = 'pki-openapi';
+      await runCmd(mountEngineCmd('pki', this.backend), false);
+    });
+    hooks.afterEach(async function () {
+      await runCmd(deleteEngineCmd(this.backend), false);
+    });
+
+    test('getProps returns correct model attributes', async function (assert) {
+      const role = await this.pathHelp.getProps(`/v1/${this.backend}/roles/example?help=1`, this.backend);
+      assert.deepEqual(role, openApiDrivenAttributes.pkiRole, 'pki role');
+
+      const signCsr = await this.pathHelp.getProps(
+        `/v1/${this.backend}/issuer/example/sign-intermediate?help=1`,
+        this.backend
+      );
+      assert.deepEqual(signCsr, openApiDrivenAttributes.pkiSignCsr, 'pki sign intermediate');
+
+      const tidy = await this.pathHelp.getProps(`/v1/${this.backend}/config/auto-tidy?help=1`, this.backend);
+      assert.deepEqual(tidy, openApiDrivenAttributes.pkiTidy, 'pki tidy');
+
+      const certGenerate = await this.pathHelp.getProps(
+        `/v1/${this.backend}/issue/example?help=1`,
+        this.backend
+      );
+      assert.deepEqual(certGenerate, openApiDrivenAttributes.pkiCertGenerate, 'pki cert generate');
+
+      const certSign = await this.pathHelp.getProps(`/v1/${this.backend}/sign/example?help=1`, this.backend);
+      assert.deepEqual(certSign, openApiDrivenAttributes.pkiCertSign, 'pki cert generate');
+
+      const acme = await this.pathHelp.getProps(`/v1/${this.backend}/config/acme?help=1`, this.backend);
+      assert.deepEqual(acme, openApiDrivenAttributes.pkiAcme, 'pki acme');
+
+      const cluster = await this.pathHelp.getProps(`/v1/${this.backend}/config/cluster?help=1`, this.backend);
+      assert.deepEqual(cluster, openApiDrivenAttributes.pkiCluster, 'pki cluster');
+
+      const urls = await this.pathHelp.getProps(`/v1/${this.backend}/config/urls?help=1`, this.backend);
+      assert.deepEqual(urls, openApiDrivenAttributes.pkiUrls, 'pki urls');
+    });
   });
 
   module('auth: userpass', function (hooks) {
@@ -78,40 +161,22 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
     test('getProps for user returns correct model attributes', async function (assert) {
       const helpUrl = `/v1/auth/${this.backend}/users/example?help=true`;
       const result = await this.pathHelp.getProps(helpUrl, this.backend);
-      assert.deepEqual(result, openapiDrivenAttributes.userpassUser);
+      assert.deepEqual(result, openApiDrivenAttributes.userpassUser);
     });
   });
 
-  module('engine: role-ssh', function (hooks) {
-    hooks.beforeEach(async function () {
-      this.backend = 'ssh-openapi';
-      await runCmd(mountEngineCmd('ssh', this.backend), false);
-    });
-    hooks.afterEach(async function () {
-      await runCmd(deleteEngineCmd(this.backend), false);
-    });
-
-    test('getProps returns correct model attributes', async function (assert) {
-      const helpUrl = `/v1/${this.backend}/roles/example?help=1`;
-      const result = await this.pathHelp.getProps(helpUrl, this.backend);
-      assert.deepEqual(result, openapiDrivenAttributes.sshRole);
-    });
-  });
-  /* TODO: fill in these other OpenAPI tests
-  module('auth: azure', function (hooks) {});
-  module('auth: gcp', function (hooks) {});
-  module('auth: github', function (hooks) {});
-  module('auth: jwt', function (hooks) {});
-  module('auth: kubernetes', function (hooks) {});
-  module('auth: ldap', function (hooks) {});
-  module('auth: okta', function (hooks) {});
-  module('auth: radius', function (hooks) {});
-  module('auth: kmip/config', function (hooks) {});
-  module('auth: kmip/role', function (hooks) {});
-  module('engine: pki/role', function (hooks) {});
-  module('engine: pki/tidy', function (hooks) {});
-  module('engine: pki/certificate/base', function (hooks) {});
-  module('engine: pki/acme', function (hooks) {});
-  module('engine: pki/config', function (hooks) {});
+  /* TODO: fill in these other OpenAPI tests -- every auth type (extends AuthConfig model)
+    approle
+    azure
+    cert
+    gcp
+    github
+    jwt
+    kubernetes
+    ldap
+    okta
+    radius
+    aws/client
+    aws/tidy
   */
 });
