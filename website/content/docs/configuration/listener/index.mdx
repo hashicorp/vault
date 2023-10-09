@@ -16,15 +16,14 @@ respond to requests. At this time, there are two types of listeners:
 [tcp]: /vault/docs/configuration/listener/tcp
 [unix]: /vault/docs/configuration/listener/unix
 
-## Unauthenticated endpoints - sensitive data redaction
+## Sensitive data redaction for unauthenticated endpoints
 
-There are four different types of information deemed sensitive that can be returned
-by unauthenticated API endpoints:
+Unauthenticated API endpoints may return the following sensitive information:
 
-1. Version number
-2. Build date
-3. Cluster name
-4. IP address
+* Vault version number
+* Vault binary build date
+* Vault cluster name
+* IP address of nodes in the cluster
 
 Vault offers the ability to configure each `listener` stanza such that when appropriate,
 these values will be redacted from responses.
@@ -35,27 +34,24 @@ The following API endpoints support redaction based on `listener` stanza configu
 * [`/sys/leader`](/vault/api-docs/system/leader)
 * [`/sys/seal-status`](/vault/api-docs/system/seal-status)
 
-When a value is redacted by Vault, it will be replaced with an empty string (`""`).
+Vault replaces redacted information with an empty string (`""`). Some Vault APIs
+also omit keys from the response when the corresponding value is empty (`""`).
 
-~> Note: In certain situations, due to an empty string value, the related key may
-no longer be present in the response object returned from the API, as that field is
-omitted when the value is empty (`""`).
-
-~> Note: The Vault API is also consumed by the Vault CLI and UI, therefore enabling redaction
-settings will also affect them both.
+<Note title="Redacting values affects responses to all API clients">
+  The Vault CLI and UI consume Vault API responses. As a result, your redaction
+  settings will apply to CLI and UI output in addition to direct API calls.
+</Note>
 
 ## Common configuration options
 
 The following options apply to both types of listener (`tcp`/`unix`), and can be configured
 for each individual listener stanza.
 
-Please see the [sensitive data redaction](/vault/docs/configuration/listener#unauthenticated-endpoints-sensitive-data-redaction) explanation above for further information.
-
 ### Redaction settings
 
-- `redact_addresses` `(bool: false)` - If enabled, will redact `leader_address` and `cluster_leader_address` values when applicable.
-- `redact_cluster_name` `(bool: false)` - If enabled, will redact `cluster_name` values when applicable.
-- `redact_version` `(bool: false)` - If enabled, will redact `version` and `build_date` values when applicable.
+- `redact_addresses` `(bool: false)` - Redacts `leader_address` and `cluster_leader_address` values in applicable API responses when `true`.
+- `redact_cluster_name` `(bool: false)` - Redacts `cluster_name` values in applicable API responses when `true`.
+- `redact_version` `(bool: false)` - Redacts `version` and `build_date` values in applicable API responses when `true`.
 
 ## Redaction examples
 
