@@ -23,7 +23,11 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 import { sanitizePath } from 'core/utils/sanitize-path';
-import { reducePathsByPathName } from 'vault/utils/openapi-helpers';
+import {
+  filterPathsByItemType,
+  pathToHelpUrlSegment,
+  reducePathsByPathName,
+} from 'vault/utils/openapi-helpers';
 
 export default Service.extend({
   attrs: null,
@@ -84,12 +88,10 @@ export default Service.extend({
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let path;
         // if we have an item we want the create info for that itemType
-        const paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+        const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
-        path = createPath.path;
-        path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
+        const path = pathToHelpUrlSegment(createPath.path);
         if (!path) {
           // TODO: we don't know if path will ever be falsey
           // if it is never falsey we can remove this.
@@ -105,35 +107,6 @@ export default Service.extend({
         // TODO: we should handle the error better here
         console.error(err); // eslint-disable-line
       });
-  },
-
-  /**
-   * filterPathsByItemType
-   * @param {object} pathInfo {
-        apiPath,
-        itemType,
-        itemTypes: [],
-        paths: [],
-        itemID,
-      }
-   * @param {string} itemType
-   * @returns Array<{
-   *   path: string;
-   *   itemType: string;
-   *   itemName: string;
-   *   operations: string[];
-   *   action: string;
-   *   navigation: boolean
-   *   param: string || false;
-   * }>
-   */
-  filterPathsByItemType(pathInfo, itemType) {
-    if (!itemType) {
-      return pathInfo.paths;
-    }
-    return pathInfo.paths.filter((path) => {
-      return itemType === path.itemType;
-    });
   },
 
   /**
@@ -217,7 +190,7 @@ export default Service.extend({
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
-    const paths = this.filterPathsByItemType(pathInfo, itemType);
+    const paths = filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
