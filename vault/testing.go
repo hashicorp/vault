@@ -139,6 +139,7 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 			"file": auditFile.Factory,
 		},
 	}
+
 	return TestCoreWithSealAndUI(t, conf)
 }
 
@@ -393,6 +394,14 @@ func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics
 	}
 	sink := SetupMetrics(conf)
 	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
+	return core, keys, root, sink
+}
+
+func TestCoreUnsealedWithMetricsAndConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	conf.BuiltinRegistry = corehelpers.NewMockBuiltinRegistry()
+	sink := SetupMetrics(conf)
+	core, keys, root := TestCoreUnsealedWithConfig(t, conf)
 	return core, keys, root, sink
 }
 
