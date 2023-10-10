@@ -1192,7 +1192,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	// validate the response structure for Update
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1256,7 +1256,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// validate the response body for list
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1427,7 +1427,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Validate lease renewal response structure
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -1782,7 +1782,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// validate the response structure for lease revoke-prefix
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
