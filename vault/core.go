@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	"github.com/armon/go-metrics"
@@ -1247,7 +1249,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	_, ok := logicalBackends["kv"]
 	if !ok {
-		logicalBackends["kv"] = PassthroughBackendFactory
+		logicalBackends["kv"] = kv.Factory
 	}
 
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
