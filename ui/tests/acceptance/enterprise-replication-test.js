@@ -252,7 +252,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
 
     // checks on secondary token modal
-    assert.dom('.hds-modal#replication-copy-token-modal').exists();
+    assert.dom('#replication-copy-token-modal').exists();
     assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
     assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
