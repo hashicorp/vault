@@ -41,7 +41,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     // can navigate to it without getting `//` in the url
     struct.id = struct.path.slice(0, -1);
 
-    if (backend.type === 'kv' && (!backend.options || !backend.options?.version)) {
+    if (backend.type === 'kv' && !backend.options?.version) {
       // enabling kv in the CLI without a version flag mounts a v1 engine
       // however, when no version is specified the options key is null
       // we explicitly set v1 here, otherwise v2 is pulled from the ember model default
