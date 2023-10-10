@@ -415,7 +415,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
 	token, keys := TestInitUnsealCore(t, core)
 
-	testCoreAddSecretMount(t, core, token, "1")
+	testCoreAddSecretMount(t, core, token)
 	return core, keys, token
 }
 
@@ -433,10 +433,7 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	return token, keys
 }
 
-// testCoreAddSecretMount adds a secret mount to a Core as part of test cluster setup.
-// Note that this added secret mount does not produce events for the event system, and
-// is something.
-func testCoreAddSecretMount(t testing.T, core *Core, token string, kvVersion string) {
+func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
@@ -446,7 +443,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string, kvVersion str
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": kvVersion,
+				"version": "1",
 			},
 		},
 	}
@@ -2146,7 +2143,28 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		kvVersion = opts.KVVersion
 	}
 
-	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
+	// Existing tests rely on this; we can make a toggle to disable it
+	// later if we want
+	kvReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: tc.RootToken,
+		Path:        "sys/mounts/secret",
+		Data: map[string]interface{}{
+			"type":        "kv",
+			"path":        "secret/",
+			"description": "key/value secret storage",
+			"options": map[string]string{
+				"version": kvVersion,
+			},
+		},
+	}
+	resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), kvReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatal(err)
+	}
 
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
@@ -2206,7 +2224,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 				"type": "noop",
 			},
 		}
-		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
+		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
 			t.Fatal(err)
 		}
