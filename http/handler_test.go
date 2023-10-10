@@ -17,6 +17,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -806,6 +808,7 @@ func testNonPrintable(t *testing.T, disable bool) {
 	props := &vault.HandlerProperties{
 		Core:                  core,
 		DisablePrintableCheck: disable,
+		ListenerConfig:        &configutil.Listener{},
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
 	defer ln.Close()

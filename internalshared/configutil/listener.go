@@ -123,6 +123,14 @@ type Listener struct {
 	// ChrootNamespace will prepend the specified namespace to requests
 	ChrootNamespaceRaw interface{} `hcl:"chroot_namespace"`
 	ChrootNamespace    string      `hcl:"-"`
+
+	// Per-listener redaction configuration
+	RedactAddressesRaw   any  `hcl:"redact_addresses"`
+	RedactAddresses      bool `hcl:"-"`
+	RedactClusterNameRaw any  `hcl:"redact_cluster_name"`
+	RedactClusterName    bool `hcl:"-"`
+	RedactVersionRaw     any  `hcl:"redact_version"`
+	RedactVersion        bool `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -142,6 +150,32 @@ func (l *Listener) GoString() string {
 func (l *Listener) Validate(path string) []ConfigError {
 	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
 	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
+}
+
+// ParseSingleIPTemplate is used as a helper function to parse out a single IP
+// address from a config parameter.
+// If the input doesn't appear to contain the 'template' format,
+// it will return the specified input unchanged.
+func ParseSingleIPTemplate(ipTmpl string) (string, error) {
+	r := regexp.MustCompile("{{.*?}}")
+	if !r.MatchString(ipTmpl) {
+		return ipTmpl, nil
+	}
+
+	out, err := template.Parse(ipTmpl)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)
+	}
+
+	ips := strings.Split(out, " ")
+	switch len(ips) {
+	case 0:
+		return "", errors.New("no addresses found, please configure one")
+	case 1:
+		return strings.TrimSpace(ips[0]), nil
+	default:
+		return "", fmt.Errorf("multiple addresses found (%q), please configure one", out)
+	}
 }
 
 // ParseListeners attempts to parse the AST list of objects into listeners.
@@ -209,6 +243,7 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseCORSSettings,
 		l.parseHTTPHeaderSettings,
 		l.parseChrootNamespaceSettings,
+		l.parseRedactionSettings,
 	} {
 		err := parser()
 		if err != nil {
@@ -565,28 +600,31 @@ func (l *Listener) parseCORSSettings() error {
 	return nil
 }
 
-// ParseSingleIPTemplate is used as a helper function to parse out a single IP
-// address from a config parameter.
-// If the input doesn't appear to contain the 'template' format,
-// it will return the specified input unchanged.
-func ParseSingleIPTemplate(ipTmpl string) (string, error) {
-	r := regexp.MustCompile("{{.*?}}")
-	if !r.MatchString(ipTmpl) {
-		return ipTmpl, nil
+// parseRedactionSettings attempts to parse the raw listener redaction settings.
+// The state of the listener will be modified, raw data will be cleared upon
+// successful parsing.
+func (l *Listener) parseRedactionSettings() error {
+	var err error
+
+	if l.RedactAddressesRaw != nil {
+		if l.RedactAddresses, err = parseutil.ParseBool(l.RedactAddressesRaw); err != nil {
+			return fmt.Errorf("invalid value for redact_addresses: %w", err)
+		}
+	}
+	if l.RedactClusterNameRaw != nil {
+		if l.RedactClusterName, err = parseutil.ParseBool(l.RedactClusterNameRaw); err != nil {
+			return fmt.Errorf("invalid value for redact_cluster_name: %w", err)
+		}
+	}
+	if l.RedactVersionRaw != nil {
+		if l.RedactVersion, err = parseutil.ParseBool(l.RedactVersionRaw); err != nil {
+			return fmt.Errorf("invalid value for redact_version: %w", err)
+		}
 	}
 
-	out, err := template.Parse(ipTmpl)
-	if err != nil {
-		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)
-	}
+	l.RedactAddressesRaw = nil
+	l.RedactClusterNameRaw = nil
+	l.RedactVersionRaw = nil
 
-	ips := strings.Split(out, " ")
-	switch len(ips) {
-	case 0:
-		return "", errors.New("no addresses found, please configure one")
-	case 1:
-		return strings.TrimSpace(ips[0]), nil
-	default:
-		return "", fmt.Errorf("multiple addresses found (%q), please configure one", out)
-	}
+	return nil
 }
