@@ -40,6 +40,9 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     // strip the trailing slash off of the path so we
     // can navigate to it without getting `//` in the url
     struct.id = struct.path.slice(0, -1);
+
+    // enabling kv in the CLI without a version flag mounts a v1 engine
+    // however, the options object is null so setting version number manually
     if (backend.type === 'kv' && !backend.options) {
       backend.options = { version: 1 };
     }
