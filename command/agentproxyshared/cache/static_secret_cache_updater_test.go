@@ -155,11 +155,11 @@ func TestOpenWebSocketConnection(t *testing.T) {
 // works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
 // logic. It's still important coverage, though.
-// As of right now, it does not pass due to an issue with the event system and default KVV1 mounts.
-// See the godocs for testCoreAddSecretMount for more info.
+// As of right now, it does not pass since the default kv mount is LeasedPassthroughBackend.
+// If that is changed, this test will be unskipped.
 func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
 	t.Parallel()
-	t.Skip("This test won't finish, as the default KVV1 mount does not send events. See the godocs for testCoreAddSecretMount for more information")
+	t.Skip("This test won't finish, as the default KV mount is LeasedPassthroughBackend in tests, and therefore does not send events")
 	// We need a valid cluster for the connection to succeed.
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
