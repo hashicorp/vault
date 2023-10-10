@@ -11,7 +11,6 @@ module('Unit | Serializer | secret-engine', function (hooks) {
 
   hooks.beforeEach(function () {
     this.serializer = this.owner.lookup('serializer:secret-engine');
-
     this.path = 'kv-engine/';
     this.backend = {
       accessor: 'kv_77813cc8',
@@ -34,7 +33,27 @@ module('Unit | Serializer | secret-engine', function (hooks) {
     };
   });
 
-  test('it should add version 1 for kv mounts when options is null', function (assert) {
+  test('it should not overwrite options for version 2', async function (assert) {
+    assert.expect(1);
+    this.backend.options = { version: '2' };
+    const expectedData = {
+      ...this.backend,
+      id: 'kv-engine',
+      path: 'kv-engine/',
+      options: {
+        version: '2',
+      },
+    };
+    assert.propEqual(
+      this.serializer.normalizeBackend(this.path, this.backend),
+      expectedData,
+      'options contain version 2'
+    );
+  });
+
+  test('it should add version 1 for kv mounts when options is null', async function (assert) {
+    assert.expect(1);
+
     const expectedData = {
       ...this.backend,
       id: 'kv-engine',
@@ -50,7 +69,9 @@ module('Unit | Serializer | secret-engine', function (hooks) {
     );
   });
 
-  test('it should add version 1 for kv mounts if options has data but no version key', function (assert) {
+  test('it should add version 1 for kv mounts if options has data but no version key', async function (assert) {
+    assert.expect(1);
+
     this.backend.options = { foo: 'bar' };
     const expectedData = {
       ...this.backend,
@@ -69,7 +90,9 @@ module('Unit | Serializer | secret-engine', function (hooks) {
     );
   });
 
-  test('it should not update options for non-kv engines', function (assert) {
+  test('it should not update options for non-kv engines', async function (assert) {
+    assert.expect(1);
+
     const cubbyholeData = {
       accessor: 'cubbyhole_8a89fbc7',
       config: {
