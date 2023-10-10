@@ -139,7 +139,6 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 			"file": auditFile.Factory,
 		},
 	}
-
 	return TestCoreWithSealAndUI(t, conf)
 }
 
