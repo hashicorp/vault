@@ -339,7 +339,7 @@ func TestStaticRolesWrite(t *testing.T) {
 
 			if c.isUpdate {
 				if ep, ap := c.newPriority, actualItem.Priority; abs(ep-ap) > 5 { // 5 second wiggle room for how long the test takes
-					t.Fatalf("mismatched updated prioirt, expected %d but got %d", ep, ap)
+					t.Fatalf("mismatched updated priority, expected %d but got %d", ep, ap)
 				}
 			}
 		})
