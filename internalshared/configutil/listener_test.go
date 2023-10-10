@@ -159,7 +159,7 @@ func TestListener_parseType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			l := &Listener{Type: tc.inputType}
+			l := &Listener{Type: listenerType(tc.inputType)}
 			err := l.parseType(tc.inputFallback)
 			switch {
 			case tc.isErrorExpected:
@@ -167,7 +167,7 @@ func TestListener_parseType(t *testing.T) {
 				require.ErrorContains(t, err, tc.errorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.expectedValue, l.Type)
+				require.Equal(t, tc.expectedValue, l.Type.String())
 			}
 		})
 	}
@@ -861,16 +861,19 @@ func TestListener_parseCORSSettings(t *testing.T) {
 // assign the relevant value on the SharedConfig struct.
 func TestListener_parseHTTPHeaderSettings(t *testing.T) {
 	tests := map[string]struct {
+		listenerType                     listenerType
 		rawCustomResponseHeaders         []map[string]any
 		expectedNumCustomResponseHeaders int
 		isErrorExpected                  bool
 		errorMessage                     string
 	}{
 		"nil": {
+			listenerType:                     TCP,
 			isErrorExpected:                  false,
 			expectedNumCustomResponseHeaders: 1, // default: Strict-Transport-Security
 		},
 		"custom-headers-bad": {
+			listenerType: TCP,
 			rawCustomResponseHeaders: []map[string]any{
 				{"juan": false},
 			},
@@ -878,6 +881,7 @@ func TestListener_parseHTTPHeaderSettings(t *testing.T) {
 			errorMessage:    "failed to parse custom_response_headers",
 		},
 		"custom-headers-good": {
+			listenerType: TCP,
 			rawCustomResponseHeaders: []map[string]any{
 				{
 					"2xx": []map[string]any{
@@ -886,6 +890,18 @@ func TestListener_parseHTTPHeaderSettings(t *testing.T) {
 				},
 			},
 			expectedNumCustomResponseHeaders: 2,
+			isErrorExpected:                  false,
+		},
+		"unix-no-headers": {
+			listenerType: Unix,
+			rawCustomResponseHeaders: []map[string]any{
+				{
+					"2xx": []map[string]any{
+						{"X-Custom-Header": []any{"Custom Header Value 1", "Custom Header Value 2"}},
+					},
+				},
+			},
+			expectedNumCustomResponseHeaders: 0,
 			isErrorExpected:                  false,
 		},
 	}
@@ -898,6 +914,7 @@ func TestListener_parseHTTPHeaderSettings(t *testing.T) {
 
 			// Configure listener with raw values
 			l := &Listener{
+				Type:                     tc.listenerType,
 				CustomResponseHeadersRaw: tc.rawCustomResponseHeaders,
 			}
 
@@ -978,6 +995,7 @@ func TestListener_parseChrootNamespaceSettings(t *testing.T) {
 // assign the relevant value on the SharedConfig struct.
 func TestListener_parseRedactionSettings(t *testing.T) {
 	tests := map[string]struct {
+		listenerType              listenerType
 		rawRedactAddresses        any
 		expectedRedactAddresses   bool
 		rawRedactClusterName      any
@@ -988,40 +1006,57 @@ func TestListener_parseRedactionSettings(t *testing.T) {
 		errorMessage              string
 	}{
 		"missing": {
+			listenerType:              TCP,
 			isErrorExpected:           false,
 			expectedRedactAddresses:   false,
 			expectedRedactClusterName: false,
 			expectedRedactVersion:     false,
 		},
 		"redact-addresses-bad": {
+			listenerType:       TCP,
 			rawRedactAddresses: "juan",
 			isErrorExpected:    true,
 			errorMessage:       "invalid value for redact_addresses",
 		},
 		"redact-addresses-good": {
+			listenerType:            TCP,
 			rawRedactAddresses:      "true",
 			expectedRedactAddresses: true,
 			isErrorExpected:         false,
 		},
 		"redact-cluster-name-bad": {
+			listenerType:         TCP,
 			rawRedactClusterName: "juan",
 			isErrorExpected:      true,
 			errorMessage:         "invalid value for redact_cluster_name",
 		},
 		"redact-cluster-name-good": {
+			listenerType:              TCP,
 			rawRedactClusterName:      "true",
 			expectedRedactClusterName: true,
 			isErrorExpected:           false,
 		},
 		"redact-version-bad": {
+			listenerType:     TCP,
 			rawRedactVersion: "juan",
 			isErrorExpected:  true,
 			errorMessage:     "invalid value for redact_version",
 		},
 		"redact-version-good": {
+			listenerType:          TCP,
 			rawRedactVersion:      "true",
 			expectedRedactVersion: true,
 			isErrorExpected:       false,
+		},
+		"redact-unix-na": {
+			listenerType:              Unix,
+			rawRedactAddresses:        "true",
+			expectedRedactAddresses:   false,
+			rawRedactClusterName:      "true",
+			expectedRedactClusterName: false,
+			rawRedactVersion:          "true",
+			expectedRedactVersion:     false,
+			isErrorExpected:           false,
 		},
 	}
 
@@ -1033,6 +1068,7 @@ func TestListener_parseRedactionSettings(t *testing.T) {
 
 			// Configure listener with raw values
 			l := &Listener{
+				Type:                 tc.listenerType,
 				RedactAddressesRaw:   tc.rawRedactAddresses,
 				RedactClusterNameRaw: tc.rawRedactClusterName,
 				RedactVersionRaw:     tc.rawRedactVersion,
