@@ -78,6 +78,9 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	defer b.issuersLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
+	var issuersList []string
+	var keysList []string
+
 	if !b.useLegacyBundleCaStorage() {
 		issuers, err := sc.listIssuers()
 		if err != nil {
@@ -95,11 +98,13 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 			if _, err = sc.deleteIssuer(issuer); err != nil {
 				return nil, err
 			}
+			issuersList = append(issuersList, string(issuer))
 		}
 		for _, key := range keys {
 			if _, err = sc.deleteKey(key); err != nil {
 				return nil, err
 			}
+			keysList = append(keysList, string(key))
 		}
 	}
 
@@ -119,9 +124,16 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 
 	// Return a warning about preferring to delete issuers and keys
 	// explicitly versus deleting everything.
-	resp := &logical.Response{}
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"issuers": issuersList,
+			"keys":    keysList,
+		},
+	}
 	resp.AddWarning("DELETE /root deletes all keys and issuers; prefer the new DELETE /key/:key_ref and DELETE /issuer/:issuer_ref for finer granularity, unless removal of all keys and issuers is desired.")
-	go logical.SendEvent(ctx, b, "pki/ca-delete-root")
+	go logical.SendEvent(ctx, b, "pki/ca-delete-root",
+		"issuers", strings.Join(issuersList, ","),
+		"keys", strings.Join(keysList, ","))
 	return resp, nil
 }
 
@@ -387,7 +399,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, issuerID, caErr := sc.fetchCAInfoWithIssuer(issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -454,11 +466,12 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 			logical.EventMetadataOperation, "issuer-sign-intermediate",
 			logical.EventMetadataDataPath, fmt.Sprintf("cert/%s", normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)),
 			"format", format,
-			"issuer_ref", issuerName,
+			"issuer_name", issuerName,
 		}
 		metadata = append(metadata, logical.MakeMetadataPairs(resp.Data,
 			"expiration", "serial_number", "certificate", "issuing_ca", "ca_chain")...)
 		metadata = append(metadata, caInfoBundleToKeys(signingBundle, "issuer_")...)
+		metadata = append(metadata, "issuer_id", string(issuerID))
 		err := logical.SendEvent(ctx, b, "pki/issuer-sign-intermediate", metadata...)
 		if err != nil {
 			b.Logger().Warn("Error sending event", "error", err)
@@ -582,7 +595,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, issuerID, caErr := sc.fetchCAInfoWithIssuer(issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -644,11 +657,12 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	go func() {
 		metadata := []string{
 			logical.EventMetadataOperation, "issuer-sign-self-issued",
-			"issuer_ref", issuerName,
+			"issuer_name", issuerName,
 			"certificate", strings.TrimSpace(string(pemCert)),
 			"issuing_ca", signingCB.Certificate,
 		}
 		metadata = append(metadata, caInfoBundleToKeys(signingBundle, "issuer_")...)
+		metadata = append(metadata, "issuer_id", string(issuerID))
 		err := logical.SendEvent(ctx, b, "pki/issuer-sign-self-issued", metadata...)
 		if err != nil {
 			b.Logger().Warn("Error sending event", "error", err)
