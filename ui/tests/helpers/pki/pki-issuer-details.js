@@ -11,7 +11,7 @@ export const SELECTORS = {
   download: '[data-test-issuer-download]',
   groupTitle: '[data-test-group-title]',
   parsingAlertBanner: '[data-test-parsing-error-alert-banner]',
-  rotateModal: '.hds-modal#pki-rotate-root-modal',
+  rotateModal: '#pki-rotate-root-modal',
   rotateModalGenerate: '[data-test-root-rotate-step-one]',
   rotateRoot: '[data-test-pki-issuer-rotate-root]',
   row: '[data-test-component="info-table-row"]',
