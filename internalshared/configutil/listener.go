@@ -357,6 +357,10 @@ func parseAndClearDurationSecond(rawSetting *interface{}, parsedSetting *time.Du
 // DisableReplicationStatusEndpoints field will be set with the successfully
 // parsed value.
 func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
+	if l.Type != "tcp" {
+		return nil
+	}
+
 	if err := parseAndClearBool(&l.DisableReplicationStatusEndpointsRaw, &l.DisableReplicationStatusEndpoints); err != nil {
 		return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
 	}
