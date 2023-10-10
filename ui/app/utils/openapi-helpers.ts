@@ -101,10 +101,8 @@ export function reducePathsByPathName(pathsInfo: PathsInfo, currentPath: [string
 const apiPathRegex = new RegExp(/\{\w+\}/, 'g');
 
 /**
- * getPathParam takes an OpenAPI url and returns the path param name, if it exists.
+ * getPathParam takes an OpenAPI url and returns the first path param name, if it exists.
  * This is an internal method, but exported for testing.
- * @param pathName string, eg. /users/{username}
- * @returns string path param name
  */
 export function _getPathParam(pathName: string): string | false {
   if (!pathName) return false;
@@ -116,16 +114,16 @@ export function _getPathParam(pathName: string): string | false {
   return params[0]?.replace(new RegExp('{|}', 'g'), '') || false;
 }
 
-export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string) {
+export function pathToHelpUrlSegment(path: string): string {
+  if (!path) return '';
+  return path.replaceAll(apiPathRegex, 'example');
+}
+
+export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string): Path[] {
   if (!itemType) {
     return pathInfo.paths;
   }
   return pathInfo.paths.filter((path) => {
     return itemType === path.itemType;
   });
-}
-
-export function pathToHelpUrlSegment(path: string) {
-  if (!path) return '';
-  return path.replaceAll(apiPathRegex, 'example');
 }
