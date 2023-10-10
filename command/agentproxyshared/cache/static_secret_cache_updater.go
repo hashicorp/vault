@@ -140,21 +140,21 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 			}
 			data, ok := messageMap["data"].(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+				return fmt.Errorf("unexpected event format when decoding 'data' element, message: %s\nerror: %w", string(message), err)
 			}
 			event, ok := data["event"].(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+				return fmt.Errorf("unexpected event format when decoding 'event' element, message: %s\nerror: %w", string(message), err)
 			}
 			metadata, ok := event["metadata"].(map[string]interface{})
 			if !ok {
-				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+				return fmt.Errorf("unexpected event format when decoding 'metadata' element, message: %s\nerror: %w", string(message), err)
 			}
 			modified, ok := metadata["modified"].(string)
 			if ok && modified == "true" {
 				path, ok := metadata["path"].(string)
 				if !ok {
-					return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+					return fmt.Errorf("unexpected event format when decoding 'path' element, message: %s\nerror: %w", string(message), err)
 				}
 				err := updater.updateStaticSecret(ctx, path)
 				if err != nil {
