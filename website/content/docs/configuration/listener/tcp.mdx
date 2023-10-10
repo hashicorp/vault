@@ -202,6 +202,10 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   there is no X-Forwarded-For header or it is empty, the client address will be
   used as-is, rather than the client connection rejected.
 
+- `disable_replication_status_endpoints` `(bool: false)` - If set true, the
+  replication status endpoints will be disabled for requests sent to this
+  listener.
+
 ### `telemetry` parameters
 
 - `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
