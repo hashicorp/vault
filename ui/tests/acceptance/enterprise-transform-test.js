@@ -216,7 +216,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation
     await click('[data-test-edit-link]');
-    assert.dom('.modal.is-active').exists('Confirmation modal appears');
+    assert.dom('.hds-modal#transformation-edit-modal').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
     await settled();
     assert.strictEqual(
