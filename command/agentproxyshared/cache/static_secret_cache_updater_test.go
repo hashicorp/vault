@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+
 	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -136,9 +138,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 func TestOpenWebSocketConnection(t *testing.T) {
 	t.Parallel()
 	// We need a valid cluster for the connection to succeed.
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	updater := testNewStaticSecretCacheUpdater(t, client)

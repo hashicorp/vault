@@ -206,7 +206,7 @@ func (c *LeaseCache) checkCacheForStaticSecretRequest(id string, req *SendReques
 // cache entry, and return nil if it isn't.
 func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendResponse, error) {
 	index, err := c.db.Get(cachememdb.IndexNameID, id)
-	if err == cachememdb.ErrCacheItemNotFound {
+	if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -218,11 +218,15 @@ func (c *LeaseCache) checkCacheForRequest(id string, req *SendRequest) (*SendRes
 
 	var token string
 	if req != nil {
+		// Req will be non-nil if we're checking for a static secret.
+		// Token might still be "" if it's going to an unauthenticated
+		// endpoint, or similar. For static secrets, we only care about
+		// requests with tokens attached, as KV is authenticated.
 		token = req.Token
 	}
 
 	if token != "" {
-		// This is a static secret check. We need to ensure that this token
+		// We are checking for a static secret. We need to ensure that this token
 		// has previously demonstrated access to this static secret.
 		// We could check the capabilities cache here, but since these
 		// indexes should be in sync, this saves us an extra cache get.
@@ -465,7 +469,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	case secret.LeaseID != "":
 		c.logger.Debug("processing lease response", "method", req.Request.Method, "path", req.Request.URL.Path)
 		entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			// If the lease belongs to a token that is not managed by the lease cache,
 			// return the response without caching it.
 			c.logger.Debug("pass-through lease response; token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -491,7 +495,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, req.Token)
-			if err == cachememdb.ErrCacheItemNotFound {
+			if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 				// If the lease belongs to a token that is not managed by the lease cache,
 				// return the response without caching it.
 				c.logger.Debug("pass-through lease response; parent token not managed by lease cache", "method", req.Request.Method, "path", req.Request.URL.Path)
@@ -969,7 +973,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 
 		// Get the context for the given token and cancel its context
 		index, err := c.db.Get(cachememdb.IndexNameToken, in.Token)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			return nil
 		}
 		if err != nil {
@@ -988,7 +992,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameTokenAccessor, in.TokenAccessor)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			return nil
 		}
 		if err != nil {
@@ -1007,7 +1011,7 @@ func (c *LeaseCache) handleCacheClear(ctx context.Context, in *cacheClearInput) 
 		// Get the cached index and cancel the corresponding lifetime watcher
 		// context
 		index, err := c.db.Get(cachememdb.IndexNameLease, in.Lease)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			return nil
 		}
 		if err != nil {
@@ -1143,7 +1147,7 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 
 		// Kill the lifetime watchers of the revoked token
 		index, err := c.db.Get(cachememdb.IndexNameToken, token)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			return true, nil
 		}
 		if err != nil {
@@ -1391,7 +1395,7 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 	switch {
 	case secret.LeaseID != "":
 		entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
-		if err == cachememdb.ErrCacheItemNotFound {
+		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			return fmt.Errorf("could not find parent Token %s for req path %s", index.RequestToken, index.RequestPath)
 		}
 		if err != nil {
@@ -1405,7 +1409,7 @@ func (c *LeaseCache) restoreLeaseRenewCtx(index *cachememdb.Index) error {
 		var parentCtx context.Context
 		if !secret.Auth.Orphan {
 			entry, err := c.db.Get(cachememdb.IndexNameToken, index.RequestToken)
-			if err == cachememdb.ErrCacheItemNotFound {
+			if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 				// If parent token is not managed by the cache, child shouldn't be
 				// either.
 				if entry == nil {

@@ -79,16 +79,20 @@ func NewStaticSecretCacheUpdater(conf *StaticSecretCacheUpdaterConfig) (*StaticS
 		return nil, errors.New("nil configuration provided")
 	}
 
-	if conf.LeaseCache == nil || conf.Logger == nil {
-		return nil, fmt.Errorf("missing configuration required params: %v", conf)
+	if conf.LeaseCache == nil {
+		return nil, fmt.Errorf("nil Lease Cache (a required parameter): %v", conf)
+	}
+
+	if conf.Logger == nil {
+		return nil, fmt.Errorf("nil Logger (a required parameter): %v", conf)
 	}
 
 	if conf.Client == nil {
-		return nil, fmt.Errorf("nil API client")
+		return nil, fmt.Errorf("nil API client (a required parameter): %v", conf)
 	}
 
 	if conf.TokenSink == nil {
-		return nil, fmt.Errorf("nil token sink")
+		return nil, fmt.Errorf("nil token sink (a required parameter): %v", conf)
 	}
 
 	return &StaticSecretCacheUpdater{
@@ -118,46 +122,51 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	// TODO: to be implemented in a future PR
 
 	for {
-		_, message, err := conn.Read(ctx)
-		if err != nil {
-			// The caller of this function should make the decision on if to retry. If it does, then
-			// the websocket connection will be retried, and we will check for missed events.
-			return fmt.Errorf("error when attempting to read from event stream, reopening websocket: %w", err)
-		}
-		updater.logger.Trace("received event", "message", string(message))
-		messageMap := make(map[string]interface{})
-		err = json.Unmarshal(message, &messageMap)
-		if err != nil {
-			return fmt.Errorf("error when unmarshaling event, message: %s\nerror: %w", string(message), err)
-		}
-		data, ok := messageMap["data"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
-		}
-		event, ok := data["event"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
-		}
-		metadata, ok := event["metadata"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
-		}
-		modified, ok := metadata["modified"].(string)
-		if ok && modified == "true" {
-			path, ok := metadata["path"].(string)
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			_, message, err := conn.Read(ctx)
+			if err != nil {
+				// The caller of this function should make the decision on if to retry. If it does, then
+				// the websocket connection will be retried, and we will check for missed events.
+				return fmt.Errorf("error when attempting to read from event stream, reopening websocket: %w", err)
+			}
+			updater.logger.Trace("received event", "message", string(message))
+			messageMap := make(map[string]interface{})
+			err = json.Unmarshal(message, &messageMap)
+			if err != nil {
+				return fmt.Errorf("error when unmarshaling event, message: %s\nerror: %w", string(message), err)
+			}
+			data, ok := messageMap["data"].(map[string]interface{})
 			if !ok {
 				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 			}
-			err := updater.updateStaticSecret(ctx, path)
-			if err != nil {
-				// While we are kind of 'missing' an event this way, re-calling this function will
-				// result in the secret remaining up to date.
+			event, ok := data["event"].(map[string]interface{})
+			if !ok {
 				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
 			}
-		} else {
-			// This is an event we're not interested in, ignore it and
-			// carry on.
-			continue
+			metadata, ok := event["metadata"].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+			}
+			modified, ok := metadata["modified"].(string)
+			if ok && modified == "true" {
+				path, ok := metadata["path"].(string)
+				if !ok {
+					return fmt.Errorf("unexpected event format, message: %s\nerror: %w", string(message), err)
+				}
+				err := updater.updateStaticSecret(ctx, path)
+				if err != nil {
+					// While we are kind of 'missing' an event this way, re-calling this function will
+					// result in the secret remaining up to date.
+					return fmt.Errorf("error updating static secret: path: %q, message: %s error: %w", path, message, err)
+				}
+			} else {
+				// This is an event we're not interested in, ignore it and
+				// carry on.
+				continue
+			}
 		}
 	}
 
@@ -178,7 +187,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 	updater.logger.Debug("received update static secret request", "path", path, "indexId", indexId)
 
 	index, err := updater.leaseCache.db.Get(cachememdb.IndexNameID, indexId)
-	if err == cachememdb.ErrCacheItemNotFound {
+	if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 		// This event doesn't correspond to a secret in our cache
 		// so this is a no-op.
 		return nil
@@ -291,14 +300,14 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 
 	// Populate these now to avoid recreating them in the upcoming for loop.
 	headers := updater.client.Headers()
-	url := webSocketURL.String()
+	wsURL := webSocketURL.String()
 	httpClient := updater.client.CloneConfig().HttpClient
 
 	// We do ten attempts, to ensure we follow forwarding to the leader.
 	var conn *websocket.Conn
 	for attempt := 0; attempt < 10; attempt++ {
 		var resp *http.Response
-		conn, resp, err = websocket.Dial(ctx, url, &websocket.DialOptions{
+		conn, resp, err = websocket.Dial(ctx, wsURL, &websocket.DialOptions{
 			HTTPClient: httpClient,
 			HTTPHeader: headers,
 		})
@@ -310,7 +319,7 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 		case resp == nil:
 			break
 		case resp.StatusCode == http.StatusTemporaryRedirect:
-			url = resp.Header.Get("Location")
+			wsURL = resp.Header.Get("Location")
 			continue
 		default:
 			break
@@ -319,16 +328,20 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 
 	if err != nil {
 		return nil, fmt.Errorf("error returned when opening event stream web socket to %s, ensure auto-auth token"+
-			" has correct permissions and Vault is version 1.16 or above: %w", url, err)
+			" has correct permissions and Vault is version 1.16 or above: %w", wsURL, err)
 	}
 
 	if conn == nil {
-		return nil, errors.New(fmt.Sprintf("too many redirects as part of establishing web socket connection to %s", url))
+		return nil, errors.New(fmt.Sprintf("too many redirects as part of establishing web socket connection to %s", wsURL))
 	}
 
 	return conn, nil
 }
 
+// Run is intended to be the method called by Vault Proxy, that runs the subsystem.
+// Once a token is provided to the sink, we will start the websocket and start consuming
+// events and updating secrets.
+// Run will shut down gracefully when the context is cancelled.
 func (updater *StaticSecretCacheUpdater) Run(ctx context.Context) error {
 	updater.logger.Info("starting static secret cache updater subsystem")
 	defer func() {
