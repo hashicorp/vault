@@ -7,8 +7,9 @@ import openApiDrivenAttributes from '../helpers/openapi-driven-attributes';
 
 /**
  * This set of tests is for ensuring that backend changes to the OpenAPI spec
- * are known by UI developers and adequately addressed in the UI. In addition
- * to updating the response
+ * are known by UI developers and adequately addressed in the UI. When changes
+ * are detected from this set of tests, they should be updated to pass and
+ * smoke tested to ensure changes to not break the GUI workflow.
  */
 module('Acceptance | OpenAPI path help test', function (hooks) {
   setupApplicationTest(hooks);
