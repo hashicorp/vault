@@ -2,4 +2,9 @@
 
 Metric type | Value   | Description
 ----------- | ------- | -----------
-gauge       | number  | Index of the last remote write-ahead log.  Note this is not emitted on standby nodes.
+gauge       | number  | Index of the last remote write-ahead log.
+
+
+<Note>
+  Standby nodes do not emit `last_remote_wal` details.
+</Note>
