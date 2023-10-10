@@ -793,7 +793,7 @@ func testConfig_Sanitized(t *testing.T) {
 					"address":          "127.0.0.1:443",
 					"chroot_namespace": "admin/",
 				},
-				"type": "tcp",
+				"type": configutil.TCP,
 			},
 		},
 		"log_format":       "",
