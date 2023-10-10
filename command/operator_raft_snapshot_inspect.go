@@ -284,26 +284,6 @@ func (c *OperatorRaftSnapshotInspectCommand) parseState(r io.Reader) (SnapshotIn
 	return info, nil
 }
 
-func (c *OperatorRaftSnapshotInspectCommand) enhance(file io.Reader) (SnapshotInfo, error) {
-	info := SnapshotInfo{
-		StatsKV:      make(map[string]typeStats),
-		TotalCountKV: 0,
-		TotalSizeKV:  0,
-	}
-
-	handler := func(s *pb.StorageEntry, read int) error {
-		c.kvEnhance(s, &info, read)
-		return nil
-	}
-
-	_, err := ReadSnapshot(file, handler)
-	if err != nil {
-		return info, err
-	}
-
-	return info, nil
-}
-
 // ReadSnapshot decodes each message type and utilizes the handler function to
 // process each message type individually
 func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry, read int) error) (*iradix.Tree, error) {
