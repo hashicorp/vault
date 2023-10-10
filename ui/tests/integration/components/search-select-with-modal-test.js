@@ -144,7 +144,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     );
     await component.selectOption();
 
-    assert.dom('.hds-modal#search-select-modal').exists('modal is active');
+    assert.dom('#search-select-modal').exists('modal is active');
     assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
