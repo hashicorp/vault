@@ -22,9 +22,10 @@ audit logs instead of reopening the file paths even when you send
   deleted file and you will lose all data logged the audit file after it was
   tagged for deletion.
 
-<Warning title="Missing Audit Entries">
-  If the file was deleted (rather than moved locally) then audit entries written
-  by Vault will be lost.
+<Warning title="You may lose audit entries">
+  If you delete the audit file on rotation, rather than moving it, you
+  will lose any entries written by Vault after rotation when the OS
+  permanently deletes the file.
 </Warning>
 
 The issue with file audit devices not honoring SIGHUP signals is fixed as a patch release in Vault `1.15.1`.
