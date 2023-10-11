@@ -440,7 +440,9 @@ telemetry {
 ```
 
 ### API: `/sys/health`
-In the following call to `/sys/health/` notice that `cluster_name` and `version` are both redacted. The `cluster_name` field is fully omitted from the response and `version` is the empty string (`""`).
+In the following call to `/sys/health/` notice that `cluster_name` and `version`
+are both redacted. The `cluster_name` field is fully omitted from the response
+and `version` is the empty string (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
 
 ```json
@@ -459,7 +461,8 @@ In the following call to `/sys/health/` notice that `cluster_name` and `version`
 
 
 ### API: `sys/leader`
-In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address` are both redacted and set to the empty string (`""`).
+In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address`
+are both redacted and set to the empty string (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
 
 ```json
@@ -479,7 +482,9 @@ In the following call to `/sys/leader/` notice that `leader_address` and `leader
 
 ### API: `sys/seal-status`
 
-In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`, and `version` are all redacted. The `cluster_name` field is fully omitted from the response while `build_date` and `version` are empty strings (`""`).
+In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`,
+and `version` are all redacted. The `cluster_name` field is fully omitted from
+the response while `build_date` and `version` are empty strings (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
 
 ```json
@@ -500,9 +505,13 @@ In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_
 }
 ```
 
-
 ### CLI: `vault status`
-The CLI command `vault status` uses endpoints that support redacting data, so the output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address` .`Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint returned the empty string, and  `Active Node Address` shows as `<none>` because it was omitted from the API response.
+The CLI command `vault status` uses endpoints that support redacting data, so the
+output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address`.
+`Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint
+returned the empty string, and  `Active Node Address` shows as `<none>` because
+it was omitted from the API response.
+
 ```
 Key                     Value
 ---                     -----
@@ -522,9 +531,7 @@ Raft Committed Index    219
 Raft Applied Index      219
 ```
 
-
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
 [api-addr]: /vault/docs/configuration#api_addr
 [cluster-addr]: /vault/docs/configuration#cluster_addr
 [go-tls-blog]: https://go.dev/blog/tls-cipher-suites
-
