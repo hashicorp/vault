@@ -1102,7 +1102,7 @@
               },
               {
                 "title": "Static Secret Caching",
-                "path": "agent-and-proxy/proxy/static-secret-caching"
+                "path": "agent-and-proxy/proxy/caching/static-secret-caching"
               },
               {
                 "title": "Persistent Caching",
