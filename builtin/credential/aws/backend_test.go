@@ -1504,7 +1504,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 		"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(request.URL.String())),
 		"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
 		"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
-		"request_role":            roleName,
+		"role":                    roleName,
 	}, nil
 }
 

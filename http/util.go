@@ -21,16 +21,19 @@ import (
 )
 
 var (
+	// TODO remove once entWrapGenericHandler is implemented in ENT
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
 		return wrapGenericHandler(core, in, props)
 	}
 
+	// TODO remove once entAdditionalRoutes is implemented in ENT
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
 	nonVotersAllowed = false
 
+	// TODO remove once entAdjustResponse is implemented in ENT
 	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
 )
 
@@ -127,6 +130,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 		handler.ServeHTTP(w, r)
 		return
+	})
+}
+
+func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(context.WithValue(r.Context(), "disable_replication_status_endpoints", true))
+
+		h.ServeHTTP(w, request)
 	})
 }
 

@@ -74,19 +74,27 @@
     </div>
   </div>
 </form>
-<Modal @title="Copy your generated key" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-datakey-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your generated key
+    </M.Header>
+    <M.Body>
       {{#if (eq @param "plaintext")}}
         <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
         <p class="sub-text">Plaintext is base64 encoded</p>
-        <Hds::Copy::Snippet class="has-bottom-margin-m" @textToCopy={{@plaintext}} @color="secondary" />
+        <Hds::Copy::Snippet
+          class="has-bottom-margin-m"
+          @textToCopy={{@plaintext}}
+          @color="secondary"
+          @container="#transit-datakey-modal"
+        />
       {{/if}}
       <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
-      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" />
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
-  </footer>
-</Modal>
+      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-datakey-modal" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

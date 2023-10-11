@@ -780,6 +780,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
 		"log_requests_level":                  "basic",
+		"user_lockout_log_interval":           0 * time.Second,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
@@ -792,7 +793,7 @@ func testConfig_Sanitized(t *testing.T) {
 					"address":          "127.0.0.1:443",
 					"chroot_namespace": "admin/",
 				},
-				"type": "tcp",
+				"type": configutil.TCP,
 			},
 		},
 		"log_format":       "",
@@ -886,6 +887,18 @@ listener "tcp" {
     enable_quit = true
   }
   chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
+}
+listener "unix" {
+  address = "/var/run/vault.sock"
+  socket_mode = "644"
+  socket_user = "1000"
+  socket_group = "1000"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
 }`))
 
 	config := Config{
@@ -899,16 +912,14 @@ listener "tcp" {
 	config.Listeners = listeners
 	// Track which types of listener were found.
 	for _, l := range config.Listeners {
-		config.found(l.Type, l.Type)
+		config.found(l.Type.String(), l.Type.String())
 	}
 
-	if len(config.Listeners) == 0 {
-		t.Fatalf("expected at least one listener in the config")
-	}
-	listener := config.Listeners[0]
-	if listener.Type != "tcp" {
-		t.Fatalf("expected tcp listener in the config")
-	}
+	require.Len(t, config.Listeners, 2)
+	tcpListener := config.Listeners[0]
+	require.Equal(t, configutil.TCP, tcpListener.Type)
+	unixListner := config.Listeners[1]
+	require.Equal(t, configutil.Unix, unixListner.Type)
 
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
@@ -938,6 +949,19 @@ listener "tcp" {
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
+				},
+				{
+					Type:              "unix",
+					Address:           "/var/run/vault.sock",
+					SocketMode:        "644",
+					SocketUser:        "1000",
+					SocketGroup:       "1000",
+					RedactAddresses:   false,
+					RedactClusterName: false,
+					RedactVersion:     false,
 				},
 			},
 		},

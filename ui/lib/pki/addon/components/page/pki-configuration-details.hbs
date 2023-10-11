@@ -111,19 +111,18 @@
 
 {{#if this.showDeleteAllIssuers}}
   <ConfirmationModal
-    @title="Delete All Issuers?"
+    @title="Delete all issuers?"
     @toConfirmMsg="deleting all issuers and keys."
-    @buttonText="Confirm"
     @confirmText="delete-all"
     @isActive={{this.showDeleteAllIssuers}}
     @onClose={{action (mut this.showDeleteAllIssuers) false}}
     @onConfirm={{this.deleteAllIssuers}}
   >
-    <section class="modal-card-custom">
+    <p>
       This endpoint deletes
       <strong>all</strong>
       issuers and keys within the mount. It is highly recommended to use the individual delete operations instead. This mount
       will be unusable until new issuers and keys are provisioned.
-    </section>
+    </p>
   </ConfirmationModal>
 {{/if}}

@@ -28,7 +28,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     for (const attribute in backend) {
       struct[attribute] = backend[attribute];
     }
-    //queryRecord adds path to the response
+    // queryRecord adds path to the response
     if (path !== null && !struct.path) {
       struct.path = path;
     }
@@ -40,6 +40,13 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     // strip the trailing slash off of the path so we
     // can navigate to it without getting `//` in the url
     struct.id = struct.path.slice(0, -1);
+
+    if (backend?.type === 'kv' && !backend?.options?.version) {
+      // enabling kv in the CLI without a version flag mounts a v1 engine
+      // however, when no version is specified the options key is null
+      // we explicitly set v1 here, otherwise v2 is pulled from the ember model default
+      struct.options = { version: '1', ...struct.options };
+    }
     return struct;
   },
 

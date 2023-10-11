@@ -56,16 +56,22 @@
   </div>
 </form>
 {{#if @isModalActive}}
-  <Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-    <section class="modal-card-body">
-      <div class="box is-shadowless is-fullwidth is-sideless">
-        <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
-        <p class="sub-text">Plaintext is base64 encoded</p>
-        <Hds::Copy::Snippet @textToCopy={{@plaintext}} @color="secondary" data-test-encrypted-value="plaintext" />
-      </div>
-    </section>
-    <footer class="modal-card-foot">
-      <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
-    </footer>
-  </Modal>
+  <Hds::Modal id="transit-decrypt-modal" @onClose={{fn (mut @isModalActive) false}} data-test-decrypt-modal as |M|>
+    <M.Header>
+      Copy your unwrapped data
+    </M.Header>
+    <M.Body>
+      <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+      <p class="sub-text">Plaintext is base64 encoded</p>
+      <Hds::Copy::Snippet
+        @textToCopy={{@plaintext}}
+        @color="secondary"
+        @container="#transit-decrypt-modal"
+        data-test-encrypted-value="plaintext"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}
