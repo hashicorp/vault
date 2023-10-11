@@ -275,6 +275,8 @@ func (t ListenerType) Normalize() ListenerType {
 // String returns the string version of a listener type.
 func (t ListenerType) String() string {
 	return string(t.Normalize())
+}
+
 // parseAndClearBool parses a raw setting as a bool configuration parameter. If
 // the raw value is successfully parsed, the parsedSetting argument is set to it
 // and the rawSetting argument is cleared. Otherwise, the rawSetting argument is
@@ -357,7 +359,7 @@ func parseAndClearDurationSecond(rawSetting *interface{}, parsedSetting *time.Du
 // DisableReplicationStatusEndpoints field will be set with the successfully
 // parsed value.
 func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
-	if l.Type != "tcp" {
+	if l.Type != TCP {
 		return nil
 	}
 
