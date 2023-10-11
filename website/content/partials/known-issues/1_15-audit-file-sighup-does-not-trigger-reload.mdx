@@ -6,8 +6,9 @@
 
 #### Issue
 
-Sending [`SIGHUP`](/vault/docs/audit/file#log-file-rotation) to Vault after rotating
-an audit log file doesn't reopen the file path as expected.
+The new underlying event framework for Vault causes Vault to continue using 
+audit logs instead of reopening the file paths even when you send 
+[`SIGHUP`](/vault/docs/audit/file#log-file-rotation) after log rotation:
 
 If the file was moved (renamed), then Vault will continue to write data to the location
 of the moved file.
