@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
@@ -111,6 +116,11 @@ export default class FormFieldComponent extends Component {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
   }
 
   onChange() {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -58,7 +63,7 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
           .dom(`[data-test-row-label="${field.label}"]`)
           .hasText(field.label, `${field.label} label renders`);
         const modelValue = this.model[field.key];
-        const value = field.key.includes('Ttl') ? duration([modelValue], {}) : modelValue;
+        const value = field.key.includes('Ttl') ? duration([modelValue]) : modelValue;
         assert.dom(`[data-test-row-value="${field.label}"]`).hasText(value, `${field.label} value renders`);
       });
     };

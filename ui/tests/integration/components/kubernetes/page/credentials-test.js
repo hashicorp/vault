@@ -1,16 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { Response } from 'miragejs';
 import hbs from 'htmlbars-inline-precompile';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | kubernetes | Page::Credentials', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kubernetes');
   setupMirage(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
     this.backend = 'kubernetes-test';
     this.roleName = 'role-0';
@@ -43,6 +53,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       );
     };
   });
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
 
   test('it should display generate credentials form', async function (assert) {
     await this.renderComponent();
@@ -69,16 +82,14 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
 
-    assert.dom('[data-test-error] .alert-banner-message-body').hasText("'kubernetes_namespace' is required");
+    assert.dom('[data-test-message-error-description]').hasText("'kubernetes_namespace' is required");
 
     this.roleName = 'role-2';
     this.getCreateCredentialsError(this.roleName);
 
     await this.renderComponent();
     await click('[data-test-generate-credentials-button]');
-    assert
-      .dom('[data-test-error] .alert-banner-message-body')
-      .hasText(`role '${this.roleName}' does not exist`);
+    assert.dom('[data-test-message-error-description]').hasText(`role '${this.roleName}' does not exist`);
   });
 
   test('it should show correct credential information after generate credentials is clicked', async function (assert) {
@@ -109,9 +120,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await click('[data-test-generate-credentials-button]');
 
     assert.dom('[data-test-credentials-header]').hasText('Credentials');
-    assert.dom('[data-test-alert-banner] .message-title').hasText('Warning');
+    assert.dom('[data-test-k8-alert-title]').hasText('Warning');
     assert
-      .dom('[data-test-alert-banner] .alert-banner-message-body')
+      .dom('[data-test-k8-alert-message]')
       .hasText("You won't be able to access these credentials later, so please copy them now.");
     assert.dom('[data-test-row-label="Service account token"]').hasText('Service account token');
     await click('[data-test-value-div="Service account token"] [data-test-button]');
@@ -124,7 +135,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.dom('[data-test-value-div="Service account name"]').exists();
 
     assert.dom('[data-test-row-label="Lease expiry"]').hasText('Lease expiry');
-    assert.dom('[data-test-value-div="Lease expiry"]').exists();
+    assert.dom('[data-test-value-div="Lease expiry"]').hasText('April 3rd 2018, 3:15:30 PM');
     assert.dom('[data-test-row-label="lease_id"]').hasText('lease_id');
     assert
       .dom('[data-test-value-div="lease_id"] [data-test-row-value="lease_id"]')

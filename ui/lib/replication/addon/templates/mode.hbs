@@ -1,7 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <section class="section">
   <div class="container is-widescreen">
     {{#if (and (eq this.model.drMode "secondary") (eq this.model.drModeInit "primary"))}}
-      <nav class="navbar" aria-label="loading nav"></nav>
       <LayoutLoading />
     {{else}}
       {{#if this.model.replicationAttrs.replicationEnabled}}

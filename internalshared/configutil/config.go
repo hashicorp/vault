@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 import (
@@ -20,7 +23,9 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
-	UserLockouts []*UserLockout `hcl:"-"`
+	UserLockouts              []*UserLockout `hcl:"-"`
+	UserLockoutLogInterval    time.Duration  `hcl:"-"`
+	UserLockoutLogIntervalRaw interface{}    `hcl:"user_lockout_log_interval"`
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -38,18 +43,20 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
+	LogFile              string      `hcl:"log_file"`
 	LogFormat            string      `hcl:"log_format"`
 	LogLevel             string      `hcl:"log_level"`
-	LogFile              string      `hcl:"log_file"`
-	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
 	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
 	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
+
+	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {
@@ -82,6 +89,14 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		result.DisableMlockRaw = nil
 	}
 
+	if result.UserLockoutLogIntervalRaw != nil {
+		if result.UserLockoutLogInterval, err = parseutil.ParseDurationSecond(result.UserLockoutLogIntervalRaw); err != nil {
+			return nil, err
+		}
+		result.FoundKeys = append(result.FoundKeys, "UserLockoutLogInterval")
+		result.UserLockoutLogIntervalRaw = nil
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -96,7 +111,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		result.found("seal", "Seal")
-		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
+		if err := parseKMS(&result.Seals, o, "seal", 5); err != nil {
 			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
@@ -117,8 +132,16 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		result.found("listener", "Listener")
-		if err := ParseListeners(&result, o); err != nil {
+		listeners, err := ParseListeners(o)
+		if err != nil {
 			return nil, fmt.Errorf("error parsing 'listener': %w", err)
+		}
+		// Update the shared config
+		result.Listeners = listeners
+
+		// Track which types of listener were found.
+		for _, l := range result.Listeners {
+			result.found(l.Type, l.Type)
 		}
 	}
 
@@ -164,16 +187,28 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"disable_mlock": c.DisableMlock,
+		"default_max_request_duration":  c.DefaultMaxRequestDuration,
+		"disable_mlock":                 c.DisableMlock,
+		"log_level":                     c.LogLevel,
+		"log_format":                    c.LogFormat,
+		"pid_file":                      c.PidFile,
+		"cluster_name":                  c.ClusterName,
+		"administrative_namespace_path": c.AdministrativeNamespacePath,
+		"user_lockout_log_interval":     c.UserLockoutLogInterval,
+	}
 
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
-
-		"pid_file": c.PidFile,
-
-		"cluster_name": c.ClusterName,
+	// Optional log related settings
+	if c.LogFile != "" {
+		result["log_file"] = c.LogFile
+	}
+	if c.LogRotateBytes != 0 {
+		result["log_rotate_bytes"] = c.LogRotateBytes
+	}
+	if c.LogRotateDuration != "" {
+		result["log_rotate_duration"] = c.LogRotateDuration
+	}
+	if c.LogRotateMaxFiles != 0 {
+		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
 	// Sanitize listeners
@@ -212,7 +247,12 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			cleanSeal := map[string]interface{}{
 				"type":     s.Type,
 				"disabled": s.Disabled,
+				"name":     s.Name,
 			}
+			if s.Priority > 0 {
+				cleanSeal["priority"] = s.Priority
+			}
+
 			sanitizedSeals = append(sanitizedSeals, cleanSeal)
 		}
 		result["seals"] = sanitizedSeals
@@ -250,6 +290,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"lease_metrics_epsilon":                  c.Telemetry.LeaseMetricsEpsilon,
 			"num_lease_metrics_buckets":              c.Telemetry.NumLeaseMetricsTimeBuckets,
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
+			"add_mount_point_rollback_metrics":       c.Telemetry.RollbackMetricsIncludeMountPoint,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

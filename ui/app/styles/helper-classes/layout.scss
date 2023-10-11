@@ -1,0 +1,109 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* This helper includes styles relating to: display, width, height, float, visibility, position, alignment. */
+
+// display
+.is-block {
+  display: block !important;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.is-inline {
+  display: inline !important;
+}
+
+.is-inline-block {
+  display: inline-block !important;
+}
+
+// position
+.top-right-absolute {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
+.is-in-bottom-right {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+.is-relative {
+  position: relative;
+}
+
+.top-xxs {
+  top: $spacing-xxs;
+}
+
+// visibility
+.is-invisible {
+  visibility: hidden;
+}
+
+// width and height
+.is-fullwidth {
+  width: 100%;
+}
+
+.is-three-fourths-width {
+  width: 75%;
+}
+
+.is-auto-width {
+  width: auto;
+}
+
+.is-min-width-0 {
+  min-width: 0;
+}
+
+.is-medium-width {
+  width: $desktop / 3;
+}
+
+.is-medium-height {
+  height: 125px;
+}
+
+// float
+.is-pulled-left {
+  float: left !important;
+}
+
+.is-pulled-right {
+  float: right !important;
+}
+
+// alignment
+.is-v-centered {
+  vertical-align: middle;
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .is-hidden-tablet {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .is-hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 1215px) {
+  .is-widescreen:not(.is-max-desktop) {
+    max-width: 1152px;
+  }
+}

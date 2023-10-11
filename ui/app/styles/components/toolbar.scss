@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .tabs-container + .toolbar {
   border-top: 0;
 }
@@ -60,6 +65,10 @@
   display: flex;
   flex: 1;
   white-space: nowrap;
+  &:has(.hds-modal) {
+    // toolbar buttons that open/close a modal pass attrs to the modal content
+    white-space: wrap;
+  }
 }
 
 .toolbar-filters + .toolbar-actions {
@@ -126,16 +135,4 @@ a.disabled.toolbar-link {
   height: 32px;
   margin: 0 $spacing-xs;
   width: 0;
-}
-
-.version-diff-toolbar {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-s;
-
-  .diff-status {
-    display: flex;
-    direction: rtl;
-    align-items: center;
-  }
 }

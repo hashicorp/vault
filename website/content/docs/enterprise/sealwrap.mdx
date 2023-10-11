@@ -6,9 +6,9 @@ description: |-
   encryption for supporting seals.
 ---
 
-# Seal Wrap
+# Seal wrap
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Vault Enterprise features a mechanism to wrap values with an extra layer of
 encryption for supporting [seals](/vault/docs/configuration/seal). This adds an
@@ -37,7 +37,7 @@ wrapping status will change. Similarly, if the flag is removed, it will be a
 lazy upgrade (which is the case when initially upgrading to a seal
 wrap-supporting version of Vault).
 
-## Activating Seal Wrapping
+## Activating seal wrapping
 
 For some values, seal wrapping is always enabled with a supporting seal. This
 includes the recovery key, any stored key shares, the root key, the keyring,
@@ -59,7 +59,7 @@ from HSMs or remote seals. However, values will be cached in memory
 un-seal-wrapped (but still encrypted by Vault's built-in cryptographic barrier)
 in Vault, which will mitigate this for read-heavy workloads.
 
-## Seal Wrap and Replication
+## Seal wrap and replication
 
 Seal wrapping takes place below the replication logic. As a result, it is
 transparent to replication. Replication will convey which values should be
@@ -72,7 +72,7 @@ In addition, it is possible to replicate from a Shamir-protected primary
 cluster to clusters that use HSMs when seal wrapping is required in downstream
 datacenters but not in the primary.
 
-## Wrapped Parameters
+## Wrapped parameters
 
 Each plugin (whether secret or auth) maintains control over parameters it
 feels are best to Seal Wrap. These are usually just a few core values as
@@ -89,7 +89,7 @@ Some examples of places where seal wrapping is used include:
   keys) and its CA keys.
 - [Transit](/vault/docs/secrets/transit) for storing keys and their policy.
 
-## FIPS Status
+## FIPS status
 
 See the [FIPS-specific Seal Wrap documentation](/vault/docs/enterprise/fips/sealwrap)
 for more information about using Seal Wrapping to achieve FIPS 140-2 compliance.

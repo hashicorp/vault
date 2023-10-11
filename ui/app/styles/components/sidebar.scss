@@ -1,104 +1,26 @@
-.is-sidebar {
-  border-right: $base-border;
-  display: flex;
-  flex: 1 1 auto;
-  margin: 0.75rem 0.75rem 0.75rem 0;
-  padding: 0 0 0 0.75rem;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-  @include until($tablet) {
-    background-color: $white;
-    bottom: 0;
-    left: -1.5rem;
-    margin: 0;
-    max-width: $drawer-width;
-    padding: $spacing-m 0 0;
-    position: absolute;
-    right: $size-2;
-    transform: translateX(-100%);
-    transition: transform $speed;
-    top: 0;
-    z-index: 5;
-  }
+.sidebar-user-menu {
+  align-self: center;
 
-  &.is-active {
-    @include until($tablet) {
-      transform: translateX(0);
+  .popup-menu-content {
+    .menu-label {
+      color: $black;
+      font-size: 14px;
+      font-weight: $font-weight-bold;
+      text-transform: unset;
     }
-
-    .menu-toggle {
-      left: auto;
-      right: $size-10;
+    .token-alert {
+      padding: $spacing-xs;
     }
   }
 
-  .menu-toggle {
-    color: $blue;
-    cursor: pointer;
-    display: none;
-    margin-left: $size-10;
-    left: 100%;
-    position: absolute;
-    top: 0;
-
-    @include until($tablet) {
-      display: block;
-    }
-
-    .button {
-      min-width: 0;
-    }
-  }
-
-  .menu {
-    flex: 1 1 auto;
-    padding-top: 5.25rem;
-    position: relative;
-
-    @include until($tablet) {
-      padding-top: $size-6;
-    }
-  }
-
-  .menu-label {
-    color: $grey-light;
-    font-weight: $font-weight-bold;
-    font-size: $size-small;
-    line-height: 1;
-    margin-bottom: $size-8;
-    padding-left: $size-5;
-  }
-
-  .menu-list {
-    border-top: $base-border;
-    padding: $size-9 0;
-
-    @include until($tablet) {
-      padding-top: $size-4;
-    }
-
-    li {
-      a {
-        &.active {
-          border-right: 4px solid $blue;
-          color: $blue;
-        }
-      }
-    }
-
-    a {
-      color: $grey-dark;
-      padding-left: $size-5;
-      transition: 250ms border-width;
-
-      &.active {
-        border-right: 4px solid $blue;
-      }
-    }
-
-    .tag {
-      @include from($fullhd) {
-        float: right;
-      }
-    }
+  .confirm-action-message p {
+    padding-top: $size-10;
+    font-weight: $font-weight-semibold;
+    color: $black;
   }
 }

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <button type="button" class="toolbar-link" {{on "click" this.downloadCert}} data-test-pki-cert-download-button>
@@ -18,10 +23,23 @@
   </ToolbarActions>
 </Toolbar>
 
+{{#if @model.privateKey}}
+  <div class="has-top-margin-m">
+    <Hds::Alert data-test-cert-detail-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+      <A.Title>Next steps</A.Title>
+      <A.Description>
+        The
+        <code>private_key</code>
+        is only available once. Make sure you copy and save it now.
+      </A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
 {{#each @model.formFields as |field|}}
-  {{#if (eq field.name "certificate")}}
-    <InfoTableRow @label="Certificate">
-      <MaskedInput @value={{@model.certificate}} @displayOnly={{true}} @allowCopy={{true}} />
+  {{#if field.options.isCertificate}}
+    <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
+      <CertificateCard @data={{get @model field.name}} />
     </InfoTableRow>
   {{else if (eq field.name "serialNumber")}}
     <InfoTableRow @label="Serial number">
@@ -37,6 +55,8 @@
     />
   {{/if}}
 {{/each}}
+
+<ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
 
 {{#if @onBack}}
   <div class="field is-grouped box is-fullwidth is-bottomless">

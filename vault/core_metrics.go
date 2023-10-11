@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -111,6 +114,29 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "dr", "secondary"}, 0, nil)
+			}
+
+			if haState == consts.Active {
+				reindexState := c.ReindexStage()
+				if reindexState != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, float32(*reindexState), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "reindex_stage"}, 0, nil)
+				}
+
+				buildProgress := c.BuildProgress()
+				if buildProgress != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, float32(*buildProgress), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_progress"}, 0, nil)
+				}
+
+				buildTotal := c.BuildTotal()
+				if buildTotal != nil {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, float32(*buildTotal), nil)
+				} else {
+					c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "build_total"}, 0, nil)
+				}
 			}
 
 			// If we're using a raft backend, emit raft metrics
@@ -296,6 +322,12 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
+			"",
+		},
+		{
+			[]string{"policy", "configured", "count"},
+			[]metrics.Label{{"gauge", "number_policies_by_type"}},
+			c.configuredPoliciesGaugeCollector,
 			"",
 		},
 	}
@@ -561,4 +593,42 @@ func (c *Core) inFlightReqGaugeMetric() {
 	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
 	// Adding a gauge metric to capture total number of inflight requests
 	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
+}
+
+// configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
+func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	c.stateLock.RLock()
+	policyStore := c.policyStore
+	c.stateLock.RUnlock()
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+	var values []metricsutil.GaugeLabelValues
+
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			return []metricsutil.GaugeLabelValues{}, err
+		}
+
+		v := metricsutil.GaugeLabelValues{}
+		v.Labels = []metricsutil.Label{{
+			"policy_type",
+			pt.String(),
+		}}
+		v.Value = float32(len(policies))
+		values = append(values, v)
+	}
+
+	return values, nil
 }

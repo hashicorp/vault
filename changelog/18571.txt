@@ -1,0 +1,3 @@
+```release-note:bug
+auth/token, sys: Fix path-help being unavailable for some list-only endpoints
+```

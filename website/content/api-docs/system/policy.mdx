@@ -8,7 +8,7 @@ description: The `/sys/policy` endpoint is used to manage ACL policies in Vault.
 
 The `/sys/policy` endpoint is used to manage ACL policies in Vault.
 
-## List Policies
+## List policies
 
 This endpoint lists all configured policies.
 
@@ -16,7 +16,7 @@ This endpoint lists all configured policies.
 | :----- | :------------ |
 | `GET`  | `/sys/policy` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -24,7 +24,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/policy
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -32,7 +32,7 @@ $ curl \
 }
 ```
 
-## Read Policy
+## Read policy
 
 This endpoint retrieve the policy body for the named policy.
 
@@ -45,7 +45,7 @@ This endpoint retrieve the policy body for the named policy.
 - `name` `(string: <required>)` – Specifies the name of the policy to retrieve.
   This is specified as part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -53,7 +53,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -62,7 +62,7 @@ $ curl \
 }
 ```
 
-## Create/Update Policy
+## Create/Update policy
 
 This endpoint adds a new or updates an existing policy. Once a policy is
 updated, it takes effect immediately to all associated users.
@@ -78,7 +78,7 @@ updated, it takes effect immediately to all associated users.
 
 - `policy` `(string: <required>)` - Specifies the policy document.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -86,7 +86,7 @@ updated, it takes effect immediately to all associated users.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -96,7 +96,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```
 
-## Delete Policy
+## Delete policy
 
 This endpoint deletes the policy with the given name. This will immediately
 affect all users associated with this policy.
@@ -110,7 +110,7 @@ affect all users associated with this policy.
 - `name` `(string: <required>)` – Specifies the name of the policy to delete.
   This is specified as part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

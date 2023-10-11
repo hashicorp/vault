@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -103,7 +108,10 @@
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
-            <AlertBanner @type="warning" @message={{get this.warningMessages attr.name}} />
+            <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>{{get this.warningMessages attr.name}}</A.Description>
+            </Hds::Alert>
           {{/if}}
         {{/if}}
       {{/each}}
@@ -150,7 +158,7 @@
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" class="button">
+            <SecretLink @mode="list" class="button" data-test-database-role-cancel>
               Cancel
             </SecretLink>
           </div>

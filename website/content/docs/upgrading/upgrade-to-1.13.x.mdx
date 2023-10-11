@@ -6,9 +6,6 @@ description: |-
   for Vault 1.13.x. Please read it carefully.
 ---
 
-~> Note: these are **draft** notes for a future version of Vault. They should not be considered
-official guidance until the release has been completed.
-
 # Overview
 
 This page contains the list of deprecations and important or breaking changes
@@ -18,9 +15,170 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
-### AliCloud Auth Role Parameter
+### User lockout
+
+As of version 1.13, Vault will stop trying to validate user credentials if the
+user submits multiple invalid credentials in quick succession. During lockout,
+Vault ignores requests from the barred user rather than responding with a
+permission denied error.
+
+User lockout is enabled by default with a lockout threshold of 5 attempt, a
+lockout duration of 15 minutes, and a counter reset window of 15 minutes.
+
+For more information, refer to the [User lockout](/vault/docs/concepts/user-lockout)
+overview.
+
+### Active directory secrets engine deprecation
+
+The Active Directory (AD) secrets engine has been deprecated as of the Vault 1.13 release.
+We will continue to support the AD secrets engine in maintenance mode for six major Vault
+releases. Maintenance mode means that we will fix bugs and security issues but will not add
+new features. For additional information, see the [deprecation table](/vault/docs/deprecation)
+and [migration guide](/vault/docs/secrets/ad/migration-guide).
+
+### AliCloud auth role parameter
 
 The AliCloud auth plugin will now require the `role` parameter on login. This
 has always been documented as a required field but the requirement will now be
 enforced.
 
+### Mounts associated with removed builtin plugins will result in core shutdown on upgrade
+
+As of 1.13.0 Standalone (logical) DB Engines and the AppId Auth Method have been
+marked with the `Removed` status. Any attempt to unseal Vault with
+mounts backed by one of these builtin plugins will result in an immediate
+shutdown of the Vault core.
+
+-> **NOTE** In the event that an external plugin with the same name and type as
+a deprecated builtin is deregistered, any subsequent unseal will continue to
+unseal with an unusable auth backend, and a corresponding ERROR log.
+
+```shell-session
+$ vault plugin register -sha256=c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1 auth app-id
+Success! Registered plugin: app-id
+$ vault auth enable -plugin-name=app-id plugin
+Success! Enabled app-id auth method at: app-id/
+$ vault auth list -detailed | grep "app-id"
+app-id/    app-id    auth_app-id_3a8f2e24    system         system     default-service    replicated     false        false                      map[]      n/a                        0018263c-0d64-7a70-fd5c-50e05c5f5dc3    n/a        n/a                      c805cf3b69f704dfcd5176ef1c7599f88adbfd7374e9c76da7f24a32a97abfe1    n/a
+$ vault plugin deregister auth app-id
+Success! Deregistered plugin (if it was registered): app-id
+$ vault plugin list -detailed | grep "app-id"
+app-id                               auth        v1.13.0+builtin.vault                                 removed
+$ curl --header "X-Vault-Token: $VAULT_TOKEN" --request POST http://127.0.0.2:8200/v1/sys/seal
+$ vault operator unseal <key1>
+...
+$ vault operator unseal <key2>
+...
+$ vault operator unseal <key3>
+...
+$ grep "app-id" /path/to/vault.log
+[ERROR] core: skipping deprecated auth entry: name=app-id path=app-id/ error="mount entry associated with removed builtin"
+[ERROR] core: skipping initialization for nil auth backend: path=app-id/ type=app-id version="v1.13.0+builtin.vault"
+```
+
+The remediation for affected mounts is to downgrade to the previously-used version of Vault
+environment variable and replace any `Removed` feature with the
+[preferred alternative
+feature](/vault/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines).
+
+For more information on the phases of deprecation, see the [Deprecation Notices
+FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
+
+#### Impacted versions
+
+Affects upgrading from any version of Vault to 1.13.x. All other upgrade paths
+are unaffected.
+
+### Application of Sentinel Role Governing Policies (RGPs) via identity groups
+
+@include 'application-of-sentinel-rgps-via-identity-groups.mdx'
+
+## Known issues
+
+@include 'tokenization-rotation-persistence.mdx'
+
+@include 'ocsp-redirect.mdx'
+
+### PKI revocation request forwarding
+
+If a revocation request comes in to a standby or performance secondary node,
+for a certificate that is present locally, the request will not be correctly
+forwarded to the active node of this cluster.
+
+As a workaround, submit revocation requests to the active node only.
+
+### STS credentials do not return a lease_duration
+Vault 1.13.0 introduced a change to the AWS Secrets Engine such that it no longer creates leases for STS credentials due
+to the fact that they cannot be revoked or renewed. As part of this change, a bug was introduced which causes `lease_duration`
+to always return zero. This prevents the Vault Agent from refreshing STS credentials and may introduce undesired behaviour
+for anything which relies on a non-zero `lease_duration`.
+
+For applications that can control what value to look for, the `ttl` value in the response can be used to know when to
+request STS credentials next.
+
+An additional workaround for users rendering STS credentials via the Vault Agent is to set the
+`static-secret-render-interval` for a template using the credentials. Setting this configuration to 15 minutes
+accommodates the default minimum duration of an STS token and overrides the default render interval of 5 minutes.
+
+#### Impacted versions
+
+Affects Vault 1.13.0 only.
+
+### LDAP pagination issue
+
+There was a regression introduced in 1.13.2 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with an instance that has an existing LDAP Auth configuration.
+
+As a workaround, disable paged searching using the following:
+```shell-session
+vault write auth/ldap/config max_page_size=-1
+```
+
+#### Impacted versions
+
+Affects Vault 1.13.2.
+
+### PKI Cross-Cluster revocation requests and unified CRL/OCSP
+
+When revoking certificates on a cluster that doesn't own the
+certificate, writing the revocation request will fail with
+a message like `error persisting cross-cluster revocation request`.
+Similar errors will appear in the log for failure to write
+unified CRL and unified delta CRL WAL entries.
+
+As a workaround, submit revocation requests to the cluster which
+issued the certificate, or use BYOC revocation. Use cluster-local
+OCSP and CRLs until this is resolved.
+
+#### Impacted versions
+
+Affects Vault 1.13.0 to 1.13.2. Fixed in 1.13.3.
+
+On upgrade, all local revocations will be synchronized between
+clusters; revocation requests are not persisted when failing to
+write cross-cluster.
+
+### Slow startup time when storing PKI certificates
+
+There was a regression introduced in 1.13.0 where Vault is slow to start because the
+PKI secret engine performs a list operation on the stored certificates. If a large number
+of certificates are stored this can cause long start times on active and standby nodes.
+
+There is currently no workaround for this other than limiting the number of certificates stored
+in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store`
+flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
+
+#### Impacted versions
+
+Affects Vault 1.13.0+
+
+@include 'perf-standby-token-create-forwarding-failure.mdx'
+
+@include 'known-issues/update-primary-data-loss.mdx'
+
+@include 'pki-double-migration-bug.mdx'
+
+@include 'known-issues/update-primary-addrs-panic.mdx'
+
+@include 'known-issues/transit-managed-keys-panics.mdx'

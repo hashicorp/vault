@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /*
   This service is used to pull an OpenAPI document describing the
   shape of data at a specific path to hydrate a model with attrs it
@@ -18,10 +23,7 @@ import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
-export function sanitizePath(path) {
-  // remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Service.extend({
   attrs: null,
@@ -239,7 +241,7 @@ export default Service.extend({
 
     return generatedItemAdapter.extend({
       urlForItem(id, isList, dynamicApiPath) {
-        const itemType = getPath.path.slice(1);
+        const itemType = sanitizePath(getPath.path);
         let url;
         id = encodePath(id);
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded

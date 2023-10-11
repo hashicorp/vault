@@ -1,13 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package audit
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
@@ -15,17 +18,27 @@ import (
 )
 
 // HashString hashes the given opaque string and returns it
-func HashString(salter *salt.Salt, data string) string {
-	return salter.GetIdentifiedHMAC(data)
+func HashString(ctx context.Context, salter Salter, data string) (string, error) {
+	salt, err := salter.Salt(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	return salt.GetIdentifiedHMAC(data), nil
 }
 
 // HashAuth returns a hashed copy of the logical.Auth input.
-func HashAuth(salter *salt.Salt, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
+func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	fn := salter.GetIdentifiedHMAC
+	salt, err := salter.Salt(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fn := salt.GetIdentifiedHMAC
 	auth := *in
 
 	if auth.ClientToken != "" {
@@ -38,12 +51,17 @@ func HashAuth(salter *salt.Salt, in *logical.Auth, HMACAccessor bool) (*logical.
 }
 
 // HashRequest returns a hashed copy of the logical.Request input.
-func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
+func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	fn := salter.GetIdentifiedHMAC
+	salt, err := salter.Salt(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fn := salt.GetIdentifiedHMAC
 	req := *in
 
 	if req.Auth != nil {
@@ -52,7 +70,7 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 			return nil, err
 		}
 
-		req.Auth, err = HashAuth(salter, cp.(*logical.Auth), HMACAccessor)
+		req.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -81,11 +99,11 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 	return &req, nil
 }
 
-func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKeys []string) error {
+func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys []string) error {
 	for k, v := range data {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
-				ValueHasher: fn,
+				ValueHasher: hashFunc,
 			})
 			if err != nil {
 				return err
@@ -94,22 +112,21 @@ func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKey
 		}
 	}
 
-	return HashStructure(data, fn, nonHMACDataKeys)
+	return HashStructure(data, hashFunc, nonHMACDataKeys)
 }
 
 // HashResponse returns a hashed copy of the logical.Request input.
-func HashResponse(
-	salter *salt.Salt,
-	in *logical.Response,
-	HMACAccessor bool,
-	nonHMACDataKeys []string,
-	elideListResponseData bool,
-) (*logical.Response, error) {
+func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) (*logical.Response, error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	fn := salter.GetIdentifiedHMAC
+	salt, err := salter.Salt(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	fn := salt.GetIdentifiedHMAC
 	resp := *in
 
 	if resp.Auth != nil {
@@ -118,7 +135,7 @@ func HashResponse(
 			return nil, err
 		}
 
-		resp.Auth, err = HashAuth(salter, cp.(*logical.Auth), HMACAccessor)
+		resp.Auth, err = HashAuth(ctx, salter, cp.(*logical.Auth), HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +168,7 @@ func HashResponse(
 
 	if resp.WrapInfo != nil {
 		var err error
-		resp.WrapInfo, err = HashWrapInfo(salter, resp.WrapInfo, HMACAccessor)
+		resp.WrapInfo, err = hashWrapInfo(fn, resp.WrapInfo, HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
@@ -160,22 +177,21 @@ func HashResponse(
 	return &resp, nil
 }
 
-// HashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
-func HashWrapInfo(salter *salt.Salt, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
+// hashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
+func hashWrapInfo(hashFunc HashCallback, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	fn := salter.GetIdentifiedHMAC
 	wrapinfo := *in
 
-	wrapinfo.Token = fn(wrapinfo.Token)
+	wrapinfo.Token = hashFunc(wrapinfo.Token)
 
 	if HMACAccessor {
-		wrapinfo.Accessor = fn(wrapinfo.Accessor)
+		wrapinfo.Accessor = hashFunc(wrapinfo.Accessor)
 
 		if wrapinfo.WrappedAccessor != "" {
-			wrapinfo.WrappedAccessor = fn(wrapinfo.WrappedAccessor)
+			wrapinfo.WrappedAccessor = hashFunc(wrapinfo.WrappedAccessor)
 		}
 	}
 

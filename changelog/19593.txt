@@ -1,0 +1,4 @@
+```release-note:improvement
+events: Suppress log warnings triggered when events are sent but the events system is not enabled.
+```
+

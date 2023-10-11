@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
@@ -66,14 +69,16 @@ locals {
 resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/verify-cluster-version.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_build_date  = var.vault_build_date,
-    vault_version     = var.vault_product_version,
-    vault_edition     = var.vault_edition,
-    vault_revision    = var.vault_revision,
-    vault_token       = var.vault_root_token,
-  })
+  environment = {
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_BUILD_DATE  = var.vault_build_date,
+    VAULT_VERSION     = var.vault_product_version,
+    VAULT_EDITION     = var.vault_edition,
+    VAULT_REVISION    = var.vault_revision,
+    VAULT_TOKEN       = var.vault_root_token,
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-cluster-version.sh")]
 
   transport = {
     ssh = {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -18,6 +21,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "quotas/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"rate_limit_exempt_paths": {
 					Type:        framework.TypeStringSlice,
@@ -35,6 +43,9 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -43,6 +54,9 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleQuotasConfigRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "configuration",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -69,20 +83,15 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		},
 		{
 			Pattern: "quotas/rate-limit/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+				OperationVerb:   "list",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasList(),
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
-					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(quotasHelp["rate-limit-list"][0]),
@@ -90,6 +99,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 		},
 		{
 			Pattern: "quotas/rate-limit/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "rate-limit-quotas",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"type": {
 					Type:        framework.TypeString,
@@ -110,6 +124,10 @@ namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 					Description: `Login role to apply this quota to. Note that when set, path must be configured
 to a valid auth method with a concept of roles.`,
 				},
+				"inheritable": {
+					Type:        framework.TypeBool,
+					Description: `Whether all child namespaces can inherit this namespace quota.`,
+				},
 				"rate": {
 					Type: framework.TypeFloat,
 					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
@@ -128,6 +146,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "write",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: http.StatusText(http.StatusNoContent),
@@ -136,6 +157,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -168,12 +192,19 @@ from any further requests until after the 'block_interval' has elapsed.`,
 									Type:     framework.TypeInt,
 									Required: true,
 								},
+								"inheritable": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
 							},
 						}},
 					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -304,6 +335,29 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 		}
 
+		var inheritable bool
+		// All global quotas should be inherited by default
+		if ns.Path == "" {
+			inheritable = true
+		}
+
+		if inheritableRaw, ok := d.GetOk("inheritable"); ok {
+			inheritable = inheritableRaw.(bool)
+			if inheritable {
+				if pathSuffix != "" || role != "" || mountPath != "" {
+					return logical.ErrorResponse("only namespace quotas can be configured as inheritable"), nil
+				}
+			} else if ns.Path == "" {
+				// User should not try to configure a global quota that cannot be inherited
+				return logical.ErrorResponse("all global quotas must be inheritable"), nil
+			}
+		}
+
+		// User should not try to configure a global quota to be uninheritable
+		if ns.Path == "" && !inheritable {
+			return logical.ErrorResponse("all global quotas must be inheritable"), nil
+		}
+
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
 		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix, role)
@@ -322,7 +376,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, inheritable, interval, blockInterval, rate)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
@@ -332,6 +386,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			rlq.MountPath = mountPath
 			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
+			rlq.Inheritable = inheritable
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
 			quota = rlq
@@ -380,6 +435,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
 			"role":           rlq.Role,
 			"rate":           rlq.Rate,
+			"inheritable":    rlq.Inheritable,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),
 		}

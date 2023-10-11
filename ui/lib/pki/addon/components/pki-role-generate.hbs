@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.serialNumber}}
-  <Page::PkiCertificateDetails @model={{@model}} @onRevoke={{this.cancel}} @onBack={{this.cancel}} />
+  <Page::PkiCertificateDetails @model={{@model}} @onBack={{this.cancel}} />
 {{else}}
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
@@ -14,11 +19,10 @@
       {{/let}}
       <FormFieldGroups
         @model={{@model}}
-        @mode="create"
         @renderGroup="Subject Alternative Name (SAN) Options"
         @groupName="formFieldGroups"
+        @showHelpText={{false}}
       />
-      <FormFieldGroups @model={{@model}} @mode="create" @renderGroup="More Options" @groupName="formFieldGroups" />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">

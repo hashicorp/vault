@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Configure kubernetes
+      Configure Kubernetes
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -46,11 +51,11 @@
       <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
   {{else if (eq this.inferredState "success")}}
-    <Icon @name="check-circle-fill" class="has-text-green" />
+    <Icon @name="check-circle-fill" class="has-text-success" />
     <span>Configuration values were inferred successfully.</span>
   {{else if (eq this.inferredState "error")}}
-    <Icon @name="x-square-fill" class="has-text-red" />
-    <span class="has-text-red">
+    <Icon @name="x-square-fill" class="has-text-danger" />
+    <span class="has-text-danger">
       Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete
       them, or configure manually.
     </span>
@@ -98,26 +103,21 @@
 </div>
 
 {{#if this.showConfirm}}
-  <Modal
-    @title="Edit configuration"
-    @type="warning"
-    @isActive={{this.showConfirm}}
-    @showCloseButton={{true}}
-    @onClose={{fn (mut this.showConfirm) false}}
-  >
-    <section class="modal-card-body">
+  <Hds::Modal id="kubernetes-edit-config-modal" @onClose={{fn (mut this.showConfirm) false}} @color="warning" as |M|>
+    <M.Header @icon="alert-triangle">
+      Edit configuration
+    </M.Header>
+    <M.Body data-test-edit-config-body>
       <p>
         Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are
         you sure?
       </p>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button data-test-config-confirm type="button" class="button is-primary" {{on "click" (perform this.save)}}>
-        Confirm
-      </button>
-      <button type="button" class="button" onclick={{fn (mut this.showConfirm) false}}>
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button data-test-config-confirm {{on "click" (perform this.save)}} @text="Confirm" />
+        <Hds::Button {{on "click" F.close}} @color="secondary" @text="Cancel" />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

@@ -1,10 +1,15 @@
-import { action } from '@ember/object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import PkiKeyModel from 'vault/models/pki/key';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiKeyModel from 'vault/models/pki/key';
 interface Args {
   key: PkiKeyModel;
 }
@@ -20,7 +25,6 @@ export default class PkiKeyDetails extends Component<Args> {
       this.flashMessages.success('Key deleted successfully.');
       this.router.transitionTo('vault.cluster.secrets.backend.pki.keys.index');
     } catch (error) {
-      this.args.key.rollbackAttributes();
       this.flashMessages.danger(errorMessage(error));
     }
   }

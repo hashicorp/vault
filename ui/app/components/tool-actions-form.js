@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { match } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';

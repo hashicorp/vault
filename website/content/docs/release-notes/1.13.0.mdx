@@ -1,0 +1,128 @@
+---
+layout: docs
+page_title: 1.13.0
+description: |-
+  This page contains release notes for Vault 1.13.0
+---
+
+# Vault 1.13.0 release notes
+
+**Software Release date:** March 1, 2023
+
+**Summary:** Vault Release 1.13.0 offers features and enhancements that improve
+the user experience while solving critical  issues previously encountered by our
+customers. We are providing an overview  of improvements in this set of  release
+notes.
+
+We encourage you to [upgrade](/vault/docs/upgrading) to the latest release of
+Vault to take advantage of the new benefits provided. With this latest release,
+we offer solutions to critical feature gaps that were identified previously.
+Please refer to the
+[Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md#1130-rc1)
+within the Vault release for further information on product improvements,
+including a comprehensive list of bug fixes.
+
+Some of these enhancements and changes in this release include the following:
+
+- **PKI improvements:**
+   - **Cross Cluster PKI Certificate Revocation:** Introducing a new unified
+     OCSP responder and CRL builder that enables a certificate revocations and
+     CRL view across clusters for a given PKI mount.
+   - **PKI UI Beta:** New UI introducing cross-signing flow, overview page,
+     roles and keys view.
+   - **Health Checks:** Provide a health overview of PKI mounts for proactive
+     actions and troubleshooting.
+   - **Command Line:** Simplified CLI to discover, rotate issuers and related
+     commands for PKI mounts
+
+- **Azure Auth Improvements:**
+   - **Rotate-root support:** Add the ability to rotate the root account's
+     client secret defined in the auth method's configuration via the new
+     `rotate-root` endpoint.
+   - **Managed Identities authentication:** The auth method now allows any Azure
+     resource that supports managed identities to authenticate with Vault.
+   - **VMSS Flex authentication:** Add support for Virtual Machine Scale Set
+     (VMSS) Flex authentication.
+
+- **GCP Secrets Impersonated Account Support:** Add support for GCP service
+  account impersonation, allowing callers to generate a GCP access token without
+  requiring Vault to store or retrieve a GCP service account key for each role.
+- **Managed Keys in Transit Engine:** Support for offloading Transit Key
+  operations to HSMs/external KMS.
+- **KMIP Secret Engine Enhancements:** Implemented Asymmetric Key Lifecycle
+  Server and Advanced Cryptographic Server profiles. Added support for RSA keys
+  and operations such as:  MAC, MAC Verify, Sign, Sign Verify, RNG Seed and RNG
+  Retrieve.
+- **Vault as a SSM:** Support is planned for an upcoming Vault PKCS#11 Provider
+  version to include mechanisms for encryption, decryption, signing and
+  signature verification for AES and RSA keys.
+- **Replication (enterprise):** We fixed a bug that could cause a cluster to
+  wind up in a permanent merkle-diff/merkle-sync loop and never enter
+  stream-wals, particularly in cases of high write loads on the primary cluster.
+- **Share Secrets in Independent Namespaces (enterprise):** You can now add
+  users from namespaces outside a namespace hierarchy to a group in a given
+  namespace hierarchy. For Vault Agent, you can now grant it access to secrets
+  outside the namespace where it authenticated, and reduce the number of Agents
+  you need to run.
+- **User Lockout:** Vault now supports configuration to lock out users when they
+  have consecutive failed login attempts. This feature is **enabled by default**
+  in 1.13 for the userpass, ldap, and approle auth methods.
+- **Event System (Alpha):** Vault has a new experimental event system. Events
+  are currently only generated on writes to the KV secrets engine, but external
+  plugins can also be updated to start generating events.
+- **Kubernetes authentication plugin bug fix:** Ensures a consistent TLS
+  configuration for all k8s API requests. This fixes a bug where it was possible
+  for the http.Client's Transport to be missing the necessary root CAs to ensure
+  that all TLS connections between the auth engine and the Kubernetes API were
+  validated against the configured set of CA certificates.
+- **Kubernetes Secretes Engine on Vault UI:** Introducing Kubernetes secret
+  engine support on the UI
+- **Client Count UI improvements:** Combining current month and previous history
+  into one dashboard
+- **OCSP Support in the TLS Certificate Auth Method:** The auth method now can
+  check for revoked certificates using the OCSP protocol.
+- **UI Wizard removal:** The UI Wizard has been removed from the UI since the
+  information was occasionally out-of-date and did not align with the latest
+  changes. A new and enhanced UI experience is planned in a future release.
+
+- **Vault Agent improvements:**
+   - Auto-auth introduced `token_file` method which reads an existing token from
+     a file. The token file method is designed for development and testing. It
+     is not suitable for production deployment.
+   - Listeners for the Vault Agent can define a role set to `metrics_only` so
+     that a service can be configured to listen on a particular port to collect
+     metrics.
+   - Vault Agent can read configurations from multiple files.
+   - Users can specify the log file path using the `-log-file` command flag or
+     `VAULT_LOG_FILE` environment variable. This is particularly useful when
+     Vault Agent is running as a Windows service.
+
+- **OpenAPI-based Go & .NET Client Libraries (Public Beta):** Use the new Go &
+  .NET client libraries to interact with the Vault API from your applications.
+   - [OpenAPI-based Go client library](https://github.com/hashicorp/vault-client-go/)
+   - [OpenAPI-based .NET client library](https://github.com/hashicorp/vault-client-dotnet/)
+
+## Known issues
+
+When Vault is configured without a TLS certificate on the TCP listener, the Vault UI may throw an error that blocks you from performing operational tasks.
+
+The error message: `Q.randomUUID is not a function`
+
+<Note>
+
+Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/14512496697875) for more details and a workaround.
+
+</Note>
+
+The fix for this UI issue is coming in the Vault 1.13.1 release.
+
+@include 'perf-standby-token-create-forwarding-failure.mdx'
+
+@include 'known-issues/update-primary-data-loss.mdx'
+
+## Feature deprecations and EOL
+
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page
+for up-to-date information on feature deprecations and plans. A [Feature
+Deprecation FAQ](/vault/docs/deprecation/faq) page addresses questions about
+decisions made about Vault feature deprecations.

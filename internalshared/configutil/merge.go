@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
@@ -51,6 +54,11 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 	result.DefaultMaxRequestDuration = c.DefaultMaxRequestDuration
 	if c2.DefaultMaxRequestDuration > result.DefaultMaxRequestDuration {
 		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
+	}
+
+	result.UserLockoutLogInterval = c.UserLockoutLogInterval
+	if c2.UserLockoutLogInterval > result.UserLockoutLogInterval {
+		result.UserLockoutLogInterval = c2.UserLockoutLogInterval
 	}
 
 	result.LogLevel = c.LogLevel

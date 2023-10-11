@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -273,11 +276,19 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	return c.RaftAutopilotStateWithContext(context.Background())
 }
 
+// RaftAutopilotStateWithToken wraps RaftAutopilotStateWithContext using the given token.
+func (c *Sys) RaftAutopilotStateWithDRToken(drToken string) (*AutopilotState, error) {
+	return c.RaftAutopilotStateWithContext(context.WithValue(context.Background(), "dr-token", drToken))
+}
+
 // RaftAutopilotStateWithContext returns the state of the raft cluster as seen by autopilot.
 func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotState, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	if ctx.Value("dr-token") != nil {
+		c.c.SetToken(ctx.Value("dr-token").(string))
+	}
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
@@ -313,10 +324,19 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	return c.RaftAutopilotConfigurationWithContext(context.Background())
 }
 
+// RaftAutopilotConfigurationWithDRToken wraps RaftAutopilotConfigurationWithContext using the given token.
+func (c *Sys) RaftAutopilotConfigurationWithDRToken(drToken string) (*AutopilotConfig, error) {
+	return c.RaftAutopilotConfigurationWithContext(context.WithValue(context.Background(), "dr-token", drToken))
+}
+
 // RaftAutopilotConfigurationWithContext fetches the autopilot config.
 func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*AutopilotConfig, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
+
+	if ctx.Value("dr-token") != nil {
+		c.c.SetToken(ctx.Value("dr-token").(string))
+	}
 
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/configuration")
 

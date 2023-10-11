@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -217,26 +220,35 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	executor.AddCheck(healthcheck.NewEnableAutoTidyCheck())
 	executor.AddCheck(healthcheck.NewTidyLastRunCheck())
 	executor.AddCheck(healthcheck.NewTooManyCertsCheck())
+	executor.AddCheck(healthcheck.NewEnableAcmeIssuance())
+	executor.AddCheck(healthcheck.NewAllowAcmeHeaders())
 	if c.flagDefaultDisabled {
 		executor.DefaultEnabled = false
 	}
 
 	// Handle listing, if necessary.
 	if c.flagList {
-		c.UI.Output("Health Checks:")
-		for _, checker := range executor.Checkers {
-			c.UI.Output(" - " + checker.Name())
-
-			prefix := "   "
-			cfg := checker.DefaultConfig()
-			marshaled, err := json.MarshalIndent(cfg, prefix, " ")
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
-				return pkiRetUsage
-			}
-			c.UI.Output(prefix + string(marshaled))
+		uiFormat := Format(c.UI)
+		if uiFormat == "yaml" {
+			c.UI.Error("YAML output format is not supported by the --list command")
+			return pkiRetUsage
 		}
 
+		if uiFormat != "json" {
+			c.UI.Output("Default health check config:")
+		}
+		config := map[string]map[string]interface{}{}
+		for _, checker := range executor.Checkers {
+			config[checker.Name()] = checker.DefaultConfig()
+		}
+
+		marshaled, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to marshal default config for check: %v", err))
+			return pkiRetUsage
+		}
+
+		c.UI.Output(string(marshaled))
 		return pkiRetOK
 	}
 

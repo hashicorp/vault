@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 const selectors = {
   ttlFormGroup: '[data-test-ttl-inputs]',
   toggle: '[data-test-ttl-toggle]',

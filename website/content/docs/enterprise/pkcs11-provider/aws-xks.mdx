@@ -5,7 +5,9 @@ description: |-
   AWS KMS External Key Store can use Vault as a key store via the Vault PKCS#11 Provider.
 ---
 
-# Vault with AWS KMS External Key Store (XKS) via PKCS#11 and XKS Proxy
+# Vault with AWS KMS external key store (XKS) via PKCS#11 and XKS proxy
+
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 ~> **Note**: AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) is used in this document as a sample implementation.
 
@@ -33,7 +35,7 @@ There are 3 parts to this setup:
 In order to serve requests with this latency, we recommend hosting Vault and the XKS proxy as close as possible
 to the desired KMS region.
 
-## Vault Setup
+## Vault setup
 
 On the Vault server, we need to [setup the KMIP Secrets Engine](/vault/docs/secrets/kmip):
 
@@ -76,7 +78,7 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/vault/docs/secr
     jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
 
-## XKS Proxy Setup
+## XKS proxy setup
 
 The rest of the steps take place on the XKS Proxy server.
 

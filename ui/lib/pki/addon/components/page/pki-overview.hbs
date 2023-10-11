@@ -1,7 +1,9 @@
-<div
-  class="selectable-card-container has-grid has-top-margin-l has-two-col-grid
-    {{if (eq @roles 403) 'has-three-col-grid' 'has-two-col-grid'}}"
->
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="is-grid grid-2-columns grid-gap-2 has-top-margin-l">
   <OverviewCard
     @cardTitle="Issuers"
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
@@ -10,7 +12,7 @@
   >
     <h2 class="title-number">{{format-number (if (eq @issuers 404) 0 @issuers.length)}}</h2>
   </OverviewCard>
-  {{#if (not (eq @roles 403))}}
+  {{#if (not-eq @roles 403)}}
     <OverviewCard
       @cardTitle="Roles"
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."
@@ -23,7 +25,7 @@
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -46,9 +48,9 @@
   </OverviewCard>
 
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
-    <div class="has-top-margin-m is-flex">
+    <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -60,10 +62,37 @@
       />
       <button
         type="button"
-        class="button is-secondary has-left-margin-s"
+        class="button is-secondary {{unless this.certificateValue 'has-left-margin-s'}}"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
+      >
+        View
+      </button>
+    </div>
+  </OverviewCard>
+
+  <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
+    <div class="has-top-margin-m is-flex">
+      <SearchSelect
+        class="is-flex-grow-1"
+        @selectLimit="1"
+        @models={{array "pki/issuer"}}
+        @backend={{@engine.id}}
+        @placeholder="Type to find an issuer..."
+        @disallowNewItems={{true}}
+        @onChange={{this.handleIssuerSearch}}
+        @fallbackComponent="input-search"
+        @shouldRenderName={{true}}
+        @nameKey={{"issuerName"}}
+        data-test-issue-issuer-input
+      />
+      <button
+        type="submit"
+        class="button is-secondary has-left-margin-s"
+        disabled={{unless this.issuerValue true}}
+        {{on "click" this.transitionToIssuerDetails}}
+        data-test-view-issuer-button
       >
         View
       </button>

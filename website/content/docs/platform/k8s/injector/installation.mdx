@@ -4,7 +4,7 @@ page_title: Agent Sidecar Injector Installation
 description: The Vault Agent Sidecar Injector can be installed using Vault Helm.
 ---
 
-# Installing the Agent Injector
+# Installing the agent injector
 
 The [Vault Helm chart](/vault/docs/platform/k8s/helm) is the recommended way to
 install and configure the Agent Injector in Kubernetes.
@@ -32,7 +32,7 @@ Docs](/vault/docs/platform/k8s/helm/configuration). Commonly used values in the 
 chart include limiting the namespaces the injector runs in, TLS options and
 more.
 
-## TLS Options
+## TLS options
 
 Admission webhook controllers require TLS to run within Kubernetes. The Injector
 defaults to supporting TLS 1.2 and above, and supports configuring the minimum
@@ -80,7 +80,7 @@ For more information on configuring manual TLS, see the [Vault Helm cert values]
 
 This option may also be used in conjunction with [cert-manager for certificate management](/vault/docs/platform/k8s/helm/examples/injector-tls-cert-manager).
 
-## Multiple Replicas and TLS
+## Multiple replicas and TLS
 
 The Vault Agent Injector can be run with multiple replicas if using [Manual
 TLS](#manual-tls) or [cert-manager](/vault/docs/platform/k8s/helm/examples/injector-tls-cert-manager), and as of v0.7.0 multiple replicas are also supported with
@@ -101,7 +101,7 @@ With Manual TLS and multiple replicas,
 [injector.leaderElector.enabled](/vault/docs/platform/k8s/helm/configuration#enabled-2)
 can be set to `false` since leader determination is not necessary in this case.
 
-## Namespace Selector
+## Namespace selector
 
 By default, the Vault Agent Injector will process all namespaces in Kubernetes except
 the system namespaces `kube-system` and `kube-public`. To limit what namespaces

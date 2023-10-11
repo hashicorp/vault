@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
@@ -84,7 +89,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config] button');
     assert
       .dom('[data-test-icon="x-square-fill"]')
-      .hasClass('has-text-red', 'Icon is displayed for error state with correct styling');
+      .hasClass('has-text-danger', 'Icon is displayed for error state with correct styling');
     const error =
       'Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete them, or configure manually.';
     assert.dom('[data-test-config] span').hasText(error, 'Error text is displayed');
@@ -96,7 +101,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config] button');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
-      .hasClass('has-text-green', 'Icon is displayed for success state with correct styling');
+      .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');
     assert
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
@@ -178,7 +183,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     assert.dom('[data-test-radio-card="local"] input').isChecked('Local cluster radio card is checked');
     assert
       .dom('[data-test-icon="check-circle-fill"]')
-      .hasClass('has-text-green', 'Icon is displayed for success state with correct styling');
+      .hasClass('has-text-success', 'Icon is displayed for success state with correct styling');
     assert
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
@@ -194,14 +199,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await render(
       hbs`
-      <div id="modal-wormhole"></div>
-      <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
+            <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
     `,
       { owner: this.engine }
     );
     await click('[data-test-config-save]');
     assert
-      .dom('.modal-card-body')
+      .dom('[data-test-edit-config-body]')
       .hasText(
         'Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are you sure?',
         'Confirm modal renders'

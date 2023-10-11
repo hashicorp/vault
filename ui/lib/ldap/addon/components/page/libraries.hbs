@@ -1,0 +1,91 @@
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  <:toolbarFilters>
+    {{#if (and (not @promptConfig) @libraries)}}
+      <FilterInput @placeholder="Filter libraries" @onInput={{fn (mut this.filterValue)}} />
+    {{/if}}
+  </:toolbarFilters>
+  <:toolbarActions>
+    {{#if @promptConfig}}
+      <ToolbarLink @route="configure" data-test-toolbar-action="config">
+        Configure LDAP
+      </ToolbarLink>
+    {{else}}
+      <ToolbarLink @route="libraries.create" @type="add" data-test-toolbar-action="library">
+        Create library
+      </ToolbarLink>
+    {{/if}}
+  </:toolbarActions>
+</TabPageHeader>
+
+{{#if @promptConfig}}
+  <ConfigCta />
+{{else if (not this.filteredLibraries)}}
+  {{#if this.filterValue}}
+    <EmptyState @title="There are no libraries matching &quot;{{this.filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      data-test-config-cta
+      @title="No libraries created yet"
+      @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
+    >
+      <LinkTo class="has-top-margin-xs" @route="libraries.create">
+        Create library
+      </LinkTo>
+    </EmptyState>
+  {{/if}}
+{{else}}
+  <div class="has-bottom-margin-s">
+    {{#each this.filteredLibraries as |library|}}
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "libraries.library.details" library.name}} as |Item|>
+        <Item.content>
+          <Icon @name="folder" />
+          <span data-test-library={{library.name}}>{{library.name}}</span>
+        </Item.content>
+        <Item.menu as |Menu|>
+          {{#if library.libraryPath.isLoading}}
+            <li class="action">
+              <button disabled type="button" class="link button is-loading is-transparent">
+                loading
+              </button>
+            </li>
+          {{else}}
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
+                data-test-edit
+                @route="libraries.library.edit"
+                @model={{library}}
+                @disabled={{not library.canEdit}}
+              >
+                Edit
+              </LinkTo>
+            </li>
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
+                data-test-details
+                @route="libraries.library.details"
+                @model={{library}}
+                @disabled={{not library.canRead}}
+              >
+                Details
+              </LinkTo>
+            </li>
+            {{#if library.canDelete}}
+              <li class="action">
+                <Menu.Message
+                  data-test-delete
+                  @id={{library.id}}
+                  @triggerText="Delete"
+                  @title="Are you sure?"
+                  @message="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+                  @onConfirm={{fn this.onDelete library}}
+                />
+              </li>
+            {{/if}}
+          {{/if}}
+        </Item.menu>
+      </ListItem>
+    {{/each}}
+  </div>
+{{/if}}

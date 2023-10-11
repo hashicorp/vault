@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{yield}}
 {{#each this.inputList as |row index|}}
   {{#let (get @validationErrors index) as |rowValidations|}}

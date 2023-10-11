@@ -1,4 +1,9 @@
-.navbar-brand .splash-page-logo {
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.splash-page-logo {
   padding: $spacing-xs $spacing-s $spacing-xs $spacing-l;
 
   @include from($mobile) {

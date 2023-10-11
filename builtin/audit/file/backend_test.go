@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package file
 
 import (
@@ -22,15 +25,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := ioutil.TempDir("", "vault-test_audit_file-file_mode_new")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(path)
-
-	file := filepath.Join(path, "auditTest.txt")
-
+	file := filepath.Join(t.TempDir(), "auditTest.txt")
 	config := map[string]string{
 		"path": file,
 		"mode": modeStr,
@@ -40,7 +35,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
-	})
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +74,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +114,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,6 +128,40 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 	}
 }
 
+// TestAuditFile_EventLogger_fileModeNew verifies that the Factory function
+// correctly sets the file mode when the useEventLogger argument is set to
+// true.
+func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
+	modeStr := "0777"
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	file := filepath.Join(t.TempDir(), "auditTest.txt")
+	config := map[string]string{
+		"path": file,
+		"mode": modeStr,
+	}
+
+	_, err = Factory(context.Background(), &audit.BackendConfig{
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+		Config:     config,
+	}, true, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(file)
+	if err != nil {
+		t.Fatalf("Cannot retrieve file mode from `Stat`")
+	}
+	if info.Mode() != os.FileMode(mode) {
+		t.Fatalf("File mode does not match.")
+	}
+}
+
 func BenchmarkAuditFile_request(b *testing.B) {
 	config := map[string]string{
 		"path": "/dev/null",
@@ -141,7 +170,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false, nil)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -171,7 +200,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(nil)
+	ctx := namespace.RootContext(context.Background())
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

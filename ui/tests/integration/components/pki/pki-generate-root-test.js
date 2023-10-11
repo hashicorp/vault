@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -18,7 +23,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test' });
+    this.urls = this.store.createRecord('pki/config/urls', { id: 'pki-test' });
     this.model = this.store.createRecord('pki/action');
     this.onSave = Sinon.spy();
     this.onCancel = Sinon.spy();
@@ -99,7 +104,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert.strictEqual(this.model.type, this.type);
     assert
       .dom(`[data-test-group="Key parameters"] ${SELECTORS.formField}`)
-      .exists({ count: 3 }, '3 form fields under keyParams toggle');
+      .exists({ count: 4 }, '4 form fields under keyParams toggle');
     assert.dom(SELECTORS.fieldByName('keyName')).exists(`Key name field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyType')).exists(`Key type field shown when type=${this.type}`);
     assert.dom(SELECTORS.fieldByName('keyBits')).exists(`Key bits field shown when type=${this.type}`);

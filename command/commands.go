@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -93,10 +96,6 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
-
-	// DisableSSCTokens is an env var used to disable index bearing
-	// token functionality
-	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -219,11 +218,7 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
-)
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
-	loginHandlers := map[string]LoginHandler{
+	loginHandlers = map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
@@ -245,7 +240,9 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			DefaultMount: "userpass",
 		},
 	}
+)
 
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:          ui,
@@ -263,6 +260,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
+			}, nil
+		},
+		"agent generate-config": func() (cli.Command, error) {
+			return &AgentGenerateConfigCommand{
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -600,6 +602,40 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"plugin runtime": func() (cli.Command, error) {
+			return &PluginRuntimeCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime register": func() (cli.Command, error) {
+			return &PluginRuntimeRegisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime deregister": func() (cli.Command, error) {
+			return &PluginRuntimeDeregisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime info": func() (cli.Command, error) {
+			return &PluginRuntimeInfoCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime list": func() (cli.Command, error) {
+			return &PluginRuntimeListCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"proxy": func() (cli.Command, error) {
+			return &ProxyCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+			}, nil
+		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
 				BaseCommand: getBaseCommand(),
@@ -701,6 +737,26 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform": func() (cli.Command, error) {
+			return &TransformCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import": func() (cli.Command, error) {
+			return &TransformImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import-version": func() (cli.Command, error) {
+			return &TransformImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -848,7 +904,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	return commands
 }
 

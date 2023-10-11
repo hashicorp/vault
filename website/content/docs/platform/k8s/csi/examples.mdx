@@ -4,13 +4,13 @@ page_title: Vault CSI Provider Examples
 description: This section documents examples of using the Vault CSI Provider.
 ---
 
-# Vault CSI Provider Examples
+# Vault CSI provider examples
 
 The following examples demonstrate how the Vault CSI Provider can be used.
 
 ~> A common mistake is to not install the CSI Secret Store Driver before using the Vault CSI Provider.
 
-## File Based Dynamic Database Credentials
+## File based dynamic database credentials
 
 The following Secret Provider Class retrieves dynamic database credentials from Vault and
 extracts the generated username and password. The secrets are then mounted as files in the
@@ -26,8 +26,6 @@ spec:
   provider: vault
   parameters:
     roleName: 'app'
-    vaultAddress: 'https://vault.vault:8200'
-    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"
@@ -81,7 +79,7 @@ created the containers will find two files containing secrets:
 - `/mnt/secrets-store/dbUsername`
 - `/mnt/secrets-store/dbPassword`
 
-## Environment Variable Dynamic Database Credentials
+## Environment variable dynamic database credentials
 
 The following Secret Provider Class retrieves dynamic database credentials from Vault and
 extracts the generated username and password. The secrets are then synced to Kubernetes secrets
@@ -105,8 +103,6 @@ spec:
           key: password
   parameters:
     roleName: 'app'
-    vaultAddress: 'https://vault.vault:8200'
-    vaultCACertPath: '/vault/tls/ca.crt'
     objects: |
       - objectName: "dbUsername"
         secretPath: "database/creds/db-app"

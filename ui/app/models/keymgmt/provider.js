@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -127,7 +132,7 @@ export default class KeymgmtProviderModel extends Model {
           backend: this.backend,
           provider: this.name,
           responsePath: 'data.keys',
-          page,
+          page: Number(page) || 1,
         });
       } catch (error) {
         this.keys = [];

@@ -23,7 +23,7 @@ Basic documentation will be generated for all paths, but a newer path definition
 more detailed documentation to be added. At this time the `/sys` endpoints have been updated to use the new
 structure, and other endpoints will be modified incrementally.
 
-## Get OpenAPI Document
+## Get OpenAPI document
 
 This endpoint returns a single OpenAPI document describing all paths visible to the requester.
 
@@ -36,13 +36,13 @@ This endpoint returns a single OpenAPI document describing all paths visible to 
 - `generic_mount_paths` `(bool: false)` – Used to specify whether to use generic mount paths. If set, the mount paths will be replaced with a dynamic parameter: `{mountPath}`
 
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl http://127.0.0.1:8200/v1/sys/internal/specs/openapi?generic_mount_paths=false
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

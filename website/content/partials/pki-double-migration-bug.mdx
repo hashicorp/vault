@@ -1,0 +1,30 @@
+### PKI storage migration revives deleted issuers
+
+Vault 1.11 introduced Storage v1, a new storage layout that supported
+multiple issuers within a single mount. Bug fixes in Vault 1.11.6, 1.12.2,
+and 1.13.0 corrected a write-ordering issue that lead to invalid CA chains.
+Specifically, incorrectly ordered writes could fail due to load, resulting
+in the mount being re-migrated next time it was loaded or silently
+truncating CA chains. This collection of bug fixes introduced Storage v2.
+
+#### Affected versions
+
+Vault may incorrectly re-migrated legacy issuers created before Vault 1.11 that
+were migrated to Storage v1 and deleted before upgrading to a Vault version with
+Storage v2.
+
+The migration fails when Vault finds managed keys associated with the legacy
+issuers that were removed from the managed key repository prior to the upgrade.
+
+The migration error appears in Vault logs as:
+
+> Error during migration of PKI mount:
+>   failed to lookup public key from managed key:
+>     no managed key found with uuid
+
+<Note>
+Issuers created in Vault 1.11+ and direct upgrades to a Storage v2 layout are
+not affected.
+</Note>
+
+The Storage v1 upgrade bug was fixed in Vault 1.14.1, 1.13.5, and 1.12.9.

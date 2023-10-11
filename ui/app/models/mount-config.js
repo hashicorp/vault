@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 
 export default class MountConfigModel extends Model {
@@ -27,11 +32,10 @@ export default class MountConfigModel extends Model {
   })
   auditNonHmacResponseKeys;
 
-  @attr('string', {
+  @attr('mountVisibility', {
     editType: 'boolean',
     label: 'List method when unauthenticated',
-    trueValue: 'unauth',
-    falseValue: 'hidden',
+    defaultValue: false,
   })
   listingVisibility;
 
@@ -52,9 +56,14 @@ export default class MountConfigModel extends Model {
   @attr('string', {
     label: 'Token Type',
     helpText:
-      "The type of token that should be generated via this role. Can be `service`, `batch`, or `default` to use the mount's default (which unless changed will be `service` tokens).",
-    possibleValues: ['default', 'batch', 'service'],
-    defaultFormValue: 'default',
+      'The type of token that should be generated via this role. For `default-service` and `default-batch` service and batch tokens will be issued respectively, unless the auth method explicitly requests a different type.',
+    possibleValues: ['default-service', 'default-batch', 'batch', 'service'],
+    noDefault: true,
   })
   tokenType;
+
+  @attr({
+    editType: 'stringArray',
+  })
+  allowedManagedKeys;
 }

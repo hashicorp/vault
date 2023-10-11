@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package builtinplugins
 
 import (
@@ -239,10 +242,10 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 
 		var (
 			credentialBackends   []string
-			credentialBackendsRe = regexp.MustCompile(`^vault auth enable (?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			credentialBackendsRe = regexp.MustCompile(`^vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 
 			secretsBackends   []string
-			secretsBackendsRe = regexp.MustCompile(`^vault secrets enable (?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			secretsBackendsRe = regexp.MustCompile(`^vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 		)
 
 		scanner := bufio.NewScanner(f)
@@ -289,6 +292,15 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 	ensureInScript := func(t *testing.T, scriptBackends []string, name string) {
 		t.Helper()
 
+		for _, excluded := range []string{
+			"oidc",     // alias for "jwt"
+			"openldap", // alias for "ldap"
+		} {
+			if name == excluded {
+				return
+			}
+		}
+
 		if !slices.Contains(scriptBackends, name) {
 			t.Fatalf("%q backend could not be found in gen_openapi.sh, please add it there", name)
 		}
@@ -300,19 +312,23 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, b := range scriptCredentialBackends {
-		ensureInRegistry(t, b, consts.PluginTypeCredential)
+	for _, name := range scriptCredentialBackends {
+		ensureInRegistry(t, name, consts.PluginTypeCredential)
 	}
 
-	for _, b := range scriptSecretsBackends {
-		ensureInRegistry(t, b, consts.PluginTypeSecrets)
+	for _, name := range scriptSecretsBackends {
+		ensureInRegistry(t, name, consts.PluginTypeSecrets)
 	}
 
-	for _, b := range Registry.Keys(consts.PluginTypeCredential) {
-		ensureInScript(t, scriptCredentialBackends, b)
+	for name, backend := range Registry.credentialBackends {
+		if backend.DeprecationStatus == consts.Supported {
+			ensureInScript(t, scriptCredentialBackends, name)
+		}
 	}
 
-	for _, b := range Registry.Keys(consts.PluginTypeSecrets) {
-		ensureInScript(t, scriptSecretsBackends, b)
+	for name, backend := range Registry.logicalBackends {
+		if backend.DeprecationStatus == consts.Supported {
+			ensureInScript(t, scriptSecretsBackends, name)
+		}
 	}
 }

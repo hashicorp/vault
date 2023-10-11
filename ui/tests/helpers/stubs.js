@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export function capabilitiesStub(requestPath, capabilitiesArray) {
   // sample of capabilitiesArray: ['read', 'update']
   return {

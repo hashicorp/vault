@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -721,7 +724,7 @@ func TestDefaultMountTable(t *testing.T) {
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return &corehelpers.NoopAudit{
 			Config: config,
 		}, nil

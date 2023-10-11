@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add integration tests for agent running in process supervisor mode
+```

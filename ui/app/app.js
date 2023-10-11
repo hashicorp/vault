@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Application from '@ember/application';
 import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
@@ -41,7 +46,31 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: ['router', 'store', 'secret-mount-path', 'flashMessages'],
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    ldap: {
+      dependencies: {
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    kv: {
+      dependencies: {
+        services: [
+          'download',
+          'namespace',
+          'router',
+          'store',
+          'secret-mount-path',
+          'flash-messages',
+          'control-group',
+        ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
@@ -63,7 +92,6 @@ export default class App extends Application {
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
-          secretsListRoot: 'vault.cluster.secrets.backend.list-root',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
         },
       },

@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -49,6 +52,11 @@ var defaultCrlConfig = crlConfig{
 func pathConfigCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/crl",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"expiry": {
 				Type: framework.TypeString,
@@ -110,6 +118,9 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "crl-configuration",
+				},
 				Callback: b.pathCRLRead,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -182,6 +193,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCRLWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "crl",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
@@ -259,9 +274,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+
+	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed fetching CRL config: %w", err)
 	}
 
 	return genResponseFromCrlConfig(config), nil
@@ -269,14 +285,14 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
 
 	if expiryRaw, ok := d.GetOk("expiry"); ok {
 		expiry := expiryRaw.(string)
-		_, err := time.ParseDuration(expiry)
+		_, err := parseutil.ParseDurationSecond(expiry)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("given expiry could not be decoded: %s", err)), nil
 		}
@@ -294,7 +310,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if expiryRaw, ok := d.GetOk("ocsp_expiry"); ok {
 		expiry := expiryRaw.(string)
-		duration, err := time.ParseDuration(expiry)
+		duration, err := parseutil.ParseDurationSecond(expiry)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("given ocsp_expiry could not be decoded: %s", err)), nil
 		}
@@ -311,7 +327,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if autoRebuildGracePeriodRaw, ok := d.GetOk("auto_rebuild_grace_period"); ok {
 		autoRebuildGracePeriod := autoRebuildGracePeriodRaw.(string)
-		if _, err := time.ParseDuration(autoRebuildGracePeriod); err != nil {
+		if _, err := parseutil.ParseDurationSecond(autoRebuildGracePeriod); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("given auto_rebuild_grace_period could not be decoded: %s", err)), nil
 		}
 		config.AutoRebuildGracePeriod = autoRebuildGracePeriod
@@ -324,7 +340,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if deltaRebuildIntervalRaw, ok := d.GetOk("delta_rebuild_interval"); ok {
 		deltaRebuildInterval := deltaRebuildIntervalRaw.(string)
-		if _, err := time.ParseDuration(deltaRebuildInterval); err != nil {
+		if _, err := parseutil.ParseDurationSecond(deltaRebuildInterval); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("given delta_rebuild_interval could not be decoded: %s", err)), nil
 		}
 		config.DeltaRebuildInterval = deltaRebuildInterval
@@ -347,16 +363,16 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl_on_existing_paths cannot be enabled if unified_crl is disabled"), nil
 	}
 
-	expiry, _ := time.ParseDuration(config.Expiry)
+	expiry, _ := parseutil.ParseDurationSecond(config.Expiry)
 	if config.AutoRebuild {
-		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
+		gracePeriod, _ := parseutil.ParseDurationSecond(config.AutoRebuildGracePeriod)
 		if gracePeriod >= expiry {
 			return logical.ErrorResponse(fmt.Sprintf("CRL auto-rebuilding grace period (%v) must be strictly shorter than CRL expiry (%v) value when auto-rebuilding of CRLs is enabled", config.AutoRebuildGracePeriod, config.Expiry)), nil
 		}
 	}
 
 	if config.EnableDelta {
-		deltaRebuildInterval, _ := time.ParseDuration(config.DeltaRebuildInterval)
+		deltaRebuildInterval, _ := parseutil.ParseDurationSecond(config.DeltaRebuildInterval)
 		if deltaRebuildInterval >= expiry {
 			return logical.ErrorResponse(fmt.Sprintf("CRL delta rebuild window (%v) must be strictly shorter than CRL expiry (%v) value when delta CRLs are enabled", config.DeltaRebuildInterval, config.Expiry)), nil
 		}
@@ -394,17 +410,11 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("config/crl", config)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
+	if _, err := b.crlBuilder.writeConfig(sc, config); err != nil {
+		return nil, fmt.Errorf("failed persisting CRL config: %w", err)
 	}
 
-	b.crlBuilder.markConfigDirty()
-	b.crlBuilder.reloadConfigIfRequired(sc)
+	resp := genResponseFromCrlConfig(config)
 
 	// Note this only affects/happens on the main cluster node, if you need to
 	// notify something based on a configuration change on all server types
@@ -414,7 +424,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		// auto-rebuild and we aren't now or equivalently, we changed our
 		// mind about delta CRLs and need a new complete one or equivalently,
 		// we changed our mind about unified CRLs), rotate the CRLs.
-		crlErr := b.crlBuilder.rebuild(sc, true)
+		warnings, crlErr := b.crlBuilder.rebuild(sc, true)
 		if crlErr != nil {
 			switch crlErr.(type) {
 			case errutil.UserError:
@@ -423,9 +433,12 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
+		for index, warning := range warnings {
+			resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+		}
 	}
 
-	return genResponseFromCrlConfig(config), nil
+	return resp, nil
 }
 
 func genResponseFromCrlConfig(config *crlConfig) *logical.Response {

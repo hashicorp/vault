@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -123,6 +126,8 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		"args":               resp.Args,
 		"builtin":            resp.Builtin,
 		"command":            resp.Command,
+		"oci_image":          resp.OCIImage,
+		"runtime":            resp.Runtime,
 		"name":               resp.Name,
 		"sha256":             resp.SHA256,
 		"deprecation_status": resp.DeprecationStatus,

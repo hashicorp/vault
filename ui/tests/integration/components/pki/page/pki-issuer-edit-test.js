@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -24,7 +29,7 @@ const selectors = {
   ocspServers: '[data-test-input="ocspServers"]  [data-test-string-list-input="0"]',
   save: '[data-test-save]',
   cancel: '[data-test-cancel]',
-  error: '[data-test-error] p',
+  error: '[data-test-message-error]',
   alert: '[data-test-inline-error-message]',
 };
 
@@ -140,6 +145,6 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     assert
       .dom(selectors.alert)
       .hasText('There was an error submitting this form.', 'Inline error alert renders');
-    assert.dom(selectors.error).hasText('Some error occurred', 'Error message renders');
+    assert.dom(selectors.error).hasTextContaining('Some error occurred', 'Error message renders');
   });
 });

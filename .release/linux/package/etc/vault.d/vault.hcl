@@ -1,4 +1,7 @@
-# Full configuration options can be found at https://www.vaultproject.io/docs/configuration
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+# Full configuration options can be found at https://developer.hashicorp.com/vault/docs/configuration
 
 ui = true
 

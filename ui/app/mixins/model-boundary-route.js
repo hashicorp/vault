@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // meant for use mixed-in to a Route file
 //
 // When a route is deactivated, this mixin clears the Ember Data store of
@@ -51,6 +56,11 @@ export default Mixin.create({
       );
       return;
     }
+    if (this.store.isDestroyed || this.store.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      return;
+    }
+
     if (modelType) {
       this.store.unloadAll(modelType);
     }

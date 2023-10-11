@@ -1,0 +1,91 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div
+  class="masked-input {{if @displayOnly 'display-only'}} {{if @allowCopy 'allow-copy'}}"
+  data-test-masked-input
+  data-test-field
+  ...attributes
+>
+  {{#if @displayOnly}}
+    {{#if this.showValue}}
+      {{! Show minus icon if there is no value }}
+      {{#if (eq @value "")}}
+        <Icon class="masked-value" @name="minus" />
+      {{else}}
+        <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{/if}}
+    {{else}}
+      <pre class="masked-value display-only masked-font">***********</pre>
+    {{/if}}
+  {{else}}
+    <Textarea
+      id={{this.textareaId}}
+      name={{@name}}
+      @value={{@value}}
+      class="input masked-value {{unless this.showValue 'masked-font'}}"
+      rows={{1}}
+      wrap="off"
+      spellcheck="false"
+      {{on "change" this.onChange}}
+      {{on "keyup" (fn this.handleKeyUp @name)}}
+      data-test-textarea
+    />
+  {{/if}}
+  {{#if @allowCopy}}
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@value}}
+      class="transparent has-padding-xxs"
+      data-test-copy-button
+    />
+  {{/if}}
+  {{#if @allowDownload}}
+    <Hds::Button
+      @text="Download secret value"
+      @icon="download"
+      @isIconOnly={{true}}
+      @color="tertiary"
+      class="has-padding-xxs"
+      data-test-download-icon
+      {{on "click" (fn (mut this.modalOpen) true)}}
+    />
+  {{/if}}
+  <button
+    onclick={{this.toggleMask}}
+    type="button"
+    aria-label={{if this.showValue "mask value" "show value"}}
+    title={{if this.showValue "mask value" "show value"}}
+    class="masked-input-toggle button"
+    data-test-button="toggle-masked"
+  >
+    <Icon @name={{if this.showValue "eye" "eye-off"}} />
+  </button>
+</div>
+
+{{! CONFIRM DOWNLOAD MODAL }}
+{{#if this.modalOpen}}
+  <Hds::Modal @color="warning" id="confirm-download-modal" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Download secret value?
+    </M.Header>
+    <M.Body>
+      This download is
+      <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <DownloadButton
+          @filename={{or @name "secret-value"}}
+          @data={{@value}}
+          @stringify={{true}}
+          @onSuccess={{fn (mut this.modalOpen) false}}
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

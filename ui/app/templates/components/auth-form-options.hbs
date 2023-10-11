@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#unless this.selectedAuthIsPath}}
   <div class="box has-slim-padding is-shadowless">
-    <ToggleButton @isOpen={{this.isOpen}} @onClick={{fn (mut this.isOpen)}} />
+    <ToggleButton @isOpen={{this.isOpen}} @onClick={{fn (mut this.isOpen)}} data-test-auth-form-options-toggle />
     {{#if this.isOpen}}
       <div class="field">
         <label for="custom-path" class="is-label">
@@ -14,6 +19,7 @@
             class="input"
             value={{@customPath}}
             oninput={{action @onPathChange value="target.value"}}
+            data-test-auth-form-mount-path
           />
         </div>
         <AlertInline

@@ -1,17 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
+import assertSecretWrap from 'vault/tests/helpers/secret-edit-toolbar';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server = apiStub({ usePassthrough: true });
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -20,7 +29,9 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the cubbyhole backend', async function (assert) {
-    const kvPath = `cubbyhole-kv-${new Date().getTime()}`;
+    assert.expect(4);
+    const kvPath = `cubbyhole-kv-${this.uid}`;
+    const requestPath = `cubbyhole/${kvPath}`;
     await listPage.visitRoot({ backend: 'cubbyhole' });
     await settled();
     assert.strictEqual(
@@ -39,5 +50,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
       'redirects to the show page'
     );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await assertSecretWrap(assert, this.server, requestPath);
   });
 });

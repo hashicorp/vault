@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .masked-font {
   color: $ui-gray-300;
 }
@@ -19,7 +24,7 @@
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: $family-primary;
+  font-family: $family-sans;
   line-height: 2.5;
 }
 
@@ -43,16 +48,11 @@
   background-color: transparent;
 }
 
-.button.masked-input-toggle,
-.button.copy-button {
+.button.masked-input-toggle {
   min-width: $spacing-xl;
   border-left: 0;
   color: $grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
-}
-
-.button.copy-button {
-  border-radius: 0;
 }
 
 .button.masked-input-toggle {
@@ -60,8 +60,7 @@
 }
 
 .display-only {
-  .button.masked-input-toggle,
-  .button.copy-button {
+  .button.masked-input-toggle {
     background: transparent;
     height: auto;
     line-height: 1rem;
@@ -75,7 +74,6 @@
     &:active,
     &.is-active,
     &:focus,
-    &.is-focused,
     &:hover,
     &:focus:not(:active) {
       color: $blue;

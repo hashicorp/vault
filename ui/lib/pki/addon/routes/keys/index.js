@@ -1,27 +1,44 @@
-import PkiOverviewRoute from '../overview';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
-export default class PkiKeysIndexRoute extends PkiOverviewRoute {
-  @service store;
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
+
+@withConfig()
+export default class PkiKeysIndexRoute extends Route {
   @service secretMountPath;
-  @service pathHelp;
+  @service store;
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/key', this.secretMountPath.currentPath);
-  }
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
 
-  model() {
+  model(params) {
+    const page = Number(params.page) || 1;
     return hash({
-      hasConfig: this.hasConfig(),
+      hasConfig: this.shouldPromptConfig,
       parentModel: this.modelFor('keys'),
-      keyModels: this.store.query('pki/key', { backend: this.secretMountPath.currentPath }).catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      }),
+      keyModels: this.store
+        .lazyPaginatedQuery('pki/key', {
+          backend: this.secretMountPath.currentPath,
+          responsePath: 'data.keys',
+          page,
+          skipCache: page === 1,
+        })
+        .catch((err) => {
+          if (err.httpStatus === 404) {
+            return [];
+          } else {
+            throw err;
+          }
+        }),
     });
   }
 
@@ -32,5 +49,12 @@ export default class PkiKeysIndexRoute extends PkiOverviewRoute {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'keys', route: 'keys.index' },
     ];
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

@@ -1,0 +1,158 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* Helpers that define anything with the CSS flexbox or CSS grid. */
+
+/* Flexbox helpers */
+.is-flex {
+  display: flex !important;
+}
+
+.is-flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.is-flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.has-gap-m {
+  gap: $spacing-m;
+}
+
+.has-gap-l {
+  gap: $spacing-l;
+}
+
+// Alignment of the items
+.is-flex-v-centered {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  justify-content: center;
+}
+
+.is-flex-center {
+  display: flex;
+  align-items: center;
+}
+
+.is-flex-align-start {
+  display: flex;
+  align-items: flex-start;
+}
+
+.is-flex-align-baseline {
+  display: flex;
+  align-items: baseline;
+}
+
+// Justify-content
+.is-centered {
+  justify-content: center;
+}
+
+.is-flex-end {
+  display: flex !important;
+  justify-content: flex-end;
+}
+
+.is-flex-start {
+  display: flex !important;
+  justify-content: flex-start;
+
+  &.has-gap {
+    gap: $spacing-m;
+  }
+}
+
+.is-flex-between,
+.is-grouped-split {
+  display: flex;
+  justify-content: space-between !important;
+}
+
+// Flex basis, grow, stretch and flow
+.is-flex-full {
+  flex-basis: 100%;
+}
+
+.is-flex-grow-1 {
+  flex-grow: 1;
+  &.basis-0 {
+    flex-basis: 0;
+  }
+}
+
+.is-flex-1 {
+  flex: 1;
+}
+
+.is-no-flex-grow {
+  flex-grow: 0 !important;
+}
+
+.is-flex-wrap {
+  flex-flow: row wrap;
+}
+
+.is-flex-half {
+  flex: 50%;
+}
+
+/* Flex Responsive */
+@media screen and (min-width: 769px), print {
+  .is-flex-v-centered-tablet {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    justify-content: center;
+  }
+}
+
+@include until($mobile) {
+  .is-flex-row {
+    flex-flow: column wrap;
+  }
+}
+
+/* CSS GRID */
+.is-grid {
+  display: grid;
+}
+
+.grid-2-columns {
+  grid-template-columns: 2fr 2fr;
+
+  @include until($mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-gap-2 {
+  grid-gap: 2rem;
+}
+
+.is-grid-3-columns {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.align-self-center {
+  align-self: center;
+}
+
+.is-medium-height {
+  height: 125px;
+}
+
+.is-grid-column-span-3 {
+  grid-column-end: span 3;
+}
+
+.grid-align-items-start {
+  align-items: start;
+}

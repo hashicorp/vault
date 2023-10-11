@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -124,6 +129,11 @@ export default class PkiIssuerCrossSign extends Component {
       id: intName,
     });
 
+    // Return if user is attempting to self-sign issuer
+    if (existingIssuer.issuerId === this.args.parentIssuer.issuerId) {
+      throw new Error('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+    }
+
     // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
     // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,
     // (ex. the certificate contains unsupported values) direct user to manually cross-sign via CLI
@@ -195,8 +205,8 @@ export default class PkiIssuerCrossSign extends Component {
     //       the newly issued intermediate CA, so that they can do recovery
     //       as they'd like.
     const issuerId = await this.store
-      .createRecord('pki/issuer', { pemBundle: signedCaChain })
-      .save({ adapterOptions: { import: true, mount: intMount } })
+      .createRecord('pki/action', { pemBundle: signedCaChain })
+      .save({ adapterOptions: { actionType: 'import', mount: intMount, useIssuer: true } })
       .then((importedIssuer) => {
         return Object.keys(importedIssuer.mapping).find(
           // matching key is the issuer_id

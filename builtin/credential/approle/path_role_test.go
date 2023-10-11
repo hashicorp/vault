@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -920,7 +923,7 @@ func TestAppRoleSecretIDLookup(t *testing.T) {
 	expected := &logical.Response{
 		Data: map[string]interface{}{
 			"http_content_type": "application/json",
-			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null}`,
+			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null,"mount_type":""}`,
 			"http_status_code":  404,
 		},
 	}
@@ -2071,5 +2074,61 @@ func TestAppRole_SecretID_WithTTL(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestAppRole_RoleSecretIDAccessorCrossDelete tests deleting a secret id via
+// secret id accessor belonging to a different role
+func TestAppRole_RoleSecretIDAccessorCrossDelete(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	// Create First Role
+	createRole(t, b, storage, "role1", "a,b")
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id",
+	})
+
+	// Create Second Role
+	createRole(t, b, storage, "role2", "a,b")
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id",
+	})
+
+	// Get role2 secretID Accessor
+	resp = b.requestNoErr(t, &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id",
+	})
+
+	// Read back role2 secretID Accessor information
+	hmacSecretID := resp.Data["keys"].([]string)[0]
+	_ = b.requestNoErr(t, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role2/secret-id-accessor/lookup",
+		Data: map[string]interface{}{
+			"secret_id_accessor": hmacSecretID,
+		},
+	})
+
+	// Attempt to destroy role2 secretID accessor using role1 path
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id-accessor/destroy",
+		Data: map[string]interface{}{
+			"secret_id_accessor": hmacSecretID,
+		},
+	})
+
+	if err == nil {
+		t.Fatalf("expected error")
 	}
 }

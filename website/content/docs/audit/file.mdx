@@ -4,7 +4,7 @@ page_title: File - Audit Devices
 description: The "file" audit device writes audit logs to a file.
 ---
 
-# File Audit Device
+# File audit device
 
 The `file` audit device writes audit logs to a file. This is a very simple audit
 device: it appends logs to a file.
@@ -52,7 +52,7 @@ these device-specific options:
 
   - `stdout` writes the audit log to standard output
 
-  - `discard` writes output (useful in testing scenarios)
+  - `discard` discards output, instead of writing it to a device (useful in testing scenarios)
 
 - `mode` `(string: "0600")` - A string containing an octal number representing
   the bit pattern for the file mode, similar to `chmod`. Set to `"0000"` to
@@ -60,6 +60,6 @@ these device-specific options:
 
 
 
-## Log File Rotation
+## Log file rotation
 
 To properly rotate Vault File Audit Device log files on BSD, Darwin, or Linux-based Vault servers, it is important that you configure your log rotation software to send the `vault` process a signal hang up / `SIGHUP` after each rotation of the log file.

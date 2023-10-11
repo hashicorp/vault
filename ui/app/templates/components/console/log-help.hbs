@@ -1,8 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! template-lint-disable no-whitespace-for-layout }}
+{{! prettier-ignore }}
 <div class="console-ui-alert has-text-grey">
-  <Icon @name="info" />
-  <pre>Usage: vault &lt;command&gt; [args] Commands: read Read data and retrieves secrets write Write data, configuration,
-    and secrets delete Delete secrets and configuration list List data or secrets Web CLI Commands: api Navigate to the Vault
-    API explorer. Use 'api [filter]' to prefilter the list. clear Clear output from the log clearall Clear output and command
-    history fullscreen Toggle fullscreen display refresh Refresh the data on the current screen under the CLI window
-  </pre>
+<Icon @name="info" />
+<pre>Usage: vault &lt;command&gt; [args]
+
+Commands:
+  read        Read data and retrieves secrets
+  kv-get      Read data for kv v2 secret engines. Use -metadata flag to read metadata
+  write       Write data, configuration, and secrets
+  delete      Delete secrets and configuration
+  list        List data or secrets
+
+Web CLI Commands:
+  api         Navigate to the Vault API explorer. Use 'api [filter]' to prefilter the list.
+  clear       Clear output from the log
+  clearall    Clear output and command history
+  fullscreen  Toggle fullscreen display
+  refresh     Refresh the data on the current screen under the CLI window
+</pre>
 </div>

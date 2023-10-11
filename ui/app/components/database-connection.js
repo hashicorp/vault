@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -68,15 +73,15 @@ export default class DatabaseConnectionEdit extends Component {
   }
 
   @action
-  continueWithoutRotate(evt) {
-    evt.preventDefault();
+  continueWithoutRotate() {
+    this.showSaveModal = false;
     const { name } = this.args.model;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action
-  continueWithRotate(evt) {
-    evt.preventDefault();
+  continueWithRotate() {
+    this.showSaveModal = false;
     const { backend, name } = this.args.model;
     this.rotateCredentials(backend, name)
       .then(() => {

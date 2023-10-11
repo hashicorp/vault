@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -33,6 +36,8 @@ type ListPluginsResponse struct {
 type PluginDetails struct {
 	Type              string `json:"type"`
 	Name              string `json:"name"`
+	OCIImage          string `json:"oci_image,omitempty" mapstructure:"oci_image"`
+	Runtime           string `json:"runtime,omitempty"`
 	Version           string `json:"version,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
@@ -143,6 +148,8 @@ type GetPluginResponse struct {
 	Command           string   `json:"command"`
 	Name              string   `json:"name"`
 	SHA256            string   `json:"sha256"`
+	OCIImage          string   `json:"oci_image,omitempty"`
+	Runtime           string   `json:"runtime,omitempty"`
 	DeprecationStatus string   `json:"deprecation_status,omitempty"`
 	Version           string   `json:"version,omitempty"`
 }
@@ -198,6 +205,16 @@ type RegisterPluginInput struct {
 
 	// Version is the optional version of the plugin being registered
 	Version string `json:"version,omitempty"`
+
+	// OCIImage specifies the container image to run as a plugin.
+	OCIImage string `json:"oci_image,omitempty"`
+
+	// Runtime is the Vault plugin runtime to use when running the plugin.
+	Runtime string `json:"runtime,omitempty"`
+
+	// Env specifies a list of key=value pairs to add to the plugin's environment
+	// variables.
+	Env []string `json:"env,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

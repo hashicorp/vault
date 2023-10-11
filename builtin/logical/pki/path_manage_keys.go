@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -15,6 +18,12 @@ import (
 func pathGenerateKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/generate/(internal|exported|kms)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "generate",
+			OperationSuffix: "internal-key|exported-key|kms-key",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {
@@ -178,6 +187,12 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 func pathImportKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/import",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "import",
+			OperationSuffix: "key",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			keyNameParam: {

@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const M = Model.extend({
+export default Model.extend({
   idPrefix: 'alphabet/',
   idForNav: computed('id', 'idPrefix', function () {
     const modelId = this.id || '';
@@ -27,8 +31,5 @@ const M = Model.extend({
   }),
 
   backend: attr('string', { readOnly: true }),
-});
-
-export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/alphabet/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/alphabet/${'id'}`, 'backend', 'id'),
 });

@@ -1,0 +1,107 @@
+---
+layout: docs
+page_title: Vault Secrets Operator Installation
+description: >-
+  The Vault Secrets Operator can be installed using Helm.
+---
+
+# Installing and upgrading the Vault Secrets Operator
+
+## Prerequisites
+
+- A Kubernetes cluster running 1.23+
+- Helm 3.7+
+
+## Installation using helm
+
+[Install Helm](https://helm.sh/docs/intro/install) before beginning.
+
+The [Vault Secrets Operator Helm chart](/vault/docs/platform/k8s/vso/helm) is the recommended way of
+installing and configuring the Vault Secrets Operator.
+
+To install a new instance of the Vault Secrets Operator, first add the
+HashiCorp helm repository and ensure you have access to the chart:
+
+```shell-session
+$ helm repo add hashicorp https://helm.releases.hashicorp.com
+"hashicorp" has been added to your repositories
+```
+
+```shell-session
+$ helm search repo hashicorp/vault-secrets-operator
+NAME           	CHART VERSION	APP VERSION	DESCRIPTION
+hashicorp/vault-secrets-operator	0.3.1       	0.3.1     	Official HashiCorp Vault Secrets Operator Chart
+```
+
+Then install the Operator:
+
+```shell-session
+$ helm install --version 0.3.1 --create-namespace --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
+
+
+## Upgrading using helm
+
+You can upgrade an existing installation with the `helm upgrade` command.
+Please always run Helm with the `--dry-run` option before any install or upgrade to verify
+changes.
+
+Update the `hashicorp` Helm repo:
+```shell-session
+$ helm repo update hashicorp
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "hashicorp" chart repository
+Update Complete. ⎈Happy Helming!⎈
+```
+
+<Note title="Helm does not automatically update CRDs">
+  You must update all CRDs manually before upgrading VSO.
+  Refer to <a href="#updating-crds">Updating CRDs</a>.
+</Note>
+
+To upgrade your VSO release, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
+```shell-session
+$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm upgrade --version <TARGET_VSO_VERSION> --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
+
+For example, if you are upgrading to VSO 0.3.1:
+```shell-session
+$ helm show crds --version 0.3.1 hashicorp/vault-secrets-operator | kubectl apply -f -
+$ helm upgrade --version 0.3.1 --namespace vault-secrets-operator vault-secrets-operator hashicorp/vault-secrets-operator
+```
+
+## Updating CRDs
+
+You must update the CRDs for VSO manually **before** you upgrade the
+ operator when the operator is managed by Helm.
+
+**Any `kubectl` warnings related to `last-applied-configuration` should be safe to ignore.**
+
+To update the VSO CRDs, replace `<TARGET_VSO_VERSION>` with the VSO version you are upgrading to:
+```shell-session
+$ helm show crds --version <TARGET_VSO_VERSION> hashicorp/vault-secrets-operator | kubectl apply -f -
+```
+
+For example, if you are upgrading to VSO 0.3.1:
+```shell-session
+$ helm show crds --version 0.3.1 hashicorp/vault-secrets-operator | kubectl apply -f -
+
+customresourcedefinition.apiextensions.k8s.io/hcpauths.secrets.hashicorp.com created
+customresourcedefinition.apiextensions.k8s.io/hcpvaultsecretsapps.secrets.hashicorp.com created
+Warning: resource customresourcedefinitions/vaultauths.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultauths.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultconnections.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultconnections.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultdynamicsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultdynamicsecrets.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultpkisecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultpkisecrets.secrets.hashicorp.com configured
+Warning: resource customresourcedefinitions/vaultstaticsecrets.secrets.hashicorp.com is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+customresourcedefinition.apiextensions.k8s.io/vaultstaticsecrets.secrets.hashicorp.com configured
+```
+
+## Chart values
+
+Refer to the [VSO helm chart](/vault/docs/platform/k8s/vso/helm)
+ overview for a full list of supported chart values.

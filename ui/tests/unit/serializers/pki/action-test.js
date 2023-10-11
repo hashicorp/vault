@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'vault/tests/helpers';
 import { rootPem } from 'vault/tests/helpers/pki/values';

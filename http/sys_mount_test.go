@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -31,6 +34,7 @@ func TestSysMounts(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -212,6 +216,7 @@ func TestSysMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -416,6 +421,72 @@ func TestSysMount_put(t *testing.T) {
 	// for more info.
 }
 
+// TestSysRemountSpacesFrom ensure we succeed in a remount where the 'from' mount has spaces in the name
+func TestSysRemountSpacesFrom(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountSpacesTo ensure we succeed in a remount where the 'to' mount has spaces in the name
+func TestSysRemountSpacesTo(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   "bar baz",
+	})
+	testResponseStatus(t, resp, 200)
+}
+
+// TestSysRemountTrailingSpaces ensures we fail on trailing spaces
+func TestSysRemountTrailingSpaces(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/mounts/foo%20bar", map[string]interface{}{
+		"type":        "kv",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "foo bar",
+		"to":   " baz ",
+	})
+	testResponseStatus(t, resp, 400)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": " foo bar ",
+		"to":   "baz",
+	})
+	testResponseStatus(t, resp, 400)
+}
+
 func TestSysRemount(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -460,6 +531,7 @@ func TestSysRemount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"bar/": map[string]interface{}{
 				"description":             "foo",
@@ -673,6 +745,7 @@ func TestSysUnmount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
 				"description":             "key/value secret storage",
@@ -861,6 +934,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("2764800"),
@@ -899,6 +973,7 @@ func TestSysTuneMount_Options(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("2764800"),
@@ -940,6 +1015,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -1179,6 +1255,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
@@ -1377,6 +1454,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foo",
 			"default_lease_ttl": json.Number("259196400"),
@@ -1415,6 +1493,7 @@ func TestSysTuneMount(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "foobar",
 			"default_lease_ttl": json.Number("40"),
@@ -1512,6 +1591,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":                  "key/value secret storage",
 			"default_lease_ttl":            json.Number("2764800"),
@@ -1558,6 +1638,7 @@ func TestSysTuneMount_nonHMACKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1596,6 +1677,7 @@ func TestSysTuneMount_listingVisibility(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1633,6 +1715,7 @@ func TestSysTuneMount_listingVisibility(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":        "key/value secret storage",
 			"default_lease_ttl":  json.Number("2764800"),
@@ -1679,6 +1762,7 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":                 "key/value secret storage",
 			"default_lease_ttl":           json.Number("2764800"),
@@ -1718,6 +1802,7 @@ func TestSysTuneMount_passthroughRequestHeaders(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),
@@ -1762,6 +1847,7 @@ func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":          "key/value secret storage",
 			"default_lease_ttl":    json.Number("2764800"),
@@ -1801,6 +1887,7 @@ func TestSysTuneMount_allowedManagedKeys(t *testing.T) {
 		"wrap_info":      nil,
 		"warnings":       nil,
 		"auth":           nil,
+		"mount_type":     "system",
 		"data": map[string]interface{}{
 			"description":       "key/value secret storage",
 			"default_lease_ttl": json.Number("2764800"),

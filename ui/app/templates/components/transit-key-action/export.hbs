@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -60,33 +65,38 @@
     </div>
   </div>
 </form>
-<Modal @title="Copy your wrapped key" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h2 class="title is-6">Wrapped Key</h2>
-      <div class="copy-text level">
-        <pre data-test-encrypted-value="export" class="level-left">{{if this.wrapTTL @wrappedToken (stringify @keys)}}</pre>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Token copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-      @buttonType="button"
-      @success={{action @toggleModal "Token copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-export-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your wrapped key
+    </M.Header>
+    <M.Body>
+      <h2 class="title is-6">Wrapped key</h2>
+      {{#if this.wrapTTL}}
+        <Hds::Copy::Snippet
+          class="has-bottom-margin-m"
+          @textToCopy={{@wrappedToken}}
+          @color="secondary"
+          @container="#transit-export-modal"
+          data-test-encrypted-value="export"
+        />
+      {{else}}
+        <div class="copy-text level is-relative">
+          <pre data-test-encrypted-value="export" class="level-left">
+            {{stringify @keys}}
+          </pre>
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{stringify @keys}}
+            @container="#transit-export-modal"
+            class="transparent top-right-absolute"
+          />
+        </div>
+      {{/if}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

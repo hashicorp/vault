@@ -1,16 +1,28 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 scenario "autopilot" {
   matrix {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
     artifact_type   = ["bundle", "package"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    // NOTE: when backporting, make sure that our initial versions are less than that
+    // release branch's version.
+    initial_version = ["1.11.12", "1.12.11", "1.13.6", "1.14.2"]
     seal            = ["awskms", "shamir"]
 
-    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
+    # Our local builder always creates bundles
     exclude {
-      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
-      artifact_type = ["package"]
+      artifact_source = ["local"]
+      artifact_type   = ["package"]
+    }
+
+    # HSM and FIPS 140-2 are only supported on amd64
+    exclude {
+      arch    = ["arm64"]
+      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     }
   }
 
@@ -23,43 +35,21 @@ scenario "autopilot" {
   ]
 
   locals {
-    build_tags = {
-      "ent"              = ["ui", "enterprise", "ent"]
-      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
-      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
-    }
-    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    dependencies_to_install = ["jq"]
+    artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    tags = merge({
-      "Project Name" : var.project_name
-      "Project" : "Enos",
-      "Environment" : "ci"
-    }, var.tags)
-    vault_instance_types = {
-      amd64 = "t3a.small"
-      arm64 = "t4g.small"
-    }
-
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-    vault_install_dir_packages = {
-      rhel   = "/bin"
-      ubuntu = "/usr/bin"
-    }
-    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
+    manage_service    = matrix.artifact_type == "bundle"
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
   }
 
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path          = local.bundle_path
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      artifact_path        = local.artifact_path
       goarch               = matrix.arch
       goos                 = "linux"
       artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
@@ -71,29 +61,19 @@ scenario "autopilot" {
       artifact_type        = matrix.artifact_type
       distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
       edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision             = var.vault_revision
     }
   }
 
-  step "find_azs" {
-    module = module.az_finder
-
-    variables {
-      instance_type = [
-        local.vault_instance_type
-      ]
-    }
+  step "ec2_info" {
+    module = module.ec2_info
   }
 
   step "create_vpc" {
-    module     = module.create_vpc
-    depends_on = [step.find_azs]
+    module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      common_tags = global.tags
     }
   }
 
@@ -101,40 +81,55 @@ scenario "autopilot" {
     module = module.read_license
 
     variables {
-      file_name = local.vault_license_path
+      file_name = global.vault_license_path
     }
   }
 
-  # This step creates a Vault cluster using a bundle downloaded from
-  # releases.hashicorp.com, with the version specified in var.vault_autopilot_initial_release
-  step "create_vault_cluster" {
-    module = module.vault_cluster
-    depends_on = [
-      step.create_vpc,
-      step.build_vault,
-    ]
+  step "create_vault_cluster_targets" {
+    module     = module.target_ec2_instances
+    depends_on = [step.create_vpc]
+
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags             = local.tags
-      dependencies_to_install = local.dependencies_to_install
-      instance_type           = local.vault_instance_type
-      kms_key_arn             = step.create_vpc.kms_key_arn
-      storage_backend         = "raft"
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_tag_key       = global.vault_tag_key
+      common_tags           = global.tags
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
+  step "create_vault_cluster" {
+    module = module.vault_cluster
+    depends_on = [
+      step.build_vault,
+      step.create_vault_cluster_targets
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_name          = step.create_vault_cluster_targets.cluster_name
+      install_dir           = local.vault_install_dir
+      license               = matrix.edition != "ce" ? step.read_license.license : null
+      packages              = concat(global.packages, global.distro_packages[matrix.distro])
+      release = {
+        edition = matrix.edition
+        version = matrix.initial_version
+      }
+      storage_backend = "raft"
       storage_backend_addl_config = {
-        autopilot_upgrade_version = var.vault_autopilot_initial_release.version
+        autopilot_upgrade_version = matrix.initial_version
       }
-      unseal_method     = matrix.seal
-      vault_install_dir = local.vault_install_dir
-      vault_release     = var.vault_autopilot_initial_release
-      vault_license     = step.read_license.license
-      vpc_id            = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      target_hosts         = step.create_vault_cluster_targets.hosts
+      unseal_method        = matrix.seal
+      enable_audit_devices = var.vault_enable_audit_devices
     }
   }
 
@@ -152,9 +147,9 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_hosts       = step.create_vault_cluster.target_hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.vault_root_token
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
@@ -172,9 +167,9 @@ scenario "autopilot" {
     variables {
       leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
       leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_instances   = step.create_vault_cluster.target_hosts
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.vault_root_token
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
@@ -186,8 +181,23 @@ scenario "autopilot" {
     }
   }
 
-  # This step creates a new Vault cluster using a bundle or package
-  # from the matrix.artifact_source, with the var.vault_product_version
+  step "create_vault_cluster_upgrade_targets" {
+    module     = module.target_ec2_instances
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      common_tags           = global.tags
+      cluster_name          = step.create_vault_cluster_targets.cluster_name
+      vpc_id                = step.create_vpc.vpc_id
+    }
+  }
+
   step "upgrade_vault_cluster_with_autopilot" {
     module = module.vault_cluster
     depends_on = [
@@ -202,28 +212,25 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags                 = local.tags
-      dependencies_to_install     = local.dependencies_to_install
-      instance_type               = local.vault_instance_type
-      kms_key_arn                 = step.create_vpc.kms_key_arn
+      artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn       = step.create_vpc.kms_key_arn
+      cluster_name                = step.create_vault_cluster_targets.cluster_name
+      log_level                   = var.vault_log_level
+      force_unseal                = matrix.seal == "shamir"
+      initialize_cluster          = false
+      install_dir                 = local.vault_install_dir
+      license                     = matrix.edition != "ce" ? step.read_license.license : null
+      local_artifact_path         = local.artifact_path
+      manage_service              = local.manage_service
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro])
+      root_token                  = step.create_vault_cluster.root_token
+      shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"
       storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
+      storage_node_prefix         = "upgrade_node"
+      target_hosts                = step.create_vault_cluster_upgrade_targets.hosts
       unseal_method               = matrix.seal
-      vault_cluster_tag           = step.create_vault_cluster.vault_cluster_tag
-      vault_init                  = false
-      vault_install_dir           = local.vault_install_dir
-      vault_license               = step.read_license.license
-      vault_local_artifact_path   = local.bundle_path
-      vault_artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      vault_node_prefix           = "upgrade_node"
-      vault_root_token            = step.create_vault_cluster.vault_root_token
-      vault_unseal_when_no_init   = matrix.seal == "shamir"
-      vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
-      vpc_id                      = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      enable_audit_devices        = var.vault_enable_audit_devices
     }
   }
 
@@ -231,6 +238,7 @@ scenario "autopilot" {
     module = module.vault_verify_unsealed
     depends_on = [
       step.create_vault_cluster,
+      step.create_vault_cluster_upgrade_targets,
       step.upgrade_vault_cluster_with_autopilot,
     ]
 
@@ -240,7 +248,7 @@ scenario "autopilot" {
 
     variables {
       vault_install_dir = local.vault_install_dir
-      vault_instances   = step.upgrade_vault_cluster_with_autopilot.vault_instances
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
   }
 
@@ -257,14 +265,15 @@ scenario "autopilot" {
 
     variables {
       vault_install_dir = local.vault_install_dir
-      vault_instances   = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.vault_root_token
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
   step "verify_autopilot_await_server_removal_state" {
     module = module.vault_verify_autopilot
     depends_on = [
+      step.create_vault_cluster_upgrade_targets,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter
     ]
@@ -277,15 +286,16 @@ scenario "autopilot" {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "await-server-removal"
       vault_install_dir               = local.vault_install_dir
-      vault_instances                 = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token                = step.create_vault_cluster.vault_root_token
+      vault_instances                 = step.create_vault_cluster.target_hosts
+      vault_root_token                = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
-  step "get_updated_vault_cluster_ips" {
-    module = module.vault_get_cluster_ips
+  step "wait_for_leader_in_upgrade_targets" {
+    module = module.vault_wait_for_leader
     depends_on = [
       step.create_vault_cluster,
+      step.create_vault_cluster_upgrade_targets,
       step.get_vault_cluster_ips,
       step.upgrade_vault_cluster_with_autopilot
     ]
@@ -295,11 +305,30 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_instances       = step.create_vault_cluster.vault_instances
-      vault_install_dir     = local.vault_install_dir
-      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token      = step.create_vault_cluster.vault_root_token
-      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+    }
+  }
+
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.create_vault_cluster,
+      step.create_vault_cluster_upgrade_targets,
+      step.get_vault_cluster_ips,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.wait_for_leader_in_upgrade_targets,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
@@ -326,6 +355,7 @@ scenario "autopilot" {
   step "raft_remove_peers" {
     module = module.vault_raft_remove_peer
     depends_on = [
+      step.create_vault_cluster_upgrade_targets,
       step.get_updated_vault_cluster_ips,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_autopilot_await_server_removal_state
@@ -336,11 +366,11 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_install_dir      = local.vault_install_dir
       operator_instance      = step.get_updated_vault_cluster_ips.leader_public_ip
-      remove_vault_instances = step.create_vault_cluster.vault_instances
+      remove_vault_instances = step.create_vault_cluster.target_hosts
+      vault_install_dir      = local.vault_install_dir
       vault_instance_count   = 3
-      vault_root_token       = step.create_vault_cluster.vault_root_token
+      vault_root_token       = step.create_vault_cluster.root_token
     }
   }
 
@@ -356,7 +386,7 @@ scenario "autopilot" {
     }
 
     variables {
-      old_vault_instances  = step.create_vault_cluster.vault_instances
+      old_vault_instances  = step.create_vault_cluster.target_hosts
       vault_instance_count = 3
     }
   }
@@ -364,6 +394,7 @@ scenario "autopilot" {
   step "verify_autopilot_idle_state" {
     module = module.vault_verify_autopilot
     depends_on = [
+      step.create_vault_cluster_upgrade_targets,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter,
       step.remove_old_nodes
@@ -377,15 +408,80 @@ scenario "autopilot" {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "idle"
       vault_install_dir               = local.vault_install_dir
-      vault_instances                 = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token                = step.create_vault_cluster.vault_root_token
+      vault_instances                 = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_root_token                = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_replication" {
+    module = module.vault_verify_replication
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
+    }
+  }
+
+  step "verify_vault_version" {
+    module = module.vault_verify_version
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_edition         = matrix.edition
+      vault_install_dir     = local.vault_install_dir
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_ui" {
+    module = module.vault_verify_ui
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances = step.upgrade_vault_cluster_with_autopilot.target_hosts
     }
   }
 
   step "verify_undo_logs_status" {
-    skip_step = try(semverconstraint(var.vault_product_version, "<1.13.0-0"), true)
-    module    = module.vault_verify_undo_logs
+    skip_step = true
+    # NOTE: temporarily disable undo logs checking until it is fixed. See VAULT-20259
+    # skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module = module.vault_verify_undo_logs
     depends_on = [
+      step.create_vault_cluster_upgrade_targets,
       step.remove_old_nodes,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_autopilot_idle_state
@@ -397,78 +493,83 @@ scenario "autopilot" {
 
     variables {
       vault_install_dir = local.vault_install_dir
-      vault_instances   = step.upgrade_vault_cluster_with_autopilot.vault_instances
-      vault_root_token  = step.create_vault_cluster.vault_root_token
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
-  output "vault_cluster_instance_ids" {
-    description = "The Vault cluster instance IDs"
-    value       = step.create_vault_cluster.instance_ids
+  output "awskms_unseal_key_arn" {
+    description = "The Vault cluster KMS key arn"
+    value       = step.create_vpc.kms_key_arn
   }
 
-  output "vault_cluster_pub_ips" {
-    description = "The Vault cluster public IPs"
-    value       = step.create_vault_cluster.instance_public_ips
+  output "cluster_name" {
+    description = "The Vault cluster name"
+    value       = step.create_vault_cluster.cluster_name
   }
 
-  output "vault_cluster_priv_ips" {
+  output "hosts" {
+    description = "The Vault cluster target hosts"
+    value       = step.create_vault_cluster.target_hosts
+  }
+
+  output "private_ips" {
     description = "The Vault cluster private IPs"
-    value       = step.create_vault_cluster.instance_private_ips
+    value       = step.create_vault_cluster.private_ips
   }
 
-  output "vault_cluster_key_id" {
-    description = "The Vault cluster Key ID"
-    value       = step.create_vault_cluster.key_id
+  output "public_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.create_vault_cluster.public_ips
   }
 
-  output "vault_cluster_root_token" {
+  output "root_token" {
     description = "The Vault cluster root token"
-    value       = step.create_vault_cluster.vault_root_token
+    value       = step.create_vault_cluster.root_token
   }
 
-  output "vault_cluster_unseal_keys_b64" {
-    description = "The Vault cluster unseal keys"
-    value       = step.create_vault_cluster.vault_unseal_keys_b64
-  }
-
-  output "vault_cluster_recovery_key_shares" {
+  output "recovery_key_shares" {
     description = "The Vault cluster recovery key shares"
-    value       = step.create_vault_cluster.vault_recovery_key_shares
+    value       = step.create_vault_cluster.recovery_key_shares
   }
 
-  output "vault_cluster_recovery_keys_b64" {
+  output "recovery_keys_b64" {
     description = "The Vault cluster recovery keys b64"
-    value       = step.create_vault_cluster.vault_recovery_keys_b64
+    value       = step.create_vault_cluster.recovery_keys_b64
   }
 
-  output "vault_cluster_recovery_keys_hex" {
+  output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
-    value       = step.create_vault_cluster.vault_recovery_keys_hex
+    value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "vault_cluster_unseal_keys_hex" {
+  output "unseal_keys_b64" {
+    description = "The Vault cluster unseal keys"
+    value       = step.create_vault_cluster.unseal_keys_b64
+  }
+
+  output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
-    value       = step.create_vault_cluster.vault_unseal_keys_hex
+    value       = step.create_vault_cluster.unseal_keys_hex
   }
 
-  output "vault_cluster_tag" {
-    description = "The Vault cluster tag"
-    value       = step.create_vault_cluster.vault_cluster_tag
+  output "upgrade_hosts" {
+    description = "The Vault cluster target hosts"
+    value       = step.upgrade_vault_cluster_with_autopilot.target_hosts
   }
 
-  output "upgraded_vault_cluster_instance_ids" {
-    description = "The Vault cluster instance IDs"
-    value       = step.upgrade_vault_cluster_with_autopilot.instance_ids
-  }
-
-  output "upgraded_vault_cluster_pub_ips" {
-    description = "The Vault cluster public IPs"
-    value       = step.upgrade_vault_cluster_with_autopilot.instance_public_ips
-  }
-
-  output "upgraded_vault_cluster_priv_ips" {
+  output "upgrade_private_ips" {
     description = "The Vault cluster private IPs"
-    value       = step.upgrade_vault_cluster_with_autopilot.instance_private_ips
+    value       = step.upgrade_vault_cluster_with_autopilot.private_ips
+  }
+
+  output "upgrade_public_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.upgrade_vault_cluster_with_autopilot.public_ips
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import TutorialMachineConfig from 'vault/machines/tutorial-machine';
 import SecretsMachineConfig from 'vault/machines/secrets-machine';
 import PoliciesMachineConfig from 'vault/machines/policies-machine';

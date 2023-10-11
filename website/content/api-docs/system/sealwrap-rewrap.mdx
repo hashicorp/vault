@@ -8,13 +8,15 @@ description: >-
 
 # `/sys/sealwrap/rewrap`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/sealwrap/rewrap` endpoint is used to rewrap all seal wrapped entries.
 This is useful when you want to upgrade seal wrapped entries to use the latest
 key, for example, after a seal migration or after rotating the remote keyring.
 
-## Read Rewrap Status
+## Read rewrap status
 
 This endpoint reports whether a seal rewrap process is currently running.
 
@@ -22,7 +24,7 @@ This endpoint reports whether a seal rewrap process is currently running.
 | :----- | :--------------------- |
 | `GET`  | `/sys/sealwrap/rewrap` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -30,7 +32,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/sealwrap/rewrap
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -45,7 +47,7 @@ $ curl \
 }
 ```
 
-## Start a Seal Rewrap Process
+## Start a seal rewrap process
 
 This endpoint starts a seal rewrap process if one is not currently running.
 The process will run in the background. Check the vault server logs for status
@@ -60,7 +62,7 @@ The default status codes are:
 - `200` if a seal rewrap process is already running
 - `204` if a seal rewrap process was started
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

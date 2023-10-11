@@ -60,10 +60,74 @@
         "title": "Security Model",
         "path": "internals/security"
       },
+
       {
         "title": "Telemetry",
-        "path": "internals/telemetry"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "internals/telemetry"
+          },
+          {
+            "title": "Enable telemetry gathering",
+            "path": "internals/telemetry/enable-telemetry"
+          },
+          {
+            "title": "Metric reference",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "internals/telemetry/metrics"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
+              },
+              {
+                "title": "Audit log metrics",
+                "path": "internals/telemetry/metrics/audit"
+              },
+              {
+                "title": "Authentication metrics",
+                "path": "internals/telemetry/metrics/authn"
+              },
+              {
+                "title": "Auto-snapshot metrics",
+                "path": "internals/telemetry/metrics/autosnap"
+              },
+              {
+                "title": "Availability metrics",
+                "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Database metrics",
+                "path": "internals/telemetry/metrics/database"
+              },
+              {
+                "title": "Policy metrics",
+                "path": "internals/telemetry/metrics/policy"
+              },
+              {
+                "title": "Raft metrics",
+                "path": "internals/telemetry/metrics/raft"
+              },
+              {
+                "title": "Secrets metrics",
+                "path": "internals/telemetry/metrics/secrets"
+              },
+              {
+                "title": "Storage plugin metrics",
+                "path": "internals/telemetry/metrics/storage"
+              },
+              {
+                "title": "Full metrics list",
+                "path": "internals/telemetry/metrics/all"
+              }
+            ]
+          }
+        ]
       },
+
       {
         "title": "Token Authentication",
         "path": "internals/token"
@@ -171,11 +235,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",
@@ -198,6 +266,15 @@
       {
         "title": "User Lockout",
         "path": "concepts/user-lockout"
+      },
+      {
+        "title": "Events",
+        "path": "concepts/events",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       }
     ]
   },
@@ -236,6 +313,14 @@
             "title": "Overview",
             "path": "configuration/seal"
           },
+          { "title": "High Availability",
+           "badge": {
+              "text": "ENTERPRISE | BETA",
+              "type": "outlined",
+              "color": "highlight"
+            },
+            "path": "configuration/seal/seal-ha"
+          },
           {
             "title": "AliCloud KMS",
             "path": "configuration/seal/alicloudkms"
@@ -259,7 +344,7 @@
           {
             "title": "HSM PKCS11",
             "badge": {
-              "text": "ENT",
+              "text": "ENTERPRISE",
               "type": "outlined",
               "color": "neutral"
             },
@@ -412,7 +497,7 @@
       {
         "title": "<code>Entropy Augmentation</code>",
         "badge": {
-          "text": "ENT",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
@@ -421,7 +506,7 @@
       {
         "title": "<code>kms_library</code>",
         "badge": {
-          "text": "ENT",
+          "text": "ENTERPRISE",
           "type": "outlined",
           "color": "neutral"
         },
@@ -503,6 +588,10 @@
         "path": "commands/delete"
       },
       {
+        "title": "<code>events</code>",
+        "path": "commands/events"
+      },
+      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -548,19 +637,6 @@
           {
             "title": "<code>undelete</code>",
             "path": "commands/kv/undelete"
-          }
-        ]
-      },
-      {
-        "title": "<code>pki</code>",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "commands/pki"
-          },
-          {
-            "title": "<code>health-check</code>",
-            "path": "commands/pki/health-check"
           }
         ]
       },
@@ -688,6 +764,35 @@
         "path": "commands/path-help"
       },
       {
+        "title": "<code>pki</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/pki"
+          },
+          {
+            "title": "<code>health-check</code>",
+            "path": "commands/pki/health-check"
+          },
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
+        ]
+      },
+      {
         "title": "<code>plugin</code>",
         "routes": [
           {
@@ -713,6 +818,31 @@
           {
             "title": "<code>reload</code>",
             "path": "commands/plugin/reload"
+          },
+          {
+            "title": "<code>runtime</code>",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "commands/plugin/runtime"
+              },
+              {
+                "title": "<code>deregister</code>",
+                "path": "commands/plugin/runtime/deregister"
+              },
+              {
+                "title": "<code>info</code>",
+                "path": "commands/plugin/runtime/info"
+              },
+              {
+                "title": "<code>list</code>",
+                "path": "commands/plugin/runtime/list"
+              },
+              {
+                "title": "<code>register</code>",
+                "path": "commands/plugin/runtime/register"
+              }
+            ]
           }
         ]
       },
@@ -748,6 +878,10 @@
       {
         "title": "<code>print</code>",
         "path": "commands/print"
+      },
+      {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
       },
       {
         "title": "<code>read</code>",
@@ -824,6 +958,19 @@
         ]
       },
       {
+        "title": "<code>transit</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/transit"
+          },
+          {
+            "title": "<code>import</code> and <code>import-version</code>",
+            "path": "commands/transit/import"
+          }
+        ]
+      },
+      {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
       },
@@ -846,69 +993,77 @@
     ]
   },
   {
-    "title": "Vault Agent",
+    "title": "Vault Agent and Vault Proxy",
     "routes": [
       {
         "title": "Overview",
-        "path": "agent"
+        "path": "agent-and-proxy"
       },
       {
         "title": "Auto-Auth",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent/autoauth"
+            "path": "agent-and-proxy/autoauth"
           },
           {
             "title": "Methods",
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent/autoauth/methods"
+                "path": "agent-and-proxy/autoauth/methods"
               },
               {
                 "title": "AliCloud",
-                "path": "agent/autoauth/methods/alicloud"
+                "path": "agent-and-proxy/autoauth/methods/alicloud"
               },
               {
                 "title": "AppRole",
-                "path": "agent/autoauth/methods/approle"
+                "path": "agent-and-proxy/autoauth/methods/approle"
               },
               {
                 "title": "AWS",
-                "path": "agent/autoauth/methods/aws"
+                "path": "agent-and-proxy/autoauth/methods/aws"
               },
               {
                 "title": "Azure",
-                "path": "agent/autoauth/methods/azure"
+                "path": "agent-and-proxy/autoauth/methods/azure"
               },
               {
                 "title": "Cert",
-                "path": "agent/autoauth/methods/cert"
+                "path": "agent-and-proxy/autoauth/methods/cert"
               },
               {
                 "title": "CF",
-                "path": "agent/autoauth/methods/cf"
+                "path": "agent-and-proxy/autoauth/methods/cf"
               },
               {
                 "title": "GCP",
-                "path": "agent/autoauth/methods/gcp"
+                "path": "agent-and-proxy/autoauth/methods/gcp"
               },
               {
                 "title": "JWT",
-                "path": "agent/autoauth/methods/jwt"
+                "path": "agent-and-proxy/autoauth/methods/jwt"
+              },
+              {
+                "title": "LDAP",
+                "path": "agent-and-proxy/autoauth/methods/ldap"
               },
               {
                 "title": "Kerberos",
-                "path": "agent/autoauth/methods/kerberos"
+                "path": "agent-and-proxy/autoauth/methods/kerberos"
               },
               {
                 "title": "Kubernetes",
-                "path": "agent/autoauth/methods/kubernetes"
+                "path": "agent-and-proxy/autoauth/methods/kubernetes"
+              },
+              {
+                "title": "Oracle Cloud Infrastructure",
+                "path": "agent-and-proxy/autoauth/methods/oci"
               },
               {
                 "title": "Token File",
-                "path": "agent/autoauth/methods/token_file"
+                "path": "agent-and-proxy/autoauth/methods/token_file"
               }
             ]
           },
@@ -917,49 +1072,109 @@
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent/autoauth/sinks"
+                "path": "agent-and-proxy/autoauth/sinks"
               },
               {
                 "title": "File",
-                "path": "agent/autoauth/sinks/file"
+                "path": "agent-and-proxy/autoauth/sinks/file"
               }
             ]
           }
         ]
       },
       {
-        "title": "API Proxy",
-        "path": "agent/apiproxy"
-      },
-      {
-        "title": "Caching",
+        "title": "Vault Proxy",
         "routes": [
           {
             "title": "Overview",
-            "path": "agent/caching"
+            "path": "agent-and-proxy/proxy"
           },
           {
-            "title": "Persistent Caching",
+            "title": "API Proxy",
+            "path": "agent-and-proxy/proxy/apiproxy"
+          },
+          {
+            "title": "Caching",
             "routes": [
               {
                 "title": "Overview",
-                "path": "agent/caching/persistent-caches"
+                "path": "agent-and-proxy/proxy/caching"
               },
               {
-                "title": "Kubernetes",
-                "path": "agent/caching/persistent-caches/kubernetes"
+                "title": "Persistent Caching",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "agent-and-proxy/proxy/caching/persistent-caches"
+                  },
+                  {
+                    "title": "Kubernetes",
+                    "path": "agent-and-proxy/proxy/caching/persistent-caches/kubernetes"
+                  }
+                ]
               }
             ]
+          },
+          {
+            "title": "Version compatibility",
+            "path": "agent-and-proxy/proxy/versions"
           }
         ]
       },
       {
-        "title": "Templates",
-        "path": "agent/template"
-      },
-      {
-        "title": "Windows service",
-        "path": "agent/winsvc"
+        "title": "Vault Agent",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "agent-and-proxy/agent"
+          },
+          {
+            "title": "API Proxy",
+            "path": "agent-and-proxy/agent/apiproxy"
+          },
+          {
+            "title": "Caching",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "agent-and-proxy/agent/caching"
+              },
+              {
+                "title": "Persistent Caching",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "agent-and-proxy/agent/caching/persistent-caches"
+                  },
+                  {
+                    "title": "Kubernetes",
+                    "path": "agent-and-proxy/agent/caching/persistent-caches/kubernetes"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "generate-config",
+            "path": "agent-and-proxy/agent/generate-config"
+          },
+          {
+            "title": "Process Supervisor Mode",
+            "path": "agent-and-proxy/agent/process-supervisor"
+          },
+          {
+            "title": "Templates",
+            "path": "agent-and-proxy/agent/template"
+          },
+          {
+            "title": "Windows service",
+            "path": "agent-and-proxy/agent/winsvc"
+          },
+          {
+            "title": "Version compatibility",
+            "path": "agent-and-proxy/agent/versions"
+          }
+        ]
       }
     ]
   },
@@ -975,7 +1190,16 @@
       },
       {
         "title": "Active Directory",
-        "path": "secrets/ad"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/ad"
+          },
+          {
+            "title": "Migration Guide",
+            "path": "secrets/ad/migration-guide"
+          }
+        ]
       },
       {
         "title": "AliCloud",
@@ -1196,8 +1420,22 @@
             "path": "secrets/pki/considerations"
           },
           {
+            "title": "Troubleshooting ACME integration",
+            "path": "secrets/pki/troubleshooting-acme"
+          },
+
+          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
+          },
+          {
+            "title": "Certificate Issuance External Policy Service (CIEPS)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cieps"
           }
         ]
       },
@@ -1273,6 +1511,45 @@
       {
         "title": "Venafi (Certificates)",
         "path": "secrets/venafi"
+      }
+    ]
+  },
+  {
+    "title": "Secrets Sync",
+    "badge": {
+      "text": "ENTERPRISE",
+      "type": "outlined",
+      "color": "neutral"
+    },
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "sync",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
+      },
+      {
+        "title": "AWS Secrets Manager",
+        "path": "sync/awssm"
+      },
+      {
+        "title": "Azure Key Vault",
+        "path": "sync/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "sync/gcpsm"
+      },
+      {
+        "title": "GitHub",
+        "path": "sync/github"
+      },
+      {
+        "title": "Vercel Project",
+        "path": "sync/vercelproject"
       }
     ]
   },
@@ -1360,6 +1637,10 @@
               {
                 "title": "SecureAuth",
                 "path": "auth/jwt/oidc-providers/secureauth"
+              },
+              {
+                "title": "IBM ISAM",
+                "path": "auth/jwt/oidc-providers/ibmisam"
               }
             ]
           }
@@ -1403,6 +1684,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -1411,20 +1701,11 @@
         "path": "auth/token"
       },
       {
-        "title": "Username &amp; Password",
+        "title": "Username and Password",
         "path": "auth/userpass"
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -1467,6 +1748,15 @@
       {
         "title": "Plugin Management",
         "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Containerized Plugins",
+        "path": "plugins/containerized-plugins",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Integrations Library",
@@ -1601,6 +1891,10 @@
                     "path": "platform/k8s/helm/examples/ha-with-raft"
                   },
                   {
+                    "title": "HA Cluster with Raft and TLS",
+                    "path": "platform/k8s/helm/examples/ha-tls"
+                  },
+                  {
                     "title": "HA Enterprise Cluster with Raft",
                     "path": "platform/k8s/helm/examples/enterprise-with-raft"
                   },
@@ -1663,6 +1957,56 @@
               {
                 "title": "Examples",
                 "path": "platform/k8s/csi/examples"
+              }
+            ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Secret Sources",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/vso/sources"
+                  },
+                  {
+                    "title": "Vault",
+                    "path": "platform/k8s/vso/sources/vault"
+                  },
+                  {
+                    "title": "HCP Vault Secrets",
+                    "path": "platform/k8s/vso/sources/hvs"
+                  }
+                ]
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Telemetry",
+                "path": "platform/k8s/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "platform/k8s/vso/api-reference"
+              },
+              {
+                "title": "OpenShift",
+                "path": "platform/k8s/vso/openshift"
               }
             ]
           }
@@ -1731,13 +2075,24 @@
         "path": "upgrading"
       },
       {
+        "title": "Upgrade Vault HA installations",
+        "path": "upgrading/vault-ha-upgrade"
+      },
+      {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.15.x",
+        "path": "upgrading/upgrade-to-1.15.x"
+      },
+      {
+        "title": "Upgrade to 1.14.x",
+        "path": "upgrading/upgrade-to-1.14.x"
+      },
+      {
         "title": "Upgrade to 1.13.x",
-        "path": "upgrading/upgrade-to-1.13.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.13.x"
       },
       {
         "title": "Upgrade to 1.12.x",
@@ -1980,6 +2335,18 @@
         "path": "release-notes"
       },
       {
+        "title": "1.15.0",
+        "path": "release-notes/1.15.0"
+      },
+      {
+        "title": "1.14.0",
+        "path": "release-notes/1.14.0"
+      },
+      {
+        "title": "1.13.0",
+        "path": "release-notes/1.13.0"
+      },
+      {
         "title": "1.12.0",
         "path": "release-notes/1.12.0"
       },
@@ -2041,19 +2408,19 @@
       },
       {
         "title": "Feature Deprecation Notice and Plans",
-        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/deprecation/faq"
       },
       {
         "title": "License",
-        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/enterprise/license/faq"
       },
       {
         "title": "Client Count",
-        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/concepts/client-count/faq"
       },
       {
         "title": "Login MFA",
-        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/auth/login-mfa/faq"
       },
       {
         "title": "Server Side Consistent Token",
@@ -2088,6 +2455,10 @@
           {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "Automated license utilization reporting",
+            "path": "enterprise/license/utilization-reporting"
           },
           {
             "title": "FAQ",
@@ -2178,7 +2549,16 @@
       },
       {
         "title": "Namespaces",
-        "path": "enterprise/namespaces"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/namespaces"
+          },
+          {
+            "title": "Create an administrative namespace",
+            "path": "enterprise/namespaces/create-admin-namespace"
+          }
+        ]
       },
       {
         "title": "Performance Standbys",

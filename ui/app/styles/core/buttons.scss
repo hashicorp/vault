@@ -1,36 +1,219 @@
-$button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 .button {
+  align-items: center;
   background-color: $grey-lightest;
   border: 1px solid $grey-light;
+  border-radius: $radius;
   box-shadow: $box-shadow-low;
+  cursor: pointer;
   color: $ui-gray-800;
   display: inline-block;
-  font-size: $size-small;
+  font-size: $size-8;
   font-weight: $font-weight-semibold;
-  height: 2.5rem;
-  line-height: 1.6;
+  min-height: 2.25rem;
   min-width: 6rem;
-  padding: $size-10 $size-8;
+  padding: 0.5625rem 0.9375rem;
+  position: relative;
+  text-align: center;
   text-decoration: none;
   transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
+  user-select: none;
   vertical-align: middle;
+  white-space: nowrap;
 
-  &.is-icon {
-    padding: 0.25rem $size-3;
+  @keyframes spinAround {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(359deg);
+    }
   }
 
   &:active,
   &.is-active,
-  &:focus,
-  &.is-focused {
+  &:focus {
     border-color: darken($grey-light, 10%);
     box-shadow: $button-box-shadow-standard;
     color: darken($grey-dark, 10%);
   }
 
-  &.is-inverted.is-outlined {
+  &:focus:not(:active) {
+    box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
+  }
+
+  &:disabled {
+    background-color: $white;
+    border-color: $ui-gray-050;
     box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  // Button types: is-compact, is-danger, is-danger-outlined, is-flat, is-ghost, is-icon, is-loading, is-link, is-outline, is-primary, is-transparent.
+
+  &.is-compact {
+    height: 2rem;
+    padding: $size-11 $size-8;
+  }
+
+  &.is-danger {
+    background-color: $red-500;
+    border-color: darken($red-500, 2%);
+    color: $white;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+
+    &:hover:not([disabled]) {
+      background-color: darken($red-500, 5%);
+      border-color: darken($red-500, 5%);
+      box-shadow: $box-shadow-middle;
+    }
+
+    &:active,
+    &.is-active {
+      background-color: darken($red-500, 10%);
+      border-color: darken($red-500, 10%);
+      box-shadow: $box-shadow-middle;
+    }
+
+    &:focus {
+      border-color: darken($red-500, 10%);
+      box-shadow: $button-box-shadow-standard;
+    }
+  }
+
+  &.is-danger-outlined {
+    border: 1px solid $red-500;
+    color: $red-500;
+  }
+
+  &.is-flat {
+    min-width: auto;
+    border: none;
+    box-shadow: none;
+  }
+
+  &.is-ghost {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: $blue;
+    text-decoration: none;
+
+    &:hover {
+      color: $blue-500;
+      background-color: $grey-lightest;
+    }
+  }
+
+  &.is-icon {
+    padding: 0.25rem $size-3;
+  }
+
+  &.is-loading {
+    color: transparent !important;
+    pointer-events: none;
+    &::after {
+      animation: spinAround 500ms infinite linear;
+      border: 2px solid $ui-gray-300;
+      border-radius: 290486px;
+      border-right-color: transparent;
+      border-top-color: transparent;
+      content: '';
+      display: block;
+      height: 1em;
+      width: 1em;
+      left: calc(50% - (1em / 2));
+      top: calc(50% - (1em / 2));
+      position: absolute !important;
+    }
+  }
+
+  &.is-link {
+    background-color: transparent;
+    border-color: transparent;
+    color: $blue;
+    text-decoration: none;
+    font-weight: $font-weight-semibold;
+    box-shadow: none;
+    min-width: 4rem;
+  }
+
+  &.is-primary {
+    background-color: $blue;
+    border-color: darken($blue, 2%);
+    color: $white;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+
+    &:disabled {
+      background-color: $ui-gray-700;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    &:hover:not([disabled]) {
+      background-color: darken($blue, 5%);
+      border-color: darken($blue, 5%);
+      box-shadow: $box-shadow-middle;
+    }
+
+    &:active,
+    &.is-active {
+      background-color: darken($blue, 10%);
+      border-color: darken($blue, 10%);
+      box-shadow: $box-shadow-middle;
+    }
+
+    &:focus {
+      border-color: darken($blue, 10%);
+      box-shadow: $button-box-shadow-standard;
+    }
+
+    &.is-loading::after {
+      border-color: transparent transparent $white $white;
+    }
+
+    &.is-underlined {
+      &:active,
+      &.is-active {
+        background-color: transparent;
+        border-bottom: 2px solid darken($blue, 10%);
+        border-radius: unset;
+        color: darken($blue, 10%);
+      }
+    }
+    // is-primary.is-outlined the only is-outlined buttons are primary.
+    &.is-outlined {
+      background-color: transparent;
+      border-color: $blue;
+      color: $blue;
+
+      &:hover,
+      &:focus {
+        background-color: transparent;
+        border-color: darken($blue, 10%);
+        color: $blue;
+      }
+
+      &:active,
+      &.is-active {
+        background-color: transparent;
+        border-color: darken($blue, 10%);
+        color: darken($blue, 10%);
+      }
+    }
+
+    &.is-outlined [disabled] {
+      background-color: transparent;
+      border-color: $ui-gray-700;
+      box-shadow: none;
+      color: $ui-gray-700;
+    }
   }
 
   &.is-transparent {
@@ -41,151 +224,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     min-width: auto;
     padding: 0;
   }
-  &.is-flat {
-    min-width: auto;
-    border: none;
-    box-shadow: none;
-  }
-
-  @each $name, $pair in $colors {
-    $color: nth($pair, 1);
-    @if $name == 'primary' {
-      $color: $blue;
-    }
-    $color-invert: nth($pair, 2);
-
-    &.is-#{$name} {
-      border-color: darken($color, 2%);
-      background-color: $color;
-      color: $color-invert;
-
-      &:hover:not([disabled]),
-      &.is-hovered {
-        background-color: darken($color, 5%);
-        border-color: darken($color, 5%);
-        box-shadow: $box-shadow-middle;
-      }
-
-      &:active,
-      &.is-active {
-        background-color: darken($color, 10%);
-        border-color: darken($color, 10%);
-        box-shadow: $box-shadow-middle;
-      }
-
-      &:focus,
-      &.is-focused {
-        border-color: darken($color, 10%);
-        box-shadow: $button-box-shadow-standard;
-      }
-
-      &.is-outlined {
-        border-color: $color;
-        color: $color;
-        background-color: transparent;
-
-        &.is-important {
-          border-color: $color;
-        }
-
-        &:hover,
-        &.is-hovered,
-        &:focus,
-        &.is-focused {
-          background-color: transparent;
-          border-color: darken($color, 10%);
-          color: $color;
-        }
-
-        &:active,
-        &.is-active {
-          background-color: transparent;
-          border-color: darken($color, 10%);
-          color: darken($color, 10%);
-        }
-      }
-
-      &.is-underlined {
-        &:active,
-        &.is-active {
-          background-color: transparent;
-          border-bottom: 2px solid darken($color, 10%);
-          border-radius: unset;
-          color: darken($color, 10%);
-        }
-      }
-
-      &.is-inverted.is-outlined {
-        border-color: rgba($color-invert, 0.5);
-        color: rgba($color-invert, 0.9);
-
-        &:hover,
-        &.is-hovered,
-        &:focus,
-        &.is-focused {
-          background-color: transparent;
-          border-color: $color-invert;
-          color: $color-invert;
-        }
-
-        &:active,
-        &.is-active {
-          background-color: rgba($color-invert, 0.2);
-          border-color: $color-invert;
-          color: $color-invert;
-          box-shadow: none;
-        }
-      }
-    }
-  }
-
-  &.is-primary {
-    font-weight: $font-weight-bold;
-    text-shadow: 0 1px 1px rgba($black, 0.25);
-  }
-
-  &.is-link {
-    color: $link;
-    text-decoration: none;
-    font-weight: $font-weight-semibold;
-    box-shadow: none;
-    min-width: 4rem;
-  }
-
-  &.is-ghost {
-    background-color: transparent;
-    border-color: transparent;
-    box-shadow: none;
-    color: $blue;
-
-    &:hover {
-      background-color: $grey-lightest;
-    }
-  }
-
-  &.is-orange {
-    background-color: $orange;
-    border-color: $orange;
-    color: $white;
-
-    &:hover,
-    &.is-hovered {
-      background-color: darken($orange, 5%);
-      border-color: darken($orange, 5%);
-    }
-  }
-  &.is-compact {
-    height: 2rem;
-    padding: $size-11 $size-8;
-  }
-
-  .has-text-info & {
-    font-weight: $font-weight-semibold;
-  }
-
-  &.has-text-danger {
-    border: 1px solid $red-500;
-  }
+  // End of button types
 
   &.tool-tip-trigger {
     color: $grey-dark;
@@ -280,4 +319,80 @@ a.button.disabled {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+
+  &:disabled {
+    color: $grey-light;
+    cursor: not-allowed;
+  }
+}
+
+// TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
+// Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
+.hds-copy-button {
+  font-weight: $font-weight-semibold; // TODO delete
+  box-shadow: $box-shadow-low; // TODO delete
+
+  &.white-icon svg {
+    color: $white;
+  }
+
+  &.icon-grey-300 svg {
+    color: $ui-gray-300;
+  }
+
+  &.icon-grey-500 svg {
+    color: $ui-gray-500;
+  }
+
+  &.transparent {
+    background: none;
+    box-shadow: none;
+    border: 1px solid transparent;
+    &:hover {
+      border: 1px solid $grey-light;
+      border-color: var(--token-color-border-strong);
+    }
+  }
+
+  &.primary {
+    background-color: $blue;
+    border-color: darken($blue, 2%);
+    color: $white;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+    svg {
+      color: $white;
+    }
+  }
+
+  &.secondary {
+    background-color: $grey-lightest;
+    border: 1px solid $grey-light;
+  }
+
+  &.in-dropdown {
+    div {
+      font-size: $size-7;
+    }
+    svg {
+      color: transparent;
+    }
+  }
+}
+
+// Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
+.hds-button {
+  font-weight: $font-weight-semibold; // TODO consult design on font weight after button class audit
+  // for toolbar-button must pass arg @color="secondary"
+  &.toolbar-button {
+    color: $black;
+    background: none;
+    border: none;
+    box-shadow: none;
+    &:hover:not(.disabled) {
+      background-color: $ui-gray-100;
+      border: 0;
+      color: $blue;
+    }
+  }
 }

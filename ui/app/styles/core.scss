@@ -1,52 +1,61 @@
-// Start with Structure & Bulma variables as a foundation
-@import './utils/colors';
-@import './utils/spacing';
-@import 'bulma/sass/utilities/initial-variables';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-// Override variables where appropriate
-@import './utils/bulma_variables';
+// Variables
+@import './utils/color_variables'; // colors need to come first.
+@import './utils/box-shadow_variables';
+@import './utils/font_variables';
+@import './utils/size_variables';
 
-// Utils
+// Element styling
+@import './core/element-styling';
+
+// Mixins
 @import './utils/mixins';
 @import './utils/animations';
 
-// Bring in the rest of Bulma
-@import 'bulma/bulma';
-@import 'bulma/switch';
-
-// Override Bulma details where appropriate
-@import './core/alert-banner';
-@import './core/generic';
+// Core Styles: each file styles a class that is not associated with a component. Ex: box and not box-label.
 @import './core/box';
 @import './core/breadcrumb';
-@import './core/bulma-radio-checkboxes';
 @import './core/buttons';
-@import './core/footer';
-@import './core/forms';
 @import './core/charts';
-@import './core/helpers';
-@import './core/hero';
+@import './core/checkbox-and-radio';
+@import './core/columns';
+@import './core/containers';
+@import './core/control';
+@import './core/field';
+@import './core/file';
+@import './core/footer';
+@import './core/inputs';
+@import './core/json-diff-patch';
+@import './core/label';
 @import './core/level';
+@import './core/link';
+@import './core/lists';
 @import './core/menu';
 @import './core/message';
-@import './core/navbar';
-@import './core/notification';
 @import './core/progress';
 @import './core/select';
 @import './core/switch';
-@import './core/tables';
-@import './core/tags';
+@import './core/tag';
 @import './core/title';
 @import './core/toggle';
 
-// bulma additions
-@import './core/layout';
-@import './core/lists';
+// Helpers
+@import './helper-classes/colors';
+@import './helper-classes/flexbox-and-grid';
+@import './helper-classes/layout';
+@import './helper-classes/general';
+@import './helper-classes/spacing';
+@import './helper-classes/typography';
 
+// Component specific styling
 @import './components/auth-buttons';
 @import './components/auth-form';
+@import './components/autocomplete-input';
 @import './components/b64-toggle';
-
 @import './components/box-label';
 @import './components/box-radio';
 @import './components/calendar-widget';
@@ -54,33 +63,28 @@
 @import './components/confirm';
 @import './components/console-ui-panel';
 @import './components/control-group';
-@import './components/diff-version-selector';
 @import './components/doc-link';
-@import './components/empty-state';
+@import './components/empty-state-component';
 @import './components/env-banner';
 @import './components/features-selection';
 @import './components/form-section';
 @import './components/global-flash';
-@import './components/hover-copy-button';
+@import './components/icon';
 @import './components/init-illustration';
-@import './components/info-table';
 @import './components/info-table-row';
-@import './components/input-hint';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
 @import './components/license-banners';
-@import './components/linkable-item';
 @import './components/linked-block';
 @import './components/list-item-row';
-@import './components/list-pagination';
 @import './components/loader';
 @import './components/login-form';
 @import './components/masked-input';
-@import './components/modal';
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
-@import './components/page-header';
+@import './components/overview-card';
+@import './components/page-header-old';
 @import './components/popup-menu';
 @import './components/radio-card';
 @import './components/radial-progress';
@@ -88,7 +92,6 @@
 @import './components/read-more';
 @import './components/regex-validator';
 @import './components/replication-dashboard';
-@import './components/replication-header';
 @import './components/replication-mode-summary';
 @import './components/replication-page';
 @import './components/replication-primary-card';
@@ -96,28 +99,22 @@
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
-@import './components/selectable-card-container.scss';
+@import './components/selectable-card-container';
+@import './components/secrets-engines-card';
 // action-block extends selectable-card
-@import './components/action-block.scss';
-@import './components/shamir-modal-flow';
+@import './components/action-block';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';
 @import './components/stat-text';
-@import './components/status-menu';
-@import './components/tabs';
+@import './components/tabs-component';
 @import './components/text-file';
-@import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';
-@import './components/transform-edit.scss';
+@import './components/transform-edit';
 @import './components/transit-card';
 @import './components/ttl-picker';
 @import './components/unseal-warning';
-@import './components/ui-wizard';
+// @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
-@import './components/vlt-radio';
 @import './components/vlt-table';
-
-// bulma-free-zone
-@import './components/icon';

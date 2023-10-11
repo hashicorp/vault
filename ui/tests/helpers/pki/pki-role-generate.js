@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   form: '[data-test-pki-generate-cert-form]',
   commonNameField: '[data-test-input="commonName"]',

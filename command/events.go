@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,6 +24,9 @@ var (
 
 type EventsSubscribeCommands struct {
 	*BaseCommand
+
+	namespaces  []string
+	bexprFilter string
 }
 
 func (c *EventsSubscribeCommands) Synopsis() string {
@@ -28,10 +35,11 @@ func (c *EventsSubscribeCommands) Synopsis() string {
 
 func (c *EventsSubscribeCommands) Help() string {
 	helpText := `
-Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
+Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
 
-  Subscribe to events of the given event type (topic). The events will be
-  output to standard out.
+  Subscribe to events of the given event type (topic), which may be a glob
+  pattern (with "*" treated as a wildcard). The events will be sent to
+  standard out.
 
   The output will be a JSON object serialized using the default protobuf
   JSON serialization format, with one line per event received.
@@ -41,7 +49,27 @@ Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
 
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
-
+	f := set.NewFlagSet("Subscribe Options")
+	f.StringVar(&StringVar{
+		Name: "filter",
+		Usage: `A boolean expression to use to filter events. Only events matching
+                the filter will be subscribed to. This is applied after any filtering
+                by event type or namespace.`,
+		Default: "",
+		Target:  &c.bexprFilter,
+	})
+	f.StringSliceVar(&StringSliceVar{
+		Name: "namespaces",
+		Usage: `Specifies one or more patterns of additional child namespaces
+                to subscribe to. The namespace of the request is automatically
+                prepended, so specifying 'ns2' when the request is in the 'ns1'
+                namespace will result in subscribing to 'ns1/ns2', in addition to
+                'ns1'. Patterns can include "*" characters to indicate
+                wildcards. The default is to subscribe only to the request's
+                namespace.`,
+		Default: []string{},
+		Target:  &c.namespaces,
+	})
 	return set
 }
 
@@ -85,6 +113,22 @@ func (c *EventsSubscribeCommands) Run(args []string) int {
 	return 0
 }
 
+// cleanNamespace removes leading and trailing space and /'s from the namespace path.
+func cleanNamespace(ns string) string {
+	ns = strings.TrimSpace(ns)
+	ns = strings.Trim(ns, "/")
+	return ns
+}
+
+// cleanNamespaces removes leading and trailing space and /'s from the namespace paths.
+func cleanNamespaces(namespaces []string) []string {
+	cleaned := make([]string, len(namespaces))
+	for i, ns := range namespaces {
+		cleaned[i] = cleanNamespace(ns)
+	}
+	return cleaned
+}
+
 func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path string) error {
 	r := client.NewRequest("GET", "/v1/"+path)
 	u := r.URL
@@ -95,19 +139,48 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	}
 	q := u.Query()
 	q.Set("json", "true")
+	if len(c.namespaces) > 0 {
+		q["namespaces"] = cleanNamespaces(c.namespaces)
+	}
+	bexprFilter := strings.TrimSpace(c.bexprFilter)
+	if bexprFilter != "" {
+		q.Set("filter", bexprFilter)
+	}
 	u.RawQuery = q.Encode()
 	client.AddHeader("X-Vault-Token", client.Token())
-	client.AddHeader("X-Vault-Namesapce", client.Namespace())
+	client.AddHeader("X-Vault-Namespace", client.Namespace())
 	ctx := context.Background()
-	conn, resp, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
-		HTTPClient: client.CloneConfig().HttpClient,
-		HTTPHeader: client.Headers(),
-	})
-	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+
+	// Follow redirects in case our request if our request is forwarded to the leader.
+	url := u.String()
+	var conn *websocket.Conn
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		var resp *http.Response
+		conn, resp, err = websocket.Dial(ctx, url, &websocket.DialOptions{
+			HTTPClient: client.CloneConfig().HttpClient,
+			HTTPHeader: client.Headers(),
+		})
+
+		if err == nil {
+			break
 		}
-		return err
+
+		switch {
+		case resp == nil:
+			return err
+		case resp.StatusCode == http.StatusTemporaryRedirect:
+			url = resp.Header.Get("Location")
+			continue
+		case resp.StatusCode == http.StatusNotFound:
+			return errors.New("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+		default:
+			return err
+		}
+	}
+
+	if conn == nil {
+		return fmt.Errorf("too many redirects")
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 

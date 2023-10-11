@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +22,8 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	semver "github.com/hashicorp/go-version"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -26,52 +33,20 @@ import (
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
-
-func TestSystemBackend_RootPaths(t *testing.T) {
-	expected := []string{
-		"auth/*",
-		"remount",
-		"audit",
-		"audit/*",
-		"raw",
-		"raw/*",
-		"replication/primary/secondary-token",
-		"replication/performance/primary/secondary-token",
-		"replication/dr/primary/secondary-token",
-		"replication/reindex",
-		"replication/dr/reindex",
-		"replication/performance/reindex",
-		"rotate",
-		"config/cors",
-		"config/auditing/*",
-		"config/ui/headers/*",
-		"plugins/catalog/*",
-		"revoke-prefix/*",
-		"revoke-force/*",
-		"leases/revoke-prefix/*",
-		"leases/revoke-force/*",
-		"leases/lookup/*",
-		"storage/raft/snapshot-auto/config/*",
-		"leases",
-		"internal/inspect/*",
-	}
-
-	b := testSystemBackend(t)
-	actual := b.SpecialPaths().Root
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
-	}
-}
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
@@ -1134,34 +1109,38 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
-	req.Data["from"] = " foo / "
+	req.Data["from"] = " foo/ "
 	req.Data["to"] = "bar"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+	if resp.Data["error"] != `'from' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
-func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "foo"
-	req.Data["to"] = " bar / "
+	req.Data["to"] = " bar/ "
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+	if resp.Data["error"] != `'to' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -2218,7 +2197,15 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 		if err := file.Close(); err != nil {
 			t.Fatal(err)
 		}
-		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+			Name:    "token",
+			Type:    consts.PluginTypeCredential,
+			Version: "v1.0.0",
+			Command: "foo",
+			Args:    []string{},
+			Env:     []string{},
+			Sha256:  []byte{},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2413,6 +2400,60 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_decodeToken ensures the correct decoding of the encoded token.
+// It also ensures that the API fails if there is some payload missing.
+func TestSystemBackend_decodeToken(t *testing.T) {
+	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+	otp := "3JhHkONiyiaNYj14nnD9xZQS"
+	tokenExpected := "4RUmoevJ3lsLni9sTXcNnRE1"
+
+	_, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
+	req.Data["encoded_token"] = encodedToken
+	req.Data["otp"] = otp
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	token, ok := resp.Data["token"]
+	if !ok {
+		t.Fatalf("did not get token back in response, response was %#v", resp.Data)
+	}
+
+	if token.(string) != tokenExpected {
+		t.Fatalf("bad token back: %s", token.(string))
+	}
+
+	datas := []map[string]interface{}{
+		nil,
+		{"encoded_token": encodedToken},
+		{"otp": otp},
+	}
+	for _, data := range datas {
+		req.Data = data
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error despite missing payload")
+		}
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+	}
+}
+
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
@@ -2542,6 +2583,14 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+
 		if !strings.HasPrefix(resp.Data["value"].(string), `{"type":"mounts"`) {
 			t.Fatalf("bad: %v", resp)
 		}
@@ -2643,6 +2692,13 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		if resp != nil {
 			t.Fatalf("bad: %v", resp)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 
 		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -2831,6 +2887,13 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 
 		// Read back and check gzip was applied by looking for prefix byte
 		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
@@ -3073,6 +3136,13 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Policy should be gone
 	c.policyStore.tokenPoliciesLRU.Purge()
 	out, err := c.policyStore.GetPolicy(namespace.RootContext(nil), "test", PolicyTypeToken)
@@ -3110,6 +3180,13 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	exp := map[string]interface{}{
 		"max_operations": absoluteOperationMaximum,
 		"interval":       0,
@@ -3128,11 +3205,22 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation), resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"max_operations": int64(3221225472),
@@ -3372,6 +3460,94 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
+// with oci_image set get recorded properly in the catalog.
+func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	for name, tc := range map[string]struct {
+		in, expected map[string]any
+	}{
+		"minimal": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "",
+				"args":      []string{},
+				"builtin":   false,
+				"version":   "",
+			},
+		},
+		"fully specified": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"version":   "v1.0.0",
+				"env":       []string{"X=2"},
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"builtin":   false,
+				"version":   "v1.0.0",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Add a container plugin.
+			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			for k, v := range tc.in {
+				req.Data[k] = v
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+			// We should get a nice error back from the API if we're not on linux, but
+			// that's all we can test on non-linux.
+			if runtime.GOOS != "linux" {
+				if err != nil || resp.Error() == nil {
+					t.Fatalf("err: %v %v", err, resp.Error())
+				}
+				return
+			}
+
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp.Error())
+			}
+
+			req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+			if tc.in["version"] != nil {
+				req.Data["version"] = tc.in["version"]
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp == nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp)
+			}
+
+			actual := resp.Data
+			if !reflect.DeepEqual(actual, tc.expected) {
+				t.Fatalf("expected did not match actual\ngot      %#v\nexpected %#v\n", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
@@ -3433,10 +3609,16 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
 	}
-	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	doRequest := func(req *logical.Request, errExpected bool, expected string) {
 		t.Helper()
@@ -3447,12 +3629,21 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
+
 		if errExpected {
 			if !resp.IsError() {
 				t.Fatalf("bad: got error response: %#v", *resp)
 			}
 			return
+		} else {
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 		}
+
 		if resp.IsError() {
 			t.Fatalf("bad: got error response: %#v", *resp)
 		}
@@ -3518,10 +3709,16 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
 
-	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
 		t.Helper()
@@ -3538,7 +3735,15 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 					t.Fatalf("bad: got error response: %#v", *resp)
 				}
 				return nil
+			} else {
+				schema.ValidateResponse(
+					t,
+					schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+					resp,
+					true,
+				)
 			}
+
 			if resp.IsError() {
 				t.Fatalf("bad: got error response: %#v", *resp)
 			}
@@ -3601,6 +3806,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -3608,6 +3814,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"secret": map[string]interface{}{},
@@ -3623,6 +3835,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3758,6 +3976,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3782,6 +4006,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 func TestSystemBackend_InternalUIMount(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
 	req.ClientToken = rootToken
@@ -3811,6 +4036,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3830,6 +4061,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3840,6 +4077,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "system" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3927,7 +4170,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}{
 			{path: "/auth/token/lookup", tag: "auth"},
 			{path: "/cubbyhole/{path}", tag: "secrets"},
-			{path: "/identity/group/id", tag: "identity"},
+			{path: "/identity/group/id/", tag: "identity"},
 			{path: expectedSecretPrefix + "^.*$", unpublished: true},
 			{path: "/sys/policy", tag: "system"},
 		}
@@ -4493,6 +4736,66 @@ func TestHandlePoliciesPasswordList(t *testing.T) {
 						"testpolicy",
 						"unrelated_policy",
 					},
+				},
+			},
+		},
+		"policy with /": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy/testpolicy1"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"testpolicy/testpolicy1"},
+				},
+			},
+		},
+		"list path/to/policy": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy"},
+				},
+			},
+		},
+		"policy ending with /": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy/"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy/"},
 				},
 			},
 		},
@@ -5321,6 +5624,13 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			false,
 		},
 		{
+			"events",
+			"invalid",
+			"does-not-matter",
+			true,
+			false,
+		},
+		{
 			"",
 			"info",
 			"does-not-matter",
@@ -5342,7 +5652,9 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
 			t.Parallel()
 
-			core, b, _ := testCoreSystemBackend(t)
+			core, _, _ := TestCoreUnsealed(t)
+			b := core.systemBackend
+			testLoggerName := t.Name() + "." + tc.logger
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -5371,7 +5683,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			initialLoggers := resp.Data
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
 					"level": tc.level,
@@ -5416,14 +5728,14 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
 					}
 
-					if loggerName != tc.logger && levelStr != initialLevelStr {
-						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+					if loggerName != testLoggerName && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 					}
 				}
 			}
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.DeleteOperation,
 			}
 
@@ -5440,7 +5752,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectDeleteError {
 				req = &logical.Request{
-					Path:      fmt.Sprintf("loggers/%s", tc.logger),
+					Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 					Operation: logical.ReadOperation,
 				}
 
@@ -5449,18 +5761,18 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
 
-				currentLevel, ok := resp.Data[tc.logger].(string)
+				currentLevel, ok := resp.Data[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
+					t.Fatalf("expected resp to include %q, resp: %#v", testLoggerName, resp)
 				}
 
-				initialLevel, ok := initialLoggers[tc.logger].(string)
+				initialLevel, ok := initialLoggers[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", testLoggerName, initialLoggers)
 				}
 
 				if currentLevel != initialLevel {
-					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", testLoggerName, initialLevel, currentLevel)
 				}
 			}
 		})
@@ -5594,7 +5906,15 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "kubernetes",
+		Type:    consts.PluginTypeCredential,
+		Version: "",
+		Command: command,
+		Args:    nil,
+		Env:     nil,
+		Sha256:  nil,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5734,5 +6054,357 @@ func TestSystemBackend_ReadExperiments(t *testing.T) {
 				t.Fatal("No experiments should be enabled by default")
 			}
 		})
+	}
+}
+
+func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
+	b := testSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	readExp := map[string]any{
+		"type":          conf.Type.String(),
+		"name":          conf.Name,
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+	if !reflect.DeepEqual(resp.Data, readExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
+	}
+
+	// List the plugin runtimes of container type
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		req.Data["type"] = "container"
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
+	}
+
+	// Delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal("expected a 404")
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	listExp := map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+
+	// List the plugin runtimes of container type
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	req.Data["type"] = "container"
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+}
+
+func TestGetSealBackendStatus(t *testing.T) {
+	testCases := []struct {
+		name          string
+		sealOpts      seal.TestSealOpts
+		expectHealthy bool
+	}{
+		{
+			name: "healthy-autoseal",
+			sealOpts: seal.TestSealOpts{
+				StoredKeys:   seal.StoredKeysSupportedGeneric,
+				Name:         "autoseal-test",
+				WrapperCount: 1,
+				Generation:   1,
+			},
+			expectHealthy: true,
+		},
+		{
+			name: "unhealthy-autoseal",
+			sealOpts: seal.TestSealOpts{
+				StoredKeys:   seal.StoredKeysSupportedGeneric,
+				Name:         "autoseal-test",
+				WrapperCount: 1,
+				Generation:   1,
+			},
+			expectHealthy: false,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			testAccess, wrappers := seal.NewTestSeal(&tt.sealOpts)
+
+			c := TestCoreWithSeal(t, NewAutoSeal(testAccess), false)
+			_, keys, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+			for _, key := range keys {
+				_, err := TestCoreUnseal(c, key)
+				require.NoError(t, err)
+			}
+
+			if c.Sealed() {
+				t.Fatal("vault is sealed")
+			}
+
+			if !tt.expectHealthy {
+				// set encryption error and perform encryption to mark seal unhealthy
+				wrappers[0].SetEncryptError(errors.New("test error encrypting"))
+
+				_, errs := c.seal.GetAccess().Encrypt(context.Background(), []byte("test-plaintext"))
+				if len(errs) == 0 {
+					t.Fatalf("expected error on encryption, but got none")
+				}
+			}
+
+			resp, err := c.GetSealBackendStatus(ctx)
+			require.NoError(t, err)
+
+			if resp.Healthy && !tt.expectHealthy {
+				t.Fatal("expected seal to be unhealthy, but status was healthy")
+			} else if !resp.Healthy && tt.expectHealthy {
+				t.Fatal("expected seal to be healthy, but status was unhealthy")
+			}
+
+			if !tt.expectHealthy && resp.UnhealthySince == "" {
+				t.Fatal("missing UnhealthySince field in response with unhealthy seal")
+			}
+
+			if len(resp.Backends) == 0 {
+				t.Fatal("Backend list in response was empty")
+			}
+
+			if !tt.expectHealthy && resp.Backends[0].Healthy {
+				t.Fatal("expected seal to be unhealthy, received healthy status")
+			} else if tt.expectHealthy && !resp.Backends[0].Healthy {
+				t.Fatal("expected seal to be healthy, received unhealthy status")
+			}
+
+			if !tt.expectHealthy && resp.Backends[0].UnhealthySince == "" {
+				t.Fatal("missing UnhealthySince field in unhealthy seal")
+			}
+		})
+	}
+
+	shamirSeal := NewDefaultSeal(seal.NewAccess(nil,
+		&seal.SealGenerationInfo{
+			Generation: 1,
+			Seals:      []*configutil.KMS{{Type: wrapping.WrapperTypeShamir.String()}},
+		},
+		[]*seal.SealWrapper{
+			{
+				Wrapper:        aeadwrapper.NewShamirWrapper(),
+				SealConfigType: wrapping.WrapperTypeShamir.String(),
+				Priority:       1,
+				Configured:     true,
+			},
+		},
+	))
+
+	c := TestCoreWithSeal(t, shamirSeal, false)
+	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		require.NoError(t, err)
+	}
+
+	if c.Sealed() {
+		t.Fatal("vault is sealed")
+	}
+
+	resp, err := c.GetSealBackendStatus(ctx)
+	require.NoError(t, err)
+
+	if !resp.Healthy {
+		t.Fatal("expected healthy seal, got unhealthy")
+	}
+
+	if len(resp.Backends) != 1 {
+		t.Fatalf("expected response Backends to contain one seal, got %d", len(resp.Backends))
+	}
+
+	if !resp.Backends[0].Healthy {
+		t.Fatal("expected healthy seal, got unhealthy")
+	}
+}
+
+func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Currently plugincontainer only supports linux")
+	}
+	c, b, _ := testCoreSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Register the plugin referencing the runtime.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = ""
+	req.Data["oci_image"] = "hashicorp/vault-plugin-auth-jwt"
+	req.Data["runtime"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// Expect to fail to delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete the plugin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// This time deleting the runtime should work.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 }

@@ -7,7 +7,7 @@ description: |-
   credentials must have read and write  permissions to the storage container.
 ---
 
-# Azure Storage Backend
+# Azure storage backend
 
 The Azure storage backend is used to persist Vault's data in an
 [Azure Storage Container][azure-storage]. The storage container must already
@@ -36,7 +36,7 @@ storage "azure" {
 
 The current implementation is limited to a maximum of 4 megabytes per blob.
 
-## `azure` Parameters
+## `azure` parameters
 
 - `accountName` `(string: <required>)` – Specifies the Azure Storage account
   name.
@@ -58,7 +58,7 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
 
-## `azure` Examples
+## `azure` examples
 
 This example shows configuring the Azure storage backend with a custom number of
 maximum parallel connections.

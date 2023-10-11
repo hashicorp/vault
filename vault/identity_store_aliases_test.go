@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -456,6 +459,46 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 				"name":            "clear",
 				"mount_accessor":  githubAccessor,
 				"custom_metadata": map[string]string{},
+			},
+		},
+		{
+			name: "only-metadata",
+			createData: map[string]interface{}{
+				"name":           "only",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{
+					"bar": "baz",
+				},
+			},
+		},
+		{
+			name: "only-metadata-clear",
+			createData: map[string]interface{}{
+				"name":           "only-clear",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{},
+			},
+		},
+		{
+			name: "only-metadata-none-before",
+			createData: map[string]interface{}{
+				"name":           "no-metadata",
+				"mount_accessor": githubAccessor,
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
 			},
 		},
 	}

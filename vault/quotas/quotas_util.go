@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package quotas
@@ -8,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 )
 
 func quotaTypes() []string {
@@ -39,6 +42,10 @@ func (*entManager) Reset() error {
 }
 
 type LeaseCountQuota struct{}
+
+func (l LeaseCountQuota) IsInheritable() bool {
+	panic("implement me")
+}
 
 func (l LeaseCountQuota) allow(_ context.Context, _ *Request) (Response, error) {
 	panic("implement me")

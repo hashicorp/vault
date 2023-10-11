@@ -7,7 +7,7 @@ description: |-
   for the MongoDB database.
 ---
 
-# MongoDB Database Secrets Engine
+# MongoDB database secrets engine
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -79,7 +79,7 @@ the proper permission, it can generate credentials.
     username           v-vaultuser-my-role-ItceCZHlp0YGn90Puy9Z-1602542024
     ```
 
-## Client x509 Certificate Authentication
+## Client x509 certificate authentication
 
 This plugin supports using MongoDB's [x509 Client-side Certificate Authentication](https://docs.mongodb.com/manual/core/security-x.509/)
 

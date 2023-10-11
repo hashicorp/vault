@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -10,6 +13,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 )
+
+// credentialBackendAdjustmentFactor allows for adjusting test assertions for
+// credential backends. Add 1 to account for the "token" backend, which is visible
+// when you walk the filesystem but is treated as special and excluded from the registry.
+// Subtract 1 to account for "oidc" which is an alias of "jwt" and not a separate plugin.
+var credentialBackendAdjustmentFactor = 1 - 1
 
 func testAuthEnableCommand(tb testing.TB) (*cli.MockUi, *AuthEnableCommand) {
 	tb.Helper()
@@ -202,10 +211,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		// of credential backends.
 		backends = append(backends, "pcf")
 
-		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
-		// is treated as special and excluded from the registry.
-		// Subtract 1 to account for "oidc" which is an alias of "jwt" and not a separate plugin.
-		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential))
+		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential)) + credentialBackendAdjustmentFactor
 		if len(backends) != expected {
 			t.Fatalf("expected %d credential backends, got %d", expected, len(backends))
 		}

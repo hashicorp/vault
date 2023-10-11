@@ -1,0 +1,4 @@
+```release-note:improvement
+secrets/gcpkms: Enable plugin multiplexing
+secrets/gcpkms: Upgrade plugin dependencies
+```

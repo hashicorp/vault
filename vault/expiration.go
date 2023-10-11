@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -144,7 +147,7 @@ type ExpirationManager struct {
 	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
-	expireFunc          ExpireLeaseStrategy
+	expireFunc          atomic.Pointer[ExpireLeaseStrategy]
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -237,8 +240,8 @@ func (r *revocationJob) OnFailure(err error) {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 
 	r.m.pendingLock.Lock()
-	defer r.m.pendingLock.Unlock()
 	pendingRaw, ok := r.m.pending.Load(r.leaseID)
+	r.m.pendingLock.Unlock()
 	if !ok {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
@@ -266,7 +269,9 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
+		r.m.pendingLock.Lock()
 		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
+		r.m.pendingLock.Unlock()
 		return
 	} else {
 		r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err,
@@ -274,7 +279,9 @@ func (r *revocationJob) OnFailure(err error) {
 	}
 
 	pending.timer.Reset(newTimer)
+	r.m.pendingLock.Lock()
 	r.m.pending.Store(r.leaseID, pending)
+	r.m.pendingLock.Unlock()
 }
 
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
@@ -325,8 +332,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
 
-	c.AddLogger(managerLogger)
-
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -355,11 +360,11 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          e,
 
 		jobManager:      jobManager,
 		revokeRetryBase: c.expirationRevokeRetryBase,
 	}
+	exp.expireFunc.Store(&e)
 	if exp.revokeRetryBase == 0 {
 		exp.revokeRetryBase = revokeRetryBase
 	}
@@ -385,7 +390,6 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
-	c.AddLogger(expLogger)
 	mgr := NewExpirationManager(c, view, e, expLogger)
 	c.expiration = mgr
 
@@ -541,7 +545,6 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
-	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")
@@ -843,6 +846,8 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	return nil
 }
 
+func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {}
+
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
@@ -857,26 +862,23 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	// Replacing the entire map would cause a race with
-	// a simultaneous WalkTokens, which doesn't hold pendingLock.
-	m.pending.Range(func(key, value interface{}) bool {
-		info := value.(pendingInfo)
-		info.timer.Stop()
-		m.pending.Delete(key)
-		return true
-	})
+	// We don't want any lease timers that fire to do anything; they can wait
+	// for the next ExpirationManager to handle them.
+	newStrategy := ExpireLeaseStrategy(expireNoop)
+	m.expireFunc.Store(&newStrategy)
+	oldPending := m.pending
+	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
-	m.nonexpiring.Range(func(key, value interface{}) bool {
-		m.nonexpiring.Delete(key)
-		return true
-	})
 	m.uniquePolicies = make(map[string][]string)
-	m.irrevocable.Range(func(key, _ interface{}) bool {
-		m.irrevocable.Delete(key)
-		return true
-	})
 	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
+
+	go oldPending.Range(func(key, value interface{}) bool {
+		info := value.(pendingInfo)
+		// We need to stop the timers to prevent memory leaks.
+		info.timer.Stop()
+		return true
+	})
 
 	if m.inRestoreMode() {
 		for {
@@ -1878,7 +1880,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseID, namespace := le.LeaseID, le.namespace
 			// Extend the timer by the lease total
 			timer := time.AfterFunc(leaseTotal, func() {
-				m.expireFunc(m.quitContext, m, leaseID, namespace)
+				expFn := *m.expireFunc.Load() // Load and deref the pointer
+				expFn(m.quitContext, m, leaseID, namespace)
 			})
 			pending = pendingInfo{
 				timer: timer,
@@ -2468,8 +2471,13 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 		return true
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2492,8 +2500,13 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 		return walkFn(key.(string), expireTime)
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }

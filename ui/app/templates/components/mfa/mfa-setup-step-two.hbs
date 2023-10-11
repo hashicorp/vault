@@ -1,18 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div ...attributes>
   <p>
     TOTP Multi-factor authentication (MFA) can be enabled here if it is required by your administrator. This will ensure that
     you are not prevented from logging into Vault in the future, once MFA is fully enforced.
   </p>
   <div class="field has-top-margin-l">
-    <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.error}} />
     {{#if @warning}}
-      <AlertBanner
-        @type="info"
-        @title="MFA enabled"
-        @message={{@warning}}
-        class="has-top-margin-l"
+      <Hds::Alert
+        @type="inline"
+        @color="highlight"
+        class="has-bottom-margin-s has-top-margin-l"
         data-test-mfa-enabled-warning
-      />
+        as |A|
+      >
+        <A.Title>MFA enabled</A.Title>
+        <A.Description>{{@warning}}</A.Description>
+      </Hds::Alert>
     {{else}}
       <div class="list-item-row">
         <div class="center-display">
@@ -38,7 +46,13 @@
       </div>
     {{/if}}
     <div class="is-flex-start has-gap has-top-margin-l">
-      <button id="restart" type="button" class="button has-text-danger" {{on "click" this.restartSetup}} data-test-restart>
+      <button
+        id="restart"
+        type="button"
+        class="button is-danger-outlined"
+        {{on "click" this.restartSetup}}
+        data-test-restart
+      >
         Restart setup
       </button>
       <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button is-primary" data-test-done>

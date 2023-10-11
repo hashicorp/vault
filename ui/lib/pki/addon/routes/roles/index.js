@@ -1,28 +1,61 @@
-import PkiOverviewRoute from '../overview';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default class PkiRolesIndexRoute extends PkiOverviewRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-issuers';
+import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
+@withConfig()
+export default class PkiRolesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  async fetchRoles() {
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
+
+  async fetchRoles(params) {
     try {
-      return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
+      const page = Number(params.page) || 1;
+      return await this.store.lazyPaginatedQuery('pki/role', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page,
+        skipCache: page === 1,
+      });
     } catch (e) {
       if (e.httpStatus === 404) {
         return { parentModel: this.modelFor('roles') };
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 
-  model() {
+  model(params) {
     return hash({
-      hasConfig: this.hasConfig(),
-      roles: this.fetchRoles(),
+      hasConfig: this.shouldPromptConfig,
+      roles: this.fetchRoles(params),
       parentModel: this.modelFor('roles'),
+      pageFilter: params.pageFilter,
     });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const roles = resolvedModel.roles;
+
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

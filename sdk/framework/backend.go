@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -57,6 +60,11 @@ type Backend struct {
 
 	// InitializeFunc is the callback, which if set, will be invoked via
 	// Initialize() just after a plugin has been mounted.
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your InitializeFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	InitializeFunc InitializeFunc
 
 	// PeriodicFunc is the callback, which if set, will be invoked when the
@@ -67,6 +75,11 @@ type Backend struct {
 	// entries in backend's storage, while the backend is still being used.
 	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your PeriodicFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	PeriodicFunc periodicFunc
 
 	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
@@ -463,12 +476,38 @@ func (b *Backend) Secret(k string) *Secret {
 	return nil
 }
 
+// WriteSafeReplicationState returns true if this backend instance is capable of writing
+// to storage without receiving an ErrReadOnly error. The active instance in a primary
+// cluster or a local mount on a performance secondary is capable of writing to storage.
+func (b *Backend) WriteSafeReplicationState() bool {
+	replicationState := b.System().ReplicationState()
+	return (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby)
+}
+
+// init runs as a sync.Once function from any plugin entry point which needs to route requests by paths.
+// It may panic if a coding error in the plugin is detected.
+// For builtin plugins, this is unit tested in helper/builtinplugins/builtinplugins_test.go.
+// For other plugins, any unit test that attempts to perform any request to the plugin will exercise these checks.
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
 			panic(fmt.Sprintf("Routing pattern cannot be blank"))
 		}
+
+		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
+		if p.ExistenceCheck == nil {
+			if _, ok := p.Operations[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+			if _, ok := p.Callbacks[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+		}
+
 		// Automatically anchor the pattern
 		if p.Pattern[0] != '^' {
 			p.Pattern = "^" + p.Pattern
@@ -476,6 +515,8 @@ func (b *Backend) init() {
 		if p.Pattern[len(p.Pattern)-1] != '$' {
 			p.Pattern = p.Pattern + "$"
 		}
+
+		// Detect the coding error of an invalid Pattern
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
 }
@@ -689,11 +730,13 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+// SendEvent is used to send events through the underlying EventSender.
+// It returns ErrNoEvents if the events system has not been configured or enabled.
 func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
 	if b.events == nil {
 		return ErrNoEvents
 	}
-	return b.events.Send(ctx, eventType, event)
+	return b.events.SendEvent(ctx, eventType, event)
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.
@@ -707,16 +750,35 @@ type FieldSchema struct {
 	Required   bool
 	Deprecated bool
 
-	// Query indicates this field will be sent as a query parameter:
+	// Query indicates this field will be expected as a query parameter as part
+	// of ReadOperation, ListOperation or DeleteOperation requests:
 	//
 	//   /v1/foo/bar?some_param=some_value
 	//
-	// It doesn't affect handling of the value, but may be used for documentation.
+	// The field will still be expected as a request body parameter for
+	// CreateOperation or UpdateOperation requests!
+	//
+	// To put that another way, you should set Query for any non-path parameter
+	// you want to use in a read/list/delete operation.  While setting the Query
+	// field to `true` is not required in such cases (Vault will expose the
+	// query parameters to you via req.Data regardless), it is highly
+	// recommended to do so in order to improve the quality of the generated
+	// OpenAPI documentation (as well as any code generation based on it), which
+	// will otherwise incorrectly omit the parameter.
+	//
+	// The reason for this design is historical: back at the start of 2018,
+	// query parameters were not mapped to fields at all, and it was implicit
+	// that all non-path fields were exclusively for the use of create/update
+	// operations.  Since then, support for query parameters has gradually been
+	// extended to read, delete and list operations - and now this declarative
+	// metadata is needed, so that the OpenAPI generator can know which
+	// parameters are actually referred to, from within the code of
+	// read/delete/list operation handler functions.
 	Query bool
 
 	// AllowedValues is an optional list of permitted values for this field.
 	// This constraint is not (yet) enforced by the framework, but the list is
-	// output as part of OpenAPI generation and may effect documentation and
+	// output as part of OpenAPI generation and may affect documentation and
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
@@ -752,6 +814,8 @@ func (t FieldType) Zero() interface{} {
 		return ""
 	case TypeInt:
 		return 0
+	case TypeInt64:
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:

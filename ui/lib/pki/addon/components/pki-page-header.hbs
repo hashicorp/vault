@@ -1,0 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">/</span>
+          <LinkToExternal @route="secrets">secrets</LinkToExternal>
+        </li>
+        <li>
+          <span class="sep">/</span>
+          <span>{{@backend.id}}</span>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      <Icon @name={{@backend.icon}} @size="24" class="has-text-grey-light" />
+      {{@backend.id}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="pki tabs">
+    <ul>
+      <LinkTo @route="overview" data-test-secret-list-tab="Overview">Overview</LinkTo>
+      <LinkTo @route="roles" data-test-secret-list-tab="Roles">Roles</LinkTo>
+      <LinkTo @route="issuers" data-test-secret-list-tab="Issuers">Issuers</LinkTo>
+      <LinkTo @route="keys" data-test-secret-list-tab="Keys">Keys</LinkTo>
+      <LinkTo @route="certificates" data-test-secret-list-tab="Certificates">Certificates</LinkTo>
+      <LinkTo @route="tidy" data-test-secret-list-tab="Tidy">Tidy</LinkTo>
+      <LinkTo @route="configuration" data-test-secret-list-tab="Configuration">Configuration</LinkTo>
+    </ul>
+  </nav>
+</div>

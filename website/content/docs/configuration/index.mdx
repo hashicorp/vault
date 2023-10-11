@@ -4,7 +4,7 @@ page_title: Server Configuration
 description: Vault server configuration reference.
 ---
 
-# Vault Configuration
+# Vault configuration
 
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
@@ -13,15 +13,21 @@ The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 
 An example configuration is shown below:
 
-```javascript
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
 storage "consul" {
   address = "127.0.0.1:8500"
   path    = "vault/"
 }
 
 listener "tcp" {
-  address     = "127.0.0.1:8200"
-  tls_disable = 1
+  address       = "127.0.0.1:8200"
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
 }
 
 telemetry {
@@ -215,7 +221,11 @@ a negative effect on performance due to the tracking of each lock attempt.
   the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`-experiment`](/vault/docs/commands/server#experiment) flag.
 
-### High Availability Parameters
+- `imprecise_lease_role_tracking` `(bool: "false")` - Skip lease counting by role if there are no role based quotas enabled.
+  When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
+  `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
+
+### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
 
@@ -242,7 +252,7 @@ The following parameters are used on backends that support [high availability][h
   will disable these features _only when that node is the active node_. This
   parameter cannot be set to `true` if `raft` is the storage type.
 
-### Vault Enterprise Parameters
+### Vault enterprise parameters
 
 The following parameters are only used with Vault Enterprise
 

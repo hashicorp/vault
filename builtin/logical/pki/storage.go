@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,6 +8,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -16,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrStorageItemNotFound = errors.New("storage item not found")
 
 const (
 	storageKeyConfig        = "config/keys"
@@ -279,6 +285,15 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 		Storage: s,
 		Backend: b,
 	}
+}
+
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
 }
 
 func (sc *storageContext) listKeys() ([]keyID, error) {
@@ -706,7 +721,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 		// Remove CRL signing usage if it exists on the issuer but doesn't
 		// exist in the KU of the x509 certificate.
 		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			issuer.Usage.ToggleUsage(CRLSigningUsage)
 		}
 
 		// Handle our new OCSPSigning usage flag for earlier versions. If we
@@ -915,7 +930,91 @@ func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool
 	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
+func (sc *storageContext) _cleanupInternalCRLMapping(mapping *internalCRLConfigEntry, path string) error {
+	// Track which CRL IDs are presently referred to by issuers; any other CRL
+	// IDs are subject to cleanup.
+	//
+	// Unused IDs both need to be removed from this map (cleaning up the size
+	// of this storage entry) but also the full CRLs removed from disk.
+	presentMap := make(map[crlID]bool)
+	for _, id := range mapping.IssuerIDCRLMap {
+		presentMap[id] = true
+	}
+
+	// Identify which CRL IDs exist and are candidates for removal;
+	// theoretically these three maps should be in sync, but were added
+	// at different times.
+	toRemove := make(map[crlID]bool)
+	for id := range mapping.CRLNumberMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+	for id := range mapping.LastCompleteNumberMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+	for id := range mapping.CRLExpirationMap {
+		if !presentMap[id] {
+			toRemove[id] = true
+		}
+	}
+
+	// Depending on which path we're writing this config to, we need to
+	// remove CRLs from the relevant folder too.
+	isLocal := path == storageLocalCRLConfig
+	baseCRLPath := "crls/"
+	if !isLocal {
+		baseCRLPath = "unified-crls/"
+	}
+
+	for id := range toRemove {
+		// Clean up space in this mapping...
+		delete(mapping.CRLNumberMap, id)
+		delete(mapping.LastCompleteNumberMap, id)
+		delete(mapping.CRLExpirationMap, id)
+
+		// And clean up space on disk from the fat CRL mapping.
+		crlPath := baseCRLPath + string(id)
+		deltaCRLPath := crlPath + "-delta"
+		if err := sc.Storage.Delete(sc.Context, crlPath); err != nil {
+			return fmt.Errorf("failed to delete unreferenced CRL %v: %w", id, err)
+		}
+		if err := sc.Storage.Delete(sc.Context, deltaCRLPath); err != nil {
+			return fmt.Errorf("failed to delete unreferenced delta CRL %v: %w", id, err)
+		}
+	}
+
+	// Lastly, some CRLs could've been partially removed from the map but
+	// not from disk. Check to see if we have any dangling CRLs and remove
+	// them too.
+	list, err := sc.Storage.List(sc.Context, baseCRLPath)
+	if err != nil {
+		return fmt.Errorf("failed listing all CRLs: %w", err)
+	}
+	for _, crl := range list {
+		if crl == "config" || strings.HasSuffix(crl, "/") {
+			continue
+		}
+
+		if presentMap[crlID(crl)] {
+			continue
+		}
+
+		if err := sc.Storage.Delete(sc.Context, baseCRLPath+"/"+crl); err != nil {
+			return fmt.Errorf("failed cleaning up orphaned CRL %v: %w", crl, err)
+		}
+	}
+
+	return nil
+}
+
 func (sc *storageContext) _setInternalCRLConfig(mapping *internalCRLConfigEntry, path string) error {
+	if err := sc._cleanupInternalCRLMapping(mapping, path); err != nil {
+		return fmt.Errorf("failed to clean up internal CRL mapping: %w", err)
+	}
+
 	json, err := logical.StorageEntryJSON(path, mapping)
 	if err != nil {
 		return err
@@ -1310,9 +1409,10 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
-	if !constants.IsEnterprise && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+	isLocalMount := sc.Backend.System().LocalMount()
+	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
-		sc.Backend.Logger().Warn("Not running Vault Enterprise, " +
+		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
 			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
 		result.UnifiedCRLOnExistingPaths = false
 		result.UnifiedCRL = false
@@ -1320,6 +1420,20 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
@@ -1425,7 +1539,7 @@ func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, e
 	if revEntry != nil {
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
 		}
 	}
 

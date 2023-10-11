@@ -1,0 +1,70 @@
+<Hds::Button
+  @text={{or @text (capitalize @mode)}}
+  @color="secondary"
+  class="toolbar-button"
+  {{on "click" (fn (mut this.modalOpen) true)}}
+  data-test-kv-delete={{@mode}}
+/>
+
+{{#if this.modalOpen}}
+  <Hds::Modal
+    id="kv-delete-modal-{{@mode}}"
+    @color={{this.modalDisplay.color}}
+    @onClose={{fn (mut this.modalOpen) false}}
+    data-test-delete-modal
+    as |M|
+  >
+    <M.Header data-test-modal-title @icon="trash">
+      {{this.modalDisplay.title}}
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        {{this.modalDisplay.intro}}
+      </p>
+      {{#if (eq @mode "delete")}}
+        <div class="is-flex-column">
+          {{#each this.deleteOptions as |option|}}
+            <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
+              <T.Trigger @tabindex="-1">
+                <div class="is-flex-align-baseline has-bottom-margin-m">
+                  <RadioButton
+                    id={{option.key}}
+                    class="radio top-xxs"
+                    @disabled={{option.disabled}}
+                    @value={{option.key}}
+                    @groupValue={{this.deleteType}}
+                    @onChange={{fn (mut this.deleteType) option.key}}
+                  />
+                  <label for={{option.key}} class="has-left-margin-s {{if option.disabled 'opacity-060'}}">
+                    <p class="has-text-weight-semibold">{{option.label}}</p>
+                    <p>{{option.description}}</p>
+                  </label>
+                </div>
+              </T.Trigger>
+              {{#if option.disabled}}
+                <T.Content @defaultClass="tool-tip">
+                  <div class="box">
+                    {{option.tooltipMessage}}
+                  </div>
+                </T.Content>
+              {{/if}}
+            </ToolTip>
+          {{/each}}
+        </div>
+      {{/if}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Confirm"
+          {{on "click" this.onDelete}}
+          @color={{if (eq this.modalDisplay.color "critical") this.modalDisplay.color}}
+          data-test-delete-modal-confirm
+        />
+
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

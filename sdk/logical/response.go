@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -82,6 +85,10 @@ type Response struct {
 	// Headers will contain the http headers from the plugin that it wishes to
 	// have as part of the output
 	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
+
+	// MountType, if non-empty, provides some information about what kind
+	// of mount this secret came from.
+	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 }
 
 // AddWarning adds a warning into the response's warning list

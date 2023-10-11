@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     <FormFieldLabel for="name" @label="Name" />
     <input
       autocomplete="off"
@@ -18,6 +23,7 @@
       @id="entities"
       @label="Entities"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/entity"}}
       @inputValue={{@model.entityIds}}
       @shouldRenderName={{true}}
@@ -30,6 +36,7 @@
       @id="groups"
       @label="Groups"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/group"}}
       @inputValue={{@model.groupIds}}
       @shouldRenderName={{true}}

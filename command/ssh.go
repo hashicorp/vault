@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -238,7 +241,7 @@ type SSHCredentialResp struct {
 func (c *SSHCommand) Run(args []string) int {
 	f := c.Flags()
 
-	if err := f.Parse(args); err != nil {
+	if err := f.Parse(args, DisableDisplayFlagWarning(true)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}

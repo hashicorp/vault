@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -283,12 +284,8 @@ func (c *Client) retryOCSP(
 	headers map[string]string,
 	reqBody []byte,
 	issuer *x509.Certificate,
-) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
-	origHost := *ocspHost
+) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, retErr error) {
 	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
-		if err != nil {
-			return nil, err
-		}
 		if request != nil {
 			request = request.WithContext(ctx)
 			for k, v := range headers {
@@ -303,43 +300,152 @@ func (c *Client) retryOCSP(
 		return res, err
 	}
 
-	ocspHost.Path = ocspHost.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
-	var res *http.Response
-	request, err := req("GET", ocspHost.String(), nil)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if res, err = doRequest(request); err != nil {
-		return nil, nil, nil, err
-	} else {
-		defer res.Body.Close()
-	}
-	if res.StatusCode == http.StatusMethodNotAllowed {
-		request, err := req("POST", origHost.String(), bytes.NewBuffer(reqBody))
-		if err != nil {
-			return nil, nil, nil, err
+	for _, method := range []string{"GET", "POST"} {
+		reqUrl := *ocspHost
+		var body []byte
+
+		switch method {
+		case "GET":
+			reqUrl.Path = reqUrl.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
+		case "POST":
+			body = reqBody
+		default:
+			// Programming error; all request/systems errors are multierror
+			// and appended.
+			return nil, nil, nil, fmt.Errorf("unknown request method: %v", method)
 		}
-		if res, err := doRequest(request); err != nil {
-			return nil, nil, nil, err
+
+		var res *http.Response
+		request, err := req(method, reqUrl.String(), bytes.NewBuffer(body))
+		if err != nil {
+			err = fmt.Errorf("error creating %v request: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+		if res, err = doRequest(request); err != nil {
+			err = fmt.Errorf("error doing %v request: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
 		} else {
 			defer res.Body.Close()
 		}
-	}
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
-	}
-	ocspResBytes, err = io.ReadAll(res.Body)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
-	if err != nil {
-		return nil, nil, nil, err
+
+		if res.StatusCode != http.StatusOK {
+			err = fmt.Errorf("HTTP code is not OK on %v request. %v: %v", method, res.StatusCode, res.Status)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		ocspResBytes, err = io.ReadAll(res.Body)
+		if err != nil {
+			err = fmt.Errorf("error reading %v request body: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		// Reading an OCSP response shouldn't be fatal. A misconfigured
+		// endpoint might return invalid results for e.g., GET but return
+		// valid results for POST on retry. This could happen if e.g., the
+		// server responds with JSON.
+		ocspRes, err = ocsp.ParseResponse(ocspResBytes /*issuer = */, nil /* !!unsafe!! */)
+		if err != nil {
+			err = fmt.Errorf("error parsing %v OCSP response: %w", method, err)
+			retErr = multierror.Append(retErr, err)
+			continue
+		}
+
+		// Above, we use the unsafe issuer=nil parameter to ocsp.ParseResponse
+		// because Go's library does the wrong thing.
+		//
+		// Here, we lack a full chain, but we know we trust the parent issuer,
+		// so if the Go library incorrectly discards useful certificates, we
+		// likely cannot verify this without passing through the full chain
+		// back to the root.
+		//
+		// Instead, take one of two paths: 1. if there is no certificate in
+		// the ocspRes, verify the OCSP response directly with our trusted
+		// issuer certificate, or 2. if there is a certificate, either verify
+		// it directly matches our trusted issuer certificate, or verify it
+		// is signed by our trusted issuer certificate.
+		//
+		// See also: https://github.com/golang/go/issues/59641
+		//
+		// This addresses the !!unsafe!! behavior above.
+		if ocspRes.Certificate == nil {
+			if err := ocspRes.CheckSignatureFrom(issuer); err != nil {
+				err = fmt.Errorf("error directly verifying signature on %v OCSP response: %w", method, err)
+				retErr = multierror.Append(retErr, err)
+				continue
+			}
+		} else {
+			// Because we have at least one certificate here, we know that
+			// Go's ocsp library verified the signature from this certificate
+			// onto the response and it was valid. Now we need to know we trust
+			// this certificate. There's two ways we can do this:
+			//
+			// 1. Via confirming issuer == ocspRes.Certificate, or
+			// 2. Via confirming ocspRes.Certificate.CheckSignatureFrom(issuer).
+			if !bytes.Equal(issuer.Raw, ocspRes.Raw) {
+				// 1 must not hold, so 2 holds; verify the signature.
+				if err := ocspRes.Certificate.CheckSignatureFrom(issuer); err != nil {
+					err = fmt.Errorf("error checking chain of trust on %v OCSP response via %v failed: %w", method, issuer.Subject.String(), err)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+
+				// Verify the OCSP responder certificate is still valid and
+				// contains the required EKU since it is a delegated OCSP
+				// responder certificate.
+				if ocspRes.Certificate.NotAfter.Before(time.Now()) {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate has expired", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+				haveEKU := false
+				for _, ku := range ocspRes.Certificate.ExtKeyUsage {
+					if ku == x509.ExtKeyUsageOCSPSigning {
+						haveEKU = true
+						break
+					}
+				}
+				if !haveEKU {
+					err := fmt.Errorf("error checking delegated OCSP responder on %v OCSP response: certificate lacks the OCSP Signing EKU", method)
+					retErr = multierror.Append(retErr, err)
+					continue
+				}
+			}
+		}
+
+		// While we haven't validated the signature on the OCSP response, we
+		// got what we presume is a definitive answer and simply changing
+		// methods will likely not help us in that regard. Use this status
+		// to return without retrying another method, when it looks definitive.
+		//
+		// We don't accept ocsp.Unknown here: presumably, we could've hit a CDN
+		// with static mapping of request->responses, with a default "unknown"
+		// handler for everything else. By retrying here, we use POST, which
+		// could hit a live OCSP server with fresher data than the cached CDN.
+		if ocspRes.Status == ocsp.Good || ocspRes.Status == ocsp.Revoked {
+			break
+		}
+
+		// Here, we didn't have a valid response. Even though we didn't get an
+		// error, we should inform the user that this (valid-looking) response
+		// wasn't utilized.
+		err = fmt.Errorf("fetched %v OCSP response of status %v; wanted either good (%v) or revoked (%v)", method, ocspRes.Status, ocsp.Good, ocsp.Revoked)
+		retErr = multierror.Append(retErr, err)
 	}
 
-	return ocspRes, ocspResBytes, &ocspStatus{
-		code: ocspSuccess,
-	}, nil
+	if ocspRes != nil && ocspResBytes != nil {
+		// Clear retErr, because we have one parseable-but-maybe-not-quite-correct
+		// OCSP response.
+		retErr = nil
+		ocspS = &ocspStatus{
+			code: ocspSuccess,
+		}
+	}
+
+	return
 }
 
 // GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.

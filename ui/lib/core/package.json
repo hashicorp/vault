@@ -8,6 +8,7 @@
     "date-fns": "*",
     "@icholy/duration": "*",
     "base64-js": "*",
+    "dompurify": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
     "ember-cli-babel": "*",
@@ -23,10 +24,10 @@
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
-    "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
     "@hashicorp/flight-icons": "*",
+    "@hashicorp/design-system-components": "*",
     "codemirror": "*",
     "ember-modifier": "*"
   }

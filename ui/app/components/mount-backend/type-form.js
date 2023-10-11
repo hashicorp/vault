@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { tracked } from '@glimmer/tracking';
 
@@ -26,7 +31,11 @@ export default class MountBackendTypeForm extends Component {
     return this.version.isEnterprise ? allEngines() : mountableEngines();
   }
 
+  get authMethods() {
+    return this.version.isEnterprise ? allMethods() : methods();
+  }
+
   get mountTypes() {
-    return this.args.mountType === 'secret' ? this.secretEngines : methods();
+    return this.args.mountType === 'secret' ? this.secretEngines : this.authMethods;
   }
 }
