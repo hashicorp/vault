@@ -1,0 +1,31 @@
+### File audit devices do not honor SIGHUP signal to reload
+
+#### Affected versions
+
+- 1.15.0
+
+#### Issue
+
+Sending [`SIGHUP`](/vault/docs/audit/file#log-file-rotation) to Vault after rotating
+an audit log file doesn't reopen the file path as expected.
+
+If the file was moved (renamed), then Vault will continue to write data to the location
+of the moved file.
+
+If the file was deleted, then Vault will continue to write data to the deleted file.
+The file will be deleted by the OS once Vault is sealed or restarted, but
+until then will continue to consume disk space due to audit entries being written.
+
+The issue has been fixed for a patch release in Vault `1.15.1`.
+
+#### Workaround
+
+If audit log rotation is a requirement for your Vault deployment, you can use the
+following environment variable set to `true` in order to disable the new underlying
+event framework Vault uses to process audit events.
+
+| Environment variable name         | Value  |
+|-----------------------------------|--------|
+| `VAULT_AUDIT_DISABLE_EVENTLOGGER` | `true` |
+
+Please note that is environment variable will be removed in a future release of Vault.
