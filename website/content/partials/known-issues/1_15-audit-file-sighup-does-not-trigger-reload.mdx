@@ -10,12 +10,17 @@ The new underlying event framework for Vault causes Vault to continue using
 audit logs instead of reopening the file paths even when you send 
 [`SIGHUP`](/vault/docs/audit/file#log-file-rotation) after log rotation:
 
-If the file was moved (renamed), then Vault will continue to write data to the location
-of the moved file.
-
-If the file was deleted, then Vault will continue to write data to the deleted file.
-The file will be deleted by the OS once Vault is sealed or restarted, but
-until then will continue to consume disk space due to audit entries being written.
+- If you move or rename your audit log file, Vault continues to log data to the
+  moved file. For example, if you archive the log file
+  `audit/log/path/vault-audit.log` by moving it to
+  `audit/log/archive/path/vault-audit.log.bak`, Vault continues to write data to
+  `audit/log/archive/path/vault-audit.log.bak` instead of starting a fresh log
+  at `audit/log/path/vault-audit.log`.
+- If you delete your audit log file, Vault continues to write data to the
+  deleted file, which will continue to consume disk space as it grows. When
+  Vault is sealed or restarted, the OS will perform junk collection on the
+  deleted file and you will lose all data logged the audit file after it was
+  tagged for deletion.
 
 <Warning title="Missing Audit Entries">
   If the file was deleted (rather than moved locally) then audit entries written
