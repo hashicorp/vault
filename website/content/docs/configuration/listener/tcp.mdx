@@ -456,7 +456,7 @@ In the following call to `/sys/health/` notice that `cluster_name` and `version`
 
 
 ### API: `sys/leader`
-
+In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address` are both redacted and set to the empty string (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
 
 ```json
