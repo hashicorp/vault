@@ -886,9 +886,9 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 
 		if reloadFunc != nil {
-			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type.String()]
+			relSlice := (*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)]
 			relSlice = append(relSlice, reloadFunc)
-			(*c.reloadFuncs)["listener|"+lnConfig.Type.String()] = relSlice
+			(*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)] = relSlice
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {

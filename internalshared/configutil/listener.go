@@ -23,12 +23,12 @@ import (
 )
 
 const (
-	TCP  listenerType = "tcp"
-	Unix listenerType = "unix"
+	TCP  ListenerType = "tcp"
+	Unix ListenerType = "unix"
 )
 
-// listenerType represents the supported types of listener.
-type listenerType string
+// ListenerType represents the supported types of listener.
+type ListenerType string
 
 type ListenerTelemetry struct {
 	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -53,7 +53,7 @@ type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
 	RawConfig  map[string]interface{}
 
-	Type       listenerType
+	Type       ListenerType
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
 	Role       string      `hcl:"role"`
@@ -262,9 +262,14 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 	return l, nil
 }
 
+// Normalize returns the lower case string version of a listener type.
+func (t ListenerType) Normalize() ListenerType {
+	return ListenerType(strings.ToLower(string(t)))
+}
+
 // String returns the string version of a listener type.
-func (t listenerType) String() string {
-	return string(t)
+func (t ListenerType) String() string {
+	return string(t.Normalize())
 }
 
 // parseChrootNamespace attempts to parse the raw listener chroot namespace settings.
@@ -292,7 +297,7 @@ func (l *Listener) parseChrootNamespaceSettings() error {
 // The state of the listener will be modified.
 func (l *Listener) parseType(fallback string) error {
 	switch {
-	case l.Type.String() != "":
+	case l.Type != "":
 	case fallback != "":
 	default:
 		return errors.New("listener type must be specified")
@@ -301,16 +306,16 @@ func (l *Listener) parseType(fallback string) error {
 	// Use type if available, otherwise fall back.
 	rawType := l.Type
 	if rawType == "" {
-		rawType = listenerType(fallback)
+		rawType = ListenerType(fallback)
 	}
 
-	parsedType := listenerType(strings.ToLower(rawType.String()))
+	parsedType := rawType.Normalize()
 
 	// Sanity check the values
 	switch parsedType {
 	case TCP, Unix:
 	default:
-		return fmt.Errorf("unsupported listener type %q", parsedType.String())
+		return fmt.Errorf("unsupported listener type %q", parsedType)
 	}
 
 	l.Type = parsedType

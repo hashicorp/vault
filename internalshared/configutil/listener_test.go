@@ -159,7 +159,7 @@ func TestListener_parseType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			l := &Listener{Type: listenerType(tc.inputType)}
+			l := &Listener{Type: ListenerType(tc.inputType)}
 			err := l.parseType(tc.inputFallback)
 			switch {
 			case tc.isErrorExpected:
@@ -861,7 +861,7 @@ func TestListener_parseCORSSettings(t *testing.T) {
 // assign the relevant value on the SharedConfig struct.
 func TestListener_parseHTTPHeaderSettings(t *testing.T) {
 	tests := map[string]struct {
-		listenerType                     listenerType
+		listenerType                     ListenerType
 		rawCustomResponseHeaders         []map[string]any
 		expectedNumCustomResponseHeaders int
 		isErrorExpected                  bool
@@ -995,7 +995,7 @@ func TestListener_parseChrootNamespaceSettings(t *testing.T) {
 // assign the relevant value on the SharedConfig struct.
 func TestListener_parseRedactionSettings(t *testing.T) {
 	tests := map[string]struct {
-		listenerType              listenerType
+		listenerType              ListenerType
 		rawRedactAddresses        any
 		expectedRedactAddresses   bool
 		rawRedactClusterName      any

@@ -22,7 +22,7 @@ import (
 type ListenerFactory func(*configutil.Listener, io.Writer, cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
-var BuiltinListeners = map[string]ListenerFactory{
+var BuiltinListeners = map[configutil.ListenerType]ListenerFactory{
 	"tcp":  tcpListenerFactory,
 	"unix": unixListenerFactory,
 }
@@ -30,7 +30,7 @@ var BuiltinListeners = map[string]ListenerFactory{
 // NewListener creates a new listener of the given type with the given
 // configuration. The type is looked up in the BuiltinListeners map.
 func NewListener(l *configutil.Listener, logger io.Writer, ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error) {
-	f, ok := BuiltinListeners[l.Type.String()]
+	f, ok := BuiltinListeners[l.Type]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("unknown listener type: %q", l.Type)
 	}
