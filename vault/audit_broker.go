@@ -216,9 +216,9 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			e.Data = in
 
-			_, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				retErr = multierror.Append(retErr, err)
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
 		}
 	}
@@ -297,9 +297,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 			e.Data = in
 
-			_, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				retErr = multierror.Append(retErr, err)
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
 		}
 	}
