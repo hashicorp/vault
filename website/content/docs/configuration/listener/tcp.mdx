@@ -437,7 +437,7 @@ telemetry {
 ```
 
 ### API: `/sys/health`
-
+In the following call to `/sys/health/` notice that `cluster_name` and `version` are both redacted. The `cluster_name` field is fully omitted from the response and `version` is the empty string (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
 
 ```json
