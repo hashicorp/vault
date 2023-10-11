@@ -499,7 +499,7 @@ In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_
 
 
 ### CLI: `vault status`
-
+The CLI command `vault status` uses endpoints that support redacting data, so the output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address` .`Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint returned the empty string, and  `Active Node Address` shows as `<none>` because it was omitted from the API response.
 ```
 Key                     Value
 ---                     -----
