@@ -344,7 +344,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		metadata = append(metadata, logical.MakeMetadataPairs(req.Data, "common_name")...)
 		metadata = append(metadata, logical.MakeMetadataPairs(resp.Data,
 			"serial_number", "issuer_id", "issuer_name", "key_id",
-			"key_name", "certificate", "expiration")...)
+			"key_name", "expiration")...)
+		metadata = append(metadata, "certificate", cb.Certificate)
+
 		err := logical.SendEvent(ctx, b, "pki/ca-generate-root", metadata...)
 		if err != nil {
 			b.Logger().Warn("Error sending event", "error", err)
@@ -469,10 +471,23 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 			"issuer_name", issuerName,
 		}
 		metadata = append(metadata, logical.MakeMetadataPairs(resp.Data,
-			"expiration", "serial_number", "certificate", "issuing_ca", "ca_chain")...)
+			"expiration", "serial_number")...)
+		pb, err := parsedBundle.ToCertBundle()
+		if err != nil {
+			b.Logger().Warn("Error sending event", "error", err)
+			return
+		}
+		sb, err := signingBundle.ToCertBundle()
+		if err != nil {
+			b.Logger().Warn("Error sending event", "error", err)
+			return
+		}
+		metadata = append(metadata, "certificate", pb.Certificate)
+		metadata = append(metadata, "issuing_ca", sb.Certificate)
+		metadata = append(metadata, "ca_chain", strings.Join(pb.CAChain, ","))
 		metadata = append(metadata, caInfoBundleToKeys(signingBundle, "issuer_")...)
 		metadata = append(metadata, "issuer_id", string(issuerID))
-		err := logical.SendEvent(ctx, b, "pki/issuer-sign-intermediate", metadata...)
+		err = logical.SendEvent(ctx, b, "pki/issuer-sign-intermediate", metadata...)
 		if err != nil {
 			b.Logger().Warn("Error sending event", "error", err)
 		}
