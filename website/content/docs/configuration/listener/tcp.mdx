@@ -21,6 +21,32 @@ multiple interfaces. If you configure multiple listeners you also need to
 specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
 
+## Sensitive data redaction for unauthenticated endpoints
+
+Unauthenticated API endpoints may return the following sensitive information:
+
+* Vault version number
+* Vault binary build date
+* Vault cluster name
+* IP address of nodes in the cluster
+
+Vault offers the ability to configure each `tcp` `listener` stanza such that,
+when appropriate, these values are redacted from responses.
+
+The following API endpoints support redaction based on `listener` stanza configuration:
+
+* [`/sys/health`](/vault/api-docs/system/health)
+* [`/sys/leader`](/vault/api-docs/system/leader)
+* [`/sys/seal-status`](/vault/api-docs/system/seal-status)
+
+Vault replaces redacted information with an empty string (`""`). Some Vault APIs
+also omit keys from the response when the corresponding value is empty (`""`).
+
+<Note title="Redacting values affects responses to all API clients">
+  The Vault CLI and UI consume Vault API responses. As a result, your redaction
+  settings will apply to CLI and UI output in addition to direct API calls.
+</Note>
+
 ## Listener's custom response headers
 
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
@@ -113,6 +139,12 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   Not required if `proxy_protocol_behavior` is set to `use_always`. Source IPs should
   be comma-delimited if provided as a string. At least one source IP must be provided,
   `proxy_protocol_authorized_addrs` cannot be an empty array or string.
+
+- `redact_addresses` `(bool: false)` - Redacts `leader_address` and `cluster_leader_address` values in applicable API responses when `true`.
+
+- `redact_cluster_name` `(bool: false)` - Redacts `cluster_name` values in applicable API responses when `true`.
+
+- `redact_version` `(bool: false)` - Redacts `version` and `build_date` values in applicable API responses when `true`.
 
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
@@ -370,6 +402,140 @@ listener "tcp" {
 # Advertise the non-loopback interface
 api_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8200"
 cluster_addr = "https://[2001:1c04:90d:1c00:a00:27ff:fefa:58ec]:8201"
+```
+
+## Redaction examples
+
+Please see redaction settings above, for details on each redaction setting.
+
+Example configuration for the [`tcp`](/vault/docs/configuration/listener/tcp) listener,
+enabling [`redact_addresses`](/vault/docs/configuration/listener/tcp#redact_addresses),
+[`redact_cluster_name`](/vault/docs/configuration/listener/tcp#redact_cluster_name) and
+[`redact_version`](/vault/docs/configuration/listener/tcp#redact_version).
+
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+
+listener "tcp" {
+  address             = "127.0.0.1:8200",
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
+  redact_addresses    = "true"
+  redact_cluster_name = "true"
+  redact_version      = "true"
+}
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
+```
+
+### API: `/sys/health`
+In the following call to `/sys/health/` notice that `cluster_name` and `version`
+are both redacted. The `cluster_name` field is fully omitted from the response
+and `version` is the empty string (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
+
+{
+  "initialized": true,
+  "sealed": false,
+  "standby": true,
+  "performance_standby": false,
+  "replication_performance_mode": "disabled",
+  "replication_dr_mode": "disabled",
+  "server_time_utc": 1696598650,
+  "version": "",
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e"
+}
+```
+
+
+### API: `sys/leader`
+In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address`
+are both redacted and set to the empty string (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
+
+{
+  "ha_enabled": true,
+  "is_self": false,
+  "active_time": "0001-01-01T00:00:00Z",
+  "leader_address": "",
+  "leader_cluster_address": "",
+  "performance_standby": false,
+  "performance_standby_last_remote_wal": 0,
+  "raft_committed_index": 164,
+  "raft_applied_index": 164
+}
+```
+
+
+### API: `sys/seal-status`
+
+In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`,
+and `version` are all redacted. The `cluster_name` field is fully omitted from
+the response while `build_date` and `version` are empty strings (`""`).
+
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
+
+{
+  "type": "shamir",
+  "initialized": true,
+  "sealed": false,
+  "t": 1,
+  "n": 1,
+  "progress": 0,
+  "nonce": "",
+  "version": "",
+  "build_date": "",
+  "migration": false,
+  "cluster_id": "a1a7a078-0ae1-7fb9-41ec-2f4f583c773e",
+  "recovery_seal": false,
+  "storage_type": "raft"
+}
+```
+
+### CLI: `vault status`
+
+The CLI command `vault status` uses endpoints that support redacting data, so the
+output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address`.
+`Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint
+returned the empty string, and  `Active Node Address` shows as `<none>` because
+it was omitted from the API response.
+
+```shell-session
+
+$ vault status
+
+Key                     Value
+---                     -----
+Seal Type               shamir
+Initialized             true
+Sealed                  false
+Total Shares            5
+Threshold               3
+Version                 n/a
+Build Date              n/a
+Storage Type            raft
+HA Enabled              true
+HA Cluster              n/a
+HA Mode                 standby
+Active Node Address     <none>
+Raft Committed Index    219
+Raft Applied Index      219
 ```
 
 [golang-tls]: https://golang.org/src/crypto/tls/cipher_suites.go
