@@ -6,6 +6,7 @@ package raft
 import (
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -39,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/version"
+	"github.com/vmihailenco/msgpack/v4"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -599,18 +601,28 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				command := &LogData{
-					Operations: []*LogOperation{
-						{
-							OpType: verifierCheckpointOp,
-						},
-					},
+				l := &raft.Log{}
+				data := make([]byte, 1)
+				data[0] = byte(verifierCheckpointOp)
+				var extensions [8]byte
+				binary.LittleEndian.PutUint64(extensions[:], verifier.ExtensionMagicPrefix)
+				l.Data = data
+				l.Extensions = extensions[:]
+				cmd, err := msgpack.Marshal(l)
+				if err != nil {
+					logger.Error("error marshaling raft log for verification", "error", err)
 				}
 
 				b.permitPool.Acquire()
 				b.l.RLock()
-				// TODO: we're not able to recover the raft index from this call, the way Consul does. Is that ok?
-				err := b.applyLog(ctx, command)
+
+				applyFuture := b.raft.Apply(cmd, 0)
+				if err := applyFuture.Error(); err != nil {
+					logger.Error("error sending raft log for verification", "error", err)
+				}
+
+				// TODO: do we need to wait for the response?
+				_ = applyFuture.Response()
 				b.l.RUnlock()
 				b.permitPool.Release()
 				logger.Debug("sent verification checkpoint", "error", err)
@@ -630,18 +642,8 @@ func isLogVerifyCheckpoint(l *raft.Log) (bool, error) {
 		return false, nil
 	}
 
-	// Unmarshal the data back into LogData
-	var command LogData
-	err := proto.Unmarshal(l.Data, &command)
-	if err != nil {
-		return false, err
-	}
-
-	// Check the operations
-	for _, op := range command.Operations {
-		if op.OpType == verifierCheckpointOp {
-			return true, nil
-		}
+	if l.Data[0] == byte(verifierCheckpointOp) {
+		return true, nil
 	}
 
 	return false, nil

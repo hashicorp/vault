@@ -6,7 +6,6 @@ package raft
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -14,10 +13,7 @@ import (
 )
 
 func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	raftDir := t.TempDir()
 	t.Logf("raft dir: %s", raftDir)
 
 	conf := map[string]string{
@@ -33,10 +29,7 @@ func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, str
 }
 
 func GetRaftWithConfig(t testing.TB, bootstrap bool, noStoreState bool, conf map[string]string) (*RaftBackend, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	raftDir := t.TempDir()
 	t.Logf("raft dir: %s", raftDir)
 
 	conf["path"] = raftDir

@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -213,9 +212,7 @@ func TestRaft_Backend(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		physical.ExerciseBackend(t, b)
 	})
 }
@@ -266,20 +263,46 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 	}
 }
 
-func TestRaft_ParseRaftWalBackend(t *testing.T) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
+func TestRaft_VerifierEnabled(t *testing.T) {
+	conf := map[string]string{
+		"trailing_logs":                  "100",
+		raftWalConfigKey:                 "true",
+		"raft_log_verifier_enabled":      "true",
+		"raft_log_verification_interval": "10s", // minimum allowed
 	}
-	defer func() { _ = os.RemoveAll(raftDir) }()
 
+	b, _ := GetRaftWithConfig(t, true, true, conf)
+
+	waitTime := 12 * time.Second
+	start := time.Now()
+	physical.ExerciseBackend(t, b)
+	finish := time.Now()
+	elapsed := finish.Sub(start)
+
+	if elapsed < waitTime {
+		time.Sleep(waitTime - elapsed)
+	}
+
+	// testBothRaftBackends(t, func(useRaftWal string) {
+	// 	conf := map[string]string{
+	// 		"trailing_logs":  "100",
+	// 		raftWalConfigKey: useRaftWal,
+	// 	}
+	//
+	// 	b, _ := GetRaftWithConfig(t, true, true, conf)
+	// 	physical.ExerciseBackend(t, b)
+	// })
+}
+
+func TestRaft_ParseRaftWalBackend(t *testing.T) {
+	raftDir := t.TempDir()
 	conf := map[string]string{
 		"path":           raftDir,
 		"node_id":        "abc123",
 		raftWalConfigKey: "notabooleanlol",
 	}
 
-	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("expected an error but got none")
 	}
@@ -394,19 +417,14 @@ func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
 }
 
 func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(raftDir)
-
+	raftDir := t.TempDir()
 	conf := map[string]string{
 		"path":                      raftDir,
 		"node_id":                   "abc123",
 		"autopilot_upgrade_version": "hahano",
 	}
 
-	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
 	if err == nil {
 		t.Fatal("expected an error but got none")
 	}
@@ -445,12 +463,7 @@ func TestRaft_ParseNonVoter(t *testing.T) {
 					if tc.envValue != nil {
 						t.Setenv(EnvVaultRaftNonVoter, *tc.envValue)
 					}
-					raftDir, err := ioutil.TempDir("", "vault-raft-")
-					if err != nil {
-						t.Fatal(err)
-					}
-					defer os.RemoveAll(raftDir)
-
+					raftDir := t.TempDir()
 					conf := map[string]string{
 						"path":       raftDir,
 						"node_id":    "abc123",
@@ -491,9 +504,7 @@ func TestRaft_Backend_LargeKey(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		key, err := base62.Random(bolt.MaxKeySize + 1)
 		if err != nil {
 			t.Fatal(err)
@@ -528,9 +539,7 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		value := make([]byte, defaultMaxEntrySize+1)
 		rand.Read(value)
 		entry := &physical.Entry{Key: "foo", Value: value}
@@ -564,9 +573,7 @@ func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		ctx := context.Background()
 		txns := make([]*physical.TxnEntry, 0)
 
@@ -629,9 +636,7 @@ func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		value := make([]byte, defaultMaxEntrySize+1)
 		rand.Read(value)
 
@@ -676,9 +681,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		value := make([]byte, defaultMaxEntrySize+1)
 		rand.Read(value)
 
@@ -719,9 +722,7 @@ func TestRaft_Backend_ListPrefix(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		physical.ExerciseBackend_ListPrefix(t, b)
 	})
 }
@@ -734,24 +735,19 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		b, _ := GetRaftWithConfig(t, true, true, conf)
 		physical.ExerciseTransactionalBackend(t, b)
 	})
 }
 
 func TestRaft_HABackend(t *testing.T) {
 	t.Skip()
-	raft, dir := GetRaft(t, true, true)
-	defer os.RemoveAll(dir)
-	raft2, dir2 := GetRaft(t, false, true)
-	defer os.RemoveAll(dir2)
+	raft1, _ := GetRaft(t, true, true)
+	raft2, _ := GetRaft(t, false, true)
 
 	// Add raft2 to the cluster
-	addPeer(t, raft, raft2)
-
-	physical.ExerciseHABackend(t, raft, raft2)
+	addPeer(t, raft1, raft2)
+	physical.ExerciseHABackend(t, raft1, raft2)
 }
 
 func TestRaft_Backend_ThreeNode(t *testing.T) {
@@ -762,12 +758,9 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		raft1, dir := GetRaftWithConfig(t, true, true, conf)
-		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-		defer func() { _ = os.RemoveAll(dir2) }()
-		defer func() { _ = os.RemoveAll(dir3) }()
+		raft1, _ := GetRaftWithConfig(t, true, true, conf)
+		raft2, _ := GetRaftWithConfig(t, false, true, conf)
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
 
 		// Add raft2 to the cluster
 		addPeer(t, raft1, raft2)
@@ -793,12 +786,9 @@ func TestRaft_GetOfflineConfig(t *testing.T) {
 		}
 
 		// Create 3 raft nodes
-		raft1, dir1 := GetRaftWithConfig(t, true, true, config)
-		raft2, dir2 := GetRaftWithConfig(t, false, true, config)
-		raft3, dir3 := GetRaftWithConfig(t, false, true, config)
-		defer func() { _ = os.RemoveAll(dir1) }()
-		defer func() { _ = os.RemoveAll(dir2) }()
-		defer func() { _ = os.RemoveAll(dir3) }()
+		raft1, _ := GetRaftWithConfig(t, true, true, config)
+		raft2, _ := GetRaftWithConfig(t, false, true, config)
+		raft3, _ := GetRaftWithConfig(t, false, true, config)
 
 		// Add them all to the cluster
 		addPeer(t, raft1, raft2)
@@ -850,12 +840,8 @@ func TestRaft_Recovery(t *testing.T) {
 		// Create 4 raft nodes
 		raft1, dir1 := GetRaftWithConfig(t, true, true, conf)
 		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
 		raft4, dir4 := GetRaftWithConfig(t, false, true, conf)
-		defer func() { _ = os.RemoveAll(dir1) }()
-		defer func() { _ = os.RemoveAll(dir2) }()
-		defer func() { _ = os.RemoveAll(dir3) }()
-		defer func() { _ = os.RemoveAll(dir4) }()
 
 		// Add them all to the cluster
 		addPeer(t, raft1, raft2)
@@ -914,15 +900,15 @@ func TestRaft_Recovery(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
+		err = os.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
+		err = os.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
+		err = os.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -964,12 +950,9 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		raft1, dir := GetRaftWithConfig(t, true, true, conf)
-		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-		defer func() { _ = os.RemoveAll(dir2) }()
-		defer func() { _ = os.RemoveAll(dir3) }()
+		raft1, _ := GetRaftWithConfig(t, true, true, conf)
+		raft2, _ := GetRaftWithConfig(t, false, true, conf)
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
 
 		// Add raft2 to the cluster
 		addPeer(t, raft1, raft2)
@@ -995,10 +978,8 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		}
 
 		b, dir := GetRaftWithConfig(t, true, true, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
 
 		defaultConfig := raft.DefaultConfig()
-
 		localConfig := raft.DefaultConfig()
 		err := b.applyConfigSettings(localConfig)
 		if err != nil {
@@ -1066,11 +1047,8 @@ func BenchmarkDB_Puts(b *testing.B) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		raft1, dir := GetRaftWithConfig(b, true, false, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
-		raft2, dir2 := GetRaftWithConfig(b, true, false, conf)
-		defer func() { _ = os.RemoveAll(dir2) }()
+		raft1, _ := GetRaftWithConfig(b, true, false, conf)
+		raft2, _ := GetRaftWithConfig(b, true, false, conf)
 
 		bench := func(b *testing.B, s physical.Backend, dataSize int) {
 			data, err := uuid.GenerateRandomBytes(dataSize)
@@ -1106,9 +1084,7 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 			raftWalConfigKey: useRaftWal,
 		}
 
-		raft1, dir := GetRaftWithConfig(b, true, false, conf)
-		defer func() { _ = os.RemoveAll(dir) }()
-
+		raft1, _ := GetRaftWithConfig(b, true, false, conf)
 		data, err := uuid.GenerateRandomBytes(256 * 1024)
 		if err != nil {
 			b.Fatal(err)
@@ -1132,7 +1108,7 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
-				s.writeTo(ctx, discardCloser{Writer: ioutil.Discard}, discardCloser{Writer: ioutil.Discard})
+				s.writeTo(ctx, discardCloser{Writer: io.Discard}, discardCloser{Writer: io.Discard})
 			}
 		}
 
