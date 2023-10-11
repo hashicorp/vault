@@ -6,37 +6,42 @@
 
 #### Issue
 
-Vault clusters with `file` audit devices enabled can be impacted by the issue.
-
-Vault's new underlying event framework for audit causes Vault to continue using
+The new underlying event framework for auditing causes Vault to continue using
 audit log files instead of reopening the file paths even when you send
-[`SIGHUP`](/vault/docs/audit/file#log-file-rotation) after log rotation.
+[`SIGHUP`](/vault/docs/audit/file#log-file-rotation) after log rotation. The
+issue impacts any Vault cluster with `file` audit devices enabled.
 
-If you move or rename your audit log file locally, Vault continues to log data to the original file.
+Not honoring the `SIGHUP` signal has two key consequences when moving or
+deleting audit files.
 
-For example, when archiving a file locally:
+If you **move or rename your audit log file** locally, Vault continues to log
+data to the original file. For example, if you archive a file locally:
 
 ```shell-session
 $ mv /var/log/vault/audit.log /var/log/vault/archive/audit.log.bak
 ```
 
-Instead of logging audit entries to a newly created file at `/var/log/vault/audit.log`,
-Vault continues to write data to `/var/log/vault/archive/audit.log.bak`.
+Vault continues to write data to `/var/log/vault/archive/audit.log.bak`
+instead of logging audit entries to a newly created file at
+`/var/log/vault/audit.log`.
 
-If you delete your audit log file, the OS unlinks the file from the directory
-structure. As Vault still has the file open, it continues to write data to the
-deleted file, which continues to consume disk space as it grows. When
-Vault is sealed or restarted, the OS deletes the previously unlinked file, and you
-will lose all data logged to the audit file after it was tagged for deletion.
+If you **delete your audit log file**, the OS unlinks the file from the
+directory structure, but Vault still has the file open. Vault continues to write
+data to the deleted file, which continues to consume disk space as it grows.
+When Vault is sealed or restarted, the OS deletes the previously unlinked file,
+and you will lose all data logged to the audit file after it was tagged for
+deletion.
 
-The issue with file audit devices not honoring SIGHUP signals is fixed as a patch release in Vault `1.15.1`.
+The issue with `file` audit devices not honoring `SIGHUP` signals is fixed as a
+patch release in Vault `1.15.1`.
 
 #### Workaround
 
-Set the `VAULT_AUDIT_DISABLE_EVENTLOGGER` environment variable to `true` in order
-to disable the new underlying event framework Vault uses to process audit events.
-Upon startup Vault's audit framework reverts to mirror versions before `1.15`.
+Set the `VAULT_AUDIT_DISABLE_EVENTLOGGER` environment variable to `true` to
+disable the new underlying event framework and restart Vault:
 
 ```shell-session
 $ export VAULT_AUDIT_DISABLE_EVENTLOGGER=true
 ```
+
+On startup, Vault reverts to the audit behavior used in `1.14.x`.
