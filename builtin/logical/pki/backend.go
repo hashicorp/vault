@@ -148,28 +148,50 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 		Paths: []*framework.Path{
 			pathListRoles(&b),
+			// TODO: generate, test, document event
 			pathRoles(&b),
+			// TODO: test, document event
 			pathGenerateRoot(&b),
+			// TODO: test, document event
 			pathSignIntermediate(&b),
+			// TODO: generate, test, document event
 			pathSignSelfIssued(&b),
+			// TODO: test, document event
 			pathDeleteRoot(&b),
+			// TODO: generate, test, document event
 			pathGenerateIntermediate(&b),
+			// TODO: generate, test, document event
 			pathSetSignedIntermediate(&b),
+			// TODO: generate, test, document event
 			pathConfigCA(&b),
+			// TODO: generate, test, document event
 			pathConfigCRL(&b),
+			// TODO: generate, test, document event
 			pathConfigURLs(&b),
+			// TODO: generate, test, document event
 			pathConfigCluster(&b),
+			// TODO: generate, test, document event
 			pathSignVerbatim(&b),
+			// TODO: generate, test, document event
 			pathSign(&b),
+			// TODO: generate, test, document event
 			pathIssue(&b),
+			// TODO: generate, test, document event
 			pathRotateCRL(&b),
+			// TODO: generate, test, document event
 			pathRotateDeltaCRL(&b),
+			// TODO: generate, test, document event
 			pathRevoke(&b),
+			// TODO: generate, test, document event
 			pathRevokeWithKey(&b),
 			pathListCertsRevoked(&b),
+			// TODO: generate, test, document event
 			pathTidy(&b),
+			// TODO: generate, test, document event
 			pathTidyCancel(&b),
+			// TODO: generate, test, document event
 			pathTidyStatus(&b),
+			// TODO: generate, test, document event
 			pathConfigAutoTidy(&b),
 
 			// Issuer APIs
@@ -177,25 +199,42 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathGetIssuer(&b),
 			pathGetUnauthedIssuer(&b),
 			pathGetIssuerCRL(&b),
+			// TODO: generate, test, document event
 			pathImportIssuer(&b),
+			// TODO: generate, test, document event
 			pathIssuerIssue(&b),
+			// TODO: generate, test, document event
 			pathIssuerSign(&b),
+			// TODO: generate, test, document event
 			pathIssuerSignIntermediate(&b),
+			// TODO: generate, test, document event
 			pathIssuerSignSelfIssued(&b),
+			// TODO: generate, test, document event
 			pathIssuerSignVerbatim(&b),
+			// TODO: generate, test, document event
 			pathIssuerGenerateRoot(&b),
+			// TODO: generate, test, document event
 			pathRotateRoot(&b),
+			// TODO: generate, test, document event
 			pathIssuerGenerateIntermediate(&b),
+			// TODO: generate, test, document event
 			pathCrossSignIntermediate(&b),
+			// TODO: generate, test, document event
 			pathConfigIssuers(&b),
+			// TODO: generate, test, document event
 			pathReplaceRoot(&b),
+			// TODO: generate, test, document event
 			pathRevokeIssuer(&b),
 
 			// Key APIs
 			pathListKeys(&b),
+			// TODO: generate, test, document event
 			pathKey(&b),
+			// TODO: generate, test, document event
 			pathGenerateKey(&b),
+			// TODO: generate, test, document event
 			pathImportKey(&b),
+			// TODO: generate, test, document event
 			pathConfigKeys(&b),
 
 			// Fetch APIs have been lowered to favor the newer issuer API endpoints
@@ -209,15 +248,20 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// OCSP APIs
 			buildPathOcspGet(&b),
+			// TODO: generate, test, document event
 			buildPathOcspPost(&b),
 
 			// CRL Signing
+			// TODO: generate, test, document event
 			pathResignCrls(&b),
+			// TODO: generate, test, document event
 			pathSignRevocationList(&b),
 
 			// ACME
+			// TODO: generate, test, document event
 			pathAcmeConfig(&b),
 			pathAcmeEabList(&b),
+			// TODO: generate, test, document event
 			pathAcmeEabDelete(&b),
 		},
 
