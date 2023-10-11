@@ -476,6 +476,7 @@ In the following call to `/sys/leader/` notice that `leader_address` and `leader
 
 ### API: `sys/seal-status`
 
+In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`, and `version` are all redacted. The `cluster_name` field is fully omitted from the response while `build_date` and `version` are empty strings (`""`).
 `curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
 
 ```json
