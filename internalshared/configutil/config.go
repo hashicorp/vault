@@ -141,7 +141,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 		// Track which types of listener were found.
 		for _, l := range result.Listeners {
-			result.found(l.Type, l.Type)
+			result.found(l.Type.String(), l.Type.String())
 		}
 	}
 

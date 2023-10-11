@@ -22,6 +22,14 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
+const (
+	TCP  ListenerType = "tcp"
+	Unix ListenerType = "unix"
+)
+
+// ListenerType represents the supported types of listener.
+type ListenerType string
+
 type ListenerTelemetry struct {
 	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
@@ -45,7 +53,7 @@ type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
 	RawConfig  map[string]interface{}
 
-	Type       string
+	Type       ListenerType
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
 	Role       string      `hcl:"role"`
@@ -254,6 +262,16 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 	return l, nil
 }
 
+// Normalize returns the lower case string version of a listener type.
+func (t ListenerType) Normalize() ListenerType {
+	return ListenerType(strings.ToLower(string(t)))
+}
+
+// String returns the string version of a listener type.
+func (t ListenerType) String() string {
+	return string(t.Normalize())
+}
+
 // parseChrootNamespace attempts to parse the raw listener chroot namespace settings.
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
@@ -286,20 +304,21 @@ func (l *Listener) parseType(fallback string) error {
 	}
 
 	// Use type if available, otherwise fall back.
-	result := l.Type
-	if result == "" {
-		result = fallback
+	rawType := l.Type
+	if rawType == "" {
+		rawType = ListenerType(fallback)
 	}
-	result = strings.ToLower(result)
+
+	parsedType := rawType.Normalize()
 
 	// Sanity check the values
-	switch result {
-	case "tcp", "unix":
+	switch parsedType {
+	case TCP, Unix:
 	default:
-		return fmt.Errorf("unsupported listener type %q", result)
+		return fmt.Errorf("unsupported listener type %q", parsedType)
 	}
 
-	l.Type = result
+	l.Type = parsedType
 
 	return nil
 }
@@ -396,6 +415,13 @@ func (l *Listener) parseTLSSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseHTTPHeaderSettings() error {
+	// Custom response headers are only supported by TCP listeners.
+	// Clear raw data and return early if it was something else.
+	if l.Type != TCP {
+		l.CustomResponseHeadersRaw = nil
+		return nil
+	}
+
 	// if CustomResponseHeadersRaw is nil, we still need to set the default headers
 	customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
 	if err != nil {
@@ -604,6 +630,16 @@ func (l *Listener) parseCORSSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseRedactionSettings() error {
+	// Redaction is only supported on TCP listeners.
+	// Clear raw data and return early if it was something else.
+	if l.Type != TCP {
+		l.RedactAddressesRaw = nil
+		l.RedactClusterNameRaw = nil
+		l.RedactVersionRaw = nil
+
+		return nil
+	}
+
 	var err error
 
 	if l.RedactAddressesRaw != nil {
