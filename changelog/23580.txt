@@ -1,3 +1,3 @@
 ```release-note:bug
-ui: Fix namespace picker and console when in collapsed navbar view.
+ui: Upgrade HDS version to fix sidebar navigation issues when it collapses in smaller viewports
 ```
