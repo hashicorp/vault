@@ -7,7 +7,12 @@ description: |-
   newly created tokens.
 ---
 
-# Vault agent caching
+# Vault Agent caching
+
+~> Note: Unlike Vault Agent, [Vault Proxy](/vault/docs/agent-and-proxy/proxy) supports
+[the caching of static secrets](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
+(KVv1 and KVv2) through its API proxy, requiring less requests to be forwarded to Vault itself. We recommend
+switching to Vault Proxy for API Proxy related workflows.
 
 Vault Agent Caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these

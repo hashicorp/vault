@@ -6,13 +6,18 @@ description: >-
   for Vault's API.
 ---
 
-# Vault agent API proxy
+# Vault Agent API proxy
 
 Vault Agent's API Proxy functionality allows you to use Vault Agent's API as a proxy
 for Vault's API.
 
 ~> Note: This functionality will be deprecated in a future release. Please
 switch to using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API proxying purposes, instead.
+
+~> Note: Unlike Vault Agent, [Vault Proxy](/vault/docs/agent-and-proxy/proxy) supports
+[the caching of static secrets](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
+(KVv1 and KVv2) through its API proxy, requiring less requests to be forwarded to Vault itself. We recommend
+switching to Vault Proxy for API Proxy related workflows.
 
 ## Functionality
 

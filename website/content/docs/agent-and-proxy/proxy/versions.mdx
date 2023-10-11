@@ -5,7 +5,7 @@ description: |-
   Guidelines for running different versions of Proxy and Server
 ---
 
-# Running different versions of proxy and server
+# Running different versions of Proxy and server
 
 There is no requirement to run identical versions of Vault Proxy and Vault Server.
 It is safe to run different versions, however you may not be able to take advantage of all the newest features in Vault if you do not upgrade to the most recent versions of Proxy and Server. We recognize that this isn’t always possible, so we do support version mismatch as best as possible.
@@ -14,7 +14,7 @@ Proxy will write a note to its logs when it detects a mismatch between Proxy and
 
 This document describes the common cases.  There may be occasional exceptions, which if intentional will be called out in the CHANGELOG in a `CHANGES` section.  If unintentional/undocumented these should be treated as bugs and reported.
 
-## Older version of proxy than server
+## Older version of Proxy than server
 
 We do not anticipate any problems stemming from continuing to run an older Proxy version after the server nodes are upgraded to a later version.  Existing deployments using Proxy should not be impacted, as we don't generally make backwards-incompatible changes to Vault Server.
 
@@ -27,7 +27,7 @@ Proxy:
 
 ## Newer version of Proxy than server
 
-It is possible that an Proxy could depend on features that don’t exist in older Server versions.
+It is possible that a Proxy could depend on features that don’t exist in older Server versions.
 
 Auto-auth:
 - Proxy may claim to support newer auth methods that have been introduced since Server was built, but they won't work due to Server not supporting them

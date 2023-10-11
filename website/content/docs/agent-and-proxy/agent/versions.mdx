@@ -5,7 +5,7 @@ description: |-
   Guidelines for running different versions of Agent and Server
 ---
 
-# Running different versions of agent and server
+# Running different versions of Agent and server
 
 There is no requirement to run identical versions of Vault Agent and Vault Server.
 It is safe to run different versions, however you may not be able to take advantage of all the newest features in Vault if you do not upgrade to the most recent versions of Agent and Server. We recognize that this isn’t always possible, so we do support version mismatch as best as possible.
@@ -14,7 +14,7 @@ As of Vault Agent 1.13.0, Agent will write a note to its logs when it detects a 
 
 This document describes the common cases.  There may be occasional exceptions, which if intentional will be called out in the CHANGELOG in a `CHANGES` section.  If unintentional/undocumented these should be treated as bugs and reported.
 
-## Older version of agent than server
+## Older version of Agent than server
 
 We do not anticipate any problems stemming from continuing to run an older Agent version after the server nodes are upgraded to a later version.  Existing deployments using Agent should not be impacted, as we don't generally make backwards-incompatible changes to Vault Server.
 
@@ -29,7 +29,7 @@ Templating:
 - the templating language features that interact with the Vault server use stable Vault APIs to retrieve and renew secrets
 - even if new secret engine types are introduced in newer Vault releases, these should not require an Agent upgrade to access via templates
 
-## Newer version of agent than server
+## Newer version of Agent than server
 
 It is possible that an Agent could depend on features that don’t exist in older Server versions.
 
