@@ -31,7 +31,7 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
     test('getProps returns correct model attributes', async function (assert) {
       const helpUrl = `/v1/${this.backend}/roles/example?help=1`;
       const result = await this.pathHelp.getProps(helpUrl, this.backend);
-      assert.propEqual(result, openApiDrivenAttributes.sshRole);
+      assert.deepEqual(result, openApiDrivenAttributes.sshRole);
     });
   });
 
