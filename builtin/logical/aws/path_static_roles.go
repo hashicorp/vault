@@ -220,8 +220,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 			return nil, fmt.Errorf("expected an item with name %q, but got an error: %w", config.Name, err)
 		}
 		i.Value = config
-		// a few options for updating the priority - the most straightforward is to just say it's rotation period + now.
-		// this might not be ideal since it would allow infinite postponing of the deadline.
+		// update the next rotation to occur at now + the new rotation period
 		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
 		err = b.credRotationQueue.Push(i)
 		if err != nil {
