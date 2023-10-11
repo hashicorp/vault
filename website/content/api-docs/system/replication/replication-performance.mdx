@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/performance`
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
-
 ## Check performance status
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -86,6 +86,8 @@ secondary, it will look something like:
 
 ## Enable performance primary replication
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint enables replication in primary mode. This is used when replication
@@ -125,6 +127,8 @@ $ curl \
 
 ## Demote performance primary
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint demotes a performance primary cluster to a performance secondary.
@@ -146,6 +150,8 @@ $ curl \
 ```
 
 ## Disable performance primary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -170,6 +176,8 @@ $ curl \
 ```
 
 ## Generate performance secondary token
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -231,6 +239,8 @@ $ curl \
 
 ## Revoke performance secondary token
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint revokes a performance secondary's ability to connect to the
@@ -264,6 +274,8 @@ $ curl \
 ```
 
 ## Create paths filter
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -311,6 +323,8 @@ $ curl \
 
 ## Read paths filter
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint is used to read the mode and the mount/namespace paths that are filtered
@@ -343,6 +357,8 @@ $ curl \
 
 ## Delete paths filter
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint is used to delete the mount and namespace filters for a secondary.
@@ -365,6 +381,8 @@ $ curl \
 ```
 
 ## Read dynamically generated filter (PRIMARY)
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -398,6 +416,8 @@ $ curl \
 
 ## Read dynamically generated filter (SECONDARY)
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint is used to read the namespace and the mount paths that are dynamically
@@ -430,6 +450,8 @@ $ curl \
 
 ## Fetch performance secondary public key
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint allows fetching a public key that is used to encrypt the returned
@@ -450,6 +472,8 @@ $ curl \
 ```
 
 ## Enable performance secondary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
@@ -501,6 +525,8 @@ $ curl \
 
 ## Promote performance secondary
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint promotes the performance secondary cluster to performance primary.
@@ -540,6 +566,8 @@ $ curl \
 
 ## Disable performance secondary
 
+@include 'alerts/enterprise-only.mdx'
+
 @include 'alerts/restricted-root.mdx'
 
 This endpoint disables Performance Replication entirely on the cluster. The cluster will no
@@ -565,6 +593,8 @@ $ curl \
 ```
 
 ## Update performance secondary's primary
+
+@include 'alerts/enterprise-only.mdx'
 
 @include 'alerts/restricted-root.mdx'
 
