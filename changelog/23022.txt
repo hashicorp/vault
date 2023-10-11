@@ -1,0 +1,5 @@
+```release-note:improvement
+core: update sys/seal-status (and CLI vault status) to report the type of
+the seal when unsealed, as well as the type of the recovery seal if an
+auto-seal.
+```
