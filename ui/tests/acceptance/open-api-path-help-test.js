@@ -31,7 +31,8 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
     test('getProps returns correct model attributes', async function (assert) {
       const helpUrl = `/v1/${this.backend}/roles/example?help=1`;
       const result = await this.pathHelp.getProps(helpUrl, this.backend);
-      assert.deepEqual(result, openApiDrivenAttributes.sshRole);
+      assert.deepEqual(result, openApiDrivenAttributes.sshRole, 'deepEqual sshRole - added data');
+      assert.propEqual(result, openApiDrivenAttributes.sshRole, 'propEqual sshRole - added data');
     });
   });
 
@@ -46,7 +47,8 @@ module('Acceptance | OpenAPI path help test', function (hooks) {
 
     test('getProps returns correct model attributes', async function (assert) {
       const config = await this.pathHelp.getProps(`/v1/${this.backend}/config?help=1`, this.backend);
-      assert.deepEqual(config, openApiDrivenAttributes.kmipConfig, 'kmip config');
+      assert.deepEqual(config, openApiDrivenAttributes.kmipConfig, 'deepEqual kmip config - deleted data');
+      assert.propEqual(config, openApiDrivenAttributes.kmipConfig, 'propEqual kmip config - deleted data');
 
       const role = await this.pathHelp.getProps(
         `/v1/${this.backend}/scope/example/role/example?help=1`,
