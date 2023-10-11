@@ -16,13 +16,18 @@ If the file was deleted, then Vault will continue to write data to the deleted f
 The file will be deleted by the OS once Vault is sealed or restarted, but
 until then will continue to consume disk space due to audit entries being written.
 
+<Important title="Missing Audit Entries">
+  If the file was deleted (rather than moved locally) then audit entries written
+  by Vault will be lost.
+</Important>
+
 The issue has been fixed for a patch release in Vault `1.15.1`.
 
 #### Workaround
 
-If audit log rotation is a requirement for your Vault deployment, you can use the
-following environment variable set to `true` in order to disable the new underlying
-event framework Vault uses to process audit events.
+If your Vault cluster uses any `file` audit devices, you can use the following
+environment variable set to `true` in order to disable the new underlying event
+framework Vault uses to process audit events.
 
 | Environment variable name         | Value  |
 |-----------------------------------|--------|
