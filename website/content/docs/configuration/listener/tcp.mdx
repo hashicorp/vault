@@ -497,9 +497,6 @@ In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_
 }
 ```
 
-When comparing the JSON response above to when redaction settings are not enabled,
-we can see that `cluster_name` is not present (it is now omitted due to being empty).
-Also, that `build_date` and `version` are now redacted and shown only as `""`.
 
 ### CLI: `vault status`
 
