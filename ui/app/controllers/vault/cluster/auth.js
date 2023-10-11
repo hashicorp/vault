@@ -6,7 +6,6 @@ import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
-import ENV from 'vault/config/environment';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
@@ -69,8 +68,7 @@ export default Controller.extend({
       if (isRoot) {
         this.auth.set('isRootToken', true);
         this.flashMessages.warning(
-          'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.',
-          ENV.environment !== 'development' ? { sticky: true } : {}
+          'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
         );
       }
     });
