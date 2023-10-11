@@ -6,7 +6,7 @@
 const sshRole = {
   role: {
     editType: 'string',
-    helpText: '[Required for all types] Name of the role being created.',
+    helpText: '[Required for all types] DIFFERNT Name of the role being created.',
     fieldValue: 'mutableId',
     fieldGroup: 'default',
     readOnly: true,
@@ -210,7 +210,7 @@ const sshRole = {
 const kmipConfig = {
   defaultTlsClientKeyBits: {
     editType: 'number',
-    helpText: 'Client certificate key bits, valid values depend on key type',
+    helpText: ' on key type',
     fieldGroup: 'default',
     defaultValue: 256,
     label: 'Default TLS Client Key bits',
