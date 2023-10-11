@@ -443,9 +443,10 @@ telemetry {
 In the following call to `/sys/health/` notice that `cluster_name` and `version`
 are both redacted. The `cluster_name` field is fully omitted from the response
 and `version` is the empty string (`""`).
-`curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
 
-```json
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/health | jq`:
+
 {
   "initialized": true,
   "sealed": false,
@@ -463,9 +464,10 @@ and `version` is the empty string (`""`).
 ### API: `sys/leader`
 In the following call to `/sys/leader/` notice that `leader_address` and `leader_cluster_address`
 are both redacted and set to the empty string (`""`).
-`curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
 
-```json
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/leader | jq`:
+
 {
   "ha_enabled": true,
   "is_self": false,
@@ -485,9 +487,10 @@ are both redacted and set to the empty string (`""`).
 In the following call to `/sys/seal-status/` notice that `cluster_name`, `build_date`,
 and `version` are all redacted. The `cluster_name` field is fully omitted from
 the response while `build_date` and `version` are empty strings (`""`).
-`curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
 
-```json
+```shell-session
+$ curl -s https://127.0.0.1:8200/v1/sys/seal-status | jq`:
+
 {
   "type": "shamir",
   "initialized": true,
@@ -506,13 +509,17 @@ the response while `build_date` and `version` are empty strings (`""`).
 ```
 
 ### CLI: `vault status`
+
 The CLI command `vault status` uses endpoints that support redacting data, so the
 output redacts `Version`, `Build Date`, `HA Cluster`, and `Active Node Address`.
 `Version`, `Build Date`, `HA Cluster` show `n/a` because the underlying endpoint
 returned the empty string, and  `Active Node Address` shows as `<none>` because
 it was omitted from the API response.
 
-```
+```shell-session
+
+$ vault status
+
 Key                     Value
 ---                     -----
 Seal Type               shamir
