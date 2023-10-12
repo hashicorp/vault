@@ -30,7 +30,7 @@
         box-shadow: none;
       }
       &.active,
-      &.active .tab {
+      &.active {
         border-color: $blue;
         color: $blue;
       }
@@ -40,7 +40,6 @@
       &.is-active {
         border-bottom: 2px solid $blue;
         color: $blue;
-
         > button {
           color: $blue;
         }
@@ -62,7 +61,7 @@
     }
     &.active a,
     &.is-active a,
-    &.active .tab {
+    &.active {
       border-color: $blue;
       color: $blue;
     }
@@ -75,8 +74,7 @@
     vertical-align: top;
   }
 
-  a,
-  .tab {
+  a {
     border-bottom: 2px solid transparent;
     color: $grey;
     font-weight: $font-weight-semibold;
