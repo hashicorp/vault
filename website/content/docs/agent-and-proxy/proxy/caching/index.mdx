@@ -15,11 +15,6 @@ newly created tokens. The renewals of the cached tokens and leases are also
 managed by the proxy. Additionally, with `cache_static_secrets` set to `true`,
 Vault Proxy [can be configured to cache KVv1 and KVv2 secrets][static-secret-caching].
 
--> **Note:** Vault Proxy caching works best with servers/clusters that are
-running on Vault 1.1 and above due to changes that were introduced
-alongside this feature, such as the exposure of the `orphan` field in token
-creation responses.
-
 ## Caching and renewals
 
 Response caching and renewals for dynamic secrets are managed by Proxy only under these
@@ -39,7 +34,7 @@ specific scenarios.
 
 ## Static secret caching
 
-Vault Proxy can be configured to cache KVv1 and KVv2 secrets as well as dynamic secrets described
+Vault Proxy can be configured to cache static (KVv1 and KVv2) secrets as well as dynamic secrets described
 above. This means that, when enabled, subsequent requests to the same KV secret made via Proxy will
 only result in a single request made to Vault. Proxy will keep a single cache entry of the secret in its
 cache, and will only provide the cached response to requests made with tokens that can access the secret.
