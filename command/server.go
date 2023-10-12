@@ -1830,8 +1830,10 @@ func (c *ServerCommand) Run(args []string) int {
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						pFile.Close()
 						break
 					}
+					pFile.Close()
 				}
 
 				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
