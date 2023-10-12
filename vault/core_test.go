@@ -127,7 +127,7 @@ func TestNewCore_configureCredentialsBackends(t *testing.T) {
 			core := &Core{}
 			require.Len(t, core.credentialBackends, 0)
 			core.configureCredentialsBackends(tc.backends, corehelpers.NewTestLogger(t))
-			require.Len(t, core.credentialBackends, len(tc.backends)+1) // + token
+			require.GreaterOrEqual(t, len(core.credentialBackends), len(tc.backends)+1) // token + ent
 			for k := range tc.backends {
 				require.Contains(t, core.credentialBackends, k)
 			}
