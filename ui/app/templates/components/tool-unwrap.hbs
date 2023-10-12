@@ -42,14 +42,10 @@
       </div>
     </T.Panel>
   </Hds::Tabs>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Copy::Button @text="Copy unwrapped data" @textToCopy={{stringify @unwrap_data}} class="primary" />
-      <button {{on "click" this.onClear}} type="button" class="button">
-        Back
-      </button>
-    </div>
-  </div>
+  <Hds::ButtonSet class="has-top-padding-m">
+    <Hds::Copy::Button @text="Copy unwrapped data" @textToCopy={{stringify @unwrap_data}} class="primary" />
+    <Hds::Button {{on "click" this.onClear}} type="button" class="button" @text="Back" />
+  </Hds::ButtonSet>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
