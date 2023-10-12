@@ -390,7 +390,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/ `);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -535,7 +535,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/list/app/ `);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
