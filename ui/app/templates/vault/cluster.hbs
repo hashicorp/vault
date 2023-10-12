@@ -12,24 +12,7 @@
     />
   {{/if}}
   {{#if this.permissionReadFailed}}
-    <Hds::Alert @type="inline" @color="critical" data-test-resultant-acl-banner as |A|>
-      <A.Title>Resultant ACL check failed</A.Title>
-      <A.Description>
-        Permissions unknown due to a failed read at
-        <code>/sys/internal/ui/resultant-acl</code>. As a result, links might be shown that you don't have access to.
-        {{if
-          this.activeCluster.version.isEnterprise
-          "If you think this is a mistake try reauthenticating directly to the namespace."
-        }}
-      </A.Description>
-      <A.Link::Standalone
-        @icon="arrow-right"
-        @iconPosition="trailing"
-        @text="Reauthenticate"
-        @route="vault.cluster.logout"
-        data-test-resultant-acl-reauthenticate
-      />
-    </Hds::Alert>
+    <ResultantAclBanner @isEnterprise={{not this.activeCluster.version.isEnterprise}} />
   {{/if}}
 </div>
 <div class="global-flash">
