@@ -18,20 +18,6 @@ $console-close-height: 35px;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
   z-index: 199;
-
-  .button {
-    background: transparent;
-    border: none;
-    color: $white;
-    min-width: 0;
-    padding: 0 $size-8;
-
-    &.active,
-    &:hover {
-      background: $blue;
-      color: $white;
-    }
-  }
 }
 
 .console-ui-panel-content {
@@ -73,7 +59,7 @@ $console-close-height: 35px;
   input {
     background-color: rgba($black, 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
-    border-radius: 2px;
+    border-radius: var(--token-side-nav-body-list-item-border-radius);
     caret-color: $white;
     color: $white;
     flex: 1 1 auto;
