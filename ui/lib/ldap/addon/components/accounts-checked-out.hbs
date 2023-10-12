@@ -18,8 +18,7 @@
             <Hds::Button
               @icon="queue"
               @text="Check-in"
-              @color="secondary"
-              class="text-button has-text-primary has-text-weight-semibold"
+              @color="tertiary"
               disabled={{this.disableCheckIn Body.data.library}}
               data-test-checked-out-account-action={{Body.data.account}}
               {{on "click" (fn (mut this.selectedStatus) Body.data)}}
