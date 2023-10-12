@@ -237,7 +237,7 @@ func isStubNeeded(funcs []string) (bool, error) {
 	return true, nil
 }
 
-var funcRE = regexp.MustCompile("^func *[(][^)]+[)] *([^(]+)")
+var funcRE = regexp.MustCompile("^func *(?:[(][^)]+[)])? *([^(]+)")
 
 func getFuncs(inputLines []string) []string {
 	var funcs []string
