@@ -133,6 +133,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 	})
 }
 
+func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(context.WithValue(r.Context(), "disable_replication_status_endpoints", true))
+
+		h.ServeHTTP(w, request)
+	})
+}
+
 func parseRemoteIPAddress(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
