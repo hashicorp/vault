@@ -111,7 +111,7 @@ var (
 	singletonMounts = []string{
 		mountTypeCubbyhole,
 		mountTypeSystem,
-		"token",
+		mountTypeToken,
 		mountTypeIdentity,
 	}
 
