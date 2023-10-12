@@ -66,11 +66,14 @@ const (
 	cubbyholeMountPath = "cubbyhole/"
 
 	mountTypeSystem      = "system"
+	mountTypeNSSystem    = "ns_system"
 	mountTypeIdentity    = "identity"
 	mountTypeCubbyhole   = "cubbyhole"
 	mountTypePlugin      = "plugin"
 	mountTypeKV          = "kv"
 	mountTypeNSCubbyhole = "ns_cubbyhole"
+	mountTypeToken       = "token"
+	mountTypeNSToken     = "ns_token"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false

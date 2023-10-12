@@ -1357,11 +1357,13 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 		credentialBackends[k] = f
 	}
 
-	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	credentialBackends[mountTypeToken] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		return NewTokenStore(ctx, logger.Named("token"), c, config)
 	}
 
 	c.credentialBackends = credentialBackends
+
+	c.addExtraCredentialBackends()
 }
 
 // configureLogicalBackends configures the Core with the ability to create
