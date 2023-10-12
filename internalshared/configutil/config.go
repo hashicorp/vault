@@ -23,7 +23,9 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
-	UserLockouts []*UserLockout `hcl:"-"`
+	UserLockouts              []*UserLockout `hcl:"-"`
+	UserLockoutLogInterval    time.Duration  `hcl:"-"`
+	UserLockoutLogIntervalRaw interface{}    `hcl:"user_lockout_log_interval"`
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -87,6 +89,14 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		result.DisableMlockRaw = nil
 	}
 
+	if result.UserLockoutLogIntervalRaw != nil {
+		if result.UserLockoutLogInterval, err = parseutil.ParseDurationSecond(result.UserLockoutLogIntervalRaw); err != nil {
+			return nil, err
+		}
+		result.FoundKeys = append(result.FoundKeys, "UserLockoutLogInterval")
+		result.UserLockoutLogIntervalRaw = nil
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -122,8 +132,16 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		result.found("listener", "Listener")
-		if err := ParseListeners(&result, o); err != nil {
+		listeners, err := ParseListeners(o)
+		if err != nil {
 			return nil, fmt.Errorf("error parsing 'listener': %w", err)
+		}
+		// Update the shared config
+		result.Listeners = listeners
+
+		// Track which types of listener were found.
+		for _, l := range result.Listeners {
+			result.found(l.Type.String(), l.Type.String())
 		}
 	}
 
@@ -176,6 +194,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		"pid_file":                      c.PidFile,
 		"cluster_name":                  c.ClusterName,
 		"administrative_namespace_path": c.AdministrativeNamespacePath,
+		"user_lockout_log_interval":     c.UserLockoutLogInterval,
 	}
 
 	// Optional log related settings

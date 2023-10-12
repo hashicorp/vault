@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/dr`
 
-@include 'alerts/enterprise-only.mdx'
-
 ## Check DR status
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -86,6 +86,10 @@ secondary, it will look something like:
 
 ## Enable DR primary replication
 
+@include 'alerts/restricted-root.mdx'
+
+@include 'alerts/enterprise-only.mdx'
+
 This endpoint enables DR replication in primary mode. This is used when DR replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
@@ -119,6 +123,10 @@ $ curl \
 
 ## Demote DR primary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint demotes a DR primary cluster to a secondary. This DR secondary cluster
 will not attempt to connect to a primary (see the update-primary call), but will
 maintain knowledge of its cluster ID and can be reconnected to the same
@@ -138,6 +146,10 @@ $ curl \
 ```
 
 ## Disable DR primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint disables DR replication entirely on the cluster. Any secondaries will
 no longer be able to connect. Caution: re-enabling this node as a primary or
@@ -160,6 +172,10 @@ $ curl \
 ```
 
 ## Generate DR secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint generates a DR secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
@@ -222,6 +238,10 @@ $ curl \
 
 ## Revoke DR secondary token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
 the DR secondary will immediately be disconnected and will not be allowed to
 connect again unless given a new activation token.  This command can be run from any node on the DR primary cluster.
@@ -254,7 +274,9 @@ $ curl \
 
 ## Generate DR secondary public key
 
-(Vault 1.3+)
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint allows generating a public key that is used to encrypt the returned
 credential information (instead of using a response wrapped token). This avoids
@@ -274,6 +296,10 @@ $ curl \
 ```
 
 ## Enable DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint enables replication on a DR secondary using a DR secondary activation
 token.
@@ -322,6 +348,10 @@ $ curl \
 ```
 
 ## Promote DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint promotes the DR secondary cluster to DR primary. For data safety and
 security reasons, new secondary tokens will need to be issued to other
@@ -406,6 +436,10 @@ $ curl \
 
 ## Disable DR secondary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint disables DR replication entirely on the cluster. The cluster will no
 longer be able to connect to the DR primary.
 
@@ -439,6 +473,10 @@ $ curl \
 ```
 
 ## Update DR secondary's primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The update endpoint changes the primary cluster assigned to a DR
 secondary cluster. Changing the primary cluster assignment does not
@@ -536,12 +574,18 @@ $ curl \
 
 ## Generate disaster recovery operation token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
 certain DR Operations. They should be treated like traditional root tokens by
 being generated when needed and deleted soon after.
 
 ## Read generation progress
+
+@include 'alerts/enterprise-only.mdx'
 
 This endpoint reads the configuration and process of the current generation
 attempt.
@@ -579,6 +623,10 @@ token, its fingerprint will be returned. Note that if an OTP is being used to
 encode the final token, it will never be returned.
 
 ## Start token generation
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint initializes a new generation attempt. Only a single
 generation attempt can take place at a time.
@@ -618,6 +666,10 @@ $ curl \
 
 ## Cancel generation
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint cancels any in-progress generation attempt. This clears any
 progress made. This must be called to change the OTP or PGP key being used.
 
@@ -634,6 +686,10 @@ $ curl \
 ```
 
 ## Provide key share to generate token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to enter a single root key share to progress the
 generation attempt. If the threshold number of root key shares is reached,
@@ -688,6 +744,10 @@ status, and the encoded token, if the attempt is complete.
 
 ## Delete DR operation token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes the DR Operation Token. This token does not have a TTL
 and therefore should be deleted when it is no longer needed.
 
@@ -718,6 +778,10 @@ $ curl \
 ```
 
 ## Reindex Replication
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint reindexes the local data storage. This can cause a very long delay
 depending on the number and size of objects in the data store.
@@ -771,6 +835,10 @@ $ curl \
 ```
 
 ## `/sys/replication/dr/secondary/merkle-check`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The Merkle check endpoint prints information about the corruption status of the Merkle tree on a DR
 secondary cluster. Check [merkle tree corruption](/vault/api-docs/system/replication#check-merkle-tree-corruption) for more details.

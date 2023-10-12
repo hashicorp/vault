@@ -53,6 +53,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {boolean} [renderInPlace] - pass `true` when power select renders in a modal
  * @param {function} [renderInfoTooltip] - receives each inputValue string and list of dropdownOptions as args, so parent can determine when to render a tooltip beside a selectedOption and the tooltip text. see 'oidc/provider-form.js'
  * @param {boolean} [disabled] - if true sets the disabled property on the ember-power-select component and makes it unusable.
  *

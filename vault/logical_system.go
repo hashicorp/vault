@@ -4941,6 +4941,7 @@ type SealStatusResponse struct {
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings          []string `json:"warnings,omitempty"`
+	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -4994,6 +4995,9 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		return s, nil
 	}
 
+	var recoverySealType string
+	sealType := sealConfig.Type
+
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
@@ -5006,25 +5010,30 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
+		if core.SealAccess().RecoveryKeySupported() {
+			recoverySealType = sealType
+		}
+		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
 	progress, nonce := core.SecretProgress()
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  initialized,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
+		Type:             sealType,
+		Initialized:      initialized,
+		Sealed:           sealed,
+		T:                sealConfig.SecretThreshold,
+		N:                sealConfig.SecretShares,
+		Progress:         progress,
+		Nonce:            nonce,
+		Version:          version.GetVersion().VersionNumber(),
+		BuildDate:        version.BuildDate,
+		Migration:        core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		ClusterName:      clusterName,
+		ClusterID:        clusterID,
+		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType: recoverySealType,
+		StorageType:      core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {

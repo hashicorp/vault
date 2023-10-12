@@ -165,13 +165,18 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
-		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
+			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
+			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
 		mux.Handle("/v1/sys/seal", handleSysSeal(core))
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-		mux.Handle("/v1/sys/leader", handleSysLeader(core))
-		mux.Handle("/v1/sys/health", handleSysHealth(core))
+		mux.Handle("/v1/sys/leader", handleSysLeader(core,
+			WithRedactAddresses(props.ListenerConfig.RedactAddresses)))
+		mux.Handle("/v1/sys/health", handleSysHealth(core,
+			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
+			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
@@ -232,20 +237,27 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		additionalRoutes(mux, core)
 	}
 
-	// Wrap the handler in another handler to trigger all help paths.
-	helpWrappedHandler := wrapHelpHandler(mux, core)
-	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
-	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
-	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
+	// Build up a chain of wrapping handlers.
+	wrappedHandler := wrapHelpHandler(mux, core)
+	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
+	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
+	wrappedHandler = genericWrapping(core, wrappedHandler, props)
 
-	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
-	// characters in the request path.
-	printablePathCheckHandler := genericWrappedHandler
+	// Add an extra wrapping handler if the DisablePrintableCheck listener
+	// setting isn't true that checks for non-printable characters in the
+	// request path.
 	if !props.DisablePrintableCheck {
-		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+		wrappedHandler = cleanhttp.PrintablePathCheckHandler(wrappedHandler, nil)
 	}
 
-	return printablePathCheckHandler
+	// Add an extra wrapping handler if the DisableReplicationStatusEndpoints
+	// setting is true that will create a new request with a context that has
+	// a value indicating that the replication status endpoints are disabled.
+	if props.ListenerConfig != nil && props.ListenerConfig.DisableReplicationStatusEndpoints {
+		wrappedHandler = disableReplicationStatusEndpointWrapping(wrappedHandler)
+	}
+
+	return wrappedHandler
 }
 
 type copyResponseWriter struct {
