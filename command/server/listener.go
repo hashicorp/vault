@@ -22,7 +22,7 @@ import (
 type ListenerFactory func(*configutil.Listener, io.Writer, cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error)
 
 // BuiltinListeners is the list of built-in listener types.
-var BuiltinListeners = map[string]ListenerFactory{
+var BuiltinListeners = map[configutil.ListenerType]ListenerFactory{
 	"tcp":  tcpListenerFactory,
 	"unix": unixListenerFactory,
 }
