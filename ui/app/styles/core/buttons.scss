@@ -391,7 +391,6 @@ a.button.disabled {
     box-shadow: none;
     &:hover:not(.disabled) {
       background-color: $ui-gray-100;
-      border: 0;
       color: $blue;
     }
   }
