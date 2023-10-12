@@ -6,7 +6,8 @@
         {{#if @library.canCheckOut}}
           <Hds::Button
             @text="Check-out"
-            @color="secondary"
+            @color="tertiary"
+            @icon="arrow-up-right"
             data-test-check-out
             {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
           />
