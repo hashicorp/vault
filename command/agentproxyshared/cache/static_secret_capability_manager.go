@@ -5,9 +5,13 @@ package cache
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 
 	"golang.org/x/exp/maps"
 
@@ -33,11 +37,12 @@ const (
 // StaticSecretCapabilityManager is a struct that utilizes
 // a worker pool to keep capabilities up to date.
 type StaticSecretCapabilityManager struct {
-	client     *api.Client
-	leaseCache *LeaseCache
-	logger     hclog.Logger
-	tokenSink  sink.Sink
-	workerPool *workerpool.WorkerPool
+	client                                     *api.Client
+	leaseCache                                 *LeaseCache
+	logger                                     hclog.Logger
+	tokenSink                                  sink.Sink
+	workerPool                                 *workerpool.WorkerPool
+	staticSecretTokenCapabilityRefreshInterval time.Duration
 }
 
 // StaticSecretCapabilityManagerConfig is the configuration for initializing a new
@@ -82,6 +87,7 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 		logger:     conf.Logger,
 		tokenSink:  conf.TokenSink,
 		workerPool: workerPool,
+		staticSecretTokenCapabilityRefreshInterval: DefaultStaticSecretTokenCapabilityRefreshInterval,
 	}, nil
 }
 
@@ -93,46 +99,112 @@ type PollingJob struct {
 	index *cachememdb.Index
 }
 
+// SubmitWorkToPoolAfterInterval submits work to the pool after the defined
+// staticSecretTokenCapabilityRefreshInterval
+func (sscm *StaticSecretCapabilityManager) SubmitWorkToPoolAfterInterval(work func()) {
+	time.AfterFunc(sscm.staticSecretTokenCapabilityRefreshInterval, func() {
+		sscm.workerPool.Submit(work)
+	})
+}
+
 // StartRenewing takes a polling job and submits a constant renewal to the worker pool.
 func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
-	work := func() {
-		index, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
+	var work func()
+	work = func() {
+		capabilitiesIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
 		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			// This cache entry no longer exists, so there is no more work to do.
 			return
 		}
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID)
-			// TODO what do we do here?
+			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.SubmitWorkToPoolAfterInterval(work)
 			return
 		}
 
-		token := index.Token
+		capabilitiesIndex.IndexLock.RLock()
+		token := capabilitiesIndex.Token
+		indexReadablePathsMap := capabilitiesIndex.ReadablePaths
+		capabilitiesIndex.IndexLock.RUnlock()
+		indexReadablePaths := maps.Keys(indexReadablePathsMap)
+
 		client, err := sscm.client.Clone()
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID)
-			// TODO what do we do here?
+			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.SubmitWorkToPoolAfterInterval(work)
 			return
 		}
 
 		client.SetToken(token)
 
-		capabilities, err := getCapabilities(maps.Keys(index.ReadablePaths), client)
+		capabilities, err := getCapabilities(indexReadablePaths, client)
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID)
-			// TODO what do we do here?
+			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.SubmitWorkToPoolAfterInterval(work)
 			return
 		}
-		for _, capabilities := range capabilities {
-			if len(capabilities) > 0 {
-				// TODO
+
+		newReadablePaths := reconcileCapabilities(indexReadablePaths, capabilities)
+		if maps.Equal(indexReadablePathsMap, newReadablePaths) {
+			// there's nothing to update!
+			sscm.SubmitWorkToPoolAfterInterval(work)
+			return
+		}
+
+		// before updating or evicting the index, we must update the tokens on
+		// for each path, update the corresponding index with the diff
+		for _, path := range indexReadablePaths {
+			// If the old path isn't contained in the new readable paths,
+			// we must delete it from the tokens map for its corresponding
+			// path index.
+			if _, ok := newReadablePaths[path]; !ok {
+				// TODO: replace with hashStaticSecretIndex(path)
+				indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
+				index, err := sscm.leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+				if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
+					// Nothing to update!
+					continue
+				}
+				if err != nil {
+					sscm.logger.Error("error when attempting to update corresponding paths for capabilities index", "index.ID", pj.index.ID, "err", err)
+					sscm.SubmitWorkToPoolAfterInterval(work)
+					return
+				}
+				index.IndexLock.Lock()
+				delete(index.Tokens, path)
+				err = sscm.leaseCache.db.Set(index)
+				if err != nil {
+					sscm.logger.Error("error when attempting to update index in cache", "index.ID", index.ID, "err", err)
+				}
+				index.IndexLock.Unlock()
 			}
 		}
-	}
 
-	time.AfterFunc(DefaultStaticSecretTokenCapabilityRefreshInterval, func() {
-		sscm.workerPool.Submit(work)
-	})
+		// Lastly, we should update the capabilities index, either evicting or updating it
+		capabilitiesIndex.IndexLock.Lock()
+		defer capabilitiesIndex.IndexLock.Unlock()
+		if len(newReadablePaths) == 0 {
+			err := sscm.leaseCache.db.Evict(cachememdb.IndexNameID, pj.index.ID)
+			if err != nil {
+				sscm.logger.Error("error when attempting to evict capabilities from cache", "index.ID", pj.index.ID, "err", err)
+				sscm.SubmitWorkToPoolAfterInterval(work)
+				return
+			}
+			// If we successfully evicted the index, no need to re-submit the work to the pool.
+			return
+		}
+
+		// The token still has some capabilities, so, update the capabilities index:
+		capabilitiesIndex.ReadablePaths = newReadablePaths
+		err = sscm.leaseCache.db.SetCapabilitiesIndex(capabilitiesIndex)
+		if err != nil {
+			sscm.logger.Error("error when attempting to update capabilities from cache", "index.ID", pj.index.ID, "err", err)
+		}
+
+		// Finally, put ourselves back on the work pool after
+		sscm.SubmitWorkToPoolAfterInterval(work)
+		return
+	}
 
 	return nil
 }
@@ -164,4 +236,24 @@ func getCapabilities(paths []string, client *api.Client) (map[string][]string, e
 	}
 
 	return capabilities, nil
+}
+
+// reconcileCapabilities takes a set of known readable paths, and a set of capabilities (a response from the
+// sys/capabilities-self endpoint) and returns a subset of the readablePaths after taking into account any updated
+// capabilities as a set, represented by a map of strings to structs.
+// It will delete any path in readablePaths if it does not have a "root" or "read" capability listed in the
+// capabilities map.
+func reconcileCapabilities(readablePaths []string, capabilities map[string][]string) map[string]struct{} {
+	newReadablePaths := make(map[string]struct{})
+	for pathName, permissions := range capabilities {
+		if slices.Contains(permissions, "read") || slices.Contains(permissions, "root") {
+			// We do this as an additional sanity check. We never want to
+			// add permissions that weren't there before.
+			if slices.Contains(readablePaths, pathName) {
+				newReadablePaths[pathName] = struct{}{}
+			}
+		}
+	}
+
+	return newReadablePaths
 }

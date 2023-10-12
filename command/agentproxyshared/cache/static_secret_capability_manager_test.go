@@ -84,3 +84,39 @@ func TestGetCapabilitiesEmptyPaths(t *testing.T) {
 	_, err := getCapabilities(capabilitiesToCheck, client)
 	require.Error(t, err)
 }
+
+// TestReconcileCapabilities tests that reconcileCapabilities will
+// correctly previously remove readable paths that we don't have read access to.
+func TestReconcileCapabilities(t *testing.T) {
+	paths := []string{"/auth/token/create", "/sys/capabilities-self", "/auth/token/lookup-self"}
+	capabilities := map[string][]string{
+		"/auth/token/create":      {"deny"},
+		"/sys/capabilities-self":  {"update"},
+		"/auth/token/lookup-self": {"read"},
+	}
+
+	updatedCapabilities := reconcileCapabilities(paths, capabilities)
+	expectedUpdatedCapabilities := map[string]struct{}{
+		"/auth/token/lookup-self": {},
+	}
+	require.Equal(t, expectedUpdatedCapabilities, updatedCapabilities)
+}
+
+// TestReconcileCapabilitiesNoOp tests that reconcileCapabilities will
+// correctly not remove capabilities when they all remain readable.
+func TestReconcileCapabilitiesNoOp(t *testing.T) {
+	paths := []string{"/foo/bar", "/bar/baz", "/baz/foo"}
+	capabilities := map[string][]string{
+		"/foo/bar": {"read"},
+		"/bar/baz": {"root"},
+		"/baz/foo": {"read"},
+	}
+
+	updatedCapabilities := reconcileCapabilities(paths, capabilities)
+	expectedUpdatedCapabilities := map[string]struct{}{
+		"/foo/bar": {},
+		"/bar/baz": {},
+		"/baz/foo": {},
+	}
+	require.Equal(t, expectedUpdatedCapabilities, updatedCapabilities)
+}
