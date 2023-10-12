@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add warning message to the namespace picker warning users about the behavior when logging in with a root token.
+```

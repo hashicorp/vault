@@ -74,6 +74,7 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 
 func (c *Core) UndoLogsEnabled() bool            { return false }
 func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) EnableUndoLogs()                  {}
 func (c *Core) PersistUndoLogs() error           { return nil }
 
 func (c *Core) ReindexStage() *uint32  { return nil }
