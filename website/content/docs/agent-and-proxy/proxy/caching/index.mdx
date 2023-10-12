@@ -170,8 +170,8 @@ The top level `cache` block has the following configuration entry:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
-- `cache_static_secrets` `(bool: false)` - If set, Blah. Must TODO
-. Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
+- `cache_static_secrets` `(bool: false)` - If set to true, this will enable caching of static secrets.
+Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
 this functionality.
 
 -> **Note:** When the `cache` block is defined, a [listener][proxy-listener] must also be defined
