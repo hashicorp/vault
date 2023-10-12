@@ -14,10 +14,13 @@ for Vault's API.
 ~> Note: This functionality will be deprecated in a future release. Please
 switch to using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API proxying purposes, instead.
 
-~> Note: Unlike Vault Agent, [Vault Proxy](/vault/docs/agent-and-proxy/proxy)'s API proxy supports
-[the caching of static secrets](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
-(KVv1 and KVv2), requiring fewer requests to be forwarded to Vault itself. We recommend
-switching to Vault Proxy for API Proxy related workflows.
+<Note title="Use Vault Proxy for static secret caching">
+  [Static secret caching](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
+  (KVv1 and KVv2) with API proxy minimizes the number of requests forwarded to
+  Vault. Vault Agent does not support static secret caching with API proxy. We
+  recommend using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API Proxy
+  related workflows.
+</Note>
 
 ## Functionality
 

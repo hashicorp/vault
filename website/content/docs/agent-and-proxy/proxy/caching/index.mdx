@@ -44,13 +44,22 @@ above. This means that, when enabled, subsequent requests to the same KV secret 
 only result in a single request made to Vault. Proxy will keep a single cache entry of the secret in its
 cache, and will only provide the cached response to requests made with tokens that can access the secret.
 
-This functionality off by default, as it requires [auto-auth](/vault/docs/agent-and-proxy/autoauth) to be configured,
-as well as the auto-auth token to have the permissions to subscribe to KV event updates via Vault's [event system](/vault/docs/concepts/events).
-Proxy uses the auto-auth token to connect to Vault's event system, and uses events to know when to update its cache
-with updated secrets.
+You can configure Vault Proxy to cache dynamic secrets and static, KVv1 and KVv2
+secrets. When you enable caching for static secrets. Proxy keeps a cached entry
+of the secret but only provides the cached response to requests made with tokens
+that can access the secret. As a result, multiple requests to Vault Proxy for
+the same KV secret only require a single, initial request to be forwarded to Vault.
 
-Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
-this functionality.
+Static secret caching is disabled by default. To enable secret caching you must
+configure [auto-auth](/vault/docs/agent-and-proxy/autoauth) and ensure the
+auto-auth token has permission to subscribe to KV
+[event](/vault/docs/concepts/events) updates.
+
+Once configured, Proxy uses the auto-auth token to subscribe to KV events, and
+monitors the subscription feed to know when to update the secrets in its cache.
+
+For more information on static secret caching, refer to the
+[Vault Proxy static secret caching][static-secret-caching] overview.
 
 ## Persistent cache
 
@@ -170,9 +179,8 @@ The top level `cache` block has the following configuration entry:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
-- `cache_static_secrets` `(bool: false)` - If set to true, this will enable caching of static secrets.
-Refer to the [Vault Proxy Static Secret Caching][static-secret-caching] page for more information on
-this functionality.
+- `cache_static_secrets` `(bool: false)` - Enables static secret caching when
+`true`.
 
 -> **Note:** When the `cache` block is defined, a [listener][proxy-listener] must also be defined
 in the config, otherwise there is no way to utilize the cache.
