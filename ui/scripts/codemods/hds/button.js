@@ -10,7 +10,7 @@
  * transformation is skipped if is-ghost or is-transparent is found in class list
  * if loading or is-loading is found to be a conditionally applied class the loading icon will be conditionally applied instead
  * if the text arg cannot be built from the child nodes (chained if block or multiple nodes that cannot be easily combined) the transformation will be skipped
- * classes relevant to the legacy button will be removed (see buttonClasses array)
+ * classes relevant to the legacy button will be removed (see classesToRemove array)
  * html onclick event handler will be replaced with the {{on "click"}} modifier
  *
  * example execution from ui directory:
@@ -21,7 +21,7 @@
 
 class Transforms {
   // button classes that will be removed from attribute
-  buttonClasses = [
+  classesToRemove = [
     'button',
     'is-compact',
     'is-danger',
@@ -34,6 +34,7 @@ class Transforms {
     'tool-tip-trigger',
     'is-secondary',
   ];
+  classesToTransform = [{ current: 'toolbar-link', updated: 'toolbar-button' }];
 
   constructor(node, builders) {
     this.node = node;
@@ -82,9 +83,14 @@ class Transforms {
       this.addAttr('@color', this.builders.text(color));
     }
     // remove button related classes no longer needed
-    const chars = value.chars
-      .split(' ')
-      .filter((className) => !this.buttonClasses.includes(className))
+    // map unused classes to new ones
+    const classArray = value.chars.split(' ');
+    const chars = classArray
+      .filter((className) => !this.classesToRemove.includes(className))
+      .map((className) => {
+        const transform = this.classesToTransform.find((classHash) => classHash.current === className);
+        return transform?.updated || className;
+      })
       .join(' ');
     return chars ? { ...value, chars } : null;
   }
