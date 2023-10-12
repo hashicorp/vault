@@ -203,13 +203,13 @@ class Transforms {
       const nameAttr = node.attributes.find((attr) => attr.name === '@name');
       this.addAttr('@icon', this.builders.string(nameAttr.value.chars));
       // Hds::Button has @iconPosition arg when used with text
-      // it seems all usages with button are leading which is default
+      // it seems most usages with button are leading which is default and recommended
       this.hasIcon = true;
     }
   }
 
   pushAcceptedNodes(node, parts) {
-    // some nodes may not need conversion and can be added to the @text assemlby as is
+    // some nodes may not need conversion and can be added to the @text assembly as is
     const acceptedNodes = ['MustacheStatement'];
     if (acceptedNodes.includes(node.type)) {
       parts.push(node);
@@ -228,7 +228,15 @@ class Transforms {
       this.convertIconNode(node);
     });
 
-    if (parts.length) {
+    // filter out ignored text nodes (\n) and compare with out compiled parts
+    // if the lengths do not match then we were unable to transform a part and we must abort text build
+    const relevantParts = this.node.children.filter((node) => {
+      if (node.type === 'TextNode' && !this.textToString(node)) {
+        return false;
+      }
+      return true;
+    });
+    if (parts.length && relevantParts.length === parts.length) {
       const value = parts.length === 1 ? parts[0] : this.builders.concat(parts);
       this.addAttr('@text', value);
       this.hasText = true;
