@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue where you could not share the list view URL from the KV v2 secret engine.
+```
