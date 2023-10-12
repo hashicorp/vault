@@ -4,7 +4,7 @@
 ~}}
 
 <form {{on "submit" (perform this.save)}} data-test-policy-form>
-  <div class="box is-bottomless is-fullwidth is-marginless">
+  <div class="box is-shadowless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
     <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
     {{#if @model.isNew}}
