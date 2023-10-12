@@ -32,6 +32,15 @@
         </div>
       </div>
       <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
+        {{#if this.auth.isRootToken}}
+          <div class="has-left-margin-s has-right-margin-s">
+            <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
+            <span class="is-size-8 has-text-semibold">
+              You are logged in with a root token and will have to reauthenticate when switching namespaces.
+            </span>
+          </div>
+        {{/if}}
+
         <div class="is-mobile level-left">
           {{#unless this.isUserRootNamespace}}
             <NamespaceLink
