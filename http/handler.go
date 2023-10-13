@@ -300,9 +300,9 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 			respondError(w, status, err)
 			return
 		}
-		if origBody != nil {
-			r.Body = ioutil.NopCloser(origBody)
-		}
+
+		r.Body = io.NopCloser(origBody)
+
 		input := &logical.LogInput{
 			Request: req,
 		}
@@ -314,17 +314,16 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		cw := newCopyResponseWriter(w)
 		h.ServeHTTP(cw, r)
 		data := make(map[string]interface{})
-		err = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
-		if err != nil {
-			// best effort, ignore
-		}
+
+		// Refactoring this code, since the returned error was being ignored.
+		jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+
 		httpResp := &logical.HTTPResponse{Data: data, Headers: cw.Header()}
 		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
 		err = core.AuditLogger().AuditResponse(r.Context(), input)
 		if err != nil {
 			respondError(w, status, err)
 		}
-		return
 	})
 }
 
@@ -465,7 +464,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		h.ServeHTTP(nw, r)
 
 		cancelFunc()
-		return
 	})
 }
 
