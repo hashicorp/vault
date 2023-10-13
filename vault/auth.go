@@ -893,7 +893,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, mountPathCubbyhole).(*CubbyholeBackend)
 			}
 		}
 

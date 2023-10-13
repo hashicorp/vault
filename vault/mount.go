@@ -61,9 +61,9 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	systemMountPath    = "sys/"
-	identityMountPath  = "identity/"
-	cubbyholeMountPath = "cubbyhole/"
+	mountPathSystem    = "sys/"
+	mountPathIdentity  = "identity/"
+	mountPathCubbyhole = "cubbyhole/"
 
 	mountTypeSystem      = "system"
 	mountTypeNSSystem    = "ns_system"
@@ -94,16 +94,16 @@ var (
 	protectedMounts = []string{
 		"audit/",
 		"auth/",
-		systemMountPath,
-		cubbyholeMountPath,
-		identityMountPath,
+		mountPathSystem,
+		mountPathCubbyhole,
+		mountPathIdentity,
 	}
 
 	untunableMounts = []string{
-		cubbyholeMountPath,
-		systemMountPath,
+		mountPathCubbyhole,
+		mountPathSystem,
 		"audit/",
-		identityMountPath,
+		mountPathIdentity,
 	}
 
 	// singletonMounts can only exist in one location and are
@@ -433,7 +433,7 @@ func (e *MountEntry) IsExternalPlugin() bool {
 
 // MountClass returns the mount class based on Accessor and Path
 func (e *MountEntry) MountClass() string {
-	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", systemMountPath)) {
+	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", mountPathSystem)) {
 		return ""
 	}
 
@@ -1802,7 +1802,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	}
 	cubbyholeMount := &MountEntry{
 		Table:            mountTableType,
-		Path:             cubbyholeMountPath,
+		Path:             mountPathCubbyhole,
 		Type:             mountTypeCubbyhole,
 		Description:      "per-token private secret storage",
 		UUID:             cubbyholeUUID,
