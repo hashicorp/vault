@@ -21,6 +21,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
@@ -349,7 +350,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		req.URL.Path = origPath
 	}()
 
-	req.URL.Path = req.Context().Value("original_request_path").(string)
+	req.URL.Path = req.Context().Value(logical.CtxKeyOriginalRequestPath{}).(string)
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {

@@ -135,7 +135,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		request := r.WithContext(context.WithValue(r.Context(), "disable_replication_status_endpoints", true))
+		request := r.WithContext(context.WithValue(r.Context(), logical.CtxKeyDisableReplicationStatusEndpoints{}, true))
 
 		h.ServeHTTP(w, request)
 	})
