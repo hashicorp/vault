@@ -234,14 +234,14 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		} else {
 			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
 		}
-		additionalRoutes(mux, core)
+		entAdditionalRoutes(mux, core)
 	}
 
 	// Build up a chain of wrapping handlers.
 	wrappedHandler := wrapHelpHandler(mux, core)
 	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
-	wrappedHandler = genericWrapping(core, wrappedHandler, props)
+	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
 	// setting isn't true that checks for non-printable characters in the
@@ -944,7 +944,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool, bool) {
 	resp, err := core.HandleRequest(rawReq.Context(), r)
-	if r.LastRemoteWAL() > 0 && !vault.WaitUntilWALShipped(rawReq.Context(), core, r.LastRemoteWAL()) {
+	if r.LastRemoteWAL() > 0 && !core.EntWaitUntilWALShipped(rawReq.Context(), r.LastRemoteWAL()) {
 		if resp == nil {
 			resp = &logical.Response{}
 		}

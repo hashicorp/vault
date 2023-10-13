@@ -379,7 +379,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
 	if isPerfStandby && resp.LastRemoteWal > 0 {
-		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
+		c.EntWaitUntilWALShipped(req.Context(), resp.LastRemoteWal)
 	}
 
 	return int(resp.StatusCode), header, resp.Body, nil

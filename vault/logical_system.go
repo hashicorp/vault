@@ -5117,9 +5117,9 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.ActiveTime = core.ActiveTime()
 	}
 	if resp.PerfStandby {
-		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
 	} else if isLeader || !haEnabled {
-		resp.LastWAL = LastWAL(core)
+		resp.LastWAL = core.EntLastWAL()
 	}
 
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
