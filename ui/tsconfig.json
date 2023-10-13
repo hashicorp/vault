@@ -69,6 +69,8 @@
       "service-worker-authenticated-download/test-support/*": [
         "lib/service-worker-authenticated-download/addon-test-support/*"
       ],
+      "sync": ["lib/sync/addon"],
+      "sync/*": ["lib/sync/addon/*"],
       "*": ["types/*"]
     }
   },
@@ -84,6 +86,7 @@
     "lib/pki/**/*",
     "lib/replication/**/*",
     "lib/service-worker-authenticated-download/**/*",
+    "lib/sync/**/*",
     "mirage/**/*"
   ],
   "exclude": ["node_modules"]
