@@ -200,7 +200,7 @@ func newRegistry() *registry {
 		},
 	}
 
-	entAddExtPlugins(reg)
+	addExternalPlugins(reg)
 
 	return reg
 }
