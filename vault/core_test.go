@@ -140,30 +140,42 @@ func TestNewCore_configureCredentialsBackends(t *testing.T) {
 func TestNewCore_configureLogicalBackends(t *testing.T) {
 	t.Parallel()
 
+	// configureLogicalBackends will add some default backends for us:
+	// cubbyhole
+	// identity
+	// kv
+	// system
+	// In addition Enterprise versions of Vault may add additional engines.
+
 	tests := map[string]struct {
-		backends           map[string]logical.Factory
-		adminNamespacePath string
+		backends               map[string]logical.Factory
+		adminNamespacePath     string
+		expectedNonEntBackends int
 	}{
 		"none": {
-			backends: nil,
+			backends:               nil,
+			expectedNonEntBackends: 0,
 		},
 		"database": {
 			backends: map[string]logical.Factory{
 				"database": logicalDb.Factory,
 			},
-			adminNamespacePath: "foo",
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 5, // database + defaults
 		},
 		"kv": {
 			backends: map[string]logical.Factory{
 				"kv": logicalKv.Factory,
 			},
-			adminNamespacePath: "foo",
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 4, // kv + defaults (kv is a default)
 		},
 		"plugin": {
 			backends: map[string]logical.Factory{
 				"plugin": plugin.Factory,
 			},
-			adminNamespacePath: "foo",
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 5, // plugin + defaults
 		},
 		"all": {
 			backends: map[string]logical.Factory{
@@ -171,7 +183,8 @@ func TestNewCore_configureLogicalBackends(t *testing.T) {
 				"kv":       logicalKv.Factory,
 				"plugin":   plugin.Factory,
 			},
-			adminNamespacePath: "foo",
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 6, // database, plugin + defaults
 		},
 	}
 
@@ -184,7 +197,7 @@ func TestNewCore_configureLogicalBackends(t *testing.T) {
 			core := &Core{}
 			require.Len(t, core.logicalBackends, 0)
 			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t), tc.adminNamespacePath)
-			require.GreaterOrEqual(t, len(core.logicalBackends), len(tc.backends))
+			require.GreaterOrEqual(t, len(core.logicalBackends), tc.expectedNonEntBackends)
 			require.Contains(t, core.logicalBackends, mountTypeKV)
 			require.Contains(t, core.logicalBackends, mountTypeCubbyhole)
 			require.Contains(t, core.logicalBackends, mountTypeSystem)
