@@ -1308,6 +1308,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // configureListeners configures the Core with the listeners from the CoreConfig.
 func (c *Core) configureListeners(conf *CoreConfig) error {
+	c.clusterListener.Store((*cluster.Listener)(nil))
+
 	if conf == nil || conf.RawConfig == nil || conf.RawConfig.Listeners == nil {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 		return nil
@@ -1317,6 +1319,7 @@ func (c *Core) configureListeners(conf *CoreConfig) error {
 	if err != nil {
 		return err
 	}
+
 	c.customListenerHeader.Store(NewListenerCustomHeader(conf.RawConfig.Listeners, c.logger, uiHeaders))
 
 	return nil
