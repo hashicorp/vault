@@ -1311,7 +1311,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 func (c *Core) configureListeners(conf *CoreConfig) error {
 	c.clusterListener.Store((*cluster.Listener)(nil))
 
-	if conf == nil || conf.RawConfig == nil || conf.RawConfig.Listeners == nil {
+	if conf.RawConfig.Listeners == nil {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 		return nil
 	}

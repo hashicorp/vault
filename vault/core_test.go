@@ -274,14 +274,6 @@ func TestNewCore_configureListeners(t *testing.T) {
 		config            *CoreConfig
 		expectedListeners []*ListenerCustomHeaders
 	}{
-		"nil-config": {
-			config:            nil,
-			expectedListeners: nil,
-		},
-		"nil-rawconfig": {
-			config:            &CoreConfig{},
-			expectedListeners: nil,
-		},
 		"nil-listeners": {
 			config: &CoreConfig{
 				RawConfig: &server.Config{
@@ -328,6 +320,7 @@ func TestNewCore_configureListeners(t *testing.T) {
 			require.NoError(t, err)
 			storage := &logical.InmemStorage{}
 			core := &Core{
+				clusterListener:      new(atomic.Value),
 				customListenerHeader: new(atomic.Value),
 				uiConfig:             NewUIConfig(false, backend, storage),
 			}
