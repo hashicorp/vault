@@ -1292,10 +1292,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Events
-	c.events, err = eventbus.NewEventBus(conf.Logger.Named("events"))
+	events, err := eventbus.NewEventBus(conf.Logger.Named("events"))
 	if err != nil {
 		return nil, err
 	}
+	c.events = events
 	c.events.Start()
 
 	// Make sure we're keeping track of the subloggers added above. We haven't
