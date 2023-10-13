@@ -1261,7 +1261,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
 	// UI
-	uiStoragePrefix := fmt.Sprintf("%sui", systemBarrierPrefix)
+	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
 
 	// Listeners
@@ -1308,7 +1308,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 // configureListeners configures the Core with the listeners from the CoreConfig.
 func (c *Core) configureListeners(conf *CoreConfig) error {
-	if conf == nil || conf.RawConfig == nil || conf.RawConfig.SharedConfig.Listeners == nil {
+	if conf == nil || conf.RawConfig == nil || conf.RawConfig.Listeners == nil {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 		return nil
 	}
