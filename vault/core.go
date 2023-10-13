@@ -191,9 +191,9 @@ var (
 	LicenseAutoloaded = func(*Core) bool { return false }
 	// TODO remove once entCheckLicenseInit is implemented in ENT
 	LicenseInitCheck = func(*Core) error { return nil }
-	// TODO remove once entGetLicenseState is implemented in ENT
+	// TODO remove once EntGetLicenseState is implemented in ENT
 	LicenseSummary = func(*Core) (*LicenseState, error) { return nil, nil }
-	// TODO remove once entReloadLicense is implemented in ENT
+	// TODO remove once EntReloadLicense is implemented in ENT
 	LicenseReload = func(*Core) error { return nil }
 )
 
