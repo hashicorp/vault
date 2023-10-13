@@ -474,3 +474,12 @@ type CtxKeyMaxRequestSize struct{}
 func (c CtxKeyMaxRequestSize) String() string {
 	return "max_request_size"
 }
+
+// CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
+// to store the original request path.
+type CtxKeyOriginalRequestPath struct{}
+
+// String returns a string representation of the receiver type.
+func (c CtxKeyOriginalRequestPath) String() string {
+	return "original_request_path"
+}
