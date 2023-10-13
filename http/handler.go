@@ -568,12 +568,12 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
-		if userHeaders != nil {
-			for k := range userHeaders {
-				v := userHeaders.Get(k)
-				header.Set(k, v)
-			}
+
+		for k := range userHeaders {
+			v := userHeaders.Get(k)
+			header.Set(k, v)
 		}
+
 		h.ServeHTTP(w, req)
 	})
 }
@@ -913,10 +913,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if header != nil {
-		for k, v := range header {
-			w.Header()[k] = v
-		}
+	for k, v := range header {
+		w.Header()[k] = v
 	}
 
 	w.WriteHeader(statusCode)
