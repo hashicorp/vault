@@ -1248,17 +1248,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
-	// Audit backends
-	c.configureAuditBackends(conf.AuditBackends)
-
-	// Credentials backends
-	c.configureCredentialsBackends(conf.CredentialBackends, conf.Logger)
+	// MFA method
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
 	// Logical backends
 	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
 
-	// MFA method
-	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	// Credentials backends
+	c.configureCredentialsBackends(conf.CredentialBackends, conf.Logger)
+
+	// Audit backends
+	c.configureAuditBackends(conf.AuditBackends)
 
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
