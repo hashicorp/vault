@@ -5,6 +5,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,13 +38,13 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 }
 
 // rotateCredential pops an element from the priority queue, and if it is expired, rotate and re-push.
-// If a cred was rotated, it returns true, otherwise false.
+// If a cred was ready for rotation, return true, otherwise return false.
 func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
 	// If queue is empty or first item does not need a rotation (priority is next rotation timestamp) there is nothing to do
 	item, err := b.credRotationQueue.Pop()
 	if err != nil {
 		// the queue is just empty, which is fine.
-		if err == queue.ErrEmpty {
+		if errors.Is(err, queue.ErrEmpty) {
 			return false, nil
 		}
 		return false, fmt.Errorf("failed to pop from queue for role %q: %w", item.Key, err)
@@ -62,14 +63,21 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 	err = b.createCredential(ctx, storage, cfg, true)
 	if err != nil {
-		return false, err
+		// put it back in the queue with a backoff
+		item.Priority = time.Now().Add(cfg.RotationPeriod).Unix()
+		err = b.credRotationQueue.Push(item)
+		if err != nil {
+			return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
+		}
+		// there was one that "should have" rotated, so we want to keep looking further down the queue
+		return true, err
 	}
 
 	// set new priority and re-queue
 	item.Priority = time.Now().Add(cfg.RotationPeriod).Unix()
 	err = b.credRotationQueue.Push(item)
 	if err != nil {
-		return false, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
+		return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
 	}
 
 	return true, nil
