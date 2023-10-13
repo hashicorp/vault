@@ -39,12 +39,9 @@
 </div>
 
 <div class="has-top-margin-xl has-bottom-margin-l">
-  <button
+  <Hds::Button
+    @text="Done"
     data-test-done
-    class="button is-primary"
-    type="button"
     {{on "click" (transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts")}}
-  >
-    Done
-  </button>
+  />
 </div>

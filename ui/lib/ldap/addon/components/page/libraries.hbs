@@ -44,9 +44,7 @@
         <Item.menu as |Menu|>
           {{#if library.libraryPath.isLoading}}
             <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
+              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
             </li>
           {{else}}
             <li class="action">
