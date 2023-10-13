@@ -22,11 +22,11 @@ func (c *Core) entCheckLicenseInit() error {
 	return nil
 }
 
-func (c *Core) entGetLicenseState() (*LicenseState, error) {
+func (c *Core) EntGetLicenseState() (*LicenseState, error) {
 	return nil, nil
 }
 
-func (c *Core) entReloadLicense() error {
+func (c *Core) EntReloadLicense() error {
 	return nil
 }
 
