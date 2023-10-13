@@ -464,3 +464,13 @@ type CtxKeyDisableReplicationStatusEndpoints struct{}
 func (c CtxKeyDisableReplicationStatusEndpoints) String() string {
 	return "disable-replication-status-endpoints"
 }
+
+// CtxKeyMaxRequestSize is a custom type used as a key in context.Context to
+// store the value of the max_request_size set for the listener through which
+// a request was received.
+type CtxKeyMaxRequestSize struct{}
+
+// String returns a string representation of the receiver type.
+func (c CtxKeyMaxRequestSize) String() string {
+	return "max_request_size"
+}
