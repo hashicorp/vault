@@ -661,7 +661,7 @@ func handleUIStub() http.Handler {
 
 func handleUIRedirect() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Redirect(w, req, "/ui/", 307)
+		http.Redirect(w, req, "/ui/", http.StatusTemporaryRedirect)
 	})
 }
 
