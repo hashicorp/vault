@@ -571,6 +571,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
 	}
+	disable_repl_status, ok := httpCtx.Value(logical.CtxKeyDisableReplicationStatusEndpoints{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyDisableReplicationStatusEndpoints{}, disable_repl_status)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
