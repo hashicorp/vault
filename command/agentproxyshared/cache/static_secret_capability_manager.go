@@ -9,19 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
-
-	"golang.org/x/exp/maps"
-
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/gammazero/workerpool"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
+	"github.com/mitchellh/mapstructure"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -40,7 +37,6 @@ type StaticSecretCapabilityManager struct {
 	client                                     *api.Client
 	leaseCache                                 *LeaseCache
 	logger                                     hclog.Logger
-	tokenSink                                  sink.Sink
 	workerPool                                 *workerpool.WorkerPool
 	staticSecretTokenCapabilityRefreshInterval time.Duration
 }
@@ -48,12 +44,10 @@ type StaticSecretCapabilityManager struct {
 // StaticSecretCapabilityManagerConfig is the configuration for initializing a new
 // StaticSecretCapabilityManager.
 type StaticSecretCapabilityManagerConfig struct {
-	LeaseCache *LeaseCache
-	Logger     hclog.Logger
-	// TokenSink is a token sync that will have the latest
-	// token from auto-auth in it, to be used in event system
-	// connections.
-	TokenSink sink.Sink
+	LeaseCache                                 *LeaseCache
+	Logger                                     hclog.Logger
+	Client                                     *api.Client
+	StaticSecretTokenCapabilityRefreshInterval time.Duration
 }
 
 // NewStaticSecretCapabilityManager creates a new instance of a StaticSecretCapabilityManager.
@@ -70,55 +64,60 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 		return nil, fmt.Errorf("nil Logger (a required parameter): %v", conf)
 	}
 
-	if conf.TokenSink == nil {
-		return nil, fmt.Errorf("nil token sink (a required parameter): %v", conf)
+	if conf.Client == nil {
+		return nil, fmt.Errorf("nil Client (a required parameter): %v", conf)
 	}
 
-	client, err := api.NewClient(api.DefaultConfig())
-	if err != nil {
-		return nil, err
+	if conf.StaticSecretTokenCapabilityRefreshInterval == 0 {
+		conf.StaticSecretTokenCapabilityRefreshInterval = DefaultStaticSecretTokenCapabilityRefreshInterval
 	}
 
 	workerPool := workerpool.New(DefaultWorkers)
 
 	return &StaticSecretCapabilityManager{
-		client:     client,
+		client:     conf.Client,
 		leaseCache: conf.LeaseCache,
 		logger:     conf.Logger,
-		tokenSink:  conf.TokenSink,
 		workerPool: workerPool,
-		staticSecretTokenCapabilityRefreshInterval: DefaultStaticSecretTokenCapabilityRefreshInterval,
+		staticSecretTokenCapabilityRefreshInterval: conf.StaticSecretTokenCapabilityRefreshInterval,
 	}, nil
 }
 
 type PollingJob struct {
-	ctx    context.Context
-	client *api.Client
+	ctx context.Context
 	// index is the index of the cache entry of the permissions we want
 	// to check and keep up to date
-	index *cachememdb.Index
+	index *cachememdb.CapabilitiesIndex
 }
 
-// SubmitWorkToPoolAfterInterval submits work to the pool after the defined
+// submitWorkToPoolAfterInterval submits work to the pool after the defined
 // staticSecretTokenCapabilityRefreshInterval
-func (sscm *StaticSecretCapabilityManager) SubmitWorkToPoolAfterInterval(work func()) {
+func (sscm *StaticSecretCapabilityManager) submitWorkToPoolAfterInterval(work func()) {
 	time.AfterFunc(sscm.staticSecretTokenCapabilityRefreshInterval, func() {
-		sscm.workerPool.Submit(work)
+		if !sscm.workerPool.Stopped() {
+			sscm.workerPool.Submit(work)
+		}
 	})
 }
 
 // StartRenewing takes a polling job and submits a constant renewal to the worker pool.
-func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
+func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 	var work func()
 	work = func() {
+		if sscm.workerPool.Stopped() {
+			sscm.logger.Trace("worker pool stopped, stopping renewal")
+			return
+		}
+
 		capabilitiesIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
 		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			// This cache entry no longer exists, so there is no more work to do.
+			sscm.logger.Trace("cache item not found for capabilities refresh, stopping the process")
 			return
 		}
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
-			sscm.SubmitWorkToPoolAfterInterval(work)
+			sscm.logger.Error("error when attempting to get capabilities index to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
 
@@ -130,8 +129,8 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 
 		client, err := sscm.client.Clone()
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
-			sscm.SubmitWorkToPoolAfterInterval(work)
+			sscm.logger.Error("error when attempting clone client to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
 
@@ -139,15 +138,16 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 
 		capabilities, err := getCapabilities(indexReadablePaths, client)
 		if err != nil {
-			sscm.logger.Error("error when attempting to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
-			sscm.SubmitWorkToPoolAfterInterval(work)
+			sscm.logger.Error("error when attempting to retrieve updated token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
 
 		newReadablePaths := reconcileCapabilities(indexReadablePaths, capabilities)
 		if maps.Equal(indexReadablePathsMap, newReadablePaths) {
+			sscm.logger.Trace("capabilities were the same for index, nothing to do", "index.ID", pj.index.ID)
 			// there's nothing to update!
-			sscm.SubmitWorkToPoolAfterInterval(work)
+			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
 
@@ -167,11 +167,12 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 				}
 				if err != nil {
 					sscm.logger.Error("error when attempting to update corresponding paths for capabilities index", "index.ID", pj.index.ID, "err", err)
-					sscm.SubmitWorkToPoolAfterInterval(work)
+					sscm.submitWorkToPoolAfterInterval(work)
 					return
 				}
+				sscm.logger.Trace("updating tokens for index, as capability has been lost", "index.ID", index.ID, "request_path", index.RequestPath)
 				index.IndexLock.Lock()
-				delete(index.Tokens, path)
+				delete(index.Tokens, capabilitiesIndex.Token)
 				err = sscm.leaseCache.db.Set(index)
 				if err != nil {
 					sscm.logger.Error("error when attempting to update index in cache", "index.ID", index.ID, "err", err)
@@ -184,10 +185,10 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 		capabilitiesIndex.IndexLock.Lock()
 		defer capabilitiesIndex.IndexLock.Unlock()
 		if len(newReadablePaths) == 0 {
-			err := sscm.leaseCache.db.Evict(cachememdb.IndexNameID, pj.index.ID)
+			err := sscm.leaseCache.db.EvictCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
 			if err != nil {
 				sscm.logger.Error("error when attempting to evict capabilities from cache", "index.ID", pj.index.ID, "err", err)
-				sscm.SubmitWorkToPoolAfterInterval(work)
+				sscm.submitWorkToPoolAfterInterval(work)
 				return
 			}
 			// If we successfully evicted the index, no need to re-submit the work to the pool.
@@ -202,11 +203,11 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 		}
 
 		// Finally, put ourselves back on the work pool after
-		sscm.SubmitWorkToPoolAfterInterval(work)
+		sscm.submitWorkToPoolAfterInterval(work)
 		return
 	}
 
-	return nil
+	sscm.submitWorkToPoolAfterInterval(work)
 }
 
 // getCapabilities is a wrapper around a /sys/capabilities-self call that returns
@@ -214,7 +215,13 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) error {
 func getCapabilities(paths []string, client *api.Client) (map[string][]string, error) {
 	body := make(map[string]interface{})
 	body["paths"] = paths
-	secret, err := client.Logical().Write("/sys/capabilities-self", body)
+	capabilities := make(map[string][]string)
+
+	secret, err := client.Logical().Write("sys/capabilities-self", body)
+	if err != nil && strings.Contains(err.Error(), "permission denied") {
+		// Token has expired. Return an empty set of capabilities:
+		return capabilities, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -222,8 +229,6 @@ func getCapabilities(paths []string, client *api.Client) (map[string][]string, e
 	if secret == nil || secret.Data == nil {
 		return nil, errors.New("data from server response is empty")
 	}
-
-	capabilities := make(map[string][]string)
 
 	for _, path := range paths {
 		var res []string
