@@ -1203,7 +1203,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
 
-	err = storedLicenseCheck(c, conf)
+	err = entCheckStoredLicense(c, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -2380,7 +2380,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
-	if err := enterprisePostUnseal(c, false); err != nil {
+	if err := c.entPostUnseal(false); err != nil {
 		return err
 	}
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
@@ -2412,13 +2412,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadMounts(ctx); err != nil {
 		return err
 	}
-	if err := enterpriseSetupFilteredPaths(c); err != nil {
+	if err := c.entSetupFilteredPaths(); err != nil {
 		return err
 	}
 	if err := c.setupMounts(ctx); err != nil {
 		return err
 	}
-	if err := enterpriseSetupAPILock(c, ctx); err != nil {
+	if err := c.entSetupAPILock(ctx); err != nil {
 		return err
 	}
 	if err := c.setupPolicyStore(ctx); err != nil {
@@ -2433,7 +2433,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.loadCredentials(ctx); err != nil {
 		return err
 	}
-	if err := enterpriseSetupFilteredPaths(c); err != nil {
+	if err := c.entSetupFilteredPaths(); err != nil {
 		return err
 	}
 	if err := c.setupCredentials(ctx); err != nil {
@@ -2538,7 +2538,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
-	if err := startReplication(c); err != nil {
+	if err := c.entStartReplication(); err != nil {
 		return err
 	}
 
@@ -2697,7 +2697,7 @@ func (c *Core) preSeal() error {
 	c.stopRaftActiveNode()
 
 	c.clusterParamsLock.Lock()
-	if err := stopReplication(c); err != nil {
+	if err := c.entStopReplication(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping replication: %w", err))
 	}
 	c.clusterParamsLock.Unlock()
@@ -2727,7 +2727,7 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error unloading mounts: %w", err))
 	}
 
-	if err := enterprisePreSeal(c); err != nil {
+	if err := c.entPreSeal(); err != nil {
 		result = multierror.Append(result, err)
 	}
 
