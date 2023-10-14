@@ -1203,7 +1203,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("barrier setup failed: %w", err)
 	}
 
-	err = entCheckStoredLicense(c, conf)
+	err = c.entCheckStoredLicense(conf)
 	if err != nil {
 		return nil, err
 	}
