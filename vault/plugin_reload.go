@@ -41,9 +41,9 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 		//   - auth/foo
 		if strings.HasPrefix(mount, credentialRoutePrefix) {
 			isAuth = true
-		} else if strings.HasPrefix(mount, systemMountPath+credentialRoutePrefix) {
+		} else if strings.HasPrefix(mount, mountPathSystem+credentialRoutePrefix) {
 			isAuth = true
-			mount = strings.TrimPrefix(mount, systemMountPath)
+			mount = strings.TrimPrefix(mount, mountPathSystem)
 		}
 		if !strings.HasSuffix(mount, "/") {
 			mount += "/"
