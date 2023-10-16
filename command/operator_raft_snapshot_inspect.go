@@ -21,7 +21,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/hashicorp/go-hclog"
-	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
 	protoio "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -258,71 +257,20 @@ func (c *OperatorRaftSnapshotInspectCommand) parseState(r io.Reader) (SnapshotIn
 		return nil
 	}
 	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
-	errCh := make(chan error, 1)
 
-	go func() {
-		for {
-			s := new(pb.StorageEntry)
-			if err := protoReader.ReadMsg(s); err != nil {
-				if err == io.EOF {
-					errCh <- nil
-					return
-				}
-				errCh <- err
-				return
+	for {
+		s := new(pb.StorageEntry)
+		if err := protoReader.ReadMsg(s); err != nil {
+			if err == io.EOF {
+				break
 			}
-			size := protoReader.GetLastReadSize()
-			handler(s, size)
+			return info, err
 		}
-	}()
-
-	err := <-errCh
-	if err != nil && err != io.EOF {
-		return info, err
+		size := protoReader.GetLastReadSize()
+		handler(s, size)
 	}
 
 	return info, nil
-}
-
-// ReadSnapshot decodes each message type and utilizes the handler function to
-// process each message type individually
-func ReadSnapshot(r io.Reader, handler func(s *pb.StorageEntry, read int) error) (*iradix.Tree, error) {
-	reader := protoio.NewDelimitedReader(r, math.MaxInt32)
-
-	errCh := make(chan error, 1)
-	txn := iradix.New().Txn()
-
-	go func() {
-		for {
-			s := new(pb.StorageEntry)
-
-			err := reader.ReadMsg(s)
-			if err != nil {
-				if err == io.EOF {
-					errCh <- nil
-					return
-				}
-				errCh <- err
-				return
-			}
-
-			size := reader.GetLastReadSize()
-
-			handler(s, size)
-
-			var value interface{} = struct{}{}
-			value = s.Value
-
-			txn.Insert([]byte(s.Key), value)
-		}
-	}()
-
-	err := <-errCh
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
-
-	return txn.Commit(), nil
 }
 
 // Read contents of snapshot. Parse metadata and snapshot info
