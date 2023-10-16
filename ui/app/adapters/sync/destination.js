@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from 'vault/adapters/application';
 
-export default class SyncDestinationsBaseAdapter extends ApplicationAdapter {
+export default class SyncDestinationAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   _baseUrl() {

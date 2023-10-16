@@ -3,6 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import SyncDestinationsBaseAdapter from './base';
+import SyncDestinationAdapter from '../destination';
 
-export default class SyncDestinationsAzureKeyVaultAdapter extends SyncDestinationsBaseAdapter {}
+export default class SyncDestinationsAzureKeyVaultAdapter extends SyncDestinationAdapter {}

@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 
 // Base model for all secret sync destination types
-export default class SyncDestinationsBaseModel extends Model {
+export default class SyncDestinationModel extends Model {
   @attr('string') name;
   @attr type;
 

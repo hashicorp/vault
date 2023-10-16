@@ -3,6 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import SyncDestinationsBaseAdapter from './base';
+import SyncDestinationAdapter from '../destination';
 
-export default class SyncDestinationsVercelProjectAdapter extends SyncDestinationsBaseAdapter {}
+export default class SyncDestinationsVercelProjectAdapter extends SyncDestinationAdapter {}
