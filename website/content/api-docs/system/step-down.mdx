@@ -12,9 +12,12 @@ The `/sys/step-down` endpoint causes the node to give up active status.
 
 ## Step down leader
 
-This endpoint forces the node to give up active status. When executed against a 
-non-active node, i.e. a standby or performance standby node, the request will be 
-forwarded to the active node. Note that the node will sleep
+The step-down endpoint forces nodes to give up "active" status. If you
+call the endpoint against a non-active node, for example, a DR or
+ performance standby node, Vault forwards the request to the active
+  node.
+  
+    Note that the node will sleep
 for ten seconds before attempting to grab the active lock again, but if no
 standby nodes grab the active lock in the interim, the same node may become the
 active node again. Requires a token with `root` policy or `sudo` capability on
