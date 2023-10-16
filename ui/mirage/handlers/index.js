@@ -15,5 +15,6 @@ import oidcConfig from './oidc-config';
 import hcpLink from './hcp-link';
 import kubernetes from './kubernetes';
 import ldap from './ldap';
+import sync from './sync';
 
-export { base, clients, db, kms, mfaConfig, mfaLogin, oidcConfig, hcpLink, kubernetes, ldap };
+export { base, clients, db, kms, mfaConfig, mfaLogin, oidcConfig, hcpLink, kubernetes, ldap, sync };
