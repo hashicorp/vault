@@ -589,8 +589,7 @@ func (r *awsRoleEntry) validate() error {
 		}
 	}
 
-	if (r.PolicyDocument != "" || len(r.PolicyArns) != 0 || len(r.RoleArns) != 0) &&
-		strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+	if (r.PolicyDocument != "" || len(r.PolicyArns) != 0) && strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
 		errors = multierror.Append(errors, fmt.Errorf("cannot supply a policy or role when using credential_type %s", sessionTokenCred))
 	}
 
