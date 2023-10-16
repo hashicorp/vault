@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
@@ -242,6 +244,9 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 	}
 	localOpts := vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{},
+		},
 	}
 	if opts != nil {
 		localOpts = *opts

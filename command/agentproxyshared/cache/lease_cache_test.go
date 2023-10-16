@@ -5,6 +5,7 @@ package cache
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,10 +43,11 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		t.Fatal(err)
 	}
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     NewMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            NewMockProxier(responses),
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -61,10 +64,11 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	}
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     &mockDelayProxier{cacheable, delay},
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            &mockDelayProxier{cacheable, delay},
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -80,11 +84,12 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 	require.NoError(t, err)
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:      client,
-		BaseContext: context.Background(),
-		Proxier:     NewMockProxier(responses),
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		Storage:     storage,
+		Client:             client,
+		BaseContext:        context.Background(),
+		Proxier:            NewMockProxier(responses),
+		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Storage:            storage,
+		CacheStaticSecrets: true,
 	})
 	require.NoError(t, err)
 
@@ -92,9 +97,6 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 }
 
 func TestCache_ComputeIndexID(t *testing.T) {
-	type args struct {
-		req *http.Request
-	}
 	tests := []struct {
 		name    string
 		req     *SendRequest
@@ -145,6 +147,232 @@ func TestCache_ComputeIndexID(t *testing.T) {
 	}
 }
 
+// TestCache_ComputeStaticSecretIndexID ensures that
+// computeStaticSecretCacheIndex works correctly. If this test breaks, then our
+// hashing algorithm has changed, and we risk breaking backwards compatibility.
+func TestCache_ComputeStaticSecretIndexID(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/foo/bar",
+			},
+		},
+	}
+
+	index := computeStaticSecretCacheIndex(req)
+	// We expect this to be "", as it doesn't start with /v1
+	expectedIndex := ""
+	require.Equal(t, expectedIndex, index)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+		},
+	}
+
+	expectedIndex = "b117a962f19f17fa372c8681cadcd6fd370d28ee6e0a7012196b780bef601b53"
+	index2 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index2)
+}
+
+// Test_GetStaticSecretPathFromRequestNoNamespaces tests that getStaticSecretPathFromRequest
+// behaves as expected when no namespaces are involved.
+func Test_GetStaticSecretPathFromRequestNoNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+		},
+	}
+
+	path := getStaticSecretPathFromRequest(req)
+	require.Equal(t, "foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				// Paths like this are not static secrets, so we should return ""
+				Path: "foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "", path)
+}
+
+// Test_GetStaticSecretPathFromRequestNamespaces tests that getStaticSecretPathFromRequest
+// behaves as expected when namespaces are involved.
+func Test_GetStaticSecretPathFromRequestNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	path := getStaticSecretPathFromRequest(req)
+	require.Equal(t, "ns1/foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/ns1/foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "ns1/foo/bar", path)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				// Paths like this are not static secrets, so we should return ""
+				Path: "ns1/foo/bar",
+			},
+		},
+	}
+
+	path = getStaticSecretPathFromRequest(req)
+	require.Equal(t, "", path)
+}
+
+// TestCache_CanonicalizeStaticSecretPath ensures that
+// canonicalizeStaticSecretPath works as expected with all kinds of inputs.
+func TestCache_CanonicalizeStaticSecretPath(t *testing.T) {
+	expected := "foo/bar"
+	actual := canonicalizeStaticSecretPath("/v1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("foo/bar", "")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("/ns1/foo/bar", "")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "ns1")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "ns1/")
+	require.Equal(t, expected, actual)
+
+	expected = "ns1/foo/bar"
+	actual = canonicalizeStaticSecretPath("/v1/foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
+
+	actual = canonicalizeStaticSecretPath("/foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
+	actual = canonicalizeStaticSecretPath("foo/bar", "/ns1/")
+	require.Equal(t, expected, actual)
+}
+
+// TestCache_ComputeStaticSecretIndexIDNamespaces ensures that
+// computeStaticSecretCacheIndex correctly identifies that a request
+// with a namespace header and a request specifying the namespace in the path
+// are equivalent.
+func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
+	req := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	index := computeStaticSecretCacheIndex(req)
+	// Paths like this are not static secrets, so we should expect ""
+	require.Equal(t, "", index)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "ns1/foo/bar",
+			},
+		},
+	}
+
+	// Paths like this are not static secrets, so we should expect ""
+	index2 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, "", index2)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/ns1/foo/bar",
+			},
+		},
+	}
+
+	expectedIndex := "a4605679d269aa1bebac7079a471a33403413f388f63bf0da3c771b225857932"
+	// We expect that computeStaticSecretCacheIndex will compute the same index
+	index3 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index3)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1"}},
+		},
+	}
+
+	index4 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index4)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1/"}},
+		},
+	}
+
+	// Paths like this are not static secrets, so we should expect ""
+	index5 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, "", index5)
+
+	req = &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/foo/bar",
+			},
+			Header: map[string][]string{api.NamespaceHeaderName: {"ns1/"}},
+		},
+	}
+
+	index6 := computeStaticSecretCacheIndex(req)
+	require.Equal(t, expectedIndex, index6)
+}
+
 func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
 		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
@@ -176,7 +404,7 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	}
 
 	lc := testNewLeaseCache(t, responses)
-	// Register an token so that the token and lease requests are cached
+	// Register a token so that the token and lease requests are cached
 	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
 
 	// Make a request. A response with a new token is returned to the lease
@@ -244,6 +472,216 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 		t.Fatal(err)
 	}
 	if diff := deep.Equal(resp.Response.StatusCode, responses[1].Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+}
+
+// TestLeaseCache_StoreCacheableStaticSecret tests that cacheStaticSecret works
+// as expected, creating the two expected cache entries, and also ensures
+// that we can evict the cache entry with the cache clear API afterwards.
+func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
+	request := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/secrets/foo/bar",
+			},
+		},
+		Token: "token",
+	}
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+	}
+	index := &cachememdb.Index{
+		Type:        cacheboltdb.StaticSecretType,
+		RequestPath: request.Request.URL.Path,
+		Namespace:   "root/",
+		Token:       "token",
+		ID:          computeStaticSecretCacheIndex(request),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// We expect two entries to be stored by this:
+	// 1. The actual static secret
+	// 2. The capabilities index
+	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	if err != nil {
+		return
+	}
+
+	indexFromDB, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	if err != nil {
+		return
+	}
+
+	require.NotNil(t, indexFromDB)
+	require.Equal(t, "token", indexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
+	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
+	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
+	require.Equal(t, "root/", indexFromDB.Namespace)
+
+	capabilitiesIndexFromDB, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	if err != nil {
+		return
+	}
+
+	require.NotNil(t, capabilitiesIndexFromDB)
+	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.ReadablePaths)
+
+	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
+		Type:        "request_path",
+		RequestPath: request.Request.URL.Path,
+	})
+	require.NoError(t, err)
+
+	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
+	require.Nil(t, expectedClearedIndex)
+}
+
+// TestLeaseCache_StaticSecret_CacheClear_All tests that static secrets are
+// stored correctly, as well as removed from the cache by a cache clear with
+// "all" specified as the type.
+func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
+	request := &SendRequest{
+		Request: &http.Request{
+			URL: &url.URL{
+				Path: "/v1/secrets/foo/bar",
+			},
+		},
+		Token: "token",
+	}
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+	}
+	index := &cachememdb.Index{
+		Type:        cacheboltdb.StaticSecretType,
+		RequestPath: request.Request.URL.Path,
+		Namespace:   "root/",
+		Token:       "token",
+		ID:          computeStaticSecretCacheIndex(request),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// We expect two entries to be stored by this:
+	// 1. The actual static secret
+	// 2. The capabilities index
+	err := lc.cacheStaticSecret(context.Background(), request, response, index)
+	if err != nil {
+		return
+	}
+
+	indexFromDB, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	if err != nil {
+		return
+	}
+
+	require.NotNil(t, indexFromDB)
+	require.Equal(t, "token", indexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"token": {}}, indexFromDB.Tokens)
+	require.Equal(t, cacheboltdb.StaticSecretType, indexFromDB.Type)
+	require.Equal(t, request.Request.URL.Path, indexFromDB.RequestPath)
+	require.Equal(t, "root/", indexFromDB.Namespace)
+
+	capabilitiesIndexFromDB, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, hex.EncodeToString(cryptoutil.Blake2b256Hash(index.Token)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	require.NotNil(t, capabilitiesIndexFromDB)
+	require.Equal(t, "token", capabilitiesIndexFromDB.Token)
+	require.Equal(t, map[string]struct{}{"secrets/foo/bar": {}}, capabilitiesIndexFromDB.ReadablePaths)
+
+	err = lc.handleCacheClear(context.Background(), &cacheClearInput{
+		Type: "all",
+	})
+	require.NoError(t, err)
+
+	expectedClearedIndex, err := lc.db.Get(cachememdb.IndexNameID, index.ID)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
+	require.Nil(t, expectedClearedIndex)
+
+	expectedClearedCapabilitiesIndex, err := lc.db.GetCapabilitiesIndex(cachememdb.IndexNameID, capabilitiesIndexFromDB.ID)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
+	require.Nil(t, expectedClearedCapabilitiesIndex)
+}
+
+// TestLeaseCache_SendCacheableStaticSecret tests that the cache has no issue returning
+// static secret style responses. It's similar to TestLeaseCache_SendCacheable in that it
+// only tests the surface level of the functionality, but there are other tests that
+// test the rest.
+func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
+	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	responses := []*SendResponse{
+		response,
+		response,
+		response,
+		response,
+	}
+
+	lc := testNewLeaseCache(t, responses)
+
+	// Register a token
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	// Make a request. A response with a new token is returned to the lease
+	// cache and that will be cached.
+	urlPath := "http://example.com/v1/sample/api"
+	sendReq := &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
+	}
+	resp, err := lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Send the same request again to get the cached response
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, responses[0].Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Modify the request a little to ensure the second response is
+	// returned to the lease cache.
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
+		t.Fatalf("expected getting proxied response: got %v", diff)
+	}
+
+	// Make the same request again and ensure that the same response is returned
+	// again.
+	sendReq = &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", urlPath, strings.NewReader(`{"value": "input_changed"}`)),
+	}
+	resp, err = lc.Send(context.Background(), sendReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := deep.Equal(resp.Response.StatusCode, response.Response.StatusCode); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 }
@@ -338,12 +776,9 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
-	idx, err := lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != nil {
-		t.Fatalf("expected nil entry, got: %#v", idx)
+	_, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 
 	// Verify that the response is not cached by sending the same request and
@@ -360,12 +795,9 @@ func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
 
-	idx, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if idx != nil {
-		t.Fatalf("expected nil entry, got: %#v", idx)
+	_, err = lc.db.Get(cachememdb.IndexNameRequestPath, "root/", urlPath)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 }
 
@@ -773,6 +1205,7 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 		// 204 No content gets special handling - avoid.
 		newTestSendResponse(250, `{"auth": {"client_token": "testtoken3", "renewable": true, "orphan": true, "lease_duration": 600}}`),
 		newTestSendResponse(251, `{"lease_id": "secret3-lease", "renewable": true, "data": {"number": "three"}, "lease_duration": 600}`),
+		newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
