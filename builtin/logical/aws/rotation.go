@@ -39,7 +39,7 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 
 // rotateCredential pops an element from the priority queue, and if it is expired, rotate and re-push.
 // If a cred was ready for rotation, return true, otherwise return false.
-func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
+func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (wasReady bool, err error) {
 	// If queue is empty or first item does not need a rotation (priority is next rotation timestamp) there is nothing to do
 	item, err := b.credRotationQueue.Pop()
 	if err != nil {
