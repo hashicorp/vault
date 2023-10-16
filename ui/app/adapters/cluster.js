@@ -86,8 +86,10 @@ export default ApplicationAdapter.extend({
         // but the specified namespace does not exist. In this case we should show the error.
         e.message =
           'chroot_namespace has been set but the namespace does not exist. Please create the namespace and then refresh the page.';
+        throw e;
       }
-      throw e;
+      // otherwise, sys/health will fail when chroot set because it's allowed in root namespace only
+      return { has_chroot_namespace: true };
     });
   },
 
