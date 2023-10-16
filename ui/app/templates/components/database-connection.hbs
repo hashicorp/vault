@@ -25,14 +25,13 @@
     <Toolbar>
       <ToolbarActions>
         {{#if @model.canDelete}}
-          <button
-            type="button"
-            class="toolbar-link"
-            onclick={{action (mut this.isDeleteModalActive) true}}
+          <Hds::Button
+            @text="Delete connection"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (action (mut this.isDeleteModalActive) true)}}
             data-test-database-connection-delete
-          >
-            Delete connection
-          </button>
+          />
         {{/if}}
         {{#if @model.canReset}}
           <ConfirmAction
@@ -172,9 +171,7 @@
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Create database
-          </button>
+          <Hds::Button @text="Create database" data-test-secret-save type="submit" disabled={{this.buttonDisabled}} />
         </div>
         <div class="control">
           <SecretLink @mode="list" class="button">
@@ -294,9 +291,7 @@
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Save
-          </button>
+          <Hds::Button @text="Save" data-test-secret-save type="submit" disabled={{this.buttonDisabled}} />
         </div>
         <div class="control">
           <SecretLink @mode="list" class="button">

@@ -31,9 +31,13 @@
   <Toolbar>
     <ToolbarActions>
       {{#if this.capabilities.canDelete}}
-        <button type="button" class="toolbar-link" onclick={{action "delete"}} data-test-transformation-alphabet-delete>
-          Delete alphabet
-        </button>
+        <Hds::Button
+          @text="Delete alphabet"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (action "delete")}}
+          data-test-transformation-alphabet-delete
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.capabilities.canUpdate}}

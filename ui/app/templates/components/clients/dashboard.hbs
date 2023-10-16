@@ -16,9 +16,7 @@
   <div data-test-start-date-editor class="is-flex-align-baseline">
     {{#if this.formattedStartDate}}
       <p class="is-size-6" data-test-date-display>{{this.formattedStartDate}}</p>
-      <button type="button" class="button is-link" {{on "click" (fn (mut this.showBillingStartModal) true)}}>
-        Edit
-      </button>
+      <Hds::Button @text="Edit" @color="secondary" {{on "click" (fn (mut this.showBillingStartModal) true)}} />
     {{else}}
       <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
     {{/if}}

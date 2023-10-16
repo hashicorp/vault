@@ -19,15 +19,15 @@
             {{or this.filename "No file chosen"}}
           </span>
           {{#if this.filename}}
-            <button
-              type="button"
+            <Hds::Button
+              @icon="x-circle"
+              @isIconOnly={{true}}
+              @color="secondary"
               class="file-delete-button"
               aria-label="Clear file selection"
               {{on "click" this.fileChange}}
               data-test-text-clear
-            >
-              <Icon @name="x-circle" />
-            </button>
+            />
           {{/if}}
         </div>
       </div>

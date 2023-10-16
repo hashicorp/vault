@@ -107,15 +107,14 @@
         </div>
         <div class="calendar-widget-grid calendar-widget">
           {{#each this.widgetMonths as |month|}}
-            <button
-              data-test-calendar-month={{month.name}}
-              type="button"
+            <Hds::Button
+              @text={{month.name}}
+              @color="secondary"
               class="is-month-list {{if month.readonly 'is-readOnly'}}"
+              data-test-calendar-month={{month.name}}
               id={{month.index}}
               {{on "click" (fn this.selectMonth month D.actions)}}
-            >
-              {{month.name}}
-            </button>
+            />
           {{/each}}
         </div>
       </div>

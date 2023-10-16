@@ -70,9 +70,14 @@
               {{/if}}
             </label>
             {{#if this.key.filename}}
-              <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
-                <Icon @name="x" aria-label="Close" />
-              </button>
+              <Hds::Button
+                @icon="x"
+                @isIconOnly={{true}}
+                @color="secondary"
+                class="file-delete-button"
+                {{action "clearKey"}}
+                data-test-pgp-clear={{true}}
+              />
             {{/if}}
           </span>
         </div>

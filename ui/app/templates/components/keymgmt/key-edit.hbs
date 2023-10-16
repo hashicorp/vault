@@ -55,25 +55,23 @@
     <Toolbar>
       <ToolbarActions>
         {{#unless @model.distribution}}
-          <button
-            type="button"
-            class="toolbar-link"
+          <Hds::Button
+            @text="Distribute key"
+            @color="secondary"
+            class="toolbar-button"
             {{on "click" (fn (mut this.isDistributing) true)}}
             data-test-keymgmt-key-distribute
-          >
-            Distribute key
-          </button>
+          />
         {{/unless}}
         {{#if @model.canDelete}}
-          <button
-            type="button"
-            class="toolbar-link"
+          <Hds::Button
+            @text="Destroy key"
+            @color="secondary"
+            class="toolbar-button"
             disabled={{not @model.deletionAllowed}}
             {{on "click" (fn (mut this.isDeleteModalOpen) true)}}
             data-test-keymgmt-key-destroy
-          >
-            Destroy key
-          </button>
+          />
         {{/if}}
         {{#if @model.provider}}
           <ConfirmAction
@@ -126,14 +124,13 @@
           {{/each}}
           <div class="field is-grouped box is-fullwidth is-bottomless">
             <div class="control">
-              <button
+              <Hds::Button
+                @text={{if this.isCreating "Create key" "Update"}}
+                @icon={{if this.saveTask.isRunning "loading"}}
                 type="submit"
                 disabled={{this.saveTask.isRunning}}
-                class="button is-primary {{if this.saveTask.isRunning 'is-loading'}}"
                 data-test-keymgmt-key-submit
-              >
-                {{if this.isCreating "Create key" "Update"}}
-              </button>
+              />
             </div>
             <div class="control">
               <LinkTo
@@ -208,10 +205,13 @@
           data-test-keymgmt-dist-empty-state
         >
           {{#if @model.canListProviders}}
-            <button type="button" class="link" {{on "click" (fn (mut this.isDistributing) true)}}>
-              Distribute key
-              <Icon @name="chevron-right" />
-            </button>
+            <Hds::Button
+              @icon="chevron-right"
+              @isIconOnly={{true}}
+              @color="secondary"
+              class="link"
+              {{on "click" (fn (mut this.isDistributing) true)}}
+            />
           {{/if}}
         </EmptyState>
       {{else}}

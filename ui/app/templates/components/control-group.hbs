@@ -109,24 +109,20 @@
             Back
           </LinkTo>
         {{else}}
-          <button
-            type="button"
-            class="button is-primary {{if this.authorize.isRunning 'is-loading'}}"
+          <Hds::Button
+            @text="Authorize"
+            @icon={{if this.authorize.isRunning "loading"}}
             {{action (perform this.authorize)}}
             data-test-authorize-button
-          >
-            Authorize
-          </button>
+          />
         {{/if}}
       {{else}}
-        <button
-          type="button"
-          class="button is-primary {{if this.refresh.isRunning 'is-loading'}}"
+        <Hds::Button
+          @text="Refresh"
+          @icon={{if this.refresh.isRunning "loading"}}
           {{action (perform this.refresh)}}
           data-test-refresh-button
-        >
-          Refresh
-        </button>
+        />
       {{/if}}
     </div>
   {{/unless}}

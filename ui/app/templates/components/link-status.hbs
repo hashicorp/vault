@@ -13,9 +13,12 @@
         </ExternalLink>
       {{else}}
         There was an error connecting to HCP. Click
-        <button type="button" class="text-button is-underline" {{on "click" (fn (mut this.showModal))}}>
-          here
-        </button>
+        <Hds::Button
+          @text="here"
+          @color="secondary"
+          class="text-button is-underline"
+          {{on "click" (fn (mut this.showModal))}}
+        />
         for more information.
       {{/if}}
     </A.Title>
