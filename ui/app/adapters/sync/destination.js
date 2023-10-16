@@ -12,6 +12,8 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
     return `${this.buildURL()}/sys`;
   }
 
+  // id is the destination name
+  // modelName is sync/destination/<destination type>
   urlForFindRecord(id, modelName) {
     return `${this._baseUrl()}/${modelName}/${id}`;
   }
