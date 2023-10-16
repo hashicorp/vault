@@ -38,9 +38,9 @@ func secretAccessKeys(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
-			"security_token": {
+			"session_token": {
 				Type:        framework.TypeString,
-				Description: "Security Token",
+				Description: "Session Token",
 			},
 		},
 
@@ -182,14 +182,11 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
-func (b *backend) getSessionToken(ctx context.Context, s logical.Storage,
-	lifeTimeInSeconds int64) (*logical.Response, error) {
-
+func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, lifeTimeInSeconds int64) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
-
 
 	getTokenInput := &sts.GetSessionTokenInput{
 		DurationSeconds: &lifeTimeInSeconds,
@@ -205,7 +202,7 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
 	}, map[string]interface{}{
-		"is_sts":   true,
+		"is_sts": true,
 	})
 
 	// Set the secret TTL to appropriately match the expiration of the token
