@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import SyncDestinationsBaseModel from './base';
+import SyncDestinationsBaseModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -12,12 +12,4 @@ export default class SyncDestinationsGithubModel extends SyncDestinationsBaseMod
   @attr('string') accessToken;
   @attr('string') repositoryOwner;
   @attr('string') repositoryName;
-
-  get type() {
-    return 'gh';
-  }
-
-  get icon() {
-    return 'github';
-  }
 }

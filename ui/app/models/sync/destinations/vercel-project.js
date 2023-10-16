@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import SyncDestinationsBaseModel from './base';
+import SyncDestinationsBaseModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -13,12 +13,4 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinations
   @attr('string') projectId;
   @attr('string') teamId;
   @attr('array') deploymentEnvironments;
-
-  get type() {
-    return 'vercel-project';
-  }
-
-  get icon() {
-    return 'vercel';
-  }
 }

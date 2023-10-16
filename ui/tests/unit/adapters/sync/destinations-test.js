@@ -6,6 +6,7 @@
 import { setupTest } from 'ember-qunit';
 import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { destinationTypes } from 'vault/helpers/sync-destinations';
 
 module('Unit | Adapter | sync/destinations', function (hooks) {
   setupTest(hooks);
@@ -16,11 +17,10 @@ module('Unit | Adapter | sync/destinations', function (hooks) {
   });
 
   test('it calls the correct endpoint for findRecord', async function (assert) {
-    // TODO make destination types a util?
-    const destinationTypes = ['aws-sm', 'azure-kv', 'gcp-sm', 'gh', 'vercel-project'];
-    assert.expect(destinationTypes.length);
+    const types = destinationTypes();
+    assert.expect(types.length);
 
-    for (const type of destinationTypes) {
+    for (const type of types) {
       this.server.get(`sys/sync/destinations/${type}/my-dest`, () => {
         assert.ok(true, `request is made to GET sys/sync/destinations/${type}/my-dest endpoint on find`);
         return {

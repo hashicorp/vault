@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import SyncDestinationsBaseModel from './base';
+import SyncDestinationsBaseModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -14,12 +14,4 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinations
   @attr('string') clientSecret;
   @attr('string') tenantId;
   @attr('string') cloud;
-
-  get type() {
-    return 'azure-kv';
-  }
-
-  get icon() {
-    return 'azure-color';
-  }
 }
