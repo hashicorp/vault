@@ -4,6 +4,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -169,7 +170,7 @@ func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRene
 				sscm.logger.Trace("updating tokens for index, as capability has been lost", "index.ID", index.ID, "request_path", index.RequestPath)
 				index.IndexLock.Lock()
 				delete(index.Tokens, capabilitiesIndex.Token)
-				err = sscm.leaseCache.db.Set(index)
+				err = sscm.leaseCache.Set(context.Background(), index)
 				if err != nil {
 					sscm.logger.Error("error when attempting to update index in cache", "index.ID", index.ID, "err", err)
 				}
@@ -193,7 +194,7 @@ func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRene
 
 		// The token still has some capabilities, so, update the capabilities index:
 		capabilitiesIndex.ReadablePaths = newReadablePaths
-		err = sscm.leaseCache.db.SetCapabilitiesIndex(capabilitiesIndex)
+		err = sscm.leaseCache.SetCapabilitiesIndex(context.Background(), capabilitiesIndex)
 		if err != nil {
 			sscm.logger.Error("error when attempting to update capabilities from cache", "index.ID", indexToRenew.ID, "err", err)
 		}
