@@ -18,17 +18,30 @@ module('Integration | Component | resultant-acl-banner', function (hooks) {
     assert.dom('[data-test-resultant-acl-reauthenticate]').doesNotExist('Does not show reauth link');
   });
 
-  test('it renders correctly for namespaces', async function (assert) {
+  test('it renders correctly with set namespace', async function (assert) {
     const nsService = this.owner.lookup('service:namespace');
     nsService.setNamespace('my-ns');
+
     await render(hbs`<ResultantAclBanner @isEnterprise={{true}} />`);
 
     assert.dom('[data-test-resultant-acl-banner] .hds-alert__title').hasText('Resultant ACL check failed');
     assert
       .dom('[data-test-resultant-acl-banner] .hds-alert__description')
       .hasText("You may be in the wrong namespace, so links might be shown that you don't have access to.");
-    assert.dom('[data-test-resultant-acl-reauthenticate]').exists('Shows reauth link');
-    // unset
-    nsService.setNamespace();
+    assert
+      .dom('[data-test-resultant-acl-reauthenticate]')
+      .hasText('Log into my-ns namespace', 'Shows reauth link with given namespace');
+  });
+
+  test('it renders correctly with default namespace', async function (assert) {
+    await render(hbs`<ResultantAclBanner @isEnterprise={{true}} />`);
+
+    assert.dom('[data-test-resultant-acl-banner] .hds-alert__title').hasText('Resultant ACL check failed');
+    assert
+      .dom('[data-test-resultant-acl-banner] .hds-alert__description')
+      .hasText("You may be in the wrong namespace, so links might be shown that you don't have access to.");
+    assert
+      .dom('[data-test-resultant-acl-reauthenticate]')
+      .hasText('Log into root namespace', 'Shows reauth link with default namespace');
   });
 });

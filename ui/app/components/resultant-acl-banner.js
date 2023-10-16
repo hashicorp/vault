@@ -5,6 +5,6 @@ export default class ResultantAclBannerComponent extends Component {
   @service namespace;
 
   get ns() {
-    return this.namespace.path;
+    return this.namespace.path || 'root';
   }
 }
