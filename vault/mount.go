@@ -423,14 +423,6 @@ func (e *MountEntry) Clone() (*MountEntry, error) {
 	return cp.(*MountEntry), nil
 }
 
-<<<<<<< HEAD
-=======
-// IsExternalPlugin returns whether the plugin is running externally
-// if the RunningSha256 is non-empty, the builtin is external. Otherwise, it's builtin
-func (e *MountEntry) IsExternalPlugin() bool {
-	return e.RunningSha256 != ""
-}
-
 // MountClass returns the mount class based on Accessor and Path
 func (e *MountEntry) MountClass() string {
 	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", mountPathSystem)) {
@@ -444,7 +436,6 @@ func (e *MountEntry) MountClass() string {
 	return consts.PluginTypeSecrets.String()
 }
 
->>>>>>> 2d01ba635d (VAULT-20476: vault.NewCore refactor. (#23644))
 // Namespace returns the namespace for the mount entry
 func (e *MountEntry) Namespace() *namespace.Namespace {
 	return e.namespace
