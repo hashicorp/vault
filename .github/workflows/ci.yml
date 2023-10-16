@@ -147,12 +147,12 @@ jobs:
 
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR is not docs/ui only
+    # Only run fips on the enterprise repo, and only if it's main or a release branch (i.e. not a PR)
+    # TODO: add back `needs.setup.outputs.enterprise == 1 &&`
     if: |
-      github.event.pull_request.draft == false &&
-      needs.setup.outputs.enterprise == 1 &&
       needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'
+      needs.verify-changes.outputs.is_ui_change == 'false' && 
+      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     needs:
       - setup
       - verify-changes
