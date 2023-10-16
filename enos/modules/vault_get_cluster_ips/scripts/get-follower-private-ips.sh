@@ -20,16 +20,18 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "Unable to locate vault binary at $binpath"
 
 count=0
-retries=5
+retries=10
 while :; do
   # Vault >= 1.10.x has the operator members. If we have that then we'll use it.
   if $binpath operator -h 2>&1 | grep members &> /dev/null; then
     # Get the folllowers that are part of our private ips.
-    if followers=$($binpath operator members -format json | jq --argjson expected "$VAULT_INSTANCE_PRIVATE_IPS" -c '.Nodes | map(select(any(.; .active_node==false)) | .api_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")) as $followers | $expected - ($expected - $followers)'); then
-      # Make sure that we got all the followers
-      if jq --argjson expected "$VAULT_INSTANCE_PRIVATE_IPS" --argjson followers "$followers" -ne '$expected | length as $el | $followers | length as $fl | $fl == $el-1' > /dev/null; then
-        echo "$followers"
-        exit 0
+    if members=$($binpath operator members -format json); then
+      if followers=$(echo "$members" | jq --argjson expected "$VAULT_INSTANCE_PRIVATE_IPS" -c '.Nodes | map(select(any(.; .active_node==false)) | .api_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")) as $followers | $expected - ($expected - $followers)'); then
+        # Make sure that we got all the followers
+        if jq --argjson expected "$VAULT_INSTANCE_PRIVATE_IPS" --argjson followers "$followers" -ne '$expected | length as $el | $followers | length as $fl | $fl == $el-1' > /dev/null; then
+          echo "$followers"
+          exit 0
+        fi
       fi
     fi
   else

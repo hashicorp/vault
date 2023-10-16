@@ -24,29 +24,3 @@
     color: $black;
   }
 }
-
-.link-status {
-  height: 40px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: $size-7;
-  font-weight: $font-weight-semibold;
-
-  &.connected {
-    background-color: var(--token-color-surface-action);
-    color: var(--token-color-foreground-action-active);
-
-    a {
-      color: var(--token-color-foreground-action-active);
-    }
-  }
-  &.warning {
-    background-color: var(--token-color-surface-warning);
-    color: var(--token-color-palette-amber-300);
-
-    a {
-      color: var(--token-color-palette-amber-300);
-    }
-  }
-}

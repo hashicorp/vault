@@ -47,24 +47,21 @@
   <hr class="has-background-gray-200 has-top-margin-l" />
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
-    <button
+    <Hds::Button
+      @text="Save"
       data-test-config-save
-      class="button is-primary"
       type="submit"
       disabled={{or this.save.isRunning (not @model.schema)}}
       {{on "click" (perform this.save)}}
-    >
-      Save
-    </button>
-    <button
+    />
+    <Hds::Button
+      @text="Back"
+      @color="secondary"
+      class="has-left-margin-xs"
       data-test-config-cancel
-      class="button has-left-margin-xs"
-      type="button"
       disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
       {{on "click" this.cancel}}
-    >
-      Back
-    </button>
+    />
     {{#if this.invalidFormMessage}}
       <AlertInline
         @type="danger"
@@ -78,14 +75,11 @@
 </form>
 
 {{#if this.showRotatePrompt}}
-  <Modal
-    @title="Rotate your root password?"
-    @type="info"
-    @isActive={{this.showRotatePrompt}}
-    @showCloseButton={{true}}
-    @onClose={{fn (mut this.showRotatePrompt) false}}
-  >
-    <section class="modal-card-body">
+  <Hds::Modal id="ldap-rotate-password-modal" @onClose={{fn (mut this.showRotatePrompt) false}} as |M|>
+    <M.Header @icon="info">
+      Rotate your root password?
+    </M.Header>
+    <M.Body>
       <p>
         It’s best practice to rotate the administrator (root) password immediately after the initial configuration of the
         LDAP engine. The rotation will update the password both in Vault and your directory server. Once rotated,
@@ -95,19 +89,17 @@
       <p>
         Would you like to rotate your new credentials? You can also do this later.
       </p>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        data-test-save-with-rotate
-        type="button"
-        class="button is-primary"
-        {{on "click" (fn (perform this.save) null true)}}
-      >
-        Save and rotate
-      </button>
-      <button data-test-save-without-rotate type="button" class="button" {{on "click" (fn (perform this.save) null false)}}>
-        Save without rotating
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button data-test-save-with-rotate @text="Save and rotate" {{on "click" (fn (perform this.save) null true)}} />
+        <Hds::Button
+          data-test-save-without-rotate
+          @text="Save without rotating"
+          @color="secondary"
+          {{on "click" (fn (perform this.save) null false)}}
+        />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

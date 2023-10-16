@@ -39,7 +39,6 @@ export default Component.extend(DEFAULTS, {
   algorithm: 'sha2-256',
 
   tagName: '',
-  unwrapActiveTab: 'data',
 
   didReceiveAttrs() {
     this._super(...arguments);

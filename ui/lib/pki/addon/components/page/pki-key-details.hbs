@@ -19,14 +19,13 @@
     {{/if}}
     {{#if @key.privateKey}}
       <DownloadButton
-        class="toolbar-link"
+        class="toolbar-button"
+        @color="secondary"
         @filename="{{@key.backend}}-{{or @key.keyName 'private-key'}}"
         @data={{@key.privateKey}}
         @extension="pem"
-      >
-        Download private key
-        <Chevron @isButton={{true}} />
-      </DownloadButton>
+        @text="Download private key"
+      />
     {{/if}}
     {{#if @canEdit}}
       <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}} data-test-pki-key-edit>

@@ -432,7 +432,7 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom(SELECTORS.issuerDetails.configure)
         .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
       await click(SELECTORS.issuerDetails.rotateRoot);
-      assert.dom(find(SELECTORS.issuerDetails.rotateModal).parentElement).hasClass('is-active');
+      assert.dom(SELECTORS.issuerDetails.rotateModal).exists('rotate root modal opens');
       await click(SELECTORS.issuerDetails.rotateModalGenerate);
       assert.strictEqual(
         currentURL(),
