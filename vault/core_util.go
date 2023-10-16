@@ -75,11 +75,11 @@ func (c *Core) EnableUndoLogs()                  {}
 func (c *Core) PersistUndoLogs() error           { return nil }
 
 func (c *Core) teardownReplicationResolverHandler() {}
-func createSecondaries(*Core, *CoreConfig)          {}
+func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
+func (c *Core) addExtraLogicalBackends(_ string) {}
 
-func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
+func (c *Core) addExtraCredentialBackends() {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }
 
