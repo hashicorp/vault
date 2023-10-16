@@ -84,7 +84,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // URL correct
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'visits list-directory of root'
       );
 
@@ -125,7 +125,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F${subdirectory}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
@@ -136,7 +136,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
       assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -253,7 +253,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('no ghost item after editing metadata', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/edge/directory`);
+    await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
     await click(PAGE.list.item('two'));
     await click(PAGE.secretTab('Metadata'));

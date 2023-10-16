@@ -383,6 +383,7 @@ a.button.disabled {
 // Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
 .hds-button {
   font-weight: $font-weight-semibold; // TODO consult design on font weight after button class audit
+  display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
     color: $black;
@@ -391,7 +392,6 @@ a.button.disabled {
     box-shadow: none;
     &:hover:not(.disabled) {
       background-color: $ui-gray-100;
-      border: 0;
       color: $blue;
     }
   }
