@@ -4,8 +4,6 @@
 package cache
 
 import (
-	"context"
-	"encoding/hex"
 	"testing"
 	"time"
 
@@ -13,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/require"
 )
@@ -254,11 +251,7 @@ func TestSubmitWorkNoOp(t *testing.T) {
 	index := &cachememdb.CapabilitiesIndex{
 		ID: "test",
 	}
-	pj := &PollingJob{
-		index: index,
-		ctx:   context.Background(),
-	}
-	sscm.StartRenewing(pj)
+	sscm.StartRenewingCapabilities(index)
 
 	// Wait for the job to complete...
 	time.Sleep(1 * time.Second)
@@ -283,7 +276,7 @@ func TestSubmitWorkUpdatesIndex(t *testing.T) {
 	secret, err := client.Auth().Token().CreateOrphan(tokenCreateRequest)
 	require.NoError(t, err)
 	token := secret.Auth.ClientToken
-	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexId := hashStaticSecretIndex(token)
 
 	sscm := testNewStaticSecretCapabilityManager(t, client)
 	index := &cachememdb.CapabilitiesIndex{
@@ -299,11 +292,7 @@ func TestSubmitWorkUpdatesIndex(t *testing.T) {
 	err = sscm.leaseCache.db.SetCapabilitiesIndex(index)
 	require.Nil(t, err)
 
-	pj := &PollingJob{
-		index: index,
-		ctx:   context.Background(),
-	}
-	sscm.StartRenewing(pj)
+	sscm.StartRenewingCapabilities(index)
 
 	// Wait for the job to complete at least once...
 	time.Sleep(3 * time.Second)
@@ -326,7 +315,7 @@ func TestSubmitWorkUpdatesIndexWithBadToken(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	token := "not real token"
-	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexId := hashStaticSecretIndex(token)
 
 	sscm := testNewStaticSecretCapabilityManager(t, client)
 	index := &cachememdb.CapabilitiesIndex{
@@ -340,11 +329,7 @@ func TestSubmitWorkUpdatesIndexWithBadToken(t *testing.T) {
 	err := sscm.leaseCache.db.SetCapabilitiesIndex(index)
 	require.Nil(t, err)
 
-	pj := &PollingJob{
-		index: index,
-		ctx:   context.Background(),
-	}
-	sscm.StartRenewing(pj)
+	sscm.StartRenewingCapabilities(index)
 
 	// Wait for the job to complete at least once...
 	time.Sleep(3 * time.Second)
@@ -377,7 +362,7 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 	secret, err := client.Auth().Token().CreateOrphan(tokenCreateRequest)
 	require.NoError(t, err)
 	token := secret.Auth.ClientToken
-	indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(token))
+	indexId := hashStaticSecretIndex(token)
 
 	sscm := testNewStaticSecretCapabilityManager(t, client)
 	index := &cachememdb.CapabilitiesIndex{
@@ -393,7 +378,7 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 	err = sscm.leaseCache.db.SetCapabilitiesIndex(index)
 	require.Nil(t, err)
 
-	pathIndexId1 := hex.EncodeToString(cryptoutil.Blake2b256Hash("foo/bar"))
+	pathIndexId1 := hashStaticSecretIndex("foo/bar")
 	pathIndex1 := &cachememdb.Index{
 		ID:        pathIndexId1,
 		Namespace: "root/",
@@ -404,7 +389,7 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 		Response:    []byte{},
 	}
 
-	pathIndexId2 := hex.EncodeToString(cryptoutil.Blake2b256Hash("auth/token/lookup-self"))
+	pathIndexId2 := hashStaticSecretIndex("auth/token/lookup-self")
 	pathIndex2 := &cachememdb.Index{
 		ID:        pathIndexId2,
 		Namespace: "root/",
@@ -421,11 +406,7 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 	err = sscm.leaseCache.db.Set(pathIndex2)
 	require.Nil(t, err)
 
-	pj := &PollingJob{
-		index: index,
-		ctx:   context.Background(),
-	}
-	sscm.StartRenewing(pj)
+	sscm.StartRenewingCapabilities(index)
 
 	// Wait for the job to complete at least once...
 	time.Sleep(1 * time.Second)

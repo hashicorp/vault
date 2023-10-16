@@ -102,6 +102,10 @@ type LeaseCache struct {
 	// cacheStaticSecrets is used to determine if the cache should also
 	// cache static secrets, as well as dynamic secrets.
 	cacheStaticSecrets bool
+
+	// capabilityManager is used when static secrets are enabled to
+	// manage the capabilities of cached tokens.
+	capabilityManager *StaticSecretCapabilityManager
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -168,9 +172,21 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}, nil
 }
 
+// SetCapabilityManager is a setter for the shuttingDown field
+func (c *LeaseCache) SetCapabilityManager(capabilityManager *StaticSecretCapabilityManager) {
+	c.capabilityManager = capabilityManager
+}
+
 // SetShuttingDown is a setter for the shuttingDown field
 func (c *LeaseCache) SetShuttingDown(in bool) {
 	c.shuttingDown.Store(in)
+
+	// Since we're shutting down, also stop the capability manager's jobs.
+	// We can do this forcibly since no there's no reason to update
+	// the cache when we're shutting down.
+	if c.capabilityManager != nil {
+		c.capabilityManager.Stop()
+	}
 }
 
 // SetPersistentStorage is a setter for the persistent storage field in
@@ -628,7 +644,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
-	capabilitiesIndex, err := c.retrieveOrCreateTokenCapabilitiesEntry(req.Token)
+	capabilitiesIndex, created, err := c.retrieveOrCreateTokenCapabilitiesEntry(req.Token)
 	if err != nil {
 		c.logger.Error("failed to cache the proxied response", "error", err)
 		return err
@@ -650,21 +666,29 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 		return err
 	}
 
+	// Lastly, ensure that we start renewing this index, if it's  new.
+	// We require the 'created' check so that we don't renew the same
+	// index multiple times.
+	if c.capabilityManager != nil && created {
+		c.capabilityManager.StartRenewingCapabilities(capabilitiesIndex)
+	}
+
 	return nil
 }
 
 // retrieveOrCreateTokenCapabilitiesEntry will either retrieve the token
 // capabilities entry from the cache, or create a new, empty one.
-func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.CapabilitiesIndex, error) {
+// The bool represents if a new token capability has been created.
+func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cachememdb.CapabilitiesIndex, bool, error) {
 	// The index ID is a hash of the token.
 	indexId := hashStaticSecretIndex(token)
 	indexFromCache, err := c.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexId)
 	if err != nil && err != cachememdb.ErrCacheItemNotFound {
-		return nil, err
+		return nil, false, err
 	}
 
 	if indexFromCache != nil {
-		return indexFromCache, nil
+		return indexFromCache, false, nil
 	}
 
 	// Build the index to cache based on the response received
@@ -674,7 +698,7 @@ func (c *LeaseCache) retrieveOrCreateTokenCapabilitiesEntry(token string) (*cach
 		ReadablePaths: make(map[string]struct{}),
 	}
 
-	return index, nil
+	return index, true, nil
 }
 
 func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo {
@@ -1300,6 +1324,8 @@ func (c *LeaseCache) Flush() error {
 // Restore loads the cachememdb from the persistent storage passed in. Loads
 // tokens first, since restoring a lease's renewal context and watcher requires
 // looking up the token in the cachememdb.
+// Restore also restarts any capability management for managed static secret
+// tokens.
 func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStorage) error {
 	var errs *multierror.Error
 
@@ -1347,6 +1373,8 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 			c.logger.Trace("restored lease", "id", newIndex.ID, "path", newIndex.RequestPath)
 		}
 	}
+
+	// TODO Violet: Also add work for each static secret capability token
 
 	return errs.ErrorOrNil()
 }

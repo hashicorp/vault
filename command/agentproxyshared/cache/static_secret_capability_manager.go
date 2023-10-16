@@ -4,8 +4,6 @@
 package cache
 
 import (
-	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -16,7 +14,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/exp/maps"
 )
@@ -83,13 +80,6 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 	}, nil
 }
 
-type PollingJob struct {
-	ctx context.Context
-	// index is the index of the cache entry of the permissions we want
-	// to check and keep up to date
-	index *cachememdb.CapabilitiesIndex
-}
-
 // submitWorkToPoolAfterInterval submits work to the pool after the defined
 // staticSecretTokenCapabilityRefreshInterval
 func (sscm *StaticSecretCapabilityManager) submitWorkToPoolAfterInterval(work func()) {
@@ -100,8 +90,15 @@ func (sscm *StaticSecretCapabilityManager) submitWorkToPoolAfterInterval(work fu
 	})
 }
 
-// StartRenewing takes a polling job and submits a constant renewal to the worker pool.
-func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
+// Stop stops all ongoing jobs and ensures future jobs will not
+// get added to the worker pool.
+func (sscm *StaticSecretCapabilityManager) Stop() {
+	sscm.workerPool.Stop()
+}
+
+// StartRenewingCapabilities takes a polling job and submits a constant renewal of capabilities to the worker pool.
+// the indexToRenew is the capabilities index we'll renew the capabilities for.
+func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRenew *cachememdb.CapabilitiesIndex) {
 	var work func()
 	work = func() {
 		if sscm.workerPool.Stopped() {
@@ -109,14 +106,14 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 			return
 		}
 
-		capabilitiesIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
+		capabilitiesIndex, err := sscm.leaseCache.db.GetCapabilitiesIndex(cachememdb.IndexNameID, indexToRenew.ID)
 		if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 			// This cache entry no longer exists, so there is no more work to do.
 			sscm.logger.Trace("cache item not found for capabilities refresh, stopping the process")
 			return
 		}
 		if err != nil {
-			sscm.logger.Error("error when attempting to get capabilities index to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.logger.Error("error when attempting to get capabilities index to refresh token capabilities", "indexToRenew.ID", indexToRenew.ID, "err", err)
 			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
@@ -129,7 +126,7 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 
 		client, err := sscm.client.Clone()
 		if err != nil {
-			sscm.logger.Error("error when attempting clone client to refresh token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.logger.Error("error when attempting clone client to refresh token capabilities", "indexToRenew.ID", indexToRenew.ID, "err", err)
 			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
@@ -138,14 +135,14 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 
 		capabilities, err := getCapabilities(indexReadablePaths, client)
 		if err != nil {
-			sscm.logger.Error("error when attempting to retrieve updated token capabilities", "index.ID", pj.index.ID, "err", err)
+			sscm.logger.Error("error when attempting to retrieve updated token capabilities", "indexToRenew.ID", indexToRenew.ID, "err", err)
 			sscm.submitWorkToPoolAfterInterval(work)
 			return
 		}
 
 		newReadablePaths := reconcileCapabilities(indexReadablePaths, capabilities)
 		if maps.Equal(indexReadablePathsMap, newReadablePaths) {
-			sscm.logger.Trace("capabilities were the same for index, nothing to do", "index.ID", pj.index.ID)
+			sscm.logger.Trace("capabilities were the same for index, nothing to do", "indexToRenew.ID", indexToRenew.ID)
 			// there's nothing to update!
 			sscm.submitWorkToPoolAfterInterval(work)
 			return
@@ -158,15 +155,14 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 			// we must delete it from the tokens map for its corresponding
 			// path index.
 			if _, ok := newReadablePaths[path]; !ok {
-				// TODO: replace with hashStaticSecretIndex(path)
-				indexId := hex.EncodeToString(cryptoutil.Blake2b256Hash(path))
+				indexId := hashStaticSecretIndex(path)
 				index, err := sscm.leaseCache.db.Get(cachememdb.IndexNameID, indexId)
 				if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
 					// Nothing to update!
 					continue
 				}
 				if err != nil {
-					sscm.logger.Error("error when attempting to update corresponding paths for capabilities index", "index.ID", pj.index.ID, "err", err)
+					sscm.logger.Error("error when attempting to update corresponding paths for capabilities index", "indexToRenew.ID", indexToRenew.ID, "err", err)
 					sscm.submitWorkToPoolAfterInterval(work)
 					return
 				}
@@ -185,9 +181,9 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 		capabilitiesIndex.IndexLock.Lock()
 		defer capabilitiesIndex.IndexLock.Unlock()
 		if len(newReadablePaths) == 0 {
-			err := sscm.leaseCache.db.EvictCapabilitiesIndex(cachememdb.IndexNameID, pj.index.ID)
+			err := sscm.leaseCache.db.EvictCapabilitiesIndex(cachememdb.IndexNameID, indexToRenew.ID)
 			if err != nil {
-				sscm.logger.Error("error when attempting to evict capabilities from cache", "index.ID", pj.index.ID, "err", err)
+				sscm.logger.Error("error when attempting to evict capabilities from cache", "index.ID", indexToRenew.ID, "err", err)
 				sscm.submitWorkToPoolAfterInterval(work)
 				return
 			}
@@ -199,7 +195,7 @@ func (sscm *StaticSecretCapabilityManager) StartRenewing(pj *PollingJob) {
 		capabilitiesIndex.ReadablePaths = newReadablePaths
 		err = sscm.leaseCache.db.SetCapabilitiesIndex(capabilitiesIndex)
 		if err != nil {
-			sscm.logger.Error("error when attempting to update capabilities from cache", "index.ID", pj.index.ID, "err", err)
+			sscm.logger.Error("error when attempting to update capabilities from cache", "index.ID", indexToRenew.ID, "err", err)
 		}
 
 		// Finally, put ourselves back on the work pool after
