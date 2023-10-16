@@ -64,7 +64,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	err = b.createCredential(ctx, storage, cfg, true)
 	if err != nil {
 		// put it back in the queue with a backoff
-		item.Priority = time.Now().Add(cfg.RotationPeriod).Unix()
+		item.Priority = time.Now().Add(10 * time.Second).Unix()
 		err = b.credRotationQueue.Push(item)
 		if err != nil {
 			return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
