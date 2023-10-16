@@ -22,6 +22,14 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
+const (
+	TCP  ListenerType = "tcp"
+	Unix ListenerType = "unix"
+)
+
+// ListenerType represents the supported types of listener.
+type ListenerType string
+
 type ListenerTelemetry struct {
 	UnusedKeys                      UnusedKeyMap `hcl:",unusedKeyPositions"`
 	UnauthenticatedMetricsAccess    bool         `hcl:"-"`
@@ -45,7 +53,7 @@ type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
 	RawConfig  map[string]interface{}
 
-	Type       string
+	Type       ListenerType
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
 	Role       string      `hcl:"role"`
@@ -131,6 +139,10 @@ type Listener struct {
 	RedactClusterName    bool `hcl:"-"`
 	RedactVersionRaw     any  `hcl:"redact_version"`
 	RedactVersion        bool `hcl:"-"`
+
+	// DisableReplicationStatusEndpoint disables the unauthenticated replication status endpoints
+	DisableReplicationStatusEndpointsRaw interface{} `hcl:"disable_replication_status_endpoints"`
+	DisableReplicationStatusEndpoints    bool        `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -244,6 +256,7 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseHTTPHeaderSettings,
 		l.parseChrootNamespaceSettings,
 		l.parseRedactionSettings,
+		l.parseDisableReplicationStatusEndpointSettings,
 	} {
 		err := parser()
 		if err != nil {
@@ -254,22 +267,124 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 	return l, nil
 }
 
+// Normalize returns the lower case string version of a listener type.
+func (t ListenerType) Normalize() ListenerType {
+	return ListenerType(strings.ToLower(string(t)))
+}
+
+// String returns the string version of a listener type.
+func (t ListenerType) String() string {
+	return string(t.Normalize())
+}
+
+// parseAndClearBool parses a raw setting as a bool configuration parameter. If
+// the raw value is successfully parsed, the parsedSetting argument is set to it
+// and the rawSetting argument is cleared. Otherwise, the rawSetting argument is
+// left unchanged and an error is returned.
+func parseAndClearBool(rawSetting *interface{}, parsedSetting *bool) error {
+	var err error
+
+	if *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseBool(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
+// parseAndClearString parses a raw setting as a string configuration parameter.
+// If the raw value is successfully parsed, the parsedSetting argument is set to
+// it and the rawSetting argument is cleared. Otherwise, the rawSetting argument
+// is left unchanged and an error is returned.
+func parseAndClearString(rawSetting *interface{}, parsedSetting *string) error {
+	var err error
+
+	if *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseString(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
+// parseAndClearInt parses a raw setting as an integer configuration parameter.
+// If the raw value is successfully parsed, the parsedSetting argument is set to
+// it and the rawSetting argument is cleared. Otherwise, the rawSetting argument
+// is left unchanged and an error is returned.
+func parseAndClearInt(rawSetting *interface{}, parsedSetting *int64) error {
+	var err error
+
+	if *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseInt(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
+// parseAndClearDurationSecond parses a raw setting as a time duration
+// configuration parameter. If the raw value is successfully parsed, the
+// parsedSetting argument is set to it and the rawSetting argument is cleared.
+// Otherwise, the rawSetting argument is left unchanged and an error is
+// returned.
+func parseAndClearDurationSecond(rawSetting *interface{}, parsedSetting *time.Duration) error {
+	var err error
+
+	if *rawSetting != nil {
+		*parsedSetting, err = parseutil.ParseDurationSecond(*rawSetting)
+		if err != nil {
+			return err
+		}
+
+		*rawSetting = nil
+	}
+
+	return nil
+}
+
+// parseDisableReplicationStatusEndpointSettings attempts to parse the raw
+// disable_replication_status_endpoints setting. The receiving Listener's
+// DisableReplicationStatusEndpoints field will be set with the successfully
+// parsed value.
+func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
+	if l.Type != TCP {
+		return nil
+	}
+
+	if err := parseAndClearBool(&l.DisableReplicationStatusEndpointsRaw, &l.DisableReplicationStatusEndpoints); err != nil {
+		return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
+	}
+
+	return nil
+}
+
 // parseChrootNamespace attempts to parse the raw listener chroot namespace settings.
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseChrootNamespaceSettings() error {
-	var err error
+	var (
+		err     error
+		setting string
+	)
 
-	// If a valid ChrootNamespace value exists, then canonicalize the namespace value
-	if l.ChrootNamespaceRaw != nil {
-		l.ChrootNamespace, err = parseutil.ParseString(l.ChrootNamespaceRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for chroot_namespace: %w", err)
-		}
-		l.ChrootNamespace = namespace.Canonicalize(l.ChrootNamespace)
+	err = parseAndClearString(&l.ChrootNamespaceRaw, &setting)
+	if err != nil {
+		return fmt.Errorf("invalid value for chroot_namespace: %w", err)
 	}
 
-	l.ChrootNamespaceRaw = nil
+	l.ChrootNamespace = namespace.Canonicalize(setting)
 
 	return nil
 }
@@ -286,20 +401,21 @@ func (l *Listener) parseType(fallback string) error {
 	}
 
 	// Use type if available, otherwise fall back.
-	result := l.Type
-	if result == "" {
-		result = fallback
+	rawType := l.Type
+	if rawType == "" {
+		rawType = ListenerType(fallback)
 	}
-	result = strings.ToLower(result)
+
+	parsedType := rawType.Normalize()
 
 	// Sanity check the values
-	switch result {
-	case "tcp", "unix":
+	switch parsedType {
+	case TCP, Unix:
 	default:
-		return fmt.Errorf("unsupported listener type %q", result)
+		return fmt.Errorf("unsupported listener type %q", parsedType)
 	}
 
-	l.Type = result
+	l.Type = parsedType
 
 	return nil
 }
@@ -308,13 +424,8 @@ func (l *Listener) parseType(fallback string) error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseRequestSettings() error {
-	if l.MaxRequestSizeRaw != nil {
-		maxRequestSize, err := parseutil.ParseInt(l.MaxRequestSizeRaw)
-		if err != nil {
-			return fmt.Errorf("error parsing max_request_size: %w", err)
-		}
-
-		l.MaxRequestSize = maxRequestSize
+	if err := parseAndClearInt(&l.MaxRequestSizeRaw, &l.MaxRequestSize); err != nil {
+		return fmt.Errorf("error parsing max_request_size: %w", err)
 	}
 
 	if l.MaxRequestDurationRaw != nil {
@@ -328,21 +439,12 @@ func (l *Listener) parseRequestSettings() error {
 		}
 
 		l.MaxRequestDuration = maxRequestDuration
+		l.MaxRequestDurationRaw = nil
 	}
 
-	if l.RequireRequestHeaderRaw != nil {
-		requireRequestHeader, err := parseutil.ParseBool(l.RequireRequestHeaderRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for require_request_header: %w", err)
-		}
-
-		l.RequireRequestHeader = requireRequestHeader
+	if err := parseAndClearBool(&l.RequireRequestHeaderRaw, &l.RequireRequestHeader); err != nil {
+		return fmt.Errorf("invalid value for require_request_header: %w", err)
 	}
-
-	// Clear raw values after successful parsing.
-	l.MaxRequestSizeRaw = nil
-	l.MaxRequestDurationRaw = nil
-	l.RequireRequestHeaderRaw = nil
 
 	return nil
 }
@@ -351,12 +453,8 @@ func (l *Listener) parseRequestSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseTLSSettings() error {
-	if l.TLSDisableRaw != nil {
-		tlsDisable, err := parseutil.ParseBool(l.TLSDisableRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_disable: %w", err)
-		}
-		l.TLSDisable = tlsDisable
+	if err := parseAndClearBool(&l.TLSDisableRaw, &l.TLSDisable); err != nil {
+		return fmt.Errorf("invalid value for tls_disable: %w", err)
 	}
 
 	if l.TLSCipherSuitesRaw != "" {
@@ -367,27 +465,16 @@ func (l *Listener) parseTLSSettings() error {
 		l.TLSCipherSuites = tlsCipherSuites
 	}
 
-	if l.TLSRequireAndVerifyClientCertRaw != nil {
-		tlsRequireAndVerifyClientCert, err := parseutil.ParseBool(l.TLSRequireAndVerifyClientCertRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_require_and_verify_client_cert: %w", err)
-		}
-		l.TLSRequireAndVerifyClientCert = tlsRequireAndVerifyClientCert
+	if err := parseAndClearBool(&l.TLSRequireAndVerifyClientCertRaw, &l.TLSRequireAndVerifyClientCert); err != nil {
+		return fmt.Errorf("invalid value for tls_require_and_verify_client_cert: %w", err)
 	}
 
-	if l.TLSDisableClientCertsRaw != nil {
-		tlsDisableClientCerts, err := parseutil.ParseBool(l.TLSDisableClientCertsRaw)
-		if err != nil {
-			return fmt.Errorf("invalid value for tls_disable_client_certs: %w", err)
-		}
-		l.TLSDisableClientCerts = tlsDisableClientCerts
+	if err := parseAndClearBool(&l.TLSDisableClientCertsRaw, &l.TLSDisableClientCerts); err != nil {
+		return fmt.Errorf("invalid value for tls_disable_client_certs: %w", err)
 	}
 
 	// Clear raw values after successful parsing.
-	l.TLSDisableRaw = nil
 	l.TLSCipherSuitesRaw = ""
-	l.TLSRequireAndVerifyClientCertRaw = nil
-	l.TLSDisableClientCertsRaw = nil
 
 	return nil
 }
@@ -396,6 +483,13 @@ func (l *Listener) parseTLSSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseHTTPHeaderSettings() error {
+	// Custom response headers are only supported by TCP listeners.
+	// Clear raw data and return early if it was something else.
+	if l.Type != TCP {
+		l.CustomResponseHeadersRaw = nil
+		return nil
+	}
+
 	// if CustomResponseHeadersRaw is nil, we still need to set the default headers
 	customHeadersMap, err := ParseCustomResponseHeaders(l.CustomResponseHeadersRaw)
 	if err != nil {
@@ -412,37 +506,21 @@ func (l *Listener) parseHTTPHeaderSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseHTTPTimeoutSettings() error {
-	var err error
-
-	if l.HTTPReadTimeoutRaw != nil {
-		if l.HTTPReadTimeout, err = parseutil.ParseDurationSecond(l.HTTPReadTimeoutRaw); err != nil {
-			return fmt.Errorf("error parsing http_read_timeout: %w", err)
-		}
+	if err := parseAndClearDurationSecond(&l.HTTPReadTimeoutRaw, &l.HTTPReadTimeout); err != nil {
+		return fmt.Errorf("error parsing http_read_timeout: %w", err)
 	}
 
-	if l.HTTPReadHeaderTimeoutRaw != nil {
-		if l.HTTPReadHeaderTimeout, err = parseutil.ParseDurationSecond(l.HTTPReadHeaderTimeoutRaw); err != nil {
-			return fmt.Errorf("error parsing http_read_header_timeout: %w", err)
-		}
+	if err := parseAndClearDurationSecond(&l.HTTPReadHeaderTimeoutRaw, &l.HTTPReadHeaderTimeout); err != nil {
+		return fmt.Errorf("error parsing http_read_header_timeout: %w", err)
 	}
 
-	if l.HTTPWriteTimeoutRaw != nil {
-		if l.HTTPWriteTimeout, err = parseutil.ParseDurationSecond(l.HTTPWriteTimeoutRaw); err != nil {
-			return fmt.Errorf("error parsing http_write_timeout: %w", err)
-		}
+	if err := parseAndClearDurationSecond(&l.HTTPWriteTimeoutRaw, &l.HTTPWriteTimeout); err != nil {
+		return fmt.Errorf("error parsing http_write_timeout: %w", err)
 	}
 
-	if l.HTTPIdleTimeoutRaw != nil {
-		if l.HTTPIdleTimeout, err = parseutil.ParseDurationSecond(l.HTTPIdleTimeoutRaw); err != nil {
-			return fmt.Errorf("error parsing http_idle_timeout: %w", err)
-		}
+	if err := parseAndClearDurationSecond(&l.HTTPIdleTimeoutRaw, &l.HTTPIdleTimeout); err != nil {
+		return fmt.Errorf("error parsing http_idle_timeout: %w", err)
 	}
-
-	// Clear raw values after successful parsing.
-	l.HTTPReadTimeoutRaw = nil
-	l.HTTPReadHeaderTimeoutRaw = nil
-	l.HTTPWriteTimeoutRaw = nil
-	l.HTTPIdleTimeoutRaw = nil
 
 	return nil
 }
@@ -498,25 +576,20 @@ func (l *Listener) parseForwardedForSettings() error {
 		if l.XForwardedForHopSkips < 0 {
 			return fmt.Errorf("x_forwarded_for_hop_skips cannot be negative but set to %d", l.XForwardedForHopSkips)
 		}
+
+		l.XForwardedForHopSkipsRaw = nil
 	}
 
-	if l.XForwardedForRejectNotAuthorizedRaw != nil {
-		if l.XForwardedForRejectNotAuthorized, err = parseutil.ParseBool(l.XForwardedForRejectNotAuthorizedRaw); err != nil {
-			return fmt.Errorf("invalid value for x_forwarded_for_reject_not_authorized: %w", err)
-		}
+	if err := parseAndClearBool(&l.XForwardedForRejectNotAuthorizedRaw, &l.XForwardedForRejectNotAuthorized); err != nil {
+		return fmt.Errorf("invalid value for x_forwarded_for_reject_not_authorized: %w", err)
 	}
 
-	if l.XForwardedForRejectNotPresentRaw != nil {
-		if l.XForwardedForRejectNotPresent, err = parseutil.ParseBool(l.XForwardedForRejectNotPresentRaw); err != nil {
-			return fmt.Errorf("invalid value for x_forwarded_for_reject_not_present: %w", err)
-		}
+	if err := parseAndClearBool(&l.XForwardedForRejectNotPresentRaw, &l.XForwardedForRejectNotPresent); err != nil {
+		return fmt.Errorf("invalid value for x_forwarded_for_reject_not_present: %w", err)
 	}
 
 	// Clear raw values after successful parsing.
 	l.XForwardedForAuthorizedAddrsRaw = nil
-	l.XForwardedForHopSkipsRaw = nil
-	l.XForwardedForRejectNotAuthorizedRaw = nil
-	l.XForwardedForRejectNotPresentRaw = nil
 
 	return nil
 }
@@ -525,15 +598,9 @@ func (l *Listener) parseForwardedForSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseTelemetrySettings() error {
-	var err error
-
-	if l.Telemetry.UnauthenticatedMetricsAccessRaw != nil {
-		if l.Telemetry.UnauthenticatedMetricsAccess, err = parseutil.ParseBool(l.Telemetry.UnauthenticatedMetricsAccessRaw); err != nil {
-			return fmt.Errorf("invalid value for telemetry.unauthenticated_metrics_access: %w", err)
-		}
+	if err := parseAndClearBool(&l.Telemetry.UnauthenticatedMetricsAccessRaw, &l.Telemetry.UnauthenticatedMetricsAccess); err != nil {
+		return fmt.Errorf("invalid value for telemetry.unauthenticated_metrics_access: %w", err)
 	}
-
-	l.Telemetry.UnauthenticatedMetricsAccessRaw = nil
 
 	return nil
 }
@@ -542,15 +609,9 @@ func (l *Listener) parseTelemetrySettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseProfilingSettings() error {
-	var err error
-
-	if l.Profiling.UnauthenticatedPProfAccessRaw != nil {
-		if l.Profiling.UnauthenticatedPProfAccess, err = parseutil.ParseBool(l.Profiling.UnauthenticatedPProfAccessRaw); err != nil {
-			return fmt.Errorf("invalid value for profiling.unauthenticated_pprof_access: %w", err)
-		}
+	if err := parseAndClearBool(&l.Profiling.UnauthenticatedPProfAccessRaw, &l.Profiling.UnauthenticatedPProfAccess); err != nil {
+		return fmt.Errorf("invalid value for profiling.unauthenticated_pprof_access: %w", err)
 	}
-
-	l.Profiling.UnauthenticatedPProfAccessRaw = nil
 
 	return nil
 }
@@ -559,15 +620,9 @@ func (l *Listener) parseProfilingSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseInFlightRequestSettings() error {
-	var err error
-
-	if l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw != nil {
-		if l.InFlightRequestLogging.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw); err != nil {
-			return fmt.Errorf("invalid value for inflight_requests_logging.unauthenticated_in_flight_requests_access: %w", err)
-		}
+	if err := parseAndClearBool(&l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw, &l.InFlightRequestLogging.UnauthenticatedInFlightAccess); err != nil {
+		return fmt.Errorf("invalid value for inflight_requests_logging.unauthenticated_in_flight_requests_access: %w", err)
 	}
-
-	l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw = nil
 
 	return nil
 }
@@ -576,12 +631,8 @@ func (l *Listener) parseInFlightRequestSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseCORSSettings() error {
-	var err error
-
-	if l.CorsEnabledRaw != nil {
-		if l.CorsEnabled, err = parseutil.ParseBool(l.CorsEnabledRaw); err != nil {
-			return fmt.Errorf("invalid value for cors_enabled: %w", err)
-		}
+	if err := parseAndClearBool(&l.CorsEnabledRaw, &l.CorsEnabled); err != nil {
+		return fmt.Errorf("invalid value for cors_enabled: %w", err)
 	}
 
 	if strutil.StrListContains(l.CorsAllowedOrigins, "*") && len(l.CorsAllowedOrigins) > 1 {
@@ -594,7 +645,6 @@ func (l *Listener) parseCORSSettings() error {
 		}
 	}
 
-	l.CorsEnabledRaw = nil
 	l.CorsAllowedHeadersRaw = nil
 
 	return nil
@@ -604,6 +654,16 @@ func (l *Listener) parseCORSSettings() error {
 // The state of the listener will be modified, raw data will be cleared upon
 // successful parsing.
 func (l *Listener) parseRedactionSettings() error {
+	// Redaction is only supported on TCP listeners.
+	// Clear raw data and return early if it was something else.
+	if l.Type != TCP {
+		l.RedactAddressesRaw = nil
+		l.RedactClusterNameRaw = nil
+		l.RedactVersionRaw = nil
+
+		return nil
+	}
+
 	var err error
 
 	if l.RedactAddressesRaw != nil {

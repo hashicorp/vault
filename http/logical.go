@@ -446,7 +446,7 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 		}
 	}
 
-	adjustResponse(core, w, req)
+	entAdjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)
