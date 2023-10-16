@@ -96,6 +96,11 @@ export default class App extends Application {
         },
       },
     },
+    sync: {
+      dependencies: {
+        services: ['router', 'store', 'flash-messages'],
+      },
+    },
   };
 }
 
