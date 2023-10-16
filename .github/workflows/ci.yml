@@ -247,19 +247,20 @@ jobs:
           make ci-bootstrap dev
       - id: test-ui
         name: test-ui
+        if: github.repository == 'hashicorp/vault-enterprise'
         env:
           VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
         run: |
           export PATH="${PWD}/bin:${PATH}"
-
-          if [ "${{ github.repository }}" == 'hashicorp/vault' ] ; then
-            export VAULT_LICENSE="${{ secrets.VAULT_LICENSE }}"
-          fi
-
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
-          yarn test:oss
+          yarn test
+      - id: test-ui-oss
+        if: github.repository == 'hashicorp/vault'
+        name: test-ui-oss
+        run: |
+          export PATH="${PWD}/bin:${PATH}"
       - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: test-results-ui
