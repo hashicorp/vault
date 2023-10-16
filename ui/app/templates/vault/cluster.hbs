@@ -11,7 +11,7 @@
     />
   {{/if}}
   {{#if this.permissionReadFailed}}
-    <ResultantAclBanner @isEnterprise={{not this.activeCluster.version.isEnterprise}} />
+    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} />
   {{/if}}
 </div>
 <div class="global-flash">
