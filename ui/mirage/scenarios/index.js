@@ -1,4 +1,5 @@
 import kubernetes from './kubernetes';
 import ldap from './ldap';
+import sync from './sync';
 
-export { kubernetes, ldap };
+export { kubernetes, ldap, sync };
