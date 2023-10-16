@@ -557,7 +557,7 @@ func (r *awsRoleEntry) validate() error {
 		}
 	}
 
-	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred)  && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) && !strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
 		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s, %s, and %s credential types", assumedRoleCred, federationTokenCred, sessionTokenCred))
 	}
 
@@ -587,6 +587,11 @@ func (r *awsRoleEntry) validate() error {
 		if err := validateAWSManagedPolicy(r.PermissionsBoundaryARN); err != nil {
 			errors = multierror.Append(fmt.Errorf("invalid permissions_boundary_arn parameter: %v", err))
 		}
+	}
+
+	if (r.PolicyDocument != "" || len(r.PolicyArns) != 0 || len(r.RoleArns) != 0) &&
+		strutil.StrListContains(r.CredentialTypes, sessionTokenCred) {
+		errors = multierror.Append(errors, fmt.Errorf("cannot supply a policy or role when using credential_type %s", sessionTokenCred))
 	}
 
 	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
