@@ -22,8 +22,14 @@ module('Unit | Adapter | sync/destinations', function (hooks) {
 
     for (const type of destinationTypes) {
       this.server.get(`sys/sync/destinations/${type}/my-dest`, () => {
-        assert.ok(true, `request is made to GET destinations/${type} endpoint on find`);
-        return { data: { name: 'my-dest' } };
+        assert.ok(true, `request is made to GET sys/sync/destinations/${type}/my-dest endpoint on find`);
+        return {
+          data: {
+            connection_details: {},
+            name: 'my-dest',
+            type,
+          },
+        };
       });
       this.store.findRecord(`sync/destinations/${type}`, 'my-dest');
     }
