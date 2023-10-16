@@ -4981,13 +4981,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:^2.12.2":
-  version: 2.12.2
-  resolution: "@hashicorp/design-system-components@npm:2.12.2"
+"@hashicorp/design-system-components@npm:^2.13.0":
+  version: 2.13.0
+  resolution: "@hashicorp/design-system-components@npm:2.13.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@ember/test-waiters": ^3.0.2
-    "@hashicorp/design-system-tokens": ^1.8.0
+    "@hashicorp/design-system-tokens": ^1.9.0
     "@hashicorp/ember-flight-icons": ^3.1.3
     dialog-polyfill: ^0.5.6
     ember-a11y-refocus: ^3.0.2
@@ -5005,14 +5005,14 @@ __metadata:
     ember-truth-helpers: ^3.1.1
     sass: ^1.62.1
     tippy.js: ^6.3.7
-  checksum: 064f54a290523c8421a9f5a9e52f5f88f6a8e88fe457216e5a30a4b27393c339ca9e886c7aeeb55c535badd4d0615096a1ed204beaca7f576eec4281cd71f43f
+  checksum: 20171b9c3f581214b36205a7a0f5b4a1e37866058a7bfd9d07d51269bcf413da551bcd0738a248de881671e918a32717ebbfd8bedb7534b11de96b5284e3beb9
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-tokens@npm:^1.8.0":
-  version: 1.8.0
-  resolution: "@hashicorp/design-system-tokens@npm:1.8.0"
-  checksum: 9cc65907defb1bb6e2d91a9f8c778d592c9aa391b186e38bbf14353b532fee2f018fd53138b514360eea857f440efb870ac1b264b56efc7a4766bd55ca83b5a8
+"@hashicorp/design-system-tokens@npm:^1.9.0":
+  version: 1.9.0
+  resolution: "@hashicorp/design-system-tokens@npm:1.9.0"
+  checksum: 72da214205dfca9e49726745e18f8a19674d36d656bd2e4ff3fec42b2ce06fbbba0ad673e6ec2333128e1b9bf67bfac2e4dd792ea37a1534a5040e6a4481855e
   languageName: node
   linkType: hard
 
@@ -25905,7 +25905,7 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": ^2.12.2
+    "@hashicorp/design-system-components": ^2.13.0
     "@hashicorp/ember-flight-icons": ^3.1.3
     "@hashicorp/structure-icons": ^1.3.0
     "@icholy/duration": ^5.1.0

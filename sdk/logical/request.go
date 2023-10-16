@@ -453,3 +453,33 @@ type CtxKeyRequestRole struct{}
 func (c CtxKeyRequestRole) String() string {
 	return "request-role"
 }
+
+// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// context.Context to store the value `true` when the
+// disable_replication_status_endpoints configuration parameter is set to true
+// for the listener through which a request was received.
+type CtxKeyDisableReplicationStatusEndpoints struct{}
+
+// String returns a string representation of the receiver type.
+func (c CtxKeyDisableReplicationStatusEndpoints) String() string {
+	return "disable-replication-status-endpoints"
+}
+
+// CtxKeyMaxRequestSize is a custom type used as a key in context.Context to
+// store the value of the max_request_size set for the listener through which
+// a request was received.
+type CtxKeyMaxRequestSize struct{}
+
+// String returns a string representation of the receiver type.
+func (c CtxKeyMaxRequestSize) String() string {
+	return "max_request_size"
+}
+
+// CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
+// to store the original request path.
+type CtxKeyOriginalRequestPath struct{}
+
+// String returns a string representation of the receiver type.
+func (c CtxKeyOriginalRequestPath) String() string {
+	return "original_request_path"
+}

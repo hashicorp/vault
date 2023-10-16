@@ -86,14 +86,13 @@
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <button
+        <Hds::Button
+          @text={{this.saveButtonText}}
+          @icon={{if this.save.isRunning "loading"}}
           type="submit"
           data-test-edit-form-submit
-          class="button is-primary {{if this.save.isRunning 'loading'}}"
           disabled={{this.save.isRunning}}
-        >
-          {{this.saveButtonText}}
-        </button>
+        />
       </div>
       {{#if this.cancelLink}}
         <div class="control">
