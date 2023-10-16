@@ -660,7 +660,7 @@ func (c *LeaseCache) storeStaticSecretIndex(ctx context.Context, req *SendReques
 	// update the index with the new capability:
 	capabilitiesIndex.ReadablePaths[path] = struct{}{}
 
-	err = c.db.SetCapabilitiesIndex(capabilitiesIndex)
+	err = c.SetCapabilitiesIndex(ctx, capabilitiesIndex)
 	if err != nil {
 		c.logger.Error("failed to cache token capabilities as part of caching the proxied response", "error", err)
 		return err
@@ -1290,6 +1290,28 @@ func (c *LeaseCache) Set(ctx context.Context, index *cachememdb.Index) error {
 	return nil
 }
 
+// SetCapabilitiesIndex stores the capabilities index in the cachememdb, and also stores it in the persistent
+// cache (if enabled)
+func (c *LeaseCache) SetCapabilitiesIndex(ctx context.Context, index *cachememdb.CapabilitiesIndex) error {
+	if err := c.db.SetCapabilitiesIndex(index); err != nil {
+		return err
+	}
+
+	if c.ps != nil {
+		plaintext, err := index.SerializeCapabilitiesIndex()
+		if err != nil {
+			return err
+		}
+
+		if err := c.ps.Set(ctx, index.ID, plaintext, cacheboltdb.TokenCapabilitiesType); err != nil {
+			return err
+		}
+		c.logger.Trace("set entry in persistent storage", "type", cacheboltdb.TokenCapabilitiesType, "id", index.ID)
+	}
+
+	return nil
+}
+
 // Evict removes an Index from the cachememdb, and also removes it from the
 // persistent cache (if enabled)
 func (c *LeaseCache) Evict(index *cachememdb.Index) error {
@@ -1374,7 +1396,50 @@ func (c *LeaseCache) Restore(ctx context.Context, storage *cacheboltdb.BoltStora
 		}
 	}
 
-	// TODO Violet: Also add work for each static secret capability token
+	// Then process static secrets and their capabilities
+	if c.cacheStaticSecrets {
+		staticSecrets, err := storage.GetByType(ctx, cacheboltdb.StaticSecretType)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		} else {
+			for _, staticSecret := range staticSecrets {
+				newIndex, err := cachememdb.Deserialize(staticSecret)
+				if err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+				c.logger.Trace("restoring static secret index", "id", newIndex.ID, "path", newIndex.RequestPath)
+				if err := c.db.Set(newIndex); err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+			}
+		}
+
+		capabilityIndexes, err := storage.GetByType(ctx, cacheboltdb.TokenCapabilitiesType)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		} else {
+			for _, capabilityIndex := range capabilityIndexes {
+				newIndex, err := cachememdb.DeserializeCapabilitiesIndex(capabilityIndex)
+				if err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+				c.logger.Trace("restoring capability index", "id", newIndex.ID)
+				if err := c.db.SetCapabilitiesIndex(newIndex); err != nil {
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+				if c.capabilityManager != nil {
+					c.capabilityManager.StartRenewingCapabilities(newIndex)
+				}
+			}
+		}
+	}
 
 	return errs.ErrorOrNil()
 }
