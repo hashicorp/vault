@@ -209,53 +209,50 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, info *SnapshotInfo, read int) {
-	if c.details {
-		if val.Key == "" {
-			return
-		}
-
-		// check for whether a filter is specified. if it is, skip
-		// any keys that don't match.
-		if len(c.filter) > 0 && !strings.HasPrefix(val.Key, c.filter) {
-			return
-		}
-
-		split := strings.Split(string(val.Key), "/")
-
-		// handle the situation where the key is shorter than
-		// the specified depth.
-		actualDepth := c.depth
-		if c.depth == 0 {
-			actualDepth = len(split)
-		} else if c.depth > len(split) {
-			actualDepth = len(split)
-		}
-
-		prefix := strings.Join(split[0:actualDepth], "/")
-		kvs := info.StatsKV[prefix]
-		if kvs.Name == "" {
-			kvs.Name = prefix
-		}
-
-		kvs.Count++
-		kvs.Size += read
-		info.TotalCountKV++
-		info.TotalSizeKV += read
-		info.StatsKV[prefix] = kvs
+	if !c.details {
+		return
 	}
+	// if c.details {
+	if val.Key == "" {
+		return
+	}
+
+	// check for whether a filter is specified. if it is, skip
+	// any keys that don't match.
+	if len(c.filter) > 0 && !strings.HasPrefix(val.Key, c.filter) {
+		return
+	}
+
+	// split := strings.Split(string(val.Key), "/")
+	split := strings.Split(val.Key, "/")
+
+	// handle the situation where the key is shorter than
+	// the specified depth.
+	actualDepth := c.depth
+	if c.depth == 0 || c.depth > len(split) {
+		actualDepth = len(split)
+	}
+
+	prefix := strings.Join(split[0:actualDepth], "/")
+	kvs := info.StatsKV[prefix]
+	if kvs.Name == "" {
+		kvs.Name = prefix
+	}
+
+	kvs.Count++
+	kvs.Size += read
+	info.TotalCountKV++
+	info.TotalSizeKV += read
+	info.StatsKV[prefix] = kvs
+	// }
 }
 
 // Read from snapshot's state.bin and update the SnapshotInfo struct
 func (c *OperatorRaftSnapshotInspectCommand) parseState(r io.Reader) (SnapshotInfo, error) {
 	info := SnapshotInfo{
-		StatsKV:      make(map[string]typeStats),
-		TotalCountKV: 0,
-		TotalSizeKV:  0,
+		StatsKV: make(map[string]typeStats),
 	}
-	handler := func(s *pb.StorageEntry, read int) error {
-		c.kvEnhance(s, &info, read)
-		return nil
-	}
+
 	protoReader := protoio.NewDelimitedReader(r, math.MaxInt32)
 
 	for {
@@ -267,7 +264,7 @@ func (c *OperatorRaftSnapshotInspectCommand) parseState(r io.Reader) (SnapshotIn
 			return info, err
 		}
 		size := protoReader.GetLastReadSize()
-		handler(s, size)
+		c.kvEnhance(s, &info, size)
 	}
 
 	return info, nil
