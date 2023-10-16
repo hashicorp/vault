@@ -10,7 +10,7 @@ export default buildRoutes(function () {
     this.route('overview');
     this.route('destinations', function () {
       this.route('create', function () {
-        this.route('destination');
+        this.route('destination', { path: '/:type' });
       });
       this.route('destination', { path: '/:type/:name' }, function () {
         this.route('edit');
