@@ -1380,6 +1380,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 		logicalBackends[k] = f
 	}
 
+	// KV
 	_, ok := logicalBackends[mountTypeKV]
 	if !ok {
 		logicalBackends[mountTypeKV] = kv.Factory
