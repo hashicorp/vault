@@ -248,12 +248,20 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		}
 		defer f.Close()
 
+		// This is a hack: the gen_openapi script contains a conditional block to
+		// enable the enterprise plugins, whose lines are indented.  Tweak the
+		// regexp to only include the indented lines on enterprise.
+		leading := "^"
+		if constants.IsEnterprise {
+			leading = "^ *"
+		}
+
 		var (
 			credentialBackends   []string
-			credentialBackendsRe = regexp.MustCompile(`^ *vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			credentialBackendsRe = regexp.MustCompile(leading + `vault auth enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 
 			secretsBackends   []string
-			secretsBackendsRe = regexp.MustCompile(`^ *vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
+			secretsBackendsRe = regexp.MustCompile(leading + `vault secrets enable (?:-.+ )*(?:"([a-zA-Z]+)"|([a-zA-Z]+))$`)
 		)
 
 		scanner := bufio.NewScanner(f)
@@ -288,11 +296,11 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 
 		deprecationStatus, ok := Registry.DeprecationStatus(name, pluginType)
 		if !ok {
-			t.Fatalf("%q %s backend is missing from registry.go; please remove it from gen_openapi.sh", name, pluginType)
+			t.Errorf("%q %s backend is missing from registry.go; please remove it from gen_openapi.sh", name, pluginType)
 		}
 
 		if deprecationStatus == consts.Removed {
-			t.Fatalf("%q %s backend is marked 'removed' in registry.go; please remove it from gen_openapi.sh", name, pluginType)
+			t.Errorf("%q %s backend is marked 'removed' in registry.go; please remove it from gen_openapi.sh", name, pluginType)
 		}
 	}
 
@@ -310,7 +318,7 @@ func Test_RegistryMatchesGenOpenapi(t *testing.T) {
 		}
 
 		if !slices.Contains(scriptBackends, name) {
-			t.Fatalf("%q backend could not be found in gen_openapi.sh, please add it there", name)
+			t.Errorf("%q backend could not be found in gen_openapi.sh, please add it there", name)
 		}
 	}
 
