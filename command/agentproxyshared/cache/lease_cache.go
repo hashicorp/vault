@@ -172,7 +172,8 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}, nil
 }
 
-// SetCapabilityManager is a setter for the shuttingDown field
+// SetCapabilityManager is a setter for CapabilityManager. If set, will manage capabilities
+// for capability indexes.
 func (c *LeaseCache) SetCapabilityManager(capabilityManager *StaticSecretCapabilityManager) {
 	c.capabilityManager = capabilityManager
 }
