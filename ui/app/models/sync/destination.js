@@ -12,6 +12,6 @@ export default class SyncDestinationModel extends Model {
   @attr type;
 
   get icon() {
-    return findDestination(this.type).icon;
+    return findDestination(this.type)?.icon;
   }
 }
