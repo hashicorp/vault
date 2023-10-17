@@ -65,7 +65,9 @@
       {{/if}}
     {{/each}}
     <span class="selection-summary">
-      <Hds::Button @text="Start" type="submit" disabled={{this.cannotStartWizard}} data-test-start-button />
+      <button type="submit" class="button is-primary" disabled={{this.cannotStartWizard}} data-test-start-button>
+        Start
+      </button>
       {{#if this.selectedFeatures}}
         <span class="time-estimate">
           <Icon @name="clock" class="has-text-grey" />About

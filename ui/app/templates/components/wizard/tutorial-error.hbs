@@ -9,13 +9,10 @@
   </p>
 </WizardSection>
 <WizardSection>
-  <Hds::Button
-    @icon="corner-up-left"
-    @isIconOnly={{true}}
-    @color="secondary"
-    class="next-feature-step"
-    {{action @onReset}}
-  />
+  <button type="button" class="button next-feature-step" {{action @onReset}}>
+    Go Back
+    <Icon @name="corner-up-left" />
+  </button>
   <button type="button" class="button next-feature-step" {{action @onAdvance}}>
     {{@nextFeature}}
     <Chevron @isButton={{true}} />
