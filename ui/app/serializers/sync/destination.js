@@ -8,12 +8,12 @@ import ApplicationSerializer from 'vault/serializers/application';
 export default class SyncDestinationSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
-  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+  normalizeItems(payload) {
     if (payload.data?.connection_details) {
       const data = { ...payload.data, ...payload.data.connection_details };
       delete data.connection_details;
-      return super.normalizeResponse(store, primaryModelClass, { ...payload, ...data }, id, requestType);
+      return data;
     }
-    return super.normalizeResponse(...arguments);
+    return super.normalizeItems(...arguments);
   }
 }
