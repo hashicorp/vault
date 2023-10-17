@@ -274,7 +274,7 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 // Evict removes an index from the cache based on index name and value.
 func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 	index, err := c.Get(indexName, indexValues...)
-	if err == ErrCacheItemNotFound {
+	if errors.Is(err, ErrCacheItemNotFound) {
 		return nil
 	}
 	if err != nil {

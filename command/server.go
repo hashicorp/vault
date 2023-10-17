@@ -1741,7 +1741,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err = vault.LicenseReload(core); err != nil {
+			if err = core.EntReloadLicense(); err != nil {
 				c.UI.Error(err.Error())
 			}
 
