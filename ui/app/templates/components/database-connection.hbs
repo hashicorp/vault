@@ -337,7 +337,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{decode-uri (get @model attr.name)}}
+          @value={{if (eq attr.name "connection_url") (decode-uri (get @model attr.name)) (get @model attr.name)}}
         />
       {{/if}}
     {{/let}}
