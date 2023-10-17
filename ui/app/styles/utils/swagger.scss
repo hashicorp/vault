@@ -1,0 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the scss for open-api-explorer.
+
+/* align list items with container */
+.swagger-ember .swagger-ui .wrapper {
+  padding: 0;
+}
+
+// /* hide the swagger-ui headers */
+.swagger-ember .swagger-ui .filter-container,
+.swagger-ember .swagger-ui .information-container.wrapper {
+  display: none;
+}
