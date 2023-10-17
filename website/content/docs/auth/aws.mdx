@@ -655,13 +655,13 @@ SDKs search for credentials (environment variables, ~/.aws/credentials, IAM
 instance profile, or ECS task role, in that order). If you do not have IAM
 credentials available at any of these locations, you can explicitly pass them
 in on the command line (though this is not recommended), omitting
-`aws_security_token` if not applicable.
+`aws_session_token` if not applicable.
 
 ```shell-session
 $ vault login -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_access_key_id=<access_key> \
         aws_secret_access_key=<secret_key> \
-        aws_security_token=<security_token>
+        aws_session_token=<session_token>
 ```
 
 The region used defaults to `us-east-1`, but you can specify a custom region like so:

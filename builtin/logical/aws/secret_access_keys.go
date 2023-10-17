@@ -161,12 +161,12 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
 	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
 	//
-	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *tokenResp.Credentials.AccessKeyId,
-		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-		"security_token": *tokenResp.Credentials.SessionToken,
-		"ttl":            uint64(ttl.Seconds()),
+		"access_key":    *tokenResp.Credentials.AccessKeyId,
+		"secret_key":    *tokenResp.Credentials.SecretAccessKey,
+		"session_token": *tokenResp.Credentials.SessionToken,
+		"ttl":           uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
@@ -198,9 +198,9 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, lifeTi
 	}
 
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *tokenResp.Credentials.AccessKeyId,
-		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-		"security_token": *tokenResp.Credentials.SessionToken,
+		"access_key":    *tokenResp.Credentials.AccessKeyId,
+		"secret_key":    *tokenResp.Credentials.SecretAccessKey,
+		"session_token": *tokenResp.Credentials.SessionToken,
 	}, map[string]interface{}{
 		"is_sts": true,
 	})
@@ -281,13 +281,13 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
 	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
 	//
-	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *tokenResp.Credentials.AccessKeyId,
-		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-		"security_token": *tokenResp.Credentials.SessionToken,
-		"arn":            *tokenResp.AssumedRoleUser.Arn,
-		"ttl":            uint64(ttl.Seconds()),
+		"access_key":    *tokenResp.Credentials.AccessKeyId,
+		"secret_key":    *tokenResp.Credentials.SecretAccessKey,
+		"session_token": *tokenResp.Credentials.SessionToken,
+		"arn":           *tokenResp.AssumedRoleUser.Arn,
+		"ttl":           uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"username": roleSessionName,
 		"policy":   roleArn,
@@ -452,9 +452,9 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Return the info!
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *keyResp.AccessKey.AccessKeyId,
-		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
-		"security_token": nil,
+		"access_key":    *keyResp.AccessKey.AccessKeyId,
+		"secret_key":    *keyResp.AccessKey.SecretAccessKey,
+		"session_token": nil,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   role,

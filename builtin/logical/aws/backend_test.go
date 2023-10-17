@@ -667,7 +667,7 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
+				STSToken  string `mapstructure:"session_token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
