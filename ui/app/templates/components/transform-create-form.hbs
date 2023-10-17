@@ -13,16 +13,15 @@
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-transform-create={{true}}>
-        {{#if (eq this.mode "create")}}
-          Create transformation
-        {{else if (eq this.mode "edit")}}
-          Save
-        {{/if}}
-      </button>
-      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
-        Cancel
-      </SecretLink>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Create transformation" type="submit" data-test-transform-create />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route="vault.cluster.secrets.backend.list-root"
+          @model={{this.model.backend}}
+        />
+      </Hds::ButtonSet>
     </div>
   </div>
 </form>
