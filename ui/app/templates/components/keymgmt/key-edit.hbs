@@ -124,25 +124,24 @@
           {{/each}}
           <div class="field is-grouped box is-fullwidth is-bottomless">
             <div class="control">
-              <Hds::Button
-                @text={{if this.isCreating "Create key" "Update"}}
-                @icon={{if this.saveTask.isRunning "loading"}}
-                type="submit"
-                disabled={{this.saveTask.isRunning}}
-                data-test-keymgmt-key-submit
-              />
-            </div>
-            <div class="control">
-              <LinkTo
-                @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
-                @model={{if this.isCreating @root.model @model.id}}
-                @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
-                @disabled={{this.savekey.isRunning}}
-                class="button"
-                data-test-keymgmt-key-cancel
-              >
-                Cancel
-              </LinkTo>
+              <Hds::ButtonSet>
+                <Hds::Button
+                  @text={{if this.isCreating "Create key" "Update"}}
+                  @icon={{if this.saveTask.isRunning "loading"}}
+                  type="submit"
+                  disabled={{this.saveTask.isRunning}}
+                  data-test-keymgmt-key-submit
+                />
+                <Hds::Button
+                  @text="Cancel"
+                  @color="secondary"
+                  @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
+                  @model={{if this.isCreating @root.model @model.id}}
+                  @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
+                  disabled={{this.savekey.isRunning}}
+                  data-test-keymgmt-key-cancel
+                />
+              </Hds::ButtonSet>
             </div>
           </div>
         {{/let}}

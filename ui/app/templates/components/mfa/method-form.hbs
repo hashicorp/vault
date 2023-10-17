@@ -11,21 +11,17 @@
 {{#if @hasActions}}
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      <Hds::Button
-        @text="Save"
-        @icon={{if this.save.isRunning "loading"}}
-        {{on "click" this.initSave}}
-        data-test-mfa-save
-        disabled={{this.save.isRunning}}
-        data-test-mfa-method-save
-      />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        class="has-left-margin-s"
-        disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
-      />
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Save"
+          @icon={{if this.save.isRunning "loading"}}
+          {{on "click" this.initSave}}
+          disabled={{this.save.isRunning}}
+          data-test-mfa-save
+          data-test-mfa-method-save
+        />
+        <Hds::Button @text="Cancel" @color="secondary" disabled={{this.save.isRunning}} {{on "click" this.cancel}} />
+      </Hds::ButtonSet>
     </div>
   </div>
 {{/if}}

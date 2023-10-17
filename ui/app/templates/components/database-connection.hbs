@@ -171,12 +171,15 @@
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <div class="control">
-          <Hds::Button @text="Create database" data-test-secret-save type="submit" />
-        </div>
-        <div class="control">
-          <SecretLink @mode="list" class="button">
-            Cancel
-          </SecretLink>
+          <Hds::ButtonSet>
+            <Hds::Button @text="Create database" type="submit" data-test-secret-save />
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route="vault.cluster.secrets.backend.list-root"
+              @model={{@model.backend}}
+            />
+          </Hds::ButtonSet>
         </div>
       </div>
     </div>

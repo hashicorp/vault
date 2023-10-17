@@ -77,7 +77,7 @@
           <Hds::Button @text={{if (eq this.mode "create") "Create role" "Save"}} type="submit" data-test-role-aws-create />
           {{#if (eq this.mode "create")}}
             <Hds::Button
-              @text="Create role"
+              @text="Cancel"
               @color="secondary"
               @route="vault.cluster.secrets.backend.list-root"
               @model={{this.model.backend}}

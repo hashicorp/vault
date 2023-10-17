@@ -63,27 +63,26 @@
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <Hds::Button
-          @text={{if (eq this.mode "create") "Create" "Save"}}
-          @icon={{if this.save.isRunning "loading"}}
-          type="submit"
-          data-test-identity-submit={{true}}
-          disabled={{this.save.isRunning}}
-        />
-        {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
-          <LinkTo @route={{this.cancelLink}} class="button" data-test-cancel-link={{true}}>
-            Cancel
-          </LinkTo>
-        {{else}}
-          <LinkTo
-            @route={{this.cancelLink}}
-            @models={{array this.model.id "details"}}
-            class="button"
-            data-test-cancel-link={{true}}
-          >
-            Cancel
-          </LinkTo>
-        {{/if}}
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text={{if (eq this.mode "create") "Create" "Save"}}
+            @icon={{if this.save.isRunning "loading"}}
+            type="submit"
+            data-test-identity-submit
+            disabled={{this.save.isRunning}}
+          />
+          {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
+            <Hds::Button @text="Cancel" @color="secondary" @route={{this.cancelLink}} data-test-cancel-link />
+          {{else}}
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route={{this.cancelLink}}
+              @models={{array this.model.id "details"}}
+              data-test-cancel-link
+            />
+          {{/if}}
+        </Hds::ButtonSet>
       </div>
     </div>
   </div>

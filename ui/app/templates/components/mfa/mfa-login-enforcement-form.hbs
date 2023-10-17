@@ -133,21 +133,22 @@
   {{#unless @isInline}}
     <hr />
     <div class="has-top-padding-s">
-      <Hds::Button
-        @text={{if @model.isNew "Create" "Update"}}
-        @icon={{if this.save.isRunning "loading"}}
-        disabled={{this.save.isRunning}}
-        data-test-mlef-save
-        {{on "click" (perform this.save)}}
-      />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        class="has-left-margin-s"
-        disabled={{this.save.isRunning}}
-        data-test-mlef-cancel
-        {{on "click" this.cancel}}
-      />
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if @model.isNew "Create" "Update"}}
+          @icon={{if this.save.isRunning "loading"}}
+          disabled={{this.save.isRunning}}
+          data-test-mlef-save
+          {{on "click" (perform this.save)}}
+        />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          disabled={{this.save.isRunning}}
+          data-test-mlef-cancel
+          {{on "click" this.cancel}}
+        />
+      </Hds::ButtonSet>
     </div>
   {{/unless}}
 </div>

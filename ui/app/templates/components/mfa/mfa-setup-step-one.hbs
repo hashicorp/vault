@@ -30,9 +30,9 @@
       />
     </div>
 
-    <div class="is-flex-start has-gap">
+    <Hds::ButtonSet>
       <Hds::Button @text="Verify" id="continue" type="submit" disabled={{(is-empty-value this.UUID)}} data-test-verify />
       <Hds::Button @text="Cancel" @color="secondary" id="cancel" {{on "click" this.redirectPreviousPage}} />
-    </div>
+    </Hds::ButtonSet>
   </form>
 </div>
