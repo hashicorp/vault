@@ -40,8 +40,6 @@ type InitResult struct {
 }
 
 var (
-	// TODO remove once entInitWALPassThrough is implemented in ENT
-	initPTFunc                = func(c *Core) func() { return nil }
 	initInProgress            uint32
 	ErrInitWithoutAutoloading = errors.New("cannot initialize storage without an autoloaded license")
 )

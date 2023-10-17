@@ -55,11 +55,6 @@ var (
 	ErrNoApplicablePolicies = errors.New("no applicable policies")
 
 	egpDebugLogging bool
-
-	// if this returns an error, the request should be blocked and the error
-	// should be returned to the client
-	// TODO remove once entBlockRequestIfError is implemented in ENT
-	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -2201,8 +2196,6 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 	}
 	return mfaAny, nil
 }
-
-func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
