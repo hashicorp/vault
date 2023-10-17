@@ -15,6 +15,7 @@
       <div class="calendar-title is-subtitle-gray">
         DATE OPTIONS
       </div>
+      {{! TODO Hds::Dropdown swapout }}
       <ul class="menu-list">
         <li class="action">
           <button
@@ -58,34 +59,29 @@
     {{#if this.showCalendar}}
       <div class="calendar-widget-container" data-test-calendar-widget-container>
         <div class="select-year">
-          <button
+          <Hds::Button
             data-test-previous-year
             id="previous-year"
-            type="button"
-            class="button is-transparent"
             disabled={{this.disablePastYear}}
             {{on "click" this.subYear}}
-          >
-            <Chevron
-              @direction="left"
-              @size="s"
-              class="has-text-grey"
-              {{on "mouseover" this.addTooltip}}
-              {{on "mouseleave" this.removeTooltip}}
-            />
-          </button>
+            @color="secondary"
+            @text="previous year"
+            @icon="chevron-left"
+            @isIconOnly={{true}}
+          />
           <p data-test-display-year>
             {{this.displayYear}}
           </p>
-          <button
+          <Hds::Button
             data-test-next-year
-            type="button"
-            class={{concat "button is-transparent " (if (or this.tooltipTarget) "negative-margin" "padding-right")}}
+            id="next-year"
             disabled={{this.disableFutureYear}}
             {{on "click" this.addYear}}
-          >
-            <Chevron @direction="right" @size="s" class="has-text-grey" />
-          </button>
+            @color="secondary"
+            @text="next year"
+            @icon="chevron-right"
+            @isIconOnly={{true}}
+          />
           {{#if this.tooltipTarget}}
             {{! Component must be in curly bracket notation }}
             {{! template-lint-disable no-curly-component-invocation }}
