@@ -4,6 +4,7 @@
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
+import { assert } from '@ember/debug';
 
 const SYNC_DESTINATIONS = [
   {
@@ -39,6 +40,14 @@ export function syncDestinations() {
 
 export function destinationTypes() {
   return SYNC_DESTINATIONS.map((d) => d.type);
+}
+
+export function findDestination(type) {
+  assert(
+    `you must pass one of the following types: ${destinationTypes().join(', ')}`,
+    destinationTypes().includes(type)
+  );
+  return SYNC_DESTINATIONS.find((d) => d.type === type);
 }
 
 export default buildHelper(syncDestinations);

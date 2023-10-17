@@ -4,7 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { syncDestinations } from 'vault/helpers/sync-destinations';
+import { findDestination } from 'vault/helpers/sync-destinations';
 
 // Base model for all secret sync destination types
 export default class SyncDestinationModel extends Model {
@@ -12,6 +12,6 @@ export default class SyncDestinationModel extends Model {
   @attr type;
 
   get icon() {
-    return syncDestinations().findBy('type', this.type).icon;
+    return findDestination(this.type)?.icon;
   }
 }
