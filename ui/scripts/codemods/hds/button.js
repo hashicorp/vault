@@ -249,6 +249,7 @@ class Transforms {
     } else if (this.hasIcon) {
       // if there was an icon node but no text we need to add the @isIconOnly arg
       this.addAttr('@isIconOnly', this.builders.mustache(this.builders.boolean(true)));
+      this.addAttr('@text', 'REPLACE_ME');
     }
   }
 
