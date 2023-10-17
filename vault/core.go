@@ -689,7 +689,8 @@ type Core struct {
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
 
-	rollbackPeriod time.Duration
+	numRollbackWorkers int
+	rollbackPeriod     time.Duration
 
 	experiments []string
 
@@ -872,6 +873,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	UserLockoutLogInterval time.Duration
+
+	NumRollbackWorkers int
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -964,6 +967,9 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	if conf.NumRollbackWorkers == 0 {
+		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
 	// Use imported logging deadlock if requested
 	var stateLock locking.RWMutex
 	if strings.Contains(conf.DetectDeadlocks, "statelock") {
@@ -1048,6 +1054,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
