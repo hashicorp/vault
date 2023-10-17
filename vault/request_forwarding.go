@@ -350,7 +350,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		req.URL.Path = origPath
 	}()
 
-	req.URL.Path = req.Context().Value(logical.CtxKeyOriginalRequestPath{}).(string)
+	req.URL.Path, _ = logical.ContextOriginalRequestPathValue(req.Context())
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {

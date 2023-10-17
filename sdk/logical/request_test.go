@@ -8,7 +8,6 @@ import (
 )
 
 func TestContextDisableReplicationStatusEndpointsValue(t *testing.T) {
-
 	testcases := []struct {
 		name          string
 		ctx           context.Context
@@ -75,7 +74,6 @@ func TestCreateContextDisableReplicationStatusEndpoints(t *testing.T) {
 }
 
 func TestContextMaxRequestSizeValue(t *testing.T) {
-
 	testcases := []struct {
 		name          string
 		ctx           context.Context
@@ -142,7 +140,6 @@ func TestCreateContextMaxRequestSize(t *testing.T) {
 }
 
 func TestContextOriginalRequestPathValue(t *testing.T) {
-
 	testcases := []struct {
 		name          string
 		ctx           context.Context
