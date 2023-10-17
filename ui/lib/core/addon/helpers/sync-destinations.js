@@ -41,4 +41,8 @@ export function destinationTypes() {
   return SYNC_DESTINATIONS.map((d) => d.type);
 }
 
+export function findDestination(type) {
+  return SYNC_DESTINATIONS.find((d) => d.type === type);
+}
+
 export default buildHelper(syncDestinations);
