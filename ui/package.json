@@ -246,7 +246,7 @@
     ]
   },
   "dependencies": {
-    "@hashicorp/design-system-components": "^2.12.2",
+    "@hashicorp/design-system-components": "^2.13.0",
     "@hashicorp/ember-flight-icons": "^3.1.3",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
