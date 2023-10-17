@@ -28,16 +28,6 @@ $dark-gray: #535f73;
   display: flex;
   justify-content: space-between;
   align-items: first baseline;
-
-  // spacing of < year > icons when the tooltip is added or removed from DOM.
-  > .padding-right {
-    // if no tooltip
-    padding-right: 26px;
-  }
-  > .negative-margin {
-    // if tooltip
-    margin-right: -50px;
-  }
 }
 
 .calendar-widget {

@@ -126,36 +126,38 @@
         @dbType={{await this.databaseType}}
       />
 
+      {{#if (not (is-empty-value this.warningMessages))}}
+        <div>
+          <Hds::Alert @type="inline" @color="warning" as |A|>
+            <A.Title>Warning</A.Title>
+            <A.Description>
+              You don't have permissions required to
+              {{if (eq @mode "create") "create" "update"}}
+              this role. See form for details.
+            </A.Description>
+          </Hds::Alert>
+        </div>
+      {{/if}}
       <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
         <div class="field is-grouped">
           <div class="control">
-            {{#if (is-empty-value this.warningMessages)}}
+            <Hds::ButtonSet>
               <Hds::Button
                 @text={{if (eq @mode "create") "Create role" "Save"}}
                 @icon={{if this.loading "loading"}}
-                data-test-secret-save
                 type="submit"
                 disabled={{this.loading}}
+                data-test-secret-save
               />
-            {{else}}
-              <ToolTip @horizontalPosition="left" as |T|>
-                <T.Trigger>
-                  <Hds::Button @text="Save" data-test-secret-save type="submit" disabled={{true}} />
-                </T.Trigger>
-                <T.Content @defaultClass="tool-tip">
-                  <div class="box">
-                    You don't have permissions required to
-                    {{if (eq @mode "create") "create" "update"}}
-                    this role. See form for details.
-                  </div>
-                </T.Content>
-              </ToolTip>
-            {{/if}}
-          </div>
-          <div class="control">
-            <SecretLink @mode="list" class="button" data-test-database-role-cancel>
-              Cancel
-            </SecretLink>
+              <Hds::Button
+                @text="Cancel"
+                @color="secondary"
+                @route="vault.cluster.secrets.backend.list-root"
+                @model={{@model.backend}}
+                @query={{hash tab="role"}}
+                data-test-database-role-cancel
+              />
+            </Hds::ButtonSet>
           </div>
         </div>
       </div>
