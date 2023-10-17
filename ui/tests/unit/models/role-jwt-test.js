@@ -36,19 +36,11 @@ module('Unit | Model | role-jwt', function (hooks) {
 
       const expectedName = DOMAIN_STRINGS[domain];
       assert.strictEqual(model.providerName, expectedName, `computes providerName: ${expectedName}`);
+      let expectedIcon = null;
       if (PROVIDER_WITH_LOGO.includes(expectedName)) {
-        assert.strictEqual(
-          model.providerButtonComponent,
-          `auth-button-${expectedName.toLowerCase()}`,
-          `computes providerButtonComponent: ${domain}`
-        );
-      } else {
-        assert.strictEqual(
-          model.providerButtonComponent,
-          null,
-          `computes providerButtonComponent: ${domain}`
-        );
+        expectedIcon = expectedName.toLowerCase();
       }
+      assert.strictEqual(model.providerIcon, expectedIcon, `computes providerIcon: ${domain}`);
     });
   });
 
