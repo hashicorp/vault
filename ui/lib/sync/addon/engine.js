@@ -14,7 +14,7 @@ export default class SyncEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['router', 'store', 'flash-messages'],
+    services: ['flash-messages', 'router', 'store', 'version'],
     externalRoutes: [],
   };
 }
