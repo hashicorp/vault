@@ -1,3 +1,0 @@
-```release-note:feature
-secrets/aws: support issuing an STS Session Token directly from the root credential.
-```
