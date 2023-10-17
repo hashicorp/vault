@@ -576,7 +576,7 @@ func (r *awsRoleEntry) validate() error {
 			errors = multierror.Append(errors, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
 		}
 		if !userPathRegex.MatchString(r.UserPath) {
-			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
+			errors = multierror.Append(errors, fmt.Errorf("the specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
 		}
 	}
 
