@@ -7,6 +7,7 @@ package activity_testonly
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -21,6 +22,42 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_ActivityLog_ClientsOverlapping_Failing(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(1).
+		NewClientsSeen(7).
+		NewCurrentMonthData().
+		RepeatedClientsSeen(5).
+		NewClientsSeen(2).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+
+	// query from the beginning of the previous month to the end of this month
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"end_time":   {timeutil.EndOfMonth(now).Format(time.RFC3339)},
+		"start_time": {timeutil.StartOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+	totals := resp.Data["total"].(map[string]interface{})
+	require.Equal(t, totals["clients"], json.Number("9"))
+	require.Equal(t, totals["entity_clients"], json.Number("9"))
+
+	byNS := []*vault.ResponseNamespace{}
+	require.NoError(t, mapstructure.Decode(resp.Data["by_namespace"], &byNS))
+	require.Len(t, byNS, 1)
+	require.Equal(t, byNS[0].Counts.EntityClients, 9)
+	require.Equal(t, byNS[0].Mounts[0].Counts.EntityClients, 9)
+}
 
 // Test_ActivityLog_LoseLeadership writes data for this month, then causes the
 // active node to lose leadership. Once a new node becomes the leader, then the
