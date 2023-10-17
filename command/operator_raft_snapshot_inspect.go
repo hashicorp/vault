@@ -278,7 +278,12 @@ func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Rea
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to decompress snapshot: %v", err)
 	}
+
 	defer func() {
+		if decomp == nil {
+			return
+		}
+
 		if err := decomp.Close(); err != nil {
 			logger.Error("Failed to close snapshot decompressor", "error", err)
 		}
@@ -294,6 +299,10 @@ func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Rea
 		return nil, nil, err
 	}
 
+	if err := decomp.Close(); err != nil {
+		return nil, nil, err
+	}
+	decomp = nil
 	return snapshotInfo, metadata, nil
 }
 
