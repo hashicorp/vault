@@ -206,7 +206,7 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, lifeTi
 	})
 
 	// Set the secret TTL to appropriately match the expiration of the token
-	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+	resp.Secret.TTL = time.Until(*tokenResp.Credentials.Expiration)
 
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
