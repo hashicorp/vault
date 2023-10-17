@@ -11,12 +11,12 @@
   </p>
 </WizardSection>
 <WizardSection @headerText="Want to start again or move on?" @class="wizard-details">
-  <button type="button" class="button next-feature-step" {{action @onReset}}>
-    Enable another Auth Method
-    <Icon @name="sync" class="hs-icon-button-right" />
-  </button>
-  <button type="button" class="button next-feature-step" {{action @onAdvance}}>
-    {{@nextFeature}}
-    <Chevron @isButton={{true}} />
-  </button>
+  <Hds::Button
+    @text="Enable another Auth Method"
+    @icon="sync"
+    @color="secondary"
+    class="next-feature-step"
+    {{on "click" (action @onReset)}}
+  />
+  <Hds::Button @text={{@nextFeature}} @icon="chevron-right" class="next-feature-step" {{on "click" (action @onAdvance)}} />
 </WizardSection>
