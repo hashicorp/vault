@@ -507,7 +507,6 @@ func NewTestLogger(t testing.T) *TestLogger {
 		}
 		output = logFile
 	}
-	t.Logf("creating test log file %s", logPath)
 
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
@@ -536,15 +535,8 @@ func NewTestLogger(t testing.T) *TestLogger {
 	t.Cleanup(func() {
 		testLogger.StopLogging()
 		if t.Failed() {
-			var size int64
-			stat, err := os.Stat(testLogger.Path)
-			if err == nil {
-				size = stat.Size()
-			}
-			t.Logf("closing testLogger, file=%s err=%v size=%d", testLogger.Path, err, size)
 			_ = testLogger.File.Close()
 		} else {
-			t.Log("closing testLogger and deleting log file")
 			_ = os.Remove(testLogger.Path)
 		}
 	})
