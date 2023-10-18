@@ -361,7 +361,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
               $RERUN_FAILS \
-              --packages "vault/external_tests/token" \
+              --packages "./vault/external_tests/token" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
