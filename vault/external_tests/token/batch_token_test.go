@@ -307,6 +307,8 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 
+	t.Fatal("test failure")
+
 	var err error
 	var secret *api.Secret
 
