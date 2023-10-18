@@ -508,6 +508,12 @@ func CreateContextMaxRequestSize(parent context.Context, value int64) context.Co
 	return context.WithValue(parent, ctxKeyMaxRequestSize{}, value)
 }
 
+// ContextContainsMaxRequestSize returns a bool value that indicates if the
+// provided Context contains a value for the ctxKeyMaxRequestSize key.
+func ContextContainsMaxRequestSize(ctx context.Context) bool {
+	return ctx.Value(ctxKeyMaxRequestSize{}) != nil
+}
+
 // CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
 // to store the original request path.
 type ctxKeyOriginalRequestPath struct{}

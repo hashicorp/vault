@@ -710,20 +710,22 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	// against an indefinite amount of data being read.
 	reader := r.Body
 	ctx := r.Context()
-	max, ok := logical.ContextMaxRequestSizeValue(ctx)
-	if !ok {
-		return nil, errors.New("could not parse max request size from request context")
-	}
-	if max > 0 {
-		// MaxBytesReader won't do all the internal stuff it must unless it's
-		// given a ResponseWriter that implements the internal http interface
-		// requestTooLarger.  So we let it have access to the underlying
-		// ResponseWriter.
-		inw := w
-		if myw, ok := inw.(logical.WrappingResponseWriter); ok {
-			inw = myw.Wrapped()
+	if logical.ContextContainsMaxRequestSize(ctx) {
+		max, ok := logical.ContextMaxRequestSizeValue(ctx)
+		if !ok {
+			return nil, errors.New("could not parse max request size from request context")
 		}
-		reader = http.MaxBytesReader(inw, r.Body, max)
+		if max > 0 {
+			// MaxBytesReader won't do all the internal stuff it must unless it's
+			// given a ResponseWriter that implements the internal http interface
+			// requestTooLarger.  So we let it have access to the underlying
+			// ResponseWriter.
+			inw := w
+			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
+				inw = myw.Wrapped()
+			}
+			reader = http.MaxBytesReader(inw, r.Body, max)
+		}
 	}
 
 	var origBody io.ReadWriter
@@ -748,12 +750,14 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 //
 // A nil map will be returned if the format is empty or invalid.
 func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
-	max, ok := logical.ContextMaxRequestSizeValue(r.Context())
-	if !ok {
-		return nil, errors.New("could not parse max request size from request context")
-	}
-	if max > 0 {
-		r.Body = io.NopCloser(io.LimitReader(r.Body, max))
+	if logical.ContextContainsMaxRequestSize(r.Context()) {
+		max, ok := logical.ContextMaxRequestSizeValue(r.Context())
+		if !ok {
+			return nil, errors.New("could not parse max request size from request context")
+		}
+		if max > 0 {
+			r.Body = io.NopCloser(io.LimitReader(r.Body, max))
+		}
 	}
 
 	if err := r.ParseForm(); err != nil {

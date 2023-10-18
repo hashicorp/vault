@@ -65,12 +65,14 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
 	ctx := req.Context()
-	max, ok := logical.ContextMaxRequestSizeValue(ctx)
-	if !ok {
-		return nil, errors.New("could not parse max request size from request context")
-	}
-	if max > 0 {
-		reader = io.LimitReader(req.Body, max)
+	if logical.ContextContainsMaxRequestSize(ctx) {
+		max, ok := logical.ContextMaxRequestSizeValue(ctx)
+		if !ok {
+			return nil, errors.New("could not parse max request size from request context")
+		}
+		if max > 0 {
+			reader = io.LimitReader(req.Body, max)
+		}
 	}
 
 	body, err := ioutil.ReadAll(reader)
