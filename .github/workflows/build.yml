@@ -327,8 +327,8 @@ jobs:
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-completed-successfully-failures-ce:
-    # TODO: Re-add && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' }}
+    # TODO: Re-add && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+    if: ${{ always() && github.repository == 'hashicorp/vault' }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -388,8 +388,8 @@ jobs:
             }
 
   notify-completed-successfully-failures-ent:
-    # TODO: Re-add && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' }}
+    # TODO: Re-add && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' }}
     runs-on: ['self-hosted', 'linux', 'small']
     permissions:
       id-token: write
