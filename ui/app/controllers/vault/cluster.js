@@ -38,6 +38,8 @@ export default Controller.extend({
   consoleOpen: alias('console.isOpen'),
   activeCluster: alias('auth.activeCluster'),
 
+  permissionReadFailed: alias('permissions.readFailed'),
+
   actions: {
     toggleConsole() {
       this.toggleProperty('consoleOpen');

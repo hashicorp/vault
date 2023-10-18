@@ -1,0 +1,25 @@
+<AlertBanner
+  @type="danger"
+  @title="Resultant ACL check failed"
+  @message={{if
+    @isEnterprise
+    "You do not have access to resources in this namespace."
+    "Links might be shown that you don't have access to. Contact your administrator to update your policy."
+  }}
+  class="message-marginless"
+  data-test-resultant-acl-banner
+>
+  {{#if @isEnterprise}}
+    <LinkTo
+      @route="vault.cluster.logout"
+      @query={{this.queryParams}}
+      class="button is-primary"
+      data-test-resultant-acl-reauthenticate
+    >
+      Log into
+      {{this.ns}}
+      namespace
+      <Icon @name="arrow-right" />
+    </LinkTo>
+  {{/if}}
+</AlertBanner>

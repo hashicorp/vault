@@ -13,6 +13,7 @@ import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import { assert } from '@ember/debug';
 
 const POLL_INTERVAL_MS = 10000;
 
@@ -55,10 +56,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     let namespace = params.namespaceQueryParam;
     const currentTokenName = this.auth.get('currentTokenName');
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
-    if (managedRoot && this.version.isOSS) {
-      // eslint-disable-next-line no-console
-      console.error('Cannot use Cloud Admin Namespace flag with OSS Vault');
-    }
+    assert(
+      'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
+      !(managedRoot && this.version.isOSS)
+    );
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url

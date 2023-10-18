@@ -64,6 +64,7 @@ export default Service.extend({
   exactPaths: null,
   globPaths: null,
   canViewAll: null,
+  readFailed: false,
   store: service(),
   auth: service(),
   namespace: service(),
@@ -80,6 +81,7 @@ export default Service.extend({
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
       this.set('canViewAll', true);
+      this.set('readFailed', true);
     }
   }),
 
@@ -87,12 +89,14 @@ export default Service.extend({
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
     this.set('canViewAll', resp.data.root);
+    this.set('readFailed', false);
   },
 
   reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('canViewAll', null);
+    this.set('readFailed', false);
   },
 
   hasNavPermission(navItem, routeParams, requireAll) {
