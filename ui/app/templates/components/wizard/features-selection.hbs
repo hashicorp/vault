@@ -38,16 +38,14 @@
               data-test-checkbox={{feature.name}}
             />
             <label for="feature-{{feature.key}}">{{feature.name}}</label>
-            <button
-              type="button"
+            <Hds::Button
               class="button is-ghost icon is-pulled-right"
-              onclick={{action (toggle (concat feature.key "-isOpen") this)}}
-            >
-              <Chevron
-                @direction={{if (get this (concat feature.key "-isOpen")) "up" "down"}}
-                @class="has-text-grey auto-width is-paddingless is-flex-column"
-              />
-            </button>
+              @color="tertiary"
+              @text={{if (get this (concat feature.key "-isOpen")) "Close" "Open"}}
+              @icon={{if (get this (concat feature.key "-isOpen")) "chevron-up" "chevron-down"}}
+              @isIconOnly={{true}}
+              {{on "click" (action (toggle (concat feature.key "-isOpen") this))}}
+            />
             {{#if feature.disabled}}
               <Info-Tooltip data-test-tooltip>
                 You do not have permissions to tour some parts of this feature

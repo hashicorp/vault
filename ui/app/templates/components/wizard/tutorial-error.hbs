@@ -9,12 +9,8 @@
   </p>
 </WizardSection>
 <WizardSection>
-  <Hds::Button
-    @text="Go back"
-    @icon="corner-up-left"
-    @color="secondary"
-    class="next-feature-step"
-    {{on "click" (action @onReset)}}
-  />
-  <Hds::Button @text={{@nextFeature}} @icon="chevron-right" class="next-feature-step" {{on "click" (action @onAdvance)}} />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Go back" @icon="corner-up-left" @color="secondary" {{on "click" (action @onReset)}} />
+    <Hds::Button @text={{@nextFeature}} @icon="chevron-right" @iconPosition="trailing" {{on "click" (action @onAdvance)}} />
+  </Hds::ButtonSet>
 </WizardSection>

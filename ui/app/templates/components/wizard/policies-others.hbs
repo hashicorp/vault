@@ -13,6 +13,6 @@
     </p>
   </WizardSection>
   <WizardSection @headerText="Ready to move on?" @class="wizard-details">
-    <Hds::Button @text={{@nextFeature}} @icon="chevron-right" class="next-feature-step" {{on "click" (action @onAdvance)}} />
+    <Hds::Button @text={{@nextFeature}} @icon="chevron-right" @iconPosition="trailing" {{on "click" (action @onAdvance)}} />
   </WizardSection>
 </WizardContent>
