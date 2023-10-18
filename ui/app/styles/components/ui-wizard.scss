@@ -46,14 +46,6 @@
     line-height: 1.33;
   }
 
-  .dismiss-collapsed {
-    position: absolute;
-    top: $size-8;
-    right: $size-8;
-    color: $grey;
-    z-index: 30;
-  }
-
   @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
