@@ -125,19 +125,6 @@
         @mode={{@mode}}
         @dbType={{await this.databaseType}}
       />
-
-      {{#if (not (is-empty-value this.warningMessages))}}
-        <div>
-          <Hds::Alert @type="inline" @color="warning" as |A|>
-            <A.Title>Warning</A.Title>
-            <A.Description>
-              You don't have permissions required to
-              {{if (eq @mode "create") "create" "update"}}
-              this role. See form for details.
-            </A.Description>
-          </Hds::Alert>
-        </div>
-      {{/if}}
       <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
         <div class="field is-grouped">
           <Hds::ButtonSet>
@@ -157,6 +144,16 @@
               data-test-database-role-cancel
             />
           </Hds::ButtonSet>
+          {{#if (not (is-empty-value this.warningMessages))}}
+            <Hds::Alert @type="compact" @color="warning" class="has-left-margin-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>
+                You don't have permissions required to
+                {{if (eq @mode "create") "create" "update"}}
+                this role. See form for details.
+              </A.Description>
+            </Hds::Alert>
+          {{/if}}
         </div>
       </div>
     </form>
