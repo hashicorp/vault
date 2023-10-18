@@ -467,13 +467,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('connection_url must be decoded', async function (assert) {
-    const backend = this.backend;
+    const backend = await mount();
     const connection = await newConnection(
       backend,
       'mongodb-database-plugin',
       '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
     );
-    await newConnection(backend, connection);
+    await connectionPage.visitShow({ backend, id: connection });
     assert
       .dom('[data-test-row-value="Connection URL"]')
       .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
