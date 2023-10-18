@@ -48,7 +48,7 @@ interface OpenApiPath {
   delete?: OpenApiAction;
 }
 
-// Take object entries from the OpenAPI response and consolidate them an object which includes itemTypes, operations, and paths
+// Take object entries from the OpenAPI response and consolidate them into an object which includes itemTypes, operations, and paths
 export function reducePathsByPathName(pathsInfo: PathsInfo, currentPath: [string, OpenApiPath]): PathsInfo {
   const pathName = currentPath[0];
   const pathDetails = currentPath[1];
