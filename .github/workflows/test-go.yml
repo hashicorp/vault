@@ -366,7 +366,6 @@ jobs:
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && (success() || failure())
         continue-on-error: true
