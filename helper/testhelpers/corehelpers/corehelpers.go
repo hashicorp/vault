@@ -535,8 +535,10 @@ func NewTestLogger(t testing.T) *TestLogger {
 	t.Cleanup(func() {
 		testLogger.StopLogging()
 		if t.Failed() {
+			t.Log("closing testLogger")
 			_ = testLogger.File.Close()
 		} else {
+			t.Log("closing testLogger and deleting log file")
 			_ = os.Remove(testLogger.Path)
 		}
 	})

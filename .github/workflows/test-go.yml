@@ -354,6 +354,7 @@ jobs:
           mkdir -p $VAULT_TEST_LOG_DIR
           
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
+          set +e
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
