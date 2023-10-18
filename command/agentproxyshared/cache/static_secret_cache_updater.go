@@ -196,7 +196,7 @@ func (updater *StaticSecretCacheUpdater) preEventStreamUpdate(ctx context.Contex
 		}
 		err = updater.updateStaticSecret(ctx, index.RequestPath)
 		if err != nil {
-			errs = multierror.Append(err, errs)
+			errs = multierror.Append(errs, err)
 		}
 	}
 
