@@ -12,16 +12,12 @@
           HCP.
         </ExternalLink>
       {{else}}
-        There was an error connecting to HCP. Click
-        <Hds::Button
-          @text="here"
-          @color="secondary"
-          class="text-button is-underline"
-          {{on "click" (fn (mut this.showModal))}}
-        />
-        for more information.
+        There was an error connecting to HCP.
       {{/if}}
     </A.Title>
+    {{#if (not-eq this.state "connected")}}
+      <A.Button @text="View error details" @color="secondary" {{on "click" (fn (mut this.showModal))}} />
+    {{/if}}
   </Hds::Alert>
 {{/if}}
 
