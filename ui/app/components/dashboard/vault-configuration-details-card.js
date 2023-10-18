@@ -22,7 +22,7 @@ export default class DashboardSecretsEnginesCard extends Component {
     // consider tls enabled if tls_disable is undefined or false AND both tls_cert_file and tls_key_file are defined
     const tlsListener = this.args.vaultConfiguration?.listeners.find((listener) => {
       const { tls_disable, tls_cert_file, tls_key_file } = listener.config || {};
-      return (tls_disable === undefined || tls_disable === false) && tls_cert_file && tls_key_file;
+      return !tls_disable && tls_cert_file && tls_key_file;
     });
 
     return tlsListener ? 'Enabled' : 'Disabled';
