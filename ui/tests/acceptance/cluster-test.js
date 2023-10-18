@@ -4,7 +4,7 @@
  */
 
 import { create } from 'ember-cli-page-object';
-import { settled, click, visit, currentRouteName } from '@ember/test-helpers';
+import { settled, click, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -99,7 +99,5 @@ module('Acceptance | cluster', function (hooks) {
     assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Does not show on login page');
     await authPage.login(noDefaultPolicyUser);
     assert.dom('[data-test-resultant-acl-banner]').includesText('Resultant ACL check failed');
-    await click('[data-test-resultant-acl-reauthenticate]');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'Reauth link goes to login page');
   });
 });

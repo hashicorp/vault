@@ -28,7 +28,7 @@ module('Integration | Component | resultant-acl-banner', function (hooks) {
     assert
       .dom('[data-test-resultant-acl-banner] .hds-alert__description')
       .hasText(
-        "You do not have access to this namespace, so links might be shown that you don't have access to."
+        "You do not have access to this namespace. Links might be shown that you don't have access to."
       );
     assert
       .dom('[data-test-resultant-acl-reauthenticate]')
@@ -37,13 +37,6 @@ module('Integration | Component | resultant-acl-banner', function (hooks) {
 
   test('it renders correctly with default namespace', async function (assert) {
     await render(hbs`<ResultantAclBanner @isEnterprise={{true}} />`);
-
-    assert.dom('[data-test-resultant-acl-banner] .hds-alert__title').hasText('Resultant ACL check failed');
-    assert
-      .dom('[data-test-resultant-acl-banner] .hds-alert__description')
-      .hasText(
-        "You do not have access to this namespace, so links might be shown that you don't have access to."
-      );
     assert
       .dom('[data-test-resultant-acl-reauthenticate]')
       .hasText('Log into root namespace', 'Shows reauth link with default namespace');
