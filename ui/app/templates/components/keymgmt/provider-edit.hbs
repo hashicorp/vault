@@ -132,26 +132,24 @@
         {{/each}}
       </div>
       <div class="field is-grouped box is-fullwidth is-bottomless">
-        <div class="control">
-          <Hds::ButtonSet>
-            <Hds::Button
-              @text={{if this.isCreating "Create provider" "Update"}}
-              @icon={{if this.saveTask.isRunning "loading"}}
-              type="submit"
-              disabled={{this.saveTask.isRunning}}
-              data-test-kms-provider-submit
-            />
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
-              @model={{if this.isCreating @root.model @model.id}}
-              @query={{if this.isCreating (hash tab="provider") (hash itemType="provider")}}
-              disabled={{this.saveTask.isRunning}}
-              data-test-kms-provider-cancel
-            />
-          </Hds::ButtonSet>
-        </div>
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text={{if this.isCreating "Create provider" "Update"}}
+            @icon={{if this.saveTask.isRunning "loading"}}
+            type="submit"
+            disabled={{this.saveTask.isRunning}}
+            data-test-kms-provider-submit
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
+            @model={{if this.isCreating @root.model @model.id}}
+            @query={{if this.isCreating (hash tab="provider") (hash itemType="provider")}}
+            disabled={{this.saveTask.isRunning}}
+            data-test-kms-provider-cancel
+          />
+        </Hds::ButtonSet>
       </div>
     </form>
   {{/if}}

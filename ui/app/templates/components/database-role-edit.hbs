@@ -140,25 +140,23 @@
       {{/if}}
       <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
         <div class="field is-grouped">
-          <div class="control">
-            <Hds::ButtonSet>
-              <Hds::Button
-                @text={{if (eq @mode "create") "Create role" "Save"}}
-                @icon={{if this.loading "loading"}}
-                type="submit"
-                disabled={{this.loading}}
-                data-test-secret-save
-              />
-              <Hds::Button
-                @text="Cancel"
-                @color="secondary"
-                @route="vault.cluster.secrets.backend.list-root"
-                @model={{@model.backend}}
-                @query={{hash tab="role"}}
-                data-test-database-role-cancel
-              />
-            </Hds::ButtonSet>
-          </div>
+          <Hds::ButtonSet>
+            <Hds::Button
+              @text={{if (eq @mode "create") "Create role" "Save"}}
+              @icon={{if this.loading "loading"}}
+              type="submit"
+              disabled={{this.loading}}
+              data-test-secret-save
+            />
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route="vault.cluster.secrets.backend.list-root"
+              @model={{@model.backend}}
+              @query={{hash tab="role"}}
+              data-test-database-role-cancel
+            />
+          </Hds::ButtonSet>
         </div>
       </div>
     </form>

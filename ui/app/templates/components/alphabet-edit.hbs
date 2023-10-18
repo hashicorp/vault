@@ -83,32 +83,30 @@
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <Hds::ButtonSet>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if (eq this.mode "create") "Create alphabet" "Save"}}
+          type="submit"
+          data-test-alphabet-transform-create
+        />
+        {{#if (eq this.mode "create")}}
           <Hds::Button
-            @text={{if (eq this.mode "create") "Create alphabet" "Save"}}
-            type="submit"
-            data-test-alphabet-transform-create
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+            @query={{hash tab="alphabet"}}
           />
-          {{#if (eq this.mode "create")}}
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route="vault.cluster.secrets.backend.list-root"
-              @model={{this.model.backend}}
-              @query={{hash tab="alphabet"}}
-            />
-          {{else}}
-            <Hds::Button
-              @text="Cancel"
-              @color="secondary"
-              @route="vault.cluster.secrets.backend.show"
-              @models={{array this.model.backend (concat "alphabet/" this.model.id)}}
-              @query={{hash tab="alphabet"}}
-            />
-          {{/if}}
-        </Hds::ButtonSet>
-      </div>
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend (concat "alphabet/" this.model.id)}}
+            @query={{hash tab="alphabet"}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
     </div>
   </form>
 {{else}}
