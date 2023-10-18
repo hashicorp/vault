@@ -182,7 +182,16 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	return resp, nil
 }
 
-func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, lifeTimeInSeconds int64) (*logical.Response, error) {
+// NOTE: Getting session tokens with or without MFA/TOTP has behavior that can cause confusion.
+// When an AWS IAM user has a policy attached requireing an MFA code by use of "aws:MultiFactorAuthPresent": "true",
+// then credentials may still be returned without an MFA code provided.
+// If a Vault role associated with the IAM user is configured without both an mfa_serial_number and
+// the mfa_code is not given, the API call is successful and returns credentials. These credentials
+// are scoped to any resources in the policy that do NOT have "aws:MultiFactorAuthPresent": "true" set and
+// accessing resources with it set will be denied.
+// This is expected behavior, as the policy may have a mix of permissions, some requiring MFA and others not.
+// If an mfa_serial_number is set on the Vault role, then a valid mfa_code MUST be provided to succeed.
+func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, serialNumber, mfaCode string, lifeTimeInSeconds int64) (*logical.Response, error) {
 	stsClient, err := b.clientSTS(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -190,6 +199,12 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, lifeTi
 
 	getTokenInput := &sts.GetSessionTokenInput{
 		DurationSeconds: &lifeTimeInSeconds,
+	}
+	if serialNumber != "" {
+		getTokenInput.SerialNumber = &serialNumber
+	}
+	if mfaCode != "" {
+		getTokenInput.TokenCode = &mfaCode
 	}
 
 	tokenResp, err := stsClient.GetSessionToken(getTokenInput)

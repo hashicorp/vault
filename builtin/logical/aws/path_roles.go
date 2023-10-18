@@ -161,6 +161,15 @@ delimited key pairs.`,
 				},
 				Default: "/",
 			},
+
+			"mfa_serial_number": {
+				Type: framework.TypeString,
+				Description: fmt.Sprintf(`Identification number of the MFA device associated with the root config user. Only valid
+when credential_type is %s. This is only required when the IAM user has an MFA device configured.`, sessionTokenCred),
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "MFA Device Serial Number",
+				},
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -326,6 +335,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 	if iamTags, ok := d.GetOk("iam_tags"); ok {
 		roleEntry.IAMTags = iamTags.(map[string]string)
+	}
+
+	if serialNumber, ok := d.GetOk("mfa_serial_number"); ok {
+		roleEntry.SerialNumber = serialNumber.(string)
 	}
 
 	if legacyRole != "" {
@@ -521,6 +534,7 @@ type awsRoleEntry struct {
 	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
+	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN fo the MFA device
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
@@ -535,6 +549,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
 		"permissions_boundary_arn": r.PermissionsBoundaryARN,
+		"mfa_serial_number":        r.SerialNumber,
 	}
 
 	if r.InvalidData != "" {
