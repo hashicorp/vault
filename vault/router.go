@@ -940,13 +940,13 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 }
 
 // BinaryPath checks if the given path uses binary requests
-func (r *Router) BinaryPath(ctx context.Context, req *logical.Request) bool {
+func (r *Router) BinaryPath(ctx context.Context, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return false
 	}
 
-	adjustedPath := ns.Path + req.Path
+	adjustedPath := ns.Path + path
 
 	r.l.RLock()
 	mount, raw, ok := r.root.LongestPrefix(adjustedPath)

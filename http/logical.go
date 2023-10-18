@@ -5,7 +5,6 @@ package http
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -52,29 +51,19 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
-	ctx := r.Context()
 	var data map[string]interface{}
 	var origBody io.ReadCloser
 	var passHTTPReq bool
 	var responseWriter http.ResponseWriter
-	req := &logical.Request{
-		Path:       path,
-		Data:       data,
-		Connection: getConnection(r),
-		Headers:    r.Header,
-	}
-	// Buffer the request body in order to allow us to peek at the beginning
-	// without consuming it. This approach involves no copying.
-	bufferedBody := newBufferedReader(r.Body)
-	r.Body = bufferedBody
 
 	// Determine the operation
+	var op logical.Operation
 	switch r.Method {
 	case "DELETE":
-		req.Operation = logical.DeleteOperation
+		op = logical.DeleteOperation
 		data = parseQuery(r.URL.Query())
 	case "GET":
-		req.Operation = logical.ReadOperation
+		op = logical.ReadOperation
 		queryVals := r.URL.Query()
 		var list bool
 		var err error
@@ -86,7 +75,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 			}
 			if list {
 				queryVals.Del("list")
-				req.Operation = logical.ListOperation
+				op = logical.ListOperation
 				if !strings.HasSuffix(path, "/") {
 					path += "/"
 				}
@@ -109,11 +98,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		}
 
 	case "POST", "PUT":
-		req.Operation = logical.UpdateOperation
+		op = logical.UpdateOperation
 
 		// Buffer the request body in order to allow us to peek at the beginning
 		// without consuming it. This approach involves no copying.
-		origBody = r.Body
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
@@ -122,20 +110,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 
-		if a != nil && a.IsBinaryPath(ctx, req) {
-			var bodyBytes bytes.Buffer
-			// TODO: Size limit
-			_, err := io.Copy(&bodyBytes, r.Body)
-			if err != nil {
-				status := http.StatusBadRequest
-				logical.AdjustErrorStatusCode(&status, err)
-				return nil, nil, status, fmt.Errorf("error reading data")
-			}
+		if a != nil && a.IsBinaryPath(r.Context(), path) {
 			passHTTPReq = true
-			req.HTTPRequest = r
-			data = make(map[string]interface{})
-			data[logical.HTTPRawBody] = bodyBytes.Bytes()
-		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
+			origBody = r.Body
+		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -174,7 +152,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		}
 
 	case "PATCH":
-		req.Operation = logical.PatchOperation
+		op = logical.PatchOperation
 
 		contentTypeHeader := r.Header.Get("Content-Type")
 		contentType, _, err := mime.ParseMediaType(contentTypeHeader)
@@ -202,14 +180,14 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		}
 
 	case "LIST":
-		req.Operation = logical.ListOperation
+		op = logical.ListOperation
 		if !strings.HasSuffix(path, "/") {
 			path += "/"
 		}
 
 		data = parseQuery(r.URL.Query())
 	case "HEAD":
-		req.Operation = logical.HeaderOperation
+		op = logical.HeaderOperation
 		data = parseQuery(r.URL.Query())
 	case "OPTIONS":
 	default:
@@ -221,8 +199,14 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
-	req.ID = requestId
-	req.Data = data
+	req := &logical.Request{
+		ID:         requestId,
+		Operation:  op,
+		Path:       path,
+		Data:       data,
+		Connection: getConnection(r),
+		Headers:    r.Header,
+	}
 
 	if passHTTPReq {
 		req.HTTPRequest = r
@@ -232,15 +216,6 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 	}
 
 	return req, origBody, 0, nil
-}
-
-func isOcspRequest(contentType string) bool {
-	contentType, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return false
-	}
-
-	return contentType == "application/ocsp-request"
 }
 
 func buildLogicalPath(r *http.Request) (string, int, error) {
