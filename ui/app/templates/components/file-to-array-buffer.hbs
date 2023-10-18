@@ -20,11 +20,11 @@
           </span>
           {{#if this.filename}}
             <Hds::Button
+              @text="Clear file selection"
               @icon="x-circle"
               @isIconOnly={{true}}
               @color="secondary"
               class="file-delete-button"
-              aria-label="Clear file selection"
               {{on "click" this.fileChange}}
               data-test-text-clear
             />

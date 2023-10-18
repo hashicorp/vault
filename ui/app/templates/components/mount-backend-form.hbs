@@ -40,7 +40,7 @@
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <Hds::Button
-            @text={{if (eq @mountType "secret") "Enable Engine" "Enable Method"}}
+            @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
             data-test-mount-submit="true"

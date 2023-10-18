@@ -17,7 +17,6 @@
         {{on "click" this.initSave}}
         disabled={{this.save.isRunning}}
         data-test-mfa-save
-        data-test-mfa-method-save
       />
       <Hds::Button @text="Cancel" @color="secondary" disabled={{this.save.isRunning}} {{on "click" this.cancel}} />
     </Hds::ButtonSet>

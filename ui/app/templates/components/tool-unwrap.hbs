@@ -44,7 +44,7 @@
   </Hds::Tabs>
   <Hds::ButtonSet class="has-top-padding-m">
     <Hds::Copy::Button @text="Copy unwrapped data" @textToCopy={{stringify @unwrap_data}} class="primary" />
-    <Hds::Button {{on "click" this.onClear}} class="button" @text="Back" />
+    <Hds::Button {{on "click" this.onClear}} @text="Back" />
   </Hds::ButtonSet>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">

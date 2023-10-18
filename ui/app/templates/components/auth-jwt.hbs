@@ -50,8 +50,7 @@
   {{#if this.isOIDC}}
     <Hds::Button
       @text={{concat "Sign in with " (or this.role.providerName "OIDC Provider")}}
-      @loading={{@disabled}}
-      @icon={{this.role.providerIcon}}
+      @icon={{if @disabled "loading" this.role.providerIcon}}
       data-test-auth-submit
       type="submit"
       disabled={{@disabled}}
@@ -60,7 +59,7 @@
   {{else}}
     <Hds::Button
       @text="Sign in"
-      @loading={{@disabled}}
+      @icon={{if @disabled "loading"}}
       data-test-auth-submit
       type="submit"
       disabled={{@disabled}}

@@ -203,10 +203,10 @@
         >
           {{#if @model.canListProviders}}
             <Hds::Button
+              @text="Distribute key"
               @icon="chevron-right"
-              @isIconOnly={{true}}
-              @color="secondary"
-              class="link"
+              @iconPosition="trailing"
+              @color="tertiary"
               {{on "click" (fn (mut this.isDistributing) true)}}
             />
           {{/if}}
