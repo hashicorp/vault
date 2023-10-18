@@ -507,6 +507,7 @@ func NewTestLogger(t testing.T) *TestLogger {
 		}
 		output = logFile
 	}
+	t.Logf("creating test log file %s", logPath)
 
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
