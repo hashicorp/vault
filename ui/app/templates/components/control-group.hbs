@@ -112,7 +112,7 @@
           <Hds::Button
             @text="Authorize"
             @icon={{if this.authorize.isRunning "loading"}}
-            {{action (perform this.authorize)}}
+            {{on "click" (action (perform this.authorize))}}
             data-test-authorize-button
           />
         {{/if}}
@@ -120,7 +120,7 @@
         <Hds::Button
           @text="Refresh"
           @icon={{if this.refresh.isRunning "loading"}}
-          {{action (perform this.refresh)}}
+          {{on "click" (action (perform this.refresh))}}
           data-test-refresh-button
         />
       {{/if}}

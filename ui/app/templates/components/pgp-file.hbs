@@ -71,12 +71,12 @@
             </label>
             {{#if this.key.filename}}
               <Hds::Button
-                @text="close"
+                @text="Clear key"
                 @icon="x"
                 @isIconOnly={{true}}
                 @color="secondary"
                 class="file-delete-button"
-                {{action "clearKey"}}
+                {{on "click" (action "clearKey")}}
                 data-test-pgp-clear={{true}}
               />
             {{/if}}

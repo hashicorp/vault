@@ -9,7 +9,7 @@
     <code>{{this.model.requestPath}}</code>. Be careful, you can only access this data once. If you need access again in the
     future you will need to get authorized again.
     <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
-      <Hds::Button @text="Visit" data-test-navigate-button {{action (perform this.markAndNavigate)}} />
+      <Hds::Button @text="Visit" data-test-navigate-button {{on "click" (action (perform this.markAndNavigate))}} />
     </div>
   </div>
 {{else}}
