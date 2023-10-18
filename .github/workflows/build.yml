@@ -336,6 +336,13 @@ jobs:
       fail-fast: false
     needs:
       - completed-successfully
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -389,6 +396,13 @@ jobs:
       fail-fast: false
     needs:
       - completed-successfully
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
     steps:
       - id: vault-auth
         name: Vault Authenticate
