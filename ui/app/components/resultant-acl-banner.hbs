@@ -3,7 +3,7 @@
   <A.Description>
     {{if
       @isEnterprise
-      "You do not have access to this namespace, so links might be shown that you don't have access to."
+      "You do not have access to this namespace. Links might be shown that you don't have access to."
       "Links might be shown that you don't have access to. Contact your administrator to update your policy."
     }}
   </A.Description>
@@ -13,6 +13,7 @@
       @iconPosition="trailing"
       @text={{concat "Log into " this.ns " namespace"}}
       @route="vault.cluster.logout"
+      @query={{this.queryParams}}
       data-test-resultant-acl-reauthenticate
     />
   {{/if}}
