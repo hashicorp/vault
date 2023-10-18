@@ -18,32 +18,18 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
     return `${this._baseUrl()}/${modelName}/${id}`;
   }
 
-  // the LIST response keys map to destination types (see below)
-  // we want each key to correspond to a unique destination
-  // and key_info to contain the model attributes
   query() {
     const url = `${this._baseUrl()}/sync/destinations`;
-    return this.ajax(url, 'GET', { data: { list: true } }).then(async (resp) => {
-      const transformedKeyInfo = {};
-      // loop through each destination type (keys in key_info)
-      for (const type in resp.data.key_info) {
-        // iterate through type's destinations and generate id
-        resp.data.key_info[type].forEach((name) => {
-          const id = `${type}/${name}`;
-          // add object to updated key_info data
-          transformedKeyInfo[id] = { id, name, type };
-        });
-      }
-      // update the data here (instead of serializer) to be compatible with lazyPaginatedQuery
-      resp.data.keys = Object.keys(transformedKeyInfo);
-      resp.data.key_info = transformedKeyInfo;
-      return resp;
+    return this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
+      return this._transformQueryResponse(resp);
     });
   }
-}
 
-/*
-* original LIST response 
+  /*
+the API response keys map to destination types (see below)
+for lazyPagination we need each key to correspond to a unique destination
+
+* original API LIST response 
  data: {
   key_info: {
     'aws-sm': ['my-dest-1'],
@@ -56,12 +42,10 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
 data: {
   key_info: {
     'aws-sm/my-dest-1': {
-      id: 'aws-sm/my-dest-1',
       name: 'my-dest-1',
       type: 'aws-sm',
     },
     'gh/my-dest-1': {
-      id: 'gh/my-dest-1',
       name: 'my-dest-1',
       type: 'gh',
     },
@@ -69,3 +53,21 @@ data: {
   keys: ['aws-sm/destination-aws', 'gh/destination-gh'],
 },
 */
+  _transformQueryResponse(resp) {
+    const transformedKeyInfo = {};
+    // loop through each destination type (keys in key_info)
+    for (const type in resp.data.key_info) {
+      // iterate through each type's destination names
+      resp.data.key_info[type].forEach((name) => {
+        // generate id
+        const id = `${type}/${name}`;
+        // create object with destination's attributes for key_info
+        transformedKeyInfo[id] = { name, type };
+      });
+    }
+    // update the response here (instead of serializer) to be compatible with lazyPaginatedQuery
+    resp.data.keys = Object.keys(transformedKeyInfo);
+    resp.data.key_info = transformedKeyInfo;
+    return resp;
+  }
+}
