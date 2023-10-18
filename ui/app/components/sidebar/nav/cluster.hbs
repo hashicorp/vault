@@ -13,9 +13,12 @@
     @text="Secrets engines"
     data-test-sidebar-nav-link="Secrets engines"
   />
-  {{#if this.version.isEnterprise}}
-    <Nav.Link @route="vault.cluster.sync" @text="Secrets sync" data-test-sidebar-nav-link="Secrets sync" />
-  {{/if}}
+  <Nav.Link
+    @route="vault.cluster.sync"
+    @text="Secrets sync"
+    @badge={{unless this.version.isEnterprise "Enterprise"}}
+    data-test-sidebar-nav-link="Secrets sync"
+  />
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}
