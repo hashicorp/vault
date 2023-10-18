@@ -327,8 +327,7 @@ jobs:
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-completed-successfully-failures-ce:
-    # TODO: Re-add && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-    if: ${{ always() && github.repository == 'hashicorp/vault' }}
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -352,7 +351,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05Q4D5V89W" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
             {
               "text": "CE build failures on ${{ github.ref_name }}",
@@ -388,8 +387,7 @@ jobs:
             }
 
   notify-completed-successfully-failures-ent:
-    # TODO: Re-add && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' }}
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ['self-hosted', 'linux', 'small']
     permissions:
       id-token: write
@@ -421,7 +419,7 @@ jobs:
       - name: send-notification
         uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
         with:
-          channel-id: "C05Q4D5V89W" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
           payload: |
             {
