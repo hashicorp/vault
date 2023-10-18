@@ -34,12 +34,16 @@ const mount = async () => {
   return path;
 };
 
-const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
+const newConnection = async (
+  backend,
+  plugin = 'mongodb-database-plugin',
+  connectionUrl = `mongodb://127.0.0.1:4321/${name}`
+) => {
   const name = `connection-${Date.now()}`;
   await connectionPage.visitCreate({ backend });
   await connectionPage.dbPlugin(plugin);
   await connectionPage.name(name);
-  await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
+  await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
   await connectionPage.save();
   await connectionPage.enable();
@@ -460,6 +464,19 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
+  });
+
+  test('connection_url must be decoded', async function (assert) {
+    const backend = await mount();
+    const connection = await newConnection(
+      backend,
+      'mongodb-database-plugin',
+      '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
+    );
+    await connectionPage.visitShow({ backend, id: connection });
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
   });
 
   test('Role create form', async function (assert) {
