@@ -350,7 +350,12 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		req.URL.Path = origPath
 	}()
 
-	req.URL.Path, _ = logical.ContextOriginalRequestPathValue(req.Context())
+	path, ok := logical.ContextOriginalRequestPathValue(req.Context())
+	if !ok {
+		return 0, nil, nil, errors.New("error extracting request path for forwarding RPC request")
+	}
+
+	req.URL.Path = path
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
