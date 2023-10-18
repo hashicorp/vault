@@ -27,9 +27,7 @@ module('Integration | Component | resultant-acl-banner', function (hooks) {
     assert.dom('[data-test-resultant-acl-banner] .hds-alert__title').hasText('Resultant ACL check failed');
     assert
       .dom('[data-test-resultant-acl-banner] .hds-alert__description')
-      .hasText(
-        "You do not have access to this namespace. Links might be shown that you don't have access to."
-      );
+      .hasText('You do not have access to resources in this namespace.');
     assert
       .dom('[data-test-resultant-acl-reauthenticate]')
       .hasText('Log into my-ns namespace', 'Shows reauth link with given namespace');
