@@ -6,34 +6,32 @@
 import ApplicationSerializer from 'vault/serializers/application';
 
 export default class SyncDestinationSerializer extends ApplicationSerializer {
+  // overwrite application serializer's normalizeResponse method
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let transformedPayload = payload;
 
-    switch (requestType) {
-      case 'query':
-        transformedPayload = this._transformQueryPayload(payload);
-        break;
-      case 'findRecord':
-        transformedPayload = this._transformFindRecordPayload(payload);
-        break;
-      default:
-        return super.normalizeResponse(...arguments);
+    if (requestType === 'findRecord') {
+      transformedPayload = this._normalizeFindRecord(payload);
     }
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 
-  _transformQueryPayload(payload) {
-    if (payload.data?.keys && Array.isArray(payload.data.keys)) {
-      // return array of destination objects
-      return payload.data.keys.map((id) => ({
-        id,
-        ...payload.data.key_info[id],
-      }));
+  extractLazyPaginatedData(payload) {
+    const transformedPayload = [];
+    // loop through each destination type (keys in key_info)
+    for (const type in payload.data.key_info) {
+      // iterate through each type's destination names
+      payload.data.key_info[type].forEach((name) => {
+        const id = `${type}/${name}`;
+        // create object with destination's id and attributes, add to payload
+        transformedPayload.pushObject({ id, name, type });
+      });
     }
-    return payload;
+    return transformedPayload;
   }
 
-  _transformFindRecordPayload(payload) {
+  // generates id and spreads connection_details object into data
+  _normalizeFindRecord(payload) {
     if (payload?.data?.connection_details) {
       const { type, name, connection_details } = payload.data;
       const id = `${type}/${name}`;

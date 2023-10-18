@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { destinationTypes } from 'vault/helpers/sync-destinations';
 
-module('Unit | Adapter | sync/destinations', function (hooks) {
+module('Unit | Adapter | sync | destination', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
@@ -33,5 +33,24 @@ module('Unit | Adapter | sync/destinations', function (hooks) {
       });
       this.store.findRecord(`sync/destinations/${type}`, 'my-dest');
     }
+  });
+
+  test('it calls the correct endpoint for query', async function (assert) {
+    assert.expect(2);
+
+    this.server.get('sys/sync/destinations', (schema, req) => {
+      assert.propEqual(req.queryParams, { list: 'true' }, 'it passes { list: true } as query params');
+      assert.ok(true, `request is made to LIST sys/sync/destinations endpoint on query`);
+      return {
+        data: {
+          key_info: {
+            'aws-sm': ['my-dest-1'],
+            gh: ['my-dest-1'],
+          },
+          keys: ['aws-sm', 'gh'],
+        },
+      };
+    });
+    this.store.query('sync/destination', {});
   });
 });
