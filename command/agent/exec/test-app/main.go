@@ -18,6 +18,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -33,9 +34,8 @@ var (
 	useSigusr1StopSignal bool
 	stopAfter            time.Duration
 	exitCode             int
+	logToStdout          bool
 )
-
-var logger = log.New(os.Stderr, "test-app: ", log.LstdFlags)
 
 func init() {
 	flag.UintVar(&port, "port", 34000, "port to run the test app on")
@@ -43,6 +43,7 @@ func init() {
 	flag.BoolVar(&useSigusr1StopSignal, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
 	flag.DurationVar(&stopAfter, "stop-after", 60*time.Second, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
+	flag.BoolVar(&logToStdout, "log-to-stdout", false, "send logs to stdout instead of stderr")
 }
 
 type Response struct {
@@ -87,6 +88,11 @@ func exit(exitCh chan<- struct{}) http.HandlerFunc {
 
 func main() {
 	flag.Parse()
+	var logOut io.Writer = os.Stderr
+	if logToStdout {
+		logOut = os.Stdout
+	}
+	logger := log.New(logOut, "test-app: ", log.LstdFlags)
 
 	doneCh := make(chan struct{})
 	exitCh := make(chan struct{})
