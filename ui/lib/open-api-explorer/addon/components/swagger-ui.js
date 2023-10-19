@@ -70,7 +70,7 @@ const CONFIG = (SwaggerUIBundle, componentInstance, query) => {
       return req;
     },
     onComplete: () => {
-      componentInstance.set('swaggerLoading', false);
+      componentInstance.swaggerLoading = false;
     },
   };
 };
@@ -79,16 +79,10 @@ export default class SwaggerUiComponent extends Component {
   @service auth;
   @service namespace;
 
-  @tracked swaggerImport;
   @tracked initialFilter;
   @tracked swaggerLoading = true;
 
   inputId = `${guidFor(this)}-swagger`;
-
-  constructor() {
-    // ARG TODO remove?
-    super(...arguments);
-  }
 
   // using an action to bind the correct "this" context
   @action async swaggerInit() {
@@ -104,7 +98,7 @@ export default class SwaggerUiComponent extends Component {
   }
 
   @action proxyEvent(e) {
-    const swaggerInput = this.element.querySelector('.operation-filter-input');
+    const swaggerInput = document.querySelector('.operation-filter-input');
     // if this breaks because of a react upgrade,
     // change this to
     //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
