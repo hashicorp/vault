@@ -55,11 +55,6 @@ var (
 	ErrNoApplicablePolicies = errors.New("no applicable policies")
 
 	egpDebugLogging bool
-
-	// if this returns an error, the request should be blocked and the error
-	// should be returned to the client
-	// TODO remove once entBlockRequestIfError is implemented in ENT
-	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -571,6 +566,9 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
 	}
+	if disable_repl_status, ok := logical.ContextDisableReplicationStatusEndpointsValue(httpCtx); ok {
+		ctx = logical.CreateContextDisableReplicationStatusEndpoints(ctx, disable_repl_status)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -895,16 +893,16 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
-				walState.LocalIndex = LastRemoteWAL(c)
+				walState.LocalIndex = c.EntLastRemoteWAL()
 			} else {
-				walState.LocalIndex = LastWAL(c)
+				walState.LocalIndex = c.EntLastWAL()
 			}
 		}
 		if walState.ReplicatedIndex == 0 {
 			if c.perfStandby {
-				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+				walState.ReplicatedIndex = c.entLastRemoteUpstreamWAL()
 			} else {
-				walState.ReplicatedIndex = LastRemoteWAL(c)
+				walState.ReplicatedIndex = c.EntLastRemoteWAL()
 			}
 		}
 
@@ -1102,7 +1100,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
@@ -1561,7 +1559,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// by placing this after the authorization check, we don't leak
 		// information about locked namespaces to unauthenticated clients.
-		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 			retErr = multierror.Append(retErr, err)
 			return
 		}
@@ -1825,7 +1823,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	// this check handles the bad login credential case
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
@@ -2197,8 +2195,6 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 	}
 	return mfaAny, nil
 }
-
-func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.

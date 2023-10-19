@@ -147,12 +147,13 @@ jobs:
 
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR is not docs/ui only
+    # Only run fips on the enterprise repo, and only if it's main or a release branch
+    # (i.e. not a PR), or is a PR with the label "fips"
     if: |
-      github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
       needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'
+      needs.verify-changes.outputs.is_ui_change == 'false' && 
+      (contains(github.event.pull_request.labels.*.name, 'fips') || github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     needs:
       - setup
       - verify-changes
@@ -246,15 +247,21 @@ jobs:
           make ci-bootstrap dev
       - id: test-ui
         name: test-ui
+        if: github.repository == 'hashicorp/vault-enterprise'
         env:
           VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
         run: |
           export PATH="${PWD}/bin:${PATH}"
-
-          if [ "${{ github.repository }}" == 'hashicorp/vault' ] ; then
-            export VAULT_LICENSE="${{ secrets.VAULT_LICENSE }}"
-          fi
-
+          # Run Ember tests
+          cd ui
+          mkdir -p test-results/qunit
+          yarn test
+      - id: test-ui-oss
+        if: github.repository == 'hashicorp/vault'
+        name: test-ui-oss
+        run: |
+          export PATH="${PWD}/bin:${PATH}"
+          
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit
