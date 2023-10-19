@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -49,6 +49,18 @@ func unlockUser(ctx context.Context, core *Core, mountAccessor string, aliasName
 	// remove entry for locked user from userFailedLoginInfo map and storage
 	if err := updateUserFailedLoginInfo(ctx, core, loginUserInfoKey, nil, true); err != nil {
 		return err
+	}
+
+	if core.lockoutLoggerCancel != nil {
+		// Check if we have no more locked users and cancel any running lockout logger
+		core.userFailedLoginInfoLock.RLock()
+		numLockedUsers := len(core.userFailedLoginInfo)
+		core.userFailedLoginInfoLock.RUnlock()
+
+		if numLockedUsers == 0 {
+			core.Logger().Info("user lockout(s) cleared")
+			core.lockoutLoggerCancel()
+		}
 	}
 
 	return nil

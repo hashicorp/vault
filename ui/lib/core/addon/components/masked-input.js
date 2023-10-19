@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { debug } from '@ember/debug';
@@ -27,12 +27,14 @@ import autosize from 'autosize';
  * @param name {String} - The key correlated to the value. Used for the download file name.
  * @param [onChange=Callback] {Function|action} - Callback triggered on change, sends new value. Must set the value of @value
  * @param [allowCopy=false] {bool} - Whether or not the input should render with a copy button.
+ * @param [allowDownload=false] {bool} - Renders a download button that prompts a confirmation modal to download the secret value
  * @param [displayOnly=false] {bool} - Whether or not to display the value as a display only `pre` element or as an input.
  *
  */
 export default class MaskedInputComponent extends Component {
   textareaId = 'textarea-' + guidFor(this);
   @tracked showValue = false;
+  @tracked modalOpen = false;
 
   constructor() {
     super(...arguments);

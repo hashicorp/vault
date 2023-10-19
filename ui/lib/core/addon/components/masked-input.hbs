@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   class="masked-input {{if @displayOnly 'display-only'}} {{if @allowCopy 'allow-copy'}}"
   data-test-masked-input
@@ -30,26 +35,24 @@
     />
   {{/if}}
   {{#if @allowCopy}}
-    <CopyButton
-      @clipboardText={{@value}}
-      @success={{action (set-flash-message "Data copied!")}}
-      @error={{action (set-flash-message "Error copying data" "danger")}}
-      class="copy-button button {{if @displayOnly 'is-compact'}}"
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@value}}
+      class="transparent has-padding-xxs"
       data-test-copy-button
-    >
-      <Icon @name="clipboard-copy" aria-label="Copy value" />
-    </CopyButton>
+    />
   {{/if}}
   {{#if @allowDownload}}
-    <DownloadButton
-      class="button download-button"
-      @filename={{or @name "secret-value"}}
-      @data={{@value}}
-      @stringify={{true}}
-      aria-label="Download secret value"
-    >
-      <Icon @name="download" />
-    </DownloadButton>
+    <Hds::Button
+      @text="Download secret value"
+      @icon="download"
+      @isIconOnly={{true}}
+      @color="tertiary"
+      class="has-padding-xxs"
+      data-test-download-icon
+      {{on "click" (fn (mut this.modalOpen) true)}}
+    />
   {{/if}}
   <button
     onclick={{this.toggleMask}}
@@ -62,3 +65,27 @@
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
   </button>
 </div>
+
+{{! CONFIRM DOWNLOAD MODAL }}
+{{#if this.modalOpen}}
+  <Hds::Modal @color="warning" id="confirm-download-modal" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Download secret value?
+    </M.Header>
+    <M.Body>
+      This download is
+      <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <DownloadButton
+          @filename={{or @name "secret-value"}}
+          @data={{@value}}
+          @stringify={{true}}
+          @onSuccess={{fn (mut this.modalOpen) false}}
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

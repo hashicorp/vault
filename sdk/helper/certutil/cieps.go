@@ -22,7 +22,7 @@ const (
 	SignCIEPSMode  = "sign"
 	IssueCIEPSMode = "issue"
 	ACMECIEPSMode  = "acme"
-	ICACIEPSMOde   = "ica"
+	ICACIEPSMode   = "ica"
 )
 
 // Configuration of the issuer and mount at the time of this request;
@@ -134,11 +134,11 @@ func (req *CIEPSRequest) ParseUserCSR() error {
 // parse if unknown fields are sent.
 type CIEPSResponse struct {
 	UUID              string            `json:"request_uuid"`
-	Error             string            `json:"error"`
-	Warnings          []string          `json:"warnings"`
+	Error             string            `json:"error,omitempty"`
+	Warnings          []string          `json:"warnings,omitempty"`
 	Certificate       string            `json:"certificate"`
 	ParsedCertificate *x509.Certificate `json:"-"`
-	IssuerRef         string            `json:"issuer_ref,omitempty"`
+	IssuerRef         string            `json:"issuer_ref"`
 	StoreCert         bool              `json:"store_certificate"`
 	GenerateLease     bool              `json:"generate_lease"`
 }

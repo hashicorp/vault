@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="action-block is-rounded" data-test-promote-replication>
   <div class="action-block-info">
     <h3 class="title is-5 is-marginless">
@@ -15,107 +20,106 @@
       type="button"
       class="button is-tertiary"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="promote"
     >
       Promote
     </button>
   </div>
 </div>
 
-<Modal
-  @title="Promote cluster?"
-  @onClose={{action (mut this.isModalActive) false}}
-  @isActive={{this.isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    {{#if (eq this.replicationMode "dr")}}
-      <p class="has-bottom-margin-m">
-        To promote this DR Replication Secondary to a primary, enter the DR Operation token.
-      </p>
-    {{/if}}
-    <p class="has-bottom-margin-m">
-      Vault Replication is not designed for active-active usage. Enabling two primaries should never be done, as it can lead
-      to data loss if they or their secondaries are ever reconnected. If the cluster has a primary, be sure to demote it
-      before promoting a secondary.
-    </p>
-
-    <div data-test-promote-dr-inputs>
+{{#if this.isModalActive}}
+  <Hds::Modal id="replication-promote-modal" @color="warning" @onClose={{fn (mut this.isModalActive) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Promote cluster?
+    </M.Header>
+    <M.Body>
       {{#if (eq this.replicationMode "dr")}}
-        <div class="field is-borderless">
-          <label for="dr_operation_token_promote" class="is-label is-size-6">
-            DR Operation Token
+        <p class="has-bottom-margin-m">
+          To promote this DR Replication Secondary to a primary, enter the DR Operation token.
+        </p>
+      {{/if}}
+      <p class="has-bottom-margin-m">
+        Vault Replication is not designed for active-active usage. Enabling two primaries should never be done, as it can
+        lead to data loss if they or their secondaries are ever reconnected. If the cluster has a primary, be sure to demote
+        it before promoting a secondary.
+      </p>
+
+      <div data-test-promote-dr-inputs>
+        {{#if (eq this.replicationMode "dr")}}
+          <div class="field is-borderless">
+            <label for="dr_operation_token_promote" class="is-label is-size-6">
+              DR Operation Token
+            </label>
+            <div class="control">
+              <Input
+                class="input"
+                id="dr_operation_token_promote"
+                name="dr_operation_token_promote"
+                @value={{this.dr_operation_token_promote}}
+              />
+            </div>
+          </div>
+        {{/if}}
+        <div class="field">
+          <label for="primary_cluster_addr" class="is-label is-size-6">
+            Primary cluster address
+            <em class="is-optional">(optional)</em>
           </label>
           <div class="control">
             <Input
               class="input"
-              id="dr_operation_token_promote"
-              name="dr_operation_token_promote"
-              @value={{this.dr_operation_token_promote}}
+              id="primary_cluster_addr"
+              name="primary_cluster_addr"
+              @value={{this.primary_cluster_addr}}
             />
           </div>
-        </div>
-      {{/if}}
-      <div class="field">
-        <label for="primary_cluster_addr" class="is-label is-size-6">
-          Primary cluster address
-          <em class="is-optional">(optional)</em>
-        </label>
-        <div class="control">
-          <Input class="input" id="primary_cluster_addr" name="primary_cluster_addr" @value={{this.primary_cluster_addr}} />
-        </div>
-        <p class="help">
-          Overrides the cluster address that the primary gives to secondary nodes.
-        </p>
-      </div>
-
-      <div class="field">
-        <div class="b-checkbox">
-          <input
-            type="checkbox"
-            id="forcePromote"
-            class="styled"
-            checked={{this.force}}
-            onchange={{action (mut this.force) value="target.checked"}}
-          />
-          <label for="forcePromote" class="is-label is-size-6">
-            Force promotion of this cluster
-          </label>
-          <p>
-            Promote the cluster even if certain safety checks fail. This could result in data loss of data isn't fully
-            replicated
+          <p class="help">
+            Overrides the cluster address that the primary gives to secondary nodes.
           </p>
         </div>
+
+        <div class="field">
+          <div class="b-checkbox">
+            <input
+              type="checkbox"
+              id="forcePromote"
+              class="styled"
+              checked={{this.force}}
+              onchange={{action (mut this.force) value="target.checked"}}
+            />
+            <label for="forcePromote" class="is-label is-size-6">
+              Force promotion of this cluster
+            </label>
+            <p>
+              Promote the cluster even if certain safety checks fail. This could result in data loss of data isn't fully
+              replicated
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      disabled={{if (and (eq this.replicationMode "dr") (not this.dr_operation_token_promote)) true}}
-      onclick={{action
-        "onSubmit"
-        "promote"
-        this.model.replicationAttrs.modeForUrl
-        (hash
-          dr_operation_token_promote=this.dr_operation_token_promote
-          primary_cluster_addr=this.primary_cluster_addr
-          force=this.force
-        )
-      }}
-      data-test-promote-confirm-button
-    >
-      Promote
-    </button>
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) false}}
-      data-test-promote-cancel-button
-    >
-      Cancel
-    </button>
-  </footer>
-</Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          disabled={{if (and (eq this.replicationMode "dr") (not this.dr_operation_token_promote)) true}}
+          {{on
+            "click"
+            (fn
+              this.onSubmit
+              "promote"
+              this.model.replicationAttrs.modeForUrl
+              (hash
+                dr_operation_token_promote=this.dr_operation_token_promote
+                primary_cluster_addr=this.primary_cluster_addr
+                force=this.force
+              )
+            )
+          }}
+          data-test-confirm-button
+          @text="Promote"
+        />
+        <Hds::Button @color="secondary" @text="Cancel" {{on "click" F.close}} data-test-promote-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

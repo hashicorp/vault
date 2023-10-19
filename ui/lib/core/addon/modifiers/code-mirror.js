@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { action } from '@ember/object';
@@ -10,6 +10,7 @@ import Modifier from 'ember-modifier';
 
 import 'codemirror/addon/edit/matchbrackets';
 import 'codemirror/addon/selection/active-line';
+import 'codemirror/addon/display/autorefresh';
 import 'codemirror/addon/lint/lint.js';
 import 'codemirror/addon/lint/json-lint.js';
 // right now we only use the ruby and javascript, if you use another mode you'll need to import it.
@@ -62,11 +63,16 @@ export default class CodeMirrorModifier extends Modifier {
       theme: namedArgs.theme || 'hashi',
       value: namedArgs.content || '',
       viewportMargin: namedArgs.viewportMargin || '',
+      autoRefresh: namedArgs.autoRefresh,
     });
 
     editor.on('change', bind(this, this._onChange, namedArgs));
     editor.on('focus', bind(this, this._onFocus, namedArgs));
 
     this._editor = editor;
+
+    if (namedArgs.onSetup) {
+      namedArgs.onSetup(editor);
+    }
   }
 }

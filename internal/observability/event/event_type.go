@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -34,4 +34,9 @@ func GenerateNodeID() (eventlogger.NodeID, error) {
 	id, err := uuid.GenerateUUID()
 
 	return eventlogger.NodeID(id), err
+}
+
+// String returns the string version of an EventType.
+func (t EventType) String() string {
+	return string(t)
 }

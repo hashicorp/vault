@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -353,21 +352,19 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		}
 
 		// Websockets need to be handled at HTTP layer instead of logical requests.
-		if core.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-			ns, err := namespace.FromContext(r.Context())
-			if err != nil {
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
-			nsPath := ns.Path
-			if ns.ID == namespace.RootNamespaceID {
-				nsPath = ""
-			}
-			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-				handler := handleEventsSubscribe(core, req)
-				handler.ServeHTTP(w, r)
-				return
-			}
+		ns, err := namespace.FromContext(r.Context())
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		nsPath := ns.Path
+		if ns.ID == namespace.RootNamespaceID {
+			nsPath = ""
+		}
+		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+			handler := handleEventsSubscribe(core, req)
+			handler.ServeHTTP(w, r)
+			return
 		}
 
 		// Make the internal request. We attach the connection info
@@ -449,7 +446,7 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 		}
 	}
 
-	adjustResponse(core, w, req)
+	entAdjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)

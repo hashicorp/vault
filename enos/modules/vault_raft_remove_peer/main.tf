@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -56,15 +56,13 @@ resource "enos_remote_exec" "vault_raft_remove_peer" {
   for_each = local.instances
 
   environment = {
-    VAULT_TOKEN = var.vault_root_token
-    VAULT_ADDR  = "http://localhost:8200"
+    REMOVE_VAULT_CLUSTER_ADDR = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
+    VAULT_TOKEN               = var.vault_root_token
+    VAULT_ADDR                = "http://localhost:8200"
+    VAULT_INSTALL_DIR         = var.vault_install_dir
   }
 
-  content = templatefile("${path.module}/templates/raft-remove-peer.sh", {
-    remove_vault_cluster_addr = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir         = var.vault_install_dir
-    vault_local_binary_path   = "${var.vault_install_dir}/vault"
-  })
+  scripts = [abspath("${path.module}/scripts/raft-remove-peer.sh")]
 
   transport = {
     ssh = {

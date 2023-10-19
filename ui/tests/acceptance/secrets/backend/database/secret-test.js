@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -14,25 +14,21 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import searchSelect from 'vault/tests/pages/components/search-select';
-import {
-  createPolicyCmd,
-  deleteEngineCmd,
-  mountEngineCmd,
-  runCmd,
-  tokenWithPolicyCmd,
-} from 'vault/tests/helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 const searchSelectComponent = create(searchSelect);
-const consoleComponent = create(consoleClass);
 
-const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
+const newConnection = async (
+  backend,
+  plugin = 'mongodb-database-plugin',
+  connectionUrl = `mongodb://127.0.0.1:4321/${name}`
+) => {
   const name = `connection-${Date.now()}`;
   await connectionPage.visitCreate({ backend });
   await connectionPage.dbPlugin(plugin);
   await connectionPage.name(name);
-  await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
+  await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
   await connectionPage.save();
   await connectionPage.enable();
@@ -41,7 +37,7 @@ const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets');
-  await click(`[data-test-auth-backend-link="${backend}"]`);
+  await click(`[data-test-secrets-backend-link="${backend}"]`);
   await click('[data-test-secret-list-tab="Connections"]');
   await click(`[data-test-secret-link="${connection}"]`);
   return;
@@ -231,10 +227,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
     await authPage.login();
-    return consoleComponent.runCommands(mountEngineCmd('database', this.backend));
+    return runCmd(mountEngineCmd('database', this.backend), false);
   });
-  hooks.afterEach(function () {
-    return consoleComponent.runCommands(deleteEngineCmd(this.backend));
+  hooks.afterEach(async function () {
+    await authPage.login();
+    return runCmd(deleteEngineCmd(this.backend), false);
   });
 
   test('can enable the database secrets engine', async function (assert) {
@@ -256,7 +253,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     await visit('/vault/secrets');
     // Cleanup backend
-    await consoleComponent.runCommands(deleteEngineCmd(backend));
+    await runCmd(deleteEngineCmd(backend), false);
   });
 
   for (const testCase of connectionTests) {
@@ -288,7 +285,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await connectionPage.save();
       await settled();
       assert
-        .dom('.modal.is-active .title')
+        .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
@@ -404,7 +401,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.save();
     await settled();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.strictEqual(
@@ -425,7 +422,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     await connectionPage.delete();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
@@ -446,15 +443,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
       path "${backend}/config/*" {
         capabilities = ["read"]
       }
-      # allow backend cleanup on afterEach
-      path "sys/mounts/${backend}" {
-        capabilities = ["delete"]
-      }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', CONNECTION_VIEW_ONLY),
-      ...tokenWithPolicyCmd('test-policy'),
-    ]);
+    const token = await runCmd(tokenWithPolicyCmd('test-policy', CONNECTION_VIEW_ONLY));
     await navToConnection(backend, connection);
     assert
       .dom('[data-test-database-connection-delete]')
@@ -467,7 +457,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await authPage.logout();
     // Check with restricted permissions
     await authPage.login(token);
-    assert.dom(`[data-test-auth-backend-link="${backend}"]`).exists('Shows backend on secret list page');
+    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
@@ -491,6 +482,19 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
+  });
+
+  test('connection_url must be decoded', async function (assert) {
+    const backend = this.backend;
+    const connection = await newConnection(
+      backend,
+      'mongodb-database-plugin',
+      '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
+    );
+    await navToConnection(backend, connection);
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
   });
 
   test('Role create form', async function (assert) {
@@ -540,10 +544,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         capabilities = ["list", "create", "read", "update"]
       }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', NO_ROLES_POLICY),
-      ...tokenWithPolicyCmd('test-policy'),
-    ]);
+    const token = await runCmd(tokenWithPolicyCmd('test-policy', NO_ROLES_POLICY));
 
     // test root user flow first
     await visit(`/vault/secrets/${backend}/overview`);

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -16,6 +16,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
@@ -403,6 +405,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 		"lease_duration": json.Number("0"),
 		"wrap_info":      nil,
 		"warnings":       nil,
+		"mount_type":     "system",
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"secret/": map[string]interface{}{
@@ -591,8 +594,9 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 		"wrap_info": map[string]interface{}{
 			"ttl": json.Number("60"),
 		},
-		"warnings": nil,
-		"auth":     nil,
+		"warnings":   nil,
+		"auth":       nil,
+		"mount_type": "",
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -804,6 +808,7 @@ func testNonPrintable(t *testing.T, disable bool) {
 	props := &vault.HandlerProperties{
 		Core:                  core,
 		DisablePrintableCheck: disable,
+		ListenerConfig:        &configutil.Listener{},
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)
 	defer ln.Close()

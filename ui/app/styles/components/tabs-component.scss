@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file defines the style for .tabs-container, .tabs and .tab
@@ -29,8 +29,7 @@
       &:focus {
         box-shadow: none;
       }
-      &.active,
-      &.active .tab {
+      &.active {
         border-color: $blue;
         color: $blue;
       }
@@ -40,10 +39,6 @@
       &.is-active {
         border-bottom: 2px solid $blue;
         color: $blue;
-
-        > button {
-          color: $blue;
-        }
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
@@ -61,8 +56,7 @@
       box-shadow: none;
     }
     &.active a,
-    &.is-active a,
-    &.active .tab {
+    &.is-active a {
       border-color: $blue;
       color: $blue;
     }
@@ -73,10 +67,6 @@
     display: flex;
     justify-content: center;
     vertical-align: top;
-  }
-
-  a,
-  .tab {
     border-bottom: 2px solid transparent;
     color: $grey;
     font-weight: $font-weight-semibold;

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .button {
@@ -14,10 +14,9 @@
   display: inline-block;
   font-size: $size-8;
   font-weight: $font-weight-semibold;
-  height: 2.5rem;
-  line-height: 1.6;
+  min-height: 2.25rem;
   min-width: 6rem;
-  padding: $size-10 $size-8;
+  padding: 0.5625rem 0.9375rem;
   position: relative;
   text-align: center;
   text-decoration: none;
@@ -281,22 +280,6 @@
   margin: 0 !important;
 }
 
-.button.next-feature-step {
-  background: $white;
-  border: 1px solid $grey-light;
-  border-radius: $radius;
-  box-shadow: none;
-  color: $blue;
-  display: flex;
-  height: auto;
-  line-height: 1.2;
-  justify-content: space-between;
-  text-align: left;
-  white-space: normal;
-  padding: $size-8;
-  width: 100%;
-}
-
 a.button.disabled {
   color: $white;
   background-color: $grey-dark;
@@ -320,4 +303,80 @@ a.button.disabled {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+
+  &:disabled {
+    color: $grey-light;
+    cursor: not-allowed;
+  }
+}
+
+// TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
+// Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
+.hds-copy-button {
+  font-weight: $font-weight-semibold; // TODO delete
+  box-shadow: $box-shadow-low; // TODO delete
+
+  &.white-icon svg {
+    color: $white;
+  }
+
+  &.icon-grey-300 svg {
+    color: $ui-gray-300;
+  }
+
+  &.icon-grey-500 svg {
+    color: $ui-gray-500;
+  }
+
+  &.transparent {
+    background: none;
+    box-shadow: none;
+    border: 1px solid transparent;
+    &:hover {
+      border: 1px solid $grey-light;
+      border-color: var(--token-color-border-strong);
+    }
+  }
+
+  &.primary {
+    background-color: $blue;
+    border-color: darken($blue, 2%);
+    color: $white;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+    svg {
+      color: $white;
+    }
+  }
+
+  &.secondary {
+    background-color: $grey-lightest;
+    border: 1px solid $grey-light;
+  }
+
+  &.in-dropdown {
+    div {
+      font-size: $size-7;
+    }
+    svg {
+      color: transparent;
+    }
+  }
+}
+
+// Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
+.hds-button {
+  font-weight: $font-weight-semibold; // TODO consult design on font weight after button class audit
+  display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
+  // for toolbar-button must pass arg @color="secondary"
+  &.toolbar-button {
+    color: $black;
+    background: none;
+    border: none;
+    box-shadow: none;
+    &:hover:not(.disabled) {
+      background-color: $ui-gray-100;
+      color: $blue;
+    }
+  }
 }

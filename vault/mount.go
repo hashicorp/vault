@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
@@ -62,15 +61,19 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	systemMountPath    = "sys/"
-	identityMountPath  = "identity/"
-	cubbyholeMountPath = "cubbyhole/"
+	mountPathSystem    = "sys/"
+	mountPathIdentity  = "identity/"
+	mountPathCubbyhole = "cubbyhole/"
 
-	systemMountType      = "system"
-	identityMountType    = "identity"
-	cubbyholeMountType   = "cubbyhole"
-	pluginMountType      = "plugin"
+	mountTypeSystem      = "system"
+	mountTypeNSSystem    = "ns_system"
+	mountTypeIdentity    = "identity"
+	mountTypeCubbyhole   = "cubbyhole"
+	mountTypePlugin      = "plugin"
+	mountTypeKV          = "kv"
 	mountTypeNSCubbyhole = "ns_cubbyhole"
+	mountTypeToken       = "token"
+	mountTypeNSToken     = "ns_token"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -91,25 +94,25 @@ var (
 	protectedMounts = []string{
 		"audit/",
 		"auth/",
-		systemMountPath,
-		cubbyholeMountPath,
-		identityMountPath,
+		mountPathSystem,
+		mountPathCubbyhole,
+		mountPathIdentity,
 	}
 
 	untunableMounts = []string{
-		cubbyholeMountPath,
-		systemMountPath,
+		mountPathCubbyhole,
+		mountPathSystem,
 		"audit/",
-		identityMountPath,
+		mountPathIdentity,
 	}
 
 	// singletonMounts can only exist in one location and are
 	// loaded by default. These are types, not paths.
 	singletonMounts = []string{
-		cubbyholeMountType,
-		systemMountType,
-		"token",
-		identityMountType,
+		mountTypeCubbyhole,
+		mountTypeSystem,
+		mountTypeToken,
+		mountTypeIdentity,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -430,7 +433,7 @@ func (e *MountEntry) IsExternalPlugin() bool {
 
 // MountClass returns the mount class based on Accessor and Path
 func (e *MountEntry) MountClass() string {
-	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", systemMountPath)) {
+	if e.Accessor == "" || strings.HasPrefix(e.Path, fmt.Sprintf("%s/", mountPathSystem)) {
 		return ""
 	}
 
@@ -694,7 +697,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// Check for the correct backend type
 	backendType := backend.Type()
 	if backendType != logical.TypeLogical {
-		if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
+		if entry.Type != mountTypeKV && entry.Type != mountTypeSystem && entry.Type != mountTypeCubbyhole {
 			return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
 		}
 	}
@@ -758,8 +761,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
 		view.setReadOnlyErr(origReadOnlyErr)
+
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -1336,7 +1341,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.Local = true
 			needPersist = true
 		}
-		if entry.Type == cubbyholeMountType && !entry.Local {
+		if entry.Type == mountTypeCubbyhole && !entry.Local {
 			entry.Local = true
 			needPersist = true
 		}
@@ -1514,10 +1519,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origReadOnlyErr)
-			})
 		}
 
 		var backend logical.Backend
@@ -1567,7 +1568,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			backendType := backend.Type()
 
 			if backendType != logical.TypeLogical {
-				if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
+				if entry.Type != mountTypeKV && entry.Type != mountTypeSystem && entry.Type != mountTypeCubbyhole {
 					return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
 				}
 			}
@@ -1603,8 +1604,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origReadOnlyErr)
+				}
 
-				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
@@ -1693,7 +1698,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	switch {
-	case entry.Type == "plugin":
+	case entry.Type == mountTypePlugin:
 		conf["plugin_name"] = entry.Config.PluginName
 	default:
 		conf["plugin_name"] = t
@@ -1703,7 +1708,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
-	c.AddLogger(backendLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeSecrets.String(),
 		MountAccessor: entry.Accessor,
@@ -1716,14 +1720,12 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, "", err
 	}
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      backendLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-	}
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		config.EventsSender = pluginEventSender
+		StorageView:  view,
+		Logger:       backendLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)
@@ -1752,7 +1754,7 @@ func (c *Core) defaultMountTable() *MountTable {
 		if err != nil {
 			panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 		}
-		mountAccessor, err := c.generateMountAccessor("kv")
+		mountAccessor, err := c.generateMountAccessor(mountTypeKV)
 		if err != nil {
 			panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 		}
@@ -1764,7 +1766,7 @@ func (c *Core) defaultMountTable() *MountTable {
 		kvMount := &MountEntry{
 			Table:            mountTableType,
 			Path:             "secret/",
-			Type:             "kv",
+			Type:             mountTypeKV,
 			Description:      "key/value secret storage",
 			UUID:             mountUUID,
 			Accessor:         mountAccessor,
@@ -1800,8 +1802,8 @@ func (c *Core) requiredMountTable() *MountTable {
 	}
 	cubbyholeMount := &MountEntry{
 		Table:            mountTableType,
-		Path:             cubbyholeMountPath,
-		Type:             cubbyholeMountType,
+		Path:             mountPathCubbyhole,
+		Type:             mountTypeCubbyhole,
 		Description:      "per-token private secret storage",
 		UUID:             cubbyholeUUID,
 		Accessor:         cubbyholeAccessor,
@@ -1825,7 +1827,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	sysMount := &MountEntry{
 		Table:            mountTableType,
 		Path:             "sys/",
-		Type:             systemMountType,
+		Type:             mountTypeSystem,
 		Description:      "system endpoints used for control, policy and debugging",
 		UUID:             sysUUID,
 		Accessor:         sysAccessor,
@@ -1901,15 +1903,15 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
 	switch entry.Type {
-	case systemMountType:
+	case mountTypeSystem:
 		c.systemBackend = backend.(*SystemBackend)
 		c.systemBarrierView = view
-	case cubbyholeMountType:
+	case mountTypeCubbyhole:
 		ch := backend.(*CubbyholeBackend)
 		ch.saltUUID = entry.UUID
 		ch.storageView = view
 		c.cubbyholeBackend = ch
-	case identityMountType:
+	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
 	}
 }

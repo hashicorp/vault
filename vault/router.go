@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -39,8 +39,9 @@ type Router struct {
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
-	storagePrefix *radix.Tree
-	logger        hclog.Logger
+	storagePrefix            *radix.Tree
+	logger                   hclog.Logger
+	rollbackMetricsMountName bool
 }
 
 // NewRouter returns a new router
@@ -581,10 +582,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	req.Path = adjustedPath
 	if !existenceCheck {
-		defer metrics.MeasureSince([]string{
-			"route", string(req.Operation),
-			strings.ReplaceAll(mount, "/", "-"),
-		}, time.Now())
+		metricName := []string{"route", string(req.Operation)}
+		if req.Operation != logical.RollbackOperation || r.rollbackMetricsMountName {
+			metricName = append(metricName, strings.ReplaceAll(mount, "/", "-"))
+		}
+		defer metrics.MeasureSince(metricName, time.Now())
 	}
 	re := raw.(*routeEntry)
 
@@ -637,9 +639,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
-	case strings.HasPrefix(originalPath, "sys/"):
-	case strings.HasPrefix(originalPath, "identity/"):
-	case strings.HasPrefix(originalPath, cubbyholeMountPath):
+	case strings.HasPrefix(originalPath, mountPathSystem):
+	case strings.HasPrefix(originalPath, mountPathIdentity):
+	case strings.HasPrefix(originalPath, mountPathCubbyhole):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
 			// cubbyhole ID so just return here
@@ -809,7 +811,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 				}
 
 				switch re.mountEntry.Type {
-				case "token", "ns_token":
+				case mountTypeToken, mountTypeNSToken:
 					// Nothing; we respect what the token store is telling us and
 					// we don't allow tuning
 				default:

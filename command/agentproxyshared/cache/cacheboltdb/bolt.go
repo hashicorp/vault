@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cacheboltdb
 
@@ -38,6 +38,14 @@ const (
 
 	// TokenType - Bucket/type for auto-auth tokens
 	TokenType = "token"
+
+	// StaticSecretType - Bucket/type for static secrets
+	StaticSecretType = "static-secret"
+
+	// TokenCapabilitiesType - Bucket/type for the token capabilities that
+	// are used to govern access to static secrets. These will be updated
+	// periodically to ensure that access to the cached secret remains.
+	TokenCapabilitiesType = "token-capabilities"
 
 	// LeaseType - v2 Bucket/type for auth AND secret leases.
 	//

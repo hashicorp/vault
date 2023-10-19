@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -33,6 +33,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 			"auth":   map[string]interface{}{},
 			"secret": map[string]interface{}{},
 		},
+		"mount_type": "",
 	}
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
@@ -62,6 +63,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 		"auth":           nil,
 		"lease_id":       "",
 		"renewable":      false,
+		"mount_type":     "",
 		"lease_duration": json.Number("0"),
 		"data": map[string]interface{}{
 			"secret": map[string]interface{}{

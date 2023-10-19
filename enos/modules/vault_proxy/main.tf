@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -52,12 +52,14 @@ locals {
 }
 
 resource "enos_remote_exec" "set_up_approle_auth_and_proxy" {
-  content = templatefile("${path.module}/templates/set-up-approle-and-proxy.sh", {
-    vault_install_dir   = var.vault_install_dir
-    vault_token         = var.vault_root_token
-    vault_proxy_pidfile = var.vault_proxy_pidfile
-    vault_proxy_address = local.vault_proxy_address
-  })
+  environment = {
+    VAULT_INSTALL_DIR   = var.vault_install_dir
+    VAULT_TOKEN         = var.vault_root_token
+    VAULT_PROXY_PIDFILE = var.vault_proxy_pidfile
+    VAULT_PROXY_ADDRESS = local.vault_proxy_address
+  }
+
+  scripts = [abspath("${path.module}/scripts/set-up-approle-and-proxy.sh")]
 
   transport = {
     ssh = {
@@ -67,11 +69,13 @@ resource "enos_remote_exec" "set_up_approle_auth_and_proxy" {
 }
 
 resource "enos_remote_exec" "use_proxy" {
-  content = templatefile("${path.module}/templates/use-proxy.sh", {
-    vault_install_dir   = var.vault_install_dir
-    vault_proxy_pidfile = var.vault_proxy_pidfile
-    vault_proxy_address = local.vault_proxy_address
-  })
+  environment = {
+    VAULT_INSTALL_DIR   = var.vault_install_dir
+    VAULT_PROXY_PIDFILE = var.vault_proxy_pidfile
+    VAULT_PROXY_ADDRESS = local.vault_proxy_address
+  }
+
+  scripts = [abspath("${path.module}/scripts/use-proxy.sh")]
 
   transport = {
     ssh = {

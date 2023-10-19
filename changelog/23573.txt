@@ -1,0 +1,5 @@
+```release-note:bug
+* Seal HA (enterprise/beta): Fix rejection of a seal configuration change
+from two to one auto seal due to persistence of the previous seal type being
+"multiseal". 
+```

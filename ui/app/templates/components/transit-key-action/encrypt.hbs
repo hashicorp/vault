@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -64,38 +69,22 @@
     </div>
   </div>
 </form>
-<Modal
-  @title="Copy your token"
-  @onClose={{action (mut @isModalActive) false}}
-  @isActive={{@isModalActive}}
-  data-test-encrypt-modal
->
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-encrypt-modal" @onClose={{fn (mut @isModalActive) false}} data-test-encrypt-modal as |M|>
+    <M.Header>
+      Copy your token
+    </M.Header>
+    <M.Body>
       <h2 class="title is-6">Ciphertext</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{@ciphertext}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Ciphertext copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{@ciphertext}}
-      @buttonType="button"
-      @success={{action @toggleModal "Ciphertext copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+      <Hds::Copy::Snippet
+        @textToCopy={{@ciphertext}}
+        @color="secondary"
+        @container="#transit-encrypt-modal"
+        data-test-encrypted-value="ciphertext"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

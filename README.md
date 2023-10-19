@@ -9,7 +9,7 @@
 -	Website: https://www.vaultproject.io
 -	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
 -	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
-- Documentation: [https://www.vaultproject.io/docs/](https://www.vaultproject.io/docs/)
+- Documentation: [https://developer.hashicorp.com/vault/docs](https://developer.hashicorp.com/vault/docs)
 - Tutorials: [HashiCorp's Learn Platform](https://learn.hashicorp.com/vault)
 - Certification Exam: [Vault Associate](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
 
@@ -52,7 +52,7 @@ The key features of Vault are:
 Documentation, Getting Started, and Certification Exams
 -------------------------------
 
-Documentation is available on the [Vault website](https://www.vaultproject.io/docs/).
+Documentation is available on the [Vault website](https://developer.hashicorp.com/vault/docs).
 
 If you're new to Vault and want to get started with security automation, please
 check out our [Getting Started guides](https://learn.hashicorp.com/collections/vault/getting-started)

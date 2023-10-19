@@ -87,7 +87,7 @@ user or machine is allowed to access.
 Here is a very simple policy which grants read capabilities to the [KVv1](/vault/api-docs/secret/kv/kv-v1) path
 `"secret/foo"`:
 
-```ruby
+```hcl
 path "secret/foo" {
   capabilities = ["read"]
 }
@@ -100,7 +100,7 @@ token would have no other access in Vault.
 
 Here is a more detailed policy, and it is documented inline:
 
-```ruby
+```hcl
 # This section grants all access on "secret/*". further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
@@ -129,7 +129,7 @@ Policies use path-based matching to test the set of capabilities against a
 request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
-```ruby
+```hcl
 # Permit reading only "secret/foo". an attached token cannot read "secret/food"
 # or "secret/foo/bar".
 path "secret/foo" {
@@ -152,7 +152,7 @@ path "secret/zip-*" {
 In addition, a `+` can be used to denote any number of characters bounded
 within a single path segment (this appeared in Vault 1.1):
 
-```ruby
+```hcl
 # Permit reading the "teamb" path under any top-level path under secret/
 path "secret/+/teamb" {
   capabilities = ["read"]
@@ -207,7 +207,6 @@ one capability.
 
 To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/vault/docs/commands#print-policy-requirements) document section.
 
-
 The list of capabilities include the following:
 
 - `create` (`POST/PUT`) - Allows creating data at the given path. Very few
@@ -221,7 +220,7 @@ The list of capabilities include the following:
   parts of Vault, this implicitly includes the ability to create the initial
   value at the path.
 
-- `patch` (`PATCH`) -  Allows partial updates to the data at a given path.
+- `patch` (`PATCH`) - Allows partial updates to the data at a given path.
 
 - `delete` (`DELETE`) - Allows deleting the data at the given path.
 
@@ -248,6 +247,9 @@ HTTP verbs.
 
 - `deny` - Disallows access. This always takes precedence regardless of any
   other defined capabilities, including `sudo`.
+
+- `subscribe` - Allows subscribing to [events](/vault/docs/concepts/events)
+  for the given path.
 
 ~> **Note:** Capabilities usually map to the HTTP verb, and not the underlying
 action taken. This can be a common source of confusion. Generating database
@@ -281,7 +283,7 @@ injected, and currently the `path` keys in policies allow injection.
 
 The following policy creates a section of the KVv2 Secret Engine to a specific user
 
-```ruby
+```hcl
 path "secret/data/{{identity.entity.id}}/*" {
   capabilities = ["create", "update", "patch", "read", "delete"]
 }
@@ -294,7 +296,7 @@ path "secret/metadata/{{identity.entity.id}}/*" {
 If you wanted to create a shared section of KV that is associated with entities that are in a
 group.
 
-```ruby
+```hcl
 # In the example below, the group ID maps a group and the path
 path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
   capabilities = ["create", "update", "patch", "read", "delete"]
@@ -327,7 +329,7 @@ token/         token         auth_token_yyyy             token based credentials
 The following templated policy allow to read the path associated with the
 Kubernetes service account namespace of the identity:
 
-```ruby
+```hcl
 path "secret/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.service_account_namespace}}/*" {
   capabilities = ["read"]
 }
@@ -352,7 +354,7 @@ constrain requests, using the following options:
 
 - `required_parameters` - A list of parameters that must be specified.
 
-  ```ruby
+  ```hcl
   # This requires the user to create "secret/profile" with a parameter/key named
   # "name" and "id" where kv v1 is enabled at "secret/".
   path "secret/profile" {
@@ -367,7 +369,7 @@ constrain requests, using the following options:
   - Setting a parameter with a value of the empty list allows the parameter to
     contain any value.
 
-    ```ruby
+    ```hcl
     # This allows the user to update the password parameter value set on any
     # users configured for userpass auth method. The password value can be
     # anything. However, the user cannot update other parameter values such as
@@ -381,15 +383,15 @@ constrain requests, using the following options:
     ```
 
     -> **Usage example:** The [ACL Policy Path
-     Templating](/vault/tutorials/policies/policy-templating)
-     tutorial demonstrates the use of `allowed_parameters` to permit a user to
-     update the user's password when using the [userpass auth
-     method](/vault/docs/auth/userpass) to log in with Vault.
+    Templating](/vault/tutorials/policies/policy-templating)
+    tutorial demonstrates the use of `allowed_parameters` to permit a user to
+    update the user's password when using the [userpass auth
+    method](/vault/docs/auth/userpass) to log in with Vault.
 
   - Setting a parameter with a value of a populated list allows the parameter
     to contain only those values.
 
-    ```ruby
+    ```hcl
     # This allows the user to create or update an encryption key for transit
     # secrets engine enabled at "transit/". When you do, you can set the
     # "auto_rotate_period" parameter value so that the key gets rotated.
@@ -408,7 +410,7 @@ constrain requests, using the following options:
     allow all other parameters to be modified. Parameters with specific values
     will still be restricted to those values.
 
-    ```ruby
+    ```hcl
     # When kv v1 secrets engine is enabled at "secret/", this allows the user to
     # create "secret/foo" with a parameter named "bar". The parameter "bar" can
     # only contain the values "zip" or "zap", but any other parameters may be
@@ -428,7 +430,7 @@ constrain requests, using the following options:
   - Setting a parameter with a value of the empty list denies any changes to
     that parameter.
 
-    ```ruby
+    ```hcl
     # This allows the user to update the userpass auth method's user
     # configurations (e.g., "password") but cannot update the "token_policies"
     # and "policies" parameter values.
@@ -444,7 +446,7 @@ constrain requests, using the following options:
   - Setting a parameter with a value of a populated list denies any parameter
     containing those values.
 
-    ```ruby
+    ```hcl
     # This allows the user to create or update token roles. However, the
     # "allowed_policies" parameter value cannot be "admin", but the user can
     # assign any other policies to the parameter.
@@ -458,7 +460,7 @@ constrain requests, using the following options:
 
   - Setting to `"*"` will deny any parameter.
 
-    ```ruby
+    ```hcl
     # This allows the user to create or update an encryption key for transit
     # secrets engine enabled at "transit/". However, the user cannot set any of
     # the configuration parameters. As a result, the created key will have all
@@ -477,7 +479,7 @@ constrain requests, using the following options:
 Parameter values also support prefix/suffix globbing. Globbing is enabled by
 prepending or appending or prepending a splat (`*`) to the value:
 
-```ruby
+```hcl
 # Only allow a parameter named "bar" with a value starting with "foo-*".
 path "secret/foo" {
   capabilities = ["create"]
@@ -492,12 +494,13 @@ path "secret/foo" {
 #### Parameter constraints limitations
 
 ##### Default values
+
 Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
 without consideration of parameters' default values.
 
 Given the following policy:
 
-```ruby
+```hcl
 # The "no_store" parameter cannot be false
 path "secret/foo" {
   capabilities = ["create"]
@@ -527,7 +530,7 @@ in the command.
 
 This can be resolved by requiring the "no_store" parameter in your policy:
 
-```ruby
+```hcl
 path "secret/foo" {
   capabilities = ["create"]
   required_parameters = ["no_store"]
@@ -549,7 +552,7 @@ $ vault write secret/foo value=bar
 It's also important to note that the use of globbing may result in surprising
 or unexpected behavior:
 
-```ruby
+```hcl
 # This allows the user to create, update, or patch "secret/foo" with a parameter
 # named "bar". the values passed to parameter "bar" must start with "baz/"
 # so values like "baz/quux" are fine. however, values like
@@ -567,6 +570,7 @@ path "secret/foo" {
   }
 }
 ```
+
 ### Required response wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
@@ -586,7 +590,7 @@ wrapping mandatory for a particular path.
 - `max_wrapping_ttl` - The maximum allowed TTL that clients can specify for a
   wrapped response.
 
-```ruby
+```hcl
 # This effectively makes response wrapping mandatory for this path by setting min_wrapping_ttl to 1 second.
 # This also sets this path's wrapped response maximum allowed TTL to 90 seconds.
 path "auth/approle/role/my-role/secret-id" {
@@ -799,15 +803,15 @@ authenticated user.
 ## Root protected API endpoints
 
 ~> **Note:** Vault treats the HTTP POST and PUT verbs as equivalent, so for each mention
-   of POST in the table below, PUT may also be used. Vault uses the non-standard LIST HTTP
-   verb, but also allows list requests to be made using the GET verb along with `?list=true`
-   as a query parameter, so for each mention of LIST in the table above, GET with `?list=true`
-   may also be used.
+of POST in the table below, PUT may also be used. Vault uses the non-standard LIST HTTP
+verb, but also allows list requests to be made using the GET verb along with `?list=true`
+as a query parameter, so for each mention of LIST in the table above, GET with `?list=true`
+may also be used.
 
 The following paths requires a root token or `sudo` capability in the policy:
 
 | Path                                                                                                                                                   | HTTP verb         | Description                                                                                                         |
-|--------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|---------------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
 | [auth/token/accessors](/vault/api-docs/auth/token#list-accessors)                                                                                      | LIST              | List token accessors for all current Vault service tokens                                                           |
 | [auth/token/create](/vault/api-docs/auth/token#create-token)                                                                                           | POST              | Create a periodic or an orphan token (`period` or `no_parent`) option                                               |
 | [auth/token/revoke-orphan](/vault/api-docs/auth/token#revoke-token-and-orphan-children)                                                                | POST              | Revoke a token but not its child tokens, which will be orphaned                                                     |
@@ -844,7 +848,7 @@ The following paths requires a root token or `sudo` capability in the policy:
 Tokens have two sets of policies: identity policies, which are computed
 based on the entity and its groups, and token policies, which are either defined
 based on the login method or, in the case of explicit token creates via the API,
-are an input to the token creation.  What follows concerns token policies
+are an input to the token creation. What follows concerns token policies
 exclusively: a token's identity policies cannot be controlled except by modifying
 the underlying entities, groups, and group memberships.
 

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -14,28 +14,11 @@ import Component from '@glimmer/component';
  * @example
  *  <PolicyExample
  *    @policyType={{@model.policyType}}
+ *    @container="#search-select-modal"
  *  />
- *
- * @example (in modal)
- *  <Modal
- *    @onClose={{fn (mut this.showTemplateModal) false}}
- *    @isActive={{this.showTemplateModal}}
- *  >
- *    <section class="modal-card-body">
- *      {{! code-mirror modifier does not render value initially until focus event fires }}
- *      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
- *      {{#if this.showTemplateModal}}
- *        <PolicyExample @policyType={{@model.policyType}}/>
- *      {{/if}}
- *    </section>
- *    <div class="modal-card-head has-border-top-light">
- *      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
- *        Close
- *      </button>
- *    </div>
- *  </Modal>
  * ```
  * @param {string} policyType - policy type to decide which template to render; can either be "acl" or "rgp"
+ * @param {string} container - selector for the container the example renders inside, passed to the copy button in JsonEditor
  */
 
 export default class PolicyExampleComponent extends Component {
@@ -74,13 +57,13 @@ main = rule when precond {
     egp: `
 import "time"
 
-# Expect requests to only happen during work days (Monday 
+# Expect requests to only happen during work days (Monday
 # through Friday) 0 for Sunday and 6 for Saturday
 workdays = rule {
     time.now.weekday > 0 and time.now.weekday < 6
 }
 
-# Expect requests to only happen during work hours (7:00 am - 
+# Expect requests to only happen during work hours (7:00 am -
 # 6:00 pm)
 workhours = rule {
     time.now.hour > 7 and time.now.hour < 18

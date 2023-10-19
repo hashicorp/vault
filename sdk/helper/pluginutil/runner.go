@@ -5,12 +5,14 @@ package pluginutil
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	prutil "github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
 )
@@ -31,6 +33,7 @@ type RunnerUtil interface {
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 	VaultVersion(ctx context.Context) (string, error)
+	ClusterID(ctx context.Context) (string, error)
 }
 
 // LookRunnerUtil defines the functions for both Looker and Wrapper
@@ -53,12 +56,48 @@ type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
+	OCIImage       string                      `json:"oci_image" structs:"oci_image"`
+	Runtime        string                      `json:"runtime" structs:"runtime"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
+}
+
+// BinaryReference returns either the OCI image reference if it's a container
+// plugin or the path to the binary if it's a plain process plugin.
+func (p *PluginRunner) BinaryReference() string {
+	if p.Builtin {
+		return ""
+	}
+	if p.OCIImage == "" {
+		return p.Command
+	}
+
+	imageRef := p.OCIImage
+	if p.Version != "" {
+		imageRef += ":" + strings.TrimPrefix(p.Version, "v")
+	}
+
+	return imageRef
+}
+
+// SetPluginInput is only used as input for the plugin catalog's set methods.
+// We don't use the very similar PluginRunner struct to avoid confusion about
+// what's settable, which does not include the builtin fields.
+type SetPluginInput struct {
+	Name     string
+	Type     consts.PluginType
+	Version  string
+	Command  string
+	OCIImage string
+	Runtime  string
+	Args     []string
+	Env      []string
+	Sha256   []byte
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and
@@ -95,6 +134,8 @@ type VersionedPlugin struct {
 	Type              string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
 	Name              string `json:"name"`
 	Version           string `json:"version"`
+	OCIImage          string `json:"oci_image,omitempty"`
+	Runtime           string `json:"runtime,omitempty"`
 	SHA256            string `json:"sha256,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty"`

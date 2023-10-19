@@ -5,18 +5,18 @@ description: |-
 
   The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
   snapshots with Vault's Raft storage backend.
-
-  This is an Enterprise-only feature.
 ---
 
 # `/sys/storage/raft/snapshot-auto`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
 snapshots with Vault's Raft storage backend.
 
 ## Create/update an automated snapshots config
-
-@include 'alerts/enterprise-and-hcp.mdx'
 
 **This endpoint requires sudo capability.**
 

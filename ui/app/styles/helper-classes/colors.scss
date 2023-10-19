@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles referencing background color, border color, and text color. */
@@ -18,6 +18,18 @@
   background-color: $ui-gray-200;
 }
 
+.has-background-gray-300 {
+  background-color: $ui-gray-300;
+}
+
+.has-background-gray-900 {
+  background-color: $ui-gray-900;
+}
+
+.background-color-black {
+  background-color: black;
+}
+
 // borders
 .has-border-top-light {
   border-radius: 0;
@@ -30,7 +42,9 @@
 }
 
 .has-error-border,
-select.has-error-border {
+select.has-error-border,
+.ttl-picker-form-field-error input,
+.string-list-form-field-error .field:first-of-type textarea {
   border: 1px solid $red-500;
 }
 
@@ -40,6 +54,10 @@ select.has-error-border {
 }
 
 // text color
+.text-grey-lightest {
+  color: $grey-lightest;
+}
+
 .has-text-grey-light {
   color: $ui-gray-300 !important;
 }
@@ -67,6 +85,10 @@ select.has-error-border {
 .has-text-info {
   color: $blue-500 !important;
 }
+// same without the !important
+.has-text-primary {
+  color: $blue-500;
+}
 
 .has-text-success {
   color: $green-500 !important;
@@ -78,4 +100,8 @@ select.has-error-border {
 
 .has-text-danger {
   color: $red-500 !important;
+}
+
+.has-text-primary {
+  color: $blue;
 }

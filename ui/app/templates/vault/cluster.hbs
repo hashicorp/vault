@@ -1,11 +1,19 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 <Sidebar::Nav::Cluster />
-{{! Only show license banners for Enterprise }}
-{{#if this.activeCluster.version.isEnterprise}}
-  <LicenseBanners
-    @expiry={{this.activeCluster.licenseExpiry}}
-    @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
-  />
-{{/if}}
+<div class="cluster-banners-wrapper">
+  {{#if this.activeCluster.version.isEnterprise}}
+    <LicenseBanners
+      @expiry={{this.activeCluster.licenseExpiry}}
+      @autoloaded={{eq this.activeCluster.licenseState "autoloaded"}}
+    />
+  {{/if}}
+  {{#if this.permissionReadFailed}}
+    <ResultantAclBanner @isEnterprise={{this.activeCluster.version.isEnterprise}} />
+  {{/if}}
+</div>
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>

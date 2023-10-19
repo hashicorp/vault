@@ -1,9 +1,18 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
+
+const ENTERPRISE_AUTH_METHODS = [
+  {
+    displayName: 'SAML',
+    value: 'saml',
+    type: 'saml',
+    category: 'generic',
+  },
+];
 
 const MOUNTABLE_AUTH_METHODS = [
   {
@@ -104,6 +113,10 @@ const MOUNTABLE_AUTH_METHODS = [
 
 export function methods() {
   return MOUNTABLE_AUTH_METHODS.slice();
+}
+
+export function allMethods() {
+  return [...MOUNTABLE_AUTH_METHODS, ...ENTERPRISE_AUTH_METHODS];
 }
 
 export default buildHelper(methods);

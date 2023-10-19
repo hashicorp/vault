@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -11,6 +11,7 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { methods } from 'vault/helpers/mountable-auth-methods';
+import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 
 /**
  * @module MountBackendForm
@@ -37,8 +38,8 @@ export default class MountBackendForm extends Component {
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
-    if (noTeardown && this.args?.mountModel) {
-      this.args.mountModel.rollbackAttributes();
+    if (noTeardown && this.args?.mountModel?.isNew) {
+      this.args.mountModel.unloadRecord();
     }
     super.willDestroy(...arguments);
   }
@@ -156,7 +157,9 @@ export default class MountBackendForm extends Component {
         this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
-    yield this.args.onMountSuccess(type, path);
+    // Check whether to use the engine route, since KV version 1 does not
+    const useEngineRoute = isAddonEngine(mountModel.engineType, mountModel.version);
+    yield this.args.onMountSuccess(type, path, useEngineRoute);
     return;
   }
 

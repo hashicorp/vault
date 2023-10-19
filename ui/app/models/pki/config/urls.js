@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -35,7 +35,7 @@ export default class PkiConfigUrlsModel extends Model {
   crlDistributionPoints;
 
   @attr({
-    label: 'OSCP Servers',
+    label: 'OCSP Servers',
     subText: 'Specifies the URL values for the OCSP Servers field.',
     showHelpText: false,
     editType: 'stringArray',

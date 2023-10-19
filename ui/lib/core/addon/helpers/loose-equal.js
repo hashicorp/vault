@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper } from '@ember/component/helper';
 
-/* 
+/*
  * use sparingly *
   ex: logic for an HTML element's selected boolean because <select> values are strings
   strict equal (===) will fail if the API param is a number

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_username" {
   type        = string
@@ -48,13 +48,13 @@ variable "aws_ssh_private_key_path" {
 variable "backend_edition" {
   description = "The backend release edition if applicable"
   type        = string
-  default     = "oss" // or "ent"
+  default     = "ce" // or "ent"
 }
 
 variable "backend_instance_type" {
   description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
-  type                  = string
-  default               = "t4g.small"
+  type        = string
+  default     = "t4g.small"
 }
 
 variable "backend_license_path" {
@@ -122,14 +122,6 @@ variable "vault_artifact_type" {
   default     = "bundle"
 }
 
-variable "vault_autopilot_initial_release" {
-  description = "The Vault release to deploy before upgrading with autopilot"
-  default = {
-    edition = "ent"
-    version = "1.11.0"
-  }
-}
-
 variable "vault_artifact_path" {
   description = "Path to CRT generated or local vault.zip bundle"
   type        = string
@@ -142,8 +134,8 @@ variable "vault_build_date" {
   default     = ""
 }
 
-variable "vault_enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+variable "vault_enable_audit_devices" {
+  description = "If true every audit device will be enabled"
   type        = bool
   default     = true
 }
@@ -161,7 +153,7 @@ variable "vault_instance_count" {
 }
 
 variable "vault_license_path" {
-  description = "The path to a valid Vault enterprise edition license. This is only required for non-oss editions"
+  description = "The path to a valid Vault enterprise edition license. This is only required for non-ce editions"
   type        = string
   default     = null
 }
@@ -193,7 +185,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_release" {
   description = "The Vault release to deploy before upgrading"
   default = {
-    edition = "oss"
+    edition = "ce"
     // Vault 1.10.5 has a known issue with retry_join.
     version = "1.10.4"
   }

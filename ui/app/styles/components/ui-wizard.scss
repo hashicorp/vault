@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file is not being used. https://github.com/hashicorp/vault/pull/19220
@@ -44,14 +44,6 @@
 
   p {
     line-height: 1.33;
-  }
-
-  .dismiss-collapsed {
-    position: absolute;
-    top: $size-8;
-    right: $size-8;
-    color: $grey;
-    z-index: 30;
   }
 
   @include until($mobile) {

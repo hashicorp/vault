@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -282,6 +282,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
+		delete(config.ConnectionDetails, "service_account_json")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),

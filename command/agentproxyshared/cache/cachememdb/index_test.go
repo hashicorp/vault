@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cachememdb
 
@@ -17,6 +17,7 @@ func TestSerializeDeserialize(t *testing.T) {
 	testIndex := &Index{
 		ID:            "testid",
 		Token:         "testtoken",
+		Tokens:        map[string]struct{}{"token1": {}, "token2": {}},
 		TokenParent:   "parent token",
 		TokenAccessor: "test accessor",
 		Namespace:     "test namespace",

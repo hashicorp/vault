@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if @canDelete}}
@@ -14,14 +19,13 @@
     {{/if}}
     {{#if @key.privateKey}}
       <DownloadButton
-        class="toolbar-link"
+        class="toolbar-button"
+        @color="secondary"
         @filename="{{@key.backend}}-{{or @key.keyName 'private-key'}}"
         @data={{@key.privateKey}}
         @extension="pem"
-      >
-        Download private key
-        <Chevron @isButton={{true}} />
-      </DownloadButton>
+        @text="Download private key"
+      />
     {{/if}}
     {{#if @canEdit}}
       <ToolbarLink @route="keys.key.edit" @model={{@key.keyId}} data-test-pki-key-edit>
@@ -49,7 +53,7 @@
   {{/each}}
   {{#if @key.privateKey}}
     <InfoTableRow @label="Private key">
-      <MaskedInput @value={{@key.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
+      <CertificateCard @data={{@key.privateKey}} />
     </InfoTableRow>
   {{/if}}
 </div>

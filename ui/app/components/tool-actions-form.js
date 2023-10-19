@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { match } from '@ember/object/computed';
@@ -39,7 +39,6 @@ export default Component.extend(DEFAULTS, {
   algorithm: 'sha2-256',
 
   tagName: '',
-  unwrapActiveTab: 'data',
 
   didReceiveAttrs() {
     this._super(...arguments);

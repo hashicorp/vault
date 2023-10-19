@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -74,16 +74,20 @@ func (d *sealUnwrapper) unwrap(ctx context.Context, key string) (entry, unwrappe
 		return nil, nil, err
 	}
 
-	se := UnmarshalSealWrappedValueWithCanary(entry.Value)
+	wrappedEntryValue, unmarshaled := UnmarshalSealWrappedValueWithCanary(entry.Value)
 	switch {
-	case se == nil:
+	case !unmarshaled:
 		unwrappedEntry = entry
-	case se.Wrapped:
+	case wrappedEntryValue.isEncrypted():
 		return nil, nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
 	default:
+		pt, err := wrappedEntryValue.getPlaintextValue()
+		if err != nil {
+			return nil, nil, err
+		}
 		unwrappedEntry = &physical.Entry{
 			Key:   entry.Key,
-			Value: se.Ciphertext,
+			Value: pt,
 		}
 	}
 

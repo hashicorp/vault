@@ -1,37 +1,47 @@
-<Modal @title={{@title}} @onClose={{@onClose}} @isActive={{@isActive}} @type={{this.type}} @showCloseButton={{true}}>
-  <section class="modal-card-body">
-    {{yield}}
-    <div class="modal-confirm-section">
-      <p class="has-text-weight-semibold is-size-6">
-        Confirm
-      </p>
-      <p class="sub-text has-top-bottom-margin-xxs">Type
-        <strong>{{this.confirmText}}</strong>
-        to confirm
-        {{this.toConfirmMsg}}</p>
-      <Input
-        @type="text"
-        @value={{this.confirmationInput}}
-        name="confirmationInput"
-        class="input has-margin-top"
-        autocomplete="off"
-        spellcheck="false"
-        data-test-confirmation-modal-input={{or @title true}}
-      />
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button {{this.buttonClass}}"
-      disabled={{not-eq this.confirmationInput this.confirmText}}
-      {{on "click" @onConfirm}}
-      data-test-confirm-button={{or @title true}}
-    >
-      {{this.buttonText}}
-    </button>
-    <button type="button" class="button is-secondary" {{on "click" @onClose}} data-test-cancel-button>
-      Cancel
-    </button>
-  </footer>
-</Modal>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @isActive}}
+  <Hds::Modal id="confirmation-modal" @onClose={{@onClose}} @color="critical" as |M|>
+    <M.Header data-test-confirmation-modal-title @icon="alert-triangle">
+      {{@title}}
+    </M.Header>
+    <M.Body>
+      {{yield}}
+      <div class="has-top-padding-m">
+        <p class="has-text-weight-semibold is-size-6">
+          Confirm
+        </p>
+        <p class="sub-text has-top-bottom-margin-xxs">Type
+          <strong>{{this.confirmText}}</strong>
+          to confirm
+          {{@toConfirmMsg}}
+        </p>
+        <Input
+          @type="text"
+          @value={{this.confirmationInput}}
+          name="confirmationInput"
+          class="input has-margin-top"
+          autocomplete="off"
+          spellcheck="false"
+          data-test-confirmation-modal-input={{@title}}
+        />
+      </div>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @color="critical"
+          type="button"
+          disabled={{not-eq this.confirmationInput this.confirmText}}
+          {{on "click" @onConfirm}}
+          data-test-confirm-button={{@title}}
+          @text={{or @buttonText "Confirm"}}
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onClose}} data-test-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

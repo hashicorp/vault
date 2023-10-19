@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
@@ -34,7 +34,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
-  test('it shows nested namespaces if you log in with a namspace starting with a /', async function (assert) {
+  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
     await click('[data-test-namespace-toggle]');
@@ -76,15 +76,15 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
     assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
     assert
-      .dom('[data-test-managed-namespace-toolbar]')
-      .doesNotExist('Managed namespace toolbar does not exist');
+      .dom('[data-test-managed-namespace-root]')
+      .doesNotExist('Managed namespace indicator does not exist');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
-    await fillIn('input#namespace', '/foo');
-    const encodedNamespace = encodeURIComponent('/foo');
+    await fillIn('input#namespace', '/foo/bar ');
+    const encodedNamespace = encodeURIComponent('foo/bar');
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,
-      'Does not prepend root to namespace'
+      'correctly sanitizes namespace'
     );
   });
 });

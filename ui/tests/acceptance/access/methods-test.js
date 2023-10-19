@@ -1,12 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName } from '@ember/test-helpers';
+import { currentRouteName, click } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/access/methods';
 import authEnable from 'vault/tests/pages/settings/auth/enable';
@@ -21,6 +22,7 @@ const searchSelect = create(ss);
 
 module('Acceptance | auth-methods list view', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
@@ -48,7 +50,6 @@ module('Acceptance | auth-methods list view', function (hooks) {
 
     await clickTrigger('#filter-by-auth-type');
     await searchSelect.options.objectAt(0).click();
-
     const rows = document.querySelectorAll('[data-test-auth-backend-link]');
     const rowsUserpass = Array.from(rows).filter((row) => row.innerText.includes('userpass'));
 
@@ -70,5 +71,22 @@ module('Acceptance | auth-methods list view', function (hooks) {
     // cleanup
     await consoleComponent.runCommands([`delete sys/auth/${authPath1}`]);
     await consoleComponent.runCommands([`delete sys/auth/${authPath2}`]);
+  });
+
+  test('it should show all methods in list view', async function (assert) {
+    this.server.get('/sys/auth', () => ({
+      data: {
+        'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
+        'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
+      },
+    }));
+    await page.visit();
+    assert.dom('[data-test-auth-backend-link]').exists({ count: 2 }, 'All auth methods appear in list view');
+    await authEnable.visit();
+    await click('[data-test-sidebar-nav-link="OIDC Provider"]');
+    await page.visit();
+    assert
+      .dom('[data-test-auth-backend-link]')
+      .exists({ count: 2 }, 'All auth methods appear in list view after navigating back');
   });
 });

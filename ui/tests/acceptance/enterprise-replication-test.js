@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -12,39 +12,9 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
-
+import { disableReplication } from 'vault/tests/helpers/replication';
 const searchSelect = create(ss);
 const flash = create(flashMessage);
-
-const disableReplication = async (type, assert) => {
-  // disable performance replication
-  await visit(`/vault/replication/${type}`);
-
-  if (findAll('[data-test-replication-link="manage"]').length) {
-    await click('[data-test-replication-link="manage"]');
-
-    await click('[data-test-disable-replication] button');
-
-    const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
-    await click('[data-test-confirm-button]');
-    await settled(); // eslint-disable-line
-
-    if (assert) {
-      // bypassing for now -- remove if tests pass reliably
-      // assert.strictEqual(
-      //   flash.latestMessage,
-      //   'This cluster is having replication disabled. Vault will be unavailable for a brief period and will resume service shortly.',
-      //   'renders info flash when disabled'
-      // );
-      assert.ok(
-        await waitUntil(() => currentURL() === '/vault/replication'),
-        'redirects to the replication page'
-      );
-    }
-    await settled();
-  }
-};
 
 module('Acceptance | Enterprise | replication', function (hooks) {
   setupApplicationTest(hooks);
@@ -280,11 +250,16 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+
     // checks on secondary token modal
-    assert.dom('#modal-wormhole').exists();
+    assert.dom('#replication-copy-token-modal').exists();
+    assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
     assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
-    await click('[data-test-modal-background="Copy your token"]');
+    assert.dom('[data-test-modal-close]').isDisabled('cancel is disabled');
+    await click('[data-test-modal-copy]');
+    assert.dom('[data-test-modal-close]').isEnabled('cancel is enabled after token is copied');
+    await click('[data-test-modal-close]');
 
     // add another secondary not using the default ttl
     await click('[data-test-secondary-add]');
@@ -299,7 +274,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
     const modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     assert.strictEqual(modalTtl, '180s', 'shows the correct TTL of 180s');
-    await click('[data-test-modal-background="Copy your token"]');
+    await click('[data-test-modal-copy]');
+    await click('[data-test-modal-close]');
 
     // confirm you were redirected to the secondaries page
     assert.strictEqual(

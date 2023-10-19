@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -32,12 +32,15 @@ type options struct {
 
 // getDefaultOptions returns Options with their default values.
 func getDefaultOptions() options {
+	fileMode := os.FileMode(0o600)
+
 	return options{
 		withNow:         time.Now(),
 		withFacility:    "AUTH",
 		withTag:         "vault",
 		withSocketType:  "tcp",
 		withMaxDuration: 2 * time.Second,
+		withFileMode:    &fileMode,
 	}
 }
 
@@ -110,11 +113,7 @@ func WithNow(now time.Time) Option {
 // WithFacility provides an Option to represent a 'facility' for a syslog sink.
 func WithFacility(facility string) Option {
 	return func(o *options) error {
-		facility = strings.TrimSpace(facility)
-
-		if facility != "" {
-			o.withFacility = facility
-		}
+		o.withFacility = facility
 
 		return nil
 	}
@@ -123,11 +122,7 @@ func WithFacility(facility string) Option {
 // WithTag provides an Option to represent a 'tag' for a syslog sink.
 func WithTag(tag string) Option {
 	return func(o *options) error {
-		tag = strings.TrimSpace(tag)
-
-		if tag != "" {
-			o.withTag = tag
-		}
+		o.withTag = tag
 
 		return nil
 	}

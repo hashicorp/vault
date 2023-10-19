@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="action-block is-rounded" data-test-disable-replication>
   <div class="action-block-info">
     <h3 class="title is-5 is-marginless">
@@ -15,7 +20,7 @@
       type="button"
       class="button is-danger"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="disable"
     >
       Disable Replication
     </button>

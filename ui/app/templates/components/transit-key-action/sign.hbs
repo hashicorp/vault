@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -115,38 +120,22 @@
     </div>
   </div>
 </form>
-<Modal
-  @title="Copy your signature"
-  @onClose={{action (mut @isModalActive) false}}
-  @isActive={{@isModalActive}}
-  data-test-sign-modal
->
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-sign-modal" @onClose={{fn (mut @isModalActive) false}} data-test-sign-modal as |M|>
+    <M.Header>
+      Copy your signature
+    </M.Header>
+    <M.Body>
       <h2 class="title is-6">Signature</h2>
-      <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="signature">{{@signature}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
-          data-test-button="modal-copy"
-          @clipboardText={{@signature}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Signature copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
-      data-test-button="modal-copy-close"
-      @clipboardText={{@signature}}
-      @buttonType="button"
-      @success={{action @toggleModal "Signature copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
-  </footer>
-</Modal>
+      <Hds::Copy::Snippet
+        @textToCopy={{@signature}}
+        @color="secondary"
+        @container="#transit-sign-modal"
+        data-test-encrypted-value="signature"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

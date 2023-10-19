@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -29,7 +29,6 @@ export default class PolicyTemplate extends Component {
   @service version;
 
   @tracked policy = null; // model record passed to policy-form
-  @tracked showExamplePolicy = false;
 
   get policyOptions() {
     return [

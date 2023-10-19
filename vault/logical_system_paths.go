@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -482,7 +482,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "decode",
+						OperationVerb:   "decode",
+						OperationSuffix: "token",
 					},
 					Summary: "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
@@ -1862,6 +1863,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 			},
+			"oci_image": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+			},
+			"runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+			},
 			"command": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
@@ -1927,6 +1936,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 								Required:    true,
+							},
+							"oci_image": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+							},
+							"runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
 							},
 							"command": {
 								Type:        framework.TypeString,
@@ -2090,6 +2107,164 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 
 		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["plugin-reload"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/runtimes/catalog/(?P<type>container)/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-runtimes-catalog",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_name"][0]),
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+			},
+			"oci_runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
+			},
+			"cgroup_parent": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
+			},
+			"cpu_nanos": {
+				Type:        framework.TypeInt64,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
+			},
+			"memory_bytes": {
+				Type:        framework.TypeInt64,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "register",
+					OperationSuffix: "plugin-runtime|plugin-runtime-with-type|plugin-runtime-with-type-and-name", // TODO
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Register a new plugin runtime, or updates an existing one with the supplied name.",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "plugin-runtime|plugin-runtime-with-type|plugin-runtime-with-type-and-name", // TODO
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Remove the plugin runtime with the given name.",
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "plugin-runtime-configuration|plugin-runtime-configuration-with-type|plugin-runtime-configuration-with-type-and-name",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"name": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_name"][0]),
+								Required:    true,
+							},
+							"type": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+								Required:    true,
+							},
+							"oci_runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
+								Required:    true,
+							},
+							"cgroup_parent": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
+								Required:    true,
+							},
+							"cpu_nanos": {
+								Type:        framework.TypeInt64,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
+								Required:    true,
+							},
+							"memory_bytes": {
+								Type:        framework.TypeInt64,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+								Required:    true,
+							},
+						},
+					}},
+				},
+				Summary: "Return the configuration data for the plugin runtime with the given name.",
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
+	handler := &framework.PathOperation{
+		Callback: b.handlePluginRuntimeCatalogList,
+		Responses: map[int][]framework.Response{
+			http.StatusOK: {{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"runtimes": {
+						Type:        framework.TypeSlice,
+						Description: "List of all plugin runtimes in the catalog",
+						Required:    true,
+					},
+				},
+			}},
+		},
+	}
+	return []*framework.Path{
+		{
+			Pattern: "plugins/runtimes/catalog/?$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-runtimes-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-runtimes",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: handler,
+				logical.ListOperation: handler,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][1]),
+		},
 	}
 }
 

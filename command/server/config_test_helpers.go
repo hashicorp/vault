@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -507,7 +507,7 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   651,
+				Offset:   652,
 				Line:     37,
 				Column:   5,
 			},
@@ -780,6 +780,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
 		"log_requests_level":                  "basic",
+		"user_lockout_log_interval":           0 * time.Second,
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
@@ -789,9 +790,10 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address": "127.0.0.1:443",
+					"address":          "127.0.0.1:443",
+					"chroot_namespace": "admin/",
 				},
-				"type": "tcp",
+				"type": configutil.TCP,
 			},
 		},
 		"log_format":       "",
@@ -845,8 +847,10 @@ func testConfig_Sanitized(t *testing.T) {
 			"lease_metrics_epsilon":                  time.Hour,
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
+			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path": "admin/",
+		"imprecise_lease_role_tracking": false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
@@ -882,6 +886,19 @@ listener "tcp" {
   proxy_api {
     enable_quit = true
   }
+  chroot_namespace = "admin"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
+}
+listener "unix" {
+  address = "/var/run/vault.sock"
+  socket_mode = "644"
+  socket_user = "1000"
+  socket_group = "1000"
+  redact_addresses = true
+  redact_cluster_name = true
+  redact_version = true
 }`))
 
 	config := Config{
@@ -889,15 +906,20 @@ listener "tcp" {
 	}
 	list, _ := obj.Node.(*ast.ObjectList)
 	objList := list.Filter("listener")
-	configutil.ParseListeners(config.SharedConfig, objList)
-	listeners := config.Listeners
-	if len(listeners) == 0 {
-		t.Fatalf("expected at least one listener in the config")
+	listeners, err := configutil.ParseListeners(objList)
+	require.NoError(t, err)
+	// Update the shared config
+	config.Listeners = listeners
+	// Track which types of listener were found.
+	for _, l := range config.Listeners {
+		config.found(l.Type.String(), l.Type.String())
 	}
-	listener := listeners[0]
-	if listener.Type != "tcp" {
-		t.Fatalf("expected tcp listener in the config")
-	}
+
+	require.Len(t, config.Listeners, 2)
+	tcpListener := config.Listeners[0]
+	require.Equal(t, configutil.TCP, tcpListener.Type)
+	unixListner := config.Listeners[1]
+	require.Equal(t, configutil.Unix, unixListner.Type)
 
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
@@ -926,6 +948,20 @@ listener "tcp" {
 						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
+					ChrootNamespace:       "admin/",
+					RedactAddresses:       true,
+					RedactClusterName:     true,
+					RedactVersion:         true,
+				},
+				{
+					Type:              "unix",
+					Address:           "/var/run/vault.sock",
+					SocketMode:        "644",
+					SocketUser:        "1000",
+					SocketGroup:       "1000",
+					RedactAddresses:   false,
+					RedactClusterName: false,
+					RedactVersion:     false,
 				},
 			},
 		},
@@ -1131,7 +1167,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
-					Name: "pkcs11",
+					Name: "pkcs11-disabled",
 				},
 			},
 		},

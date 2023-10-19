@@ -1,0 +1,3 @@
+```release-note:feature
+**GCP IAM Support**: Adds support for IAM-based authentication to MySQL and PostgreSQL backends using Google Cloud SQL.
+```

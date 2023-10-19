@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -13,6 +13,15 @@ export default Controller.extend(ListController, {
   flashMessages: service(),
   store: service(),
   clusterController: controller('vault.cluster'),
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   backendCrumb: computed('clusterController.model.name', function () {
     return {

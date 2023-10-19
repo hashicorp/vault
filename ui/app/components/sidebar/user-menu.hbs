@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <BasicDropdown
   @horizontalPosition="right"
   @verticalPosition="below"
@@ -34,15 +39,16 @@
                   </LinkTo>
                 </li>
               {{/if}}
-              <li class="action">
-                <CopyButton
-                  @clipboardText={{this.auth.currentToken}}
-                  class="link"
-                  @buttonType="button"
-                  @success={{action (set-flash-message "Token copied!")}}
-                >
-                  Copy token
-                </CopyButton>
+              <li class="action" id="container">
+                {{! container is required in navbar collapsed state }}
+                <Hds::Copy::Button
+                  @text="Copy token"
+                  @textToCopy={{this.auth.currentToken}}
+                  @isFullWidth={{true}}
+                  @container="#container"
+                  class="in-dropdown link is-flex-start"
+                  {{on "click" (fn (set-flash-message "Token copied!"))}}
+                />
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
                 {{#if this.auth.authData.renewable}}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package socket
 
@@ -12,9 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -38,7 +39,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	if !ok {
 		socketType = "tcp"
 	}
-
 	writeDeadline, ok := conf.Config["write_timeout"]
 	if !ok {
 		writeDeadline = "2s"
@@ -48,51 +48,39 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		return nil, err
 	}
 
-	format, ok := conf.Config["format"]
-	if !ok {
-		format = audit.JSONFormat.String()
-	}
-	switch format {
-	case audit.JSONFormat.String(), audit.JSONxFormat.String():
-	default:
-		return nil, fmt.Errorf("unknown format type %q", format)
+	var cfgOpts []audit.Option
+
+	if format, ok := conf.Config["format"]; ok {
+		cfgOpts = append(cfgOpts, audit.WithFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
-	hmacAccessor := true
 	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
-		value, err := strconv.ParseBool(hmacAccessorRaw)
+		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hmacAccessor = value
+		cfgOpts = append(cfgOpts, audit.WithHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
-	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
-		b, err := strconv.ParseBool(raw)
+		v, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
 		}
-		logRaw = b
+		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	elideListResponses := false
 	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
-		value, err := strconv.ParseBool(elideListResponsesRaw)
+		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
 			return nil, err
 		}
-		elideListResponses = value
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
 	}
 
-	cfg, err := audit.NewFormatterConfig(
-		audit.WithElision(elideListResponses),
-		audit.WithFormat(format),
-		audit.WithHMACAccessor(hmacAccessor),
-		audit.WithRaw(logRaw),
-	)
+	cfg, err := audit.NewFormatterConfig(cfgOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +101,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 	var w audit.Writer
-	switch format {
-	case audit.JSONFormat.String():
+	switch b.formatConfig.RequiredFormat {
+	case audit.JSONFormat:
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case audit.JSONxFormat.String():
+	case audit.JSONxFormat:
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
@@ -128,6 +116,16 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.formatter = fw
 
 	if useEventLogger {
+		var opts []event.Option
+
+		if socketType, ok := conf.Config["socket_type"]; ok {
+			opts = append(opts, event.WithSocketType(socketType))
+		}
+
+		if writeDeadline, ok := conf.Config["write_timeout"]; ok {
+			opts = append(opts, event.WithMaxDuration(writeDeadline))
+		}
+
 		b.nodeIDList = make([]eventlogger.NodeID, 2)
 		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
 
@@ -138,10 +136,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		sinkNode, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		n, err := event.NewSocketSink(b.formatConfig.RequiredFormat.String(), address, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("error creating socket sink node: %w", err)
 		}
+		sinkNode := &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
 		sinkNodeID, err := event.GenerateNodeID()
 		if err != nil {
 			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
@@ -224,6 +223,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var buf bytes.Buffer
 
 	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])

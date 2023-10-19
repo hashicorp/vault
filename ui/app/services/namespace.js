@@ -1,11 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { alias, equal } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { computed } from '@ember/object';
 
 const ROOT_NAMESPACE = '';
 export default Service.extend({
@@ -19,6 +20,13 @@ export default Service.extend({
   accessibleNamespaces: null,
 
   inRootNamespace: equal('path', ROOT_NAMESPACE),
+
+  currentNamespace: computed('inRootNamespace', 'path', function () {
+    if (this.inRootNamespace) return 'root';
+
+    const parts = this.path?.split('/');
+    return parts[parts.length - 1];
+  }),
 
   setNamespace(path) {
     if (!path) {

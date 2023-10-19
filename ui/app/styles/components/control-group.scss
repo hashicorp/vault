@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .control-group,
@@ -33,21 +33,4 @@
 
 .control-group .authorizations {
   margin-top: $size-9;
-}
-
-.control-group .hover-copy-button-static {
-  color: $orange;
-}
-
-.control-group-token-text {
-  color: $grey;
-  position: relative;
-  padding: $size-8 0;
-
-  .hover-copy-button-static {
-    position: relative;
-    top: auto;
-    left: auto;
-    display: inline-block;
-  }
 }

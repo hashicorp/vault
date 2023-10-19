@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
     <div
-      class="column is-one-quarter {{if this.hasLabelOverflow 'label-overflow'}}"
+      class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
       data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
@@ -29,18 +34,15 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex" data-test-value-div={{@label}}>
+    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-value-div={{@label}}>
       {{#if @addCopyButton}}
-        <div class="display-only">
-          <CopyButton
-            @clipboardText={{@value}}
-            @success={{action (set-flash-message "Data copied!")}}
-            class="button copy-button is-compact"
-            data-test-copy-button
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy value" />
-          </CopyButton>
-        </div>
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@value}}
+          class="transparent has-padding-xxs"
+          data-test-copy-button
+        />
       {{/if}}
       {{#if (has-block)}}
         {{yield}}
@@ -82,21 +84,21 @@
           {{#if @tooltipText}}
             <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
               <T.Trigger @tabindex={{false}}>
-                <span class="is-word-break has-text-black" data-test-row-value={{this.label}}>{{this.value}}</span>
+                <span class="is-word-break has-text-black" data-test-row-value={{@label}}>{{@value}}</span>
               </T.Trigger>
               <T.Content @defaultClass="tool-tip">
-                <CopyButton
-                  @clipboardText={{@tooltipText}}
-                  @success={{action (set-flash-message "Data copied!")}}
-                  @tagName="div"
-                  disabled={{not @isTooltipCopyable}}
-                  class={{if @isTooltipCopyable "has-pointer"}}
-                  data-test-tooltip-copy
-                >
-                  <div class="box">
-                    {{@tooltipText}}
-                  </div>
-                </CopyButton>
+                <div class="box is-flex-center">
+                  {{@tooltipText}}
+                  {{#if @isTooltipCopyable}}
+                    <Hds::Copy::Button
+                      @text="Copy"
+                      @isIconOnly={{true}}
+                      @textToCopy={{@tooltipText}}
+                      class="transparent white-icon"
+                      data-test-tooltip-copy
+                    />
+                  {{/if}}
+                </div>
               </T.Content>
             </ToolTip>
           {{else}}

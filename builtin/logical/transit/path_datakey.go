@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -168,6 +168,10 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 			"ciphertext":  ciphertext,
 			"key_version": keyVersion,
 		},
+	}
+
+	if len(nonce) > 0 && !nonceAllowed(p) {
+		return nil, ErrNonceNotAllowed
 	}
 
 	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {

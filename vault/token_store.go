@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -113,7 +113,7 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		storage := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+		storage := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 		if storage == nil {
 			return fmt.Errorf("no cubby mount entry")
 		}
@@ -2202,7 +2202,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			view := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+			view := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 			if view == nil {
 				return fmt.Errorf("no cubby mount entry")
 			}

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
   {{did-insert (perform this.fetchOptions)}}
   {{did-update (perform this.fetchOptions) (or @options @models)}}
@@ -38,6 +43,7 @@
         @options={{this.dropdownOptions}}
         @onChange={{this.selectOrCreate}}
         @placeholderComponent={{component "search-select-placeholder"}}
+        @renderInPlace={{@renderInPlace}}
         @verticalPosition="below"
         @disabled={{@disabled}}
         as |option|

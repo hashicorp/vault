@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Variables
@@ -29,6 +29,7 @@
 @import './core/file';
 @import './core/footer';
 @import './core/inputs';
+@import './core/json-diff-patch';
 @import './core/label';
 @import './core/level';
 @import './core/link';
@@ -58,31 +59,27 @@
 @import './components/box-label';
 @import './components/box-radio';
 @import './components/calendar-widget';
+@import './components/cluster-banners';
 @import './components/codemirror';
 @import './components/confirm';
 @import './components/console-ui-panel';
 @import './components/control-group';
-@import './components/diff-version-selector';
 @import './components/doc-link';
 @import './components/empty-state-component';
 @import './components/env-banner';
 @import './components/features-selection';
 @import './components/form-section';
 @import './components/global-flash';
-@import './components/hover-copy-button';
 @import './components/icon';
 @import './components/init-illustration';
 @import './components/info-table-row';
 @import './components/kmip-role-edit';
 @import './components/known-secondaries-card.scss';
-@import './components/license-banners';
 @import './components/linked-block';
 @import './components/list-item-row';
-@import './components/list-pagination';
 @import './components/loader';
 @import './components/login-form';
 @import './components/masked-input';
-@import './components/modal-component.scss';
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
@@ -103,9 +100,9 @@
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container';
+@import './components/secrets-engines-card';
 // action-block extends selectable-card
 @import './components/action-block';
-@import './components/shamir-modal-flow';
 @import './components/shamir-progress';
 @import './components/sidebar';
 @import './components/splash-page';

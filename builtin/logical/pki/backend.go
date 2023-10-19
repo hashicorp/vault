@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -430,7 +430,8 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 
 func (b *backend) cleanup(ctx context.Context) {
 	sc := b.makeStorageContext(ctx, b.storage)
-	b.acmeState.validator.Closing <- struct{}{}
+
+	b.acmeState.Shutdown(b)
 
 	b.cleanupEnt(sc)
 }

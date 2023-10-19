@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service, { inject as service } from '@ember/service';
@@ -107,6 +107,17 @@ export default Service.extend({
     data.uiParams = { url: this.router.currentURL };
     this.storeControlGroupToken(data);
     return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
+  },
+
+  // Handle error from non-read request (eg. POST or UPDATE) so it can be retried
+  saveTokenFromError(error) {
+    const { accessor, token, creation_path, creation_time, ttl } = error;
+    const data = { accessor, token, creation_path, creation_time, ttl };
+    this.storeControlGroupToken(data);
+    // In the read flow the accessor is marked once the user clicks "Visit" from the control group page
+    // On a POST/UPDATE flow we don't redirect, so we need to mark automatically so that on the next try
+    // the request will attempt unwrap.
+    this.markTokenForUnwrap(accessor);
   },
 
   logFromError(error) {

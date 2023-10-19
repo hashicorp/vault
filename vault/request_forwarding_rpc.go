@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -66,7 +66,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 
 	// Performance standby nodes will use this value to do wait for WALs to ship
 	// in order to do a best-effort read after write guarantee
-	resp.LastRemoteWal = LastWAL(s.core)
+	resp.LastRemoteWal = s.core.EntLastWAL()
 
 	return resp, nil
 }

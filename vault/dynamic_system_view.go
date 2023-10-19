@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -143,7 +143,7 @@ func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
 	}
 	ns := mountEntry.Namespace()
 
-	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
 		return true, nil
 	}
 

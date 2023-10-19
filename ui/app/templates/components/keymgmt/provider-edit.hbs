@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
@@ -170,13 +175,15 @@
                 @options={{options}}
               />
             {{/each}}
-            {{#if (gt @model.keys.meta.lastPage 1)}}
-              <PaginationControls
-                @total={{@model.keys.meta.total}}
-                @onChange={{perform this.fetchKeys}}
-                class="has-top-margin-xl has-bottom-margin-l"
-              />
-            {{/if}}
+            <Hds::Pagination::Numbered
+              @currentPage={{@model.keys.meta.currentPage}}
+              @currentPageSize={{@model.keys.meta.pageSize}}
+              @route="vault.cluster.secrets.backend.show"
+              @showSizeSelector={{false}}
+              @totalItems={{@model.keys.meta.total}}
+              @onPageChange={{perform this.fetchKeys}}
+            />
+
           {{else}}
             <EmptyState
               @title="No keys for this provider"

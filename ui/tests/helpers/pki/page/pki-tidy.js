@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 import { SELECTORS as TIDY_FORM } from './pki-tidy-form';
 
@@ -12,12 +12,12 @@ export const SELECTORS = {
   hdsAlertButtonText: '[data-test-cancel-tidy-action] .hds-button__text',
   timeStartedRow: '[data-test-value-div="Time started"]',
   timeFinishedRow: '[data-test-value-div="Time finished"]',
-  cancelTidyModalBackground: '[data-test-modal-background="Cancel tidy?"]',
+  cancelTidyModalBackground: '#pki-cancel-tidy-modal',
   tidyEmptyStateConfigure: '[data-test-tidy-empty-state-configure]',
   manualTidyToolbar: '[data-test-pki-manual-tidy-config]',
   autoTidyToolbar: '[data-test-pki-auto-tidy-config]',
   tidyConfigureModal: {
-    configureTidyModal: '[data-test-modal-background="Tidy this mount"]',
+    configureTidyModal: '#pki-tidy-modal',
     tidyModalAutoButton: '[data-test-tidy-modal-auto-button]',
     tidyModalManualButton: '[data-test-tidy-modal-manual-button]',
     tidyModalCancelButton: '[data-test-tidy-modal-cancel-button]',

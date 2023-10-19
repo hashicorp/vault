@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -338,7 +338,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 		t.Fatal(err)
 	}
 	req.Header.Add(consts.AuthHeaderName, rootToken)
-	req = req.WithContext(context.WithValue(req.Context(), "original_request_path", req.URL.Path))
+	req = req.WithContext(logical.CreateContextOriginalRequestPath(req.Context(), req.URL.Path))
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {

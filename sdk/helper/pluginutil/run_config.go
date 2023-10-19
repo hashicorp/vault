@@ -8,11 +8,25 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-secure-stdlib/plugincontainer"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
+)
+
+const (
+	// Labels for plugin container ownership
+	labelVaultPID           = "com.hashicorp.vault.pid"
+	labelVaultClusterID     = "com.hashicorp.vault.cluster.id"
+	labelVaultPluginName    = "com.hashicorp.vault.plugin.name"
+	labelVaultPluginVersion = "com.hashicorp.vault.plugin.version"
+	labelVaultPluginType    = "com.hashicorp.vault.plugin.type"
 )
 
 type PluginClientConfig struct {
@@ -30,27 +44,35 @@ type PluginClientConfig struct {
 
 type runConfig struct {
 	// Provided by PluginRunner
-	command string
-	args    []string
-	sha256  []byte
+	command  string
+	image    string
+	imageTag string
+	args     []string
+	sha256   []byte
 
 	// Initialized with what's in PluginRunner.Env, but can be added to
 	env []string
 
+	runtimeConfig *pluginruntimeutil.PluginRuntimeConfig
+
 	PluginClientConfig
 }
 
-func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
-	cmd := exec.Command(rc.command, rc.args...)
+func (rc runConfig) mlockEnabled() bool {
+	return rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled())
+}
+
+func (rc runConfig) generateCmd(ctx context.Context) (cmd *exec.Cmd, clientTLSConfig *tls.Config, err error) {
+	cmd = exec.Command(rc.command, rc.args...)
 	cmd.Env = append(cmd.Env, rc.env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled()) {
+	if rc.mlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	version, err := rc.Wrapper.VaultVersion(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version))
 
@@ -63,41 +85,42 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	automtlsEnv := fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, rc.AutoMTLS)
 	cmd.Env = append(cmd.Env, automtlsEnv)
 
-	var clientTLSConfig *tls.Config
 	if !rc.AutoMTLS && !rc.IsMetadataMode {
 		// Get a CA TLS Certificate
 		certBytes, key, err := generateCert()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Use CA to sign a client cert and return a configured TLS config
 		clientTLSConfig, err = createClientTLSConfig(certBytes, key)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Use CA to sign a server cert and wrap the values in a response wrapped
 		// token.
 		wrapToken, err := wrapServerConfig(ctx, rc.Wrapper, certBytes, key)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		// Add the response wrap token to the ENV of the plugin
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
 	}
 
-	secureConfig := &plugin.SecureConfig{
-		Checksum: rc.sha256,
-		Hash:     sha256.New(),
+	return cmd, clientTLSConfig, nil
+}
+
+func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
+	cmd, clientTLSConfig, err := rc.generateCmd(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig:  rc.HandshakeConfig,
 		VersionedPlugins: rc.PluginSets,
-		Cmd:              cmd,
-		SecureConfig:     secureConfig,
 		TLSConfig:        clientTLSConfig,
 		Logger:           rc.Logger,
 		AllowedProtocols: []plugin.Protocol{
@@ -106,7 +129,68 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		},
 		AutoMTLS: rc.AutoMTLS,
 	}
+	if rc.image == "" {
+		clientConfig.Cmd = cmd
+		clientConfig.SecureConfig = &plugin.SecureConfig{
+			Checksum: rc.sha256,
+			Hash:     sha256.New(),
+		}
+	} else {
+		containerCfg, err := rc.containerConfig(ctx, cmd.Env)
+		if err != nil {
+			return nil, err
+		}
+		clientConfig.SkipHostEnv = true
+		clientConfig.RunnerFunc = containerCfg.NewContainerRunner
+		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
+			Group:   strconv.Itoa(containerCfg.GroupAdd),
+			TempDir: os.Getenv("VAULT_PLUGIN_TMPDIR"),
+		}
+	}
 	return clientConfig, nil
+}
+
+func (rc runConfig) containerConfig(ctx context.Context, env []string) (*plugincontainer.Config, error) {
+	clusterID, err := rc.Wrapper.ClusterID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &plugincontainer.Config{
+		Image:  rc.image,
+		Tag:    rc.imageTag,
+		SHA256: fmt.Sprintf("%x", rc.sha256),
+
+		Env:        env,
+		GroupAdd:   os.Getgid(),
+		Runtime:    consts.DefaultContainerPluginOCIRuntime,
+		CapIPCLock: rc.mlockEnabled(),
+		Labels: map[string]string{
+			labelVaultPID:           strconv.Itoa(os.Getpid()),
+			labelVaultClusterID:     clusterID,
+			labelVaultPluginName:    rc.PluginClientConfig.Name,
+			labelVaultPluginType:    rc.PluginClientConfig.PluginType.String(),
+			labelVaultPluginVersion: rc.PluginClientConfig.Version,
+		},
+	}
+
+	// Use rc.command and rc.args directly instead of cmd.Path and cmd.Args, as
+	// exec.Command may mutate the provided command.
+	if rc.command != "" {
+		cfg.Entrypoint = []string{rc.command}
+	}
+	if len(rc.args) > 0 {
+		cfg.Args = rc.args
+	}
+	if rc.runtimeConfig != nil {
+		cfg.CgroupParent = rc.runtimeConfig.CgroupParent
+		cfg.NanoCpus = rc.runtimeConfig.CPU
+		cfg.Memory = rc.runtimeConfig.Memory
+		if rc.runtimeConfig.OCIRuntime != "" {
+			cfg.Runtime = rc.runtimeConfig.OCIRuntime
+		}
+	}
+
+	return cfg, nil
 }
 
 func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
@@ -170,11 +254,24 @@ func MLock(mlock bool) RunOpt {
 }
 
 func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.Client, error) {
+	var image, imageTag string
+	if r.OCIImage != "" {
+		image = r.OCIImage
+		imageTag = strings.TrimPrefix(r.Version, "v")
+	}
 	rc := runConfig{
-		command: r.Command,
-		args:    r.Args,
-		sha256:  r.Sha256,
-		env:     r.Env,
+		command:       r.Command,
+		image:         image,
+		imageTag:      imageTag,
+		args:          r.Args,
+		sha256:        r.Sha256,
+		env:           r.Env,
+		runtimeConfig: r.RuntimeConfig,
+		PluginClientConfig: PluginClientConfig{
+			Name:       r.Name,
+			PluginType: r.Type,
+			Version:    r.Version,
+		},
 	}
 
 	for _, opt := range opts {
