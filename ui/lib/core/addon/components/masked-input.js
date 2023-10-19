@@ -69,6 +69,6 @@ export default class MaskedInputComponent extends Component {
   }
 
   @action toggleStringifyDownload(event) {
-    this.stringifyDownload = event.target.value;
+    this.stringifyDownload = event.target.checked;
   }
 }
