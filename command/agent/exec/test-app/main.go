@@ -33,7 +33,6 @@ var (
 	useSigusr1StopSignal bool
 	stopAfter            time.Duration
 	exitCode             int
-	logToStdout          bool
 )
 
 var logger = log.New(os.Stderr, "test-app: ", log.LstdFlags)
@@ -44,7 +43,6 @@ func init() {
 	flag.BoolVar(&useSigusr1StopSignal, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
 	flag.DurationVar(&stopAfter, "stop-after", 60*time.Second, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
-	flag.BoolVar(&logToStdout, "log-to-stdout", false, "log to stdout instead of stderr")
 }
 
 type Response struct {
