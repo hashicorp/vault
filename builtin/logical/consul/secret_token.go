@@ -85,14 +85,22 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 		version = versionRaw.(string)
 	}
 
-	// Extract Consul Namespace info from secret
+	// Extract Consul Namespace and Partition info from secret
 	var revokeWriteOptions *api.WriteOptions
+	var namespace, partition string
+
 	namespaceRaw, ok := req.Data["consul_namespace"]
 	if ok {
-		namespace := namespaceRaw.(string)
-		revokeWriteOptions = &api.WriteOptions{
-			Namespace: namespace,
-		}
+		namespace = namespaceRaw.(string)
+	}
+	partitionRaw, ok := req.Data["partition"]
+	if ok {
+		partition = partitionRaw.(string)
+	}
+
+	revokeWriteOptions = &api.WriteOptions{
+		Namespace: namespace,
+		Partition: partition,
 	}
 
 	switch version {
