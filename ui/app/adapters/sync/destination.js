@@ -13,8 +13,13 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
   }
 
   // id is the destination name
-  // modelName is sync/destination/<destination type>
+  // modelName is sync/destinations/:type
   urlForFindRecord(id, modelName) {
     return `${this._baseUrl()}/${modelName}/${id}`;
+  }
+
+  query() {
+    const url = `${this._baseUrl()}/sync/destinations`;
+    return this.ajax(url, 'GET', { data: { list: true } });
   }
 }

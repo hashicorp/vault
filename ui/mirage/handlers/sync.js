@@ -24,6 +24,7 @@ export default function (server) {
           }
           return keyInfo;
         }, {}),
+        keys: records.map((r) => r.type),
       },
     };
   });
@@ -33,6 +34,7 @@ export default function (server) {
     if (record) {
       delete record.type;
       delete record.name;
+      delete record.id;
       return {
         data: {
           connection_details: record,

@@ -43,7 +43,7 @@ The `size` param defaults to the default page size set in [the app config](../co
 
 ### Serializing
 
-In order to interrupt the regular serialization when using `lazyPaginatedData`, define `extractLazyPaginatedData` on the modelType's serializer. This will be called with the raw response before being cached on the store.
+In order to interrupt the regular serialization when using `lazyPaginatedData`, define `extractLazyPaginatedData` on the modelType's serializer. This will be called with the raw response before being cached on the store. `extractLazyPaginatedData` should return an array of objects.
 
 ## Gotchas
 
