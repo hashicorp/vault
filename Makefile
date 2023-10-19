@@ -177,6 +177,7 @@ ci-bootstrap: .ci-bootstrap
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
+	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate -tags tools tools/tools.go
 	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
 
