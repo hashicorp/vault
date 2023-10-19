@@ -11,4 +11,4 @@ find . -type f -name '*.go' | while read line; do
   fi
 done
 
-copywrite headers
+copywrite headers --plan
