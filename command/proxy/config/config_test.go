@@ -117,3 +117,16 @@ func TestLoadConfigFile_ProxyCache(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+// TestLoadConfigFile_StaticSecretCachingWithoutAutoAuth tests that loading
+// a config file with static secret caching enabled but no auto auth will fail.
+func TestLoadConfigFile_StaticSecretCachingWithoutAutoAuth(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-cache-static-no-auto-auth.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cfg.ValidateConfig(); err == nil {
+		t.Fatalf("expected error, as static secret caching requires auto-auth")
+	}
+}

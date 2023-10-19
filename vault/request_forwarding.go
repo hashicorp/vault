@@ -21,6 +21,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
@@ -349,7 +350,12 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		req.URL.Path = origPath
 	}()
 
-	req.URL.Path = req.Context().Value("original_request_path").(string)
+	path, ok := logical.ContextOriginalRequestPathValue(req.Context())
+	if !ok {
+		return 0, nil, nil, errors.New("error extracting request path for forwarding RPC request")
+	}
+
+	req.URL.Path = path
 
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
@@ -379,7 +385,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
 	if isPerfStandby && resp.LastRemoteWal > 0 {
-		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
+		c.EntWaitUntilWALShipped(req.Context(), resp.LastRemoteWal)
 	}
 
 	return int(resp.StatusCode), header, resp.Body, nil

@@ -32,9 +32,13 @@
             @placeholder="secret/"
             data-test-view-secret
           />
-          <button type="submit" class="button is-secondary" disabled={{not this.secretPath}} data-test-get-secret-detail>
-            {{this.buttonText}}
-          </button>
+          <Hds::Button
+            @text={{this.buttonText}}
+            @color="secondary"
+            type="submit"
+            disabled={{not this.secretPath}}
+            data-test-get-secret-detail
+          />
         </form>
         {{#if @failedDirectoryQuery}}
           <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
