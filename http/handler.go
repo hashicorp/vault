@@ -381,9 +381,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
-			ctx = context.WithValue(ctx, logical.CtxKeyMaxRequestSize{}, maxRequestSize)
+			ctx = logical.CreateContextMaxRequestSize(ctx, maxRequestSize)
 		}
-		ctx = context.WithValue(ctx, logical.CtxKeyOriginalRequestPath{}, r.URL.Path)
+		ctx = logical.CreateContextOriginalRequestPath(ctx, r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
@@ -710,11 +710,10 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	// against an indefinite amount of data being read.
 	reader := r.Body
 	ctx := r.Context()
-	maxRequestSize := ctx.Value(logical.CtxKeyMaxRequestSize{})
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
+	if logical.ContextContainsMaxRequestSize(ctx) {
+		max, ok := logical.ContextMaxRequestSizeValue(ctx)
 		if !ok {
-			return nil, fmt.Errorf("could not parse %s from request context", logical.CtxKeyMaxRequestSize{})
+			return nil, errors.New("could not parse max request size from request context")
 		}
 		if max > 0 {
 			// MaxBytesReader won't do all the internal stuff it must unless it's
@@ -728,7 +727,9 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 			reader = http.MaxBytesReader(inw, r.Body, max)
 		}
 	}
+
 	var origBody io.ReadWriter
+
 	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
@@ -749,16 +750,16 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 //
 // A nil map will be returned if the format is empty or invalid.
 func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
-	maxRequestSize := r.Context().Value(logical.CtxKeyMaxRequestSize{})
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
+	if logical.ContextContainsMaxRequestSize(r.Context()) {
+		max, ok := logical.ContextMaxRequestSizeValue(r.Context())
 		if !ok {
-			return nil, fmt.Errorf("could not parse %s from request context", logical.CtxKeyMaxRequestSize{})
+			return nil, errors.New("could not parse max request size from request context")
 		}
 		if max > 0 {
-			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
+			r.Body = io.NopCloser(io.LimitReader(r.Body, max))
 		}
 	}
+
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
