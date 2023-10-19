@@ -45,7 +45,11 @@ export default class MountBackendForm extends Component {
   }
 
   checkPathChange(type) {
-    if (!type) return;
+    if (!type) {
+      // type is cleared on back so we want to reset path
+      this.args.mountModel.path = '';
+      return;
+    }
     const mount = this.args.mountModel;
     const currentPath = mount.path;
     const mountTypes =
