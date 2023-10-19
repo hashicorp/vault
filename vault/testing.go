@@ -1786,13 +1786,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		for _, c := range testCluster.cleanupFuncs {
 			c()
 		}
-		if l, ok := testCluster.Logger.(*corehelpers.TestLogger); ok {
-			if t.Failed() {
-				_ = l.File.Close()
-			} else {
-				_ = os.Remove(l.Path)
-			}
-		}
 	}
 
 	// Setup
