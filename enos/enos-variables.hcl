@@ -48,7 +48,7 @@ variable "aws_ssh_private_key_path" {
 variable "backend_edition" {
   description = "The backend release edition if applicable"
   type        = string
-  default     = "oss" // or "ent"
+  default     = "ce" // or "ent"
 }
 
 variable "backend_instance_type" {
@@ -122,14 +122,6 @@ variable "vault_artifact_type" {
   default     = "bundle"
 }
 
-variable "vault_autopilot_initial_release" {
-  description = "The Vault release to deploy before upgrading with autopilot"
-  default = {
-    edition = "ent"
-    version = "1.11.0"
-  }
-}
-
 variable "vault_artifact_path" {
   description = "Path to CRT generated or local vault.zip bundle"
   type        = string
@@ -161,7 +153,7 @@ variable "vault_instance_count" {
 }
 
 variable "vault_license_path" {
-  description = "The path to a valid Vault enterprise edition license. This is only required for non-oss editions"
+  description = "The path to a valid Vault enterprise edition license. This is only required for non-ce editions"
   type        = string
   default     = null
 }
@@ -193,7 +185,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_release" {
   description = "The Vault release to deploy before upgrading"
   default = {
-    edition = "oss"
+    edition = "ce"
     // Vault 1.10.5 has a known issue with retry_join.
     version = "1.10.4"
   }

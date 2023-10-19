@@ -60,8 +60,16 @@
 </form>
 
 {{#if this.isModalActive}}
-  <Modal @title="Copy your token" @onClose={{action "toggleModal" "Token copied!"}} @isActive={{this.isModalActive}}>
-    <section class="modal-card-body">
+  <Hds::Modal
+    id="replication-copy-token-modal"
+    @onClose={{action "closeTokenModal"}}
+    @isDismissDisabled={{not this.isTokenCopied}}
+    as |M|
+  >
+    <M.Header>
+      Copy your token
+    </M.Header>
+    <M.Body>
       <p>
         This token can be used to enable
         {{this.model.replicationModeForDisplay}}
@@ -79,14 +87,28 @@
           <InfoTableRow @label="Expires" @value={{date-format this.expirationDate "MMM dd, yyyy hh:mm:ss a"}} />
         </div>
       </div>
-    </section>
-    <footer class="modal-card-foot">
-      <Hds::Copy::Button
-        @text="Copy & Close"
-        @textToCopy={{this.token}}
-        class="primary"
-        {{on "click" (action "copyClose" "Token copied!")}}
-      />
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Copy::Button
+          data-test-modal-copy
+          @text="Copy token"
+          @textToCopy={{this.token}}
+          class="primary"
+          @container=".hds-modal"
+          {{on "click" (action "onCopy")}}
+        />
+        <Hds::Button
+          data-test-modal-close
+          disabled={{not this.isTokenCopied}}
+          @text="Close"
+          @color="secondary"
+          {{on "click" (action "closeTokenModal")}}
+        />
+        {{#unless this.isTokenCopied}}
+          <AlertInline @type="warning" @message="Copy token to dismiss modal" />
+        {{/unless}}
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

@@ -29,6 +29,7 @@
           {{/if}}
           <div class="toolbar-separator"></div>
           <Hds::Copy::Button
+            @container={{@container}}
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{@value}}
@@ -52,6 +53,7 @@
       onSetup=this.onSetup
       onUpdate=this.onUpdate
       onFocus=this.onFocus
+      autoRefresh=(if @container true false)
     }}
     class={{if @readOnly "readonly-codemirror"}}
     data-test-component="code-mirror-modifier"

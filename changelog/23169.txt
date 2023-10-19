@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Implement Helios Design System pagination component
+```

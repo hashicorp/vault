@@ -15,16 +15,14 @@
             <Body.Td data-test-checked-out-library={{Body.data.account}}>{{Body.data.library}}</Body.Td>
           {{/if}}
           <Body.Td>
-            <button
-              type="button"
-              class="text-button has-text-primary has-text-weight-semibold"
+            <Hds::Button
+              @icon="queue"
+              @text="Check-in"
+              @color="tertiary"
               disabled={{this.disableCheckIn Body.data.library}}
               data-test-checked-out-account-action={{Body.data.account}}
               {{on "click" (fn (mut this.selectedStatus) Body.data)}}
-            >
-              <Icon @name="queue" />
-              Check-in
-            </button>
+            />
           </Body.Td>
         </Body.Tr>
       </:body>
@@ -39,37 +37,35 @@
 </OverviewCard>
 
 {{#if this.selectedStatus}}
-  <Modal
-    @title="Account Check-in"
-    @isActive={{this.selectedStatus}}
-    @showCloseButton={{true}}
-    @onClose={{fn (mut this.selectedStatus) undefined}}
-  >
-    <section class="modal-card-body">
+  <Hds::Modal id="account-check-in-modal" @onClose={{fn (mut this.selectedStatus) undefined}} as |M|>
+    <M.Header>
+      Account Check-in
+    </M.Header>
+    <M.Body>
       <p>
         This action will check-in account
         {{this.selectedStatus.account}}
         back to the library. Do you want to proceed?
       </p>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
-        disabled={{this.checkIn.isRunning}}
-        data-test-check-in-confirm
-        {{on "click" (perform this.checkIn)}}
-      >
-        Confirm
-      </button>
-      <button
-        type="button"
-        class="button"
-        disabled={{this.checkIn.isRunning}}
-        {{on "click" (fn (mut this.selectedStatus) "")}}
-      >
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button
+          @icon={{if this.save.isRunning "is-loading"}}
+          disabled={{this.checkIn.isRunning}}
+          data-test-check-in-confirm
+          {{on "click" (perform this.checkIn)}}
+          @text="Confirm"
+        />
+        <Hds::Button
+          @icon={{if this.save.isRunning "is-loading"}}
+          @color="secondary"
+          disabled={{this.checkIn.isRunning}}
+          {{on "click" (fn (mut this.selectedStatus) "")}}
+          @text="Cancel"
+        />
+
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

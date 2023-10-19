@@ -79,7 +79,7 @@ require (
 	github.com/hashicorp/consul-template v0.33.0
 	github.com/hashicorp/consul/api v1.23.0
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/eventlogger v0.2.3
+	github.com/hashicorp/eventlogger v0.2.5
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
@@ -212,17 +212,17 @@ require (
 	go.opentelemetry.io/otel/trace v1.16.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.2.1
-	golang.org/x/crypto v0.13.0
+	golang.org/x/crypto v0.14.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	golang.org/x/net v0.15.0
+	golang.org/x/net v0.17.0
 	golang.org/x/oauth2 v0.11.0
 	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.12.0
-	golang.org/x/term v0.12.0
+	golang.org/x/sys v0.13.0
+	golang.org/x/term v0.13.0
 	golang.org/x/text v0.13.0
-	golang.org/x/tools v0.9.1
+	golang.org/x/tools v0.10.0
 	google.golang.org/api v0.138.0
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.58.3
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
@@ -334,8 +334,8 @@ require (
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/envoyproxy/go-control-plane v0.11.1-0.20230524094728-9239064ad72f // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.10.1 // indirect
+	github.com/envoyproxy/go-control-plane v0.11.1 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.0.2 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
@@ -470,7 +470,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
-	github.com/prometheus/client_model v0.3.0 // indirect
+	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect

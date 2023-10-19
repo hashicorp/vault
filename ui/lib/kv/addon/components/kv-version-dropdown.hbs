@@ -10,6 +10,7 @@
         {{#each @metadata.sortedVersions as |versionData|}}
           <li data-test-version={{versionData.version}} class="action">
             {{#if @onSelect}}
+              {{! TODO Hds::Button manual update }}
               <button
                 disabled={{or versionData.destroyed versionData.isSecretDeleted}}
                 {{on "click" (fn @onSelect versionData.version D.actions)}}

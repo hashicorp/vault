@@ -250,11 +250,16 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+
     // checks on secondary token modal
-    assert.dom('#modal-wormhole').exists();
+    assert.dom('#replication-copy-token-modal').exists();
+    assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
     assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
-    await click('[data-test-modal-background="Copy your token"]');
+    assert.dom('[data-test-modal-close]').isDisabled('cancel is disabled');
+    await click('[data-test-modal-copy]');
+    assert.dom('[data-test-modal-close]').isEnabled('cancel is enabled after token is copied');
+    await click('[data-test-modal-close]');
 
     // add another secondary not using the default ttl
     await click('[data-test-secondary-add]');
@@ -269,7 +274,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
     const modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     assert.strictEqual(modalTtl, '180s', 'shows the correct TTL of 180s');
-    await click('[data-test-modal-background="Copy your token"]');
+    await click('[data-test-modal-copy]');
+    await click('[data-test-modal-close]');
 
     // confirm you were redirected to the secondaries page
     assert.strictEqual(

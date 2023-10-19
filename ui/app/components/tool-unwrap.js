@@ -16,14 +16,12 @@ import { action } from '@ember/object';
  *  @onClear={{action "onClear"}}
  *  @token={{token}}
  *  @unwrap_data={{unwrap_data}}
- *  @unwrapActiveTab={{unwrapActiveTab}}
  *  @details={{details}}
  *  @errors={{errors}}/>
  * ```
  * @param onClear {Function} - parent action that is passed through. Must be passed as {{action "onClear"}}
  * @param token=null {String} - property passed from parent to child and then passed back up to parent
  * @param unwrap_data {String} - property returned from parent.
- * @param unwrapActiveTab {String} - property returned from parent.
  * @param details {String} - property returned from parent.
  * @param error=null {Object} - errors passed from parent as default then from child back to parent.
  */
