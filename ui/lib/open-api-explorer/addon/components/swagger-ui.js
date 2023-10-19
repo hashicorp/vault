@@ -3,10 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+// import { task, timeout } from 'ember-concurrency';
 import parseURL from 'core/utils/parse-url';
 import config from 'open-api-explorer/config/environment';
+import { guidFor } from '@ember/object/internals';
 
 const { APP } = config;
 
@@ -31,9 +35,9 @@ const SearchFilterPlugin = () => {
   };
 };
 
-const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
+const CONFIG = (SwaggerUIBundle, componentInstance, query) => {
   return {
-    dom_id: `#${componentInstance.elementId}-swagger`,
+    dom_id: `#${componentInstance.inputId}`,
     url: '/v1/sys/internal/specs/openapi',
     deepLinking: false,
     presets: [SwaggerUIBundle.presets.apis],
@@ -41,7 +45,7 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
     // 'list' expands tags, but not operations
     docExpansion: 'list',
     operationsSorter: 'alpha',
-    filter: initialFilter || true,
+    filter: query || true,
     // this makes sure we show the x-vault- options
     showExtensions: true,
     // we don't have any models defined currently
@@ -49,10 +53,9 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
     defaultModelExpandDepth: 1,
     requestInterceptor: (req) => {
       // we need to add vault authorization header
-      // and namepace headers for things to work properly
+      // and namespace headers for things to work properly
       req.headers['X-Vault-Token'] = componentInstance.auth.currentToken;
-
-      const namespace = componentInstance.namespaceService.path;
+      const namespace = componentInstance.namespace.path;
       if (namespace && !APP.NAMESPACE_ROOT_URLS.some((str) => req.url.includes(str))) {
         req.headers['X-Vault-Namespace'] = namespace;
       }
@@ -72,38 +75,45 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
   };
 };
 
-export default Component.extend({
-  auth: service(),
-  namespaceService: service('namespace'),
-  initialFilter: null,
-  onFilterChange() {},
-  swaggerLoading: true,
+export default class SwaggerUiComponent extends Component {
+  @service auth;
+  @service namespace;
 
-  async didInsertElement() {
+  @tracked swaggerImport;
+  @tracked initialFilter;
+  @tracked swaggerLoading = true;
+
+  inputId = `${guidFor(this)}-swagger`;
+
+  constructor() {
+    // ARG TODO remove?
+    super(...arguments);
+  }
+
+  // using an action to bind the correct "this" context
+  @action async swaggerInit() {
     const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    this._super(...arguments);
-    // trim any initial slashes
-    const initialFilter = this.initialFilter.replace(/^(\/)+/, '');
-    SwaggerUIBundle(CONFIG(SwaggerUIBundle, this, initialFilter));
-  },
+    // trim any initial slashes on initialFilter
+    const configSettings = CONFIG(SwaggerUIBundle, this, this.initialFilter?.replace(/^(\/)+/, ''));
+    SwaggerUIBundle(configSettings);
+  }
 
-  actions: {
-    // sets the filter so the query param is updated so we get sharable URLs
-    updateFilter(e) {
-      this.onFilterChange(e.target.value || '');
-    },
-    proxyEvent(e) {
-      const swaggerInput = this.element.querySelector('.operation-filter-input');
-      // if this breaks because of a react upgrade,
-      // change this to
-      //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      //originalSetter.call(swaggerInput, e.target.value);
-      // see post on triggering react events externally for an explanation of
-      // why this works: https://stackoverflow.com/a/46012210
-      const evt = new Event('input', { bubbles: true });
-      evt.simulated = true;
-      swaggerInput.value = e.target.value.replace(/^(\/)+/, '');
-      swaggerInput.dispatchEvent(evt);
-    },
-  },
-});
+  // sets the filter so the query param is updated so we get sharable URLs
+  @action updateFilter(e) {
+    this.onFilterChange(e.target.value || '');
+  }
+
+  @action proxyEvent(e) {
+    const swaggerInput = this.element.querySelector('.operation-filter-input');
+    // if this breaks because of a react upgrade,
+    // change this to
+    //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    //originalSetter.call(swaggerInput, e.target.value);
+    // see post on triggering react events externally for an explanation of
+    // why this works: https://stackoverflow.com/a/46012210
+    const evt = new Event('input', { bubbles: true });
+    evt.simulated = true;
+    swaggerInput.value = e.target.value.replace(/^(\/)+/, '');
+    swaggerInput.dispatchEvent(evt);
+  }
+}

@@ -13,14 +13,35 @@
 </PageHeader>
 <Toolbar>
   <ToolbarFilters>
+    {{!-- <form {{on "submit" (perform this.handleSearch)}}>
+      <Hds::SegmentedGroup as |S|>
+        <S.TextInput
+          id="secret-id"
+          @value={{this.query}}
+          placeholder="Search by path"
+          aria-describedby="Search by path"
+          size="32"
+          {{on "input" this.handleInput}}
+          {{on "keydown" this.handleKeyDown}}
+          data-test-swagger-list-filter
+        />
+        <S.Button
+          @color="secondary"
+          @text="Search"
+          @icon={{if this.handleSearch.isRunning "loading" "search"}}
+          type="submit"
+          data-test-swagger-list-filter-submit
+        />
+      </Hds::SegmentedGroup>
+    </form> --}}
     <div class="field is-marginless">
       <p class="control has-icons-left">
         <label for="swagger-result-filter" class="sr-only">Filter operations by path</label>
         <input
           id="swagger-result-filter"
-          {{on "input" (action "proxyEvent")}}
-          {{on "change" (action "updateFilter")}}
-          value={{@initialFilter}}
+          {{on "input" this.proxyEvent}}
+          {{on "change" this.updateFilter}}
+          value={{this.initialFilter}}
           disabled={{this.swaggerLoading}}
           class="filter input"
           placeholder="Filter ops by path"
@@ -42,5 +63,5 @@
     <DocLink @path="/vault/api-docs#namespaces">docs</DocLink>
     for examples.
   </NamespaceReminder>
-  <div id="{{this.elementId}}-swagger" class="swagger-ember"></div>
+  <div id={{this.inputId}} class="swagger-ember" {{did-insert this.swaggerInit}}></div>
 </div>

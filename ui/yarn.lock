@@ -24711,7 +24711,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swagger-ui-dist@npm:^5.7.2":
+"swagger-ui-dist@npm:^5.9.0":
   version: 5.9.0
   resolution: "swagger-ui-dist@npm:5.9.0"
   checksum: 722f5d81adf0c0a940559952f48f7cd20a3f2a53aee8771c896eee8e3bed6f78c2f231960a7c30a4dca390d1205c0b2909d84062978013bb60febc478b9fc3d9
@@ -26046,7 +26046,7 @@ __metadata:
     stylelint: ^15.4.0
     stylelint-config-standard: ^32.0.0
     stylelint-prettier: ^3.0.0
-    swagger-ui-dist: ^5.7.2
+    swagger-ui-dist: ^5.9.0
     text-encoder-lite: 2.0.0
     tracked-built-ins: ^3.1.1
     typescript: ^4.8.4
