@@ -11,7 +11,7 @@ The Vault Secrets Operator may be installed on OpenShift clusters via the embedd
 
 ## OperatorHub
 
-The Vault Secrets Operator is certified by Red Hat and therefore included in the [OperatorHub section](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.2/html/operators/olm-understanding-operatorhub) of an OpenShift cluster's web console. 
+The Vault Secrets Operator is certified by Red Hat and therefore included in the [OperatorHub section](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.2/html/operators/olm-understanding-operatorhub) of an OpenShift cluster's web console.
 
 Navigate to the OperatorHub page of your OpenShift cluster and search for `Vault Secrets Operator`, then follow the instructions to install.
 
@@ -20,10 +20,10 @@ Navigate to the OperatorHub page of your OpenShift cluster and search for `Vault
 The Vault Secrets Operator may also be installed in OpenShift using the Helm chart. (See [Installation](/vault/docs/platform/k8s/vso/installation) for an overview of installation using the [Helm chart](/vault/docs/platform/k8s/vso/helm).) The examples below show example [values.yaml files](https://helm.sh/docs/chart_template_guide/values_files/) for each configuration, which would be used with `helm install` as below:
 
 ```shell-session
-helm install vault-secrets-operator hashicorp/vault-secrets-operator \
+$ helm install vault-secrets-operator hashicorp/vault-secrets-operator \
   --create-namespace \
   --namespace vault-secrets-operator \
-  --version 0.2.0 \
+  --version 0.3.3 \
   --values values.yaml
 ```
 
@@ -56,7 +56,7 @@ controller:
   manager:
     image:
       repository: registry.connect.redhat.com/hashicorp/vault-secrets-operator
-      tag: 0.2.0-ubi
+      tag: 0.3.3-ubi
     resources:
       limits:
         memory: 256Mi
