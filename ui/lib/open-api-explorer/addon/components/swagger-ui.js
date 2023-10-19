@@ -35,7 +35,7 @@ const SearchFilterPlugin = () => {
   };
 };
 
-const CONFIG = (SwaggerUIBundle, componentInstance, query) => {
+const CONFIG = (SwaggerUIBundle, componentInstance, filter) => {
   return {
     dom_id: `#${componentInstance.inputId}`,
     url: '/v1/sys/internal/specs/openapi',
@@ -45,7 +45,7 @@ const CONFIG = (SwaggerUIBundle, componentInstance, query) => {
     // 'list' expands tags, but not operations
     docExpansion: 'list',
     operationsSorter: 'alpha',
-    filter: query || true,
+    filter: filter || true,
     // this makes sure we show the x-vault- options
     showExtensions: true,
     // we don't have any models defined currently
@@ -79,7 +79,6 @@ export default class SwaggerUiComponent extends Component {
   @service auth;
   @service namespace;
 
-  @tracked initialFilter;
   @tracked swaggerLoading = true;
 
   inputId = `${guidFor(this)}-swagger`;
@@ -87,27 +86,8 @@ export default class SwaggerUiComponent extends Component {
   // using an action to bind the correct "this" context
   @action async swaggerInit() {
     const { default: SwaggerUIBundle } = await import('swagger-ui-dist/swagger-ui-bundle.js');
-    // trim any initial slashes on initialFilter
-    const configSettings = CONFIG(SwaggerUIBundle, this, this.initialFilter?.replace(/^(\/)+/, ''));
+    // trim any slashes on the filter value
+    const configSettings = CONFIG(SwaggerUIBundle, this, this.args.filter?.replace(/^(\/)+/, ''));
     SwaggerUIBundle(configSettings);
-  }
-
-  // sets the filter so the query param is updated so we get sharable URLs
-  @action updateFilter(e) {
-    this.onFilterChange(e.target.value || '');
-  }
-
-  @action proxyEvent(e) {
-    const swaggerInput = document.querySelector('.operation-filter-input');
-    // if this breaks because of a react upgrade,
-    // change this to
-    //let originalSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    //originalSetter.call(swaggerInput, e.target.value);
-    // see post on triggering react events externally for an explanation of
-    // why this works: https://stackoverflow.com/a/46012210
-    const evt = new Event('input', { bubbles: true });
-    evt.simulated = true;
-    swaggerInput.value = e.target.value.replace(/^(\/)+/, '');
-    swaggerInput.dispatchEvent(evt);
   }
 }

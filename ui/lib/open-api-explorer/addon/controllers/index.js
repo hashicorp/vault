@@ -5,7 +5,8 @@
 
 import Controller from '@ember/controller';
 
-export default Controller.extend({
-  queryParams: ['filter'],
-  filter: '',
-});
+export default class OpenApiIndex extends Controller {
+  queryParams = ['filter'];
+
+  filter = null;
+}

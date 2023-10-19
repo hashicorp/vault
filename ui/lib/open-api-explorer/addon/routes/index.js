@@ -6,11 +6,13 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-export default Route.extend({
-  flashMessages: service(),
+export default class OpenApiExplorerIndex extends Route {
+  @service flashMessages;
+
   // without an empty model hook here, ember likes to use the parent model, and then things get weird with
   // query params, so here we're no-op'ing the model hook
-  model() {},
+  model() {}
+
   afterModel() {
     const warning = `The "Try it out" functionality in this API explorer will make requests to this Vault server on your behalf.
 
@@ -21,5 +23,5 @@ Your token will also be shown on the screen in the example curl command output.`
       sticky: true,
       preformatted: true,
     });
-  },
-});
+  }
+}
