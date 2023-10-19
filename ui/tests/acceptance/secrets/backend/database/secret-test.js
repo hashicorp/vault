@@ -478,7 +478,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-selectable-card="Roles"]')
       .doesNotExist('Roles card does not exist on overview w/ policy');
-    assert.dom('.title-number').hasText('1', 'Lists the correct number of connections');
+    assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
