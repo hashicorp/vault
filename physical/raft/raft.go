@@ -431,8 +431,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		dbPath := filepath.Join(path, "raft.db")
 		opts := etcdboltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path:        dbPath,
-			BoltOptions: opts,
+			Path:                    dbPath,
+			BoltOptions:             opts,
+			MsgpackUseNewTimeFormat: true,
 		}
 		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
@@ -903,6 +904,9 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
+
+	// overrideMsgpackUseNewTimeFormat is used for testing backwards compatability
+	overrideMsgpackUseNewTimeFormat *bool
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -997,11 +1001,15 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return err
 		}
 		transConfig := &raft.NetworkTransportConfig{
-			Stream:                streamLayer,
-			MaxPool:               3,
-			Timeout:               10 * time.Second,
-			ServerAddressProvider: b.serverAddressProvider,
-			Logger:                b.logger.Named("raft-net"),
+			Stream:                  streamLayer,
+			MaxPool:                 3,
+			Timeout:                 10 * time.Second,
+			ServerAddressProvider:   b.serverAddressProvider,
+			Logger:                  b.logger.Named("raft-net"),
+			MsgpackUseNewTimeFormat: true,
+		}
+		if opts.overrideMsgpackUseNewTimeFormat != nil {
+			transConfig.MsgpackUseNewTimeFormat = *opts.overrideMsgpackUseNewTimeFormat
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 

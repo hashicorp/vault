@@ -9,5 +9,5 @@ package raft
 // on the library, which allows us to pin the version in go.mod.
 
 import (
-	_ "github.com/hashicorp/go-msgpack/codec"
+	_ "github.com/hashicorp/go-msgpack/v2/codec"
 )

@@ -14,16 +14,20 @@ import (
 )
 
 func GetRaft(t testing.TB, bootstrap bool, noStoreState bool) (*RaftBackend, string) {
+	return GetRaftWithOpts(t, bootstrap, noStoreState, SetupOpts{})
+}
+
+func GetRaftWithOpts(t testing.TB, bootstrap bool, noStoreState bool, setupOpts SetupOpts) (*RaftBackend, string) {
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("raft dir: %s", raftDir)
 
-	return getRaftWithDir(t, bootstrap, noStoreState, raftDir)
+	return getRaftWithDir(t, bootstrap, noStoreState, raftDir, setupOpts)
 }
 
-func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string) (*RaftBackend, string) {
+func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir string, setupOpts SetupOpts) (*RaftBackend, string) {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +66,7 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 			t.Fatal(err)
 		}
 
-		err = backend.SetupCluster(context.Background(), SetupOpts{})
+		err = backend.SetupCluster(context.Background(), setupOpts)
 		if err != nil {
 			t.Fatal(err)
 		}
