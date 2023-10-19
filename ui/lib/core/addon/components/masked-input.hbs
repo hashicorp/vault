@@ -75,13 +75,20 @@
     <M.Body>
       This download is
       <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
+
+      <div class="has-top-margin-m">
+        <Hds::Form::Toggle::Field @value={{this.stringifyDownload}} {{on "change" this.toggleStringifyDownload}} as |F|>
+          <F.Label>Stringify secret value</F.Label>
+          <F.HelperText>Select to preserve formatting for json values.</F.HelperText>
+        </Hds::Form::Toggle::Field>
+      </div>
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
         <DownloadButton
           @filename={{or @name "secret-value"}}
           @data={{@value}}
-          @stringify={{true}}
+          @stringify={{this.stringifyDownload}}
           @onSuccess={{fn (mut this.modalOpen) false}}
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
