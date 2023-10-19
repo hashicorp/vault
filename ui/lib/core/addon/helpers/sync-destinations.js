@@ -11,26 +11,31 @@ const SYNC_DESTINATIONS = [
     displayName: 'AWS Secrets Manager',
     type: 'aws-sm',
     icon: 'aws-color',
+    category: 'cloud',
   },
   {
     displayName: 'Azure Key Vault',
     type: 'azure-kv',
     icon: 'azure-color',
+    category: 'cloud',
   },
   {
     displayName: 'Google Secret Manager',
     type: 'gcp-sm',
     icon: 'gcp-color',
+    category: 'cloud',
   },
   {
     displayName: 'Github Actions',
     type: 'gh',
-    icon: 'github',
+    icon: 'github-color',
+    category: 'dev-tools',
   },
   {
     displayName: 'Vercel Project',
     type: 'vercel-project',
-    icon: 'vercel',
+    icon: 'vercel-color',
+    category: 'dev-tools',
   },
 ];
 
