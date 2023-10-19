@@ -265,6 +265,11 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 		return nil
 	}
 
+	// We can't auto-rotate managed keys
+	if p.Type == keysutil.KeyType_MANAGED_KEY {
+		return nil
+	}
+
 	// Retrieve the latest version of the policy and determine if it is time to rotate.
 	latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
 	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotatePeriod)) {
