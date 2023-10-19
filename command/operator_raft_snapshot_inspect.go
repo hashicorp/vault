@@ -59,7 +59,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Help() string {
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -81,13 +81,6 @@ func (c *OperatorRaftSnapshotInspectCommand) Flags() *FlagSets {
 		Target:  &c.filter,
 		Default: "",
 		Usage:   "Can only be used with -details. Limits the key breakdown using this prefix filter.",
-	})
-
-	f.StringVar(&StringVar{
-		Name:    "format",
-		Target:  &c.format,
-		Default: TableFormat,
-		Usage:   `Print the output in the given format. Valid formats are "table" and "json".`,
 	})
 
 	return set
@@ -169,7 +162,7 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		return 1
 	}
 
-	formatter, err := NewFormatter(c.format)
+	formatter, err := NewFormatter(Format(c.UI))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error outputting enhanced snapshot data: %s", err))
 		return 1
@@ -317,6 +310,10 @@ func NewFormatter(format string) (SnapshotFormatter, error) {
 		return newTableFormatter(), nil
 	case JSONFormat:
 		return newJSONFormatter(), nil
+	case "pretty":
+		return nil, fmt.Errorf("Format not supported: %s", format)
+	case "yaml":
+		return nil, fmt.Errorf("Format not supported: %s", format)
 	default:
 		return nil, fmt.Errorf("Unknown format: %s", format)
 	}
