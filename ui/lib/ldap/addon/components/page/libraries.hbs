@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
@@ -44,9 +49,7 @@
         <Item.menu as |Menu|>
           {{#if library.libraryPath.isLoading}}
             <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
+              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
             </li>
           {{else}}
             <li class="action">

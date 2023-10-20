@@ -231,6 +231,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	b.Backend.Invalidate = sysInvalidate(b)
 	b.Backend.InitializeFunc = sysInitialize(b)
+	b.Backend.Clean = sysClean(b)
 	return b
 }
 
@@ -2253,7 +2254,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !strings.HasPrefix(path, "auth/") {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
 		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+		if mountEntry.Type == mountTypeToken || mountEntry.Type == mountTypeNSToken {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
 		}
 
@@ -3697,7 +3698,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -5117,9 +5118,9 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.ActiveTime = core.ActiveTime()
 	}
 	if resp.PerfStandby {
-		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
 	} else if isLeader || !haEnabled {
-		resp.LastWAL = LastWAL(core)
+		resp.LastWAL = core.EntLastWAL()
 	}
 
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()

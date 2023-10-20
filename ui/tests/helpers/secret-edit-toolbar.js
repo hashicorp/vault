@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { click } from '@ember/test-helpers';
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',

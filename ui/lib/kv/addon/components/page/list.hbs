@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
     <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
@@ -32,9 +37,13 @@
             @placeholder="secret/"
             data-test-view-secret
           />
-          <button type="submit" class="button is-secondary" disabled={{not this.secretPath}} data-test-get-secret-detail>
-            {{this.buttonText}}
-          </button>
+          <Hds::Button
+            @text={{this.buttonText}}
+            @color="secondary"
+            type="submit"
+            disabled={{not this.secretPath}}
+            data-test-get-secret-detail
+          />
         </form>
         {{#if @failedDirectoryQuery}}
           <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />

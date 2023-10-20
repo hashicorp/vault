@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package http
@@ -5,6 +8,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -18,4 +22,5 @@ func entWrapGenericHandler(core *vault.Core, in http.Handler, props *vault.Handl
 
 func entAdditionalRoutes(mux *http.ServeMux, core *vault.Core) {}
 
-func entAdjustResponse() {}
+func entAdjustResponse(core *vault.Core, w http.ResponseWriter, req *logical.Request) {
+}
