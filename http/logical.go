@@ -44,7 +44,7 @@ func (b *bufferedReader) Close() error {
 
 const MergePatchContentTypeHeader = "application/merge-patch+json"
 
-func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -110,7 +110,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.R
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 
-		if a != nil && a.IsBinaryPath(r.Context(), path) {
+		if ra != nil && ra.IsBinaryPath(r.Context(), path) {
 			passHTTPReq = true
 			origBody = r.Body
 		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
