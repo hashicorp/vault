@@ -6,20 +6,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func replaceVersion(v, vp string) (string, string) {
+func replaceVersion(v, vp string) func() {
 	origV := Version
 	origVP := VersionPrerelease
 
 	Version = v
 	VersionPrerelease = vp
 
-	return origV, origVP
+	return func() {
+		Version = origV
+		VersionPrerelease = origVP
+	}
 }
 
 func TestGetVersion(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	origVersion, origVersionPrerelease := replaceVersion("1.2.3", "")
+	restoreVersionFunc := replaceVersion("1.2.3", "")
+	defer restoreVersionFunc()
 
 	// Test the general case
 	vi := GetVersion()
@@ -36,14 +40,13 @@ func TestGetVersion(t *testing.T) {
 	assert.Equal(t, "git-describe", vi.Version)
 
 	GitDescribe = origGitDescribe
-
-	replaceVersion(origVersion, origVersionPrerelease)
 }
 
 func TestVersionNumber(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	origVersion, origVersionPrerelease := replaceVersion("unknown", "unknown")
+	restoreVersionFunc := replaceVersion("unknown", "unknown")
+	defer restoreVersionFunc()
 
 	// Test the unknown version case
 	vi := GetVersion()
@@ -63,14 +66,13 @@ func TestVersionNumber(t *testing.T) {
 	// Test the metadata only version case
 	vi.VersionPrerelease = ""
 	assert.Equal(t, "1.2.3+ent", vi.VersionNumber())
-
-	replaceVersion(origVersion, origVersionPrerelease)
 }
 
 func TestFullVersionNumber(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	origVersion, origVersionPrerelease := replaceVersion("unknown", "unknown")
+	restoreVersionFunc := replaceVersion("unknown", "unknown")
+	defer restoreVersionFunc()
 
 	// Test the unknown version case
 	vi := GetVersion()
@@ -103,6 +105,4 @@ func TestFullVersionNumber(t *testing.T) {
 	vi.VersionPrerelease = "rc1"
 	vi.VersionMetadata = "ent"
 	assert.Equal(t, "Vault v1.2.3-rc1+ent (ab1234f), built 2023-10-20", vi.FullVersionNumber(true))
-
-	replaceVersion(origVersion, origVersionPrerelease)
 }
