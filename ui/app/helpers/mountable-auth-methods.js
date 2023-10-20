@@ -11,6 +11,7 @@ const ENTERPRISE_AUTH_METHODS = [
     value: 'saml',
     type: 'saml',
     category: 'generic',
+    glyph: 'saml-color',
   },
 ];
 
@@ -20,6 +21,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'alicloud',
     type: 'alicloud',
     category: 'cloud',
+    glyph: 'alibaba-color',
   },
   {
     displayName: 'AppRole',
@@ -108,6 +110,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'userpass',
     type: 'userpass',
     category: 'generic',
+    glyph: 'users',
   },
 ];
 

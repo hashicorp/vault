@@ -568,7 +568,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-selectable-card="Connections"]')
       .exists({ count: 1 }, 'renders only the connection card');
-
     await click('[data-test-action-text="Configure new"]');
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
   });

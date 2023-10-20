@@ -16,7 +16,7 @@
       <LinkTo
         class="has-icon-right is-ghost is-no-underline has-text-weight-semibold"
         @route={{@actionTo}}
-        @query={{@actionQuery}}
+        @query={{or @actionQuery (hash @actionQuery)}}
         data-test-action-text={{@actionText}}
       >
         {{@actionText}}

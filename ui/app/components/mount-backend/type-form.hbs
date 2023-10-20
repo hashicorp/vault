@@ -14,7 +14,7 @@
         class="has-top-padding-m has-text-centered small-card"
         @onClick={{fn @setMountType type.type}}
         @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-        data-test-mount-type
+        data-test-mount-type={{type.type}}
       >
         <Icon @name={{or type.glyph type.type}} @size="24" class="has-bottom-margin-xs" />
         <Hds::Text::Body @tag="h3" @size="300">

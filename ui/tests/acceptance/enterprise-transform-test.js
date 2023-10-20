@@ -75,7 +75,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
     await mountSecrets.selectType(engine.type);
-    await mountSecrets.next().path(engine.type);
+    await mountSecrets.path(engine.type);
     await mountSecrets.submit();
 
     assert.strictEqual(
