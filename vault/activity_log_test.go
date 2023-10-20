@@ -784,8 +784,8 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(entityLog0.Clients) != activitySegmentClientCapacity {
-		t.Fatalf("unexpected client length. Expected %d, got %d", activitySegmentClientCapacity,
+	if len(entityLog0.Clients) != ActivitySegmentClientCapacity {
+		t.Fatalf("unexpected client length. Expected %d, got %d", ActivitySegmentClientCapacity,
 			len(entityLog0.Clients))
 	}
 
@@ -795,7 +795,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	expectedCount := 8100 - activitySegmentClientCapacity
+	expectedCount := 8100 - ActivitySegmentClientCapacity
 	if len(entityLog1.Clients) != expectedCount {
 		t.Fatalf("unexpected entity length. Expected %d, got %d", expectedCount,
 			len(entityLog1.Clients))
