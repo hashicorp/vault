@@ -478,11 +478,9 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-create]').doesNotExist('Add role button does not show due to permissions');
     assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
     await visit(`/vault/secrets/${backend}/overview`);
+    assert.dom('[data-test-overview-card="Connections"]').exists('Connections card exists on overview');
     assert
-      .dom('[data-test-overview-card-container="Connections"]')
-      .exists('Connections card exists on overview');
-    assert
-      .dom('[data-test-overview-card-container="Roles"]')
+      .dom('[data-test-overview-card="Roles"]')
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
@@ -572,7 +570,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-secret-list-tab="Roles"]')
       .doesNotExist(`does not show the roles tab because it does not have permissions`);
     assert
-      .dom('[data-test-overview-card-container="Connections"]')
+      .dom('[data-test-overview-card="Connections"]')
       .exists({ count: 1 }, 'renders only the connection card');
     await click('[data-test-action-text="Configure new"]');
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);

@@ -44,7 +44,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       .dom('[data-test-mount-type]')
       .exists({ count: authTypes.length }, 'Renders all mountable auth methods');
     await click(`[data-test-mount-type="okta"]`);
-    assert.ok(spy.calledOnceWith('github'));
+    assert.ok(spy.calledOnceWith('okta'));
   });
 
   module('Enterprise', function (hooks) {
