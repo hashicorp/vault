@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file
+```

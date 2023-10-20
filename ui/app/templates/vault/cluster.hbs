@@ -41,7 +41,7 @@
 </div>
 
 {{#if this.auth.isActiveSession}}
-  <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}}>
+  <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}} @allowingExpiration={{this.auth.allowExpiration}}>
     {{outlet}}
   </TokenExpireWarning>
 {{else}}
