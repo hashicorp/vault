@@ -849,6 +849,22 @@ func TestBackend_Roles(t *testing.T) {
 	}
 }
 
+func TestBackend_Enterprise_Diff_Namespace_Revocation(t *testing.T) {
+	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
+		t.Skip("Skipping: No enterprise license found")
+	}
+
+	testBackendEntDiffNamespaceRevocation(t)
+}
+
+func TestBackend_Enterprise_Diff_Partition_Revocation(t *testing.T) {
+	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
+		t.Skip("Skipping: No enterprise license found")
+	}
+
+	testBackendEntDiffPartitionRevocation(t)
+}
+
 func TestBackend_Enterprise_Namespace(t *testing.T) {
 	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
 		t.Skip("Skipping: No enterprise license found")
@@ -863,6 +879,268 @@ func TestBackend_Enterprise_Partition(t *testing.T) {
 	}
 
 	testBackendEntPartition(t)
+}
+
+func testBackendEntDiffNamespaceRevocation(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
+	defer cleanup()
+
+	// Perform additional Consul configuration
+	consulapiConfig := consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = consulConfig.Address()
+	consulapiConfig.Token = consulConfig.Token
+	client, err := consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create Policy in default namespace to manage ACLs in a different
+	// namespace
+	nsPol := &consulapi.ACLPolicy{
+		Name:        "diff-ns-test",
+		Description: "policy to test management of ACLs in one ns from another",
+		Rules: `namespace "ns1" {
+			acl="write"
+		}
+		`,
+	}
+	pol, _, err := client.ACL().PolicyCreate(nsPol, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create new Token in default namespace with new ACL
+	cToken, _, err := client.ACL().TokenCreate(
+		&consulapi.ACLToken{
+			Policies: []*consulapi.ACLLink{{ID: pol.ID}},
+		}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write backend config
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   cToken.SecretID,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the role in namespace "ns1"
+	req.Path = "roles/test-ns"
+	req.Data = map[string]interface{}{
+		"consul_policies":  []string{"ns-test"},
+		"lease":            "6h",
+		"consul_namespace": "ns1",
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get Token
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test-ns"
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	generatedSecret := resp.Secret
+	generatedSecret.TTL = 6 * time.Hour
+
+	// Verify Secret
+	var d struct {
+		Token           string `mapstructure:"token"`
+		Accessor        string `mapstructure:"accessor"`
+		ConsulNamespace string `mapstructure:"consul_namespace"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+
+	if d.ConsulNamespace != "ns1" {
+		t.Fatalf("Failed to access namespace")
+	}
+
+	// Revoke the credential
+	req.Operation = logical.RevokeOperation
+	req.Secret = generatedSecret
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Revocation failed: %v", err)
+	}
+
+	// Build a management client and verify that the token does not exist anymore
+	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+	consulmgmtConfig.Address = connData["address"].(string)
+	consulmgmtConfig.Token = connData["token"].(string)
+	mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := &consulapi.QueryOptions{
+		Datacenter: "DC1",
+		Namespace:  "ns1",
+	}
+
+	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+	if err == nil {
+		t.Fatal("err: expected error")
+	}
+}
+
+func testBackendEntDiffPartitionRevocation(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
+	defer cleanup()
+
+	// Perform additional Consul configuration
+	consulapiConfig := consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = consulConfig.Address()
+	consulapiConfig.Token = consulConfig.Token
+	client, err := consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create Policy in default partition to manage ACLs in a different
+	// partition
+	partPol := &consulapi.ACLPolicy{
+		Name:        "diff-part-test",
+		Description: "policy to test management of ACLs in one part from another",
+		Rules: `partition "part1" {
+			acl="write"
+		}
+		`,
+	}
+	pol, _, err := client.ACL().PolicyCreate(partPol, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create new Token in default partition with new ACL
+	cToken, _, err := client.ACL().TokenCreate(
+		&consulapi.ACLToken{
+			Policies: []*consulapi.ACLLink{{ID: pol.ID}},
+		}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write backend config
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   cToken.SecretID,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the role in partition "part1"
+	req.Path = "roles/test-part"
+	req.Data = map[string]interface{}{
+		"consul_policies": []string{"part-test"},
+		"lease":           "6h",
+		"partition":       "part1",
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Get Token
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test-part"
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	generatedSecret := resp.Secret
+	generatedSecret.TTL = 6 * time.Hour
+
+	// Verify Secret
+	var d struct {
+		Token     string `mapstructure:"token"`
+		Accessor  string `mapstructure:"accessor"`
+		Partition string `mapstructure:"partition"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+
+	if d.Partition != "part1" {
+		t.Fatalf("Failed to access partition")
+	}
+
+	// Revoke the credential
+	req.Operation = logical.RevokeOperation
+	req.Secret = generatedSecret
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Revocation failed: %v", err)
+	}
+
+	// Build a management client and verify that the token does not exist anymore
+	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+	consulmgmtConfig.Address = connData["address"].(string)
+	consulmgmtConfig.Token = connData["token"].(string)
+	mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := &consulapi.QueryOptions{
+		Datacenter: "DC1",
+		Partition:  "part1",
+	}
+
+	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+	if err == nil {
+		t.Fatal("err: expected error")
+	}
 }
 
 func testBackendEntNamespace(t *testing.T) {
