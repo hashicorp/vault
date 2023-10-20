@@ -102,4 +102,38 @@ module('Integration | Component | masked input', function (hooks) {
     const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
   });
+
+  test('it should render stringify toggle in download modal', async function (assert) {
+    assert.expect(3);
+
+    // this looks wonky but need a new line in there to test stringify adding escape character
+    this.value = `bar
+`;
+
+    const downloadStub = sinon.stub(this.owner.lookup('service:download'), 'miscExtension');
+    downloadStub.callsFake((fileName, value) => {
+      const firstCall = downloadStub.callCount === 1;
+      const assertVal = firstCall ? this.value : JSON.stringify(this.value);
+      assert.strictEqual(assertVal, value, `Value is ${firstCall ? 'not ' : ''}stringified`);
+      return true;
+    });
+
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <MaskedInput
+        @name="key"
+        @value={{this.value}}
+        @displayOnly={{true}}
+        @allowDownload={{true}}
+      />
+    `);
+
+    await click('[data-test-download-icon]');
+    assert.dom('[data-test-stringify-toggle]').isNotChecked('Stringify toggle off as default');
+    await click('[data-test-download-button]');
+
+    await click('[data-test-download-icon]');
+    await click('[data-test-stringify-toggle]');
+    await click('[data-test-download-button]');
+  });
 });
