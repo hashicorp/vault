@@ -4754,6 +4754,8 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
+// pathInternalUIVersion is the framework.PathOperation callback function for
+// the sys/internal/ui/version path. It simply returns the Vault version.
 func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{
 		Data: map[string]any{
