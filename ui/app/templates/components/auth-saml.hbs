@@ -31,15 +31,14 @@
     <div data-test-yield-content>
       {{yield}}
     </div>
-    <button
+    <Hds::Button
+      @text="Sign in with SAML provider"
+      @icon={{if @disabled "loading"}}
       data-test-auth-submit={{true}}
       type="submit"
       disabled={{@disabled}}
-      class="button is-primary {{if @disabled 'is-loading'}}"
       id="auth-submit"
-    >
-      Sign in with SAML provider
-    </button>
+    />
   </form>
 {{else}}
   <Hds::Alert @type="inline" @color="warning" data-test-saml-auth-not-allowed as |A|>
