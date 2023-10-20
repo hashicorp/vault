@@ -24,7 +24,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="box is-sideless is-fullwidth is-marginless">
+<div class="box is-sideless is-bottomless is-fullwidth is-marginless">
   <NamespaceReminder @mode="enable" @noun={{if (eq @mountType "secret") "Secret Engine" "Auth Method"}} />
   <MessageError @errorMessage={{this.errorMessage}} />
   {{#if @mountModel.type}}
