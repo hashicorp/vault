@@ -20,4 +20,8 @@
     width: 7rem;
     min-height: 8rem;
   }
+
+  &.one-third-card {
+    width: calc(100% / 3 - $spacing-m);
+  }
 }
