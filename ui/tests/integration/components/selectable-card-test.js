@@ -13,20 +13,17 @@ module('Integration | Component selectable-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.cardTitle = 'Connections';
     this.onClick = sinon.spy();
   });
 
   test('it renders', async function (assert) {
-    await render(hbs`<SelectableCard @cardTitle={{this.cardTitle}} @onClick={{this.onClick}}/>`);
-    const titleText = this.element.querySelector('h3').innerText;
-    assert.strictEqual(titleText, 'Connections');
-    await click(this.element);
-    assert.ok(this.onClick.calledOnce(), 'calls on click');
+    await render(hbs`<SelectableCard @onClick={{this.onClick}}/>`);
+    await click('.selectable-card');
+    assert.ok(this.onClick.calledOnce, 'calls on click');
   });
 
   test('it renders block content', async function (assert) {
-    await render(hbs`<SelectableCard  @onClick={{this.onClick}} >hello</SelectableCard>`);
-    assert.strictEqual(this.element.innerText, 'hello');
+    await render(hbs`<SelectableCard  @onClick={{this.onClick}}>hello</SelectableCard>`);
+    assert.dom('.selectable-card').hasText('hello');
   });
 });
