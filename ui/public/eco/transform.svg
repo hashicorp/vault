@@ -1,16 +1,16 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="1" y="1" width="10" height="10" rx="1" fill="white" stroke="#BAC1CC" stroke-width="2"/>
-<rect x="13" y="13" width="10" height="10" rx="1" fill="white" stroke="#BAC1CC" stroke-width="2"/>
-<rect x="19" y="6" width="2" height="2" fill="#BAC1CC"/>
-<rect x="19" y="9" width="2" height="2" fill="#BAC1CC"/>
-<rect x="11" y="21" width="2" height="2" transform="rotate(-180 11 21)" fill="#BAC1CC"/>
-<rect x="8" y="21" width="2" height="2" transform="rotate(-180 8 21)" fill="#BAC1CC"/>
-<rect x="5" y="21" width="2" height="2" transform="rotate(-180 5 21)" fill="#BAC1CC"/>
-<rect x="5" y="18" width="2" height="2" transform="rotate(-180 5 18)" fill="#BAC1CC"/>
-<rect x="5" y="15" width="2" height="2" transform="rotate(-180 5 15)" fill="#BAC1CC"/>
-<path d="M7.02393 9H8.78174L6.98438 2.65869H5.01123L3.21826 9H4.81787L5.12109 7.60693H6.72949L7.02393 9ZM5.89453 4.08691H5.97803L6.479 6.44678H5.37598L5.89453 4.08691Z" fill="#BAC1CC"/>
-<path d="M15.4248 17.3833L16.9761 18.1743L15.4248 18.9653L16.0269 20.0068L17.4902 19.062L17.3979 20.8022H18.6021L18.5098 19.0576L19.9731 20.0112L20.5752 18.9653L19.0195 18.1743L20.5752 17.3833L19.9731 16.3418L18.5142 17.291L18.6021 15.5464H17.3979L17.4858 17.291L16.0269 16.3374L15.4248 17.3833Z" fill="#BAC1CC"/>
-<rect x="13" y="3" width="2" height="2" fill="#BAC1CC"/>
-<rect x="16" y="3" width="2" height="2" fill="#BAC1CC"/>
-<rect x="19" y="3" width="2" height="2" fill="#BAC1CC"/>
+<rect x="1" y="1" width="10" height="10" rx="1" fill="white" stroke="#000000" stroke-width="2"/>
+<rect x="13" y="13" width="10" height="10" rx="1" fill="white" stroke="#000000" stroke-width="2"/>
+<rect x="19" y="6" width="2" height="2" fill="#000000"/>
+<rect x="19" y="9" width="2" height="2" fill="#000000"/>
+<rect x="11" y="21" width="2" height="2" transform="rotate(-180 11 21)" fill="#000000"/>
+<rect x="8" y="21" width="2" height="2" transform="rotate(-180 8 21)" fill="#000000"/>
+<rect x="5" y="21" width="2" height="2" transform="rotate(-180 5 21)" fill="#000000"/>
+<rect x="5" y="18" width="2" height="2" transform="rotate(-180 5 18)" fill="#000000"/>
+<rect x="5" y="15" width="2" height="2" transform="rotate(-180 5 15)" fill="#000000"/>
+<path d="M7.02393 9H8.78174L6.98438 2.65869H5.01123L3.21826 9H4.81787L5.12109 7.60693H6.72949L7.02393 9ZM5.89453 4.08691H5.97803L6.479 6.44678H5.37598L5.89453 4.08691Z" fill="#000000"/>
+<path d="M15.4248 17.3833L16.9761 18.1743L15.4248 18.9653L16.0269 20.0068L17.4902 19.062L17.3979 20.8022H18.6021L18.5098 19.0576L19.9731 20.0112L20.5752 18.9653L19.0195 18.1743L20.5752 17.3833L19.9731 16.3418L18.5142 17.291L18.6021 15.5464H17.3979L17.4858 17.291L16.0269 16.3374L15.4248 17.3833Z" fill="#000000"/>
+<rect x="13" y="3" width="2" height="2" fill="#000000"/>
+<rect x="16" y="3" width="2" height="2" fill="#000000"/>
+<rect x="19" y="3" width="2" height="2" fill="#000000"/>
 </svg>
