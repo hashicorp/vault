@@ -44,8 +44,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     this.renderComponent = () => {
       return render(
         hbs`
-          <div id="modal-wormhole"></div>
-          <AccountsCheckedOut
+                    <AccountsCheckedOut
             @libraries={{array this.library}}
             @statuses={{this.statuses}}
             @showLibraryColumn={{this.showLibraryColumn}}

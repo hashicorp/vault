@@ -64,14 +64,14 @@
       Configuration values can be inferred from the pod and your local environment variables.
     </p>
     <div>
-      <button
-        class="button has-top-margin-s {{if this.fetchInferred.isRunning 'is-loading'}}"
-        type="button"
+      <Hds::Button
+        @text="Get config values"
+        @color="secondary"
+        @icon={{if this.fetchInferred.isRunning "loading"}}
+        class="has-top-margin-s"
         disabled={{this.fetchInferred.isRunning}}
         {{on "click" (perform this.fetchInferred)}}
-      >
-        Get config values
-      </button>
+      />
     </div>
   {{/if}}
 </div>
@@ -79,50 +79,36 @@
 <hr class="has-background-gray-200 has-top-margin-l" />
 
 <div class="has-top-margin-s has-bottom-margin-s is-flex">
-  <button
-    data-test-config-save
-    class="button is-primary"
-    type="button"
-    disabled={{this.isDisabled}}
-    {{on "click" (perform this.save)}}
-  >
-    Save
-  </button>
-  <button
+  <Hds::Button @text="Save" data-test-config-save disabled={{this.isDisabled}} {{on "click" (perform this.save)}} />
+  <Hds::Button
+    @text="Back"
+    @color="secondary"
+    class="has-left-margin-xs"
     data-test-config-cancel
-    class="button has-left-margin-xs"
-    type="button"
     disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
     {{on "click" this.cancel}}
-  >
-    Back
-  </button>
+  />
   {{#if this.alert}}
     <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
   {{/if}}
 </div>
 
 {{#if this.showConfirm}}
-  <Modal
-    @title="Edit configuration"
-    @type="warning"
-    @isActive={{this.showConfirm}}
-    @showCloseButton={{true}}
-    @onClose={{fn (mut this.showConfirm) false}}
-  >
-    <section class="modal-card-body">
+  <Hds::Modal id="kubernetes-edit-config-modal" @onClose={{fn (mut this.showConfirm) false}} @color="warning" as |M|>
+    <M.Header @icon="alert-triangle">
+      Edit configuration
+    </M.Header>
+    <M.Body data-test-edit-config-body>
       <p>
         Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are
         you sure?
       </p>
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button data-test-config-confirm type="button" class="button is-primary" {{on "click" (perform this.save)}}>
-        Confirm
-      </button>
-      <button type="button" class="button" onclick={{fn (mut this.showConfirm) false}}>
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button data-test-config-confirm {{on "click" (perform this.save)}} @text="Confirm" />
+        <Hds::Button {{on "click" F.close}} @color="secondary" @text="Cancel" />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

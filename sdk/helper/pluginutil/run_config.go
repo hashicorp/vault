@@ -58,12 +58,16 @@ type runConfig struct {
 	PluginClientConfig
 }
 
+func (rc runConfig) mlockEnabled() bool {
+	return rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled())
+}
+
 func (rc runConfig) generateCmd(ctx context.Context) (cmd *exec.Cmd, clientTLSConfig *tls.Config, err error) {
 	cmd = exec.Command(rc.command, rc.args...)
 	cmd.Env = append(cmd.Env, rc.env...)
 
 	// Add the mlock setting to the ENV of the plugin
-	if rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled()) {
+	if rc.mlockEnabled() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
 	version, err := rc.Wrapper.VaultVersion(ctx)
@@ -139,7 +143,8 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		clientConfig.SkipHostEnv = true
 		clientConfig.RunnerFunc = containerCfg.NewContainerRunner
 		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
-			Group: strconv.Itoa(containerCfg.GroupAdd),
+			Group:   strconv.Itoa(containerCfg.GroupAdd),
+			TempDir: os.Getenv("VAULT_PLUGIN_TMPDIR"),
 		}
 	}
 	return clientConfig, nil
@@ -155,9 +160,10 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		Tag:    rc.imageTag,
 		SHA256: fmt.Sprintf("%x", rc.sha256),
 
-		Env:      env,
-		GroupAdd: os.Getgid(),
-		Runtime:  consts.DefaultContainerPluginOCIRuntime,
+		Env:        env,
+		GroupAdd:   os.Getgid(),
+		Runtime:    consts.DefaultContainerPluginOCIRuntime,
+		CapIPCLock: rc.mlockEnabled(),
 		Labels: map[string]string{
 			labelVaultPID:           strconv.Itoa(os.Getpid()),
 			labelVaultClusterID:     clusterID,

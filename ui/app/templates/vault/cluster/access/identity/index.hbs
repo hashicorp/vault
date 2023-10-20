@@ -43,9 +43,7 @@
                   </li>
                   {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                     <li class="action">
-                      <button disabled type="button" class="link button is-loading is-transparent">
-                        loading
-                      </button>
+                      <LoadingDropdownOption />
                     </li>
                   {{else}}
                     {{#if item.canAddAlias}}
@@ -96,13 +94,16 @@
       </div>
     </LinkedBlock>
   {{/each}}
-  {{#if (gt this.model.meta.lastPage 1)}}
-    <ListPagination
-      @page={{this.model.meta.currentPage}}
-      @lastPage={{this.model.meta.lastPage}}
-      @link="vault.cluster.access.identity.index"
-    />
-  {{/if}}
+
+  <Hds::Pagination::Numbered
+    @currentPage={{this.model.meta.currentPage}}
+    @currentPageSize={{this.model.meta.pageSize}}
+    @route="vault.cluster.access.identity.index"
+    @showSizeSelector={{false}}
+    @totalItems={{this.model.meta.total}}
+    @queryFunction={{this.paginationQueryParams}}
+  />
+
 {{else}}
   <EmptyState
     @title="No {{pluralize this.identityType}} yet"

@@ -282,7 +282,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
     await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
-    await click('[data-test-mfa-method-save]');
+    await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input]', model.type);
     await click('[data-test-confirm-button]');
 

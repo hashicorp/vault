@@ -65,7 +65,6 @@
     "@ember/test-waiters": "^3.0.0",
     "@glimmer/component": "^1.1.2",
     "@glimmer/tracking": "^1.1.2",
-    "@hashicorp/ember-flight-icons": "3.0.5",
     "@hashicorp/structure-icons": "^1.3.0",
     "@icholy/duration": "^5.1.0",
     "@tsconfig/ember": "^1.0.1",
@@ -125,7 +124,6 @@
     "ember-cli": "~4.12.1",
     "ember-cli-autoprefixer": "^0.8.1",
     "ember-cli-babel": "^7.26.11",
-    "ember-cli-clipboard": "0.16.0",
     "ember-cli-content-security-policy": "2.0.3",
     "ember-cli-dependency-checker": "^3.3.1",
     "ember-cli-deprecation-workflow": "^2.1.0",
@@ -167,7 +165,6 @@
     "ember-test-selectors": "6.0.0",
     "ember-tether": "^2.0.1",
     "ember-truth-helpers": "3.0.0",
-    "ember-wormhole": "0.6.0",
     "escape-string-regexp": "^2.0.0",
     "eslint": "^8.37.0",
     "eslint-config-prettier": "^8.8.0",
@@ -249,7 +246,8 @@
     ]
   },
   "dependencies": {
-    "@hashicorp/design-system-components": "2.7.0",
+    "@hashicorp/design-system-components": "^2.13.0",
+    "@hashicorp/ember-flight-icons": "^3.1.3",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
     "node-notifier": "^8.0.1",

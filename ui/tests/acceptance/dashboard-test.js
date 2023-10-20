@@ -29,14 +29,11 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
-// selectors
-import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
-import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
-import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
-import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
 import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 const consoleComponent = create(consoleClass);
+
+const createNS = async (name) => consoleComponent.runCommands(`write sys/namespaces/${name} -force`);
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
@@ -54,7 +51,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     const versionName = version.version;
     const versionNameEnd = version.isEnterprise ? versionName.indexOf('+') : versionName.length;
     assert
-      .dom('[data-test-dashboard-version-header]')
+      .dom(SELECTORS.cardHeader('Vault version'))
       .hasText(`Vault v${versionName.slice(0, versionNameEnd)} root`);
   });
 
@@ -67,7 +64,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await mountSecrets.enable('pki', 'pki');
       await settled();
       await visit('/vault/dashboard');
-      assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
+      assert.dom(SELECTORS.cardHeader('Secrets engines')).hasText('Secrets engines');
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
@@ -172,55 +169,65 @@ module('Acceptance | landing page dashboard', function (hooks) {
           usage_gauge_period: 5000000000,
         },
       };
-      await authPage.login();
-    });
 
-    test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
         data: this.data,
         wrap_info: null,
         warnings: null,
         auth: null,
       }));
-      await authPage.login();
-      await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('2 days');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Enabled');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.logFormat).hasText('None');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.logLevel).hasText('debug');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.storageType).hasText('raft');
     });
-    test('shows the tls disabled if it is disabled', async function (assert) {
-      this.server.get('sys/config/state/sanitized', () => {
-        this.data.listeners[0].config.tls_disable = false;
-        return {
-          data: this.data,
-          wrap_info: null,
-          warnings: null,
-          auth: null,
-        };
-      });
-      await authPage.login();
-      await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
-    });
-    test('shows the tls disabled if there is no tlsDisabled returned from server', async function (assert) {
-      this.server.get('sys/config/state/sanitized', () => {
-        this.data.listeners = [];
 
-        return {
-          data: this.data,
-          wrap_info: null,
-          warnings: null,
-          auth: null,
-        };
-      });
+    test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('configuration-details')).exists();
+      createNS('world');
+      await visit('/vault/dashboard?namespace=world');
+      assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
+    });
+
+    test('shows the configuration details card', async function (assert) {
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
+      assert
+        .dom(SELECTORS.vaultConfigurationCard.configDetailsField('api_addr'))
+        .hasText('http://127.0.0.1:8200');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled'); // tls_disable=true
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
+    });
+
+    test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
+      this.data.listeners[0].config.tls_disable = false;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
+
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    });
+
+    test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
+      delete this.data.listeners[0].config.tls_disable;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    });
+
+    test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
+      this.data.listeners = [];
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
     });
   });
 
@@ -230,40 +237,43 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).exists();
+      assert.dom(SELECTORS.emptyState('no-mount-selected')).exists();
     });
 
     test('shows the correct actions and links associated with pki', async function (assert) {
-      await mountSecrets.enable('pki', 'pki');
+      const backend = 'pki-dashboard';
+      await mountSecrets.enable('pki', backend);
       await runCommands([
-        `write pki/roles/some-role \
+        `write ${backend}/roles/some-role \
       issuer_ref="default" \
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
       ]);
-      await runCommands([`write pki/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
+      await runCommands([
+        `write ${backend}/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`,
+      ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
-      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Issue certificate');
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'Issue certificate');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
 
-      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, 'some-role');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
-      await click(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate'));
+      await selectChoose(SELECTORS.searchSelect('params'), 'some-role');
+      assert.dom(SELECTORS.actionButton('Issue leaf certificate')).exists({ count: 1 });
+      await click(SELECTORS.actionButton('Issue leaf certificate'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
 
       await visit('/vault/dashboard');
 
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
-      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View certificate');
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Certificate serial number');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View certificate')).exists({ count: 1 });
-      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
-      await click(QUICK_ACTION_SELECTORS.getActionButton('View certificate'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'View certificate');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Certificate serial number');
+      assert.dom(SELECTORS.actionButton('View certificate')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('View certificate'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.pki.certificates.certificate.details'
@@ -271,17 +281,17 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
       await visit('/vault/dashboard');
 
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
-      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View issuer');
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Issuer');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
-      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
-      await click(QUICK_ACTION_SELECTORS.getActionButton('View issuer'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), backend);
+      await fillIn(SELECTORS.selectEl, 'View issuer');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Issuer');
+      assert.dom(SELECTORS.actionButton('View issuer')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('View issuer'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
-      await consoleComponent.runCommands(deleteEngineCmd('pki'));
+      await consoleComponent.runCommands(deleteEngineCmd(backend));
     });
 
     const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
@@ -308,13 +318,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'database');
-      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Generate credentials for database');
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
-      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
-      await click(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials'));
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'database');
+      await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
+      assert.dom(SELECTORS.actionButton('Generate credentials')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
+      await click(SELECTORS.actionButton('Generate credentials'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
@@ -323,11 +333,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCommands(['write sys/mounts/kv type=kv', 'write kv/foo bar=baz']);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
-      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Find KV secrets');
-      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'kv');
+      await fillIn(SELECTORS.selectEl, 'Find KV secrets');
+      assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
+      assert.dom(SELECTORS.subtitle('param')).hasText('Secret path');
+      assert.dom(SELECTORS.actionButton('Read secrets')).exists({ count: 1 });
       await consoleComponent.runCommands(deleteEngineCmd('kv'));
     });
   });
@@ -382,12 +392,22 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
+      assert.dom(SELECTORS.emptyState('replication')).exists();
+      assert.dom(SELECTORS.emptyStateTitle('replication')).hasText('Replication not set up');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateMessage)
+        .dom(SELECTORS.emptyStateMessage('replication'))
         .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
-      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
+      assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
+    });
+
+    test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
+      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('replication')).exists();
+      createNS('blah');
+      await visit('/vault/dashboard?namespace=blah');
+      assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
@@ -404,24 +424,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
         'details dashboard is shown'
       );
       await visit('/vault/dashboard');
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
-        .hasText('DR primary');
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary'))
-        .hasText('not set up');
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle'))
-        .exists();
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
-        .hasText('Performance primary');
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary'))
-        .hasText('running');
-      assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
-        .exists();
+      assert.dom(SELECTORS.title('DR primary')).hasText('DR primary');
+      assert.dom(SELECTORS.tooltipTitle('DR primary')).hasText('not set up');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'DR primary', 'x-circle')).exists();
+      assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
+      assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
+      assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
     });
   });
 });

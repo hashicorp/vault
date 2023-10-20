@@ -20,19 +20,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
-var (
-	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
-		// Wrap the help wrapped handler with another layer with a generic
-		// handler
-		return wrapGenericHandler(core, in, props)
-	}
-
-	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
-
-	nonVotersAllowed = false
-
-	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
-)
+var nonVotersAllowed = false
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +115,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 		handler.ServeHTTP(w, r)
 		return
+	})
+}
+
+func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := r.WithContext(logical.CreateContextDisableReplicationStatusEndpoints(r.Context(), true))
+
+		h.ServeHTTP(w, request)
 	})
 }
 

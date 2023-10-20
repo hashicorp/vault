@@ -40,3 +40,19 @@ To continue measuring `vault.rollback.attempts.{MOUNTPOINT}` and
 metrics in the `telemetry` stanza of your Vault configuration with the
 [`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
 option.
+
+## Application of Sentinel Role Governing Policies (RGPs) via identity groups
+
+@include 'application-of-sentinel-rgps-via-identity-groups.mdx'
+
+## Known issues and workarounds
+
+@include 'known-issues/transit-managed-keys-panics.mdx'
+
+@include 'known-issues/transit-managed-keys-sign-fails.mdx'
+
+@include 'known-issues/aws-auth-panics.mdx'
+
+@include 'known-issues/ui-collapsed-navbar.mdx'
+
+@include 'known-issues/1_15-audit-file-sighup-does-not-trigger-reload.mdx'

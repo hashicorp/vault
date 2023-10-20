@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { run } from '@ember/runloop';
 import Model, { attr } from '@ember-data/model';
 import { setupTest } from 'ember-qunit';

@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="configuration-details">
-  <h3 class="title is-4" data-test-configuration-details-title>Configuration details</h3>
+  <h3 class="title is-4" data-test-dashboard-card-header="configuration">Configuration details</h3>
 
   <Hds::Table @caption="Vault configuration details" class="is-border-spacing-revert">
     <:body as |B|>
@@ -19,7 +24,7 @@
       </B.Tr>
       <B.Tr>
         <B.Td>TLS</B.Td>
-        <B.Td data-test-vault-config-details="tls_disable">{{this.tlsDisabled}}</B.Td>
+        <B.Td data-test-vault-config-details="tls">{{this.tls}}</B.Td>
       </B.Tr>
       <B.Tr>
         <B.Td>Log format</B.Td>

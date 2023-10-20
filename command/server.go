@@ -80,11 +80,6 @@ var (
 
 var memProfilerEnabled = false
 
-var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
-	return 1
-}
-
 const (
 	storageMigrationLock = "core/migration"
 
@@ -676,7 +671,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -891,9 +886,9 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 
 		if reloadFunc != nil {
-			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
+			relSlice := (*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)]
 			relSlice = append(relSlice, reloadFunc)
-			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
+			(*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)] = relSlice
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
@@ -930,6 +925,10 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
+
+		if lnConfig.ChrootNamespace != "" {
+			props["chroot_namespace"] = lnConfig.ChrootNamespace
+		}
 
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
@@ -1275,6 +1274,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+	if setSealResponse.sealConfigWarning != nil {
+		c.UI.Warn(fmt.Sprintf("Warnings during seal configuration: %v", setSealResponse.sealConfigWarning))
+	}
 
 	for _, seal := range setSealResponse.getCreatedSeals() {
 		seal := seal // capture range variable
@@ -1319,7 +1321,7 @@ func (c *ServerCommand) Run(args []string) int {
 	c.SubloggerAdder = &coreConfig
 
 	if c.flagDevFourCluster {
-		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return entEnableFourClusterDev(c, &coreConfig, info, infoKeys, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
@@ -1371,9 +1373,9 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	adjustCoreConfigForEnt(config, &coreConfig)
+	entAdjustCoreConfig(config, &coreConfig)
 
-	if !storageSupportedForEnt(&coreConfig) {
+	if !entCheckStorageType(&coreConfig) {
 		c.UI.Warn("")
 		c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which is not supported for Vault Enterprise, must be \"raft\" or \"consul\"", coreConfig.StorageType)))
 		c.UI.Warn("")
@@ -1480,7 +1482,7 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -1522,7 +1524,8 @@ func (c *ServerCommand) Run(args []string) int {
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
-		Core: core,
+		Core:           core,
+		ListenerConfig: &configutil.Listener{},
 	}))
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
@@ -1738,7 +1741,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err = vault.LicenseReload(core); err != nil {
+			if err = core.EntReloadLicense(); err != nil {
 				c.UI.Error(err.Error())
 			}
 
@@ -1827,8 +1830,10 @@ func (c *ServerCommand) Run(args []string) int {
 					err = pprof.Lookup(dump).WriteTo(pFile, 0)
 					if err != nil {
 						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						pFile.Close()
 						break
 					}
+					pFile.Close()
 				}
 
 				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
@@ -2129,7 +2134,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -2153,7 +2158,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	for _, core := range testCluster.Cores {
 		core.Server.Handler = vaulthttp.Handler.Handler(&vault.HandlerProperties{
-			Core: core.Core,
+			Core:           core.Core,
+			ListenerConfig: &configutil.Listener{},
 		})
 		core.SetClusterHandler(core.Server.Handler)
 	}
@@ -2557,7 +2563,8 @@ type SetSealResponse struct {
 	unwrapSeal  vault.Seal
 
 	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
-	sealConfigError error
+	sealConfigError   error
+	sealConfigWarning error
 }
 
 func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
@@ -2602,8 +2609,12 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 
 	var sealConfigError error
+	var sealConfigWarning error
 	recordSealConfigError := func(err error) {
 		sealConfigError = errors.Join(sealConfigError, err)
+	}
+	recordSealConfigWarning := func(err error) {
+		sealConfigWarning = errors.Join(sealConfigWarning, err)
 	}
 	enabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
 	disabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
@@ -2615,6 +2626,12 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}
 	sealWrapperInfoKeysMap := make(map[string]infoKeysAndMap)
 
+	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
+	if err != nil {
+		return nil, err
+	}
+
+	configuredSeals := 0
 	for _, configSeal := range config.Seals {
 		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
 		if configSeal.Priority > 1 {
@@ -2628,24 +2645,31 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", configSeal.Type))
 
+		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
 		var wrapperInfoKeys []string
 		wrapperInfoMap := map[string]string{}
 		wrapper, wrapperConfigError := configutil.ConfigureWrapper(configSeal, &wrapperInfoKeys, &wrapperInfoMap, sealLogger)
-		if wrapperConfigError != nil {
-			// It seems that we are checking for this particular error here is to distinguish between a
-			// mis-configured seal vs one that fails for another reason. Apparently the only other reason is
-			// a key not found error. It seems the intention is for the key not found error to be returned
-			// as a seal specific error later
-			if !errwrap.ContainsType(wrapperConfigError, new(logical.KeyNotFoundError)) {
-				return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
-			} else {
-				sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
-				recordSealConfigError(wrapperConfigError)
+		if wrapperConfigError == nil {
+			// for some reason configureWrapper in kms.go returns nil wrapper and nil error for wrapping.WrapperTypeShamir
+			if wrapper == nil {
+				wrapper = aeadwrapper.NewShamirWrapper()
 			}
-		}
-		// for some reason configureWrapper in kms.go returns nil wrapper and nil error for wrapping.WrapperTypeShamir
-		if wrapper == nil && wrapperConfigError == nil {
-			wrapper = aeadwrapper.NewShamirWrapper()
+			configuredSeals++
+		} else {
+			if sealHaBetaEnabled {
+				recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
+			} else {
+				// It seems that we are checking for this particular error here is to distinguish between a
+				// mis-configured seal vs one that fails for another reason. Apparently the only other reason is
+				// a key not found error. It seems the intention is for the key not found error to be returned
+				// as a seal specific error later
+				if !errwrap.ContainsType(wrapperConfigError, new(logical.KeyNotFoundError)) {
+					return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
+				} else {
+					sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
+					recordSealConfigError(wrapperConfigError)
+				}
+			}
 		}
 
 		sealWrapper := vaultseal.NewSealWrapper(
@@ -2654,6 +2678,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			configSeal.Name,
 			configSeal.Type,
 			configSeal.Disabled,
+			wrapperConfigError == nil,
 		)
 
 		if configSeal.Disabled {
@@ -2661,12 +2686,17 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		} else {
 			enabledSealWrappers = append(enabledSealWrappers, sealWrapper)
 		}
-		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
 
 		sealWrapperInfoKeysMap[sealWrapper.Name] = infoKeysAndMap{
 			keys:   wrapperInfoKeys,
 			theMap: wrapperInfoMap,
 		}
+	}
+
+	if len(enabledSealWrappers) == 0 && len(disabledSealWrappers) == 0 && sealConfigWarning != nil {
+		// All of them errored out, so warnings are now errors
+		recordSealConfigError(sealConfigWarning)
+		sealConfigWarning = nil
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2695,12 +2725,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
-
-	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
-	if err != nil {
-		return nil, err
-	}
-
 	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, sealHaBetaEnabled)
 	if err != nil {
 		return nil, err
@@ -2724,10 +2748,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	sealLogger := c.logger
 	switch {
 	case len(enabledSealWrappers) == 0:
-		return nil, errors.New("no enabled Seals in configuration")
-
+		return nil, errors.Join(sealConfigWarning, errors.New("no enabled Seals in configuration"))
+	case configuredSeals == 0:
+		return nil, errors.Join(sealConfigWarning, errors.New("no seals were successfully initialized"))
 	case containsShamir(enabledSealWrappers) && containsShamir(disabledSealWrappers):
-		return nil, errors.New("shamir seals cannot be set disabled (they should simply not be set)")
+		return nil, errors.Join(sealConfigWarning, errors.New("shamir seals cannot be set disabled (they should simply not be set)"))
 
 	case len(enabledSealWrappers) == 1 && containsShamir(enabledSealWrappers):
 		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
@@ -2747,7 +2772,9 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// so just put enabled and disabled wrappers on the same seal Access
 		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealWrappers))
-
+		if configuredSeals < len(enabledSealWrappers) {
+			c.UI.Warn("WARNING: running with fewer than all configured seals during unseal.  Will not be fully highly available until errors are corrected and Vault restarted.")
+		}
 	case len(enabledSealWrappers) == 1:
 		// We may have multiple seals disabled, but we know Shamir is not one of them.
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
@@ -2757,13 +2784,14 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	default:
 		// We know there are multiple enabled seals and that the seal HA beta is not enabled
-		return nil, errors.New("error: more than one enabled seal found")
+		return nil, errors.Join(sealConfigWarning, errors.New("error: more than one enabled seal found"))
 	}
 
 	return &SetSealResponse{
-		barrierSeal:     barrierSeal,
-		unwrapSeal:      unwrapSeal,
-		sealConfigError: sealConfigError,
+		barrierSeal:       barrierSeal,
+		unwrapSeal:        unwrapSeal,
+		sealConfigError:   sealConfigError,
+		sealConfigWarning: sealConfigWarning,
 	}, nil
 }
 
@@ -2771,6 +2799,10 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
+		// This forces a seal re-wrap on all seal related config changes, as we can't
+		// be sure what effect the config change might do. This is purposefully different
+		// from within the Validate call below that just matches on seal configs based
+		// on name/type.
 		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
 			return existingSealGenInfo, nil
 		}

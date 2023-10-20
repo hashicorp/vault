@@ -48,9 +48,9 @@
                   @data={{@pem}}
                   @extension="pem"
                   data-test-issuer-download-type="pem"
-                >
-                  PEM format
-                </DownloadButton>
+                  @text="PEM format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
             {{#if @der}}
@@ -62,9 +62,9 @@
                   @data={{@der}}
                   @extension="der"
                   data-test-issuer-download-type="der"
-                >
-                  DER format
-                </DownloadButton>
+                  @text="DER format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
           </ul>
@@ -148,45 +148,37 @@
 {{/if}}
 
 {{! ROOT ROTATION MODAL }}
-<Modal
-  @type="rotation"
-  @title="Rotate this root"
-  @onClose={{fn (mut this.showRotationModal) false}}
-  @isActive={{this.showRotationModal}}
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <h3 class="title is-5">Root rotation</h3>
-    <p class="has-text-grey has-bottom-padding-s">
-      Root rotation is an impactful process. Please be ready to ensure that the new root is properly distributed to
-      end-users’ trust stores. You can also do this manually by
-      <DocLink @path="/vault/docs/secrets/pki/rotation-primitives#suggested-root-rotation-procedure">
-        following our documentation.
-      </DocLink>
-    </p>
-    <h3 class="title is-5 has-top-bottom-margin">How root rotation will work</h3>
-    <p class="has-text-grey">
-      <ol class="has-left-margin-m has-bottom-margin-s">
-        <li>The new root will be generated using defaults from the old one that you can customize.</li>
-        <li>You will identify intermediates, which Vault will then cross-sign.</li>
-      </ol>
-      Then, you can begin re-issuing leaf certs and phase out the old root.
-    </p>
-    <div class="has-top-margin-l has-tall-padding">
-      <img src={{img-path "~/pki-rotate-root.png"}} alt="pki root rotation diagram" />
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.rotate-root")}}
-      data-test-root-rotate-step-one
-    >
-      Generate new root
-    </button>
-    <button type="button" class="button is-secondary" {{on "click" (fn (mut this.showRotationModal) false)}}>
-      Cancel
-    </button>
-  </footer>
-</Modal>
+{{#if this.showRotationModal}}
+  <Hds::Modal id="pki-rotate-root-modal" @size="large" @onClose={{fn (mut this.showRotationModal) false}} as |M|>
+    <M.Header @icon="rotate-cw">
+      Rotate this root
+    </M.Header>
+    <M.Body>
+      <h3 class="title is-5">Root rotation</h3>
+      <p class="has-text-grey has-bottom-padding-s">
+        Root rotation is an impactful process. Please be ready to ensure that the new root is properly distributed to
+        end-users’ trust stores. You can also do this manually by
+        <DocLink @path="/vault/docs/secrets/pki/rotation-primitives#suggested-root-rotation-procedure">
+          following our documentation.
+        </DocLink>
+      </p>
+      <h3 class="title is-5 has-top-bottom-margin">How root rotation will work</h3>
+      <p class="has-text-grey">
+        <ol class="has-left-margin-m has-bottom-margin-s">
+          <li>The new root will be generated using defaults from the old one that you can customize.</li>
+          <li>You will identify intermediates, which Vault will then cross-sign.</li>
+        </ol>
+        Then, you can begin re-issuing leaf certs and phase out the old root.
+      </p>
+      <div class="has-top-margin-l has-tall-padding">
+        <img src={{img-path "~/pki-rotate-root.png"}} alt="pki root rotation diagram" />
+      </div>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Generate new root" @route="issuers.issuer.rotate-root" data-test-root-rotate-step-one />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

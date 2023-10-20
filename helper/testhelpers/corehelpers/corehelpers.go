@@ -532,6 +532,14 @@ func NewTestLogger(t testing.T) *TestLogger {
 	logger.RegisterSink(sink)
 	testLogger.InterceptLogger = logger
 
+	t.Cleanup(func() {
+		testLogger.StopLogging()
+		if t.Failed() {
+			_ = testLogger.File.Close()
+		} else {
+			_ = os.Remove(testLogger.Path)
+		}
+	})
 	return testLogger
 }
 
