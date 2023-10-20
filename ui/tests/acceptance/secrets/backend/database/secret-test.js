@@ -19,12 +19,16 @@ import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vau
 
 const searchSelectComponent = create(searchSelect);
 
-const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
+const newConnection = async (
+  backend,
+  plugin = 'mongodb-database-plugin',
+  connectionUrl = `mongodb://127.0.0.1:4321/${name}`
+) => {
   const name = `connection-${Date.now()}`;
   await connectionPage.visitCreate({ backend });
   await connectionPage.dbPlugin(plugin);
   await connectionPage.name(name);
-  await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
+  await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
   await connectionPage.save();
   await connectionPage.enable();
@@ -281,7 +285,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await connectionPage.save();
       await settled();
       assert
-        .dom('.modal.is-active .title')
+        .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
       assert.dom('[data-test-enable-connection]').exists('Enable button exists');
       await click('[data-test-enable-connection]');
@@ -314,7 +318,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
         'Database connection is pre-selected on the form'
       );
       await click('[data-test-database-role-cancel]');
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Cancel button links to list view');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/list?tab=role`,
+        'Cancel button links to role list view'
+      );
     });
   }
   test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {
@@ -397,7 +405,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.save();
     await settled();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
     assert.strictEqual(
@@ -418,7 +426,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     await connectionPage.delete();
     assert
-      .dom('.modal.is-active .title')
+      .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
@@ -478,6 +486,19 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn('.ember-text-field', 'blah');
     assert.dom('[data-test-get-credentials]').isEnabled();
+  });
+
+  test('connection_url must be decoded', async function (assert) {
+    const backend = this.backend;
+    const connection = await newConnection(
+      backend,
+      'mongodb-database-plugin',
+      '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
+    );
+    await navToConnection(backend, connection);
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
   });
 
   test('Role create form', async function (assert) {

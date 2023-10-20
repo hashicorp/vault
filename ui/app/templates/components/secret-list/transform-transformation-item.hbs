@@ -31,9 +31,7 @@
               <ul class="menu-list">
                 {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
                   <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
+                    <LoadingDropdownOption />
                   </li>
                 {{else}}
                   {{#if @item.updatePath.canRead}}

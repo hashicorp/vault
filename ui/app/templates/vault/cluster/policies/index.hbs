@@ -97,14 +97,10 @@
                     <ul class="menu-list">
                       {{#if item.updatePath.isPending}}
                         <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
+                          <LoadingDropdownOption />
                         </li>
                         <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
+                          <LoadingDropdownOption />
                         </li>
                       {{else}}
                         {{#if item.canRead}}
@@ -151,16 +147,16 @@
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-
-    <Hds::Pagination::Numbered
-      @currentPage={{this.model.meta.currentPage}}
-      @currentPageSize={{this.model.meta.pageSize}}
-      @route="vault.cluster.policies.index"
-      @showSizeSelector={{false}}
-      @totalItems={{this.model.meta.total}}
-      @queryFunction={{this.paginationQueryParams}}
-    />
-
+    {{#unless this.pageFilter}}
+      <Hds::Pagination::Numbered
+        @currentPage={{this.model.meta.currentPage}}
+        @currentPageSize={{this.model.meta.pageSize}}
+        @route="vault.cluster.policies.index"
+        @showSizeSelector={{false}}
+        @totalItems={{this.model.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
+      />
+    {{/unless}}
   {{else}}
     <EmptyState
       @title="No {{uppercase this.policyType}} policies yet"

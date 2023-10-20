@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
@@ -165,14 +170,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
@@ -189,13 +194,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
@@ -416,13 +421,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
@@ -585,7 +590,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).doesNotExist('List filter hidden since no nested list access');
@@ -606,13 +611,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
@@ -771,14 +776,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
@@ -797,13 +802,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
@@ -989,13 +994,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 
@@ -1152,14 +1157,14 @@ path "${this.backend}/*" {
 
       // Navigate through list items
       await click(PAGE.list.item('app/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
 
       await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
@@ -1174,12 +1179,12 @@ path "${this.backend}/*" {
       );
       await grantAccess({
         apiPath: `${backend}/data/app/nested/secret`,
-        originUrl: `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
+        originUrl: `/vault/secrets/${backend}/kv/list/app/nested/`,
         userToken: this.userToken,
       });
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/app/nested/`,
         'navigates to list url where secret is'
       );
       await click(PAGE.list.item('secret'));
@@ -1195,13 +1200,13 @@ path "${this.backend}/*" {
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/nested/`),
         'links back to list directory'
       );
 
       await click(PAGE.breadcrumbAtIdx(2));
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list/app/`),
         'links back to list directory'
       );
 

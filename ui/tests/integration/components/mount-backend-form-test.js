@@ -147,13 +147,13 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await component.selectType('kv');
+      await component.selectType('azure');
       await component.next();
-      assert.strictEqual(component.pathValue, 'kv', 'sets the value of the type');
+      assert.strictEqual(component.pathValue, 'azure', 'sets the value of the type');
       await component.back();
-      await component.selectType('ssh');
+      await component.selectType('nomad');
       await component.next();
-      assert.strictEqual(component.pathValue, 'ssh', 'updates the value of the type');
+      assert.strictEqual(component.pathValue, 'nomad', 'updates the value of the type');
     });
 
     test('it keeps path value if the user has changed it', async function (assert) {

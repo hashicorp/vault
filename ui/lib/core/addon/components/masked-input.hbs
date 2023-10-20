@@ -39,14 +39,20 @@
       @text="Copy"
       @isIconOnly={{true}}
       @textToCopy={{@value}}
-      class="transparent icon-only is-paddingless"
+      class="transparent has-padding-xxs"
       data-test-copy-button
     />
   {{/if}}
   {{#if @allowDownload}}
-    <button type="button" class="button download-button" {{on "click" (fn (mut this.modalOpen) true)}}>
-      <Icon data-test-download-icon @name="download" />
-    </button>
+    <Hds::Button
+      @text="Download secret value"
+      @icon="download"
+      @isIconOnly={{true}}
+      @color="tertiary"
+      class="has-padding-xxs"
+      data-test-download-icon
+      {{on "click" (fn (mut this.modalOpen) true)}}
+    />
   {{/if}}
   <button
     onclick={{this.toggleMask}}
@@ -61,31 +67,37 @@
 </div>
 
 {{! CONFIRM DOWNLOAD MODAL }}
-{{#if @allowDownload}}
-  <Modal
-    @title="Download secret value?"
-    @onClose={{action (mut this.modalOpen) false}}
-    @isActive={{this.modalOpen}}
-    @type="warning"
-  >
-    <section class="modal-card-body">
+{{#if this.modalOpen}}
+  <Hds::Modal @color="warning" id="confirm-download-modal" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Download secret value?
+    </M.Header>
+    <M.Body>
       This download is
       <strong>unencrypted</strong>. Are you sure you want to download this secret data as plaintext?
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <DownloadButton
-        class="button is-primary"
-        @filename={{or @name "secret-value"}}
-        @data={{@value}}
-        @stringify={{true}}
-        aria-label="Download secret value"
-        @onSuccess={{fn (mut this.modalOpen) false}}
-      >
-        Download
-      </DownloadButton>
-      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+
+      <div class="has-top-margin-m">
+        <Hds::Form::Toggle::Field
+          checked={{this.stringifyDownload}}
+          {{on "change" this.toggleStringifyDownload}}
+          data-test-stringify-toggle
+          as |F|
+        >
+          <F.Label>Stringify secret value</F.Label>
+          <F.HelperText>Preserve formatting for JSON values.</F.HelperText>
+        </Hds::Form::Toggle::Field>
+      </div>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <DownloadButton
+          @filename={{or @name "secret-value"}}
+          @data={{@value}}
+          @stringify={{this.stringifyDownload}}
+          @onSuccess={{fn (mut this.modalOpen) false}}
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

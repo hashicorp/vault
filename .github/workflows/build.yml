@@ -118,7 +118,7 @@ jobs:
           - goos: windows
             goarch: arm
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -139,7 +139,7 @@ jobs:
         goos: [linux]
         goarch: [arm, arm64, 386, amd64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       goarch: ${{ matrix.goarch }}
       goos: ${{ matrix.goos }}
@@ -159,7 +159,7 @@ jobs:
         goos: [darwin]
         goarch: [amd64, arm64]
       fail-fast: true
-    uses: ./.github/workflows/build-vault-oss.yml
+    uses: ./.github/workflows/build-vault-ce.yml
     with:
       create-packages: false
       goarch: ${{ matrix.goarch }}
@@ -236,17 +236,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - sample-name: build_oss_linux_amd64_deb
+          - sample-name: build_ce_linux_amd64_deb
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
-          - sample-name: build_oss_linux_arm64_deb
+          - sample-name: build_ce_linux_arm64_deb
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
-          - sample-name: build_oss_linux_amd64_rpm
+          - sample-name: build_ce_linux_amd64_rpm
             build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
-          - sample-name: build_oss_linux_arm64_rpm
+          - sample-name: build_ce_linux_arm64_rpm
             build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
-          - sample-name: build_oss_linux_amd64_zip
+          - sample-name: build_ce_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - sample-name: build_oss_linux_arm64_zip
+          - sample-name: build_ce_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
@@ -326,7 +326,7 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-completed-successfully-failures-oss:
+  notify-completed-successfully-failures-ce:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
@@ -336,6 +336,13 @@ jobs:
       fail-fast: false
     needs:
       - completed-successfully
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -344,9 +351,40 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
-            {"text":"OSS build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {
+              "text": "CE build failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: CE build failures on ${{ github.ref_name }} :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ (needs.build-other.result != 'failure' && needs.build-linux.result != 'failure' && needs.build-darwin.result != 'failure' && needs.build-docker.result != 'failure' && needs.build-ubi.result != 'failure') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
 
   notify-completed-successfully-failures-ent:
     if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
@@ -358,6 +396,13 @@ jobs:
       fail-fast: false
     needs:
       - completed-successfully
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
     steps:
       - id: vault-auth
         name: Vault Authenticate
@@ -374,7 +419,38 @@ jobs:
       - name: send-notification
         uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
           payload: |
-            {"text":"Enterprise build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {
+              "text": "Enterprise build failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: Enterprise build failures on ${{ github.ref_name }} :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ (needs.build-other.result != 'failure' && needs.build-linux.result != 'failure' && needs.build-darwin.result != 'failure' && needs.build-docker.result != 'failure' && needs.build-ubi.result != 'failure') && ':white_check_mark:' || ':x:' }} Build results\n${{ (needs.test.result != 'failure' && needs.test-docker-k8s.result != 'failure') && ':white_check_mark:' || ':x:' }} Enos tests"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
