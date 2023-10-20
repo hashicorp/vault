@@ -4,7 +4,7 @@
 ~}}
 
 <Hds::Card::Container
-  tabindex="0"
+  tabindex={{unless @disabled "0"}}
   class="selectable-card {{if @disabled 'disabled'}}"
   @level={{if @disabled "base" "mid"}}
   @hasBorder={{true}}
