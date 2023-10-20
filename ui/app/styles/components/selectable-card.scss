@@ -4,7 +4,9 @@
  */
 
 .selectable-card {
-  &:hover:not(.disabled) {
+  &:hover:not(.disabled),
+  &:focus,
+  &:focus-visible {
     cursor: pointer;
     box-shadow: var(--token-focus-ring-action-box-shadow);
   }
