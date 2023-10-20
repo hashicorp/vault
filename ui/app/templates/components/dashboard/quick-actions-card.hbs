@@ -59,15 +59,13 @@
         />
 
         <div>
-          <button
-            type="button"
-            class="button is-primary has-top-margin-m"
+          <Hds::Button
+            @text={{this.searchSelectParams.buttonText}}
+            class="has-top-margin-m"
             disabled={{(not (and this.selectedAction this.selectedEngine this.paramValue))}}
             {{on "click" this.navigateToPage}}
             data-test-button={{this.searchSelectParams.buttonText}}
-          >
-            {{this.searchSelectParams.buttonText}}
-          </button>
+          />
         </div>
       {{/if}}
     {{else}}

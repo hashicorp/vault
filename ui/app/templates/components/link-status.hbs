@@ -12,47 +12,15 @@
           HCP.
         </ExternalLink>
       {{else}}
-        There was an error connecting to HCP. Click
-        <button type="button" class="text-button is-underline" {{on "click" (fn (mut this.showModal))}}>
-          here
-        </button>
-        for more information.
+        Error connecting to HCP
       {{/if}}
     </A.Title>
+    {{#if this.error}}
+      <A.Description data-test-link-error>
+        Since
+        {{this.timestamp}},
+        {{this.error}}. Check the logs for more information.
+      </A.Description>
+    {{/if}}
   </Hds::Alert>
-{{/if}}
-
-{{#if this.showModal}}
-  <Hds::Modal id="hcp-link-error-modal" @color="warning" @size="small" @onClose={{fn (mut this.showModal) false}} as |M|>
-    <M.Header @icon="alert-triangle">
-      HCP Link error
-    </M.Header>
-    <M.Body>
-      <div>
-        <p class="has-text-weight-bold">Timestamp</p>
-        <p data-test-link-status-timestamp>
-          {{or this.timestamp "Not available"}}
-        </p>
-      </div>
-      <div class="has-top-bottom-margin">
-        <p class="has-text-weight-bold">Error</p>
-        {{#if this.error}}
-          <code class="tag has-text-danger" data-test-link-status-error>
-            {{this.error}}
-          </code>
-        {{else}}
-          <p data-test-link-status-error>
-            Not available
-          </p>
-        {{/if}}
-      </div>
-      <div>
-        <p class="has-text-weight-bold">Additional information</p>
-        <p>Check the logs for more information</p>
-      </div>
-    </M.Body>
-    <M.Footer as |F|>
-      <Hds::Button @text="Close" {{on "click" F.close}} data-test-link-status-close />
-    </M.Footer>
-  </Hds::Modal>
 {{/if}}
