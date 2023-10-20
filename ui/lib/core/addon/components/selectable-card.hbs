@@ -4,10 +4,12 @@
 ~}}
 
 <Hds::Card::Container
+  tabindex="0"
   class="selectable-card {{if @disabled 'disabled'}}"
   @level={{if @disabled "base" "mid"}}
   @hasBorder={{true}}
   {{on "click" @onClick}}
+  {{on "keypress" @onClick}}
   ...attributes
 >
   {{yield}}
