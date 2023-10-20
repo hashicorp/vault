@@ -318,7 +318,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
         'Database connection is pre-selected on the form'
       );
       await click('[data-test-database-role-cancel]');
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Cancel button links to list view');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/list?tab=role`,
+        'Cancel button links to role list view'
+      );
     });
   }
   test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {

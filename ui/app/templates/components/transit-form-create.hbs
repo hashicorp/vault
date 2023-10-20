@@ -125,14 +125,13 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button
+      <Hds::Button
+        @text="Create encryption key"
+        @icon={{if @requestInFlight "loading"}}
         data-test-transit-key="create"
         type="submit"
         disabled={{@requestInFlight}}
-        class="button is-primary {{if @requestInFlight 'is-loading'}}"
-      >
-        Create encryption key
-      </button>
+      />
     </div>
     <div class="control">
       <SecretLink @mode="list" class="button">
