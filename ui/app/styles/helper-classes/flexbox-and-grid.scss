@@ -110,12 +110,19 @@
   // direction
   &.row-wrap {
     flex-flow: row wrap;
-    row-gap: $spacing-xs;
   }
 
   // alignment
   &.space-between {
     justify-content: space-between;
+  }
+
+  &.row-gap-8px {
+    row-gap: $spacing-xs;
+  }
+
+  &.column-gap-16px {
+    column-gap: $spacing-m;
   }
 }
 
