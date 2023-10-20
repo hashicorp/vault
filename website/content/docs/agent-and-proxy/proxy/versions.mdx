@@ -8,15 +8,24 @@ description: |-
 # Running different versions of Proxy and Vault server
 
 There is no requirement to run identical versions of Vault Proxy and Vault server.
-It is safe to run different versions, however you may not be able to take advantage of all the newest features in Vault if you do not upgrade to the most recent versions of Proxy and Vault server. We recognize that this isn’t always possible, so we do support version mismatch as best as possible.
+It is safe to run different versions, however you may not be able to take
+advantage of all the newest features in Vault if you do not upgrade to
+the most recent versions of Proxy and Vault server.
 
-Proxy will write a note to its logs when it detects a mismatch between Proxy and Vault server.  This is purely informative, intended to assist with debugging in case the mismatch is given rise to problems, e.g. because a newer Proxy version is trying to make use of functionality that doesn't exist in the Vault server version it's talking to.  If Proxy is behaving acceptably, the message may be ignored.
+Proxy writes a note to the logs when it detects a mismatch between
+Proxy and Vault server versions. The note is purely informative to assist
+with debugging when the problem may be related to a version mismatch.
+For example, when a newer Proxy version expects functionality that is
+not available in an older version of Vault.
 
 This document describes the common cases.  There may be occasional exceptions, which if intentional will be called out in the CHANGELOG in a `CHANGES` section.  If unintentional/undocumented these should be treated as bugs and reported.
 
 ## Older version of Proxy than Vault server
 
-We do not anticipate any problems stemming from continuing to run an older Proxy version after the Vault server nodes are upgraded to a later version.  Existing deployments using Proxy should not be impacted, as we don't generally make backwards-incompatible changes to Vault server.
+In most cases, Vault server upgrades are backwards compatible with
+older versions of Vault Proxy. In the rare case where a Vault upgrade is
+**not** backwards compatible, we document the relevant information in
+the Vault upgrade guide.
 
 Auto-auth:
 - new auth methods that have been introduced since Proxy was built will be unavailable
@@ -27,12 +36,17 @@ Proxy:
 
 ## Newer version of Proxy than Vault server
 
-It is possible that a Proxy could depend on features that don’t exist in older Vault server versions.
+Newer Vault Agent versions will not work with older versions of Vault if
+the Proxy depends on features that do not exist in older Vault server
+versions. Whenever possible, we release newer functionality as opt-in
+and provide graceful degradation when connecting to an older Vault
+server instance. But the new functionality may be required In cases
+where the change relates  unless there's a very good reason (such as a
+serious security flaw being patched)
 
 Auto-auth:
-- Proxy may claim to support newer auth methods that have been introduced since Vault server was built, but they won't work due to Vault server not supporting them
-- Proxy may make use of new functionality for existing auth methods that isn't available in an older Vault server you're using
-  - Generally we will try to make such a change be opt-in, or to gracefully degrade when connecting to an older Vault server instance, unless there's a very good reason (such as a serious security flaw being patched)
+- Proxy may support authentication methods that are unavailable in older Vault versions.
+- Proxy may make use of newer functionality for existing authentication methods.
 
 Proxy:
 - since Proxy simply mirrors the incoming requests, it is unlikely that incompatibilities would surface in proxying, but new functionality may not be available

@@ -34,11 +34,6 @@ specific scenarios.
 
 ## Static secret caching
 
-Vault Proxy can be configured to cache static (KVv1 and KVv2) secrets as well as dynamic secrets described
-above. This means that, when enabled, subsequent requests to the same KV secret made via Proxy will
-only result in a single request made to Vault. Proxy will keep a single cache entry of the secret in its
-cache, and will only provide the cached response to requests made with tokens that can access the secret.
-
 You can configure Vault Proxy to cache dynamic secrets and static, KVv1 and KVv2
 secrets. When you enable caching for static secrets. Proxy keeps a cached entry
 of the secret but only provides the cached response to requests made with tokens
