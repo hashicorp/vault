@@ -171,6 +171,18 @@ class Transforms {
     });
   }
 
+  filterModifiers() {
+    const params = [this.builders.string('click')];
+    this.node.modifiers.forEach((modifier) => {
+      if (modifier.path === 'action') {
+        // Replaces {{action "blah"}} with {{on "click" (action "blah")}}
+        params.push(this.builders.sexpr(modifier.path, modifier.params));
+        const onClickModifier = this.builders.elementModifier('on', params);
+        this.modifiers.push(onClickModifier);
+      }
+    });
+  }
+
   textToString(node) {
     // filter out escape charaters like \n and whitespace from TextNode and rebuild as StringLiteral
     const text = decodeURI(node.chars).trim();
@@ -249,6 +261,7 @@ class Transforms {
     } else if (this.hasIcon) {
       // if there was an icon node but no text we need to add the @isIconOnly arg
       this.addAttr('@isIconOnly', this.builders.mustache(this.builders.boolean(true)));
+      this.addAttr('@text', 'REPLACE_ME');
     }
   }
 
@@ -273,6 +286,7 @@ module.exports = (env) => {
           if (transforms.shouldTransform()) {
             transforms.childNodesToArgs();
             transforms.filterAttributes();
+            transforms.filterModifiers();
             return transforms.buildElement();
           }
         } catch (error) {
