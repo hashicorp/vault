@@ -7,7 +7,7 @@
   <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
     {{capitalize category}}
   </Hds::Text::Display>
-  <div class="flex row-wrap row-gap-8px column-gap-16px has-bottom-padding-m">
+  <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
     {{#each (filter-by "category" category this.mountTypes) as |type|}}
       <SelectableCard
         id={{type.type}}
