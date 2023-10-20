@@ -37,9 +37,7 @@
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-clients-config-save>
-          Save
-        </button>
+        <Hds::Button @text="Save" type="submit" disabled={{this.buttonDisabled}} data-test-clients-config-save />
         <LinkTo @route="vault.cluster.clients.config" class="button">
           Cancel
         </LinkTo>

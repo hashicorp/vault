@@ -1,0 +1,55 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (and this.showWarning (is-after (now interval=1000) @expirationDate))}}
+  <Hds::Alert @type="page" @color="critical" data-test-token-expired-banner as |A|>
+    <A.Title>Error</A.Title>
+    <A.Description>
+      Your auth token expired on
+      {{date-format @expirationDate "MMMM do yyyy, h:mm:ss a"}}. You will need to re-authenticate.
+    </A.Description>
+    <A.Link::Standalone @icon="arrow-right" @iconPosition="trailing" @text="Reauthenticate" @route="vault.cluster.logout" />
+  </Hds::Alert>
+{{else}}
+  <section class="section">
+    <div class="container is-widescreen">
+      {{#if (and this.showWarning @allowingExpiration this.canDismiss)}}
+        <Hds::Alert
+          @type="inline"
+          @color="warning"
+          @onDismiss={{fn (mut this.canDismiss) false}}
+          class="has-top-margin-s"
+          data-test-token-expiring-banner
+          as |A|
+        >
+          <A.Title>Session will expire</A.Title>
+          <A.Description>
+            We've stopped auto-renewing your token due to inactivity. It will expire in
+            {{date-from-now @expirationDate}}
+            on
+            {{date-format @expirationDate "MMMM do yyyy, h:mm:ss a O"}}.
+          </A.Description>
+          <A.Button
+            @text="Renew token"
+            @color="secondary"
+            @icon={{if this.renewToken.isRunning "loading" "reload"}}
+            @iconPosition="trailing"
+            disabled={{this.renewToken.isRunning}}
+            {{on "click" (perform this.renewToken)}}
+            data-test-renew-token-button
+          />
+          <A.Link::Standalone
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            @color="secondary"
+            @text="Log out"
+            @route="vault.cluster.logout"
+          />
+        </Hds::Alert>
+      {{/if}}
+      {{yield}}
+    </div>
+  </section>
+{{/if}}
