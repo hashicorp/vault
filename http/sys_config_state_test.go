@@ -164,7 +164,6 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"enable_response_header_hostname":     false,
 				"enable_response_header_raft_node_id": false,
 				"log_requests_level":                  "",
-				"user_lockout_log_interval":           json.Number("0"),
 				"listeners": []interface{}{
 					map[string]interface{}{
 						"config": nil,
