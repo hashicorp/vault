@@ -178,6 +178,7 @@ module('Integration | Component | masked input', function (hooks) {
     });
 
     await render(hbs`
+      <div id="modal-wormhole"></div>
       <MaskedInput
         @name="key"
         @value={{this.value}}
