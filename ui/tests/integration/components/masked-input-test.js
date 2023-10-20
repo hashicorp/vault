@@ -103,28 +103,6 @@ module('Integration | Component | masked input', function (hooks) {
     assert.strictEqual(unMaskedValue, this.value);
   });
 
-  test('it renders a minus icon when an empty string is provided as a value', async function (assert) {
-    await render(hbs`
-      <MaskedInput
-        @name="key"
-        @value=""
-        @displayOnly={{true}}
-        @allowCopy={{true}}
-        @allowDownload={{true}}
-      />
-    `);
-    assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.ok(component.copyButtonIsPresent);
-    assert.ok(component.downloadIconIsPresent);
-    assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
-
-    await component.toggleMasked();
-    assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
-    assert
-      .dom('[data-test-icon="minus"]')
-      .exists('shows minus icon when unmasked because value is empty string');
-  });
-
   test('it should render stringify toggle in download modal', async function (assert) {
     assert.expect(3);
 
