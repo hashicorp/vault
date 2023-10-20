@@ -23,7 +23,7 @@ module('Integration | Component overview-card', function (hooks) {
 
   test('it returns card title, ', async function (assert) {
     await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}}/>`);
-    const titleText = this.element.querySelector('.title').innerText;
+    const titleText = this.element.querySelector('h3').innerText;
     assert.strictEqual(titleText, 'Card title');
   });
   test('it returns card subtext, ', async function (assert) {
@@ -32,8 +32,10 @@ module('Integration | Component overview-card', function (hooks) {
     assert.strictEqual(titleText, 'This is subtext for card');
   });
   test('it returns card action text', async function (assert) {
-    await render(hbs`<OverviewCard @cardTitle={{this.cardTitle}} @actionText={{this.actionText}}/>`);
+    await render(
+      hbs`<OverviewCard @cardTitle={{this.cardTitle}} @actionText={{this.actionText}} @actionTo="route"/>`
+    );
     const titleText = this.element.querySelector('a').innerText;
-    assert.strictEqual(titleText, 'View card ');
+    assert.strictEqual(titleText, 'View card');
   });
 });

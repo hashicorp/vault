@@ -18,9 +18,7 @@
           </li>
           {{#if item.updatePath.isPending}}
             <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
+              <LoadingDropdownOption />
             </li>
           {{else}}
             {{#if item.canEdit}}

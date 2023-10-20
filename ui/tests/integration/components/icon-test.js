@@ -27,7 +27,7 @@ module('Integration | Component | icon', function (hooks) {
     assert.dom('.al').hasAttribute('aria-label', 'Testing', 'renders aria-label');
 
     await render(hbs`<Icon @name="vault-logo" @size="24"/>`);
-    assert.dom('.hs-icon').hasClass('hs-icon-xl', 'adds the larger size class');
+    assert.dom('.hs-icon').hasClass('hs-icon-xlm', 'adds the larger size class');
 
     const promise = waitForError();
     render(hbs`<Icon @name="vault-logo" @size="12"/>`);
