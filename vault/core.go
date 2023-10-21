@@ -105,11 +105,6 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
-	// defaultUserLockoutLogInterval is the default duration that Vault will
-	// emit a log informing that a user lockout is in effect when the value
-	// is not specified in the server config
-	defaultUserLockoutLogInterval = 1 * time.Minute
-
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
 	// number of failed totp passcode validations exceeds this max value, the
@@ -162,48 +157,6 @@ var (
 	// step down of the active node, to prevent instantly regrabbing the lock.
 	// It's var not const so that tests can manipulate it.
 	manualStepDownSleepPeriod = 10 * time.Second
-
-	// Functions only in the Enterprise version
-	// TODO remove once entPostUnseal is implemented in ENT
-	enterprisePostUnseal = enterprisePostUnsealImpl
-	// TODO remove once entPreSeal is implemented in ENT
-	enterprisePreSeal = enterprisePreSealImpl
-	// TODO remove once entSetupFilteredPaths is implemented in ENT
-	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
-	// TODO remove once entSetupQuotas is implemented in ENT
-	enterpriseSetupQuotas = enterpriseSetupQuotasImpl
-	// TODO remove once entSetupAPILock is implemented in ENT
-	enterpriseSetupAPILock = setupAPILockImpl
-	// TODO remove once entStartReplication is implemented in ENT
-	startReplication = startReplicationImpl
-	// TODO remove once entStopReplication is implemented in ENT
-	stopReplication = stopReplicationImpl
-	// TODO remove once EntLastWAL is implemented in ENT
-	LastWAL = lastWALImpl
-	// TODO remove once EntLastPerformanceWAL is implemented in ENT
-	LastPerformanceWAL = lastPerformanceWALImpl
-	// TODO remove once EntLastDRWAL is implemented in ENT
-	LastDRWAL = lastDRWALImpl
-	// TODO remove once EntPerformanceMerkleRoot is implemented in ENT
-	PerformanceMerkleRoot = merkleRootImpl
-	// TODO remove once EntDRMerkleRoot is implemented in ENT
-	DRMerkleRoot = merkleRootImpl
-	// TODO remove once EntLastRemoteWAL is implemented in ENT
-	LastRemoteWAL = lastRemoteWALImpl
-	// TODO remove once entLastRemoteUpstreamWAL is implemented in ENT
-	LastRemoteUpstreamWAL = lastRemoteUpstreamWALImpl
-	// TODO remove once EntWaitUntilWALShipped is implemented in ENT
-	WaitUntilWALShipped = waitUntilWALShippedImpl
-	// TODO remove once entCheckStoredLicense is implemented in ENT
-	storedLicenseCheck = func(c *Core, conf *CoreConfig) error { return nil }
-	// TODO remove once entIsLicenseAutoloaded is implemented in ENT
-	LicenseAutoloaded = func(*Core) bool { return false }
-	// TODO remove once entCheckLicenseInit is implemented in ENT
-	LicenseInitCheck = func(*Core) error { return nil }
-	// TODO remove once EntGetLicenseState is implemented in ENT
-	LicenseSummary = func(*Core) (*LicenseState, error) { return nil, nil }
-	// TODO remove once EntReloadLicense is implemented in ENT
-	LicenseReload = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -687,9 +640,6 @@ type Core struct {
 
 	updateLockedUserEntriesCancel context.CancelFunc
 
-	lockoutLoggerCancel    context.CancelFunc
-	userLockoutLogInterval time.Duration
-
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -905,8 +855,6 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
-
-	UserLockoutLogInterval time.Duration
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -952,10 +900,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	}
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
-	}
-
-	if conf.UserLockoutLogInterval == 0 {
-		conf.UserLockoutLogInterval = defaultUserLockoutLogInterval
 	}
 
 	// Validate the advertise addr if its given to us
@@ -1082,7 +1026,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
-		userLockoutLogInterval:         conf.UserLockoutLogInterval,
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
@@ -2758,32 +2701,6 @@ func (c *Core) preSeal() error {
 	return result
 }
 
-func enterprisePostUnsealImpl(c *Core, isStandby bool) error {
-	return nil
-}
-
-func enterprisePreSealImpl(c *Core) error {
-	return nil
-}
-
-func enterpriseSetupFilteredPathsImpl(c *Core) error {
-	return nil
-}
-
-func enterpriseSetupQuotasImpl(ctx context.Context, c *Core) error {
-	return nil
-}
-
-func startReplicationImpl(c *Core) error {
-	return nil
-}
-
-func stopReplicationImpl(c *Core) error {
-	return nil
-}
-
-func setupAPILockImpl(_ *Core, _ context.Context) error { return nil }
-
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
 }
@@ -2813,34 +2730,6 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
-}
-
-func waitUntilWALShippedImpl(ctx context.Context, c *Core, index uint64) bool {
-	return true
-}
-
-func merkleRootImpl(c *Core) string {
-	return ""
-}
-
-func lastWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastPerformanceWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastDRWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastRemoteWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastRemoteUpstreamWALImpl(c *Core) uint64 {
-	return 0
 }
 
 // physicalBarrierSealConfig reads the storage entry at configPath and parses and validates it as SealConfig.
@@ -3697,51 +3586,6 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
-func (c *Core) startLockoutLogger() {
-	// Are we already running a logger
-	if c.lockoutLoggerCancel != nil {
-		return
-	}
-
-	ctx, cancelFunc := context.WithCancel(c.activeContext)
-	c.lockoutLoggerCancel = cancelFunc
-
-	// Perform first check for lockout entries
-	lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-	if lockedUserCount > 0 {
-		c.Logger().Warn("user lockout(s) in effect")
-	} else {
-		// We shouldn't end up here
-		return
-	}
-
-	// Start lockout watcher
-	go func() {
-		ticker := time.NewTicker(c.userLockoutLogInterval)
-		for {
-			select {
-			case <-ticker.C:
-				// Check for lockout entries
-				lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-				if lockedUserCount > 0 {
-					c.Logger().Warn("user lockout(s) in effect")
-					break
-				}
-				c.Logger().Info("user lockout(s) cleared")
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			case <-ctx.Done():
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			}
-		}
-	}()
-}
-
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
@@ -3770,13 +3614,7 @@ func (c *Core) updateLockedUserEntries() {
 			}
 		}
 	}()
-}
-
-func (c *Core) getUserFailedLoginCount(ctx context.Context) int {
-	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
-
-	return len(c.userFailedLoginInfo)
+	return
 }
 
 // runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
