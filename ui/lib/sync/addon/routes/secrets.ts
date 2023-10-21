@@ -12,6 +12,11 @@ export default class SyncSecretsRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
-    return this.store.query('sync/destination', {}).catch(() => []);
+    try {
+      await this.store.query('sync/destination', {});
+      return { promptConfig: false };
+    } catch (error) {
+      return { promptConfig: true };
+    }
   }
 }
