@@ -1843,7 +1843,7 @@ func (m *ExpirationManager) sendEvent(eventType logical.EventType, le *leaseEntr
 		ns = le.namespace
 	}
 	data.Id = id
-	data.EntityIds = []string{le.ClientToken}
+	data.EntityIds = []string{}
 	structMap := map[string]interface{}{
 		"path":              le.Path,
 		"expire_time":       le.ExpireTime.Format(time.RFC3339),
