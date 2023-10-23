@@ -2,7 +2,12 @@
 
 package vault
 
-import "context"
+import (
+	"context"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/vault/seal"
+	"io"
+)
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
@@ -92,4 +97,7 @@ func (c *Core) entLastRemoteUpstreamWAL() uint64 {
 
 func (c *Core) EntWaitUntilWALShipped(ctx context.Context, index uint64) bool {
 	return true
+}
+
+func (c *Core) reloadSealsEnt(secureRandomReader io.Reader, sealAccess seal.Access, logger hclog.Logger) {
 }

@@ -1265,22 +1265,15 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if setSealResponse.barrierSeal != nil {
+	for _, seal := range setSealResponse.getCreatedSeals() {
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
 			err = (*seal).Finalize(ctx)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
-		}(&setSealResponse.barrierSeal)
-	}
-
-	if setSealResponse.unwrapSeal != nil {
-		defer func(seal *vault.Seal) {
-			err = (*seal).Finalize(ctx)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}(&setSealResponse.unwrapSeal)
+		}(seal)
 	}
 
 	coreConfig := createCoreConfig(c, config, backend, configSR, setSealResponse.barrierSeal, setSealResponse.unwrapSeal, metricsHelper, metricSink, secureRandomReader)
@@ -1681,28 +1674,21 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			if !cmp.Equal(core.GetCoreConfigInternal().Seals, config.Seals) {
-				barrierSeal, unwrapSeal, err := c.reloadSeals(ctx, core, config)
+				setSealResponse, err := c.reloadSeals(ctx, core, config)
 				if err != nil {
-					c.logger.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
+					c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
 					config.Seals = core.GetCoreConfigInternal().Seals
 				}
 
-				if barrierSeal != nil {
+				for _, seal := range setSealResponse.getCreatedSeals() {
+					seal := seal // capture range variable
+					// Ensure that the seal finalizer is called, even if using verify-only
 					defer func(seal *vault.Seal) {
-						err = (*seal).Finalize(context.Background())
+						err = (*seal).Finalize(ctx)
 						if err != nil {
 							c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 						}
-					}(&barrierSeal)
-				}
-
-				if unwrapSeal != nil {
-					defer func(seal *vault.Seal) {
-						err = (*seal).Finalize(context.Background())
-						if err != nil {
-							c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-						}
-					}(&unwrapSeal)
+					}(seal)
 				}
 			}
 
@@ -3333,13 +3319,13 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 	return nil
 }
 
-func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, config *server.Config) (vault.Seal, vault.Seal, error) {
+func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, config *server.Config) (*SetSealResponse, error) {
 	if len(config.Seals) == 1 && config.Seals[0].Disabled {
-		return nil, nil, errors.New("moving from autoseal to shamir requires seal migration")
+		return nil, errors.New("moving from autoseal to shamir requires seal migration")
 	}
 
 	if core.SealAccess().BarrierSealConfigType() == vault.SealConfigTypeShamir {
-		return nil, nil, errors.New("moving from shamir to autoseal requires seal migration")
+		return nil, errors.New("moving from shamir to autoseal requires seal migration")
 	}
 
 	infoKeysReload := make([]string, 0)
@@ -3347,15 +3333,15 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 
 	setSealResponse, secureRandomReader, err := c.configureSeals(ctx, config, core.PhysicalAccess(), infoKeysReload, infoReload)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if setSealResponse.sealConfigError != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = core.SetSeals(setSealResponse.barrierSeal, secureRandomReader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error setting seal: %s", err)
+		return nil, fmt.Errorf("error setting seal: %s", err)
 	}
 
 	newGen := setSealResponse.barrierSeal.GetAccess().GetSealGenerationInfo()
@@ -3364,7 +3350,7 @@ func (c *ServerCommand) reloadSeals(ctx context.Context, core *vault.Core, confi
 		c.logger.Warn("could not update seal information in storage", "err", err)
 	}
 
-	return setSealResponse.barrierSeal, setSealResponse.unwrapSeal, nil
+	return setSealResponse, nil
 }
 
 func SetStorageMigration(b physical.Backend, active bool) error {

@@ -437,13 +437,13 @@ func TestReloadSeals(t *testing.T) {
 	_, testCommand := testServerCommand(t)
 	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
 
-	_, _, err := testCommand.reloadSeals(context.Background(), testCore, &testConfig)
+	_, err := testCommand.reloadSeals(context.Background(), testCore, &testConfig)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 
 	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
-	_, _, err = testCommand.reloadSeals(context.Background(), testCore, &testConfig)
+	_, err = testCommand.reloadSeals(context.Background(), testCore, &testConfig)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
