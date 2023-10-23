@@ -263,6 +263,10 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 	}
 }
 
+// TestRaft_VerifierEnabled is not checking to ensure that the verifier works correctly - the verifier has
+// its own unit tests for that. What we're checking for here is that we've plumbed everything through correctly,
+// i.e. we can stand up a raft cluster with the verifier enabled, do a bunch of raft things, let the verifier
+// do its thing, and nothing blows up.
 func TestRaft_VerifierEnabled(t *testing.T) {
 	conf := map[string]string{
 		"trailing_logs":                  "100",
@@ -292,6 +296,9 @@ func TestRaft_VerifierEnabled(t *testing.T) {
 	// 	b, _ := GetRaftWithConfig(t, true, true, conf)
 	// 	physical.ExerciseBackend(t, b)
 	// })
+
+	// TODO: check the metrics at this point to see if the verifier has reported something.
+	//  It's possible that this is racy because go-metrics reports things in blocks of 10 seconds.
 }
 
 func TestRaft_ParseRaftWalBackend(t *testing.T) {

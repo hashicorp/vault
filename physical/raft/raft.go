@@ -40,7 +40,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/version"
-	"github.com/vmihailenco/msgpack/v4"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -608,15 +607,11 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 				binary.LittleEndian.PutUint64(extensions[:], verifier.ExtensionMagicPrefix)
 				l.Data = data
 				l.Extensions = extensions[:]
-				cmd, err := msgpack.Marshal(l)
-				if err != nil {
-					logger.Error("error marshaling raft log for verification", "error", err)
-				}
 
 				b.permitPool.Acquire()
 				b.l.RLock()
 
-				applyFuture := b.raft.Apply(cmd, 0)
+				applyFuture := b.raft.Apply(data, 0)
 				if err := applyFuture.Error(); err != nil {
 					logger.Error("error sending raft log for verification", "error", err)
 				}
@@ -625,7 +620,7 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 				_ = applyFuture.Response()
 				b.l.RUnlock()
 				b.permitPool.Release()
-				logger.Debug("sent verification checkpoint", "error", err)
+				logger.Debug("sent verification checkpoint")
 			case <-ctx.Done():
 				return
 			}

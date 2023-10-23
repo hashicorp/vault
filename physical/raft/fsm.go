@@ -6,6 +6,7 @@ package raft
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/raft-wal/verifier"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -59,6 +61,12 @@ var (
 	_ raft.BatchingFSM       = (*FSM)(nil)
 )
 
+var logVerifierMagicBytes [8]byte
+
+func init() {
+	binary.LittleEndian.PutUint64(logVerifierMagicBytes[:], verifier.ExtensionMagicPrefix)
+}
+
 type restoreCallback func(context.Context) error
 
 type FSMEntry struct {
@@ -75,6 +83,63 @@ func (f *FSMEntry) String() string {
 type FSMApplyResponse struct {
 	Success    bool
 	EntrySlice []*FSMEntry
+}
+
+type logVerificationChunkingShim struct {
+	chunker *raftchunking.ChunkingBatchingFSM
+}
+
+// Apply implements raft.BatchingFSM.
+func (s *logVerificationChunkingShim) Apply(l *raft.Log) interface{} {
+	// This is a hack because raftchunking doesn't play nicely with lower-level
+	// usage of Extensions field like we need for LogStore verification.
+
+	// When we write a verifier log, we write a single byte that consists of the verifierCheckpointOp,
+	// and then we encode the verifier.ExtensionMagicPrefix into the raft log
+	// Extensions field. Both of those together should ensure that verifier
+	// raft logs can never be mistaken for chunked protobufs. See the docs on
+	// verifier.ExtensionMagicPrefix for the reasoning behind the specific value
+	// that was chosen, and how it ensures this property.
+
+	// So here, we need to check for the exact conditions that we encoded when we wrote the
+	// verifier log out. If they match, return early, otherwise the chunking FSM will
+	// misinterpret what this log is and everything will blow up.
+	if s.isVerifierLog(l) {
+		return l.Index
+	}
+
+	return s.chunker.Apply(l)
+}
+
+// ApplyBatch implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{} {
+	newBatch := make([]interface{}, 0, len(logs))
+
+	// TODO: is this correct? do we want to ignore the verifier logs? or do we want to verify them somehow?
+	for _, l := range logs {
+		if !s.isVerifierLog(l) {
+			newBatch = append(newBatch, l)
+		}
+	}
+
+	return newBatch
+}
+
+// Snapshot implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Snapshot() (raft.FSMSnapshot, error) {
+	return s.chunker.Snapshot()
+}
+
+// Restore implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Restore(snapshot io.ReadCloser) error {
+	return s.chunker.Restore(snapshot)
+}
+
+func (s *logVerificationChunkingShim) isVerifierLog(l *raft.Log) bool {
+	return len(l.Data) == 1 &&
+		l.Data[0] == byte(verifierCheckpointOp) &&
+		len(l.Extensions) == 8 &&
+		bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8])
 }
 
 // FSM is Vault's primary state storage. It writes updates to a bolt db file
@@ -104,7 +169,7 @@ type FSM struct {
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
-	chunker *raftchunking.ChunkingBatchingFSM
+	chunker *logVerificationChunkingShim
 
 	localID         string
 	desiredSuffrage string
@@ -135,11 +200,12 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		localID:         localID,
 	}
 
-	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-		f:   f,
-		ctx: context.Background(),
-	})
-
+	f.chunker = &logVerificationChunkingShim{
+		chunker: raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
+			f:   f,
+			ctx: context.Background(),
+		}),
+	}
 	dbPath := filepath.Join(path, databaseFilename)
 	f.l.Lock()
 	defer f.l.Unlock()
