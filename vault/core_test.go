@@ -468,7 +468,12 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 // TestCore_UseSSCTokenToggleOn will check that the root SSC
 // token can be used even when disableSSCTokens is toggled on
 func TestCore_UseSSCTokenToggleOn(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	c.disableSSCTokens = true
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -519,6 +524,9 @@ func TestCore_UseSSCTokenToggleOn(t *testing.T) {
 func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
 	coreConfig := &CoreConfig{
 		DisableSSCTokens: true,
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
 	}
 	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	if len(root) > TokenLength+OldTokenPrefixLength || !strings.HasPrefix(root, consts.LegacyServiceTokenPrefix) {
@@ -981,7 +989,12 @@ func TestCore_Seal_SingleUse(t *testing.T) {
 
 // Ensure we get a LeaseID
 func TestCore_HandleRequest_Lease(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1027,7 +1040,12 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 }
 
 func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1073,7 +1091,12 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 }
 
 func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -2358,7 +2381,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	// Wait for core to become active
 	TestWaitActive(t, core)
 
-	testCoreAddSecretMount(t, core, root)
+	testCoreAddSecretMount(t, core, root, "1")
 
 	// Put a secret
 	req := &logical.Request{
@@ -2630,7 +2653,12 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 
 // Renew should return the same lease back
 func TestCore_RenewSameLease(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	// Create a leasable secret
 	req := &logical.Request{
@@ -2761,7 +2789,12 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		BackendType: logical.TypeCredential,
 	}
 
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
