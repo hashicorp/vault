@@ -1,7 +1,12 @@
 name: Check Copywrite Headers
 
 on:
-  push: {}
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+      - release/**
 
 jobs:
   copywrite:
