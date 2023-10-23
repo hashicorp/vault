@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -36,6 +36,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -1325,7 +1326,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	// KV
 	_, ok := logicalBackends[mountTypeKV]
 	if !ok {
-		logicalBackends[mountTypeKV] = PassthroughBackendFactory
+		logicalBackends[mountTypeKV] = kv.Factory
 	}
 
 	// Cubbyhole
