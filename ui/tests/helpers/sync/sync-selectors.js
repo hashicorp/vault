@@ -11,4 +11,7 @@ export const PAGE = {
     summary: '[data-test-cta-container] p',
     button: '[data-test-cta-button]',
   },
+  create: {
+    selectType: (type) => `[data-test-select-destination="${type}"]`,
+  },
 };
