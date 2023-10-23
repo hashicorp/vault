@@ -249,6 +249,11 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 				return err
 			}
 			re.loginPaths.Store(loginPathsEntry)
+			binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+			if err != nil {
+				return err
+			}
+			re.binaryPaths.Store(binaryPathsEntry)
 		}
 	}
 
