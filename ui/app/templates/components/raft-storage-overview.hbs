@@ -34,13 +34,11 @@
                   Download
                 </ExternalLink>
               {{else}}
-                <button
-                  type="button"
-                  class="link is-ghost"
-                  onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}
-                >
-                  Download
-                </button>
+                <Hds::Button
+                  @text="Download"
+                  class="link"
+                  {{on "click" (queue (action "downloadSnapshot") (action D.actions.close))}}
+                />
               {{/if}}
             </li>
             <li class="action">
