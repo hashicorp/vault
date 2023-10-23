@@ -243,7 +243,8 @@ export default Service.extend({
 
   persistAuthData() {
     const [firstArg, resp] = arguments;
-    const mountPath = firstArg?.data?.path;
+    // Tab vs dropdown format
+    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
     const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
     let tokenName;

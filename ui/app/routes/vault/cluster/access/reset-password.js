@@ -15,7 +15,7 @@ export default class VaultClusterAccessResetPasswordRoute extends Route {
       throw new Error(ERROR_UNAVAILABLE);
     }
     const { backend, displayName } = this.auth.authData;
-    if (!backend || !displayName) {
+    if (!backend.mountPath || !displayName) {
       throw new Error(ERROR_UNAVAILABLE);
     }
     try {

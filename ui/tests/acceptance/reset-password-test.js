@@ -5,13 +5,9 @@ import authPage from 'vault/tests/pages/auth';
 import { createPolicyCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 
 const resetPolicy = `
-    path "sys/control-group/authorize" {
-    capabilities = ["update"]
-  }
-
-  path "sys/control-group/request" {
-    capabilities = ["update"]
-  }
+path "auth/userpass/users/reset-me/password" {
+  capabilities = ["update", "create"]
+}
 `;
 module('Acceptance | reset password', function (hooks) {
   setupApplicationTest(hooks);
@@ -38,7 +34,7 @@ module('Acceptance | reset password', function (hooks) {
 
     assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');
 
-    assert.dom('[data-test-title]').hasText('Reset Password', 'page title');
+    assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
     assert.dom('[data-test-reset-password-success]').exists('shows success');
