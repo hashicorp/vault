@@ -15,6 +15,7 @@ export default class PageUserpassResetPasswordComponent extends Component {
   @action reset() {
     this.successful = false;
     this.error = '';
+    this.newPassword = '';
   }
 
   @task
@@ -24,11 +25,15 @@ export default class PageUserpassResetPasswordComponent extends Component {
     const adapter = this.store.adapterFor('auth-method');
     const { backend, username } = this.args;
     if (!backend || !username) return;
+    if (!this.newPassword) {
+      this.error = 'Please provide a new password.';
+      return;
+    }
     try {
       yield adapter.resetPassword(backend, username, this.newPassword);
       this.successful = true;
     } catch (e) {
-      this.error = errorMessage(e, 'please check Vault logs for details');
+      this.error = errorMessage(e, 'Check Vault logs for details');
     }
   }
 }
