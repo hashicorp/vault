@@ -41,7 +41,7 @@ module('Integration | Component | sync header', function (hooks) {
     );
 
     assert.dom(PAGE.title).hasText('Secrets sync');
-    assert.dom(PAGE.headerContainer).hasTextContaining('Secrets sync/', 'renders default breadcrumb');
+    assert.dom(PAGE.headerContainer).hasTextContaining('Secrets sync', 'renders default breadcrumb');
   });
 
   test('it renders breadcrumbs', async function (assert) {
