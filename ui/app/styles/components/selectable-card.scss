@@ -21,7 +21,7 @@
     min-height: 8rem;
   }
 
-  &.one-third-card {
-    width: calc(100% / 3 - $spacing-m);
+  &.card-width-20 {
+    width: 20rem;
   }
 }
