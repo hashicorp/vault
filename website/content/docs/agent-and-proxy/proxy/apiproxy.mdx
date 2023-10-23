@@ -15,7 +15,7 @@ for Vault's API.
 
 The [`listener` stanza](/vault/docs/agent#listener-stanza) for Vault Proxy configures a listener for Vault Proxy. If
 its `role` is not set to `metrics_only`, it will act as a proxy for the Vault server that
-has been configured in the [`vault` stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza) of Proxy Agent. This enables access to the Vault
+has been configured in the [`vault` stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza) of Proxy. This enables access to the Vault
 API from the Proxy API, and can be configured to optionally allow or force the automatic use of
 the Auto-Auth token for these requests, as described below.
 
@@ -28,7 +28,7 @@ request to Vault. See the [caching docs](/vault/docs/agent-and-proxy/proxy/cachi
 Vault Proxy allows for easy authentication to Vault in a wide variety of
 environments using [Auto-Auth](/vault/docs/agent-and-proxy/autoauth). By setting the
 `use_auto_auth_token` (see below) configuration, clients will not be required
-to provide a Vault token to the requests made to the Agent. When this
+to provide a Vault token to the requests made to the Proxy. When this
 configuration is set, if the request doesn't already bear a token, then the
 auto-auth token will be used to forward the request to the Vault server. This
 configuration will be overridden if the request already has a token attached,
@@ -48,11 +48,11 @@ existing Vault token in the request and instead uses the auto-auth token.
 
 The top level `api_proxy` block has the following configuration entries:
 
-- `use_auto_auth_token` `(bool/string: false)` - If set, the requests made to Agent
+- `use_auto_auth_token` `(bool/string: false)` - If set, the requests made to Proxy
 without a Vault token will be forwarded to the Vault server with the
 auto-auth token attached. If the requests already bear a token, this
 configuration will be overridden and the token in the request will be used to
-forward the request to the Vault server. If set to `"force"` Agent will use the
+forward the request to the Vault server. If set to `"force"` Proxy will use the
 auto-auth token, overwriting the attached Vault token if set.
 
 The following two `api_proxy` options are only useful when making requests to a Vault
@@ -72,7 +72,7 @@ Here is an example of a `listener` configuration alongside `api_proxy` configura
 and enforce consistency.
 
 ```hcl
-# Other Vault proxy configuration blocks
+# Other Vault Proxy configuration blocks
 # ...
 
 api_proxy {
