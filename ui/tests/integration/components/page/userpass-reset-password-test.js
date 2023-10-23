@@ -67,6 +67,6 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
     await fillIn(S.input, 'invalid-pw');
     await click(S.save);
 
-    assert.dom(S.error).hasText('some error occurred', 'Shows error from API');
+    assert.dom(S.error).hasText('Error some error occurred', 'Shows error from API');
   });
 });
