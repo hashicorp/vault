@@ -118,6 +118,19 @@ func TestLoadConfigFile_ProxyCache(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_NoCachingEnabled tests that you cannot enable a cache
+// without either of the options to enable caching secrets
+func TestLoadConfigFile_NoCachingEnabled(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-cache-but-no-secrets.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cfg.ValidateConfig(); err == nil {
+		t.Fatalf("expected error, as you cannot configure a cache without caching secrets")
+	}
+}
+
 // TestLoadConfigFile_StaticSecretCachingWithoutAutoAuth tests that loading
 // a config file with static secret caching enabled but no auto auth will fail.
 func TestLoadConfigFile_StaticSecretCachingWithoutAutoAuth(t *testing.T) {

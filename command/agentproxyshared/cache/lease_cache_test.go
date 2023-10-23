@@ -43,11 +43,12 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		t.Fatal(err)
 	}
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            NewMockProxier(responses),
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             NewMockProxier(responses),
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -64,11 +65,12 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	}
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            &mockDelayProxier{cacheable, delay},
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             &mockDelayProxier{cacheable, delay},
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,12 +86,13 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 	require.NoError(t, err)
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            NewMockProxier(responses),
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		Storage:            storage,
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             NewMockProxier(responses),
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Storage:             storage,
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
 	})
 	require.NoError(t, err)
 

@@ -102,17 +102,22 @@ type LeaseCache struct {
 	// cacheStaticSecrets is used to determine if the cache should also
 	// cache static secrets, as well as dynamic secrets.
 	cacheStaticSecrets bool
+
+	// cacheDynamicSecrets is used to determine if the cache should
+	// cache dynamic secrets
+	cacheDynamicSecrets bool
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
 // LeaseCache.
 type LeaseCacheConfig struct {
-	Client             *api.Client
-	BaseContext        context.Context
-	Proxier            Proxier
-	Logger             hclog.Logger
-	Storage            *cacheboltdb.BoltStorage
-	CacheStaticSecrets bool
+	Client              *api.Client
+	BaseContext         context.Context
+	Proxier             Proxier
+	Logger              hclog.Logger
+	Storage             *cacheboltdb.BoltStorage
+	CacheStaticSecrets  bool
+	CacheDynamicSecrets bool
 }
 
 type inflightRequest struct {
@@ -155,16 +160,17 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
-		client:             conf.Client,
-		proxier:            conf.Proxier,
-		logger:             conf.Logger,
-		db:                 db,
-		baseCtxInfo:        baseCtxInfo,
-		l:                  &sync.RWMutex{},
-		idLocks:            locksutil.CreateLocks(),
-		inflightCache:      gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-		ps:                 conf.Storage,
-		cacheStaticSecrets: conf.CacheStaticSecrets,
+		client:              conf.Client,
+		proxier:             conf.Proxier,
+		logger:              conf.Logger,
+		db:                  db,
+		baseCtxInfo:         baseCtxInfo,
+		l:                   &sync.RWMutex{},
+		idLocks:             locksutil.CreateLocks(),
+		inflightCache:       gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		ps:                  conf.Storage,
+		cacheStaticSecrets:  conf.CacheStaticSecrets,
+		cacheDynamicSecrets: conf.CacheDynamicSecrets,
 	}, nil
 }
 
@@ -451,6 +457,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	} else {
 		// Since it's not a static secret, set the ID to be the dynamic id
 		index.ID = dynamicSecretCacheId
+	}
+
+	// Short-circuit if we've been configured to not cache dynamic secrets
+	if !c.cacheDynamicSecrets {
+		return resp, nil
 	}
 
 	// Short-circuit if the secret is not renewable
