@@ -10,7 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
-module('Integration | Component | sync header', function (hooks) {
+module('Integration | Component | sync | SyncHeader', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
   hooks.beforeEach(function () {

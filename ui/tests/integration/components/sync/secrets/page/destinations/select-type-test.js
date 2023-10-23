@@ -12,7 +12,7 @@ import { click, render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { destinationTypes } from 'vault/helpers/sync-destinations';
 
-module('Integration | Component | sync | page | destinations | select-type', function (hooks) {
+module('Integration | Component | sync | Secrets::Page::Destinations::SelectType', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
 
