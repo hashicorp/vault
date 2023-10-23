@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // The constants within this file represent the expected model attributes as parsed from OpenAPI
 // if changes are made to the OpenAPI spec, that may result in changes that must be reflected
 // here AND ensured to not cause breaking changes within the UI.
