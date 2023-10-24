@@ -37,6 +37,9 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
-    assert.dom('[data-test-reset-password-success]').exists('shows success');
+    assert
+      .dom('[data-test-flash-message]')
+      .hasText('Successfully reset password', 'Shows success flash message');
+    assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
 });

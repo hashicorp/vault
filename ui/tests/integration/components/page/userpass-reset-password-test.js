@@ -10,8 +10,7 @@ const S = {
   save: '[data-test-reset-password-save]',
   error: '[data-test-reset-password-error]',
   input: '[data-test-textarea]',
-  success: '[data-test-reset-password-success]',
-  reset: '[data-test-reset-reset-password]',
+  success: '[data-test-flash-message]',
 };
 module('Integration | Component | page/userpass-reset-password', function (hooks) {
   setupRenderingTest(hooks);
@@ -42,12 +41,7 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
     await fillIn(S.input, 'new');
     await click(S.save);
 
-    assert.dom(S.success).includesText('Password set successfully', 'Shows success message');
-    assert.dom(S.infoBanner).doesNotExist('Info banner no longer shown', 'info banner hidden');
-    assert.dom(S.input).doesNotExist('Input no longer shown', 'input hidden');
-
-    await click(S.reset);
-    assert.dom(S.success).doesNotExist('Reset removes success banner');
+    assert.dom(S.success).includesText('Successfully reset password', 'Shows success message');
     assert.dom(S.input).hasValue('', 'Reset shows input again with empty value');
   });
 

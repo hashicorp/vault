@@ -1,4 +1,3 @@
-import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
@@ -7,15 +6,15 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class PageUserpassResetPasswordComponent extends Component {
   @service store;
+  @service flashMessages;
 
   @tracked newPassword = '';
-  @tracked successful = false;
   @tracked error = '';
 
-  @action reset() {
-    this.successful = false;
+  onSuccess() {
     this.error = '';
     this.newPassword = '';
+    this.flashMessages.success('Successfully reset password');
   }
 
   @task
@@ -31,7 +30,7 @@ export default class PageUserpassResetPasswordComponent extends Component {
     }
     try {
       yield adapter.resetPassword(backend, username, this.newPassword);
-      this.successful = true;
+      this.onSuccess();
     } catch (e) {
       this.error = errorMessage(e, 'Check Vault logs for details');
     }
