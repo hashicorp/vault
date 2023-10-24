@@ -52,12 +52,10 @@
 @import './helper-classes/typography';
 
 // Component specific styling
-@import './components/auth-buttons';
 @import './components/auth-form';
 @import './components/autocomplete-input';
 @import './components/b64-toggle';
 @import './components/box-label';
-@import './components/box-radio';
 @import './components/calendar-widget';
 @import './components/cluster-banners';
 @import './components/codemirror';
@@ -94,14 +92,12 @@
 @import './components/replication-dashboard';
 @import './components/replication-mode-summary';
 @import './components/replication-page';
-@import './components/replication-primary-card';
 @import './components/replication-summary';
 @import './components/role-item';
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container';
 @import './components/secrets-engines-card';
-// action-block extends selectable-card
 @import './components/action-block';
 @import './components/shamir-progress';
 @import './components/sidebar';

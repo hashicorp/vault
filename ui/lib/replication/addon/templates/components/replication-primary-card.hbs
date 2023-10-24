@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="selectable-card is-rounded {{dasherize this.title}} {{if this.hasError 'has-error-border'}}">
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-m {{if this.hasErrorClass 'has-error-border'}}">
   <h3 class="card-title title is-5">{{this.title}}</h3>
   <div>
     {{#if this.hasError}}
@@ -23,4 +23,4 @@
       {{/if}}
     </h3>
   </div>
-</div>
+</Hds::Card::Container>
