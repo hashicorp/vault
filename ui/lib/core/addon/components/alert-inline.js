@@ -34,7 +34,7 @@ export default class AlertInlineComponent extends Component {
   }
 
   get paddingTop() {
-    return this.args.paddingTop ? ' has-top-padding-s' : '';
+    return this.args.paddingTop ? ' has-top-padding-xs' : '';
   }
 
   get isMarginless() {
