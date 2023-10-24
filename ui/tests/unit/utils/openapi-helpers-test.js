@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { _getPathParam, pathToHelpUrlSegment } from 'vault/utils/openapi-helpers';
 

@@ -75,14 +75,13 @@
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button
+        <Hds::Button
+          @text="Save"
+          @icon={{if this.saveModel.isRunning "loading"}}
           type="submit"
           data-test-save-config="true"
-          class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
           disabled={{this.saveModel.isRunning}}
-        >
-          Save
-        </button>
+        />
         {{#if (eq this.mode "create")}}
           <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
             Cancel
