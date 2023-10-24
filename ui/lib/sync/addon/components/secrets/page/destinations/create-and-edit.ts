@@ -69,8 +69,9 @@ export default class DestinationsCreateForm extends Component<Args> {
 
   @action
   cancel() {
-    this.args.destination.rollbackAttributes();
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
+    const method = this.args.destination.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.destination[method]();
+    this.router.transitionTo('vault.cluster.sync.secrets.destinations.create');
   }
 
   @action
