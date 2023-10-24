@@ -12,7 +12,7 @@ const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
   accessToken: [{ type: 'presence', message: 'Access token is required.' }],
   projectId: [{ type: 'presence', message: 'Project ID is required.' }],
-  deploymentEnvironments: [{ type: 'presence', message: 'Deployment environments are required.' }],
+  deploymentEnvironments: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
 const fields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
 
@@ -36,11 +36,11 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   })
   teamId;
 
-  @attr({
+  // TODO can also be a string, return and test how this works with live API
+  @attr('array', {
     subText: 'Deployment environments where the environment variables are available.',
-    editType: 'yield',
-    checkboxOptions: ['deployment', 'preview', 'production'],
-    // TODO can also be a string, return and test how this works with live API
+    editType: 'checkboxList',
+    possibleValues: ['deployment', 'preview', 'production'],
     defaultValue: () => [],
   })
   deploymentEnvironments;
