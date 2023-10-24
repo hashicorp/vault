@@ -24,4 +24,10 @@ Your token will also be shown on the screen in the example curl command output.`
       preformatted: true,
     });
   }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('filter', null);
+    }
+  }
 }

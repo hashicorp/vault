@@ -79,6 +79,8 @@ export default class SwaggerUiComponent extends Component {
   @service namespace;
 
   @tracked swaggerLoading = true;
+  @tracked eventListenerAdded = false;
+  @tracked swaggerInput;
 
   inputId = `${guidFor(this)}-swagger`;
 
@@ -88,5 +90,25 @@ export default class SwaggerUiComponent extends Component {
     // trim any slashes on the filter value
     const configSettings = CONFIG(SwaggerUIBundle, this, this.args.filter?.replace(/^(\/)+/, ''));
     SwaggerUIBundle(configSettings);
+  }
+
+  @action addEventListener() {
+    // add event listener to swagger filter input so we can update the queryParam used only for URL sharing purposes.
+    this.swaggerInput = document.querySelector('.operation-filter-input');
+    if (!this.swaggerInput) return;
+    this.swaggerInput.addEventListener('keyup', this.onProxyInput.bind(this));
+    this.eventListenerAdded = true;
+  }
+
+  onProxyInput() {
+    const swaggerInputValue = this.swaggerInput.value;
+    this.args.onFilterChange(swaggerInputValue || null);
+  }
+
+  willDestroy() {
+    if (this.eventListenerAdded) {
+      this.swaggerInput.removeEventListener('input', this.onProxyInput);
+    }
+    super.willDestroy(...arguments);
   }
 }
