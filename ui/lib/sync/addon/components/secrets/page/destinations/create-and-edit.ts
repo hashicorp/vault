@@ -17,14 +17,9 @@ import { ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
-import { HTMLElementEvent } from 'forms';
 
 interface Args {
   destination: SyncDestinationModel;
-}
-
-interface ModeCheckboxAttrs {
-  deploymentEnvironments: string[];
 }
 
 export default class DestinationsCreateForm extends Component<Args> {
@@ -72,13 +67,5 @@ export default class DestinationsCreateForm extends Component<Args> {
     const method = this.args.destination.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.args.destination[method]();
     this.router.transitionTo('vault.cluster.sync.secrets.destinations.create');
-  }
-
-  @action
-  handleCheckbox(event: HTMLElementEvent<HTMLInputElement>) {
-    const method = event.target.checked ? 'addObject' : 'removeObject';
-    const attrName = event.target.name;
-    const modelParam = this.args.destination[attrName as keyof ModeCheckboxAttrs];
-    modelParam[method](event.target.value);
   }
 }
