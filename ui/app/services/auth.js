@@ -6,13 +6,14 @@
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
 import { getOwner } from '@ember/application';
-import { resolve, reject } from 'rsvp';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { assign } from '@ember/polyfills';
 import Service, { inject as service } from '@ember/service';
 import { capitalize } from '@ember/string';
 import fetch from 'fetch';
+import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
@@ -117,7 +118,13 @@ export default Service.extend({
     }
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
-    return { ...stored, backend: { ...stored.backend, ...BACKENDS.findBy('type', backend) } };
+    return assign(stored, {
+      backend: {
+        // add mount path for password reset
+        mountPath: stored.backend.mountPath,
+        ...BACKENDS.findBy('type', backend),
+      },
+    });
   }),
 
   init() {
@@ -180,7 +187,7 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    const opts = { ...defaults, ...options };
+    const opts = assign(defaults, options);
 
     return fetch(url, {
       method: opts.method || 'GET',
@@ -219,34 +226,12 @@ export default Service.extend({
     };
   },
 
-  calculateRootNamespace(currentNamespace, namespace_path, backend) {
-    // here we prefer namespace_path if its defined,
-    // else we look and see if there's already a namespace saved
-    // and then finally we'll use the current query param if the others
-    // haven't set a value yet
-    // all of the typeof checks are necessary because the root namespace is ''
-    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
-    // if we're logging in with token and there's no namespace_path, we can assume
-    // that the token belongs to the root namespace
-    if (backend === 'token' && !userRootNamespace) {
-      userRootNamespace = '';
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      userRootNamespace = currentNamespace;
-    }
-  },
-
   persistAuthData() {
     const [firstArg, resp] = arguments;
-    // Tab vs dropdown format
-    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
     const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
+    // Tab vs dropdown format
+    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
     let tokenName;
     let options;
     let backend;
@@ -270,8 +255,26 @@ export default Service.extend({
     }
 
     const { entity_id, policies, renewable, namespace_path } = resp;
-    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
-    let data = {
+    // here we prefer namespace_path if its defined,
+    // else we look and see if there's already a namespace saved
+    // and then finally we'll use the current query param if the others
+    // haven't set a value yet
+    // all of the typeof checks are necessary because the root namespace is ''
+    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
+    // if we're logging in with token and there's no namespace_path, we can assume
+    // that the token belongs to the root namespace
+    if (backend === 'token' && !userRootNamespace) {
+      userRootNamespace = '';
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      if (this.authData) {
+        userRootNamespace = this.authData.userRootNamespace;
+      }
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      userRootNamespace = currentNamespace;
+    }
+    const data = {
       userRootNamespace,
       displayName,
       backend: currentBackend,
@@ -290,10 +293,7 @@ export default Service.extend({
     );
 
     if (resp.renewable) {
-      data = {
-        ...data,
-        ...this.calculateExpiration(resp),
-      };
+      assign(data, this.calculateExpiration(resp));
     }
 
     if (!data.displayName) {
