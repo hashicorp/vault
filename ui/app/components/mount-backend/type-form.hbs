@@ -4,39 +4,30 @@
 ~}}
 
 {{#each (array "generic" "cloud" "infra") as |category|}}
-  <h3 class="title box-radio-header">
+  <Hds::Text::Display class="has-top-padding-m has-bottom-padding-s" @tag="h2" size="400">
     {{capitalize category}}
-  </h3>
-  <div class="box-radio-container">
+  </Hds::Text::Display>
+  <div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
     {{#each (filter-by "category" category this.mountTypes) as |type|}}
-      <BoxRadio
-        @displayName={{type.displayName}}
-        @type={{type.type}}
-        @glyph={{or type.glyph type.type}}
-        @groupValue={{this.selection}}
-        @groupName="mount-type"
-        @onRadioChange={{mut this.selection}}
+      <SelectableCard
+        id={{type.type}}
+        class="has-top-padding-m has-text-centered small-card"
+        @onClick={{fn @setMountType type.type}}
         @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-        @tooltipMessage={{if
-          (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
-          (concat
-            type.displayName
-            " is part of the Advanced Data Protection module, which is not included in your enterprise license."
-          )
-          "This secret engine is not included in your license."
-        }}
-      />
+        data-test-mount-type={{type.type}}
+      >
+        <Icon @name={{or type.glyph type.type}} @size="24" class="has-bottom-margin-xs" />
+        <Hds::Text::Body @tag="h3" @size="300">
+          {{type.displayName}}
+        </Hds::Text::Body>
+        {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
+          <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
+        {{/if}}
+      </SelectableCard>
     {{/each}}
   </div>
 {{/each}}
+
 <div class="field is-grouped box is-fullwidth is-bottomless">
-  <button
-    data-test-mount-next
-    type="button"
-    class="button is-primary"
-    {{on "click" (fn @setMountType this.selection)}}
-    disabled={{not this.selection}}
-  >
-    Next
-  </button>
+  <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backends" />
 </div>

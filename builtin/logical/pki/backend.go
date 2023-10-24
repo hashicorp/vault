@@ -144,6 +144,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 				unifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
+
+			Binary: []string{
+				"ocsp",           // OCSP POST
+				"ocsp/*",         // OCSP GET
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
+			},
 		},
 
 		Paths: []*framework.Path{
