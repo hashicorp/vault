@@ -455,7 +455,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			return 1
 		}
 
-		cacheLogger.Info("")
+		cacheLogger.Info("cache configured", "cache_static_secrets", config.Cache.CacheStaticSecrets, "disable_caching_dynamic_secrets", config.Cache.DisableCachingDynamicSecrets)
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
