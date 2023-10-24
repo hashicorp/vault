@@ -186,9 +186,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
-        Verify
-      </button>
+      <Hds::Button @text="Verify" @icon={{if @loading "loading"}} type="submit" disabled={{@loading}} />
     </div>
   </div>
 </form>

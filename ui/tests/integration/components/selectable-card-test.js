@@ -5,30 +5,25 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-
-const TOTAL = 15;
-const CARD_TITLE = 'Connections';
+import sinon from 'sinon';
 
 module('Integration | Component selectable-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.set('total', TOTAL);
-    this.set('cardTitle', CARD_TITLE);
+    this.onClick = sinon.spy();
   });
 
-  test('it shows the card total', async function (assert) {
-    await render(hbs`<SelectableCard @total={{this.total}} @cardTitle={{this.cardTitle}}/>`);
-    const titleNumber = this.element.querySelector('.title-number').innerText;
-
-    assert.strictEqual(titleNumber, '15');
+  test('it renders', async function (assert) {
+    await render(hbs`<SelectableCard @onClick={{this.onClick}}/>`);
+    await click('.selectable-card');
+    assert.ok(this.onClick.calledOnce, 'calls on click');
   });
 
-  test('it returns card title, ', async function (assert) {
-    await render(hbs`<SelectableCard @total={{1}} @cardTitle={{this.cardTitle}}/>`);
-    const titleText = this.element.querySelector('.title').innerText;
-    assert.strictEqual(titleText, 'Connections');
+  test('it renders block content', async function (assert) {
+    await render(hbs`<SelectableCard  @onClick={{this.onClick}}>hello</SelectableCard>`);
+    assert.dom('.selectable-card').hasText('hello');
   });
 });

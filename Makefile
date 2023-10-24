@@ -11,8 +11,7 @@ EXTERNAL_TOOLS_CI=\
 	golang.org/x/tools/cmd/goimports \
 	github.com/golangci/revgrep/cmd/revgrep \
 	mvdan.cc/gofumpt \
-	honnef.co/go/tools/cmd/staticcheck \
-	github.com/bufbuild/buf/cmd/buf
+	honnef.co/go/tools/cmd/staticcheck
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
@@ -173,6 +172,7 @@ ci-bootstrap: .ci-bootstrap
 		echo "Installing/Updating $$tool" ; \
 		GO111MODULE=off $(GO_CMD) get -u $$tool; \
 	done
+	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
 	@touch .ci-bootstrap
 
 # bootstrap the build by downloading additional tools that may be used by devs
@@ -317,3 +317,12 @@ ci-get-version-package:
 .PHONY: ci-prepare-legal
 ci-prepare-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+
+.PHONY: ci-copywriteheaders
+ci-copywriteheaders:
+	copywrite headers --plan
+	# Special case for MPL headers in /api, /sdk, and /shamir
+	cd api && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
+
