@@ -3,8 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div
-  class="selectable-card is-rounded card-container summary {{if this.hasErrorClass 'has-error-border'}}"
+<Hds::Card::Container
+  @hasBorder={{true}}
+  class="replication-summary-card card-container summary {{if this.hasErrorClass 'has-error-border'}}"
   data-test-replication-summary-card
 >
   {{! Check if DR or Performance Card }}
@@ -59,4 +60,4 @@
       <div><code class="is-word-break has-text-black">{{this.merkleRootPerformance}}</code></div>
     </div>
   {{/if}}
-</div>
+</Hds::Card::Container>
