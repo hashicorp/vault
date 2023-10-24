@@ -29,7 +29,7 @@ module('Integration | Component | alert-inline', function (hooks) {
     assert.dom('[data-test-inline-error-message]').hasText('some very important alert');
     assert
       .dom('[data-test-inline-alert]')
-      .hasAttribute('class', 'is-flex-center padding-top is-marginless size-small');
+      .hasAttribute('class', 'is-flex-center has-top-padding-xs is-marginless size-small');
   });
 
   test('it yields to block text', async function (assert) {

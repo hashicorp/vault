@@ -44,7 +44,8 @@
 .has-error-border,
 select.has-error-border,
 .ttl-picker-form-field-error input,
-.string-list-form-field-error .field:first-of-type textarea {
+.string-list-form-field-error .field:first-of-type textarea,
+.hds-form-checkbox.has-error-border {
   border: 1px solid $red-500;
 }
 
