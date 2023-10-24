@@ -192,7 +192,7 @@ func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *V
 		// Start a cURL container.
 		curlRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
 			ImageRepo:     "docker.mirror.hashicorp.services/curlimages/curl",
-			ImageTag:      "latest",
+			ImageTag:      "8.4.0",
 			ContainerName: fmt.Sprintf("curl_test_%s", runID),
 			NetworkName:   vaultNetwork,
 			Entrypoint:    []string{"sleep", sleepTimer},
