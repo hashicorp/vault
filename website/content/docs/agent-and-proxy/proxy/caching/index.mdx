@@ -165,11 +165,15 @@ $ curl \
 ## Configuration (`cache`)
 
 The presence of the top level `cache` block in any way (including an empty `cache` block)  will enable the cache.
-The top level `cache` block has the following configuration entry:
+Note that either `cache_static_secrets` must be `true` and/or `disable_caching_dynamic_secrets` must
+be `false`, as otherwise the cache does nothing. The top level `cache` block has the following configuration entries:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 
 - `cache_static_secrets` `(bool: false)` - Enables static secret caching when
+`true`.
+
+- `disable_caching_dynamic_secrets` `(bool: false)` - Disables dynamic secret caching when
 `true`.
 
 -> **Note:** When the `cache` block is defined, a [listener][proxy-listener] must also be defined
