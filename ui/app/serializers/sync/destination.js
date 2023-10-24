@@ -6,7 +6,12 @@
 import ApplicationSerializer from 'vault/serializers/application';
 
 export default class SyncDestinationSerializer extends ApplicationSerializer {
-  // overwrite application serializer's normalizeResponse method
+  attrs = {
+    name: { serialize: false },
+    type: { serialize: false },
+  };
+
+  // interrupt application's normalizeItems, which is called in normalizeResponse by application serializer
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     let transformedPayload = payload;
 
