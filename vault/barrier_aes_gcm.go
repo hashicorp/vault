@@ -213,7 +213,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, sealKey []by
 func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) error {
 	const (
 		// The keyring is persisted before the root key.
-		keyRingTimeout = 1 * time.Second
+		keyringTimeout = 1 * time.Second
 		rootKeyTimeout = 5 * time.Second
 	)
 
@@ -244,7 +244,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 
 	// We reduce the timeout on the initial 'put' but if this succeeds we will
 	// allow longer later on when we try to persist the root key .
-	ctxKeyring, cancelKeyring := context.WithTimeout(ctx, keyRingTimeout)
+	ctxKeyring, cancelKeyring := context.WithTimeout(ctx, keyringTimeout)
 	defer cancelKeyring()
 	if err := b.backend.Put(ctxKeyring, pe); err != nil {
 		return fmt.Errorf("failed to persist keyring: %w", err)
