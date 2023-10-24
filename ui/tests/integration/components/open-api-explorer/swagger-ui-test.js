@@ -1,5 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
+import { waitUntil, find } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
@@ -24,7 +25,7 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     await render(hbs`<SwaggerUi/>`, {
       owner: this.engine,
     });
-
+    await waitUntil(() => find(`[data-test-swagger-ui]`));
     assert.dom('[data-test-swagger-ui]').exists('renders component');
   });
 });
