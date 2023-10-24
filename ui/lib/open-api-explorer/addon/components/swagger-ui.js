@@ -48,7 +48,7 @@ export default class SwaggerUiComponent extends Component {
       url: '/v1/sys/internal/specs/openapi',
       deepLinking: false,
       presets: [SwaggerUIBundle.presets.apis],
-      plugins: [SwaggerUIBundle.plugins.DownloadUrl, this.SearchFilterPlugin.bind(componentInstance)],
+      plugins: [SwaggerUIBundle.plugins.DownloadUrl, this.SearchFilterPlugin],
       // 'list' expands tags, but not operations
       docExpansion: 'list',
       operationsSorter: 'alpha',
