@@ -28,7 +28,7 @@ export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinat
   secretAccessKey;
 
   @attr('string', {
-    subText: `For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.”`,
+    subText: 'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.”',
   })
   region;
 }
