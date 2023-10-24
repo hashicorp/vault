@@ -9,7 +9,6 @@ import { getOwner } from '@ember/application';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import { assign } from '@ember/polyfills';
 import Service, { inject as service } from '@ember/service';
 import { capitalize } from '@ember/string';
 import fetch from 'fetch';
@@ -118,7 +117,7 @@ export default Service.extend({
     }
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
-    return assign(stored, {
+    return Object.assign(stored, {
       backend: {
         // add mount path for password reset
         mountPath: stored.backend.mountPath,
@@ -187,7 +186,7 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    const opts = assign(defaults, options);
+    const opts = Object.assign(defaults, options);
 
     return fetch(url, {
       method: opts.method || 'GET',
@@ -226,6 +225,29 @@ export default Service.extend({
     };
   },
 
+  calculateRootNamespace(currentNamespace, namespace_path, backend) {
+    // here we prefer namespace_path if its defined,
+    // else we look and see if there's already a namespace saved
+    // and then finally we'll use the current query param if the others
+    // haven't set a value yet
+    // all of the typeof checks are necessary because the root namespace is ''
+    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
+    // if we're logging in with token and there's no namespace_path, we can assume
+    // that the token belongs to the root namespace
+    if (backend === 'token' && !userRootNamespace) {
+      userRootNamespace = '';
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      if (this.authData) {
+        userRootNamespace = this.authData.userRootNamespace;
+      }
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      userRootNamespace = currentNamespace;
+    }
+    return userRootNamespace;
+  },
+
   persistAuthData() {
     const [firstArg, resp] = arguments;
     const tokens = this.tokens;
@@ -255,25 +277,7 @@ export default Service.extend({
     }
 
     const { entity_id, policies, renewable, namespace_path } = resp;
-    // here we prefer namespace_path if its defined,
-    // else we look and see if there's already a namespace saved
-    // and then finally we'll use the current query param if the others
-    // haven't set a value yet
-    // all of the typeof checks are necessary because the root namespace is ''
-    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
-    // if we're logging in with token and there's no namespace_path, we can assume
-    // that the token belongs to the root namespace
-    if (backend === 'token' && !userRootNamespace) {
-      userRootNamespace = '';
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      userRootNamespace = currentNamespace;
-    }
+    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
     const data = {
       userRootNamespace,
       displayName,
@@ -293,7 +297,7 @@ export default Service.extend({
     );
 
     if (resp.renewable) {
-      assign(data, this.calculateExpiration(resp));
+      Object.assign(data, this.calculateExpiration(resp));
     }
 
     if (!data.displayName) {

@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
@@ -10,7 +11,6 @@ const S = {
   save: '[data-test-reset-password-save]',
   error: '[data-test-reset-password-error]',
   input: '[data-test-textarea]',
-  success: '[data-test-flash-message]',
 };
 module('Integration | Component | page/userpass-reset-password', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,7 +22,9 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
   });
 
   test('form works -- happy path', async function (assert) {
-    assert.expect(8);
+    assert.expect(5);
+    const flashMessages = this.owner.lookup('service:flashMessages');
+    const flashSpy = sinon.spy(flashMessages, 'success');
     this.server.post(`/auth/${this.backend}/users/${this.username}/password`, (schema, req) => {
       const body = JSON.parse(req.requestBody);
       assert.ok(true, 'correct endpoint called for update (once)');
@@ -41,7 +43,7 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
     await fillIn(S.input, 'new');
     await click(S.save);
 
-    assert.dom(S.success).includesText('Successfully reset password', 'Shows success message');
+    assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
     assert.dom(S.input).hasValue('', 'Reset shows input again with empty value');
   });
 

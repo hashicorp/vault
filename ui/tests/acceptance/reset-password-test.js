@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { currentURL, click, fillIn, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
@@ -21,6 +22,8 @@ module('Acceptance | reset password', function (hooks) {
   });
 
   test('allows password reset for userpass users', async function (assert) {
+    const flashMessages = this.owner.lookup('service:flashMessages');
+    const flashSpy = sinon.spy(flashMessages, 'success');
     await authPage.login();
     await runCmd([
       mountAuthCmd('userpass'),
@@ -37,9 +40,8 @@ module('Acceptance | reset password', function (hooks) {
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-textarea]', 'newpassword');
     await click('[data-test-reset-password-save]');
-    assert
-      .dom('[data-test-flash-message]')
-      .hasText('Successfully reset password', 'Shows success flash message');
+
+    assert.true(flashSpy.calledOnceWith('Successfully reset password'), 'Shows success message');
     assert.dom('[data-test-textarea]').hasValue('', 'Resets input after save');
   });
 });
