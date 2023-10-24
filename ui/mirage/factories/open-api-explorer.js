@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// This cannot be called kv-metadata because mirage checks for plural factory names, and metadata and data are considered plural. It will throw an error.
 import { Factory } from 'ember-cli-mirage';
 /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
 export default Factory.extend({
