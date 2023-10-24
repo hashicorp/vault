@@ -7,7 +7,10 @@ export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
   breadcrumbs: '[data-test-breadcrumbs]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   title: '[data-test-page-title]',
   headerContainer: 'header.page-header',
+  // FORMS
+  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
+  inputByAttr: (attr) => `[data-test-input="${attr}"]`,
+  validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
 };
