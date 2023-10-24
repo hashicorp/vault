@@ -214,7 +214,6 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 	const (
 		// The keyring is persisted before the root key.
 		keyringTimeout = 1 * time.Second
-		rootKeyTimeout = 5 * time.Second
 	)
 
 	// Create the keyring entry
@@ -279,11 +278,9 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Value: value,
 	}
 
-	// Use a longer timeout for the follow-up write to persist the root key, as
-	// the initial storage of the keyring was successful.
-	ctxRootKey, cancelRootKey := context.WithTimeout(ctx, rootKeyTimeout)
-	defer cancelRootKey()
-	if err := b.backend.Put(ctxRootKey, pe); err != nil {
+	// Use the longer timeout from the original context, for the follow-up write
+	// to persist the root key, as the initial storage of the keyring was successful.
+	if err := b.backend.Put(ctx, pe); err != nil {
 		return fmt.Errorf("failed to persist root key: %w", err)
 	}
 	return nil
