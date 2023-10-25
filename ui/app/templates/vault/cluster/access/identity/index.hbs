@@ -64,9 +64,12 @@
                       </li>
                       <li class="action">
                         {{#if item.disabled}}
-                          <button type="button" {{action "toggleDisabled" item}} class="link">
-                            Enable
-                          </button>
+                          <Hds::Button
+                            @text="Enable"
+                            @color="secondary"
+                            class="in-dropdown link is-flex-start"
+                            {{action "toggleDisabled" item}}
+                          />
                         {{else if (eq this.identityType "entity")}}
                           <c.Message
                             @id="{{item.id}}-disable"
