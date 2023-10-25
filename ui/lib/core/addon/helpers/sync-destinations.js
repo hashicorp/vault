@@ -6,20 +6,28 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
-// These helper is referenced in the base sync destination model
-// to return static display attributes that rely on type
+/* 
+This helper is referenced in the base sync destination model
+to return static display attributes that rely on type
+maskedParams: attributes for sensitive data, the API returns these values as '*****'
+*/
+
+// TODO update maskedParams for other types: https://hashicorp.atlassian.net/browse/VAULT-21428
+
 const SYNC_DESTINATIONS = [
   {
     name: 'AWS Secrets Manager',
     type: 'aws-sm',
     icon: 'aws-color',
     category: 'cloud',
+    maskedParams: ['accessKeyId', 'secretAccessKey'],
   },
   {
     name: 'Azure Key Vault',
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
+    maskedParams: ['clientId', 'clientSecret'],
   },
   {
     name: 'Google Secret Manager',

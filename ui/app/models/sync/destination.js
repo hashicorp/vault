@@ -19,4 +19,8 @@ export default class SyncDestinationModel extends Model {
   get typeDisplayName() {
     return findDestination(this.type)?.name;
   }
+
+  get maskedParams() {
+    return findDestination(this.type)?.maskedParams;
+  }
 }
