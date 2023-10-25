@@ -20,14 +20,12 @@
       Learn more
     </DocLink>
   </p>
-  <button
+  <Hds::Button
+    @text="Configure MFA"
     type="submit"
-    class="button is-primary"
     {{on "click" (transition-to "vault.cluster.access.mfa.methods.create")}}
     data-test-mfa-configure
-  >
-    Configure MFA
-  </button>
+  />
 </div>
 <div class="box is-fullwidth is-shadowless">
   <p>
