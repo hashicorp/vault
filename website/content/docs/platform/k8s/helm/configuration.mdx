@@ -138,7 +138,7 @@ and consider if they're appropriate for your deployment.
           - ALL
       ```
 
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the injector. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each container of the injector. This should be a YAML dictionary of a Kubernetes [resource](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) object. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
     ```yaml
     resources:
@@ -1051,7 +1051,7 @@ and consider if they're appropriate for your deployment.
         readOnly: true
     ```
 
-  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each of the CSI containers. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core) objects. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
+  - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for each of the CSI containers. This should be a YAML dictionary of a Kubernetes [resource](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) objects. If this isn't specified, then the pods won't request any specific amount of resources, which limits the ability for Kubernetes to make efficient use of compute resources.<br /> **Setting this is highly recommended.**
 
     ```yaml
     resources:
@@ -1170,7 +1170,7 @@ and consider if they're appropriate for your deployment.
 
     - `logFormat` (`string: "standard"`) -
     - `logLevel` (`string: "info"`) -
-    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for the agent. This should be a YAML dictionary of a Kubernetes [ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core) object.
+    - `resources` (`dictionary: {}`) - The resource requests and limits (CPU, memory, etc.) for the agent. This should be a YAML dictionary of a Kubernetes [resource](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) object.
     ```yaml
     resources:
       requests:
