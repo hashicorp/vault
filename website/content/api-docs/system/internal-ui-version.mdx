@@ -10,8 +10,10 @@ description: >-
 The `/sys/internal/ui/version` endpoint exposes the Vault software version
 so the Vault UI can display the information to logged in users.
 
-This is currently only being used internally for the UI. Due to the nature of its
-intended usage, there is no guarantee on backwards compatibility for this endpoint.
+Vault uses internal endpoints to provide information to the Vault UI
+and/or Vault CLI. Internal endpoints are explicitly intended to support
+Vault functionality, so we do not recommend them for general use
+and do not guarantee backwards compatibility across versions.
 
 ## Get version
 
