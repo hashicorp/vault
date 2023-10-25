@@ -7,8 +7,8 @@ import { Factory, trait } from 'ember-cli-mirage';
 
 export default Factory.extend({
   ['aws-sm']: trait({
-    access_key_id: 'foo',
-    secret_access_key: 'bar',
+    access_key_id: '*****',
+    secret_access_key: '*****',
     region: 'us-west-1',
     type: 'aws-sm',
     name: 'destination-aws',
