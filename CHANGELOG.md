@@ -311,7 +311,6 @@ IMPROVEMENTS:
 
 * api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
 * core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
-* core: emit logs when user(s) are locked out and when all lockouts have been cleared [[GH-23140](https://github.com/hashicorp/vault/pull/23140)]
 * ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
 
 BUG FIXES:
