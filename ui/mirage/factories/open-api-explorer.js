@@ -29,5 +29,17 @@ export default Factory.extend({
         },
       },
     },
+    '/secret/data/{path}': {
+      description: 'Location of a secret.',
+      post: {
+        summary: 'Location of a secret.',
+        tags: ['secret'],
+        responses: {
+          200: {
+            description: 'OK',
+          },
+        },
+      },
+    },
   },
 });

@@ -18,14 +18,16 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     assert.expect(2);
     const openApiResponse = this.server.create('open-api-explorer');
     this.server.get('sys/internal/specs/openapi', () => {
-      assert.ok(true, 'request made to correct endpoint.');
       return openApiResponse;
     });
 
     await render(hbs`<SwaggerUi/>`, {
       owner: this.engine,
     });
-    await waitUntil(() => find(`[data-test-swagger-ui]`));
+
+    await waitUntil(() => find('[data-test-swagger-ui]'));
     assert.dom('[data-test-swagger-ui]').exists('renders component');
+    await waitUntil(() => find('.operation-filter-input'));
+    assert.dom('.opblock-post').exists({ count: 2 }, 'renders two blocks');
   });
 });
