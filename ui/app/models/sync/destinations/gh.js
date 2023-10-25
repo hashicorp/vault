@@ -14,12 +14,12 @@ const validations = {
   repositoryOwner: [{ type: 'presence', message: 'Repository owner is required.' }],
   repositoryName: [{ type: 'presence', message: 'Repository name is required.' }],
 };
-const fields = ['name', 'accessToken', 'repositoryOwner', 'repositoryName'];
+const fields = ['name', 'repositoryOwner', 'repositoryName', 'accessToken'];
 
 @withModelValidations(validations)
 @withFormFields(fields)
 export default class SyncDestinationsGithubModel extends SyncDestinationModel {
-  @attr('string')
+  @attr('string', { subText: 'Personal access token to authenticate to the GitHub repository.' })
   accessToken;
 
   @attr('string', { subText: 'Github organization or username that owns the repository.' })

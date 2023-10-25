@@ -45,20 +45,21 @@ export default class DestinationsCreateForm extends Component<Args> {
 
     this.modelValidations = isValid ? null : state;
     this.invalidFormMessage = isValid ? '' : invalidFormMessage;
-    if (!isValid) return;
 
-    try {
-      const verb = destination.isNew ? 'created' : 'updated';
-      yield destination.save();
-      this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
+    if (isValid) {
+      try {
+        const verb = destination.isNew ? 'created' : 'updated';
+        yield destination.save();
+        this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
 
-      this.router.transitionTo(
-        'vault.cluster.sync.secrets.destinations.destination.details',
-        destination.type,
-        destination.name
-      );
-    } catch (error) {
-      this.error = errorMessage(error, 'Error saving destination. Please try again or contact support.');
+        this.router.transitionTo(
+          'vault.cluster.sync.secrets.destinations.destination.details',
+          destination.type,
+          destination.name
+        );
+      } catch (error) {
+        this.error = errorMessage(error, 'Error saving destination. Please try again or contact support.');
+      }
     }
   }
 
