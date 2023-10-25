@@ -54,7 +54,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         {},
         {
           errors: [
-            `1 error occurred:* couldn't create store node in syncer: failed to create store: unable to initialize store of type "azure-kv": failed to parse azure key vault URI: parse "my-unprasableuri": invalid URI for request`,
+            `1 error occurred: * couldn't create store node in syncer: failed to create store: unable to initialize store of type "azure-kv": failed to parse azure key vault URI: parse "my-unprasableuri": invalid URI for request`,
           ],
         }
       );
