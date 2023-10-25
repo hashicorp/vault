@@ -92,8 +92,10 @@
   <div class="has-top-margin-l has-border-top-light">
     <div class="has-top-margin-l has-bottom-margin-l">
       {{#if this.showForms}}
-        <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-mfa-create-save />
-        <Hds::Button @text="Cancel" @color="secondary" class="has-left-margin-xs" {{on "click" this.cancel}} />
+        <Hds::ButtonSet>
+          <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-mfa-create-save />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
+        </Hds::ButtonSet>
       {{else if this.type}}
         <Hds::Button @text="Next" {{on "click" this.createModels}} data-test-mfa-create-next />
       {{/if}}
