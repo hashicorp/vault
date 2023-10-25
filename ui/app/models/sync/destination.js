@@ -8,7 +8,7 @@ import { findDestination } from 'vault/helpers/sync-destinations';
 
 // Base model for all secret sync destination types
 export default class SyncDestinationModel extends Model {
-  @attr('string') name;
+  @attr('string', { subText: 'Specifies the name for this destination.' }) name;
   @attr type;
 
   get icon() {

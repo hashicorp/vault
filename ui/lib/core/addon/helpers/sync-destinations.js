@@ -48,6 +48,7 @@ export function destinationTypes() {
 }
 
 export function findDestination(type) {
+  if (!type) return;
   assert(
     `you must pass one of the following types: ${destinationTypes().join(', ')}`,
     destinationTypes().includes(type)

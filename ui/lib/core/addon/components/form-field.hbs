@@ -35,6 +35,20 @@
           </div>
         {{/each}}
       </div>
+    {{else if (and (eq @attr.type "array") (eq @attr.options.editType "checkboxList"))}}
+      <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        {{#each @attr.options.possibleValues as |option|}}
+          <G.Checkbox::Field
+            class={{if this.validationError "has-error-border"}}
+            @value={{option}}
+            @id={{option}}
+            {{on "change" this.handleChecklist}}
+            as |F|
+          >
+            <F.Label>{{option}}</F.Label>
+          </G.Checkbox::Field>
+        {{/each}}
+      </Hds::Form::Checkbox::Group>
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
@@ -101,7 +115,7 @@
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <div class="has-bottom-margin-m">
+    <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
         @helpText={{@attr.options.helpText}}
