@@ -13,4 +13,5 @@ export const SELECTORS = {
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
+  messageError: '[data-test-message-error]',
 };

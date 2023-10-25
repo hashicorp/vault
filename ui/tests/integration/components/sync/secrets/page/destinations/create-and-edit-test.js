@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { Response } from 'miragejs';
 import { click, render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
@@ -41,6 +42,33 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(PAGE.form.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
+  });
+
+  test('it renders API errors', async function (assert) {
+    assert.expect(1);
+    const name = 'my-failed-dest';
+    const type = SYNC_DESTINATIONS[0].type;
+    this.server.post(`sys/sync/destinations/${type}/${name}`, () => {
+      return new Response(
+        500,
+        {},
+        {
+          errors: [
+            `1 error occurred:* couldn't create store node in syncer: failed to create store: unable to initialize store of type "azure-kv": failed to parse azure key vault URI: parse "my-unprasableuri": invalid URI for request`,
+          ],
+        }
+      );
+    });
+
+    this.model = this.store.createRecord(`sync/destinations/${type}`, { name, type });
+    await this.renderFormComponent();
+
+    await click(PAGE.form.saveButton);
+    assert
+      .dom(PAGE.messageError)
+      .hasText(
+        `Error 1 error occurred: * couldn't create store node in syncer: failed to create store: unable to initialize store of type "azure-kv": failed to parse azure key vault URI: parse "my-unprasableuri": invalid URI for request`
+      );
   });
 
   // module runs for each destination type
