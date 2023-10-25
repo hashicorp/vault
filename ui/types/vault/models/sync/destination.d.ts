@@ -4,6 +4,7 @@ export default interface SyncDestinationModel extends WithFormFieldsAndValidatio
   name: string;
   type: string;
   get icon(): string;
+  get typeDisplayName(): string;
 
   // aws-sm
   accessKeyId?: string;

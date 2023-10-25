@@ -6,33 +6,35 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
+// These helper is referenced in the base sync destination model
+// to return static display attributes that rely on type
 const SYNC_DESTINATIONS = [
   {
-    displayName: 'AWS Secrets Manager',
+    name: 'AWS Secrets Manager',
     type: 'aws-sm',
     icon: 'aws-color',
     category: 'cloud',
   },
   {
-    displayName: 'Azure Key Vault',
+    name: 'Azure Key Vault',
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
   },
   {
-    displayName: 'Google Secret Manager',
+    name: 'Google Secret Manager',
     type: 'gcp-sm',
     icon: 'gcp-color',
     category: 'cloud',
   },
   {
-    displayName: 'Github Actions',
+    name: 'Github Actions',
     type: 'gh',
     icon: 'github-color',
     category: 'dev-tools',
   },
   {
-    displayName: 'Vercel Project',
+    name: 'Vercel Project',
     type: 'vercel-project',
     icon: 'vercel-color',
     category: 'dev-tools',

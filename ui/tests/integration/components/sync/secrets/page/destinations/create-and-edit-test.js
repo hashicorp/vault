@@ -73,7 +73,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
   // module runs for each destination type
   for (const destination of SYNC_DESTINATIONS) {
-    const { displayName, type } = destination;
+    const { name, type } = destination;
 
     module(`destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
@@ -85,7 +85,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderFormComponent();
 
-        assert.dom(PAGE.title).hasTextContaining(`Create destination for ${displayName}`);
+        assert.dom(PAGE.title).hasTextContaining(`Create destination for ${name}`);
         for (const attr of this.model.formFields) {
           assert.dom(PAGE.inputByAttr(attr.name)).exists();
         }
