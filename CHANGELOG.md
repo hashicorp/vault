@@ -2,6 +2,61 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.15.1
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.21.3.
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* auto-auth/azure: Support setting the `authenticate_from_environment` variable to "true" and "false" string literals, too. [[GH-22996](https://github.com/hashicorp/vault/pull/22996)]
+* secrets-sync (enterprise): Added telemetry on number of destinations and associations per type.
+* ui: Adds a warning when whitespace is detected in a key of a KV secret [[GH-23702](https://github.com/hashicorp/vault/pull/23702)]
+* ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
+* ui: Surface warning banner if UI has stopped auto-refreshing token [[GH-23143](https://github.com/hashicorp/vault/pull/23143)]
+* ui: show banner when resultant-acl check fails due to permissions or wrong namespace. [[GH-23503](https://github.com/hashicorp/vault/pull/23503)]
+
+BUG FIXES:
+
+* Seal HA (enterprise/beta): Fix rejection of a seal configuration change
+from two to one auto seal due to persistence of the previous seal type being
+"multiseal". [[GH-23573](https://github.com/hashicorp/vault/pull/23573)]
+* audit: Fix bug reopening 'file' audit devices on SIGHUP. [[GH-23598](https://github.com/hashicorp/vault/pull/23598)]
+* auth/aws: Fixes a panic that can occur in IAM-based login when a [client config](https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-client) does not exist. [[GH-23555](https://github.com/hashicorp/vault/pull/23555)]
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets-sync (enterprise): Fixed issue where we could sync a deleted secret
+* secrets/aws: update credential rotation deadline when static role rotation period is updated [[GH-23528](https://github.com/hashicorp/vault/pull/23528)]
+* secrets/consul: Fix revocations when Vault has an access token using specific namespace and admin partition policies [[GH-23010](https://github.com/hashicorp/vault/pull/23010)]
+* secrets/pki: Stop processing in-flight ACME verifications when an active node steps down [[GH-23278](https://github.com/hashicorp/vault/pull/23278)]
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
+* storage/consul: fix a bug where an active node in a specific sort of network
+partition could continue to write data to Consul after a new leader is elected
+potentially causing data loss or corruption for keys with many concurrent
+writers. For Enterprise clusters this could cause corruption of the merkle trees
+leading to failure to complete merkle sync without a full re-index. [[GH-23013](https://github.com/hashicorp/vault/pull/23013)]
+* ui: Assumes version 1 for kv engines when options are null because no version is specified [[GH-23585](https://github.com/hashicorp/vault/pull/23585)]
+* ui: Decode the connection url for display on the connection details page [[GH-23695](https://github.com/hashicorp/vault/pull/23695)]
+* ui: Fix AWS secret engine to allow empty policy_document field. [[GH-23470](https://github.com/hashicorp/vault/pull/23470)]
+* ui: Fix bug where auth items were not listed when within a namespace. [[GH-23446](https://github.com/hashicorp/vault/pull/23446)]
+* ui: Fix regression that broke the oktaNumberChallenge on the ui. [[GH-23565](https://github.com/hashicorp/vault/pull/23565)]
+* ui: Fix the copy token button in the sidebar navigation window when in a collapsed state. [[GH-23331](https://github.com/hashicorp/vault/pull/23331)]
+* ui: Fixes issue where you could not share the list view URL from the KV v2 secrets engine. [[GH-23620](https://github.com/hashicorp/vault/pull/23620)]
+* ui: Fixes issue with sidebar navigation links disappearing when navigating to policies when a user is not authorized [[GH-23516](https://github.com/hashicorp/vault/pull/23516)]
+* ui: Fixes issues displaying accurate TLS state in dashboard configuration details [[GH-23726](https://github.com/hashicorp/vault/pull/23726)]
+
 ## 1.15.0
 ### September 27, 2023
 
@@ -243,6 +298,46 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: fixes long namespace names overflow in the sidebar
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
 * ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
+
+## 1.14.5
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.10.
+* replication (enterprise): Switch to non-deprecated gRPC field for resolver target host
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
+* ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
+
+BUG FIXES:
+
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets/consul: Fix revocations when Vault has an access token using specific namespace and admin partition policies [[GH-23010](https://github.com/hashicorp/vault/pull/23010)]
+* secrets/pki: Stop processing in-flight ACME verifications when an active node steps down [[GH-23278](https://github.com/hashicorp/vault/pull/23278)]
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
+* storage/consul: fix a bug where an active node in a specific sort of network
+partition could continue to write data to Consul after a new leader is elected
+potentially causing data loss or corruption for keys with many concurrent
+writers. For Enterprise clusters this could cause corruption of the merkle trees
+leading to failure to complete merkle sync without a full re-index. [[GH-23013](https://github.com/hashicorp/vault/pull/23013)]
+* ui: Decode the connection url for display on the connection details page [[GH-23695](https://github.com/hashicorp/vault/pull/23695)]
+* ui: Fix AWS secret engine to allow empty policy_document field. [[GH-23470](https://github.com/hashicorp/vault/pull/23470)]
+* ui: Fix the copy token button in the sidebar navigation window when in a collapsed state. [[GH-23331](https://github.com/hashicorp/vault/pull/23331)]
+* ui: Fixes issue with sidebar navigation links disappearing when navigating to policies when a user is not authorized [[GH-23516](https://github.com/hashicorp/vault/pull/23516)]
 
 ## 1.14.4
 ### September 27, 2023
@@ -638,6 +733,34 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes bug in kmip role form that caused `operation_all` to persist after deselecting all operation checkboxes [[GH-19139](https://github.com/hashicorp/vault/pull/19139)]
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
+
+## 1.13.9
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.10.
+* replication (enterprise): Switch to non-deprecated gRPC field for resolver target host
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
+
+BUG FIXES:
+
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
 
 ## 1.13.6
 ### August 30, 2023
