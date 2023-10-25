@@ -12,9 +12,9 @@ export const PAGE = {
     summary: '[data-test-cta-container] p',
     button: '[data-test-cta-button]',
   },
-  create: {
-    selectType: (type) => `[data-test-select-destination="${type}"]`,
-  },
+  selectType: (type) => `[data-test-select-destination="${type}"]`,
+  cancelButton: '[data-test-cancel]',
+  saveButton: '[data-test-save]',
   form: {
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
@@ -29,13 +29,6 @@ export const PAGE = {
         default:
           return fillIn(`[data-test-input="${attr}"]`, value);
       }
-    },
-
-    cancelButton: '[data-test-cancel]',
-    saveButton: '[data-test-save]',
-    credentials: async () => {
-      await click('[data-test-text-toggle]');
-      await fillIn('[data-test-text-file-textarea]');
     },
   },
 };

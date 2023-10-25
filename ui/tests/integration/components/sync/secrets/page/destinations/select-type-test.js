@@ -29,7 +29,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::SelectType
     );
 
     for (const type of types) {
-      await click(PAGE.create.selectType(type));
+      await click(PAGE.selectType(type));
       const transition = transitionStub.calledWith(
         'vault.cluster.sync.secrets.destinations.create.destination',
         type
