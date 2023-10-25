@@ -16,22 +16,44 @@ module('Unit | Adapter | sync | destination', function (hooks) {
     this.store = this.owner.lookup('service:store');
   });
 
+  test('it calls the correct endpoint for createRecord', async function (assert) {
+    const types = destinationTypes();
+    assert.expect(types.length);
+
+    for (const type of types) {
+      const name = 'my-dest';
+      this.server.post(`sys/sync/destinations/${type}/${name}`, () => {
+        assert.ok(true, `request is made to GET sys/sync/destinations/${type}/my-dest endpoint on create`);
+        return {
+          data: {
+            connection_details: {},
+            name,
+            type,
+          },
+        };
+      });
+      this.model = this.store.createRecord(`sync/destinations/${type}`, { type, name });
+      this.model.save();
+    }
+  });
+
   test('it calls the correct endpoint for findRecord', async function (assert) {
     const types = destinationTypes();
     assert.expect(types.length);
 
     for (const type of types) {
-      this.server.get(`sys/sync/destinations/${type}/my-dest`, () => {
-        assert.ok(true, `request is made to GET sys/sync/destinations/${type}/my-dest endpoint on find`);
+      const name = 'my-dest';
+      this.server.get(`sys/sync/destinations/${type}/${name}`, () => {
+        assert.ok(true, `request is made to GET sys/sync/destinations/${type}/${name} endpoint on find`);
         return {
           data: {
             connection_details: {},
-            name: 'my-dest',
+            name,
             type,
           },
         };
       });
-      this.store.findRecord(`sync/destinations/${type}`, 'my-dest');
+      this.store.findRecord(`sync/destinations/${type}`, name);
     }
   });
 
