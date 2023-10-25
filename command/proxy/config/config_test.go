@@ -5,6 +5,7 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/command/agentproxyshared"
@@ -128,5 +129,64 @@ func TestLoadConfigFile_StaticSecretCachingWithoutAutoAuth(t *testing.T) {
 
 	if err := cfg.ValidateConfig(); err == nil {
 		t.Fatalf("expected error, as static secret caching requires auto-auth")
+	}
+}
+
+// TestLoadConfigFile_ProxyCacheStaticSecrets tests loading a config file containing a cache
+// as well as a valid proxy config with static secret caching enabled
+func TestLoadConfigFile_ProxyCacheStaticSecrets(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config-cache-static-secret-cache.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+			Listeners: []*configutil.Listener{
+				{
+					Type:       "tcp",
+					Address:    "127.0.0.1:8300",
+					TLSDisable: true,
+				},
+			},
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Cache: &Cache{
+			CacheStaticSecrets:                         true,
+			StaticSecretTokenCapabilityRefreshInterval: 1 * time.Hour,
+		},
+		Vault: &Vault{
+			Address:          "http://127.0.0.1:1111",
+			TLSSkipVerify:    true,
+			TLSSkipVerifyRaw: interface{}("true"),
+			Retry: &Retry{
+				NumRetries: 12,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }
