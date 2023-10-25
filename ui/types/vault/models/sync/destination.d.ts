@@ -3,7 +3,7 @@ import type { WithFormFieldsAndValidationsModel } from 'vault/app-types';
 export default interface SyncDestinationModel extends WithFormFieldsAndValidationsModel {
   name: string;
   type: string;
-  get icon(): string;
+  get displayAttributes(): object;
 
   // aws-sm
   accessKeyId?: string;

@@ -11,7 +11,8 @@ export default class SyncDestinationModel extends Model {
   @attr('string', { subText: 'Specifies the name for this destination.' }) name;
   @attr type;
 
-  get icon() {
-    return findDestination(this.type)?.icon;
+  get displayAttributes() {
+    // static, display attributes for destination type (i.e. icon name)
+    return findDestination(this.type);
   }
 }

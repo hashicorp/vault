@@ -9,7 +9,6 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { inject as service } from '@ember/service';
-import { findDestination } from 'vault/helpers/sync-destinations';
 import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';
@@ -30,10 +29,6 @@ export default class DestinationsCreateForm extends Component<Args> {
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';
   @tracked error = '';
-
-  get displayName() {
-    return findDestination(this.args.destination.type)?.displayName;
-  }
 
   @task
   @waitFor
