@@ -59,15 +59,17 @@
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
                 {{#if this.auth.authData.renewable}}
-                  <li class="action">
-                    <button
-                      type="button"
+                  <li class="action" id="renew-token-container">
+                    <Hds::Button
+                      @text="Renew token"
+                      @color="secondary"
+                      @icon={{if this.isRenewing "loading"}}
+                      @isFullWidth={{true}}
+                      @container="#renew-token-container"
+                      class="in-dropdown link is-flex-start"
                       {{on "click" this.renewToken}}
-                      class="link button {{if this.isRenewing 'is-loading'}}"
                       data-test-user-menu-item="renew token"
-                    >
-                      Renew token
-                    </button>
+                    />
                   </li>
                 {{/if}}
                 <li class="action">
