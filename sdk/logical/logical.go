@@ -159,6 +159,9 @@ type Paths struct {
 	// On standby nodes, like all storage write operations, this will trigger
 	// an ErrReadOnly return.
 	WriteForwardedStorage []string
+
+	// RFC5785
+	WellKnown map[string]string
 }
 
 type Auditor interface {
