@@ -18,7 +18,6 @@ IMPROVEMENTS:
 * ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
 * ui: Surface warning banner if UI has stopped auto-refreshing token [[GH-23143](https://github.com/hashicorp/vault/pull/23143)]
 * ui: show banner when resultant-acl check fails due to permissions or wrong namespace. [[GH-23503](https://github.com/hashicorp/vault/pull/23503)]
-* website/docs: fix inaccuracies with unauthenticated_in_flight_requests_access parameter [[GH-23287](https://github.com/hashicorp/vault/pull/23287)]
 
 BUG FIXES:
 
