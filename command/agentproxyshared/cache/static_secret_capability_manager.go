@@ -98,7 +98,7 @@ func (sscm *StaticSecretCapabilityManager) Stop() {
 }
 
 // StartRenewingCapabilities takes a polling job and submits a constant renewal of capabilities to the worker pool.
-// the indexToRenew is the capabilities index we'll renew the capabilities for.
+// indexToRenew is the capabilities index we'll renew the capabilities for.
 func (sscm *StaticSecretCapabilityManager) StartRenewingCapabilities(indexToRenew *cachememdb.CapabilitiesIndex) {
 	var work func()
 	work = func() {
