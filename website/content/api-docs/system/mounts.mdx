@@ -379,6 +379,9 @@ This endpoint tunes configuration parameters for a given mount point.
 - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
   to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
+- `delegated_auth_accessors` `(array: [])` - List of allowed authentication mount
+  accessors the backend can request delegated authentication for.
+
 ### Sample payload
 
 ```json

@@ -161,6 +161,9 @@ const (
 	// flagNameLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	flagNameLogLevel = "log-level"
+	// flagNameDelegatedAuthAccessors allows operators to specify the allowed mount accessors a backend can delegate
+	// authentication
+	flagNameDelegatedAuthAccessors = "delegated-auth-accessors"
 )
 
 var (

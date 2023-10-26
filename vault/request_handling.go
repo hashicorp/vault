@@ -1510,67 +1510,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if routeErr == logical.ErrInvalidCredentials {
 			return handleInvalidCreds(routeErr)
 		} else if da, ok := routeErr.(*logical.RequestDelegatedAuth); ok {
-			// Backend has requested internally delegated authentication
-
-			requestedAccessor := da.MountAccessor()
-			// First, is this allowed
-			if !slices.Contains(entry.Config.DelegatedAuthAccessors, requestedAccessor) {
-				return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
-			}
-
-			// If the route is requesting delegated authentication...
-			mount, err := c.auth.findByAccessor(ctx, da.MountAccessor())
-			if err != nil {
-				return nil, nil, err
-			}
-			if mount == nil {
-				return nil, nil, fmt.Errorf("backend requested delegate authentication but mount with accessor '%s' not found", requestedAccessor)
-			}
-
-			// Found it, now form the login path and issue the request
-			// TODO: Prevent recursive loops
-			path := paths.Join("auth", mount.Path, da.Path())
-			authReq, err := req.Clone()
-			if err != nil {
-				return nil, nil, err
-			}
-			authReq.MountAccessor = requestedAccessor
-			authReq.Path = path
-			// Clear the data fields for the new request
-			authReq.Data = make(map[string]interface{})
-			if da.Data() != nil {
-				// Add any other data fields the auth method might need, provided dynamically by the source mount
-				for k, v := range da.Data() {
-					authReq.Data[k] = v
-				}
-			}
-
-			authResp, err := c.handleCancelableRequest(ctx, authReq)
-			if err != nil || resp.IsError() {
-				// see if the backend wishes to handle the failed auth
-				if da.AuthErrorHandler() != nil {
-					resp, err := da.AuthErrorHandler()(ctx, req, authReq, authResp, err)
-					return resp, nil, err
-				}
-				switch err {
-				case nil:
-					return authResp, nil, nil
-				case logical.ErrInvalidCredentials:
-					return handleInvalidCreds(err)
-				default:
-					return authResp, nil, err
-				}
-			}
-
-			// Authentication successful, use the resulting ClientToken to reissue the original request
-			secondReq, err := req.Clone()
-			if err != nil {
-				return nil, nil, err
-			}
-			secondReq.ClientToken = authResp.Auth.ClientToken
-			secondReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
-			resp2, err := c.handleCancelableRequest(ctx, secondReq)
-			return resp2, nil, err
+			return c.handleDelegatedAuth(ctx, req, da, entry, handleInvalidCreds)
 		}
 	}
 
@@ -1902,6 +1842,97 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	return resp, auth, routeErr
+}
+
+// handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuth, it is requesting that
+// and authentication workflow of it's choosing be implemented prior to it being able to accept it. Normally
+// this is used for standard protocols that communicate the credential information in a non-standard Vault way
+func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuth,
+	entry *MountEntry, handleInvalidCreds func(err error) (*logical.Response, *logical.Auth, error),
+) (*logical.Response, *logical.Auth, error) {
+	// Make sure we didn't get into a routing loop.
+	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
+		return nil, nil, fmt.Errorf("%w: original request had delegated auth token, "+
+			"forbidding another delegated request from path '%s'", ErrInternalError, origReq.Path)
+	}
+
+	// Backend has requested internally delegated authentication
+	requestedAccessor := da.MountAccessor()
+	if strings.TrimSpace(requestedAccessor) == "" {
+		return nil, nil, fmt.Errorf("%w: backend returned an invalid mount accessor '%s'", ErrInternalError, requestedAccessor)
+	}
+	// First, is this allowed by the mount tunable?
+	if !slices.Contains(entry.Config.DelegatedAuthAccessors, requestedAccessor) {
+		return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
+	}
+
+	// If the route is requesting delegated authentication...
+	mount, err := c.auth.findByAccessor(ctx, da.MountAccessor())
+	if err != nil {
+		return nil, nil, err
+	}
+	if mount == nil {
+		return nil, nil, fmt.Errorf("%w: backend requested delegate authentication but mount with accessor '%s' not found", ErrInternalError, requestedAccessor)
+	}
+
+	// Found it, now form the login path and issue the request
+	path := paths.Join("auth", mount.Path, da.Path())
+	authReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	authReq.MountAccessor = requestedAccessor
+	authReq.Path = path
+	// Clear the data fields for the new request
+	authReq.Data = make(map[string]interface{})
+	if da.Data() != nil {
+		// Add any other data fields the auth method might need, provided dynamically by the source mount
+		for k, v := range da.Data() {
+			authReq.Data[k] = v
+		}
+	}
+
+	// Make sure we are going to perform a login request and not expose other backend types to this request
+	if !c.isLoginRequest(ctx, authReq) {
+		return nil, nil, fmt.Errorf("delegated path '%s' was not considered a login request", authReq.Path)
+	}
+
+	authResp, err := c.handleCancelableRequest(ctx, authReq)
+	if err != nil || authResp.IsError() {
+		// see if the backend wishes to handle the failed auth
+		if da.AuthErrorHandler() != nil {
+			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
+			return resp, nil, err
+		}
+		switch err {
+		case nil:
+			return authResp, nil, nil
+		case logical.ErrInvalidCredentials:
+			return handleInvalidCreds(err)
+		default:
+			return authResp, nil, err
+		}
+	}
+	// A login request should never return a secret!
+	if authResp == nil {
+		return nil, nil, fmt.Errorf("%w: delegated auth request returned empty response for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Secret != nil {
+		return nil, nil, fmt.Errorf("%w: unexpected Secret response for login path for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth == nil || authResp.Auth.ClientToken == "" {
+		return nil, nil, fmt.Errorf("%w: delegated auth request did not return a client token for login path: %s", ErrInternalError, authReq.Path)
+	}
+
+	// Authentication successful, use the resulting ClientToken to reissue the original request
+	secondReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	secondReq.ClientToken = authResp.Auth.ClientToken
+	secondReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
+	resp, err := c.handleCancelableRequest(ctx, secondReq)
+	return resp, nil, err
 }
 
 // LoginCreateToken creates a token as a result of a login request.
