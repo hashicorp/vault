@@ -40,6 +40,7 @@ export default Factory.extend({
     name: 'destination-vercel',
     access_token: '*****', // TODO confirm masked
     project_id: 'prj_12345',
+    team_id: 'team_12345',
     deployment_environments: ['development', 'preview', 'production'],
   }),
 });
