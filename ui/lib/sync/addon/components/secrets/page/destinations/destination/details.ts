@@ -13,7 +13,6 @@ interface Args {
 export default class DestinationDetailsPage extends Component<Args> {
   credentialValue = (value: string) => {
     // if this value is empty, a destination uses globally set environment variables
-    if (value) return 'Destination credentials added';
-    return 'Using environment variable';
+    return value ? 'Destination credentials added' : 'Using environment variable';
   };
 }
