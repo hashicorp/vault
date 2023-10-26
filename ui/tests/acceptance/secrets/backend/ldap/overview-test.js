@@ -33,7 +33,6 @@ module('Acceptance | ldap | overview', function (hooks) {
     await visit('/vault/secrets');
     await click('[data-test-enable-engine]');
     await click('[data-test-mount-type="ldap"]');
-    await click('[data-test-mount-next]');
     await fillIn('[data-test-input="path"]', 'ldap-test');
     await click('[data-test-mount-submit]');
     assert.true(isURL('overview'), 'Transitions to ldap overview route on mount success');
