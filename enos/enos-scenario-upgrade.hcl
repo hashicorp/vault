@@ -16,6 +16,7 @@ scenario "upgrade" {
     // those earlier versions.
     initial_version = ["1.11.12", "1.12.11", "1.13.6"]
     seal            = ["awskms", "shamir"]
+    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
@@ -93,6 +94,15 @@ scenario "upgrade" {
     }
   }
 
+  step "create_seal_key" {
+    module = "seal_key_${matrix.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
@@ -122,11 +132,11 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.vault_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -139,11 +149,11 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.backend_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      cluster_tag_key = global.backend_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -182,7 +192,6 @@ scenario "upgrade" {
     }
 
     variables {
-      awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = global.backend_tag_key
       consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
@@ -199,9 +208,11 @@ scenario "upgrade" {
         edition = matrix.edition
         version = matrix.initial_version
       }
+      seal_ha_beta    = matrix.seal_ha_beta
+      seal_key_name   = step.create_seal_key.resource_name
+      seal_type       = matrix.seal
       storage_backend = matrix.backend
       target_hosts    = step.create_vault_cluster_targets.hosts
-      unseal_method   = matrix.seal
     }
   }
 
@@ -413,11 +424,6 @@ scenario "upgrade" {
     value       = step.create_vault_cluster.audit_device_file_path
   }
 
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
-  }
-
   output "cluster_name" {
     description = "The Vault cluster name"
     value       = step.create_vault_cluster.cluster_name
@@ -456,6 +462,11 @@ scenario "upgrade" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.resource_name
   }
 
   output "unseal_keys_b64" {
