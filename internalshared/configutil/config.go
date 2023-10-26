@@ -23,9 +23,7 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
-	UserLockouts              []*UserLockout `hcl:"-"`
-	UserLockoutLogInterval    time.Duration  `hcl:"-"`
-	UserLockoutLogIntervalRaw interface{}    `hcl:"user_lockout_log_interval"`
+	UserLockouts []*UserLockout `hcl:"-"`
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -87,14 +85,6 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		}
 		result.FoundKeys = append(result.FoundKeys, "DisableMlock")
 		result.DisableMlockRaw = nil
-	}
-
-	if result.UserLockoutLogIntervalRaw != nil {
-		if result.UserLockoutLogInterval, err = parseutil.ParseDurationSecond(result.UserLockoutLogIntervalRaw); err != nil {
-			return nil, err
-		}
-		result.FoundKeys = append(result.FoundKeys, "UserLockoutLogInterval")
-		result.UserLockoutLogIntervalRaw = nil
 	}
 
 	list, ok := obj.Node.(*ast.ObjectList)
@@ -194,7 +184,6 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		"pid_file":                      c.PidFile,
 		"cluster_name":                  c.ClusterName,
 		"administrative_namespace_path": c.AdministrativeNamespacePath,
-		"user_lockout_log_interval":     c.UserLockoutLogInterval,
 	}
 
 	// Optional log related settings

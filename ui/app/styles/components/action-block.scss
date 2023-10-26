@@ -12,7 +12,7 @@
 }
 
 .action-block {
-  @extend .selectable-card;
+  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
   grid-template-columns: 2fr 1fr;
   display: grid;
   padding: $spacing-m $spacing-l;
