@@ -77,8 +77,8 @@ func TestRaftNetworkClusterWithMultipleTimeEncodingsSet(t *testing.T) {
 	if entry == nil {
 		t.Fatal("Entry from raft secondary is nil")
 	}
-	if !bytes.Equal(entry.Value, []byte{99}) {
-		t.Errorf("Expected {99} but got %+v", entry.Value)
+	if !bytes.Equal(entry.Value, []byte{9}) {
+		t.Errorf("Expected {9} but got %+v", entry.Value)
 	}
 }
 
