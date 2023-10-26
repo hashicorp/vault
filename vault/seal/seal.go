@@ -599,18 +599,17 @@ GATHER_RESULTS:
 func (a *access) tryEncrypt(ctx context.Context, sealWrapper *SealWrapper, plaintext []byte, options ...wrapping.Option) (*wrapping.BlobInfo, error) {
 	now := time.Now()
 	var encryptErr error
+	mLabels := []metrics.Label{{Name: "seal_wrapper_name", Value: sealWrapper.Name}}
+
 	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
-		metrics.MeasureSince([]string{"seal", sealWrapper.Name, "encrypt", "time"}, now)
+		metrics.MeasureSinceWithLabels([]string{"seal", "encrypt", "time"}, now, mLabels)
 
 		if encryptErr != nil {
-			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
-			metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt", "error"}, 1)
+			metrics.IncrCounterWithLabels([]string{"seal", "encrypt", "error"}, 1, mLabels)
 		}
 	}(now)
 
-	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
-	metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt"}, 1)
+	metrics.IncrCounterWithLabels([]string{"seal", "encrypt"}, 1, mLabels)
 
 	ciphertext, encryptErr := sealWrapper.Wrapper.Encrypt(ctx, plaintext, options...)
 	if encryptErr != nil {
@@ -744,18 +743,17 @@ GATHER_RESULTS:
 func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, ciphertextByKeyId map[string]*wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
 	now := time.Now()
 	var decryptErr error
+	mLabels := []metrics.Label{{Name: "seal_wrapper_name", Value: sealWrapper.Name}}
+
 	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
-		metrics.MeasureSince([]string{"seal", sealWrapper.Name, "decrypt", "time"}, now)
+		metrics.MeasureSinceWithLabels([]string{"seal", "decrypt", "time"}, now, mLabels)
 
 		if decryptErr != nil {
-			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
-			metrics.IncrCounter([]string{"seal", sealWrapper.Name, "decrypt", "error"}, 1)
+			metrics.IncrCounterWithLabels([]string{"seal", "decrypt", "error"}, 1, mLabels)
 		}
 	}(now)
 
-	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
-	metrics.IncrCounter([]string{"seal", sealWrapper.Name, "decrypt"}, 1)
+	metrics.IncrCounterWithLabels([]string{"seal", "decrypt"}, 1, mLabels)
 
 	var pt []byte
 
