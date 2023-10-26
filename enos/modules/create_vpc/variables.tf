@@ -24,9 +24,3 @@ variable "common_tags" {
   type        = map(string)
   default     = { "Project" : "vault-ci" }
 }
-
-variable "create_kms_key" {
-  description = "Whether or not to create an key management service key"
-  type        = bool
-  default     = true
-}

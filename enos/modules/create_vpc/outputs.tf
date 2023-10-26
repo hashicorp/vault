@@ -1,22 +1,17 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-output "vpc_id" {
+output "id" {
   description = "Created VPC ID"
   value       = aws_vpc.vpc.id
 }
 
-output "vpc_cidr" {
+output "cidr" {
   description = "CIDR for whole VPC"
   value       = var.cidr
 }
 
-output "kms_key_arn" {
-  description = "ARN of the generated KMS key"
-  value       = try(aws_kms_key.key[0].arn, null)
-}
-
-output "kms_key_alias" {
-  description = "Alias of the generated KMS key"
-  value       = try(aws_kms_alias.alias[0].name, null)
+output "cluster_id" {
+  description = "A unique string associated with the VPC"
+  value       = random_string.cluster_id.result
 }
