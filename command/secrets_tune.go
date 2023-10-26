@@ -35,6 +35,7 @@ type SecretsTuneCommand struct {
 	flagVersion                   int
 	flagPluginVersion             string
 	flagAllowedManagedKeys        []string
+	flagDelegatedAuthAccessors    []string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -158,6 +159,14 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication too. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
 	return set
 }
 
@@ -241,6 +250,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountConfigInput.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
 		}
 	})
 

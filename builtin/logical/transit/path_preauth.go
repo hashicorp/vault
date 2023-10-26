@@ -31,6 +31,10 @@ func (b *backend) pathPreauthTest() *framework.Path {
 			"password": {
 				Type: framework.TypeString,
 			},
+			"loop": {
+				Type:    framework.TypeBool,
+				Default: false,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -45,6 +49,14 @@ func (b *backend) pathPreauthTest() *framework.Path {
 }
 
 func (b *backend) handlePreauthTest(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if d.Get("loop").(bool) {
+		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), d.Get("username").(string)),
+			map[string]interface{}{
+				"password": d.Get("password").(string),
+			},
+			nil)
+		return nil, da
+	}
 	if req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
 		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), d.Get("username").(string)),
 			map[string]interface{}{
