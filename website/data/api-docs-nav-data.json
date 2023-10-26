@@ -516,6 +516,10 @@
         "path": "system/internal-ui-resultant-acl"
       },
       {
+        "title": "<code>/sys/internal/ui/version</code>",
+        "path": "system/internal-ui-version"
+      },
+      {
         "title": "<code>/sys/key-status</code>",
         "path": "system/key-status"
       },
