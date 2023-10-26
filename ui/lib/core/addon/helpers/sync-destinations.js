@@ -27,25 +27,28 @@ const SYNC_DESTINATIONS = [
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
-    maskedParams: ['clientId', 'clientSecret'],
+    maskedParams: [],
   },
   {
     name: 'Google Secret Manager',
     type: 'gcp-sm',
     icon: 'gcp-color',
     category: 'cloud',
+    maskedParams: [],
   },
   {
     name: 'Github Actions',
     type: 'gh',
     icon: 'github-color',
     category: 'dev-tools',
+    maskedParams: ['accessToken'],
   },
   {
     name: 'Vercel Project',
     type: 'vercel-project',
     icon: 'vercel-color',
     category: 'dev-tools',
+    maskedParams: [],
   },
 ];
 
