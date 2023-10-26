@@ -2877,7 +2877,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
 		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
-			// We are going from a single non-shamir seal to multiseal, and the seal HA beta is enabled.
+			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
 

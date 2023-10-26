@@ -2761,7 +2761,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
 
 	case server.IsMultisealSupported():
-		// We know we are not using Shamir seal, that we are not migrating away from one, and seal HA is enabled,
+		// We know we are not using Shamir seal, that we are not migrating away from one, and multi seal is supported,
 		// so just put enabled and disabled wrappers on the same seal Access
 		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
 		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealWrappers))
@@ -2776,7 +2776,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 
 	default:
-		// We know there are multiple enabled seals and that the seal HA beta is not enabled
+		// We know there are multiple enabled seals but multi seal is not supported.
 		return nil, errors.Join(sealConfigWarning, errors.New("error: more than one enabled seal found"))
 	}
 
