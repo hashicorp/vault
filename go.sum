@@ -1909,8 +1909,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0 h1:g0W1ybHjO945jDtuD
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0/go.mod h1:2wobeIypBESGQYmhv12vuAorCvfETHpBoMyrb+6QTmQ=
 github.com/hashicorp/vault-plugin-secrets-kv v0.15.0 h1:S2d1t4m4ilDNJRdMUzNUimvyu/+ll8huq5QncVgYz+s=
 github.com/hashicorp/vault-plugin-secrets-kv v0.15.0/go.mod h1:xu/eiT+BB2b2Gh/AZFJ1xCS8E7S29gOQcuh9VMxros8=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0 h1:FB860wKclwLBvBHkQb5nq8bGMUAsuw0khrYT1RM0NR0=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0/go.mod h1:6YPhFm57C3DvPueHEGdTLK94g3gZI/gdiRrSwO5Fym8=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2 h1:5eFlzhFXoSe+ntm26wromhtLbPjTCdXcdwpMv7wFeHk=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2/go.mod h1:OdXvez+GH0XBSRS7gxbS8B1rLUPb8bGk+bDVyEaAzI8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.11.1 h1:8TI1l3Dt1pdkPPDG/1SyoKbWB/PBc1kHJ/nSD+2jTR4=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.11.1/go.mod h1:aeTnHAsh580Kml5O+kyn9g0ywE5f7EQXkXFeraMF08A=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.7.1 h1:Icb3EDpNvb4ltnGff2Zrm3JVNDDdbbL2wdA2LouD2KQ=
@@ -2295,8 +2295,8 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
 github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
 github.com/modocache/gover v0.0.0-20171022184752-b58185e213c5/go.mod h1:caMODM3PzxT8aQXRPkAt8xlV/e7d7w8GM5g0fa5F0D8=
-github.com/mongodb-forks/digest v1.0.4 h1:9FrGTc7MGAchgaQBcXBnEwUM/Oo8obW7OGWxnsSvZ64=
-github.com/mongodb-forks/digest v1.0.4/go.mod h1:eHRfgovT+dvSFfltrOa27hy1oR/rcwyDdp5H1ZQxEMA=
+github.com/mongodb-forks/digest v1.0.5 h1:EJu3wtLZcA0HCvsZpX5yuD193/sW9tHiNvrEM5apXMk=
+github.com/mongodb-forks/digest v1.0.5/go.mod h1:rb+EX8zotClD5Dj4NdgxnJXG9nwrlx3NWKJ8xttz1Dg=
 github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe/go.mod h1:wL8QJuTMNUDYhXwkmfOly8iTdp5TEcJFWZD2D7SIkUc=
 github.com/montanaflynn/stats v0.6.6/go.mod h1:etXPPgVO6n31NxCd9KQUMvCM+ve0ruNzt6R8Bnaayow=
 github.com/montanaflynn/stats v0.7.0 h1:r3y12KyNxj/Sb/iOE46ws+3mS1+MZca1wlHQFPsY/JU=
@@ -2829,8 +2829,8 @@ go.etcd.io/etcd/raft/v3 v3.5.5/go.mod h1:76TA48q03g1y1VpTue92jZLr9lIHKUNcYdZOOGy
 go.etcd.io/etcd/server/v3 v3.5.0/go.mod h1:3Ah5ruV+M+7RZr0+Y/5mNLwC+eQlni+mQmOVdCRJoS4=
 go.etcd.io/etcd/server/v3 v3.5.5/go.mod h1:rZ95vDw/jrvsbj9XpTqPrTAB9/kzchVdhRirySPkUBc=
 go.etcd.io/gofail v0.1.0/go.mod h1:VZBCXYGZhHAinaBiiqYvuDynvahNsAyLFwB3kEHKz1M=
-go.mongodb.org/atlas v0.28.0 h1:CelAXtmiM36tdifSDwWdDH1nNbdvq0M2XfUR8208JxA=
-go.mongodb.org/atlas v0.28.0/go.mod h1:L4BKwVx/OeEhOVjCSdgo90KJm4469iv7ZLzQms/EPTg=
+go.mongodb.org/atlas v0.33.0 h1:qJhkEuJufh7sVDVHorTF/D7G7naQ1EJAzqf1aV29JWs=
+go.mongodb.org/atlas v0.33.0/go.mod h1:L4BKwVx/OeEhOVjCSdgo90KJm4469iv7ZLzQms/EPTg=
 go.mongodb.org/mongo-driver v1.0.3/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.1.1/go.mod h1:u7ryQJ+DOzQmeO7zB6MHyr8jkEQvC8vH7qLUO4lqsUM=
 go.mongodb.org/mongo-driver v1.3.0/go.mod h1:MSWZXKOynuguX+JSvwP8i+58jYCXxbia8HS3gZBapIE=
