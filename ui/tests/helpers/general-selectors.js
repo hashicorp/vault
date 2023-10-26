@@ -9,6 +9,7 @@ export const SELECTORS = {
   breadcrumbs: '[data-test-breadcrumbs]',
   title: '[data-test-page-title]',
   headerContainer: 'header.page-header',
+  icon: (name) => `[data-test-icon="${name}"]`,
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
