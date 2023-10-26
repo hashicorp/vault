@@ -143,9 +143,6 @@ type Listener struct {
 	// DisableReplicationStatusEndpoint disables the unauthenticated replication status endpoints
 	DisableReplicationStatusEndpointsRaw interface{} `hcl:"disable_replication_status_endpoints"`
 	DisableReplicationStatusEndpoints    bool        `hcl:"-"`
-
-	WellKnownsRaw interface{}       `hcl:"well_knowns"`
-	WellKnowns    map[string]string `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -260,7 +257,6 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseChrootNamespaceSettings,
 		l.parseRedactionSettings,
 		l.parseDisableReplicationStatusEndpointSettings,
-		l.parseWellKnowns,
 	} {
 		err := parser()
 		if err != nil {
@@ -371,36 +367,6 @@ func (l *Listener) parseDisableReplicationStatusEndpointSettings() error {
 		return fmt.Errorf("invalid value for disable_replication_status_endpoints: %w", err)
 	}
 
-	return nil
-}
-
-// parseWellKnowns attempts to parse the low level URI path aliases
-func (l *Listener) parseWellKnowns() error {
-	if l.Type != TCP {
-		return nil
-	}
-
-	var str string
-	if err := parseAndClearString(&l.WellKnownsRaw, &str); err != nil {
-		return fmt.Errorf("invalid value for well_knowns: %w", err)
-	}
-	wkns, err := parseutil.ParseCommaStringSlice(str)
-	if err != nil {
-		return fmt.Errorf("invalid value for well_knowns: %w", err)
-	}
-
-	r := regexp.MustCompile("([^:]+): ?(.*)")
-	l.WellKnowns = make(map[string]string)
-	for _, w := range wkns {
-		if !r.MatchString(w) {
-			return fmt.Errorf("invalid definition of well known alias: %s", w)
-		}
-		parts := r.FindStringSubmatch(w)
-		if len(parts) != 3 {
-			return fmt.Errorf("unexpected part count for well known alias: %d", len(parts))
-		}
-		l.WellKnowns[parts[1]] = parts[2]
-	}
 	return nil
 }
 

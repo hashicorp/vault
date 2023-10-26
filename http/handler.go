@@ -197,9 +197,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		}
 		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
-		if len(props.ListenerConfig.WellKnowns)>0 {
-			mux.Handle("/"
-	}
+
 		if core.UIEnabled() {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
@@ -209,7 +207,6 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			}
 			mux.Handle("/ui", handleUIRedirect())
 			mux.Handle("/", handleUIRedirect())
-
 		}
 
 		// Register metrics path without authentication if enabled
@@ -415,9 +412,18 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				return
 			}
 			r = newR
-
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
+			redir, err := core.GetAPIRedirect(r.Context(), r.URL.Path)
+			if err != nil {
+				core.Logger().Warn("error resolving potential API redirect", "error", err)
+			} else {
+				if redir != "" {
+					w.Header().Set("Location", redir)
+					w.WriteHeader(http.StatusFound)
+					return
+				}
+			}
 			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return

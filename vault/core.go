@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	paths "path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -730,6 +731,8 @@ type Core struct {
 
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
+
+	apiRedirects *apiRedirectRegistry
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -1080,6 +1083,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		apiRedirects:                   NewAPIRedirects(),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -4279,4 +4283,19 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) GetAPIRedirect(ctx context.Context, path string) (string, error) {
+	if c.apiRedirects == nil {
+		return "", nil
+	}
+	redir := c.apiRedirects.Find(path)
+	if redir != nil {
+		dest, err := redir.Destination()
+		if err != nil {
+			return "", err
+		}
+		return paths.Join("v1", dest), nil
+	}
+	return "", nil
 }
