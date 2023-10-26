@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 
 import type RouterService from '@ember/routing/router-service';
 
-export default class SyncSecretsDestinationIndexRoute extends Route {
+export default class SyncSecretsDestinationsDestinationIndexRoute extends Route {
   @service declare readonly router: RouterService;
 
   redirect() {
