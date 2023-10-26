@@ -176,7 +176,7 @@ func handleSysSealBackendStatus(core *vault.Core) http.Handler {
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, opt ...ListenerConfigOption) {
 	ctx := context.Background()
-	status, err := core.GetSealStatus(ctx)
+	status, err := core.GetSealStatus(ctx, true)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
