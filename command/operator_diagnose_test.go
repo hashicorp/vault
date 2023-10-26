@@ -8,11 +8,12 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/command/server"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/command/server"
 
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
