@@ -15,6 +15,7 @@ export const PAGE = {
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
+  toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name

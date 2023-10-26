@@ -39,7 +39,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderFormComponent();
 
-    await click(PAGE.form.cancelButton);
+    await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
   });
@@ -63,7 +63,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     this.model = this.store.createRecord(`sync/destinations/${type}`, { name, type });
     await this.renderFormComponent();
 
-    await click(PAGE.form.saveButton);
+    await click(PAGE.saveButton);
     assert
       .dom(PAGE.messageError)
       .hasText(
@@ -114,7 +114,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const attr of this.model.formFields) {
           await PAGE.form.fillInByAttr(attr.name, `my-${attr.name}`);
         }
-        await click(PAGE.form.saveButton);
+        await click(PAGE.saveButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = ['vault.cluster.sync.secrets.destinations.destination.details', type, name];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
@@ -126,7 +126,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderFormComponent();
 
-        await click(PAGE.form.saveButton);
+        await click(PAGE.saveButton);
 
         // only asserts validations for presence, may want to refactor if validations change
         for (const attr in validations) {

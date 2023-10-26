@@ -7,38 +7,40 @@ import { Factory, trait } from 'ember-cli-mirage';
 
 export default Factory.extend({
   ['aws-sm']: trait({
-    access_key_id: 'foo',
-    secret_access_key: 'bar',
-    region: 'us-west-1',
     type: 'aws-sm',
     name: 'destination-aws',
+    access_key_id: '*****',
+    secret_access_key: '*****',
+    region: 'us-west-1',
   }),
   ['azure-kv']: trait({
-    key_vault_uri: 'https://keyvault-1234abcd.vault.azure.net',
-    subscription_id: 'subscription-id',
-    tenant_id: 'tenant-id',
-    client_id: 'client-id',
-    client_secret: 'my-secret',
     type: 'azure-kv',
     name: 'destination-azure',
+    key_vault_uri: 'https://keyvault-1234abcd.vault.azure.net',
+    subscription_id: 'subscription-id',
+    tenant_id: 'tenant-id', // TODO confirm masked
+    client_id: '*****', // TODO confirm masked
+    client_secret: '*****', // TODO confirm masked
   }),
   ['gcp-sm']: trait({
-    credentials: '{"username":"foo","password":"bar"}',
     type: 'gcp-sm',
     name: 'destination-gcp',
+    credentials: '*****',
+    project_id: 'gcp-project-id', // TODO backend will add, doesn't exist yet
   }),
   gh: trait({
-    access_token: 'github_pat_12345',
-    repository_owner: 'my-organization-or-username',
-    repository_name: 'my-repository',
     type: 'gh',
     name: 'destination-gh',
+    access_token: '*****',
+    repository_owner: 'my-organization-or-username',
+    repository_name: 'my-repository',
   }),
   ['vercel-project']: trait({
-    access_token: 'my-access-token',
-    project_id: 'prj_12345',
-    deployment_environments: ['development', 'preview', 'production'],
     type: 'vercel-project',
     name: 'destination-vercel',
+    access_token: '*****', // TODO confirm masked
+    project_id: 'prj_12345',
+    team_id: 'team_12345',
+    deployment_environments: ['development', 'preview', 'production'],
   }),
 });

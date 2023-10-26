@@ -15,9 +15,8 @@ export default buildRoutes(function () {
       this.route('destination', { path: '/:type/:name' }, function () {
         this.route('edit');
         this.route('details');
-        this.route('secrets', function () {
-          this.route('sync');
-        });
+        this.route('secrets');
+        this.route('sync');
       });
     });
   });

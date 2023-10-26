@@ -16,13 +16,13 @@ const fields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
 @withFormFields(fields)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
   @attr('string', {
-    label: 'Access key',
+    label: 'Access key ID',
     subText: 'Access key ID to authenticate against the secrets manager.',
   })
   accessKeyId;
 
   @attr('string', {
-    label: 'Secret key',
+    label: 'Secret access key',
     subText: 'Secret access key to authenticate against the secrets manager.',
   })
   secretAccessKey;
