@@ -101,9 +101,11 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist            *agentproxyshared.PersistConfig `hcl:"persist"`
-	InProcDialer       transportDialer                 `hcl:"-"`
-	CacheStaticSecrets bool                            `hcl:"cache_static_secrets"`
+	Persist                                       *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer                                  transportDialer                 `hcl:"-"`
+	CacheStaticSecrets                            bool                            `hcl:"cache_static_secrets"`
+	StaticSecretTokenCapabilityRefreshIntervalRaw interface{}                     `hcl:"static_secret_token_capability_refresh_interval"`
+	StaticSecretTokenCapabilityRefreshInterval    time.Duration                   `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -619,6 +621,14 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	subList := subs.List
 	if err := parsePersist(result, subList); err != nil {
 		return fmt.Errorf("error parsing persist: %w", err)
+	}
+
+	if result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw != nil {
+		var err error
+		if result.Cache.StaticSecretTokenCapabilityRefreshInterval, err = parseutil.ParseDurationSecond(result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw); err != nil {
+			return fmt.Errorf("error parsing static_secret_token_capability_refresh_interval, must be provided as a duration string: %w", err)
+		}
+		result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw = nil
 	}
 
 	return nil

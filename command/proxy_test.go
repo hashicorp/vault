@@ -1156,6 +1156,178 @@ log_level = "trace"
 	wg.Wait()
 }
 
+// TestProxy_Cache_StaticSecretPermissionsLost Tests that the cache successfully caches a static secret
+// going through the Proxy for a KVV2 secret, and then the calling client loses permissions to the secret,
+// so it can no longer access the cache.
+func TestProxy_Cache_StaticSecretPermissionsLost(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": logicalKv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+	// We need auto-auth so that the event system can run.
+	// For ease, we use the token file path with the root token.
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
+	// We make the token capability refresh interval one second, for ease of testing
+	cacheConfig := `
+cache {
+	cache_static_secrets = true
+	static_secret_token_capability_refresh_interval = "1s"
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+log_level = "trace"
+`, serverClient.Address(), cacheConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	ui, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+		t.Errorf("stdout: %s", ui.OutputWriter.String())
+		t.Errorf("stderr: %s", ui.ErrorWriter.String())
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	require.Nil(t, err)
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	require.Nil(t, err)
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	// Mount the KVV2 engine
+	err = serverClient.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	require.Nil(t, err)
+
+	err = serverClient.Sys().PutPolicy("kv-policy", `
+   path "secret-v2/*" {
+     capabilities = ["update", "read"]
+   }`)
+	require.Nil(t, err)
+
+	// Setup a token that we can later revoke:
+	renewable := true
+	// Set the token's policies to 'default' and nothing else
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:  []string{"default", "kv-policy"},
+		TTL:       "2s",
+		Renewable: &renewable,
+	}
+
+	secret, err := serverClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	require.Nil(t, err)
+	token := secret.Auth.ClientToken
+	proxyClient.SetToken(token)
+
+	// Create kvv2 secret
+	_, err = serverClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData)
+	require.Nil(t, err)
+
+	// We use raw requests so we can check the headers for cache hit/miss.
+	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret-v2/data/my-secret")
+	resp1, err := proxyClient.RawRequest(req)
+	require.Nil(t, err)
+
+	cacheValue := resp1.Header.Get("X-Cache")
+	require.Equal(t, "MISS", cacheValue)
+
+	// We expect this to be a cache hit, with the new value
+	resp2, err := proxyClient.RawRequest(req)
+	require.Nil(t, err)
+
+	cacheValue = resp2.Header.Get("X-Cache")
+	require.Equal(t, "HIT", cacheValue)
+
+	// Lastly, we check to make sure the actual data we received is
+	// as we expect. We must use ParseSecret due to the raw requests.
+	secret1, err := api.ParseSecret(resp1.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, ok := secret1.Data["data"]
+	require.True(t, ok)
+	require.Equal(t, secretData, data)
+
+	secret2, err := api.ParseSecret(resp2.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data2, ok := secret2.Data["data"]
+	require.True(t, ok)
+	// We expect that the cached value got updated by the event system.
+	require.Equal(t, secretData, data2)
+
+	// Wait for the token to expire, and for the permissions to be revoked
+	// The TTL on the token was 2s, and the capability refresh is every 1s,
+	// so this should give us more than enough time!
+	time.Sleep(5 * time.Second)
+	kvSecret, err := proxyClient.KVv2("secret-v2").Get(context.Background(), "my-secret")
+	if err == nil {
+		t.Fatalf("expected error, but none found, secret:%v, err:%v", kvSecret, err)
+	}
+	// Make sure it's a permission denied error
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("expected error on GET to secret after token revocation, secret:%v, err:%v", kvSecret, err)
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestProxy_ApiProxy_Retry Tests the retry functionalities of Vault Proxy's API Proxy
 func TestProxy_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
