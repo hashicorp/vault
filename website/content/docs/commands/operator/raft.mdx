@@ -145,7 +145,7 @@ Usage: vault operator raft remove-peer <server_id>
 ```
 
 <Note>
-  Once a node is removed, its Raft data needs to be deleted before it may be joined back into an existing cluster. This requires shutting down the Vault process, deleting the data, then restarting the Vault process on the removed node.
+  Once a node is removed, its Raft data needs to be deleted before it may be joined back into an existing cluster. This requires shutting down the Vault process, deleting the data in the "[vault storage directory](/vault/tutorials/raft/raft-lost-quorum#locate-the-storage-directory)", then restarting the Vault process on the removed node.
 </Note>
 
 ## snapshot
