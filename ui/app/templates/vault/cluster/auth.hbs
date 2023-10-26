@@ -36,7 +36,6 @@
             @icon="arrow-left"
             @isIconOnly={{true}}
             @color="tertiary"
-            @size="large"
             {{on "click" (fn (mut this.mfaAuthData) null)}}
           />
         {{else if this.waitingForOktaNumberChallenge}}
@@ -45,7 +44,6 @@
             @icon="arrow-left"
             @isIconOnly={{true}}
             @color="tertiary"
-            @size="large"
             {{on "click" (action "cancelAuthentication")}}
           />
         {{/if}}
