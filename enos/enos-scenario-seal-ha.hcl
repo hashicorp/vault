@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-scenario "proxy" {
+scenario "seal_ha" {
   matrix {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
@@ -9,9 +9,9 @@ scenario "proxy" {
     backend         = ["consul", "raft"]
     consul_version  = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    seal            = ["awskms", "shamir"]
-    seal_ha_beta    = ["true", "false"]
+    edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    primary_seal    = ["awskms"]
+    secondary_seal  = ["awskms"]
 
     # Our local builder always creates bundles
     exclude {
@@ -82,12 +82,24 @@ scenario "proxy" {
     }
   }
 
-  step "create_seal_key" {
-    module = "seal_key_${matrix.seal}"
+  step "create_primary_seal_key" {
+    module = "seal_key_${matrix.primary_seal}"
 
     variables {
-      cluster_id  = step.create_vpc.cluster_id
-      common_tags = global.tags
+      cluster_id   = step.create_vpc.cluster_id
+      cluster_meta = "primary"
+      common_tags  = global.tags
+    }
+  }
+
+  step "create_secondary_seal_key" {
+    module = "seal_key_${matrix.secondary_seal}"
+
+    variables {
+      cluster_id      = step.create_vpc.cluster_id
+      cluster_meta    = "secondary"
+      common_tags     = global.tags
+      other_resources = step.create_primary_seal_key.resource_names
     }
   }
 
@@ -123,7 +135,7 @@ scenario "proxy" {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
-      seal_key_names  = step.create_seal_key.resource_names
+      seal_key_names  = step.create_secondary_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -138,9 +150,9 @@ scenario "proxy" {
 
     variables {
       ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      seal_key_names  = step.create_secondary_seal_key.resource_names
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
-      seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
     }
   }
@@ -195,11 +207,11 @@ scenario "proxy" {
       local_artifact_path  = local.artifact_path
       manage_service       = local.manage_service
       packages             = concat(global.packages, global.distro_packages[matrix.distro])
-      seal_ha_beta         = matrix.seal_ha_beta
-      seal_key_name        = step.create_seal_key.resource_name
-      seal_type            = matrix.seal
-      storage_backend      = matrix.backend
-      target_hosts         = step.create_vault_cluster_targets.hosts
+      // Only configure our primary seal during our initial cluster setup
+      seal_type       = matrix.primary_seal
+      seal_key_name   = step.create_primary_seal_key.resource_name
+      storage_backend = matrix.backend
+      target_hosts    = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -220,24 +232,6 @@ scenario "proxy" {
     }
   }
 
-  step "start_vault_proxy" {
-    module = "vault_proxy"
-    depends_on = [
-      step.build_vault,
-      step.create_vault_cluster,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_install_dir = local.vault_install_dir
-      vault_instances   = step.create_vault_cluster_targets.hosts
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
   step "get_vault_cluster_ips" {
     module     = module.vault_get_cluster_ips
     depends_on = [step.wait_for_leader]
@@ -253,9 +247,169 @@ scenario "proxy" {
     }
   }
 
+  step "verify_vault_unsealed" {
+    module     = module.vault_verify_unsealed
+    depends_on = [step.wait_for_leader]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Write some test data before we create the new seal
+  step "verify_write_test_data" {
+    module = module.vault_verify_write_data
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips,
+      step.verify_vault_unsealed,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
+      vault_instances   = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Wait for the initial seal rewrap to complete before we add our HA seal.
+  step "wait_for_initial_seal_rewrap" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.verify_write_test_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Stop the vault service on all nodes before we restart with new seal config
+  step "stop_vault" {
+    module = module.stop_vault
+    depends_on = [
+      step.create_vault_cluster,
+      step.verify_write_test_data,
+      step.wait_for_initial_seal_rewrap,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      target_hosts = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Add the secondary seal to the cluster
+  step "add_ha_seal_to_cluster" {
+    module     = module.start_vault
+    depends_on = [step.stop_vault]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      cluster_name            = step.create_vault_cluster_targets.cluster_name
+      install_dir             = local.vault_install_dir
+      license                 = matrix.edition != "ce" ? step.read_vault_license.license : null
+      manage_service          = local.manage_service
+      seal_type               = matrix.primary_seal
+      seal_key_name           = step.create_primary_seal_key.resource_name
+      seal_type_secondary     = matrix.secondary_seal
+      seal_key_name_secondary = step.create_secondary_seal_key.resource_name
+      storage_backend         = matrix.backend
+      target_hosts            = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_new_leader" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.add_ha_seal_to_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_updated_cluster_ips" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_new_leader]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_vault_unsealed_with_new_seal" {
+    module     = module.vault_verify_unsealed
+    depends_on = [step.wait_for_new_leader]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for the seal rewrap to complete and verify that no entries failed
+  step "wait_for_seal_rewrap" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.add_ha_seal_to_cluster,
+      step.verify_vault_unsealed_with_new_seal,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_vault_version" {
     module     = module.vault_verify_version
-    depends_on = [step.create_vault_cluster]
+    depends_on = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -272,44 +426,10 @@ scenario "proxy" {
     }
   }
 
-  step "verify_vault_unsealed" {
-    module     = module.vault_verify_unsealed
-    depends_on = [step.create_vault_cluster]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_install_dir = local.vault_install_dir
-      vault_instances   = step.create_vault_cluster_targets.hosts
-    }
-  }
-
-  step "verify_write_test_data" {
-    module = module.vault_verify_write_data
-    depends_on = [
-      step.create_vault_cluster,
-      step.get_vault_cluster_ips
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
-      leader_private_ip = step.get_vault_cluster_ips.leader_private_ip
-      vault_instances   = step.create_vault_cluster_targets.hosts
-      vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
   step "verify_raft_auto_join_voter" {
     skip_step  = matrix.backend != "raft"
     module     = module.vault_verify_raft_auto_join_voter
-    depends_on = [step.create_vault_cluster]
+    depends_on = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -324,7 +444,7 @@ scenario "proxy" {
 
   step "verify_replication" {
     module     = module.vault_verify_replication
-    depends_on = [step.create_vault_cluster]
+    depends_on = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -338,25 +458,22 @@ scenario "proxy" {
   }
 
   step "verify_read_test_data" {
-    module = module.vault_verify_read_data
-    depends_on = [
-      step.verify_write_test_data,
-      step.verify_replication
-    ]
+    module     = module.vault_verify_read_data
+    depends_on = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      node_public_ips   = step.get_vault_cluster_ips.follower_public_ips
+      node_public_ips   = step.get_updated_cluster_ips.follower_public_ips
       vault_install_dir = local.vault_install_dir
     }
   }
 
   step "verify_ui" {
     module     = module.vault_verify_ui
-    depends_on = [step.create_vault_cluster]
+    depends_on = [step.wait_for_seal_rewrap]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -380,6 +497,11 @@ scenario "proxy" {
   output "hosts" {
     description = "The Vault cluster target hosts"
     value       = step.create_vault_cluster.target_hosts
+  }
+
+  output "primary_seal_key_name" {
+    description = "The Vault cluster primary seal key name"
+    value       = step.create_primary_seal_key.resource_name
   }
 
   output "private_ips" {
@@ -412,9 +534,9 @@ scenario "proxy" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "seal_key_name" {
-    description = "The Vault cluster seal key name"
-    value       = step.create_seal_key.resource_name
+  output "secondary_seal_key_name" {
+    description = "The Vault cluster secondary seal key name"
+    value       = step.create_secondary_seal_key.resource_name
   }
 
   output "unseal_keys_b64" {
