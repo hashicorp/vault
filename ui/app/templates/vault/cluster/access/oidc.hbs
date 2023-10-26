@@ -27,8 +27,7 @@
     {{#if this.isCta}}
       <Hds::Button
         @text="Create your first app"
-        type="submit"
-        {{on "click" (transition-to "vault.cluster.access.oidc.clients.create")}}
+        @route="vault.cluster.access.oidc.clients.create"
         data-test-oidc-configure
       />
     {{/if}}
