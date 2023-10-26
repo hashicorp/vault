@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 
 import type StoreService from 'vault/services/store';
 
-export default class SyncSecretsRoute extends Route {
+export default class SyncSecretsOverviewRoute extends Route {
   @service declare readonly store: StoreService;
 
   async model() {
