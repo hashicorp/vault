@@ -1265,16 +1265,8 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	for _, seal := range setSealResponse.getCreatedSeals() {
-		seal := seal // capture range variable
-		// Ensure that the seal finalizer is called, even if using verify-only
-		defer func(seal *vault.Seal) {
-			err = (*seal).Finalize(ctx)
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}(seal)
-	}
+	currentSeals := setSealResponse.getCreatedSeals()
+	defer c.finalizeSeals(ctx, &currentSeals)
 
 	coreConfig := createCoreConfig(c, config, backend, configSR, setSealResponse.barrierSeal, setSealResponse.unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 	if c.flagDevThreeNode {
@@ -1674,22 +1666,15 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			if !cmp.Equal(core.GetCoreConfigInternal().Seals, config.Seals) {
-				setSealResponse, err := c.reloadSeals(ctx, core, config)
+				setSealResponse, err = c.reloadSeals(ctx, core, config)
 				if err != nil {
 					c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
 					config.Seals = core.GetCoreConfigInternal().Seals
 				}
 
-				for _, seal := range setSealResponse.getCreatedSeals() {
-					seal := seal // capture range variable
-					// Ensure that the seal finalizer is called, even if using verify-only
-					defer func(seal *vault.Seal) {
-						err = (*seal).Finalize(ctx)
-						if err != nil {
-							c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-						}
-					}(seal)
-				}
+				// finalize the old seals and set the new seals as the current ones
+				c.finalizeSeals(ctx, &currentSeals)
+				currentSeals = setSealResponse.getCreatedSeals()
 			}
 
 			core.SetConfig(config)
@@ -1885,6 +1870,16 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 	}
 
 	return setSealResponse, secureRandomReader, nil
+}
+
+func (c *ServerCommand) finalizeSeals(ctx context.Context, seals *[]*vault.Seal) {
+	for _, seal := range *seals {
+		// Ensure that the seal finalizer is called, even if using verify-only
+		err := (*seal).Finalize(ctx)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+		}
+	}
 }
 
 // configureLogging takes the configuration and attempts to parse config values into 'log' friendly configuration values
