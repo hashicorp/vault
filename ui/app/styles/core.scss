@@ -14,6 +14,9 @@
 @import 'bulma/bulma';
 @import 'bulma/switch';
 
+// Open-api styling
+@import './utils/swagger';
+
 // Override Bulma details where appropriate
 @import './core/alert-banner';
 @import './core/generic';
