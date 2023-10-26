@@ -1,0 +1,9 @@
+### Internal error when vault policy in namespace does not exist
+If a user is a member of a group that gets a policy from a 
+namespace other than the one they’re trying to log into, 
+and that policy doesn’t exist, we return an internal error. 
+This impacts all auth methods.
+
+#### Affected versions
+This issue affects Vault Enterprise versions 1.14.x and higher.  A
+fix will be released in Vault 1.15.2, 1.14.6, and 1.13.10.
