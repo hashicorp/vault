@@ -4754,6 +4754,18 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
+// pathInternalUIVersion is the framework.PathOperation callback function for
+// the sys/internal/ui/version path. It simply returns the Vault version.
+func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{
+		Data: map[string]any{
+			"version": version.GetVersion().VersionNumber(),
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
@@ -4957,7 +4969,7 @@ type SealBackendStatusResponse struct {
 	Backends       []SealBackendStatus `json:"backends"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -5017,7 +5029,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
 		Type:             sealType,
@@ -5029,7 +5041,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Nonce:            nonce,
 		Version:          version.GetVersion().VersionNumber(),
 		BuildDate:        version.BuildDate,
-		Migration:        core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
 		ClusterName:      clusterName,
 		ClusterID:        clusterID,
 		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
@@ -5128,7 +5140,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
