@@ -9,23 +9,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func replaceVersion(v, vp string) func() {
+func replaceVersion(v, vp, vm string) func() {
 	origV := Version
 	origVP := VersionPrerelease
+	origVM := VersionMetadata
 
 	Version = v
 	VersionPrerelease = vp
+	VersionMetadata = vm
 
 	return func() {
 		Version = origV
 		VersionPrerelease = origVP
+		VersionMetadata = origVM
 	}
 }
 
 func TestGetVersion(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	restoreVersionFunc := replaceVersion("1.2.3", "")
+	restoreVersionFunc := replaceVersion("1.2.3", "", "")
 	defer restoreVersionFunc()
 
 	// Test the general case
@@ -48,14 +51,14 @@ func TestGetVersion(t *testing.T) {
 func TestVersionNumber(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	restoreVersionFunc := replaceVersion("unknown", "unknown")
+	restoreVersionFunc := replaceVersion("unknown", "unknown", "")
 	defer restoreVersionFunc()
 
 	// Test the unknown version case
 	vi := GetVersion()
 	assert.Equal(t, "(version unknown)", vi.VersionNumber())
 
-	replaceVersion("1.2.3", "")
+	replaceVersion("1.2.3", "", "")
 
 	// Test the pre-release case
 	vi = GetVersion()
@@ -74,7 +77,7 @@ func TestVersionNumber(t *testing.T) {
 func TestFullVersionNumber(t *testing.T) {
 	// This test cannot be parallelized because it messes with some global
 	// variables that determine the version information.
-	restoreVersionFunc := replaceVersion("unknown", "unknown")
+	restoreVersionFunc := replaceVersion("unknown", "unknown", "")
 	defer restoreVersionFunc()
 
 	// Test the unknown version case
@@ -82,7 +85,7 @@ func TestFullVersionNumber(t *testing.T) {
 	assert.Equal(t, "Vault (version unknown)", vi.FullVersionNumber(false))
 
 	// Test the no pre-release, metadata, revision, build date case
-	replaceVersion("1.2.3", "")
+	replaceVersion("1.2.3", "", "")
 	vi = GetVersion()
 	assert.Equal(t, "Vault v1.2.3", vi.FullVersionNumber(false))
 
