@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
+import { click, visit, fillIn, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -13,7 +13,7 @@ import logout from 'vault/tests/pages/logout';
 
 const shell = create(consoleClass);
 
-const createNS = async (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
+const createNS = (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -42,7 +42,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const nses = ['beep', 'boop', 'bop'];
     for (const [i, ns] of nses.entries()) {
       await createNS(ns);
-      await settled();
       // the namespace path will include all of the namespaces up to this point
       const targetNamespace = nses.slice(0, i + 1).join('/');
       const url = `/vault/secrets?namespace=${targetNamespace}`;
@@ -52,16 +51,13 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
         .hasText(ns, `shows the namespace ${ns} in the toggle component`);
-      // because quint does not like page reloads, visiting url directing instead of clicking on namespace in toggle
+      // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
 
     await logout.visit();
-    await settled();
     await authPage.visit({ namespace: '/beep/boop' });
-    await settled();
     await authPage.tokenInput('root').submit();
-    await settled();
     await click('[data-test-namespace-toggle]');
 
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');
