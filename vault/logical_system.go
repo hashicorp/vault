@@ -4720,7 +4720,7 @@ func (core *Core) getStatusWarnings() []string {
 	return warnings
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -4773,24 +4773,23 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		clusterID = cluster.ID
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  initialized,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
-		Warnings:     core.getStatusWarnings(),
+		Type:             sealType,
+		Initialized:      initialized,
+		Sealed:           sealed,
+		T:                sealConfig.SecretThreshold,
+		N:                sealConfig.SecretShares,
+		Progress:         progress,
+		Nonce:            nonce,
+		Version:          version.GetVersion().VersionNumber(),
+		BuildDate:        version.BuildDate,
+		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		ClusterName:      clusterName,
+		ClusterID:        clusterID,
+		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
+		StorageType:      core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -4848,7 +4847,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
