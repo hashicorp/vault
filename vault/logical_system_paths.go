@@ -2642,6 +2642,31 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
 		},
 		{
+			Pattern: "internal/ui/version",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "version",
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIVersion,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
 			Pattern: "internal/counters/requests",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "internal",
