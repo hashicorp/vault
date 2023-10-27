@@ -1301,7 +1301,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, resp.Auth.EntityID, false)
 		if err != nil {
-			c.logger.Error("failed to fetch entity derived policies", "error", err)
+			c.logger.Error("failed to fetch entity derived policies in request handler", "error", err)
 			// Best-effort clean up on error, so we log the cleanup error as a
 			// warning but still return as internal error.
 			if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1680,7 +1680,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Login MFA
 		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
-			c.logger.Error("failed to fetch entity", "error", err)
+			c.logger.Error("failed to fetch entity in login request handler", "error", err)
 			return nil, nil, ErrInternalError
 		}
 		// finding the MFAEnforcementConfig that matches the ns and either of
