@@ -216,6 +216,7 @@ data "aws_iam_policy_document" "enos_scenario" {
       "kms:ListKeys",
       "kms:ListResourceTags",
       "kms:ScheduleKeyDeletion",
+      "kms:TagResource",
       "servicequotas:ListServiceQuotas"
     ]
 
