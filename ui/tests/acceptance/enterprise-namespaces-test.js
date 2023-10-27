@@ -52,7 +52,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
         .hasText(ns, `shows the namespace ${ns} in the toggle component`);
-      // because quint does not like page reloads, visiting url directing instead of clicking on namespace in toggle
+      // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
 
