@@ -1482,13 +1482,8 @@ func (c *ServerCommand) Run(args []string) int {
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-<<<<<<< HEAD
-	if !core.IsInSealMigrationMode() {
-		go runUnseal(c, core, context.Background())
-=======
 	if !core.IsInSealMigrationMode(true) {
-		go runUnseal(c, core, ctx)
->>>>>>> 29d8929824 (api/seal-status: fix deadlock when namespace is set on seal-status calls (#23861))
+		go runUnseal(c, core, context.Background())
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
