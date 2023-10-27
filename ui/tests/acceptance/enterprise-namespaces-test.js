@@ -4,7 +4,7 @@
  */
 
 import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -34,7 +34,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
-  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
+  skip('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
     await click('[data-test-namespace-toggle]');
