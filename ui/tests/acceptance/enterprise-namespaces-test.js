@@ -13,7 +13,7 @@ import logout from 'vault/tests/pages/logout';
 
 const shell = create(consoleClass);
 
-const createNS = async (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
+const createNS = (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
