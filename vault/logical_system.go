@@ -4776,7 +4776,7 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:             sealType,
+		Type:             sealConfig.Type,
 		Initialized:      initialized,
 		Sealed:           sealed,
 		T:                sealConfig.SecretThreshold,
