@@ -34,6 +34,10 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
+  // this test is flaky and is intentionally being skipped for now
+  // after seeing it fail both in CI and locally, an attempt at stabilizing it was made in https://github.com/hashicorp/vault/pull/23867
+  // this seemed to make it consistently pass locally while continuing to fail sporadically in CI
+  // that fix attempt was reverted in favor of skipping until it can be reworked to reliably pass
   skip('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
