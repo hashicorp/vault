@@ -2454,13 +2454,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		sealHaEnabled, err := server.IsSealHABetaEnabled()
-		if err != nil {
-			return err
-		}
-		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
-			// Flag migration performed for seal-rewrap later
-			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+		if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
+			// Set the migration done flag so that a seal-rewrap gets triggered later.
+			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 			// triggering the rewrap when necessary.
 			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
 			atomic.StoreUint32(c.sealMigrationDone, 1)
@@ -2880,23 +2876,17 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 				return err
 			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
+		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return nil
 		case configuredType == SealConfigTypeMultiseal:
 			// The configured seal is multiseal and we know the stored type is not shamir, thus
 			// we are going from auto seal to multiseal.
-			betaEnabled, err := server.IsSealHABetaEnabled()
-			switch {
-			case err != nil:
-				return err
-			case !betaEnabled:
-				return fmt.Errorf("cannot seal migrate from %q to %q, Seal High Availability beta is not enabled",
-					existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
-			default:
-				// We are going from a single non-shamir seal to multiseal, and the seal HA beta is enabled.
-				// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
-				// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
-
-				return nil
-			}
+			return fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		case storedType == SealConfigTypeMultiseal:
 			// The stored type is multiseal and we know the type the configured type is not shamir,
 			// thus we are going from multiseal to autoseal.
