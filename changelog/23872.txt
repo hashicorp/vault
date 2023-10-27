@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/etcd: etcd should only return keys when calling List()
+```
