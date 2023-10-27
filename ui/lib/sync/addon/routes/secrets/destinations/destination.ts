@@ -13,7 +13,7 @@ interface RouteParams {
   type: string;
 }
 
-export default class SyncSecretsDestinationRoute extends Route {
+export default class SyncSecretsDestinationsDestinationRoute extends Route {
   @service declare readonly store: Store;
 
   model(params: RouteParams) {
