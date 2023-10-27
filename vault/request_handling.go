@@ -278,7 +278,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Add identity policies from all the namespaces
 	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
-		c.logger.Error("failed to fetch identity policies", "error", err)
+		c.logger.Error("failed to fetch entity and derived policies", "error", err)
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
@@ -1679,7 +1679,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Login MFA
 		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
-			c.logger.Error("failed to fetch identity policies", "error", err)
+			c.logger.Error("failed to fetch entity", "error", err)
 			return nil, nil, ErrInternalError
 		}
 		// finding the MFAEnforcementConfig that matches the ns and either of
@@ -1864,7 +1864,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 
 	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 	if err != nil {
-		c.logger.Error("failed to fetch identity policies", "error", err)
+		c.logger.Error("failed to fetch derived policies", "error", err)
 		return false, nil, ErrInternalError
 	}
 
