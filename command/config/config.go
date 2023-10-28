@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
+
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -21,6 +25,13 @@ const (
 	// ConfigPathEnv is the environment variable that can be used to
 	// override where the Vault configuration is.
 	ConfigPathEnv = "VAULT_CONFIG_PATH"
+
+	// DefaultClientContextConfig is the default path to the client context configuration file
+	DefaultClientContextConfig = "~/.vault-client-context"
+
+	// ClientContextConfigPathEnv is the environment variable that can be used to
+	// override where the client context configuration is.
+	ClientContextConfigPathEnv = "VAULT_CLIENT_CONTEXT_CONFIG_PATH"
 )
 
 // Config is the CLI configuration for Vault that can be specified via
@@ -31,6 +42,22 @@ type DefaultConfig struct {
 	// is not specified, then vault's internal token store will be used, which
 	// stores the token on disk unencrypted.
 	TokenHelper string `hcl:"token_helper"`
+}
+
+type ClientContextConfig struct {
+	ClientContexts []ContextInfo `hcl:"client_context,block"`
+	CurrentContext ContextInfo   `hcl:"current_context,block"`
+}
+
+type ContextInfo struct {
+	Name          string `hcl:"name"`
+	ClusterToken  string `hcl:"cluster_token"`
+	VaultAddr     string `hcl:"cluster_addr"`
+	NamespacePath string `hcl:"namespace_path"`
+}
+
+func NewContextConfig() ClientContextConfig {
+	return ClientContextConfig{}
 }
 
 // Config loads the configuration and returns it. If the configuration
@@ -100,4 +127,153 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 		return nil, err
 	}
 	return &c, nil
+}
+
+func WriteClientContextConfig(path string, config ClientContextConfig) (err error) {
+	if path == "" {
+		path = DefaultClientContextConfig
+	}
+	if v := os.Getenv(ClientContextConfigPathEnv); v != "" {
+		path = v
+	}
+
+	contents := hclwrite.NewEmptyFile()
+
+	gohcl.EncodeIntoBody(&config, contents.Body())
+
+	// NOTE: requires HOME env var to be set
+	path, err = homedir.Expand(path)
+	if err != nil {
+		return fmt.Errorf("error expanding client context config path %q: %w", path, err)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create configuration file %q: %v", path, err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			err = fmt.Errorf("failed to close configuration file %q: %v", path, err)
+		}
+	}()
+
+	if _, err := contents.WriteTo(f); err != nil {
+		return fmt.Errorf("failed to write to configuration file %q: %v", path, err)
+	}
+
+	return err
+}
+
+func LoadClientContextConfig(path string) (ClientContextConfig, error) {
+	result := NewContextConfig()
+
+	if path == "" {
+		path = DefaultClientContextConfig
+	}
+	if v := os.Getenv(ClientContextConfigPathEnv); v != "" {
+		path = v
+	}
+
+	// NOTE: requires HOME env var to be set
+	path, err := homedir.Expand(path)
+	if err != nil {
+		return result, fmt.Errorf("error expanding client context config path %q: %w", path, err)
+	}
+
+	contents, err := ioutil.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return result, err
+	}
+
+	conf, err := ParseClientContextConfig(string(contents))
+	if err != nil {
+		return result, fmt.Errorf("error parsing client context config file at %q: %w", path, err)
+	}
+
+	return conf, nil
+}
+
+// ParseClientContextConfig parses the given configuration as a string.
+func ParseClientContextConfig(contents string) (ClientContextConfig, error) {
+	result := NewContextConfig()
+
+	root, err := hcl.Parse(contents)
+	if err != nil {
+		return result, err
+	}
+
+	list, ok := root.Node.(*ast.ObjectList)
+	if !ok {
+		return result, fmt.Errorf("failed to parse config; does not contain a root object")
+	}
+
+	if o := list.Filter("current_context"); len(o.Items) > 0 {
+		if err := parseCurrentContext(&result.CurrentContext, o, "current_context"); err != nil {
+			return result, fmt.Errorf("error parsing 'current_context', %w", err)
+		}
+	}
+
+	if o := list.Filter("client_context"); len(o.Items) > 0 {
+		if err := parseClientContexts(&result, o, "client_contexts"); err != nil {
+			return result, fmt.Errorf("error parsing 'client_contexts', %w", err)
+		}
+	}
+
+	return result, nil
+}
+
+func parseCurrentContext(result *ContextInfo, list *ast.ObjectList, name string) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one %q is allowed at a time", name)
+	}
+	item := list.Items[0]
+
+	key := name
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
+	}
+
+	if err := hcl.DecodeObject(result, item.Val); err != nil {
+		return fmt.Errorf("failed to decode object for the current context, name.key: %s.%s, error:%w", name, key, err)
+	}
+
+	return nil
+}
+
+func parseClientContexts(result *ClientContextConfig, list *ast.ObjectList, name string) error {
+	if result.ClientContexts == nil {
+		result.ClientContexts = make([]ContextInfo, 0, len(list.Items))
+	}
+
+	for i, item := range list.Items {
+		var ci ContextInfo
+		if err := hcl.DecodeObject(&ci, item.Val); err != nil {
+			return fmt.Errorf("failed to decode %q at location %d, error: %w", name, i, err)
+		}
+		switch {
+		case ci.Name != "":
+		case len(item.Keys) == 1:
+			ci.Name = strings.ToLower(item.Keys[0].Token.Value().(string))
+		default:
+			return fmt.Errorf("failed to parse client context name for location %d", i)
+		}
+
+		result.ClientContexts = append(result.ClientContexts, ci)
+	}
+
+	return nil
+}
+
+func FindContextInfoIndexByName(infoSlice []ContextInfo, name string) (int, bool) {
+	var index int
+	var found bool
+	for i, ctx := range infoSlice {
+		if ctx.Name == name {
+			found = true
+			index = i
+			break
+		}
+	}
+
+	return index, found
 }

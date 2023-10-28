@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	cmdConfig "github.com/hashicorp/vault/command/config"
 	"github.com/posener/complete"
 )
 
@@ -295,24 +296,45 @@ func (c *LoginCommand) Run(args []string) int {
 	token := secret.Auth.ClientToken
 
 	if !c.flagNoStore {
-		// Grab the token helper so we can store
-		tokenHelper, err := c.TokenHelper()
-		if err != nil {
-			c.UI.Error(wrapAtLength(fmt.Sprintf(
-				"Error initializing token helper. Please verify that the token "+
-					"helper is available and properly configured for your system. The "+
-					"error was: %s", err)))
-			return 1
-		}
+		// check if there is a client config context. If so, that takes precedence
+		// over the token helper.
+		currentConfig, err := cmdConfig.LoadClientContextConfig("")
+		if err == nil && currentConfig.CurrentContext.Name != "" {
+			// updating the current token
+			currentConfig.CurrentContext.ClusterToken = token
+			// we need to update both the client context and the current context with the new token
+			index, found := cmdConfig.FindContextInfoIndexByName(currentConfig.ClientContexts, currentConfig.CurrentContext.Name)
+			if found {
+				currentConfig.ClientContexts[index].ClusterToken = token
+			}
+			if err = cmdConfig.WriteClientContextConfig("", currentConfig); err != nil {
+				c.UI.Error(fmt.Sprintf("faile to write client context configuration, %v", err))
+				c.UI.Error(wrapAtLength(
+					"Authentication was successful, but the token was not persisted. The "+
+						"resulting token is shown below for your records.") + "\n")
+				OutputSecret(c.UI, secret)
+				return 2
+			}
+		} else {
+			// Grab the token helper so we can store
+			tokenHelper, err := c.TokenHelper()
+			if err != nil {
+				c.UI.Error(wrapAtLength(fmt.Sprintf(
+					"Error initializing token helper. Please verify that the token "+
+						"helper is available and properly configured for your system. The "+
+						"error was: %s", err)))
+				return 1
+			}
 
-		// Store the token in the local client
-		if err := tokenHelper.Store(token); err != nil {
-			c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
-			c.UI.Error(wrapAtLength(
-				"Authentication was successful, but the token was not persisted. The "+
-					"resulting token is shown below for your records.") + "\n")
-			OutputSecret(c.UI, secret)
-			return 2
+			// Store the token in the local client
+			if err := tokenHelper.Store(token); err != nil {
+				c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
+				c.UI.Error(wrapAtLength(
+					"Authentication was successful, but the token was not persisted. The "+
+						"resulting token is shown below for your records.") + "\n")
+				OutputSecret(c.UI, secret)
+				return 2
+			}
 		}
 
 		c.checkForAndWarnAboutLoginToken()
@@ -338,9 +360,9 @@ func (c *LoginCommand) Run(args []string) int {
 	if Format(c.UI) == "table" {
 		c.UI.Output(wrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
-				"below is already stored in the token helper. You do NOT need to run "+
-				"\"vault login\" again. Future Vault requests will automatically use "+
-				"this token.") + "\n")
+				"below is already stored in the client config context or the token helper."+
+				" You do NOT need to run \"vault login\" again. Future Vault requests will"+
+				" automatically use this token.") + "\n")
 	}
 
 	return OutputSecret(c.UI, secret)

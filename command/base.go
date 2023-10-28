@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	cmdConfig "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
@@ -83,6 +84,16 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	config := api.DefaultConfig()
 
+	// use client config context before reading the environment and the flags
+	currentCtxConfig, err := c.ClientCurrentContext()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read client current context, %w", err)
+	}
+
+	if currentCtxConfig.VaultAddr != "" {
+		config.Address = currentCtxConfig.VaultAddr
+	}
+
 	if err := config.ReadEnvironment(); err != nil {
 		return nil, errors.Wrap(err, "failed to read environment")
 	}
@@ -136,6 +147,11 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	// Get the token if it came in from the environment
 	token := client.Token()
 
+	// setting the token from the current client context
+	if currentCtxConfig.ClusterToken != "" {
+		token = currentCtxConfig.ClusterToken
+	}
+
 	// If we don't have a token, check the token helper
 	if token == "" {
 		helper, err := c.TokenHelper()
@@ -154,6 +170,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	}
 
 	client.SetMFACreds(c.flagMFA)
+
+	if currentCtxConfig.NamespacePath != notSetValue {
+		client.SetNamespace(namespace.Canonicalize(currentCtxConfig.NamespacePath))
+	}
 
 	// flagNS takes precedence over flagNamespace. After resolution, point both
 	// flags to the same value to be able to use them interchangeably anywhere.
@@ -210,6 +230,14 @@ func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
 		return nil, err
 	}
 	return helper, nil
+}
+
+func (c *BaseCommand) ClientCurrentContext() (cmdConfig.ContextInfo, error) {
+	currentConfig, err := cmdConfig.LoadClientContextConfig("")
+	if err != nil {
+		return cmdConfig.ContextInfo{}, err
+	}
+	return currentConfig.CurrentContext, nil
 }
 
 // DefaultWrappingLookupFunc is the default wrapping function based on the
@@ -324,7 +352,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
-				addrStringVar.Default = "https://127.0.0.1:8200"
+				// use client config context before reading the environment and the flags
+				currentCtxConfig, _ := c.ClientCurrentContext()
+
+				if currentCtxConfig.VaultAddr != "" {
+					addrStringVar.Default = currentCtxConfig.VaultAddr
+				} else {
+					addrStringVar.Default = "https://127.0.0.1:8200"
+				}
 			}
 			f.StringVar(addrStringVar)
 
