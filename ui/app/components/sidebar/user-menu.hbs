@@ -60,6 +60,7 @@
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
                 {{#if this.auth.authData.renewable}}
                   <li class="action">
+                    {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
                     <button
                       type="button"
                       {{on "click" this.renewToken}}
