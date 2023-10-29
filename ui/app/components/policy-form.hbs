@@ -89,25 +89,22 @@
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text={{if @model.isNew "Create policy" "Save"}}
+        @icon={{if this.save.isRunning "loading"}}
         type="submit"
-        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
         data-test-policy-save
-      >
-        {{if @model.isNew "Create policy" "Save"}}
-      </button>
-      <button
-        type="button"
-        class="button has-left-margin-s"
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
         disabled={{this.save.isRunning}}
         {{on "click" this.cancel}}
         data-test-policy-cancel
-      >
-        Cancel
-      </button>
-    </div>
+      />
+    </Hds::ButtonSet>
   </div>
 </form>
 
