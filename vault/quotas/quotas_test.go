@@ -16,7 +16,7 @@ import (
 )
 
 func TestQuotas_MountPathOverwrite(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	quota := NewRateLimitQuota("tq", "", "kv1/", "", "", 10, time.Second, 0)
@@ -43,7 +43,7 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 }
 
 func TestQuotas_Precedence(t *testing.T) {
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath, pathSuffix, role string) Quota {
@@ -124,7 +124,7 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	leaseWalkFunc := func(context.Context, func(request *Request) bool) error {
 		return nil
 	}
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink())
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	rlqReq := &Request{
