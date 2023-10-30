@@ -1146,7 +1146,13 @@ func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 }
 
 func TestSystemBackend_leases(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1186,7 +1192,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	// validate the response structure for Update
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1205,7 +1211,13 @@ func TestSystemBackend_leases(t *testing.T) {
 }
 
 func TestSystemBackend_leases_list(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1244,7 +1256,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// validate the response body for list
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1370,7 +1382,13 @@ func TestSystemBackend_leases_list(t *testing.T) {
 }
 
 func TestSystemBackend_renew(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1409,7 +1427,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Validate lease renewal response structure
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -1549,7 +1567,13 @@ func TestSystemBackend_renew_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revoke(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1712,7 +1736,13 @@ func TestSystemBackend_revoke_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1752,7 +1782,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// validate the response structure for lease revoke-prefix
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -1769,7 +1799,13 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -4096,7 +4132,13 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 }
 
 func TestSystemBackend_OpenAPI(t *testing.T) {
-	_, b, rootToken := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, rootToken := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := c.systemBackend
 
 	// Ensure no paths are reported if there is no token
 	{
@@ -6137,6 +6179,23 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		}
 	}
 
+	// List the plugin runtimes of container type
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		req.Data["type"] = "container"
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
+	}
+
 	// Delete the plugin runtime
 	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -6173,6 +6232,17 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	listExp := map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+
+	// List the plugin runtimes of container type
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	req.Data["type"] = "container"
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}

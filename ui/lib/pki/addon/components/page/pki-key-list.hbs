@@ -6,7 +6,7 @@
 <PkiPaginatedList @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
   <:actions>
     {{#if @canImportKey}}
-      <ToolbarLink @route="keys.import" @type="download" data-test-pki-key-import>
+      <ToolbarLink @route="keys.import" @type="upload" data-test-pki-key-import>
         Import
       </ToolbarLink>
     {{/if}}

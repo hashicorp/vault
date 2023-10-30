@@ -2244,6 +2244,13 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 		{
 			Pattern: "plugins/runtimes/catalog/?$",
 
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
+
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "plugins-runtimes-catalog",
 				OperationVerb:   "list",
@@ -2633,6 +2640,31 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+		},
+		{
+			Pattern: "internal/ui/version",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "version",
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIVersion,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
 		},
 		{
 			Pattern: "internal/counters/requests",

@@ -33,15 +33,14 @@
           @fallbackComponent="input-search"
           @onChange={{this.selectRole}}
         />
-        <button
-          class="button has-left-margin-s"
-          type="button"
+        <Hds::Button
+          @text="Generate"
+          @color="secondary"
+          class="has-left-margin-s"
           disabled={{not this.selectedRole}}
           {{on "click" this.generateCredential}}
           data-test-generate-credential-button
-        >
-          Generate
-        </button>
+        />
       </div>
     </OverviewCard>
   </div>

@@ -33,6 +33,8 @@ import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-se
 
 const consoleComponent = create(consoleClass);
 
+const createNS = async (name) => consoleComponent.runCommands(`write sys/namespaces/${name} -force`);
+
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -167,16 +169,27 @@ module('Acceptance | landing page dashboard', function (hooks) {
           usage_gauge_period: 5000000000,
         },
       };
-      await authPage.login();
-    });
 
-    test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
         data: this.data,
         wrap_info: null,
         warnings: null,
         auth: null,
       }));
+    });
+
+    test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
+      await authPage.login();
+      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('configuration-details')).exists();
+      createNS('world');
+      await visit('/vault/dashboard?namespace=world');
+      assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
+    });
+
+    test('shows the configuration details card', async function (assert) {
       await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(SELECTORS.cardHeader('configuration')).hasText('Configuration details');
@@ -185,39 +198,36 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .hasText('http://127.0.0.1:8200');
       assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('default_lease_ttl')).hasText('0');
       assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('max_lease_ttl')).hasText('2 days');
-      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Enabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled'); // tls_disable=true
       assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_format')).hasText('None');
       assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('log_level')).hasText('debug');
       assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('type')).hasText('raft');
     });
-    test('shows the tls disabled if it is disabled', async function (assert) {
-      this.server.get('sys/config/state/sanitized', () => {
-        this.data.listeners[0].config.tls_disable = false;
-        return {
-          data: this.data,
-          wrap_info: null,
-          warnings: null,
-          auth: null,
-        };
-      });
-      await authPage.login();
-      await visit('/vault/dashboard');
-      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Disabled');
-    });
-    test('shows the tls disabled if there is no tlsDisabled returned from server', async function (assert) {
-      this.server.get('sys/config/state/sanitized', () => {
-        this.data.listeners = [];
 
-        return {
-          data: this.data,
-          wrap_info: null,
-          warnings: null,
-          auth: null,
-        };
-      });
+    test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
+      this.data.listeners[0].config.tls_disable = false;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
+
       await authPage.login();
       await visit('/vault/dashboard');
-      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls_disable')).hasText('Disabled');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    });
+
+    test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
+      delete this.data.listeners[0].config.tls_disable;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
+    });
+
+    test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
+      this.data.listeners = [];
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(SELECTORS.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
     });
   });
 
@@ -388,6 +398,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .dom(SELECTORS.emptyStateMessage('replication'))
         .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
       assert.dom(SELECTORS.emptyStateActions('replication')).hasText('Enable replication');
+    });
+
+    test('hides the replication card on a non-root namespace enterprise version', async function (assert) {
+      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.dom(SELECTORS.cardName('replication')).exists();
+      createNS('blah');
+      await visit('/vault/dashboard?namespace=blah');
+      assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {

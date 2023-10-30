@@ -25,14 +25,11 @@
       </DocLink>
     </p>
     {{#if this.isCta}}
-      <button
-        type="submit"
-        class="button is-primary"
-        {{on "click" (transition-to "vault.cluster.access.oidc.clients.create")}}
+      <Hds::Button
+        @text="Create your first app"
+        @route="vault.cluster.access.oidc.clients.create"
         data-test-oidc-configure
-      >
-        Create your first app
-      </button>
+      />
     {{/if}}
   </div>
   {{#unless this.isCta}}

@@ -91,12 +91,6 @@
     color: $red-500;
   }
 
-  &.is-warning-outlined {
-    background-color: $yellow-010;
-    border: 1px solid $yellow-700;
-    color: $yellow-700;
-  }
-
   &.is-flat {
     min-width: auto;
     border: none;
@@ -286,22 +280,6 @@
   margin: 0 !important;
 }
 
-.button.next-feature-step {
-  background: $white;
-  border: 1px solid $grey-light;
-  border-radius: $radius;
-  box-shadow: none;
-  color: $blue;
-  display: flex;
-  height: auto;
-  line-height: 1.2;
-  justify-content: space-between;
-  text-align: left;
-  white-space: normal;
-  padding: $size-8;
-  width: 100%;
-}
-
 a.button.disabled {
   color: $white;
   background-color: $grey-dark;
@@ -332,11 +310,11 @@ a.button.disabled {
   }
 }
 
+// TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
 // Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
-  font-weight: $font-weight-semibold;
-  box-shadow: $box-shadow-low;
-  border-radius: $radius;
+  font-weight: $font-weight-semibold; // TODO delete
+  box-shadow: $box-shadow-low; // TODO delete
 
   &.white-icon svg {
     color: $white;
@@ -350,15 +328,14 @@ a.button.disabled {
     color: $ui-gray-500;
   }
 
-  &.icon-only {
-    margin-right: $spacing-xxs;
-    margin-left: $spacing-xxs;
-  }
-
   &.transparent {
     background: none;
-    border: none;
     box-shadow: none;
+    border: 1px solid transparent;
+    &:hover {
+      border: 1px solid $grey-light;
+      border-color: var(--token-color-border-strong);
+    }
   }
 
   &.primary {
@@ -383,6 +360,23 @@ a.button.disabled {
     }
     svg {
       color: transparent;
+    }
+  }
+}
+
+// Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
+.hds-button {
+  font-weight: $font-weight-semibold; // TODO consult design on font weight after button class audit
+  display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
+  // for toolbar-button must pass arg @color="secondary"
+  &.toolbar-button {
+    color: $black;
+    background: none;
+    border: none;
+    box-shadow: none;
+    &:hover:not(.disabled) {
+      background-color: $ui-gray-100;
+      color: $blue;
     }
   }
 }

@@ -43,9 +43,7 @@
                 {{#if (eq @item.keyType "otp")}}
                   {{#if @item.generatePath.isPending}}
                     <li class="action">
-                      <button disabled type="button" class="link button is-loading is-transparent">
-                        loading
-                      </button>
+                      <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
                     </li>
                   {{else if @item.canGenerate}}
                     <li class="action">
@@ -61,9 +59,9 @@
                 {{else if (eq @item.keyType "ca")}}
                   {{#if @item.signPath.isPending}}
                     <li class="action">
-                      <button disabled type="button" class="link button is-loading is-transparent">
-                        loading
-                      </button>
+                      <li class="action">
+                        <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
+                      </li>
                     </li>
                   {{else if @item.canGenerate}}
                     <li class="action">
@@ -78,40 +76,21 @@
                   {{/if}}
                 {{/if}}
                 {{#if @item.canEditZeroAddress}}
-                  {{#if @item.zeroAddress}}
-                    <li class="action">
-                      <button
-                        type="button"
-                        disabled={{get this (concat "loading-" @item.id)}}
-                        class="link button is-transparent {{if (get this (concat 'loading-' @item.id)) 'is-loading'}} "
-                        {{on "click" @toggleZeroAddress}}
-                      >
-                        Disable Zero Address
-                      </button>
-                    </li>
-                  {{else}}
-                    <li class="action">
-                      <button
-                        type="button"
-                        disabled={{get this (concat "loading-" @item.id)}}
-                        class="link button is-transparent {{if (get this (concat 'loading-' @item.id)) 'is-loading'}}"
-                        {{on "click" @toggleZeroAddress}}
-                      >
-                        Enable Zero Address
-                      </button>
-                    </li>
-                  {{/if}}
+                  <li class="action">
+                    <Hds::Button
+                      disabled={{@loadingToggleZeroAddress}}
+                      class="link"
+                      @icon={{if @loadingToggleZeroAddress "loading"}}
+                      @isIconOnly={{@loadingToggleZeroAddress}}
+                      {{on "click" @toggleZeroAddress}}
+                      @text={{if @item.zeroAddress "Disable Zero Address" "Enable Zero Address"}}
+                    />
+                  </li>
                 {{/if}}
                 {{#if @item.updatePath.isPending}}
                   <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
-                  </li>
-                  <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
+                    <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
+                    <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
                   </li>
                 {{else}}
                   {{#if @item.canRead}}
