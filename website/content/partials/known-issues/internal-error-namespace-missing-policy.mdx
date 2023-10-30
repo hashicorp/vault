@@ -10,3 +10,58 @@ This impacts all auth methods.
 - 1.15.0 and 1.15.1
 
 A fix will be released in Vault 1.15.2, 1.14.6, and 1.13.10.
+
+### Workaround
+During authentication, vault adds all policies that can be applied to an entity.
+This includes policies in separate namespaces. If vault attempts to add a policy
+from another namespace _and_ this policy does not exist, vault will return an
+internal error. The way to resolve this issue is to either add the policy, or to
+delete the policy.
+
+Below is an example of a userpass auth method that is failing because of a
+missing group policy from another namespace.
+
+```
+`# Failed login
+$ vault login -method=userpass username=user1 password=123
+Error authenticating: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/user1
+Code: 500. Errors:
+
+* internal error
+
+# Identify the entity and group IDs
+$ vault read -format=json identity/entity/name/user1 | jq '{"entity_id": .data.id, "group_ids": .data.group_ids} '
+{
+  "entity_id": "420c82de-57c3-df2e-2ef6-0690073b1636",
+  "group_ids": [
+    "6cb152b7-955d-272b-4dcf-a2ed668ca1ea"
+  ]
+}
+
+# Fetch the group from the other namespace
+$ vault read -format=json -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | jq '.data
+.policies'
+[
+  "group_policy"
+]
+
+# The only policy in this namespace is default (group_policy is missing)
+$ vault policy list -namespace=ns1
+default
+
+# Option 1: Remove the missing policy from the group
+vault write -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea name="test" policies="d
+efault"
+
+# OR Option 2: Create the missing policy
+$ vault policy write -namespace=ns1 group_policy - << EOF
+    path "secret/data/*" {
+	    capabilities = ["create", "update"]
+    }
+EOF
+
+# Login should succeed now
+$ vault login -method=userpass username=user1 password=123`
+```
