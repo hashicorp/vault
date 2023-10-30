@@ -8,12 +8,25 @@
 import base from './base';
 import clients from './clients';
 import db from './db';
+import hcpLink from './hcp-link';
 import kms from './kms';
+import kubernetes from './kubernetes';
+import ldap from './ldap';
 import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
-import hcpLink from './hcp-link';
-import kubernetes from './kubernetes';
-import ldap from './ldap';
+import reducedDisclosure from './reduced-disclosure';
 
-export { base, clients, db, kms, mfaConfig, mfaLogin, oidcConfig, hcpLink, kubernetes, ldap };
+export {
+  base,
+  clients,
+  db,
+  hcpLink,
+  kms,
+  kubernetes,
+  ldap,
+  mfaConfig,
+  mfaLogin,
+  oidcConfig,
+  reducedDisclosure,
+};

@@ -64,14 +64,14 @@
       Configuration values can be inferred from the pod and your local environment variables.
     </p>
     <div>
-      <button
-        class="button has-top-margin-s {{if this.fetchInferred.isRunning 'is-loading'}}"
-        type="button"
+      <Hds::Button
+        @text="Get config values"
+        @color="secondary"
+        @icon={{if this.fetchInferred.isRunning "loading"}}
+        class="has-top-margin-s"
         disabled={{this.fetchInferred.isRunning}}
         {{on "click" (perform this.fetchInferred)}}
-      >
-        Get config values
-      </button>
+      />
     </div>
   {{/if}}
 </div>
@@ -79,24 +79,15 @@
 <hr class="has-background-gray-200 has-top-margin-l" />
 
 <div class="has-top-margin-s has-bottom-margin-s is-flex">
-  <button
-    data-test-config-save
-    class="button is-primary"
-    type="button"
-    disabled={{this.isDisabled}}
-    {{on "click" (perform this.save)}}
-  >
-    Save
-  </button>
-  <button
+  <Hds::Button @text="Save" data-test-config-save disabled={{this.isDisabled}} {{on "click" (perform this.save)}} />
+  <Hds::Button
+    @text="Back"
+    @color="secondary"
+    class="has-left-margin-xs"
     data-test-config-cancel
-    class="button has-left-margin-xs"
-    type="button"
     disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
     {{on "click" this.cancel}}
-  >
-    Back
-  </button>
+  />
   {{#if this.alert}}
     <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
   {{/if}}

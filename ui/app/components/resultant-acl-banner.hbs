@@ -1,0 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Alert @type="inline" @color="critical" data-test-resultant-acl-banner as |A|>
+  <A.Title>Resultant ACL check failed</A.Title>
+  <A.Description>
+    {{if
+      @isEnterprise
+      "You do not have access to resources in this namespace."
+      "Links might be shown that you don't have access to. Contact your administrator to update your policy."
+    }}
+  </A.Description>
+  {{#if @isEnterprise}}
+    <A.Link::Standalone
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @text={{concat "Log into " this.ns " namespace"}}
+      @route="vault.cluster.logout"
+      @query={{this.queryParams}}
+      data-test-resultant-acl-reauthenticate
+    />
+  {{/if}}
+</Hds::Alert>

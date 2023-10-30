@@ -453,3 +453,88 @@ type CtxKeyRequestRole struct{}
 func (c CtxKeyRequestRole) String() string {
 	return "request-role"
 }
+
+// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// context.Context to store the value `true` when the
+// disable_replication_status_endpoints configuration parameter is set to true
+// for the listener through which a request was received.
+type ctxKeyDisableReplicationStatusEndpoints struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyDisableReplicationStatusEndpoints) String() string {
+	return "disable-replication-status-endpoints"
+}
+
+// ContextDisableReplicationStatusEndpointsValue examines the provided
+// context.Context for the disable replication status endpoints value and
+// returns it as a bool value if it's found along with the ok return value set
+// to true; otherwise the ok return value is false.
+func ContextDisableReplicationStatusEndpointsValue(ctx context.Context) (value, ok bool) {
+	value, ok = ctx.Value(ctxKeyDisableReplicationStatusEndpoints{}).(bool)
+
+	return
+}
+
+// CreateContextDisableReplicationStatusEndpoints creates a new context.Context
+// based on the provided parent that also includes the provided value for the
+// ctxKeyDisableReplicationStatusEndpoints key.
+func CreateContextDisableReplicationStatusEndpoints(parent context.Context, value bool) context.Context {
+	return context.WithValue(parent, ctxKeyDisableReplicationStatusEndpoints{}, value)
+}
+
+// CtxKeyMaxRequestSize is a custom type used as a key in context.Context to
+// store the value of the max_request_size set for the listener through which
+// a request was received.
+type ctxKeyMaxRequestSize struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyMaxRequestSize) String() string {
+	return "max_request_size"
+}
+
+// ContextMaxRequestSizeValue examines the provided context.Context for the max
+// request size value and returns it as an int64 value if it's found along with
+// the ok value set to true; otherwise the ok return value is false.
+func ContextMaxRequestSizeValue(ctx context.Context) (value int64, ok bool) {
+	value, ok = ctx.Value(ctxKeyMaxRequestSize{}).(int64)
+
+	return
+}
+
+// CreateContextMaxRequestSize creates a new context.Context based on the
+// provided parent that also includes the provided max request size value for
+// the ctxKeyMaxRequestSize key.
+func CreateContextMaxRequestSize(parent context.Context, value int64) context.Context {
+	return context.WithValue(parent, ctxKeyMaxRequestSize{}, value)
+}
+
+// ContextContainsMaxRequestSize returns a bool value that indicates if the
+// provided Context contains a value for the ctxKeyMaxRequestSize key.
+func ContextContainsMaxRequestSize(ctx context.Context) bool {
+	return ctx.Value(ctxKeyMaxRequestSize{}) != nil
+}
+
+// CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
+// to store the original request path.
+type ctxKeyOriginalRequestPath struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyOriginalRequestPath) String() string {
+	return "original_request_path"
+}
+
+// ContextOriginalRequestPathValue examines the provided context.Context for the
+// original request path value and returns it as a string value if it's found
+// along with the ok value set to true; otherwise the ok return value is false.
+func ContextOriginalRequestPathValue(ctx context.Context) (value string, ok bool) {
+	value, ok = ctx.Value(ctxKeyOriginalRequestPath{}).(string)
+
+	return
+}
+
+// CreateContextOriginalRequestPath creates a new context.Context based on the
+// provided parent that also includes the provided original request path value
+// for the ctxKeyOriginalRequestPath key.
+func CreateContextOriginalRequestPath(parent context.Context, value string) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalRequestPath{}, value)
+}

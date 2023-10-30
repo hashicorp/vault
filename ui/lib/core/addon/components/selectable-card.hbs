@@ -1,0 +1,16 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  tabindex={{unless @disabled "0"}}
+  class="selectable-card {{if @disabled 'disabled'}}"
+  @level={{if @disabled "base" "mid"}}
+  @hasBorder={{true}}
+  {{on "click" @onClick}}
+  {{on "keypress" @onClick}}
+  ...attributes
+>
+  {{yield}}
+</Hds::Card::Container>

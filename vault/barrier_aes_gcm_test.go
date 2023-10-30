@@ -12,10 +12,12 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/stretchr/testify/require"
 )
 
 var logger = logging.NewVaultLogger(log.Trace)
@@ -692,5 +694,81 @@ func TestBarrier_LegacyRotate(t *testing.T) {
 	reason, err := b1.CheckBarrierAutoRotate(context.Background())
 	if err != nil || reason != legacyRotateReason {
 		t.Fail()
+	}
+}
+
+// TestBarrier_persistKeyring_Context checks that we get the right errors if
+// the context is cancelled or times-out before the first part of persistKeyring
+// is able to persist the keyring itself (i.e. we don't go on to try and persist
+// the root key).
+func TestBarrier_persistKeyring_Context(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		shouldCancel         bool
+		isErrorExpected      bool
+		expectedErrorMessage string
+		contextTimeout       time.Duration
+		testTimeout          time.Duration
+	}{
+		"cancelled": {
+			shouldCancel:         true,
+			isErrorExpected:      true,
+			expectedErrorMessage: "failed to persist keyring: context canceled",
+			contextTimeout:       8 * time.Second,
+			testTimeout:          10 * time.Second,
+		},
+		"timeout-before-keyring": {
+			isErrorExpected:      true,
+			expectedErrorMessage: "failed to persist keyring: context deadline exceeded",
+			contextTimeout:       1 * time.Nanosecond,
+			testTimeout:          5 * time.Second,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Set up barrier
+			backend, err := inmem.NewInmem(nil, corehelpers.NewTestLogger(t))
+			require.NoError(t, err)
+			barrier, err := NewAESGCMBarrier(backend)
+			require.NoError(t, err)
+			key, err := barrier.GenerateKey(rand.Reader)
+			require.NoError(t, err)
+			err = barrier.Initialize(context.Background(), key, nil, rand.Reader)
+			require.NoError(t, err)
+			err = barrier.Unseal(context.Background(), key)
+			require.NoError(t, err)
+			k := barrier.keyring.TermKey(1)
+			k.Encryptions = 0
+			k.InstallTime = time.Now().Add(-24 * 366 * time.Hour)
+
+			// Persist the keyring
+			ctx, cancel := context.WithTimeout(context.Background(), tc.contextTimeout)
+			persistChan := make(chan error)
+			go func() {
+				if tc.shouldCancel {
+					cancel()
+				}
+				persistChan <- barrier.persistKeyring(ctx, barrier.keyring)
+			}()
+
+			select {
+			case err := <-persistChan:
+				switch {
+				case tc.isErrorExpected:
+					require.Error(t, err)
+					require.EqualError(t, err, tc.expectedErrorMessage)
+				default:
+					require.NoError(t, err)
+				}
+			case <-time.After(tc.testTimeout):
+				t.Fatal("timeout reached")
+			}
+		})
 	}
 }

@@ -205,14 +205,13 @@
           {{/if}}
         </div>
         <div class="box is-marginless is-shadowless">
-          <button
+          <Hds::Button
+            @text="Initialize"
+            @icon={{if this.loading "loading"}}
             data-test-init-submit
             type="submit"
-            class="button is-primary {{if this.loading 'is-loading'}}"
             disabled={{this.loading}}
-          >
-            Initialize
-          </button>
+          />
           <div class="init-illustration">
             {{svg-jar "initialize"}}
           </div>

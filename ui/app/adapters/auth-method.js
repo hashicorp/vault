@@ -78,4 +78,10 @@ export default ApplicationAdapter.extend({
     const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
     return this.ajax(url, 'POST', { data });
   },
+
+  resetPassword(backend, username, password) {
+    // For userpass auth types only
+    const url = `/v1/auth/${encodePath(backend)}/users/${encodePath(username)}/password`;
+    return this.ajax(url, 'POST', { data: { password } });
+  },
 });

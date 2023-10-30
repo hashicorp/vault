@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -47,24 +52,21 @@
   <hr class="has-background-gray-200 has-top-margin-l" />
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
-    <button
+    <Hds::Button
+      @text="Save"
       data-test-config-save
-      class="button is-primary"
       type="submit"
       disabled={{or this.save.isRunning (not @model.schema)}}
       {{on "click" (perform this.save)}}
-    >
-      Save
-    </button>
-    <button
+    />
+    <Hds::Button
+      @text="Back"
+      @color="secondary"
+      class="has-left-margin-xs"
       data-test-config-cancel
-      class="button has-left-margin-xs"
-      type="button"
       disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
       {{on "click" this.cancel}}
-    >
-      Back
-    </button>
+    />
     {{#if this.invalidFormMessage}}
       <AlertInline
         @type="danger"

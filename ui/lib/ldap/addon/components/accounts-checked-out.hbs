@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <OverviewCard
   @cardTitle="Accounts checked-out"
   @subText="The accounts that are currently on lease with this token or exist in a library set with check-in enforcement disabled."
@@ -15,16 +20,14 @@
             <Body.Td data-test-checked-out-library={{Body.data.account}}>{{Body.data.library}}</Body.Td>
           {{/if}}
           <Body.Td>
-            <button
-              type="button"
-              class="text-button has-text-primary has-text-weight-semibold"
+            <Hds::Button
+              @icon="queue"
+              @text="Check-in"
+              @color="tertiary"
               disabled={{this.disableCheckIn Body.data.library}}
               data-test-checked-out-account-action={{Body.data.account}}
               {{on "click" (fn (mut this.selectedStatus) Body.data)}}
-            >
-              <Icon @name="queue" />
-              Check-in
-            </button>
+            />
           </Body.Td>
         </Body.Tr>
       </:body>

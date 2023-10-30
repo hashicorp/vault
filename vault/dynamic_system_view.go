@@ -145,7 +145,7 @@ func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
 	}
 	ns := mountEntry.Namespace()
 
-	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
 		return true, nil
 	}
 

@@ -198,3 +198,22 @@ func Deserialize(indexBytes []byte) (*Index, error) {
 	}
 	return index, nil
 }
+
+// SerializeCapabilitiesIndex returns a json marshal'ed CapabilitiesIndex object
+func (i CapabilitiesIndex) SerializeCapabilitiesIndex() ([]byte, error) {
+	indexBytes, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return indexBytes, nil
+}
+
+// DeserializeCapabilitiesIndex converts json bytes to an CapabilitiesIndex object
+func DeserializeCapabilitiesIndex(indexBytes []byte) (*CapabilitiesIndex, error) {
+	index := new(CapabilitiesIndex)
+	if err := json.Unmarshal(indexBytes, index); err != nil {
+		return nil, err
+	}
+	return index, nil
+}

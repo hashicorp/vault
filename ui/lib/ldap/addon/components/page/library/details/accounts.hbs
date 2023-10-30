@@ -1,17 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
   <div>
-    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half border-radius-2">
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
       <div class="is-flex-between">
         <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
         {{#if @library.canCheckOut}}
-          <button
-            type="button"
-            class="button is-link"
+          <Hds::Button
+            @text="Check-out"
+            @color="tertiary"
+            @icon="arrow-up-right"
             data-test-check-out
             {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
-          >
-            Check-out
-          </button>
+          />
         {{/if}}
       </div>
 

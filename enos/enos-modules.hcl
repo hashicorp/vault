@@ -57,12 +57,35 @@ module "replication_data" {
   source = "./modules/replication_data"
 }
 
+module "seal_key_awskms" {
+  source = "./modules/seal_key_awskms"
+
+  common_tags = var.tags
+}
+
+module "seal_key_shamir" {
+  source = "./modules/seal_key_shamir"
+
+  common_tags = var.tags
+}
+
 module "shutdown_node" {
   source = "./modules/shutdown_node"
 }
 
 module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
+}
+
+module "start_vault" {
+  source = "./modules/start_vault"
+
+  install_dir = var.vault_install_dir
+  log_level   = var.vault_log_level
+}
+
+module "stop_vault" {
+  source = "./modules/stop_vault"
 }
 
 # create target instances using ec2:CreateFleet
@@ -245,6 +268,13 @@ module "vault_verify_write_data" {
 
 module "vault_wait_for_leader" {
   source = "./modules/vault_wait_for_leader"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_wait_for_seal_rewrap" {
+  source = "./modules/vault_wait_for_seal_rewrap"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count

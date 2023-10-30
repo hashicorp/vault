@@ -87,6 +87,11 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 					"read",
 				},
 			},
+			"sys/internal/ui/version": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
 			"sys/leases/lookup": map[string]interface{}{
 				"capabilities": []interface{}{
 					"update",

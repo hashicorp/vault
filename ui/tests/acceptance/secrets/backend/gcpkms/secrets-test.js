@@ -26,7 +26,7 @@ module('Acceptance | gcpkms/enable', function (hooks) {
     await mountSecrets.visit();
     await settled();
     await mountSecrets.selectType('gcpkms');
-    await mountSecrets.next().path(enginePath).submit();
+    await mountSecrets.path(enginePath).submit();
     await settled();
     assert.strictEqual(
       currentRouteName(),

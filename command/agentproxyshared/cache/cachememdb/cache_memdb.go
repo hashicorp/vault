@@ -237,6 +237,28 @@ func (c *CacheMemDB) SetCapabilitiesIndex(index *CapabilitiesIndex) error {
 	return nil
 }
 
+// EvictCapabilitiesIndex removes a capabilities index from the cache based on index name and value.
+func (c *CacheMemDB) EvictCapabilitiesIndex(indexName string, indexValues ...interface{}) error {
+	index, err := c.GetCapabilitiesIndex(indexName, indexValues...)
+	if err == ErrCacheItemNotFound {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("unable to fetch index on cache deletion: %v", err)
+	}
+
+	txn := c.db.Load().(*memdb.MemDB).Txn(true)
+	defer txn.Abort()
+
+	if err := txn.Delete(tableNameCapabilitiesIndexer, index); err != nil {
+		return fmt.Errorf("unable to delete index from cache: %v", err)
+	}
+
+	txn.Commit()
+
+	return nil
+}
+
 // GetByPrefix returns all the cached indexes based on the index name and the
 // value prefix.
 func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) ([]*Index, error) {
@@ -274,7 +296,7 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 // Evict removes an index from the cache based on index name and value.
 func (c *CacheMemDB) Evict(indexName string, indexValues ...interface{}) error {
 	index, err := c.Get(indexName, indexValues...)
-	if err == ErrCacheItemNotFound {
+	if errors.Is(err, ErrCacheItemNotFound) {
 		return nil
 	}
 	if err != nil {

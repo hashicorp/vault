@@ -23,9 +23,6 @@ func GetVersion() *VersionInfo {
 	if GitDescribe != "" {
 		ver = GitDescribe
 	}
-	if GitDescribe == "" && rel == "" && VersionPrerelease != "" {
-		rel = "dev"
-	}
 
 	return &VersionInfo{
 		Revision:          GitCommit,

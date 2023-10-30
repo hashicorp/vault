@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { statuses } from '../../../mirage/handlers/hcp-link';
@@ -69,37 +69,50 @@ module('Integration | Component | link-status', function (hooks) {
     assert.dom(SELECTORS.bannerWarning).exists('Warning banner renders for error state');
     assert
       .dom('[data-test-link-status]')
+      .hasText('Error connecting to HCP', 'Banner title renders for error state');
+    assert
+      .dom('[data-test-link-error]')
       .hasText(
-        'There was an error connecting to HCP. Click here for more information.',
-        'Banner copy renders for error state'
+        'Since 2022-09-21T11:25:02.196835-07:00, unable to establish a connection with HCP. Check the logs for more information.',
+        'Error renders for case 1'
       );
 
-    await click(SELECTORS.modalOpen);
+    // unable to establish connection error
+    await render(hbs`
+      <LinkStatus @status={{get this.statuses 2}} />
+    `);
     assert
-      .dom('[data-test-link-status-timestamp]')
-      .hasText('2022-09-21T11:25:02.196835-07:00', 'Timestamp renders');
-    assert
-      .dom('[data-test-link-status-error]')
-      .hasText('unable to establish a connection with HCP', 'Error renders');
+      .dom('[data-test-link-error]')
+      .hasText(
+        'Since 2022-09-21T11:25:02.196835-07:00, unable to establish a connection with HCP. Check the logs for more information.',
+        'Error renders for case 2'
+      );
 
-    await click(SELECTORS.modalClose);
-    // connecting error
+    // no permissions error
     await render(hbs`
       <LinkStatus @status={{get this.statuses 3}} />
     `);
-    await click(SELECTORS.modalOpen);
     assert
-      .dom('[data-test-link-status-error]')
-      .hasText('principal does not have the permission to register as a provider', 'Error renders');
-    await click(SELECTORS.modalClose);
+      .dom('[data-test-link-error]')
+      .hasText(
+        'Since 2022-09-21T11:25:02.196835-07:00, principal does not have the permission to register as a provider. Check the logs for more information.',
+        'Error renders for case 3'
+      );
 
-    // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
+    // could not obtain token error
+    await render(hbs`
+      <LinkStatus @status={{get this.statuses 4}} />
+    `);
+    assert
+      .dom('[data-test-link-error]')
+      .hasText(
+        'Since 2022-09-21T11:25:02.196835-07:00, could not obtain a token with the supplied credentials. Check the logs for more information.',
+        'Error renders for case 3'
+      );
+
     await render(hbs`
       <LinkStatus @status="connecting" />
     `);
-    await click(SELECTORS.modalOpen);
-
-    assert.dom('[data-test-link-status-timestamp]').hasText('Not available', 'Timestamp placeholder renders');
-    assert.dom('[data-test-link-status-error]').hasText('Not available', 'Error placeholder renders');
+    assert.dom('[data-test-link-error]').doesNotExist('No errors rendered when link is in connected state');
   });
 });

@@ -33,6 +33,7 @@ var wcAdjacentNonSlashRegEx = regexp.MustCompile(`\+[^/]|[^/]\+`).MatchString
 type Router struct {
 	l                  sync.RWMutex
 	root               *radix.Tree
+	binaryPaths        *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
@@ -66,6 +67,7 @@ type routeEntry struct {
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
+	binaryPaths   atomic.Value
 	l             sync.RWMutex
 }
 
@@ -202,6 +204,11 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
+	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	if err != nil {
+		return err
+	}
+	re.binaryPaths.Store(binaryPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -639,9 +646,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
-	case strings.HasPrefix(originalPath, "sys/"):
-	case strings.HasPrefix(originalPath, "identity/"):
-	case strings.HasPrefix(originalPath, cubbyholeMountPath):
+	case strings.HasPrefix(originalPath, mountPathSystem):
+	case strings.HasPrefix(originalPath, mountPathIdentity):
+	case strings.HasPrefix(originalPath, mountPathCubbyhole):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
 			// cubbyhole ID so just return here
@@ -811,7 +818,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 				}
 
 				switch re.mountEntry.Type {
-				case "token", "ns_token":
+				case mountTypeToken, mountTypeNSToken:
 					// Nothing; we respect what the token store is telling us and
 					// we don't allow tuning
 				default:
@@ -915,6 +922,57 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		if prefixMatch {
 			// Handle the prefix match case
 			return strings.HasPrefix(remain, match)
+		}
+		if match == remain {
+			// Handle the exact match case
+			return true
+		}
+	}
+
+	// check Login Paths containing wildcards
+	reqPathParts := strings.Split(remain, "/")
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// BinaryPath checks if the given path uses binary requests
+func (r *Router) BinaryPath(ctx context.Context, path string) bool {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return false
+	}
+
+	adjustedPath := ns.Path + path
+
+	r.l.RLock()
+	mount, raw, ok := r.root.LongestPrefix(adjustedPath)
+	r.l.RUnlock()
+	if !ok {
+		return false
+	}
+	re := raw.(*routeEntry)
+
+	// Trim to get remaining path
+	remain := strings.TrimPrefix(adjustedPath, mount)
+
+	// Check the binaryPaths of this backend
+	// Check the loginPaths of this backend
+	pe := re.binaryPaths.Load().(*loginPathsEntry)
+	match, raw, ok := pe.paths.LongestPrefix(remain)
+	if !ok && len(pe.wildcardPaths) == 0 {
+		// no match found
+		return false
+	}
+
+	if ok {
+		prefixMatch := raw.(bool)
+		// Handle the prefix match case
+		if prefixMatch && strings.HasPrefix(remain, match) {
+			return true
 		}
 		if match == remain {
 			// Handle the exact match case
