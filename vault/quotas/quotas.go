@@ -167,13 +167,13 @@ type Manager struct {
 	metricSink *metricsutil.ClusterMetricSink
 
 	// quotaLock is a lock for manipulating quotas and anything not covered by a more specific lock
-	quotaLock *locking.DeadlockRWMutex
+	quotaLock locking.RWMutex
 
 	// quotaConfigLock is a lock for accessing config items, such as RateLimitExemptPaths
-	quotaConfigLock *locking.DeadlockRWMutex
+	quotaConfigLock locking.RWMutex
 
 	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
-	dbAndCacheLock *locking.DeadlockRWMutex
+	dbAndCacheLock locking.RWMutex
 }
 
 // QuotaLeaseInformation contains all of the information lease-count quotas require
@@ -269,7 +269,7 @@ type Request struct {
 
 // NewManager creates and initializes a new quota manager to hold all the quota
 // rules and to process incoming requests.
-func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink) (*Manager, error) {
+func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink, detectDeadlocks bool) (*Manager, error) {
 	db, err := memdb.NewMemDB(dbSchema())
 	if err != nil {
 		return nil, err
@@ -281,9 +281,16 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 		metricSink:           ms,
 		rateLimitPathManager: pathmanager.New(),
 		config:               new(Config),
-		quotaLock:            new(locking.DeadlockRWMutex),
-		quotaConfigLock:      new(locking.DeadlockRWMutex),
-		dbAndCacheLock:       new(locking.DeadlockRWMutex),
+		quotaLock:            &locking.SyncRWMutex{},
+		quotaConfigLock:      &locking.SyncRWMutex{},
+		dbAndCacheLock:       &locking.SyncRWMutex{},
+	}
+
+	if detectDeadlocks {
+		logger.Debug("enabling deadlock detection")
+		manager.quotaLock = &locking.DeadlockRWMutex{}
+		manager.quotaConfigLock = &locking.DeadlockRWMutex{}
+		manager.dbAndCacheLock = &locking.DeadlockRWMutex{}
 	}
 
 	manager.init(walkFunc)
@@ -1298,4 +1305,11 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 	txn.Commit()
 
 	return nil
+}
+
+func (m *Manager) DetectDeadlocks() bool {
+	if _, ok := m.quotaLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

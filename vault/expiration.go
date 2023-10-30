@@ -111,7 +111,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock locking.DeadlockRWMutex
+	pendingLock locking.RWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -324,7 +324,7 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
+func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger, detectDeadlocks bool) *ExpirationManager {
 	managerLogger := logger.Named("job-manager")
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
@@ -337,6 +337,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		tokenStore:  c.tokenStore,
 		logger:      logger,
 		pending:     sync.Map{},
+		pendingLock: &locking.SyncRWMutex{},
 		nonexpiring: sync.Map{},
 		leaseCount:  0,
 		tidyLock:    new(int32),
@@ -372,6 +373,11 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		exp.logger = log.New(&opts)
 	}
 
+	if detectDeadlocks {
+		managerLogger.Debug("enabling deadlock detection")
+		exp.pendingLock = &locking.DeadlockRWMutex{}
+	}
+
 	go exp.uniquePoliciesGc()
 
 	return exp
@@ -387,7 +393,15 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
-	mgr := NewExpirationManager(c, view, e, expLogger)
+
+	detectDeadlocks := false
+	for _, v := range c.detectDeadlocks {
+		if v == "expiration" {
+			detectDeadlocks = true
+		}
+	}
+
+	mgr := NewExpirationManager(c, view, e, expLogger, detectDeadlocks)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -2817,4 +2831,11 @@ func (le *leaseEntry) isIncorrectlyNonExpiring() bool {
 func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
 	return out, jsonutil.DecodeJSON(buf, out)
+}
+
+func (e *ExpirationManager) DetectDeadlocks() bool {
+	if _, ok := e.pendingLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }
