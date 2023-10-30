@@ -2830,3 +2830,10 @@ func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
 	return out, jsonutil.DecodeJSON(buf, out)
 }
+
+func (e *ExpirationManager) DetectDeadlocks() bool {
+	if _, ok := e.pendingLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
+}

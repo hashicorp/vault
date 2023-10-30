@@ -1326,3 +1326,10 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 
 	return nil
 }
+
+func (m *Manager) DetectDeadlocks() bool {
+	if _, ok := m.quotaLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
+}

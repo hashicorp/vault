@@ -4202,3 +4202,10 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
+
+func (c *Core) DetectDeadlocks() bool {
+	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
+}
