@@ -3361,3 +3361,51 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
 	}
 }
+
+func TestExpiration_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.expiration.DetectDeadlocks() {
+		t.Fatal("expiration has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.expiration.DetectDeadlocks() {
+		t.Fatal("expiration doesn't have deadlock detection enabled, it should")
+	}
+}
+
+func TestQuotas_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.quotaManager.DetectDeadlocks() {
+		t.Fatal("quotas has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.quotaManager.DetectDeadlocks() {
+		t.Fatal("quotas doesn't have deadlock detection enabled, it should")
+	}
+}
+
+func TestStatelock_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.DetectStateLockDeadlocks() {
+		t.Fatal("statelock has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.DetectStateLockDeadlocks() {
+		t.Fatal("statelock doesn't have deadlock detection enabled, it should")
+	}
+}
