@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -398,7 +397,13 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
 
-	detectDeadlocks := slices.Contains(c.detectDeadlocks, "expiration")
+	detectDeadlocks := false
+	for _, v := range c.detectDeadlocks {
+		if v == "expiration" {
+			detectDeadlocks = true
+		}
+	}
+
 	mgr := NewExpirationManager(c, view, e, expLogger, detectDeadlocks)
 	c.expiration = mgr
 

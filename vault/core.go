@@ -1244,7 +1244,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
 
-	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
+	detectDeadlocks := false
+	for _, v := range c.detectDeadlocks {
+		if v == "quotas" {
+			detectDeadlocks = true
+		}
+	}
+
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
 	if err != nil {
 		return nil, err
