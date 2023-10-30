@@ -978,8 +978,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	var stateLock locking.RWMutex
 	stateLock = &locking.SyncRWMutex{}
 
-	if slices.Contains(detectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
+	for _, v := range detectDeadlocks {
+		if v == "statelock" {
+			stateLock = &locking.DeadlockRWMutex{}
+		}
 	}
 
 	// Setup the core
