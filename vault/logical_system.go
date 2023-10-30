@@ -4325,7 +4325,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
