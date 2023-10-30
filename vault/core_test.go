@@ -3398,14 +3398,14 @@ func TestStatelock_DeadlockDetection(t *testing.T) {
 	testCore := TestCore(t)
 	testCoreUnsealed(t, testCore)
 
-	if testCore.DetectDeadlocks() {
+	if testCore.DetectStateLockDeadlocks() {
 		t.Fatal("statelock has deadlock detection enabled, it shouldn't")
 	}
 
 	testCore = TestCoreWithDeadlockDetection(t, nil, false)
 	testCoreUnsealed(t, testCore)
 
-	if !testCore.DetectDeadlocks() {
+	if !testCore.DetectStateLockDeadlocks() {
 		t.Fatal("statelock doesn't have deadlock detection enabled, it should")
 	}
 }

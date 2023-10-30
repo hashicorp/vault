@@ -4203,7 +4203,7 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) DetectDeadlocks() bool {
+func (c *Core) DetectStateLockDeadlocks() bool {
 	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
 		return true
 	}
