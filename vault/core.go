@@ -959,6 +959,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	var detectDeadlocks []string
 	if conf.DetectDeadlocks != "" {
+		conf.DetectDeadlocks = strings.Trim(conf.DetectDeadlocks, " ")
 		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
 	}
 
