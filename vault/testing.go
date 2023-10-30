@@ -142,6 +142,20 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+		DetectDeadlocks: "expiration,quotas,statelock",
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
 func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
 	confRaw := &server.Config{
 		SharedConfig: &configutil.SharedConfig{
