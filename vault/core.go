@@ -959,8 +959,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	var detectDeadlocks []string
 	if conf.DetectDeadlocks != "" {
-		conf.DetectDeadlocks = strings.ToLower(strings.TrimSpace(conf.DetectDeadlocks))
 		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
+		for k, v := range detectDeadlocks {
+			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
+		}
 	}
 
 	// Use imported logging deadlock if requested
