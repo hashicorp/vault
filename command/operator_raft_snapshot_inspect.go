@@ -205,7 +205,7 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 	if !c.details {
 		return
 	}
-	// if c.details {
+
 	if val.Key == "" {
 		return
 	}
@@ -216,7 +216,6 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 		return
 	}
 
-	// split := strings.Split(string(val.Key), "/")
 	split := strings.Split(val.Key, "/")
 
 	// handle the situation where the key is shorter than
@@ -237,7 +236,6 @@ func (c *OperatorRaftSnapshotInspectCommand) kvEnhance(val *pb.StorageEntry, inf
 	info.TotalCountKV++
 	info.TotalSizeKV += read
 	info.StatsKV[prefix] = kvs
-	// }
 }
 
 // Read from snapshot's state.bin and update the SnapshotInfo struct
