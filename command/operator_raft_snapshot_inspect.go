@@ -168,8 +168,8 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		return 1
 	}
 
-	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error outputting enhanced snapshot data: %s", err))
+	if info == nil {
+		c.UI.Error(fmt.Sprintf("Error calculating snapshot info: %s", err))
 		return 1
 	}
 
