@@ -38,7 +38,6 @@ type OperatorRaftSnapshotInspectCommand struct {
 	details bool
 	depth   int
 	filter  string
-	format  string
 }
 
 func (c *OperatorRaftSnapshotInspectCommand) Synopsis() string {
@@ -92,6 +91,13 @@ func (c *OperatorRaftSnapshotInspectCommand) AutocompleteArgs() complete.Predict
 
 func (c *OperatorRaftSnapshotInspectCommand) AutocompleteFlags() complete.Flags {
 	return c.Flags().Completions()
+}
+
+type OutputFormat struct {
+	Meta         *MetadataInfo
+	StatsKV      []typeStats
+	TotalCountKV int
+	TotalSizeKV  int
 }
 
 // SnapshotInfo is used for passing snapshot stat
@@ -335,15 +341,6 @@ func formatTable(info *OutputFormat) (string, error) {
 	}
 
 	return b.String(), nil
-}
-
-// OutputFormat is used for passing information
-// through the formatter
-type OutputFormat struct {
-	Meta         *MetadataInfo
-	StatsKV      []typeStats
-	TotalCountKV int
-	TotalSizeKV  int
 }
 
 const (
