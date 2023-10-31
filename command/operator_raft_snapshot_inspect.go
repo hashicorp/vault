@@ -302,11 +302,6 @@ func (c *OperatorRaftSnapshotInspectCommand) Read(logger hclog.Logger, in io.Rea
 	return snapshotInfo, metadata, nil
 }
 
-const (
-	TableFormat string = "table"
-	JSONFormat  string = "json"
-)
-
 func formatTable(info *OutputFormat) (string, error) {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 8, 8, 6, ' ', 0)
