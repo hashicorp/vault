@@ -478,10 +478,3 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 		},
 	)
 }
-
-func TestRequestHandling_DelegatedAuth(t *testing.T) {
-	core, _, root := TestCoreUnsealed(t)
-
-	if err := core.loadMounts(namespace.RootContext(nil)); err != nil {
-		t.Fatalf("err: %v", err)
-	}

@@ -71,17 +71,88 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-type wildcardPath struct {
+type wildcardPath[E any] struct {
 	// this sits in the hot path of requests so we are micro-optimizing by
 	// storing pre-split slices of path segments
-	segments []string
-	isPrefix bool
+	prefixMatch bool
+	segments    []string
+	isPrefix    bool
+	value       E
 }
 
-// loginPathsEntry is used to hold the routeEntry loginPaths
-type loginPathsEntry struct {
+type SpecialPathLeaf interface {
+	IsPrefixMatch() bool
+}
+
+// SpecialPathsEntry is used to hold the routeEntry loginPaths
+type SpecialPathsEntry[E SpecialPathLeaf] struct {
 	paths         *radix.Tree
-	wildcardPaths []wildcardPath
+	wildcardPaths []wildcardPath[E]
+}
+
+func (pe *SpecialPathsEntry[E]) Match(path string) (bool, E) {
+	var zero E
+	match, raw, ok := pe.paths.LongestPrefix(path)
+	if !ok && len(pe.wildcardPaths) == 0 {
+		// no match found
+		return false, zero
+	}
+
+	if ok {
+		prefixMatch := raw.(SpecialPathLeaf).IsPrefixMatch()
+		// Handle the prefix match case
+		if prefixMatch && strings.HasPrefix(path, match) {
+			return true, raw.(E)
+		}
+		if match == path {
+			// Handle the exact match case
+			return true, raw.(E)
+		}
+	}
+
+	// check Login Paths containing wildcards
+	reqPathParts := strings.Split(path, "/")
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
+			return true, w.value
+		}
+	}
+	return false, zero
+}
+
+func (pe *SpecialPathsEntry[E]) AddNonWildcardPath(path string, f func(bool) E) bool {
+	// Check if this is a prefix or exact match
+	prefixMatch := len(path) >= 1 && path[len(path)-1] == '*'
+	if prefixMatch {
+		path = path[:len(path)-1]
+	}
+
+	_, u := pe.paths.Insert(path, f(prefixMatch))
+	return u
+}
+
+func (pe *SpecialPathsEntry[E]) Add(path string, f func(b bool) E) error {
+	if ok, err := isValidUnauthenticatedPath(path); !ok {
+		return err
+	}
+
+	if strings.Contains(path, "+") {
+		// Paths with wildcards are not stored in the radix tree because
+		// the radix tree does not handle wildcards in the middle of strings.
+		isPrefix := false
+		if path[len(path)-1] == '*' {
+			isPrefix = true
+			path = path[0 : len(path)-1]
+		}
+		// We are micro-optimizing by storing pre-split slices of path segments
+		wcPath := wildcardPath[E]{segments: strings.Split(path, "/"), isPrefix: isPrefix}
+		pe.wildcardPaths = append(pe.wildcardPaths, wcPath)
+	} else {
+		// accumulate paths that do not contain wildcards
+		// to be stored in the radix tree
+		pe.AddNonWildcardPath(path, f)
+	}
+	return nil
 }
 
 type ValidateMountResponse struct {
@@ -199,12 +270,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	}
 	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
-	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+	loginPathsEntry, err := ParseSpecialPaths(paths.Unauthenticated)
 	if err != nil {
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
-	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	binaryPathsEntry, err := ParseSpecialPaths(paths.Binary)
 	if err != nil {
 		return err
 	}
@@ -885,6 +956,12 @@ func (r *Router) RootPath(ctx context.Context, path string) bool {
 	return match == remain
 }
 
+type routerPath bool
+
+func (rp routerPath) IsPrefixMatch() bool {
+	return bool(rp)
+}
+
 // LoginPath checks if the given path is used for logins
 // Matching Priority
 //  1. prefix
@@ -910,33 +987,9 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	remain := strings.TrimPrefix(adjustedPath, mount)
 
 	// Check the loginPaths of this backend
-	pe := re.loginPaths.Load().(*loginPathsEntry)
-	match, raw, ok := pe.paths.LongestPrefix(remain)
-	if !ok && len(pe.wildcardPaths) == 0 {
-		// no match found
-		return false
-	}
-
-	if ok {
-		prefixMatch := raw.(bool)
-		if prefixMatch {
-			// Handle the prefix match case
-			return strings.HasPrefix(remain, match)
-		}
-		if match == remain {
-			// Handle the exact match case
-			return true
-		}
-	}
-
-	// check Login Paths containing wildcards
-	reqPathParts := strings.Split(remain, "/")
-	for _, w := range pe.wildcardPaths {
-		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
-			return true
-		}
-	}
-	return false
+	pe := re.loginPaths.Load().(*SpecialPathsEntry[routerPath])
+	matches, _ := pe.Match(remain)
+	return matches
 }
 
 // BinaryPath checks if the given path uses binary requests
@@ -961,33 +1014,9 @@ func (r *Router) BinaryPath(ctx context.Context, path string) bool {
 
 	// Check the binaryPaths of this backend
 	// Check the loginPaths of this backend
-	pe := re.binaryPaths.Load().(*loginPathsEntry)
-	match, raw, ok := pe.paths.LongestPrefix(remain)
-	if !ok && len(pe.wildcardPaths) == 0 {
-		// no match found
-		return false
-	}
-
-	if ok {
-		prefixMatch := raw.(bool)
-		// Handle the prefix match case
-		if prefixMatch && strings.HasPrefix(remain, match) {
-			return true
-		}
-		if match == remain {
-			// Handle the exact match case
-			return true
-		}
-	}
-
-	// check Login Paths containing wildcards
-	reqPathParts := strings.Split(remain, "/")
-	for _, w := range pe.wildcardPaths {
-		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
-			return true
-		}
-	}
-	return false
+	pe := re.binaryPaths.Load().(*SpecialPathsEntry[routerPath])
+	matches, _ := pe.Match(remain)
+	return matches
 }
 
 // pathMatchesWildcardPath returns true if the path made up of the path slice
@@ -1037,38 +1066,17 @@ func isValidUnauthenticatedPath(path string) (bool, error) {
 	return true, nil
 }
 
-// parseUnauthenticatedPaths converts a list of special paths to a
-// loginPathsEntry
-func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
-	var tempPaths []string
-	tempWildcardPaths := make([]wildcardPath, 0)
+// ParseSpecialPaths converts a list of special paths to a SpecialPathsEntry
+func ParseSpecialPaths(paths []string) (*SpecialPathsEntry[routerPath], error) {
+	spe := &SpecialPathsEntry[routerPath]{
+		paths: radix.New(),
+	}
 	for _, path := range paths {
-		if ok, err := isValidUnauthenticatedPath(path); !ok {
+		if err := spe.Add(path, func(b bool) routerPath { return routerPath(b) }); err != nil {
 			return nil, err
 		}
-
-		if strings.Contains(path, "+") {
-			// Paths with wildcards are not stored in the radix tree because
-			// the radix tree does not handle wildcards in the middle of strings.
-			isPrefix := false
-			if path[len(path)-1] == '*' {
-				isPrefix = true
-				path = path[0 : len(path)-1]
-			}
-			// We are micro-optimizing by storing pre-split slices of path segments
-			wcPath := wildcardPath{segments: strings.Split(path, "/"), isPrefix: isPrefix}
-			tempWildcardPaths = append(tempWildcardPaths, wcPath)
-		} else {
-			// accumulate paths that do not contain wildcards
-			// to be stored in the radix tree
-			tempPaths = append(tempPaths, path)
-		}
 	}
-
-	return &loginPathsEntry{
-		paths:         pathsToRadix(tempPaths),
-		wildcardPaths: tempWildcardPaths,
-	}, nil
+	return spe, nil
 }
 
 // pathsToRadix converts a list of special paths to a radix tree.

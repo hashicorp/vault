@@ -12,13 +12,16 @@ import (
 )
 
 type apiRedirectRegistry struct {
-	lock  sync.Mutex
-	paths *radix.Tree
+	lock    sync.Mutex
+	paths   *SpecialPathsEntry[*APIRedirect]
+	entries map[string]*APIRedirect
 }
 
 func NewAPIRedirects() *apiRedirectRegistry {
 	return &apiRedirectRegistry{
-		paths: radix.New(),
+		paths: &SpecialPathsEntry[*APIRedirect]{
+			paths: radix.New(),
+		},
 	}
 }
 
@@ -28,33 +31,50 @@ func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mou
 	}
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
-	_, _, found := reg.paths.LongestPrefix(src)
+	found, _ := reg.paths.Match(src)
 	if found {
 		return fmt.Errorf("api redirect conflict for %s", src)
 	}
-	_, found = reg.paths.Insert(src, &APIRedirect{
-		c:         core,
-		mountUUID: mountUUID,
-		prefix:    dest,
+	return reg.paths.Add(src, func(b bool) *APIRedirect {
+		return &APIRedirect{
+			c:             core,
+			mountUUID:     mountUUID,
+			prefix:        dest,
+			isPrefixMatch: b,
+		}
 	})
-	if found {
-		panic("somehow had a duplicate even though lock was held")
-	}
-	return nil
 }
 
 func (reg *apiRedirectRegistry) Find(path string) *APIRedirect {
-	_, r, found := reg.paths.LongestPrefix(path)
+	found, e := reg.paths.Match(path)
 	if found {
-		return r.(*APIRedirect)
+		return e
 	}
 	return nil
 }
 
+func (reg *apiRedirectRegistry) Unregister(uuid string) {
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+	reg.paths.paths.Walk(func(k string, v interface{}) bool {
+		r := v.(*APIRedirect)
+		if r.mountUUID == uuid {
+			reg.paths.paths.Delete(k)
+			return true
+		}
+		return false
+	})
+}
+
 type APIRedirect struct {
-	c         *Core
-	mountUUID string
-	prefix    string
+	c             *Core
+	mountUUID     string
+	prefix        string
+	isPrefixMatch bool
+}
+
+func (a *APIRedirect) IsPrefixMatch() bool {
+	return a.isPrefixMatch
 }
 
 func (a *APIRedirect) Destination() (string, error) {

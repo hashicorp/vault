@@ -419,7 +419,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			} else {
 				if redir != "" {
 					w.Header().Set("Location", redir)
-					w.WriteHeader(http.StatusFound)
+					switch r.Method {
+					case http.MethodGet:
+						w.WriteHeader(http.StatusFound)
+					default:
+						w.WriteHeader(http.StatusTemporaryRedirect)
+					}
+					cancelFunc()
 					return
 				}
 			}

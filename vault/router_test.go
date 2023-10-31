@@ -567,18 +567,18 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 	}
 	allPaths := append(paths, wildcardPaths...)
 
-	p, err := parseUnauthenticatedPaths(allPaths)
+	p, err := ParseSpecialPaths(allPaths)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// outputs
-	wildcardPathsEntry := []wildcardPath{
+	wildcardPathsEntry := []wildcardPath[bool]{
 		{segments: []string{"end", "+"}, isPrefix: false},
 		{segments: []string{"+", "begin", ""}, isPrefix: true},
 		{segments: []string{"middle", "+", "bar"}, isPrefix: true},
 	}
-	expected := &loginPathsEntry{
+	expected := &SpecialPathsEntry[bool]{
 		paths:         pathsToRadix(paths),
 		wildcardPaths: wildcardPathsEntry,
 	}
@@ -625,7 +625,7 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		_, err := parseUnauthenticatedPaths(tc.paths)
+		_, err := ParseSpecialPaths(tc.paths)
 		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
 			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
 		}
