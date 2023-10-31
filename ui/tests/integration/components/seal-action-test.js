@@ -39,7 +39,7 @@ module('Integration | Component | seal-action', function (hooks) {
     await click('[data-test-seal] button');
     await click('[data-test-confirm-button]');
 
-    assert.ok(this.sealSuccess.calledOnce, 'called onSeal action');
+    assert.ok(this.sealError.calledOnce, 'called onSeal action');
     assert.dom('[data-test-seal-error]').includesText(SEAL_WHEN_STANDBY_MSG, 'Shows error returned from API');
   });
 });
