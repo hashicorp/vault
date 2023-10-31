@@ -1,10 +1,10 @@
 ---
 layout: docs
-page_title: Containerized plugins
-description: External Vault plugins can be run in containers.
+page_title: Containerized plugins overview
+description: Learn about running external Vault plugins in containers.
 ---
 
-# Containerized plugins
+# Containerized plugins overview
 
 @include 'alerts/beta.mdx'
 
@@ -14,10 +14,17 @@ description: External Vault plugins can be run in containers.
 
 </Note>
 
-By default, external plugins run as subprocesses that share Vault's user and
-environment variables. Administrators managing Vault instances on Linux can
-choose to run external plugins in containers. Running plugins in containers
-increases the isolation between plugins, and between plugins and Vault.
+Vault has a wide selection of builtin plugins to support integrating with other
+systems. For example, you can use plugins to exchange app identity information
+with an authentication service to receive a Vault token, or manage database
+credentials. You can also register **external** plugins with your Vault instance
+to extend the capabilities of your Vault server.
+
+By default, external plugins run as subprocesses that share the user and
+environment variables of your Vault instance. Administrators managing Vault
+instances on Linux can choose to run external plugins in containers. Running
+plugins in containers increases the isolation between individual plugins and
+between the plugins and Vault.
 
 ## System requirements
 

@@ -1751,12 +1751,26 @@
       },
       {
         "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "routes": [
+          {
+            "title": "Containerized plugins overview",
+            "path": "plugins/containerized-plugins",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       },
       {
         "title": "Integrations Library",
