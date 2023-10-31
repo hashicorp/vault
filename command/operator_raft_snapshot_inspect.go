@@ -578,7 +578,7 @@ func (c *OperatorRaftSnapshotInspectCommand) read(in io.Reader) (*SnapshotInfo, 
 			}
 
 		case "SHA256SUMS":
-			if _, err := io.Copy(&shaBuffer, archive); err != nil {
+			if _, err := io.CopyN(&shaBuffer, archive, 10000); err != nil && err != io.EOF {
 				return nil, nil, fmt.Errorf("failed to read snapshot hashes: %v", err)
 			}
 
