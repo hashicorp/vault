@@ -1676,7 +1676,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		source := c.router.MatchingMount(ctx, req.Path)
 
 		// Login MFA
-		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}

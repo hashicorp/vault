@@ -32,7 +32,6 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.23
-	github.com/NYTimes/gziphandler v1.1.1
 	github.com/ProtonMail/go-crypto v0.0.0-20230626094100-7e9e0395ebec
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -165,6 +164,7 @@ require (
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.0
 	github.com/joyent/triton-go v1.7.1-0.20200416154420-6801d15b779f
+	github.com/klauspost/compress v1.16.5
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0
 	github.com/mattn/go-colorable v0.1.13
@@ -420,7 +420,6 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/asmfmt v1.3.2 // indirect
-	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
