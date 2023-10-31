@@ -255,8 +255,8 @@
     .hs-icon {
       &,
       &:first-child:last-child {
-        margin-left: $spacing-xxs;
-        margin-right: -$spacing-xxs;
+        margin-left: $spacing-4;
+        margin-right: -$spacing-4;
       }
     }
   }

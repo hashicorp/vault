@@ -4,10 +4,10 @@
  */
 
 .splash-page-logo {
-  padding: $spacing-xs $spacing-s $spacing-xs $spacing-l;
+  padding: $spacing-8 $spacing-12 $spacing-8 $spacing-24;
 
   @include from($mobile) {
-    padding-left: $spacing-xs;
+    padding-left: $spacing-8;
   }
 
   svg {
@@ -16,7 +16,7 @@
     width: 72px;
 
     @include from($mobile) {
-      margin-left: $spacing-xs;
+      margin-left: $spacing-8;
     }
   }
 }

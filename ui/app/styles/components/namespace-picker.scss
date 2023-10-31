@@ -7,7 +7,7 @@
   position: relative;
   color: var(--token-color-palette-neutral-300);
   display: flex;
-  padding: $spacing-xxs $spacing-xs;
+  padding: $spacing-4 $spacing-8;
   width: 100%;
 }
 
@@ -22,7 +22,7 @@
   flex: 1 1 auto;
   height: 2rem;
   justify-content: space-between;
-  margin-right: $spacing-xxs;
+  margin-right: $spacing-4;
 }
 
 .namespace-picker-content {
