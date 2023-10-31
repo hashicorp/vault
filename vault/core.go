@@ -4197,13 +4197,13 @@ func (c *Core) GetAPIRedirect(ctx context.Context, path string) (string, error) 
 	if c.apiRedirects == nil {
 		return "", nil
 	}
-	redir := c.apiRedirects.Find(path)
+	redir, remaining := c.apiRedirects.Find(path)
 	if redir != nil {
 		dest, err := redir.Destination()
 		if err != nil {
 			return "", err
 		}
-		return paths.Join("v1", dest), nil
+		return paths.Join("v1", dest, remaining), nil
 	}
 	return "", nil
 }

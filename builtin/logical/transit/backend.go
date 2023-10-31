@@ -295,5 +295,6 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 
 func (b *backend) initialize(ctx context.Context, request *logical.InitializationRequest) error {
 	sv := b.System()
-	return sv.(logical.ExtendedSystemView).RequestAPIRedirect(ctx, "/foo", "keys/foo")
+	sv.(logical.ExtendedSystemView).RequestAPIRedirect(ctx, "/foo", "keys/foo")
+	return sv.(logical.ExtendedSystemView).RequestAPIRedirect(ctx, "/bar/*", "keys/foo2")
 }

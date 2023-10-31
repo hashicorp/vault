@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	paths "path"
 	"regexp"
 	"strings"
 	"sync"
@@ -90,34 +91,35 @@ type SpecialPathsEntry[E SpecialPathLeaf] struct {
 	wildcardPaths []wildcardPath[E]
 }
 
-func (pe *SpecialPathsEntry[E]) Match(path string) (bool, E) {
+func (pe *SpecialPathsEntry[E]) Match(path string) (bool, E, string) {
 	var zero E
 	match, raw, ok := pe.paths.LongestPrefix(path)
 	if !ok && len(pe.wildcardPaths) == 0 {
 		// no match found
-		return false, zero
+		return false, zero, strings.TrimPrefix(path, match)
 	}
 
 	if ok {
 		prefixMatch := raw.(SpecialPathLeaf).IsPrefixMatch()
 		// Handle the prefix match case
 		if prefixMatch && strings.HasPrefix(path, match) {
-			return true, raw.(E)
+			return true, raw.(E), strings.TrimPrefix(path, match)
 		}
 		if match == path {
 			// Handle the exact match case
-			return true, raw.(E)
+			return true, raw.(E), ""
 		}
 	}
 
-	// check Login Paths containing wildcards
+	// check special paths containing wildcards
 	reqPathParts := strings.Split(path, "/")
 	for _, w := range pe.wildcardPaths {
-		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
-			return true, w.value
+		matches, remaining := pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix, true)
+		if matches {
+			return true, w.value, remaining
 		}
 	}
-	return false, zero
+	return false, zero, ""
 }
 
 func (pe *SpecialPathsEntry[E]) AddNonWildcardPath(path string, f func(bool) E) bool {
@@ -988,7 +990,7 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 
 	// Check the loginPaths of this backend
 	pe := re.loginPaths.Load().(*SpecialPathsEntry[routerPath])
-	matches, _ := pe.Match(remain)
+	matches, _, _ := pe.Match(remain)
 	return matches
 }
 
@@ -1015,37 +1017,42 @@ func (r *Router) BinaryPath(ctx context.Context, path string) bool {
 	// Check the binaryPaths of this backend
 	// Check the loginPaths of this backend
 	pe := re.binaryPaths.Load().(*SpecialPathsEntry[routerPath])
-	matches, _ := pe.Match(remain)
+	matches, _, _ := pe.Match(remain)
 	return matches
 }
 
 // pathMatchesWildcardPath returns true if the path made up of the path slice
 // matches the given wildcard path slice
-func pathMatchesWildcardPath(path, wcPath []string, isPrefix bool) bool {
+func pathMatchesWildcardPath(path, wcPath []string, isPrefix, returnRemaining bool) (bool, string) {
 	if len(wcPath) == 0 {
-		return false
+		return false, ""
 	}
 
 	if len(path) < len(wcPath) {
 		// check if the path coming in is shorter; if so it can't match
-		return false
+		return false, ""
 	}
 	if !isPrefix && len(wcPath) != len(path) {
 		// If it's not a prefix we expect the same number of segments
-		return false
+		return false, ""
 	}
 
-	for i, wcPathPart := range wcPath {
+	var i int
+	var wcPathPart string
+	for i, wcPathPart = range wcPath {
 		switch {
 		case wcPathPart == "+":
 		case wcPathPart == path[i]:
 		case isPrefix && i == len(wcPath)-1 && strings.HasPrefix(path[i], wcPathPart):
 		default:
 			// we encountered segments that did not match
-			return false
+			return false, ""
 		}
 	}
-	return true
+	if returnRemaining {
+		return true, paths.Join(path[i:]...)
+	}
+	return true, ""
 }
 
 func wildcardError(path, msg string) error {

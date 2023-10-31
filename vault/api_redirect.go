@@ -30,7 +30,7 @@ func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mou
 	}
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
-	found, _ := reg.paths.Match(src)
+	found, _, _ := reg.paths.Match(src)
 	if found {
 		return fmt.Errorf("api redirect conflict for %s", src)
 	}
@@ -44,12 +44,12 @@ func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mou
 	})
 }
 
-func (reg *apiRedirectRegistry) Find(path string) *APIRedirect {
-	found, e := reg.paths.Match(path)
+func (reg *apiRedirectRegistry) Find(path string) (*APIRedirect, string) {
+	found, e, remaining := reg.paths.Match(path)
 	if found {
-		return e
+		return e, remaining
 	}
-	return nil
+	return nil, ""
 }
 
 func (reg *apiRedirectRegistry) Unregister(uuid string) {
@@ -63,6 +63,12 @@ func (reg *apiRedirectRegistry) Unregister(uuid string) {
 		}
 		return false
 	})
+	for i, w := range reg.paths.wildcardPaths {
+		if w.value.mountUUID == uuid {
+			reg.paths.wildcardPaths = append(reg.paths.wildcardPaths[:i], reg.paths.wildcardPaths[i+1:]...)
+			break
+		}
+	}
 }
 
 type APIRedirect struct {
