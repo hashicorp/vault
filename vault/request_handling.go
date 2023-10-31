@@ -1882,6 +1882,7 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	}
 	authReq.MountAccessor = requestedAccessor
 	authReq.Path = path
+	authReq.Operation = logical.UpdateOperation
 	// Clear the data fields for the new request
 	authReq.Data = make(map[string]interface{})
 	if da.Data() != nil {

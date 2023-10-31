@@ -1421,6 +1421,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
+	if len(apiConfig.DelegatedAuthAccessors) > 0 {
+		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
+	}
 
 	// Create the mount entry
 	me := &MountEntry{

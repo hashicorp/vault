@@ -171,6 +171,12 @@ This endpoint enables a new secrets engine at the given path.
     unversioned plugin that may have been registered, the latest versioned plugin
     registered, or a built-in plugin in that order of precendence.
 
+  - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+    that the mount in question is allowed to access.
+
+  - `delegated_auth_accessors` `(array: [])` - List of allowed authentication mount
+    accessors the backend can request delegated authentication for.
+
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
 
