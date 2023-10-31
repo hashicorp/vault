@@ -1522,6 +1522,155 @@ func TestPadEqualSigns(t *testing.T) {
 		})
 	}
 }
+func testKVUndeleteCommand(tb testing.TB) (*cli.MockUi, *KVUndeleteCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &KVUndeleteCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestKVUndeleteCommand(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			"not_enough_args",
+			[]string{},
+			[]string{"Not enough arguments"},
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			[]string{"Too many arguments"},
+			1,
+		},
+		{
+			"no_versions",
+			[]string{"-mount", "kv", "/read/foo"},
+			[]string{"No versions provided"},
+			1,
+		},
+		{
+			"v2_mount_flag_syntax",
+			[]string{"-versions", "1", "-mount", "kv", "read/foo"},
+			[]string{"Success! Data written to: kv/undelete/read/foo"},
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_complex_1",
+			[]string{"-versions", "1", "-mount", "secrets/testapp", "test"},
+			[]string{"Success! Data written to: secrets/testapp/undelete/test"},
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_complex_2",
+			[]string{"-versions", "1", "-mount", "secrets/x/testapp", "test"},
+			[]string{"Success! Data written to: secrets/x/testapp/undelete/test"},
+			0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range cases {
+			tc := tc
+
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := testVaultServer(t)
+				defer closer()
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := client.Sys().Mount("secrets/testapp", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Additional layer of mount path
+				if err := client.Sys().Mount("secrets/x/testapp", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Give time for the upgrade code to run/finish
+				time.Sleep(time.Second)
+
+				if _, err := client.Logical().Write("kv/data/read/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("kv/data/read/foo"); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("secrets/testapp/data/test", map[string]interface{}{
+					"data": map[string]interface{}{
+						"complex": "yes",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("secrets/x/testapp/data/test", map[string]interface{}{
+					"data": map[string]interface{}{
+						"complex": "yes",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("secrets/x/testapp/data/test"); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("secrets/testapp/data/test"); err != nil {
+					t.Fatal(err)
+				}
+
+				ui, cmd := testKVUndeleteCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+				for _, str := range tc.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
+	})
+}
 
 func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
 	t.Helper()
