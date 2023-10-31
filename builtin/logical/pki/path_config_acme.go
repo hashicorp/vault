@@ -21,7 +21,7 @@ import (
 const (
 	storageAcmeConfig      = "config/acme"
 	pathConfigAcmeHelpSyn  = "Configuration of ACME Endpoints"
-	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_directory_policy=\"\", either \"forbid\", preventing the default directory from being used at all, \"role:<role_name>\" which is the role to be used for non-role-qualified ACME requests; or \"sign-verbatim\", the default meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups\ntls_skip=true, whether skip TLS certificate validity check when doing ACME HTTP-01 challenge"
+	pathConfigAcmeHelpDesc = "Here we configure:\n\nenabled=false, whether ACME is enabled, defaults to false meaning that clusters will by default not get ACME support,\nallowed_issuers=\"default\", which issuers are allowed for use with ACME; by default, this will only be the primary (default) issuer,\nallowed_roles=\"*\", which roles are allowed for use with ACME; by default these will be all roles matching our selection criteria,\ndefault_directory_policy=\"\", either \"forbid\", preventing the default directory from being used at all, \"role:<role_name>\" which is the role to be used for non-role-qualified ACME requests; or \"sign-verbatim\", the default meaning ACME issuance will be equivalent to sign-verbatim.,\ndns_resolver=\"\", which specifies a custom DNS resolver to use for all ACME-related DNS lookups"
 	disableAcmeEnvVar      = "VAULT_DISABLE_PUBLIC_ACME"
 )
 
@@ -33,7 +33,6 @@ type acmeConfigEntry struct {
 	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
 	DNSResolver            string        `json:"dns_resolver"`
 	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
-	TLSSkip                bool          `json:"tls_skip"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -44,7 +43,6 @@ var defaultAcmeConfig = acmeConfigEntry{
 	DefaultDirectoryPolicy: "sign-verbatim",
 	DNSResolver:            "",
 	EabPolicyName:          eabPolicyNotRequired,
-	TLSSkip:                true,
 }
 
 var (
@@ -131,11 +129,6 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `Specify the policy to use for external account binding behaviour, 'not-required', 'new-account-required' or 'always-required'`,
 				Default:     "always-required",
 			},
-			"tls_skip": {
-				Type:        framework.TypeBool,
-				Description: `whether skip TLS certificate validity check when doing ACME HTTP-01 challenge, default skip check`,
-				Default:     true,
-			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -190,7 +183,6 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 			"enabled":                  config.Enabled,
 			"dns_resolver":             config.DNSResolver,
 			"eab_policy":               config.EabPolicyName,
-			"tls_skip":                 config.TLSSkip,
 		},
 		Warnings: warnings,
 	}
@@ -257,10 +249,6 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 				eabPolicyNotRequired, eabPolicyNewAccountRequired, eabPolicyAlwaysRequired)
 		}
 		config.EabPolicyName = eabPolicy.Name
-	}
-
-	if tlsSkipRaw, ok := d.GetOk("tls_skip"); ok {
-		config.TLSSkip = tlsSkipRaw.(bool)
 	}
 
 	// Validate Default Directory Behavior:
