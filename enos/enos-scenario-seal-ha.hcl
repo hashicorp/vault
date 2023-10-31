@@ -407,6 +407,7 @@ scenario "seal_ha" {
     }
   }
 
+  // Perform all of our standard verifications after we've enabled multiseal
   step "verify_vault_version" {
     module     = module.vault_verify_version
     depends_on = [step.wait_for_seal_rewrap]
@@ -457,6 +458,7 @@ scenario "seal_ha" {
     }
   }
 
+  // Make sure our data is still available
   step "verify_read_test_data" {
     module     = module.vault_verify_read_data
     depends_on = [step.wait_for_seal_rewrap]
@@ -481,6 +483,166 @@ scenario "seal_ha" {
 
     variables {
       vault_instances = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Make sure we have a "multiseal" seal type
+  step "verify_seal_type" {
+    // Don't run this on versions less than 1.16.0-beta1 until VAULT-21053 is fixed on prior branches.
+    skip_step  = semverconstraint(var.vault_product_version, "< 1.16.0-beta1")
+    module     = module.verify_seal_type
+    depends_on = [step.wait_for_seal_rewrap]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      seal_type         = "multiseal"
+    }
+  }
+
+  // Now we'll migrate away from our initial seal to our secondary seal
+
+  // Stop the vault service on all nodes before we restart with new seal config
+  step "stop_vault_for_migration" {
+    module = module.stop_vault
+    depends_on = [
+      step.wait_for_seal_rewrap,
+      step.verify_read_test_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      target_hosts = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Remove the "primary" seal from the cluster. Set our "secondary" seal to priority 1. We do this
+  // by restarting vault with the correct config.
+  step "remove_primary_seal" {
+    module     = module.start_vault
+    depends_on = [step.stop_vault_for_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      cluster_name    = step.create_vault_cluster_targets.cluster_name
+      install_dir     = local.vault_install_dir
+      license         = matrix.edition != "ce" ? step.read_vault_license.license : null
+      manage_service  = local.manage_service
+      seal_alias      = "secondary"
+      seal_type       = matrix.secondary_seal
+      seal_key_name   = step.create_secondary_seal_key.resource_name
+      storage_backend = matrix.backend
+      target_hosts    = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for our cluster to elect a leader after restarting vault with a new primary seal
+  step "wait_for_leader_after_migration" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.remove_primary_seal]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Since we've restarted our cluster we might have a new leader and followers. Get the new IPs.
+  step "get_cluster_ips_after_migration" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Make sure we unsealed
+  step "verify_vault_unsealed_after_migration" {
+    module     = module.vault_verify_unsealed
+    depends_on = [step.wait_for_leader_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for the seal rewrap to complete and verify that no entries failed
+  step "wait_for_seal_rewrap_after_migration" {
+    module = module.vault_wait_for_seal_rewrap
+    depends_on = [
+      step.wait_for_leader_after_migration,
+      step.verify_vault_unsealed_after_migration,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  // Make sure our data is still available after migration
+  step "verify_read_test_data_after_migration" {
+    module     = module.vault_verify_read_data
+    depends_on = [step.wait_for_seal_rewrap_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      node_public_ips   = step.get_cluster_ips_after_migration.follower_public_ips
+      vault_install_dir = local.vault_install_dir
+    }
+  }
+
+  // Make sure we have our secondary seal type after migration
+  step "verify_seal_type_after_migration" {
+    // Don't run this on versions less than 1.16.0-beta1 until VAULT-21053 is fixed on prior branches.
+    skip_step  = semverconstraint(var.vault_product_version, "<= 1.16.0-beta1")
+    module     = module.verify_seal_type
+    depends_on = [step.wait_for_seal_rewrap_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_install_dir = local.vault_install_dir
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      seal_type         = matrix.secondary_seal
     }
   }
 
