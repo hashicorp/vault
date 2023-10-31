@@ -37,8 +37,7 @@ $ vault read -format=json identity/entity/name/user1 | jq '{"entity_id": .data.i
 }
 
 # Fetch the group from the other namespace
-$ vault read -format=json -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | jq '.data
-.policies'
+$ vault read -format=json -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | jq '.data.policies'
 [
   "group_policy"
 ]
@@ -48,8 +47,7 @@ $ vault policy list -namespace=ns1
 default
 
 # Option 1: Remove the missing policy from the group
-vault write -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea name="test" policies="d
-efault"
+$ vault write -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea name="test" policies="default"
 
 # OR Option 2: Create the missing policy
 $ vault policy write -namespace=ns1 group_policy - << EOF
