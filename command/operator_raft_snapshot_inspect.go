@@ -162,7 +162,6 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		return 1
 	}
 
-	formatter, err := NewFormatter(Format(c.UI))
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error outputting enhanced snapshot data: %s", err))
 		return 1
@@ -184,20 +183,25 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 	}
 	formattedStatsKV := generateKVStats(*info)
 
-	in := &OutputFormat{
+	data := &OutputFormat{
 		Meta:         metaformat,
 		StatsKV:      formattedStatsKV,
 		TotalCountKV: info.TotalCountKV,
 		TotalSizeKV:  info.TotalSizeKV,
 	}
 
-	out, err := formatter.Format(in)
+	if Format(c.UI) != "table" {
+		return OutputData(c.UI, data)
+	}
+
+	tableData, err := formatTable(data)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
-	c.UI.Output(out)
+	c.UI.Output(tableData)
+
 	return 0
 }
 
@@ -302,46 +306,7 @@ const (
 	JSONFormat  string = "json"
 )
 
-func NewFormatter(format string) (SnapshotFormatter, error) {
-	switch format {
-	case TableFormat:
-		return newTableFormatter(), nil
-	case JSONFormat:
-		return newJSONFormatter(), nil
-	case "pretty":
-		return nil, fmt.Errorf("Format not supported: %s", format)
-	case "yaml":
-		return nil, fmt.Errorf("Format not supported: %s", format)
-	default:
-		return nil, fmt.Errorf("Unknown format: %s", format)
-	}
-}
-
-func newTableFormatter() SnapshotFormatter {
-	return &tableFormatter{}
-}
-
-func newJSONFormatter() SnapshotFormatter {
-	return &jsonFormatter{}
-}
-
-type SnapshotFormatter interface {
-	Format(*OutputFormat) (string, error)
-}
-
-type tableFormatter struct{}
-
-type jsonFormatter struct{}
-
-func (_ *jsonFormatter) Format(info *OutputFormat) (string, error) {
-	b, err := json.MarshalIndent(info, "", "   ")
-	if err != nil {
-		return "", fmt.Errorf("Failed to marshal original snapshot stats: %v", err)
-	}
-	return string(b), nil
-}
-
-func (_ *tableFormatter) Format(info *OutputFormat) (string, error) {
+func formatTable(info *OutputFormat) (string, error) {
 	var b bytes.Buffer
 	tw := tabwriter.NewWriter(&b, 8, 8, 6, ' ', 0)
 
