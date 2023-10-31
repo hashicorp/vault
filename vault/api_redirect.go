@@ -12,9 +12,8 @@ import (
 )
 
 type apiRedirectRegistry struct {
-	lock    sync.Mutex
-	paths   *SpecialPathsEntry[*APIRedirect]
-	entries map[string]*APIRedirect
+	lock  sync.Mutex
+	paths *SpecialPathsEntry[*APIRedirect]
 }
 
 func NewAPIRedirects() *apiRedirectRegistry {
