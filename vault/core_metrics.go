@@ -597,13 +597,13 @@ func (c *Core) inFlightReqGaugeMetric() {
 
 // configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
 func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	if c.policyStore == nil {
-		return []metricsutil.GaugeLabelValues{}, nil
-	}
-
 	c.stateLock.RLock()
 	policyStore := c.policyStore
 	c.stateLock.RUnlock()
+
+	if policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
 
 	ctx = namespace.RootContext(ctx)
 	namespaces := c.collectNamespaces()
