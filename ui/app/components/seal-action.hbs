@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-sideless is-fullwidth is-marginless">
   {{#if this.error}}
     <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-m" data-test-seal-error as |A|>
@@ -22,7 +27,7 @@
     @confirmButtonText="Seal"
     @horizontalPosition="auto-left"
     @onConfirmAction={{this.handleSeal}}
-    data-test-seal="true"
+    data-test-seal
   >
     Seal
   </ConfirmAction>
