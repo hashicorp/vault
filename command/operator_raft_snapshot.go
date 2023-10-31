@@ -32,6 +32,10 @@ Usage: vault operator raft snapshot <subcommand> [options] [args]
 
       $ vault operator raft snapshot save raft.snap
 
+  Inspects a snapshot based on a file:
+
+      $ vault operator raft snapshot inspect raft.snap
+
   Please see the individual subcommand help for detailed usage information.
 `
 
