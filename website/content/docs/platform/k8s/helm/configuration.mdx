@@ -435,7 +435,7 @@ and consider if they're appropriate for your deployment.
         - /vault
       ```
 
-  - `hostAliases` (`array: []`) - A list of aliases to be added to `/etc/hosts`. Specified as a YAML list.
+  - `hostAliases` (`array: []`) - A list of aliases to be added to `/etc/hosts`. Specified as a YAML list following the [hostAlias format](https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/)
 
   - `route` - Values that configure Route services for Vault in OpenShift
 
@@ -752,13 +752,17 @@ and consider if they're appropriate for your deployment.
       "sample/annotation2": "bar"
     ```
 
-    - `ipFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's supported IP family policy, can be either: SingleStack: Single-stack service. The control plane allocates a cluster IP for the Service, using the first configured service cluster IP range. PreferDualStack: Allocates IPv4 and IPv6 cluster IPs for the Service. RequireDualStack: Allocates Service .spec.ClusterIPs from both IPv4 and IPv6 address ranges.
+    - `ipFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's [supported IP family policy](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), can be either: `SingleStack`, `PreferDualStack`, or `RequireDualStack`.
+
+    - `serviceIPFamilies` (`array: []`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well. Can be IPv4 and/or IPv6.
 
   - `serviceAccount` - Values that configure the Kubernetes service account created for Vault.
 
     - `create` (`boolean: true`): If set to true, creates a service account used by Vault.
 
     - `name` (`string: ""`): Name of the service account to use. If not set and create is true, a name is generated using the name of the installation (default is "vault").
+
+    - `createSecret` (`boolean: false`): Create a Kubernetes Secret object to store a non-expiring token for the service account. Prior to Kubernetes 1.24.0, Kubernetes used to generate this secret for each service account by default. Kubernetes recommends using short-lived tokens from the TokenRequest API or projected volumes instead if possible. For more details, see https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets. `server.serviceAccount.create` must be equal to 'true' in order to use this feature.
 
     - `annotations` (`dictionary: {}`) - This value defines additional annotations for the service account. This can either be YAML or a YAML-formatted multi-line templated string.
 
@@ -1010,7 +1014,7 @@ and consider if they're appropriate for your deployment.
 
   - `targetPort` (`int: 8200`) - Sets the target port value of the service.
 
-  - `serviceIPFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's supported IP family policy, can be either: SingleStack: Single-stack service. The control plane allocates a cluster IP for the Service, using the first configured service cluster IP range. PreferDualStack: Allocates IPv4 and IPv6 cluster IPs for the Service. RequireDualStack: Allocates Service .spec.ClusterIPs from both IPv4 and IPv6 address ranges.
+  - `serviceIPFamilyPolicy` (`string: ""`) - The IP family and IP families options are to set the behaviour in a dual-stack environment. Omitting these values will let the service fall back to whatever the CNI dictates the defaults should be. These are only supported for kubernetes versions >=1.23. The service's [supported IP family policy](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services), can be either: `SingleStack`, `PreferDualStack`, or `RequireDualStack`.
 
   - `serviceIPFamilies` (`array: []`) - Sets the families that should be supported and the order in which they should be applied to ClusterIP as well. Can be IPv4 and/or IPv6.
 
