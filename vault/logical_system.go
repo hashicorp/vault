@@ -1180,10 +1180,17 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
-		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-		"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+		"default_lease_ttl": b.Core.defaultLeaseTTL,
+		"max_lease_ttl":     b.Core.maxLeaseTTL,
 		"force_no_cache":    entry.Config.ForceNoCache,
 	}
+	if defttl := int64(entry.Config.DefaultLeaseTTL.Seconds()); defttl != 0 {
+		entryConfig["default_lease_ttl"] = defttl
+	}
+	if maxttl := int64(entry.Config.MaxLeaseTTL.Seconds()); maxttl != 0 {
+		entryConfig["default_lease_ttl"] = maxttl
+	}
+
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
