@@ -232,13 +232,14 @@
   "private": true,
   "ember-addon": {
     "paths": [
+      "lib/config-ui",
       "lib/core",
       "lib/css",
       "lib/keep-gitkeep",
       "lib/kmip",
       "lib/kubernetes",
-      "lib/ldap",
       "lib/kv",
+      "lib/ldap",
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",
