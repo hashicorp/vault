@@ -218,10 +218,12 @@ func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, serial
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
 		"access_key":    *tokenResp.Credentials.AccessKeyId,
 		"secret_key":    *tokenResp.Credentials.SecretAccessKey,
 		"session_token": *tokenResp.Credentials.SessionToken,
+		"ttl":           uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"is_sts": true,
 	})
