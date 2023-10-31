@@ -182,11 +182,6 @@ func (c *OperatorRaftSnapshotInspectCommand) Run(args []string) int {
 		Version: meta.Version,
 	}
 
-	// Restructures stats given above to be human readable
-	if info == nil {
-		c.UI.Error(fmt.Sprintf("Error calculating snapshot info: %s", err))
-		return 1
-	}
 	formattedStatsKV := generateKVStats(*info)
 
 	data := &OutputFormat{
