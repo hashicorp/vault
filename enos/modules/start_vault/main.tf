@@ -51,7 +51,8 @@ locals {
     "awskms" = {
       type = "awskms"
       attributes = {
-        name       = "primary"
+        name       = var.seal_alias
+        priority   = var.seal_priority
         kms_key_id = var.seal_key_name
       }
     }
@@ -65,7 +66,8 @@ locals {
     "awskms" = {
       type = "awskms"
       attributes = {
-        name       = "secondary"
+        name       = var.seal_alias_secondary
+        priority   = var.seal_priority_secondary
         kms_key_id = var.seal_key_name_secondary
       }
     }
