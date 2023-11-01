@@ -76,9 +76,20 @@ $ vault read -format=json -namespace=ns1 \
 ```
 
 </CodeBlockConfig>
-# The only policy in this namespace is default (group_policy is missing)
+Now that we know Vault is looking for a policy called `group_policy`, we can
+check whether that policy exists under the `ns1` namespace:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
 $ vault policy list -namespace=ns1
 default
+```
+
+</CodeBlockConfig>
+
+The only policy in the `ns1` namespace is `default`, which confirms that the
+missing policy (`group_policy`) is causing the error.
 
 # Option 1: Remove the missing policy from the group
 $ vault write -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea name="test" policies="default"
