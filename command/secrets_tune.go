@@ -162,7 +162,7 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameDelegatedAuthAccessors,
 		Target: &c.flagDelegatedAuthAccessors,
-		Usage: "A list of permitted authentication accessors this backend can delegate authentication too. " +
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
 			"Note that multiple values may be specified by providing this option multiple times, " +
 			"each time with 1 accessor.",
 	})

@@ -174,11 +174,11 @@ func TestDelegatedAuth(t *testing.T) {
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	upAccessor2 := resp.Data["accessor"].(string)
 
-	// Setup our backend mount that will delegate it's auth to the userpass mount
+	// Set up our backend mount that will delegate its auth to the userpass mount
 	err = client.Sys().Mount("dat", &api.MountInput{
 		Type: "delegateauthtest",
 		Config: api.MountConfigInput{
-			DelegatedAuthAccessors: []string{upAccessor},
+			DelegatedAuthAccessors: []string{upAccessor, "an-accessor-that-does-not-exist"},
 		},
 	})
 	require.NoError(t, err, "failed mounting delegated auth endpoint")
@@ -304,6 +304,14 @@ func TestDelegatedAuth(t *testing.T) {
 			username:      "allowed-est",
 			password:      "test",
 			errorContains: "backend returned an invalid mount accessor",
+		},
+		{
+			name:          "accessor-does-not-exist-within-delegated-auth-error",
+			accessor:      "an-accessor-that-does-not-exist",
+			path:          "login",
+			username:      "allowed-est",
+			password:      "test",
+			errorContains: "mount with accessor 'an-accessor-that-does-not-exist' not found",
 		},
 		{
 			name:          "non-allowed-accessor-within-delegated-auth-error",
