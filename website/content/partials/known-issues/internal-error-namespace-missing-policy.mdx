@@ -40,14 +40,23 @@ Code: 500. Errors:
 
 * internal error
 
-# Identify the entity and group IDs
-$ vault read -format=json identity/entity/name/user1 | jq '{"entity_id": .data.id, "group_ids": .data.group_ids} '
+To confirm the problem is a missing policy, start by identifying the relevant
+entity and group IDs:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault read -format=json identity/entity/name/user1 | \
+  jq '{"entity_id": .data.id, "group_ids": .data.group_ids} '
 {
   "entity_id": "420c82de-57c3-df2e-2ef6-0690073b1636",
   "group_ids": [
     "6cb152b7-955d-272b-4dcf-a2ed668ca1ea"
   ]
 }
+```
+
+</CodeBlockConfig>
 
 # Fetch the group from the other namespace
 $ vault read -format=json -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | jq '.data.policies'
