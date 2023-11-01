@@ -91,16 +91,51 @@ default
 The only policy in the `ns1` namespace is `default`, which confirms that the
 missing policy (`group_policy`) is causing the error.
 
-# Option 1: Remove the missing policy from the group
-$ vault write -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea name="test" policies="default"
 
-# OR Option 2: Create the missing policy
+To fix the problem, we can either remove the missing policy from the
+`6cb152b7-955d-272b-4dcf-a2ed668ca1ea` group or create the missing policy under
+the `ns1` namespace.
+
+<Tabs>
+
+<Tab heading="Remove the group policy">
+
+To remove `group_policy` from group ID `6cb152b7-955d-272b-4dcf-a2ed668ca1ea`,
+use the `vault write` command to set the applicable policies to just include
+`default`:
+
+```shell-session
+$ vault write                                             \
+  -namespace=ns1                                          \
+  identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea  \
+  name="test"                                             \
+  policies="default"
+```
+
+</Tab>
+
+<Tab heading="Add the policy to ns1">
+
+To create the missing policy, use `vault policy write` and define the
+appropriate capabilities:
+
+```shell-session
 $ vault policy write -namespace=ns1 group_policy - << EOF
     path "secret/data/*" {
 	    capabilities = ["create", "update"]
     }
 EOF
+```
 
-# Login should succeed now
+</Tab>
+</Tabs>
+
+Verify the fix by re-running the login command:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
 $ vault login -method=userpass username=user1 password=123`
 ```
+
+</CodeBlockConfig>
