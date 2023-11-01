@@ -18,15 +18,15 @@ policy to a token when:
 
 1. the token belongs to a different namespace than the one handling
    authentication, and
-1. the derived policy does not exist under the namespace.
+2. the derived policy does not exist under the namespace.
 
 
 You can resolve the error by adding the policy to the relevant namespace or
 deleting the group policy mapping that uses the derived policy.
 
 As an example, consider the following userpass auth method failure. The error is
-likely due to the fact that Vault expects a group policy under the namespace for
-`user1` that does not exist.
+due to the fact that Vault expects a group policy under the namespace that does 
+not exist.
 
 <CodeBlockConfig hideClipboard>
 
@@ -61,7 +61,7 @@ $ vault read -format=json identity/entity/name/user1 | \
 
 </CodeBlockConfig>
 
-Use the group ID to fetch the relevant policies for `user1` under the `ns1`
+Use the group ID to fetch the relevant policies for the group under the `ns1`
 namespace:
 
 <CodeBlockConfig hideClipboard>
