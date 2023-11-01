@@ -472,7 +472,7 @@ func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyTyp
 	pt, ok := ps.policyTypeMap.Load(index)
 	if !ok {
 		// Doesn't exist
-		return nil, fmt.Errorf("policy does not exist in type map: %v", index)
+		return nil, ErrPolicyNotExistInTypeMap
 	}
 
 	policyType, ok := pt.(PolicyType)
