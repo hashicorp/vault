@@ -88,7 +88,9 @@ export default ApplicationAdapter.extend({
           'chroot_namespace has been set but the namespace does not exist. Please create the namespace and then refresh the page.';
         throw e;
       }
-      // otherwise, sys/health will fail when chroot set because it's allowed in root namespace only
+      // otherwise, sys/health will only fail when chroot set
+      // because it's allowed in root namespace only and
+      // configured to return a 200 response in other cases
       return { has_chroot_namespace: true };
     });
   },
