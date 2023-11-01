@@ -28,7 +28,9 @@ As an example, consider the following userpass auth method failure. The error is
 likely due to the fact that Vault expects a group policy under the namespace for
 `user1` that does not exist.
 
-```
+<CodeBlockConfig hideClipboard>
+
+```shell-session
 # Failed login
 $ vault login -method=userpass username=user1 password=123
 Error authenticating: Error making API request.
