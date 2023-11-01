@@ -24,8 +24,9 @@ policy to a token when:
 You can resolve the error by adding the policy to the relevant namespace or
 deleting the group policy mapping that uses the derived policy.
 
-Below is an example of a userpass auth method that is failing because of a
-missing group policy from another namespace.
+As an example, consider the following userpass auth method failure. The error is
+likely due to the fact that Vault expects a group policy under the namespace for
+`user1` that does not exist.
 
 ```
 # Failed login
