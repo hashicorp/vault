@@ -34,13 +34,13 @@ specific scenarios.
 
 ## Static secret caching
 
-You can configure Vault Proxy to cache dynamic secrets and static, KVv1 and KVv2
+You can configure Vault Proxy to cache dynamic secrets and static (KVv1 and KVv2)
 secrets. When you enable caching for static secrets. Proxy keeps a cached entry
 of the secret but only provides the cached response to requests made with tokens
 that can access the secret. As a result, multiple requests to Vault Proxy for
 the same KV secret only require a single, initial request to be forwarded to Vault.
 
-Static secret caching is disabled by default. To enable secret caching you must
+Static secret caching is disabled by default. To enable caching for static secrets you must
 configure [auto-auth](/vault/docs/agent-and-proxy/autoauth) and ensure the
 auto-auth token has permission to subscribe to KV
 [event](/vault/docs/concepts/events) updates.
@@ -53,8 +53,8 @@ For more information on static secret caching, refer to the
 
 ## Persistent cache
 
-Vault Proxy can restore tokens and leases from a persistent cache file created
-by a previous Vault Proxy process.
+Vault Proxy can restore secrets, such as, tokens, leases, and static secrets, from a persistent
+cache file created by a previous Vault Proxy process.
 
 Refer to the [Vault Proxy Persistent
 Caching](/vault/docs/agent-and-proxy/proxy/caching/persistent-caches) page for more information on
@@ -83,7 +83,7 @@ entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request uniqueness
 
-In order to detect repeat requests and return cached responses, Proxy will need
+In order to detect repeat requests and return cached responses, Proxy needs
 to have a way to uniquely identify the requests. This computation as it stands
 today takes a simplistic approach (may change in future) of serializing and
 hashing the HTTP request along with all the headers and the request body. This
@@ -166,7 +166,7 @@ $ curl \
 
 The presence of the top level `cache` block in any way (including an empty `cache` block)  will enable the cache.
 Note that either `cache_static_secrets` must be `true` and/or `disable_caching_dynamic_secrets` must
-be `false`, as otherwise the cache does nothing. The top level `cache` block has the following configuration entries:
+be `false`, otherwise the cache does nothing. The top level `cache` block has the following configuration entries:
 
 - `persist` `(object: optional)` - Configuration for the persistent cache.
 

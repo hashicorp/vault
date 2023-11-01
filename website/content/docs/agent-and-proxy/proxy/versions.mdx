@@ -8,7 +8,7 @@ description: |-
 # Running different versions of Proxy and Vault server
 
 There is no requirement to run identical versions of Vault Proxy and Vault server.
-It is safe to run different versions, however you may not be able to take
+It is safe to run different versions. However, you may not be able to take
 advantage of all the newest features in Vault if you do not upgrade to
 the most recent versions of Proxy and Vault server.
 
@@ -40,12 +40,12 @@ Newer Vault Agent versions will not work with older versions of Vault if
 the Proxy depends on features that do not exist in older Vault server
 versions. Whenever possible, we release newer functionality as opt-in
 and provide graceful degradation when connecting to an older Vault
-server instance. But the new functionality may be required In cases
+server instance. But the new functionality may be required in cases
 where the change relates  unless there's a very good reason (such as a
 serious security flaw being patched)
 
 Auto-auth:
-- Proxy may support authentication methods that are unavailable in older Vault versions.
+- Proxy may support authentication methods that are unavailable in older versions of Vault.
 - Proxy may make use of newer functionality for existing authentication methods.
 
 Proxy:

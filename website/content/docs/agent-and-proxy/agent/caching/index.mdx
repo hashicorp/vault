@@ -73,7 +73,7 @@ entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request uniqueness
 
-In order to detect repeat requests and return cached responses, agent will need
+In order to detect repeat requests and return cached responses, Agent needs
 to have a way to uniquely identify the requests. This computation as it stands
 today takes a simplistic approach (may change in future) of serializing and
 hashing the HTTP request along with all the headers and the request body. This
