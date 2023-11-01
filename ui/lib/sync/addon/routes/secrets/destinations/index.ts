@@ -26,11 +26,11 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
         return model[key].toLowerCase().includes(value.toLowerCase());
       });
     };
-    if (name) {
-      filteredDataset = filter('name', name);
-    }
     if (type) {
       filteredDataset = filter('type', type);
+    }
+    if (name) {
+      filteredDataset = filter('name', name);
     }
     return filteredDataset;
   }
