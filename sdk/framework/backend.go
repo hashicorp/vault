@@ -50,8 +50,7 @@ type Backend struct {
 	//
 	// PathsSpecial is the list of path patterns that denote the paths above
 	// that require special privileges.
-	Paths []*Path
-
+	Paths        []*Path
 	PathsSpecial *logical.Paths
 
 	// Secrets is the list of secret types that this backend can

@@ -135,11 +135,6 @@ func TestDelegatedAuth(t *testing.T) {
 	})
 	require.NoError(t, err, "failed mounting userpass endpoint")
 
-	err = client.Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-	require.NoError(t, err, "failed mounting userpass2 endpoint")
-
 	_, err = client.Logical().Write("auth/userpass/users/allowed-est", map[string]interface{}{
 		"password":   "test",
 		"policies":   "allow-est",
@@ -153,7 +148,12 @@ func TestDelegatedAuth(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to create allowed-est user")
 
-	// Setup another EST user on the second userpass mount
+	// Setup another auth mount so we can test multiple accessors in mount tuning works later
+	err = client.Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	require.NoError(t, err, "failed mounting userpass2")
+
 	_, err = client.Logical().Write("auth/userpass2/users/allowed-est-2", map[string]interface{}{
 		"password":   "test",
 		"policies":   "allow-est",
@@ -161,6 +161,7 @@ func TestDelegatedAuth(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to create allowed-est-2 user")
 
+	// Fetch the userpass auth accessors
 	resp, err := client.Logical().Read("/sys/mounts/auth/userpass")
 	require.NoError(t, err, "failed to query for mount accessor")
 	require.NotNil(t, resp, "received nil response from mount accessor query")
@@ -189,11 +190,15 @@ func TestDelegatedAuth(t *testing.T) {
 		"path":     "login",
 	}
 
+	// We want a client without any previous tokens set to make sure we aren't using
+	// the other token.
 	clientNoToken, err := client.Clone()
 	require.NoError(t, err, "failed cloning client")
-
 	clientNoToken.ClearToken()
 
+	// Happy path test for the various operation types we want to support, make sure
+	// for each one that we don't error out and we get back a token value from the backend
+	// call.
 	for _, test := range []string{"delete", "read", "list", "write"} {
 		t.Run("op-"+test, func(st *testing.T) {
 			switch test {
@@ -336,7 +341,8 @@ func TestDelegatedAuth(t *testing.T) {
 		})
 	}
 
-	// Make sure we can add an accessor to the mount that previously failed above
+	// Make sure we can add an accessor to the mount that previously failed above, and the request handling code
+	// does use both accessor values.
 	t.Run("multiple-accessors", func(st *testing.T) {
 		err = client.Sys().TuneMount("dat", api.MountConfigInput{DelegatedAuthAccessors: []string{upAccessor, upAccessor2}})
 		require.NoError(t, err, "Failed to tune mount to update delegated auth accessors")
