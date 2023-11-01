@@ -4,6 +4,8 @@
 package vault
 
 import (
+	"context"
+	paths "path"
 	"reflect"
 	"strings"
 	"testing"
@@ -573,12 +575,12 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 	}
 
 	// outputs
-	wildcardPathsEntry := []wildcardPath[bool]{
+	wildcardPathsEntry := []wildcardPath[routerPath]{
 		{segments: []string{"end", "+"}, isPrefix: false},
 		{segments: []string{"+", "begin", ""}, isPrefix: true},
 		{segments: []string{"middle", "+", "bar"}, isPrefix: true},
 	}
-	expected := &SpecialPathsEntry[bool]{
+	expected := &SpecialPathsEntry[routerPath]{
 		paths:         pathsToRadix(paths),
 		wildcardPaths: wildcardPathsEntry,
 	}
@@ -629,5 +631,62 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
 			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
 		}
+	}
+}
+
+func TestAPIRedirectMatching(t *testing.T) {
+	// inputs
+	redirs := map[string]string{
+		"foo":           "v1/foo-only",
+		"foo/*":         "v1/foo-star",
+		"sub/bar*":      "v1/sub-bar-star",
+		"end/+":         "v1/end-plus",
+		"+/begin/*":     "v1/plus/begin/star",
+		"middle/+/bar*": "v1/middle/plus/bar/star",
+	}
+
+	tests := map[string]struct {
+		expected string
+		mismatch bool
+	}{
+		"foo":             {"v1/foo-only", false},
+		"foof":            {"", true},
+		"foo/f":           {"v1/foo-star", false},
+		"foo/f2":          {"v1/foo-star", false},
+		"sub/bar":         {"v1/sub-bar-star", false},
+		"sub/bark":        {"v1/sub-bar-star", false},
+		"end/foo":         {"v1/end-plus", false},
+		"end":             {"", true},
+		"foo/begin/baz":   {"v1/foo-star", false},
+		"qux/begin/bar":   {"v1/plus/begin/star", false},
+		"qux/begin":       {"", true},
+		"begin/foo":       {"", true},
+		"middle/foo/bar":  {"v1/middle/plus/bar/star", false},
+		"middle/foo/bark": {"v1/middle/plus/bar/star", false},
+		"middle/bar":      {"", true},
+	}
+	apiRedir := NewAPIRedirects()
+	for s, d := range redirs {
+		if err := apiRedir.TryRegister(context.Background(), nil, "my-mount", s, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for k, x := range tests {
+		t.Run(k, func(t *testing.T) {
+			v, s := apiRedir.Find(k)
+			if x.mismatch && v != nil {
+				t.Fail()
+			} else if !x.mismatch && v == nil {
+				t.Fail()
+			} else if !x.mismatch {
+				d, err := v.Destination()
+				if err != nil {
+					t.Fatal(err)
+				} else if paths.Join(d, s) != x.expected {
+					t.Fail()
+				}
+			}
+		})
 	}
 }

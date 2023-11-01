@@ -103,7 +103,7 @@ func (pe *SpecialPathsEntry[E]) Match(path string) (bool, E, string) {
 		prefixMatch := raw.(SpecialPathLeaf).IsPrefixMatch()
 		// Handle the prefix match case
 		if prefixMatch && strings.HasPrefix(path, match) {
-			return true, raw.(E), strings.TrimPrefix(path, match)
+			return true, raw.(E), ""
 		}
 		if match == path {
 			// Handle the exact match case
@@ -122,18 +122,18 @@ func (pe *SpecialPathsEntry[E]) Match(path string) (bool, E, string) {
 	return false, zero, ""
 }
 
-func (pe *SpecialPathsEntry[E]) AddNonWildcardPath(path string, f func(bool) E) bool {
+func (pe *SpecialPathsEntry[E]) AddNonWildcardPath(path string, itemBuilder func(bool) E) bool {
 	// Check if this is a prefix or exact match
 	prefixMatch := len(path) >= 1 && path[len(path)-1] == '*'
 	if prefixMatch {
 		path = path[:len(path)-1]
 	}
 
-	_, u := pe.paths.Insert(path, f(prefixMatch))
+	_, u := pe.paths.Insert(path, itemBuilder(prefixMatch))
 	return u
 }
 
-func (pe *SpecialPathsEntry[E]) Add(path string, f func(b bool) E) error {
+func (pe *SpecialPathsEntry[E]) Add(path string, itemBuilder func(b bool) E) error {
 	if ok, err := isValidUnauthenticatedPath(path); !ok {
 		return err
 	}
@@ -147,12 +147,12 @@ func (pe *SpecialPathsEntry[E]) Add(path string, f func(b bool) E) error {
 			path = path[0 : len(path)-1]
 		}
 		// We are micro-optimizing by storing pre-split slices of path segments
-		wcPath := wildcardPath[E]{segments: strings.Split(path, "/"), isPrefix: isPrefix}
+		wcPath := wildcardPath[E]{segments: strings.Split(path, "/"), isPrefix: isPrefix, value: itemBuilder(isPrefix)}
 		pe.wildcardPaths = append(pe.wildcardPaths, wcPath)
 	} else {
 		// accumulate paths that do not contain wildcards
 		// to be stored in the radix tree
-		pe.AddNonWildcardPath(path, f)
+		pe.AddNonWildcardPath(path, itemBuilder)
 	}
 	return nil
 }
@@ -1050,7 +1050,7 @@ func pathMatchesWildcardPath(path, wcPath []string, isPrefix, returnRemaining bo
 		}
 	}
 	if returnRemaining {
-		return true, paths.Join(path[i:]...)
+		return true, paths.Join(path[i+1:]...)
 	}
 	return true, ""
 }

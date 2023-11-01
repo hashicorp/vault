@@ -83,10 +83,15 @@ func (a *APIRedirect) IsPrefixMatch() bool {
 }
 
 func (a *APIRedirect) Destination() (string, error) {
-	m := a.c.mounts.findByMountUUID(a.mountUUID)
+	if a.c == nil {
+		// Just for testing
+		return a.prefix, nil
+	} else {
+		m := a.c.mounts.findByMountUUID(a.mountUUID)
 
-	if m == nil {
-		return "", fmt.Errorf("cannot find backend with uuid: %s", a.mountUUID)
+		if m == nil {
+			return "", fmt.Errorf("cannot find backend with uuid: %s", a.mountUUID)
+		}
+		return paths.Join(m.Namespace().Path, m.Path, a.prefix), nil
 	}
-	return paths.Join(m.Namespace().Path, m.Path, a.prefix), nil
 }
