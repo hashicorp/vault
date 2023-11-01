@@ -9,7 +9,7 @@ description: >-
 
 The Vault Secrets Operator (VSO) supports authenticating to Vault's [GCP auth](/vault/docs/auth/gcp) method, using GKE workload identity.
 
-See Google's [Use Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) for the steps necessary to enable workload identity on a GKE cluster, and to allow a Kubernetes service account to impersonate a Google IAM service account.
+See Google's [Use Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) for the steps necessary to enable workload identity on a GKE cluster, and to allow a Kubernetes service account to impersonate a Google IAM service account. The [workload identity submodule](https://registry.terraform.io/modules/terraform-google-modules/kubernetes-engine/google/28.0.0/submodules/workload-identity) of the [GKE terraform module](https://registry.terraform.io/modules/terraform-google-modules/kubernetes-engine/google/28.0.0) can be used for this setup as well.
 
 Once workload identity is configured on a GKE cluster, use a Vault role config like this:
 
