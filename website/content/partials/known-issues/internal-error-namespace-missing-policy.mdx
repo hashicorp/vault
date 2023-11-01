@@ -61,12 +61,21 @@ $ vault read -format=json identity/entity/name/user1 | \
 
 </CodeBlockConfig>
 
-# Fetch the group from the other namespace
-$ vault read -format=json -namespace=ns1 identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | jq '.data.policies'
+Use the group ID to fetch the relevant policies for `user1` under the `ns1`
+namespace:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault read -format=json -namespace=ns1 \
+  identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | \
+  jq '.data.policies'
 [
   "group_policy"
 ]
+```
 
+</CodeBlockConfig>
 # The only policy in this namespace is default (group_policy is missing)
 $ vault policy list -namespace=ns1
 default
