@@ -12,7 +12,17 @@ This impacts all auth methods.
 A fix will be released in Vault 1.15.2, 1.14.6, and 1.13.10.
 
 ### Workaround
-During authentication, Vault will derive any additional policies that should be inherited based on any groups an entity is a member of. If Vault attempts to attach a policy to a token from a different namespace than the one handling the authentication, _and_ that policy does not exist, Vault will return an internal error. The way to resolve this issue is to either add the policy, or to delete the group policy mapping referring to the non-existent policy.
+During authentication, Vault derives inherited policies based on the groups an
+entity belongs to. Vault returns an internal error when attaching the derived
+policy to a token when:
+
+1. the token belongs to a different namespace than the one handling
+   authentication, and
+1. the derived policy does not exist under the namespace.
+
+
+You can resolve the error by adding the policy to the relevant namespace or
+deleting the group policy mapping that uses the derived policy.
 
 Below is an example of a userpass auth method that is failing because of a
 missing group policy from another namespace.
