@@ -21,7 +21,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Replication', 'Monitoring'];
+    const headings = ['Vault', 'Replication', 'Monitoring', 'Settings'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
@@ -37,12 +37,14 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
+    // TODO Custom Messages: VAULT-21591 Update this count to 2 after permissions check for Custom Messages link
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
+      .exists({ count: 3 }, 'Nav links are hidden other than secrets and dashboard');
+    // TODO Custom Messages: VAULT-21591 Update this count to 1 after permissions check for Settings section
     assert
       .dom('[data-test-sidebar-nav-heading]')
-      .exists({ count: 1 }, 'Headings are hidden other than Vault');
+      .exists({ count: 2 }, 'Headings are hidden other than Vault');
   });
 
   test('it should render nav links', async function (assert) {
@@ -59,6 +61,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Client Count',
       'License',
       'Seal Vault',
+      'Custom Messages',
     ];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
