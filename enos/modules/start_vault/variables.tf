@@ -53,9 +53,21 @@ variable "seal_ha_beta" {
   default     = true
 }
 
+variable "seal_alias" {
+  type        = string
+  description = "The primary seal alias name"
+  default     = "primary"
+}
+
+variable "seal_alias_secondary" {
+  type        = string
+  description = "The secondary seal alias name"
+  default     = "secondary"
+}
+
 variable "seal_key_name" {
   type        = string
-  description = "The auto-unseal key name"
+  description = "The primary auto-unseal key name"
   default     = null
 }
 
@@ -63,6 +75,18 @@ variable "seal_key_name_secondary" {
   type        = string
   description = "The secondary auto-unseal key name"
   default     = null
+}
+
+variable "seal_priority" {
+  type        = string
+  description = "The primary seal priority"
+  default     = "1"
+}
+
+variable "seal_priority_secondary" {
+  type        = string
+  description = "The secondary seal priority"
+  default     = "2"
 }
 
 variable "seal_type" {
