@@ -40,6 +40,9 @@ const API_PATHS = {
     activity: 'sys/internal/counters/activity',
     config: 'sys/internal/counters/config',
   },
+  settings: {
+    customMessages: 'sys/config/ui/custom-messages',
+  },
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
