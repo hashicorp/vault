@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -36,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	gziphandler "github.com/klauspost/compress/gzhttp"
 )
 
 const (
@@ -295,7 +295,7 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		origBody := new(bytes.Buffer)
 		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return

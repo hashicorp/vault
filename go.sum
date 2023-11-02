@@ -903,7 +903,6 @@ github.com/Microsoft/hcsshim v0.10.0-rc.7/go.mod h1:ILuwjA+kNW+MrN/w5un7n3mTqkws
 github.com/Microsoft/hcsshim/test v0.0.0-20201218223536-d3e5debf77da/go.mod h1:5hlzMzRKMLyo42nCZ9oml8AdTlq/0cvIaBv6tK1RehU=
 github.com/Microsoft/hcsshim/test v0.0.0-20210227013316-43a75bb4edd3/go.mod h1:mw7qgWloBUl75W/gVH3cQszUg1+gUITj7D6NY7ywVnY=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
-github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
@@ -2168,8 +2167,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0 h1:DePS4sSAbjYTQrpTP
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.6.0/go.mod h1:4nPWdBQxjIEGZaWWPKHixN7MFHjESOlOtNyy02e/w9c=
 github.com/hashicorp/vault-plugin-secrets-kv v0.16.2 h1:HdluNBrYGEEAJ1IrP3/T5RRgha16VGRlAisAlSB2hvI=
 github.com/hashicorp/vault-plugin-secrets-kv v0.16.2/go.mod h1:oJwVConr6pkDIIO8q8OO3FP5WtWj/iSWuhiPVdKt67E=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.1 h1:6WyystBBEx1bDpkZO99wI3RbNvhUTVR6/ihHDeZMsPw=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.1/go.mod h1:OdXvez+GH0XBSRS7gxbS8B1rLUPb8bGk+bDVyEaAzI8=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2 h1:5eFlzhFXoSe+ntm26wromhtLbPjTCdXcdwpMv7wFeHk=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.2/go.mod h1:OdXvez+GH0XBSRS7gxbS8B1rLUPb8bGk+bDVyEaAzI8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.11.2 h1:LNzIP4zfWivAy/hgCIwETJFr7BBS91bsJ6AlsGhqAc8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.11.2/go.mod h1:osvWc6/BOZPR8Mdqp5dF40dAaHddEiylO1pDRI7DOqo=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.7.3 h1:k5jCx6laFvQHvrQod+TSHSoDqF3ZSIlQB4Yzj6koz0I=

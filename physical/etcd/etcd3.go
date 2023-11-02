@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -247,7 +247,7 @@ func (c *EtcdBackend) List(ctx context.Context, prefix string) ([]string, error)
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	prefix = path.Join(c.path, prefix) + "/"
-	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
+	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix(), clientv3.WithKeysOnly())
 	if err != nil {
 		return nil, err
 	}
