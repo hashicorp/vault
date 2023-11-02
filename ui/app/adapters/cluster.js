@@ -80,6 +80,11 @@ export default ApplicationAdapter.extend({
         performancestandbycode: 200,
       },
       unauthenticated: true,
+    }).catch(() => {
+      // sys/health will only fail when chroot set
+      // because it's allowed in root namespace only and
+      // configured to return a 200 response in other fail scenarios
+      return { has_chroot_namespace: true };
     });
   },
 
