@@ -26,6 +26,7 @@
     "fmt:styles": "prettier --write app/styles/**/*.*",
     "start": "VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
+    "start:chroot": "ember server --proxy=http://localhost:8300 --port=4300",
     "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "npm-run-all --print-name lint:js:quiet lint:hbs:quiet && node scripts/start-vault.js",
     "test:enos": "npm-run-all lint:js:quiet lint:hbs:quiet && node scripts/enos-test-ember.js",
