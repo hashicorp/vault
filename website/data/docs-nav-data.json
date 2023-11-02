@@ -1989,6 +1989,19 @@
                 ]
               },
               {
+                "title": "Auth Methods",
+                "routes": [
+                  {
+                    "title": "Overview",
+                    "path": "platform/k8s/vso/auth"
+                  },
+                  {
+                    "title": "AWS",
+                    "path": "platform/k8s/vso/auth/aws"
+                  }
+                ]
+              },
+              {
                 "title": "Examples",
                 "path": "platform/k8s/vso/examples"
               },
