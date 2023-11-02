@@ -6,6 +6,7 @@
 // add all handlers here
 // individual lookup done in mirage config
 import base from './base';
+import chrootNamespace from './chroot-namespace';
 import clients from './clients';
 import db from './db';
 import kms from './kms';
@@ -16,4 +17,16 @@ import hcpLink from './hcp-link';
 import kubernetes from './kubernetes';
 import ldap from './ldap';
 
-export { base, clients, db, kms, mfaConfig, mfaLogin, oidcConfig, hcpLink, kubernetes, ldap };
+export {
+  base,
+  chrootNamespace,
+  clients,
+  db,
+  hcpLink,
+  kms,
+  kubernetes,
+  ldap,
+  mfaConfig,
+  mfaLogin,
+  oidcConfig,
+};
