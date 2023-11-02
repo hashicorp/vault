@@ -115,4 +115,13 @@
       data-test-sidebar-nav-link="Seal Vault"
     />
   {{/if}}
+
+  {{#if (has-permission "settings")}}
+    <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
+    <Nav.Link
+      @route="vault.cluster.config-ui.messages"
+      @text="Custom Messages"
+      data-test-sidebar-nav-link="Custom Messages"
+    />
+  {{/if}}
 </Hds::SideNav::Portal>
