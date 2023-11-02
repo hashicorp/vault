@@ -4,32 +4,25 @@
  */
 
 import ApplicationAdapter from 'vault/adapters/application';
+import { pluralize } from 'ember-inflector';
 
 export default class SyncDestinationAdapter extends ApplicationAdapter {
-  namespace = 'v1';
+  namespace = 'v1/sys';
 
-  _baseUrl() {
-    return `${this.buildURL()}/sys`;
+  pathForType(modelName) {
+    return modelName === 'sync/destination' ? pluralize(modelName) : modelName;
   }
 
-  createRecord(store, type, snapshot) {
-    const { name, type: destinationType } = snapshot.attributes();
-    const url = `${this._baseUrl()}/sync/destinations/${destinationType}/${name}`;
-
-    return this.ajax(url, 'POST', { data: snapshot.serialize() }).then((resp) => ({
-      id: `${destinationType}/${name}`,
+  createRecord(store, { modelName }, snapshot) {
+    const { name, type } = snapshot.attributes();
+    const data = snapshot.serialize();
+    return this.ajax(this.buildURL(modelName, name), 'POST', { data }).then((resp) => ({
+      id: `${type}/${name}`,
       ...resp,
     }));
   }
 
-  // modelName is sync/destinations/:type
-  // id is the destination name
-  urlForFindRecord(id, modelName) {
-    return `${this._baseUrl()}/${modelName}/${id}`;
-  }
-
-  query() {
-    const url = `${this._baseUrl()}/sync/destinations`;
-    return this.ajax(url, 'GET', { data: { list: true } });
+  query(store, { modelName }) {
+    return this.ajax(this.buildURL(modelName), 'GET', { data: { list: true } });
   }
 }

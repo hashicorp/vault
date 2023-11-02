@@ -12,7 +12,7 @@ import { render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 import { toLabel } from 'vault/helpers/to-label';
-import { isArray } from '@ember/array';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module(
@@ -24,6 +24,8 @@ module(
 
     hooks.beforeEach(function () {
       this.store = this.owner.lookup('service:store');
+
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
       this.renderFormComponent = () => {
         return render(
@@ -86,7 +88,7 @@ module(
           // assert the remaining model attributes render
           this.unmaskedAttrs.forEach(({ name, options }) => {
             const label = options.label || toLabel([name]);
-            const value = isArray(this.model[name]) ? this.model[name].join(',') : this.model[name];
+            const value = Array.isArray(this.model[name]) ? this.model[name].join(',') : this.model[name];
             assert.dom(PAGE.infoRowValue(label)).hasText(value);
           });
         });

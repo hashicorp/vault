@@ -13,6 +13,7 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 module('Integration | Component | sync | SyncHeader', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
+
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.16.0+ent';
@@ -28,7 +29,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
     );
 
     assert.dom(PAGE.title).hasText('Secrets sync Enterprise feature');
-    assert.dom(PAGE.breadcrumbs).doesNotExist('does not render breadcrumbs');
+    assert.dom(PAGE.headerContainer).hasTextContaining('Secrets sync', 'renders default breadcrumb');
   });
 
   test('it should not render enterprise badge for enterprise versions', async function (assert) {
