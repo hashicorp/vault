@@ -15,7 +15,7 @@ import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
-import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/app-types';
+import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;

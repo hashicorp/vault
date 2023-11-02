@@ -5,7 +5,7 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
-import type { SyncDestination, SyncDestinationType } from 'vault/vault/app-types';
+import type { SyncDestination, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 /* 
 This helper is referenced in the base sync destination model
