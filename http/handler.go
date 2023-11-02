@@ -419,7 +419,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				core.Logger().Warn("error resolving potential API redirect", "error", err)
 			} else {
 				if redir != "" {
-					w.Header().Set("Location", redir)
+					dest := url.URL{
+						Path:     redir,
+						RawQuery: r.URL.RawQuery,
+					}
+					w.Header().Set("Location", dest.String())
 					switch r.Method {
 					case http.MethodGet:
 						w.WriteHeader(http.StatusFound)

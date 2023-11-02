@@ -647,13 +647,11 @@ func TestAPIRedirectMatching(t *testing.T) {
 		expected string
 		mismatch bool
 	}{
-		"foo":                               {"/v1/one-path", false},
-		"foof":                              {"", true},
-		"foo/extra":                         {"/v1/one-path/extra", false},
-		"bar/baz":                           {"/v1/two-paths", false},
-		"bar/baz?with=query&params=present": {"/v1/two-paths?with=query&params=present", false},
-		"bar/baz/extra":                     {"/v1/two-paths/extra", false},
-		"bar/baz/extra?with=query&params=present": {"/v1/two-paths/extra?with=query&params=present", false},
+		"foo":           {"/v1/one-path", false},
+		"foof":          {"", true},
+		"foo/extra":     {"/v1/one-path/extra", false},
+		"bar/baz":       {"/v1/two-paths", false},
+		"bar/baz/extra": {"/v1/two-paths/extra", false},
 	}
 	apiRedir := NewAPIRedirects()
 	for s, d := range redirs {
