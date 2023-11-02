@@ -81,10 +81,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   async onDelete(destination: SyncDestinationModel) {
     try {
-      const { name, type } = destination;
+      const { name } = destination;
       const message = `Successfully deleted destination ${name}.`;
       await destination.destroyRecord();
-      this.store.clearDataset(`sync/destinations/${type}`);
+      this.store.clearDataset('sync/destination');
       this.router.transitionTo('vault.cluster.sync.secrets.destinations');
       this.flashMessages.success(message);
     } catch (error) {

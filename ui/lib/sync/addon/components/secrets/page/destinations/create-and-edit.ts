@@ -46,7 +46,7 @@ export default class DestinationsCreateForm extends Component<Args> {
         const verb = destination.isNew ? 'created' : 'updated';
         yield destination.save();
         this.flashMessages.success(`Successfully ${verb} the destination ${destination.name}`);
-
+        this.store.clearDataset('sync/destination');
         this.router.transitionTo(
           'vault.cluster.sync.secrets.destinations.destination.details',
           destination.type,
