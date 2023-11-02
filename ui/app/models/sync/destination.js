@@ -41,9 +41,6 @@ export default class SyncDestinationModel extends Model {
   get canRead() {
     return this.destinationPath.get('canRead') !== false;
   }
-  get canList() {
-    return this.destinationPath.get('canList') !== false;
-  }
   get canSync() {
     return this.setAssociationPath.get('canUpdate') !== false;
   }
