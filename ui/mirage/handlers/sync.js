@@ -8,6 +8,18 @@ import { Response } from 'miragejs';
 export default function (server) {
   const base = '/sys/sync/destinations';
   const uri = `${base}/:type/:name`;
+
+  const recordToPayload = (record) => {
+    const { type, name, ...connection_details } = record;
+    return {
+      data: {
+        connection_details,
+        name,
+        type,
+      },
+    };
+  };
+
   // destinations
   server.get(base, (schema) => {
     const records = schema.db.syncDestinations.where({});
@@ -32,16 +44,7 @@ export default function (server) {
     const { type, name } = req.params;
     const record = schema.db.syncDestinations.findBy({ type, name });
     if (record) {
-      delete record.type;
-      delete record.name;
-      delete record.id;
-      return {
-        data: {
-          connection_details: record,
-          name,
-          type,
-        },
-      };
+      return recordToPayload(record);
     }
     return new Response(404, {}, { errors: [] });
   });
@@ -49,8 +52,8 @@ export default function (server) {
     const { type, name } = req.params;
     const data = { ...JSON.parse(req.requestBody), type, name };
     schema.db.syncDestinations.firstOrCreate({ type, name }, data);
-    schema.db.syncDestinations.update({ type, name }, data);
-    return new Response(204);
+    const record = schema.db.syncDestinations.update({ type, name }, data);
+    return recordToPayload(record);
   });
   server.delete(uri, (schema, req) => {
     const { type, name } = req.params;
