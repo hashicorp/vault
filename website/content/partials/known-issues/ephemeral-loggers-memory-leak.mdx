@@ -1,0 +1,12 @@
+### Vault is storing references to ephemeral sub-loggers leading to a memory leak
+
+Vault is unexpectedly storing references to ephemeral sub-loggers which prevents them from being cleaned up, leading to
+a memory leak. This impacts many areas of Vault, but primarily Approle Authentication methods, and logins in Enterprise.
+There is no workaround.
+
+#### Affected versions
+
+This issue affects Vault CE and Vault Enterprise versions:
+- 1.13.7+
+- 1.14.3+
+- 1.15.0+
