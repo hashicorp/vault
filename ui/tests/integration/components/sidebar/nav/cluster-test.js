@@ -49,7 +49,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets engines',
-      'Secrets sync',
+      'Secrets Sync',
       'Access',
       'Policies',
       'Tools',
