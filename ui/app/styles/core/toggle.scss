@@ -71,7 +71,7 @@
 .toggle[type='checkbox'] {
   &.is-small {
     + label {
-      font-size: $size-7;
+      font-size: $size-6;
       padding-left: $spacing-12 * 2.5;
       margin: 0 0.25rem;
       &::before {
