@@ -24,6 +24,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    this.clearDatasetStub = sinon.stub(this.store, 'clearDataset');
 
     this.renderFormComponent = () => {
       return render(hbs` <Secrets::Page::Destinations::CreateAndEdit @destination={{this.model}} />`, {
@@ -92,7 +93,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       });
 
       test('it saves destination and transitions to details', async function (assert) {
-        assert.expect(4);
+        assert.expect(5);
         const name = 'my-name';
         this.server.post(`sys/sync/destinations/${type}/${name}`, (schema, req) => {
           const payload = JSON.parse(req.requestBody);
@@ -118,6 +119,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = ['vault.cluster.sync.secrets.destinations.destination.details', type, name];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
+        assert.propEqual(
+          this.clearDatasetStub.lastCall.args,
+          ['sync/destination'],
+          'Store dataset is cleared on create success'
+        );
       });
 
       test('it validates inputs', async function (assert) {

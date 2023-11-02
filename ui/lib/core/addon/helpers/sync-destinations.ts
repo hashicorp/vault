@@ -4,7 +4,8 @@
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
-import { assert } from '@ember/debug';
+
+import type { SyncDestination, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 /* 
 This helper is referenced in the base sync destination model
@@ -14,7 +15,7 @@ maskedParams: attributes for sensitive data, the API returns these values as '**
 
 // TODO update maskedParams for other types: https://hashicorp.atlassian.net/browse/VAULT-21428
 
-const SYNC_DESTINATIONS = [
+const SYNC_DESTINATIONS: Array<SyncDestination> = [
   {
     name: 'AWS Secrets Manager',
     type: 'aws-sm',
@@ -52,20 +53,15 @@ const SYNC_DESTINATIONS = [
   },
 ];
 
-export function syncDestinations() {
+export function syncDestinations(): Array<SyncDestination> {
   return [...SYNC_DESTINATIONS];
 }
 
-export function destinationTypes() {
+export function destinationTypes(): Array<SyncDestinationType> {
   return SYNC_DESTINATIONS.map((d) => d.type);
 }
 
-export function findDestination(type) {
-  if (!type) return;
-  assert(
-    `you must pass one of the following types: ${destinationTypes().join(', ')}`,
-    destinationTypes().includes(type)
-  );
+export function findDestination(type: SyncDestinationType | undefined): SyncDestination | undefined {
   return SYNC_DESTINATIONS.find((d) => d.type === type);
 }
 
