@@ -4,7 +4,7 @@
 ~}}
 
 <form {{on "submit" (perform this.save)}} data-test-policy-form>
-  <div class="box is-bottomless is-fullwidth is-marginless">
+  <div class="box is-shadowless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
     <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
     {{#if @model.isNew}}
@@ -23,11 +23,24 @@
       </div>
     {{/if}}
     <div class="field">
-      {{#if @model.isNew}}
-        <Toolbar>
-          <label class="has-text-weight-bold">Policy</label>
-          <ToolbarActions>
-            <div class="toolbar-separator"></div>
+      <Toolbar>
+        <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
+        {{#if @renderPolicyExampleModal}}
+          {{! only true in policy create and edit routes }}
+          <ToolbarFilters>
+            <Hds::Button
+              @text="How to write a policy"
+              @icon="bulb"
+              @size="small"
+              @color="tertiary"
+              {{on "click" (fn (mut this.showTemplateModal))}}
+              data-test-policy-example-button
+            />
+          </ToolbarFilters>
+        {{/if}}
+        <ToolbarActions>
+          <div class="toolbar-separator"></div>
+          {{#if @model.isNew}}
             <div class="control is-flex">
               <Input
                 id="fileUploadToggle"
@@ -40,25 +53,24 @@
               />
               <label for="fileUploadToggle">Upload file</label>
             </div>
-          </ToolbarActions>
-        </Toolbar>
-        {{#if this.showFileUpload}}
-          <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
-        {{else}}
-          <JsonEditor
-            @title="Policy"
-            @showToolbar={{false}}
-            @value={{@model.policy}}
-            @valueUpdated={{action (mut @model.policy)}}
-            @mode="ruby"
-            @extraKeys={{hash Shift-Enter=(perform this.save)}}
-            data-test-policy-editor
-          />
-        {{/if}}
+          {{else}}
+            {{! EDITING - no file upload toggle}}
+            <Hds::Copy::Button
+              @text="Copy"
+              @isIconOnly={{true}}
+              @textToCopy={{@model.policy}}
+              class="transparent"
+              data-test-copy-button
+            />
+          {{/if}}
+        </ToolbarActions>
+      </Toolbar>
+      {{#if this.showFileUpload}}
+        <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
       {{else}}
-        {{! EDITING - no file upload toggle}}
         <JsonEditor
           @title="Policy"
+          @showToolbar={{false}}
           @value={{@model.policy}}
           @valueUpdated={{action (mut @model.policy)}}
           @mode="ruby"
@@ -70,36 +82,6 @@
         <span class="is-size-9 has-text-grey has-bottom-margin-l">
           You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
         </span>
-        {{! Only renders button (and modal) if not already in the "create policy" modal }}
-        {{#if @renderPolicyExampleModal}}
-          <span class="is-size-9 has-text-grey has-bottom-margin-l">
-            See
-            <button
-              type="button"
-              class="text-button has-text-info"
-              {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-policy-example-button
-            >
-              example template
-            </button>.
-          </span>
-          {{! Only renders more information if already in the "create policy" modal }}
-        {{else}}
-          <p class="has-top-margin-l">
-            More information about
-            {{uppercase @model.policyType}}
-            policies can be found
-            <DocLink
-              @path={{if
-                (eq @model.policyType "acl")
-                "/vault/docs/concepts/policies#capabilities"
-                "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
-              }}
-            >
-              here.
-            </DocLink>
-          </p>
-        {{/if}}
       </div>
     </div>
     {{#each @model.additionalAttrs as |attr|}}
@@ -107,47 +89,44 @@
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text={{if @model.isNew "Create policy" "Save"}}
+        @icon={{if this.save.isRunning "loading"}}
         type="submit"
-        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
         data-test-policy-save
-      >
-        {{if @model.isNew "Create policy" "Save"}}
-      </button>
-      <button
-        type="button"
-        class="button has-left-margin-s"
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
         disabled={{this.save.isRunning}}
         {{on "click" this.cancel}}
         data-test-policy-cancel
-      >
-        Cancel
-      </button>
-    </div>
+      />
+    </Hds::ButtonSet>
   </div>
 </form>
-{{! SAMPLE POLICY MODAL. Only renders modal if not already in create policy modal }}
-{{#if @renderPolicyExampleModal}}
-  <Modal
-    @title="Example {{uppercase @model.policyType}} Policy"
+
+{{! SAMPLE POLICY MODAL. Only renders in policy create and edit routes }}
+{{#if this.showTemplateModal}}
+  <Hds::Modal
+    id="policy-example-modal"
+    @size="large"
     @onClose={{fn (mut this.showTemplateModal) false}}
-    @isActive={{this.showTemplateModal}}
-    @showCloseButton={{true}}
     data-test-policy-example-modal
+    as |M|
   >
-    <section class="modal-card-body">
-      {{! code-mirror modifier does not render value initially until focus event fires }}
-      {{! wait until the Modal is rendered and then show the PolicyExample (contains JsonEditor) }}
-      {{#if this.showTemplateModal}}
-        <PolicyExample @policyType={{@model.policyType}} />
-      {{/if}}
-    </section>
-    <div class="modal-card-head has-border-top-light">
-      <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
-        Close
-      </button>
-    </div>
-  </Modal>
+    <M.Header data-test-modal-title>
+      Example
+      {{uppercase @model.policyType}}
+      Policy
+    </M.Header>
+    <M.Body>
+      <PolicyExample @policyType={{@model.policyType}} @container="#policy-example-modal" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-close-button />
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

@@ -208,7 +208,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClusterID:                  clusterID,
 	}
 
-	licenseState, err := vault.LicenseSummary(core)
+	licenseState, err := core.EntGetLicenseState()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -224,7 +224,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	}
 
 	if init && !sealed && !standby {
-		body.LastWAL = vault.LastWAL(core)
+		body.LastWAL = core.EntLastWAL()
 	}
 
 	return code, body, nil

@@ -1,17 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
   <div>
-    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half border-radius-2">
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
       <div class="is-flex-between">
         <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
         {{#if @library.canCheckOut}}
-          <button
-            type="button"
-            class="button is-link"
+          <Hds::Button
+            @text="Check-out"
+            @color="tertiary"
+            @icon="arrow-up-right"
             data-test-check-out
             {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
-          >
-            Check-out
-          </button>
+          />
         {{/if}}
       </div>
 
@@ -54,32 +58,23 @@
 </div>
 
 {{#if this.showCheckOutPrompt}}
-  <Modal
-    @title="Account Check-out"
-    @isActive={{this.showCheckOutPrompt}}
-    @showCloseButton={{true}}
-    @onClose={{fn (mut this.showCheckOutPrompt) false}}
-  >
-    <section class="modal-card-body">
+  <Hds::Modal id="account-check-out-modal" @onClose={{fn (mut this.showCheckOutPrompt) false}} as |M|>
+    <M.Header>
+      Account Check-out
+    </M.Header>
+    <M.Body>
       <p>
         Current generated credential’s time-to-live is set at
         {{format-duration @library.ttl}}. You can set a different limit if you’d like:
       </p>
       <br />
       <TtlPicker @label="TTL" @hideToggle={{true}} @initialValue={{@library.ttl}} @onChange={{this.setTtl}} />
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button data-test-check-out="save" type="button" class="button is-primary" {{on "click" this.checkOut}}>
-        Check-out
-      </button>
-      <button
-        data-test-check-out="cancel"
-        type="button"
-        class="button"
-        {{on "click" (fn (mut this.showCheckOutPrompt) false)}}
-      >
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button data-test-check-out="save" @text="Check-out" {{on "click" this.checkOut}} />
+        <Hds::Button data-test-check-out="cancel" @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

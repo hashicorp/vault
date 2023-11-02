@@ -13,6 +13,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/command/server"
+
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+
+	"github.com/hashicorp/vault/builtin/plugin"
+
+	"github.com/hashicorp/vault/builtin/audit/syslog"
+
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/stretchr/testify/require"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -35,6 +48,297 @@ import (
 
 // invalidKey is used to test Unseal
 var invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
+
+// TestNewCore_configureAuditBackends ensures that we are able to configure the
+// supplied audit backends when getting a NewCore.
+func TestNewCore_configureAuditBackends(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		backends map[string]audit.Factory
+	}{
+		"none": {
+			backends: nil,
+		},
+		"file": {
+			backends: map[string]audit.Factory{
+				"file": file.Factory,
+			},
+		},
+		"socket": {
+			backends: map[string]audit.Factory{
+				"socket": socket.Factory,
+			},
+		},
+		"syslog": {
+			backends: map[string]audit.Factory{
+				"syslog": syslog.Factory,
+			},
+		},
+		"all": {
+			backends: map[string]audit.Factory{
+				"file":   file.Factory,
+				"socket": socket.Factory,
+				"syslog": syslog.Factory,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			core := &Core{}
+			require.Len(t, core.auditBackends, 0)
+			core.configureAuditBackends(tc.backends)
+			require.Len(t, core.auditBackends, len(tc.backends))
+			for k := range tc.backends {
+				require.Contains(t, core.auditBackends, k)
+			}
+		})
+	}
+}
+
+// TestNewCore_configureCredentialsBackends ensures that we are able to configure the
+// supplied credential backends, in addition to defaults, when getting a NewCore.
+func TestNewCore_configureCredentialsBackends(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		backends map[string]logical.Factory
+	}{
+		"none": {
+			backends: nil,
+		},
+		"plugin": {
+			backends: map[string]logical.Factory{
+				"plugin": plugin.Factory,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			core := &Core{}
+			require.Len(t, core.credentialBackends, 0)
+			core.configureCredentialsBackends(tc.backends, corehelpers.NewTestLogger(t))
+			require.GreaterOrEqual(t, len(core.credentialBackends), len(tc.backends)+1) // token + ent
+			for k := range tc.backends {
+				require.Contains(t, core.credentialBackends, k)
+			}
+		})
+	}
+}
+
+// TestNewCore_configureLogicalBackends ensures that we are able to configure the
+// supplied logical backends, in addition to defaults, when getting a NewCore.
+func TestNewCore_configureLogicalBackends(t *testing.T) {
+	t.Parallel()
+
+	// configureLogicalBackends will add some default backends for us:
+	// cubbyhole
+	// identity
+	// kv
+	// system
+	// In addition Enterprise versions of Vault may add additional engines.
+
+	tests := map[string]struct {
+		backends               map[string]logical.Factory
+		adminNamespacePath     string
+		expectedNonEntBackends int
+	}{
+		"none": {
+			backends:               nil,
+			expectedNonEntBackends: 0,
+		},
+		"database": {
+			backends: map[string]logical.Factory{
+				"database": logicalDb.Factory,
+			},
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 5, // database + defaults
+		},
+		"kv": {
+			backends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 4, // kv + defaults (kv is a default)
+		},
+		"plugin": {
+			backends: map[string]logical.Factory{
+				"plugin": plugin.Factory,
+			},
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 5, // plugin + defaults
+		},
+		"all": {
+			backends: map[string]logical.Factory{
+				"database": logicalDb.Factory,
+				"kv":       logicalKv.Factory,
+				"plugin":   plugin.Factory,
+			},
+			adminNamespacePath:     "foo",
+			expectedNonEntBackends: 6, // database, plugin + defaults
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			core := &Core{}
+			require.Len(t, core.logicalBackends, 0)
+			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t), tc.adminNamespacePath)
+			require.GreaterOrEqual(t, len(core.logicalBackends), tc.expectedNonEntBackends)
+			require.Contains(t, core.logicalBackends, mountTypeKV)
+			require.Contains(t, core.logicalBackends, mountTypeCubbyhole)
+			require.Contains(t, core.logicalBackends, mountTypeSystem)
+			require.Contains(t, core.logicalBackends, mountTypeIdentity)
+			for k := range tc.backends {
+				require.Contains(t, core.logicalBackends, k)
+			}
+		})
+	}
+}
+
+// TestNewCore_configureLogRequestLevel ensures that we are able to configure the
+// supplied logging level when getting a NewCore.
+func TestNewCore_configureLogRequestLevel(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		level         string
+		expectedLevel log.Level
+	}{
+		"none": {
+			level:         "",
+			expectedLevel: log.NoLevel,
+		},
+		"trace": {
+			level:         "trace",
+			expectedLevel: log.Trace,
+		},
+		"debug": {
+			level:         "debug",
+			expectedLevel: log.Debug,
+		},
+		"info": {
+			level:         "info",
+			expectedLevel: log.Info,
+		},
+		"warn": {
+			level:         "warn",
+			expectedLevel: log.Warn,
+		},
+		"error": {
+			level:         "error",
+			expectedLevel: log.Error,
+		},
+		"bad": {
+			level:         "foo",
+			expectedLevel: log.NoLevel,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// We need to supply a logger, as configureLogRequestLevel emits
+			// warnings to the logs in certain circumstances.
+			core := &Core{
+				logger: corehelpers.NewTestLogger(t),
+			}
+			core.configureLogRequestLevel(tc.level)
+			require.Equal(t, tc.expectedLevel, log.Level(core.logRequestsLevel.Load()))
+		})
+	}
+}
+
+// TestNewCore_configureListeners tests that we are able to configure listeners
+// on a NewCore via config.
+func TestNewCore_configureListeners(t *testing.T) {
+	// We would usually expect CoreConfig to come from server.NewConfig().
+	// However, we want to fiddle to give us some granular control over the config.
+	tests := map[string]struct {
+		config            *CoreConfig
+		expectedListeners []*ListenerCustomHeaders
+	}{
+		"nil-listeners": {
+			config: &CoreConfig{
+				RawConfig: &server.Config{
+					SharedConfig: &configutil.SharedConfig{},
+				},
+			},
+			expectedListeners: nil,
+		},
+		"listeners-empty": {
+			config: &CoreConfig{
+				RawConfig: &server.Config{
+					SharedConfig: &configutil.SharedConfig{
+						Listeners: []*configutil.Listener{},
+					},
+				},
+			},
+			expectedListeners: nil,
+		},
+		"listeners-some": {
+			config: &CoreConfig{
+				RawConfig: &server.Config{
+					SharedConfig: &configutil.SharedConfig{
+						Listeners: []*configutil.Listener{
+							{Address: "foo"},
+						},
+					},
+				},
+			},
+			expectedListeners: []*ListenerCustomHeaders{
+				{Address: "foo"},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// We need to init some values ourselves, usually CreateCore does this for us.
+			logger := corehelpers.NewTestLogger(t)
+			backend, err := inmem.NewInmem(nil, logger)
+			require.NoError(t, err)
+			storage := &logical.InmemStorage{}
+			core := &Core{
+				clusterListener:      new(atomic.Value),
+				customListenerHeader: new(atomic.Value),
+				uiConfig:             NewUIConfig(false, backend, storage),
+			}
+
+			err = core.configureListeners(tc.config)
+			require.NoError(t, err)
+			switch tc.expectedListeners {
+			case nil:
+				require.Nil(t, core.customListenerHeader.Load())
+			default:
+				for i, v := range core.customListenerHeader.Load().([]*ListenerCustomHeaders) {
+					require.Equal(t, v.Address, tc.config.RawConfig.Listeners[i].Address)
+				}
+			}
+		})
+	}
+}
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = logging.NewVaultLogger(log.Trace)
@@ -110,7 +414,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog, _ := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(true); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -129,14 +433,14 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 			if !unseal {
 				t.Fatalf("should be unsealed")
 			}
-			if prog, _ := c.SecretProgress(); prog != 0 {
+			if prog, _ := c.SecretProgress(true); prog != 0 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		} else {
 			if unseal {
 				t.Fatalf("should not be unsealed")
 			}
-			if prog, _ := c.SecretProgress(); prog != i+1 {
+			if prog, _ := c.SecretProgress(true); prog != i+1 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		}
@@ -165,7 +469,12 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 // TestCore_UseSSCTokenToggleOn will check that the root SSC
 // token can be used even when disableSSCTokens is toggled on
 func TestCore_UseSSCTokenToggleOn(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	c.disableSSCTokens = true
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -216,6 +525,9 @@ func TestCore_UseSSCTokenToggleOn(t *testing.T) {
 func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
 	coreConfig := &CoreConfig{
 		DisableSSCTokens: true,
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
 	}
 	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	if len(root) > TokenLength+OldTokenPrefixLength || !strings.HasPrefix(root, consts.LegacyServiceTokenPrefix) {
@@ -289,7 +601,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog, _ := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(true); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -301,7 +613,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 	if !unseal {
 		t.Fatalf("should be unsealed")
 	}
-	if prog, _ := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(true); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -678,7 +990,12 @@ func TestCore_Seal_SingleUse(t *testing.T) {
 
 // Ensure we get a LeaseID
 func TestCore_HandleRequest_Lease(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -724,7 +1041,12 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 }
 
 func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -770,7 +1092,12 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 }
 
 func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -2055,7 +2382,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	// Wait for core to become active
 	TestWaitActive(t, core)
 
-	testCoreAddSecretMount(t, core, root)
+	testCoreAddSecretMount(t, core, root, "1")
 
 	// Put a secret
 	req := &logical.Request{
@@ -2327,7 +2654,12 @@ func TestCore_HandleLogin_ReturnSecret(t *testing.T) {
 
 // Renew should return the same lease back
 func TestCore_RenewSameLease(t *testing.T) {
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 
 	// Create a leasable secret
 	req := &logical.Request{
@@ -2458,7 +2790,12 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		BackendType: logical.TypeCredential,
 	}
 
-	c, _, root := TestCoreUnsealed(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
@@ -3064,5 +3401,53 @@ func TestSetSeals(t *testing.T) {
 
 	if wrappers[0].Name != "new-seal-1" {
 		t.Fatalf("unexpected seal name: got %s, expected new-seal-1", wrappers[0].Name)
+  }
+}
+
+func TestExpiration_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.expiration.DetectDeadlocks() {
+		t.Fatal("expiration has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.expiration.DetectDeadlocks() {
+		t.Fatal("expiration doesn't have deadlock detection enabled, it should")
+	}
+}
+
+func TestQuotas_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.quotaManager.DetectDeadlocks() {
+		t.Fatal("quotas has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.quotaManager.DetectDeadlocks() {
+		t.Fatal("quotas doesn't have deadlock detection enabled, it should")
+	}
+}
+
+func TestStatelock_DeadlockDetection(t *testing.T) {
+	testCore := TestCore(t)
+	testCoreUnsealed(t, testCore)
+
+	if testCore.DetectStateLockDeadlocks() {
+		t.Fatal("statelock has deadlock detection enabled, it shouldn't")
+	}
+
+	testCore = TestCoreWithDeadlockDetection(t, nil, false)
+	testCoreUnsealed(t, testCore)
+
+	if !testCore.DetectStateLockDeadlocks() {
+		t.Fatal("statelock doesn't have deadlock detection enabled, it should")
 	}
 }

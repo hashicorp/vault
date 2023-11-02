@@ -231,6 +231,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	b.Backend.Invalidate = sysInvalidate(b)
 	b.Backend.InitializeFunc = sysInitialize(b)
+	b.Backend.Clean = sysClean(b)
 	return b
 }
 
@@ -2253,7 +2254,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !strings.HasPrefix(path, "auth/") {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
 		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+		if mountEntry.Type == mountTypeToken || mountEntry.Type == mountTypeNSToken {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
 		}
 
@@ -3697,7 +3698,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4550,7 +4551,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -4753,6 +4759,18 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 	return resp, nil
 }
 
+// pathInternalUIVersion is the framework.PathOperation callback function for
+// the sys/internal/ui/version path. It simply returns the Vault version.
+func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{
+		Data: map[string]any{
+			"version": version.GetVersion().VersionNumber(),
+		},
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Limit output to authorized paths
 	resp, err := b.pathInternalUIMountsRead(ctx, req, d)
@@ -4941,6 +4959,7 @@ type SealStatusResponse struct {
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings          []string `json:"warnings,omitempty"`
+	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -4955,7 +4974,7 @@ type SealBackendStatusResponse struct {
 	Backends       []SealBackendStatus `json:"backends"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -4994,6 +5013,9 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		return s, nil
 	}
 
+	var recoverySealType string
+	sealType := sealConfig.Type
+
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
@@ -5006,25 +5028,30 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
+		if core.SealAccess().RecoveryKeySupported() {
+			recoverySealType = sealType
+		}
+		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  initialized,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
+		Type:             sealType,
+		Initialized:      initialized,
+		Sealed:           sealed,
+		T:                sealConfig.SecretThreshold,
+		N:                sealConfig.SecretShares,
+		Progress:         progress,
+		Nonce:            nonce,
+		Version:          version.GetVersion().VersionNumber(),
+		BuildDate:        version.BuildDate,
+		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		ClusterName:      clusterName,
+		ClusterID:        clusterID,
+		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType: recoverySealType,
+		StorageType:      core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -5108,9 +5135,9 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.ActiveTime = core.ActiveTime()
 	}
 	if resp.PerfStandby {
-		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
 	} else if isLeader || !haEnabled {
-		resp.LastWAL = LastWAL(core)
+		resp.LastWAL = core.EntLastWAL()
 	}
 
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
@@ -5118,7 +5145,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}

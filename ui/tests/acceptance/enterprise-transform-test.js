@@ -75,7 +75,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
     await mountSecrets.selectType(engine.type);
-    await mountSecrets.next().path(engine.type);
+    await mountSecrets.path(engine.type);
     await mountSecrets.submit();
 
     assert.strictEqual(
@@ -216,7 +216,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation
     await click('[data-test-edit-link]');
-    assert.dom('.modal.is-active').exists('Confirmation modal appears');
+    assert.dom('#transformation-edit-modal').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
     await settled();
     assert.strictEqual(

@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/plugin: Fix an issue where external plugins were not reporting logs below INFO level
+```

@@ -11,7 +11,7 @@ The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
+                  the vault-secrets-operator repo's values.yaml: file commit=d2307002434ffd899f7982f9827f427dbb6295e6 -->
 <!-- codegen: start -->
 
 ## Top-Level Stanzas
@@ -81,7 +81,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.14.1`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.14.4`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -119,7 +119,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.3.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.3.4`)
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -275,12 +275,12 @@ Use these links to navigate to a particular top-level stanza.
 
         - `memory` ((#v-controller-manager-resources-requests-memory)) (`string: 64Mi`)
 
-  - `podSecurityContext` ((#v-controller-podsecuritycontext)) - Configures the Pod security context
+  - `podSecurityContext` ((#v-controller-podsecuritycontext)) - Configures the Pod Security Context
     https://kubernetes.io/docs/tasks/configure-pod-container/security-context
 
     - `runAsNonRoot` ((#v-controller-podsecuritycontext-runasnonroot)) (`boolean: true`)
 
-  - `securityContext` ((#v-controller-securitycontext)) - Configures the container security context
+  - `securityContext` ((#v-controller-securitycontext)) - Configures the Container Security Context
     https://kubernetes.io/docs/tasks/configure-pod-container/security-context
 
     - `allowPrivilegeEscalation` ((#v-controller-securitycontext-allowprivilegeescalation)) (`boolean: false`)

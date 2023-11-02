@@ -43,9 +43,7 @@
                   </li>
                   {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                     <li class="action">
-                      <button disabled type="button" class="link button is-loading is-transparent">
-                        loading
-                      </button>
+                      <LoadingDropdownOption />
                     </li>
                   {{else}}
                     {{#if item.canAddAlias}}
@@ -66,6 +64,7 @@
                       </li>
                       <li class="action">
                         {{#if item.disabled}}
+                          {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
                           <button type="button" {{action "toggleDisabled" item}} class="link">
                             Enable
                           </button>

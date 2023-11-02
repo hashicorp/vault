@@ -165,7 +165,7 @@ func createV1BoltSchema(tx *bolt.Tx) error {
 
 func createV2BoltSchema(tx *bolt.Tx) error {
 	// Create the buckets for tokens and leases.
-	for _, bucket := range []string{TokenType, LeaseType, lookupType} {
+	for _, bucket := range []string{TokenType, LeaseType, lookupType, StaticSecretType, TokenCapabilitiesType} {
 		if _, err := tx.CreateBucketIfNotExists([]byte(bucket)); err != nil {
 			return fmt.Errorf("failed to create %s bucket: %w", bucket, err)
 		}
@@ -267,6 +267,10 @@ func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, inde
 			if err := meta.Put([]byte(AutoAuthToken), protoBlob); err != nil {
 				return fmt.Errorf("failed to set latest auto-auth token: %w", err)
 			}
+		case StaticSecretType:
+			key = []byte(id)
+		case TokenCapabilitiesType:
+			key = []byte(id)
 		default:
 			return fmt.Errorf("called Set for unsupported type %q", indexType)
 		}
@@ -419,7 +423,7 @@ func (b *BoltStorage) Close() error {
 // the schema/layout
 func (b *BoltStorage) Clear() error {
 	return b.db.Update(func(tx *bolt.Tx) error {
-		for _, name := range []string{TokenType, LeaseType, lookupType} {
+		for _, name := range []string{TokenType, LeaseType, lookupType, StaticSecretType, TokenCapabilitiesType} {
 			b.logger.Trace("deleting bolt bucket", "name", name)
 			if err := tx.DeleteBucket([]byte(name)); err != nil {
 				return err

@@ -350,7 +350,7 @@ jobs:
             fi
           fi
 
-          export VAULT_TEST_LOG_DIR=test-results/go-test/logs
+          export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
           mkdir -p $VAULT_TEST_LOG_DIR
           
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
@@ -476,6 +476,7 @@ jobs:
           name: test-results
           path: test-results/go-test
       - run: |
+          rm -rf test-results/go-test/logs
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
 
