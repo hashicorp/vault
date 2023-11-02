@@ -24,7 +24,7 @@ $console-close-height: 35px;
   color: $white;
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: $size-8;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
@@ -35,7 +35,7 @@ $console-close-height: 35px;
   p {
     background: none;
     color: inherit;
-    font-size: 14px;
+    font-size: $size-8;
     min-height: 2rem;
     padding: 0;
 

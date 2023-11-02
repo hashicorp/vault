@@ -8,7 +8,7 @@
 
   & > code {
     color: $ui-gray-800;
-    padding: 14px;
+    padding: $spacing-14;
   }
 }
 .transform-pattern-text div:not(:first-child) {
