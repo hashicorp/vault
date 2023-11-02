@@ -27,8 +27,8 @@ module('Unit | Serializer | sync | destination', function (hooks) {
       );
       const serverData = { request_id: id, data: { name, type, connection_details } };
 
-      const normalized = this.serializer._normalizeFindRecord(serverData);
-      const expected = { data: { id: `${type}/${name}`, type, name, ...connection_details } };
+      const normalized = this.serializer._normalizePayload(serverData);
+      const expected = { data: { id: name, type, name, ...connection_details } };
       assert.propEqual(
         normalized,
         expected,
