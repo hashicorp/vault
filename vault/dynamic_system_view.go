@@ -39,6 +39,8 @@ type extendedSystemView interface {
 	SudoPrivilege(context.Context, string, string) bool
 }
 
+var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
+
 type extendedSystemViewImpl struct {
 	dynamicSystemView
 }
@@ -148,6 +150,10 @@ func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (e extendedSystemViewImpl) RequestAPIRedirect(ctx context.Context, src, dest string) error {
+	return e.core.apiRedirects.TryRegister(ctx, e.core, e.mountEntry.UUID, src, dest)
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {

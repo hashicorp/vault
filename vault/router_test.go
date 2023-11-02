@@ -4,9 +4,12 @@
 package vault
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -629,5 +632,50 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
 			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
 		}
+	}
+}
+
+func TestAPIRedirectMatching(t *testing.T) {
+	a := assert.New(t)
+	// inputs
+	redirs := map[string]string{
+		"foo":     "v1/one-path",
+		"bar/baz": "v1/two-paths",
+	}
+
+	tests := map[string]struct {
+		expected string
+		mismatch bool
+	}{
+		"foo":                               {"/v1/one-path", false},
+		"foof":                              {"", true},
+		"foo/extra":                         {"/v1/one-path/extra", false},
+		"bar/baz":                           {"/v1/two-paths", false},
+		"bar/baz?with=query&params=present": {"/v1/two-paths?with=query&params=present", false},
+		"bar/baz/extra":                     {"/v1/two-paths/extra", false},
+		"bar/baz/extra?with=query&params=present": {"/v1/two-paths/extra?with=query&params=present", false},
+	}
+	apiRedir := NewAPIRedirects()
+	for s, d := range redirs {
+		if err := apiRedir.TryRegister(context.Background(), nil, "my-mount", s, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for k, x := range tests {
+		t.Run(k, func(t *testing.T) {
+			v, s := apiRedir.Find(k)
+			if x.mismatch && v != nil {
+				t.Fail()
+			} else if !x.mismatch && v == nil {
+				t.Fail()
+			} else if !x.mismatch {
+				d, err := v.Destination(s)
+				if err != nil {
+					t.Fatal(err)
+				}
+				a.Equal(x.expected, d)
+			}
+		})
 	}
 }

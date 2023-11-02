@@ -111,6 +111,8 @@ type ExtendedSystemView interface {
 	// APILockShouldBlockRequest returns whether a namespace for the requested
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
+
+	RequestAPIRedirect(ctx context.Context, src, dest string) error
 }
 
 type PasswordGenerator func() (password string, err error)

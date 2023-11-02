@@ -414,6 +414,22 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
+			redir, err := core.GetAPIRedirect(r.Context(), r.URL.Path)
+			if err != nil {
+				core.Logger().Warn("error resolving potential API redirect", "error", err)
+			} else {
+				if redir != "" {
+					w.Header().Set("Location", redir)
+					switch r.Method {
+					case http.MethodGet:
+						w.WriteHeader(http.StatusFound)
+					default:
+						w.WriteHeader(http.StatusTemporaryRedirect)
+					}
+					cancelFunc()
+					return
+				}
+			}
 			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return

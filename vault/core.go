@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	paths "path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -692,6 +693,7 @@ type Core struct {
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 
+	apiRedirects *apiRedirectRegistry
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 }
@@ -1046,6 +1048,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		apiRedirects:                   NewAPIRedirects(),
 		detectDeadlocks:                detectDeadlocks,
 	}
 
@@ -4203,6 +4206,21 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) GetAPIRedirect(ctx context.Context, path string) (string, error) {
+	if c.apiRedirects == nil {
+		return "", nil
+	}
+	redir, remaining := c.apiRedirects.Find(path)
+	if redir != nil {
+		dest, err := redir.Destination(remaining)
+		if err != nil {
+			return "", err
+		}
+		return paths.Join("v1", dest), nil
+	}
+	return "", nil
 }
 
 func (c *Core) DetectStateLockDeadlocks() bool {
