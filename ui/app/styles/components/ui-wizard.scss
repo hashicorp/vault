@@ -32,7 +32,7 @@
 
 .ui-wizard {
   z-index: 300;
-  padding: $spacing-16;
+  padding: $spacing-18;
   width: $drawer-width;
   background: $white;
   box-shadow: $box-shadow, $box-shadow-highest;
@@ -56,7 +56,7 @@
   }
 
   .doc-link {
-    margin-top: $spacing-16;
+    margin-top: $spacing-18;
     display: block;
   }
 
@@ -143,7 +143,7 @@
 }
 
 .wizard-section:last-of-type {
-  margin-bottom: $spacing-16;
+  margin-bottom: $spacing-18;
 }
 
 .wizard-section button:not(:last-of-type) {

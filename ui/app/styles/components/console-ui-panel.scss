@@ -28,7 +28,7 @@ $console-close-height: 35px;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
-  padding: $spacing-12 $spacing-12 $spacing-16;
+  padding: $spacing-12 $spacing-12 $spacing-18;
   transition: justify-content $speed ease-in;
 
   pre,
