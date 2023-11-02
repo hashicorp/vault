@@ -36,7 +36,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
     assert.dom('[data-test-crumb]').includesText('Destinations', 'renders breadcrumb');
   });
 
-  test('it should title for enterprise version', async function (assert) {
+  test('it should just render title for enterprise version', async function (assert) {
     await this.renderComponent();
     assert.dom('[data-test-page-title]').hasText('Secrets sync');
   });
