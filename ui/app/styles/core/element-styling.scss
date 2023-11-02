@@ -80,7 +80,7 @@ object {
 
 html {
   background-color: $white;
-  font-size: 14px;
+  font-size: $base-font-size;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
