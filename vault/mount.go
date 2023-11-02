@@ -138,9 +138,8 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 
 // MountTable is used to represent the internal mount table
 type MountTable struct {
-	Type              string        `json:"type"`
-	Entries           []*MountEntry `json:"entries"`
-	entriesByAccessor map[string]*MountEntry
+	Type    string        `json:"type"`
+	Entries []*MountEntry `json:"entries"`
 }
 
 type MountMigrationStatus int
@@ -293,21 +292,6 @@ func (t *MountTable) findByBackendUUID(ctx context.Context, backendUUID string) 
 
 	for i := 0; i < n; i++ {
 		if entry := t.Entries[i]; entry.BackendAwareUUID == backendUUID && entry.Namespace().ID == ns.ID {
-			return entry, nil
-		}
-	}
-	return nil, nil
-}
-
-func (t *MountTable) findByAccessor(ctx context.Context, accessor string) (*MountEntry, error) {
-	n := len(t.Entries)
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.Accessor == accessor && entry.Namespace().ID == ns.ID {
 			return entry, nil
 		}
 	}

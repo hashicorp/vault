@@ -1843,11 +1843,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	return resp, auth, routeErr
 }
 
+type invalidCredentialHandler func(err error) (*logical.Response, *logical.Auth, error)
+
 // handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuth, it is requesting that
-// and authentication workflow of it's choosing be implemented prior to it being able to accept it. Normally
+// an authentication workflow of its choosing be implemented prior to it being able to accept it. Normally
 // this is used for standard protocols that communicate the credential information in a non-standard Vault way
 func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuth,
-	entry *MountEntry, handleInvalidCreds func(err error) (*logical.Response, *logical.Auth, error),
+	entry *MountEntry, invalidCredHandler invalidCredentialHandler,
 ) (*logical.Response, *logical.Auth, error) {
 	// Make sure we didn't get into a routing loop.
 	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
@@ -1865,13 +1867,20 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 		return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
 	}
 
-	// If the route is requesting delegated authentication...
-	mount, err := c.auth.findByAccessor(ctx, da.MountAccessor())
+	reqNamespace, err := namespace.FromContext(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed looking up namespace from context: %w", err)
 	}
+
+	mount := c.router.MatchingMountByAccessor(requestedAccessor)
 	if mount == nil {
-		return nil, nil, fmt.Errorf("%w: backend requested delegate authentication but mount with accessor '%s' not found", ErrInternalError, requestedAccessor)
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication accessor '%s' was not found", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.Table != credentialTableType {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount '%s' was not an auth mount", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.NamespaceID != reqNamespace.ID {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount was in a different namespace than request", logical.ErrPermissionDenied)
 	}
 
 	// Found it, now form the login path and issue the request
@@ -1908,7 +1917,7 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 		case nil:
 			return authResp, nil, nil
 		case logical.ErrInvalidCredentials:
-			return handleInvalidCreds(err)
+			return invalidCredHandler(err)
 		default:
 			return authResp, nil, err
 		}

@@ -20,89 +20,105 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A map of success values to be populated once and used in request
-// operations that can't pass in values
-var delegatedReqValues map[string]string
-
-func delegatedAuthOperationHandler(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if req.ClientToken == "" || req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
-		switch req.Operation {
-		case logical.DeleteOperation, logical.ReadOperation, logical.ListOperation:
-			return nil, logical.NewDelegatedAuthenticationRequest(delegatedReqValues["accessor"],
-				paths.Join(delegatedReqValues["path"], delegatedReqValues["username"]),
-				map[string]interface{}{"password": delegatedReqValues["password"]}, nil)
-		case logical.UpdateOperation, logical.CreateOperation, logical.PatchOperation:
-			return nil, logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string),
-				paths.Join(d.Get("path").(string), d.Get("username").(string)),
-				map[string]interface{}{"password": d.Get("password").(string)}, nil)
-		default:
-			return nil, fmt.Errorf("unsupported operation handler type: %s", req.Operation)
+func buildDaError(defaults map[string]string, d *framework.FieldData) *logical.RequestDelegatedAuth {
+	fieldDataOrDefault := func(field string, d *framework.FieldData) string {
+		if val, ok := d.GetOk(field); ok {
+			return val.(string)
 		}
+
+		return defaults[field]
 	}
 
-	if req.Operation == logical.ListOperation {
-		return logical.ListResponse([]string{"success", req.ClientToken}), nil
-	}
+	accessor := fieldDataOrDefault("accessor", d)
+	path := fieldDataOrDefault("path", d)
+	username := fieldDataOrDefault("username", d)
+	password := fieldDataOrDefault("password", d)
 
-	if d.Get("loop").(bool) {
-		da := logical.NewDelegatedAuthenticationRequest(d.Get("accessor").(string), paths.Join(d.Get("path").(string), d.Get("username").(string)),
-			map[string]interface{}{"password": d.Get("password").(string)}, nil)
-		return nil, da
-	}
+	loginPath := paths.Join(path, username)
+	data := map[string]interface{}{"password": password}
 
-	if d.Get("perform_write").(bool) {
-		entry, err := logical.StorageEntryJSON("test", map[string]string{"test": "value"})
-		if err != nil {
-			return nil, err
-		}
-		if err = req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
-	}
-
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"success": true,
-			"token":   req.ClientToken,
-		},
-	}, nil
+	return logical.NewDelegatedAuthenticationRequest(accessor, loginPath, data, nil)
 }
 
-func delegatedAuthFactory(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-	b := new(framework.Backend)
-	b.BackendType = logical.TypeLogical
-	b.Paths = []*framework.Path{
-		{
-			Pattern: "preauth-test/list/?",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{Callback: delegatedAuthOperationHandler},
+func buildDelegatedAuthFactory(defaults map[string]string) logical.Factory {
+	opHandler := func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		daError := buildDaError(defaults, d)
+		if req.ClientToken == "" || req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+			return nil, daError
+		}
+
+		if req.Operation == logical.ListOperation {
+			return logical.ListResponse([]string{"success", req.ClientToken}), nil
+		}
+
+		if d.Get("loop").(bool) {
+			return nil, daError
+		}
+
+		if d.Get("perform_write").(bool) {
+			entry, err := logical.StorageEntryJSON("test", map[string]string{"test": "value"})
+			if err != nil {
+				return nil, err
+			}
+			if err = req.Storage.Put(ctx, entry); err != nil {
+				return nil, err
+			}
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"success": true,
+				"token":   req.ClientToken,
 			},
-		},
-		{
-			Pattern: "preauth-test",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation:   &framework.PathOperation{Callback: delegatedAuthOperationHandler},
-				logical.PatchOperation:  &framework.PathOperation{Callback: delegatedAuthOperationHandler},
-				logical.UpdateOperation: &framework.PathOperation{Callback: delegatedAuthOperationHandler},
-				logical.DeleteOperation: &framework.PathOperation{Callback: delegatedAuthOperationHandler},
-			},
-			Fields: map[string]*framework.FieldSchema{
-				"accessor":      {Type: framework.TypeString},
-				"path":          {Type: framework.TypeString},
-				"username":      {Type: framework.TypeString},
-				"password":      {Type: framework.TypeString},
-				"loop":          {Type: framework.TypeBool},
-				"perform_write": {Type: framework.TypeBool},
-			},
-		},
+		}, nil
 	}
-	b.PathsSpecial = &logical.Paths{Unauthenticated: []string{"preauth-test", "preauth-test/*"}}
-	err := b.Setup(ctx, config)
-	return b, err
+
+	return func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		b := new(framework.Backend)
+		b.BackendType = logical.TypeLogical
+		b.Paths = []*framework.Path{
+			{
+				Pattern: "preauth-test/list/?",
+				Operations: map[logical.Operation]framework.OperationHandler{
+					logical.ListOperation: &framework.PathOperation{Callback: opHandler},
+				},
+			},
+			{
+				Pattern: "preauth-test",
+				Operations: map[logical.Operation]framework.OperationHandler{
+					logical.ReadOperation:   &framework.PathOperation{Callback: opHandler},
+					logical.PatchOperation:  &framework.PathOperation{Callback: opHandler},
+					logical.UpdateOperation: &framework.PathOperation{Callback: opHandler},
+					logical.DeleteOperation: &framework.PathOperation{Callback: opHandler},
+				},
+				Fields: map[string]*framework.FieldSchema{
+					"accessor":      {Type: framework.TypeString},
+					"path":          {Type: framework.TypeString},
+					"username":      {Type: framework.TypeString},
+					"password":      {Type: framework.TypeString},
+					"loop":          {Type: framework.TypeBool},
+					"perform_write": {Type: framework.TypeBool},
+				},
+			},
+		}
+		b.PathsSpecial = &logical.Paths{Unauthenticated: []string{"preauth-test", "preauth-test/*"}}
+		err := b.Setup(ctx, config)
+		return b, err
+	}
 }
 
 func TestDelegatedAuth(t *testing.T) {
 	t.Parallel()
+
+	// A map of success values to be populated once and used in request
+	// operations that can't pass in values
+	delegatedReqDefaults := map[string]string{
+		"username": "allowed-est",
+		"password": "test",
+		"path":     "login",
+	}
+
+	delegatedAuthFactory := buildDelegatedAuthFactory(delegatedReqDefaults)
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass":  userpass.Factory,
@@ -174,21 +190,22 @@ func TestDelegatedAuth(t *testing.T) {
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	upAccessor2 := resp.Data["accessor"].(string)
 
+	resp, err = client.Logical().Read("/sys/mounts/cubbyhole")
+	require.NoError(t, err, "failed to query for mount accessor for cubbyhole")
+	require.NotNil(t, resp, "received nil response from mount accessor query for cubbyhole")
+	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
+	cubbyAccessor := resp.Data["accessor"].(string)
+
 	// Set up our backend mount that will delegate its auth to the userpass mount
 	err = client.Sys().Mount("dat", &api.MountInput{
 		Type: "delegateauthtest",
 		Config: api.MountConfigInput{
-			DelegatedAuthAccessors: []string{upAccessor, "an-accessor-that-does-not-exist"},
+			DelegatedAuthAccessors: []string{upAccessor, "an-accessor-that-does-not-exist", cubbyAccessor},
 		},
 	})
 	require.NoError(t, err, "failed mounting delegated auth endpoint")
 
-	delegatedReqValues = map[string]string{
-		"accessor": upAccessor,
-		"username": "allowed-est",
-		"password": "test",
-		"path":     "login",
-	}
+	delegatedReqDefaults["accessor"] = upAccessor
 
 	// We want a client without any previous tokens set to make sure we aren't using
 	// the other token.
@@ -210,12 +227,13 @@ func TestDelegatedAuth(t *testing.T) {
 				resp, err = clientNoToken.Logical().List("dat/preauth-test/list/")
 			case "write":
 				resp, err = clientNoToken.Logical().Write("dat/preauth-test", map[string]interface{}{
-					"accessor": delegatedReqValues["accessor"],
-					"path":     delegatedReqValues["path"],
-					"username": delegatedReqValues["username"],
-					"password": delegatedReqValues["password"],
+					"accessor": delegatedReqDefaults["accessor"],
+					"path":     delegatedReqDefaults["path"],
+					"username": delegatedReqDefaults["username"],
+					"password": delegatedReqDefaults["password"],
 				})
 			}
+
 			require.NoErrorf(st, err, "failed making %s pre-auth call with allowed-est", test)
 			require.NotNilf(st, resp, "pre-auth %s call returned nil", test)
 			if test != "list" {
@@ -311,7 +329,7 @@ func TestDelegatedAuth(t *testing.T) {
 			path:          "login",
 			username:      "allowed-est",
 			password:      "test",
-			errorContains: "mount with accessor 'an-accessor-that-does-not-exist' not found",
+			errorContains: "requested delegate authentication accessor 'an-accessor-that-does-not-exist' was not found",
 		},
 		{
 			name:          "non-allowed-accessor-within-delegated-auth-error",
@@ -329,6 +347,14 @@ func TestDelegatedAuth(t *testing.T) {
 			password:      "test",
 			forceLoop:     true,
 			errorContains: "delegated authentication requested but authentication token present",
+		},
+		{
+			name:          "non-auth-mount-accessor",
+			accessor:      cubbyAccessor,
+			path:          "login",
+			username:      "allowed-est",
+			password:      "test",
+			errorContains: fmt.Sprintf("requested delegate authentication mount '%s' was not an auth mount", cubbyAccessor),
 		},
 	}
 	for _, test := range failureTests {
