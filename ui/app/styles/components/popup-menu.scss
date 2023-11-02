@@ -27,7 +27,7 @@
   }
 
   .menu {
-    padding: spacing-4 0;
+    padding: $spacing-4 0;
   }
 
   button.link,
@@ -42,7 +42,7 @@
     height: auto;
     font-size: $size-6;
     font-weight: $font-weight-semibold;
-    padding: $spacing-10 $spacing-8;
+    padding: $spacing-10 $spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
