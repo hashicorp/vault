@@ -9,7 +9,7 @@
   box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
   color: $ui-gray-900;
   display: block;
-  padding: $size-5;
+  padding: $spacing-16;
 
   &:not(:last-child) {
     margin-bottom: 1.5rem;

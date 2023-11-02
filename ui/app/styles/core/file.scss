@@ -25,8 +25,13 @@
   vertical-align: top;
   white-space: nowrap;
 
+  // TODO is this still a thing?
+  // hds-button--size-medium {
+  //   min-height: 2.25rem;
+  //   padding: 0.5625rem 0.9375rem;
+  // }
   &.button {
-    height: $size-2; // in older parts of the code (Ex: shamir-modal-flow) this class is not a button. In newer parts of the code it is, and height needs to match the height of a button (2.5rem).
+    height: $spacing-36; // in older parts of the code (Ex: shamir-modal-flow) this class is not a button. In newer parts of the code it is, and height needs to match the height of a button (2.5rem).
   }
 
   &:disabled {

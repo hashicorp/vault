@@ -90,18 +90,18 @@
 // Text color or styling
 .is-help {
   font-size: $size-8;
-  margin-top: $size-11;
+  margin-top: $spacing-4;
 }
 
 .help {
   display: block;
   font-size: 0.85714rem;
-  margin-top: $size-11;
+  margin-top: $spacing-4;
 }
 
 .sub-text {
   color: $grey;
-  margin-bottom: $size-11;
+  margin-bottom: $spacing-4;
   font-size: $size-8;
 
   strong {

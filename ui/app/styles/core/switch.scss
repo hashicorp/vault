@@ -27,8 +27,8 @@
       display: block;
       top: calc(50% - 1.5rem * 0.5);
       left: 0;
-      width: $size-1;
-      height: $size-4;
+      width: $spacing-42;
+      height: $spacing-20;
       border: 0.1rem solid transparent;
       border-radius: $radius-large;
       background: $ui-gray-300;
@@ -40,13 +40,13 @@
       border-radius: $radius-large;
       content: '';
       display: block;
-      height: $size-6;
-      left: $size-11;
+      height: $spacing-14;
+      left: $spacing-4;
       position: absolute;
       top: calc(50% - 1rem * 0.5);
       transform: translate3d(0, 0, 0);
       transition: all 0.25s ease-out;
-      width: $size-6;
+      width: $spacing-14;
     }
 
     &:checked::after {
@@ -55,6 +55,7 @@
   }
 }
 
+// TODO is this why the toggles are off???
 // is-rounded
 .switch[type='checkbox'].is-rounded {
   + label {
@@ -84,36 +85,36 @@
     font-size: $size-8;
     font-weight: bold;
     height: 18px;
-    padding-left: $size-8 * 2.5;
+    padding-left: $spacing-12 * 2.5;
     position: relative;
-    margin: 0 $size-11;
+    margin: 0 $spacing-4;
     &::before {
       border: 0.1rem solid transparent;
       border-radius: $radius-large;
       background: $ui-gray-300;
       display: block;
       content: '';
-      height: $size-8;
+      height: $spacing-12;
       position: absolute;
-      top: calc($size-8 / 5);
-      width: $size-8 * 2;
+      top: calc($spacing-12 / 5);
+      width: $spacing-12 * 2;
     }
     &::after {
       background: $white;
       border-radius: $radius-large;
       content: '';
       display: block;
-      height: $size-8 * 0.8;
+      height: $spacing-12 * 0.8;
       left: 0;
       position: absolute;
-      top: calc($size-8 / 4);
+      top: calc($spacing-12 / 4);
       transform: translateX(0.15rem);
       transition: all 0.25s ease-out;
-      width: $size-8 * 0.8;
+      width: $spacing-12 * 0.8;
       will-change: left;
 
       &:checked {
-        left: $size-5;
+        left: $spacing-16;
       }
     }
   }

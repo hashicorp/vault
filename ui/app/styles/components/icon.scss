@@ -6,10 +6,10 @@
 .icon {
   align-items: center;
   display: inline-flex;
-  height: $size-4;
+  height: $spacing-16;
   justify-content: center;
   vertical-align: middle;
-  width: $size-4;
+  width: $spacing-16;
   // override the display if .button.icon to .button's default display: inline-block. See manage namespaces icon button in the namespace picker
   &.button {
     display: inline-block;
@@ -34,8 +34,8 @@
   justify-content: center;
   align-items: flex-start;
   vertical-align: middle;
-  width: 16px;
-  height: 16px;
+  width: $spacing-16;
+  height: $spacing-16;
   margin: 2px 4px;
 }
 
@@ -50,6 +50,7 @@
   align-items: center;
 }
 
+// TODO used??
 .hs-icon-s {
   width: 12px;
   height: 12px;

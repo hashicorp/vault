@@ -10,7 +10,7 @@
   box-shadow: inset $box-link-shadow;
   border-radius: $radius;
   display: block;
-  height: $size-6;
+  height: $spacing-14;
   overflow: hidden;
   padding: 0;
   margin-bottom: 0;
@@ -23,7 +23,7 @@
     width: 30px;
   }
   &.is-medium {
-    height: $size-5;
+    height: $spacing-16;
     width: 120px;
   }
 }

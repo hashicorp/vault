@@ -58,7 +58,7 @@
 
   &.is-compact {
     height: 2rem;
-    padding: $size-11 $size-8;
+    padding: $spacing-4 $spacing-12;
   }
 
   &.is-danger {
@@ -111,7 +111,7 @@
   }
 
   &.is-icon {
-    padding: 0.25rem $size-3;
+    padding: 0.25rem $spacing-24;
   }
 
   &.is-loading {
@@ -246,7 +246,7 @@
       &,
       &:first-child:last-child {
         position: relative;
-        left: -$size-10;
+        left: -$spacing-8;
       }
     }
   }
@@ -264,7 +264,7 @@
 
 .button.icon {
   box-sizing: border-box;
-  padding: 0 $size-11;
+  padding: 0 $spacing-4;
   height: 24px;
   width: 24px;
   &,

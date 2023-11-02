@@ -67,28 +67,29 @@
 }
 
 /* CUSTOM */
+// TODO or is this why the toggles are off??
 .toggle[type='checkbox'] {
   &.is-small {
     + label {
       font-size: $size-7;
-      padding-left: $size-8 * 2.5;
+      padding-left: $spacing-12 * 2.5;
       margin: 0 0.25rem;
       &::before {
-        top: calc($size-8 / 5);
-        height: $size-8;
-        width: $size-8 * 2;
+        top: calc($spacing-12 / 5);
+        height: $spacing-12;
+        width: $spacing-12 * 2;
       }
       &::after {
-        width: $size-8 * 0.8;
-        height: $size-8 * 0.8;
+        width: $spacing-12 * 0.8;
+        height: $spacing-12 * 0.8;
         transform: translateX(0.15rem);
         left: 0;
-        top: calc($size-8 / 4);
+        top: calc($spacing-12 / 4);
       }
     }
     &:checked + label::after {
       left: 0;
-      transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
+      transform: translateX(($spacing-12 * 2) - ($spacing-12 * 0.94));
     }
   }
 

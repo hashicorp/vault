@@ -16,7 +16,7 @@
   position: relative;
 
   &:not(:last-child) {
-    margin-bottom: $size-4;
+    margin-bottom: $spacing-20;
   }
 
   .message-icon {

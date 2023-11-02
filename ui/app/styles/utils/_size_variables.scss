@@ -3,26 +3,30 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* General sizing in rem values used largely for text sizing.*/
-$size-1: 3rem; // 48px, same as $spacing-48
-$size-2: 2.5rem; // 40px
-$size-3: calc(24 / 14) + 0rem; // ~1.714rem ~27px
-$size-4: 1.5rem; // 24px same as $spacing-24
-$size-5: 1.25rem; // 20px
-$size-6: 1rem; // 16px same as $spacing-16
-$size-7: calc(13 / 14) + 0rem; // ~.929rem ~15px
-$size-8: calc(12 / 14) + 0rem; // ~.857rem  ~13.7px
-$size-9: 0.75rem; // 12px same as $spacing-12
-$size-10: 0.5rem; // 8px same as $spacing-8
-$size-11: 0.25rem; // 4px same as spacing-4
+/* Size variables (rem only) */
+$size-1: 3rem; // 42px,
+$size-2: 2.5rem; // 35px
+$size-3: calc(24 / 14) + 0rem; // ~1.714rem ~24px
+$size-4: 1.5rem; // 21px
+$size-5: 1.25rem; // 17.5px
+$size-6: 1rem; // 14px
+$size-7: calc(13 / 14) + 0rem; // ~.929rem ~13px
+$size-8: calc(12 / 14) + 0rem; // ~.857rem  ~12px
+$size-9: 0.75rem; // 10.5px
+$size-10: 0.5rem; // 7px
+$size-11: 0.25rem; // 3.5px
 
-/* Spacing vars in px */
+/* Spacing variables (px only) */
 $spacing-4: 4px;
 $spacing-8: 8px;
+$spacing-10: 10px;
 $spacing-12: 12px;
+$spacing-14: 14px;
 $spacing-16: 16px;
+$spacing-20: 20px;
 $spacing-24: 24px;
 $spacing-36: 36px;
+$spacing-42: 42px;
 $spacing-48: 48px;
 
 /* Border radius */
