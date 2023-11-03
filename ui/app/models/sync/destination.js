@@ -5,6 +5,7 @@
 
 import Model, { attr } from '@ember-data/model';
 import { findDestination } from 'vault/helpers/sync-destinations';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 // Base model for all secret sync destination types
 export default class SyncDestinationModel extends Model {
@@ -22,5 +23,25 @@ export default class SyncDestinationModel extends Model {
 
   get maskedParams() {
     return findDestination(this.type)?.maskedParams;
+  }
+
+  @lazyCapabilities(apiPath`sys/sync/destinations/${'type'}/${'name'}`, 'type', 'name') destinationPath;
+  @lazyCapabilities(apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`, 'type', 'name')
+  setAssociationPath;
+
+  get canCreate() {
+    return this.destinationPath.get('canCreate') !== false;
+  }
+  get canDelete() {
+    return this.destinationPath.get('canDelete') !== false;
+  }
+  get canEdit() {
+    return this.destinationPath.get('canUpdate') !== false;
+  }
+  get canRead() {
+    return this.destinationPath.get('canRead') !== false;
+  }
+  get canSync() {
+    return this.setAssociationPath.get('canUpdate') !== false;
   }
 }

@@ -13,11 +13,7 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
 
   // interrupt application's normalizeItems, which is called in normalizeResponse by application serializer
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    let transformedPayload = payload;
-
-    if (requestType === 'findRecord') {
-      transformedPayload = this._normalizeFindRecord(payload);
-    }
+    const transformedPayload = this._normalizePayload(payload, requestType);
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 
@@ -35,12 +31,14 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     return transformedPayload;
   }
 
-  // generates id and spreads connection_details object into data
-  _normalizeFindRecord(payload) {
-    if (payload?.data?.connection_details) {
-      const { type, name, connection_details } = payload.data;
-      const id = `${type}/${name}`;
-      return { data: { id, type, name, ...connection_details } };
+  // uses name for id and spreads connection_details object into data
+  _normalizePayload(payload, requestType) {
+    if (requestType !== 'query' && payload?.data) {
+      const { data } = payload;
+      const connection_details = payload.data.connection_details || {};
+      data.id = data.name;
+      delete data.connection_details;
+      return { data: { ...data, ...connection_details } };
     }
     return payload;
   }

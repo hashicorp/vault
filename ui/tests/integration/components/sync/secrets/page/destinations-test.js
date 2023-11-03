@@ -24,9 +24,11 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     const store = this.owner.lookup('service:store');
     const modelName = 'sync/destinations/aws-sm';
+    const destination = this.server.create('sync-destination', 'aws-sm');
     store.pushPayload(modelName, {
       modelName,
-      ...this.server.create('sync-destination', 'aws-sm'),
+      ...destination,
+      id: destination.name,
     });
 
     this.destinations = store.peekAll(modelName).toArray();
@@ -114,12 +116,12 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   });
 
   test('it should render destination list items', async function (assert) {
-    // assert.expect(6);
+    assert.expect(6);
 
-    // this.server.delete('/sync/destinations/aws-sm/destination-aws', () => {
-    //   assert.ok('Request made to delete destination');
-    //   return {};
-    // });
+    this.server.delete('/sys/sync/destinations/aws-sm/destination-aws', () => {
+      assert.ok('Request made to delete destination');
+      return {};
+    });
 
     await this.renderComponent();
 
@@ -129,11 +131,18 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     await click('[data-test-popup-menu-trigger]');
 
-    // TODO: test delete action once capabilities are added
-    // await click('[data-test-delete]');
-    // await click('[data-test-confirm-button]');
+    await click('[data-test-delete]');
+    await click('[data-test-confirm-button]');
 
-    // assert.true(this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations'), 'Transition is triggered on delete success');
-    // assert.true(this.clearDatasetStub.calledWith('sync/destinations/aws-sm'), 'Store dataset is cleared on delete success');
+    assert.propEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations'],
+      'Transition is triggered on delete success'
+    );
+    assert.propEqual(
+      this.clearDatasetStub.lastCall.args,
+      ['sync/destination'],
+      'Store dataset is cleared on delete success'
+    );
   });
 });

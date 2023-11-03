@@ -75,4 +75,43 @@ module('Unit | Adapter | sync | destination', function (hooks) {
     });
     this.store.query('sync/destination', {});
   });
+
+  test('it should make request to correct endpoint for deleteRecord with base model', async function (assert) {
+    assert.expect(1);
+
+    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1', () => {
+      assert.ok(true, 'DELETE request made to correct endpoint');
+      return {};
+    });
+
+    const modelName = 'sync/destination';
+    this.store.pushPayload(modelName, {
+      modelName,
+      type: 'aws-sm',
+      name: 'us-west-1',
+      id: 'us-west-1',
+    });
+    const model = this.store.peekRecord(modelName, 'us-west-1');
+    await model.destroyRecord();
+  });
+
+  test('it should make request to correct endpoint for deleteRecord', async function (assert) {
+    assert.expect(1);
+
+    const destination = this.server.create('sync-destination', 'aws-sm');
+
+    this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}`, () => {
+      assert.ok(true, 'DELETE request made to correct endpoint');
+      return {};
+    });
+
+    const modelName = 'sync/destinations/aws-sm';
+    this.store.pushPayload(modelName, {
+      modelName,
+      ...destination,
+      id: destination.name,
+    });
+    const model = this.store.peekRecord(modelName, destination.name);
+    await model.destroyRecord();
+  });
 });
