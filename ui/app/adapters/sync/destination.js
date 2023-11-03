@@ -13,14 +13,6 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
     return modelName === 'sync/destination' ? pluralize(modelName) : modelName;
   }
 
-  // createRecord(store, { modelName }, snapshot) {
-  //   const { name, type } = snapshot.attributes();
-  //   const data = snapshot.serialize();
-  //   return this.ajax(this.buildURL(modelName, name), 'POST', { data }).then((resp) => ({
-  //     id: `${type}/${name}`,
-  //     ...resp,
-  //   }));
-  // }
   urlForCreateRecord(modelName, snapshot) {
     const { name } = snapshot.attributes();
     return `${super.urlForCreateRecord(modelName, snapshot)}/${name}`;
