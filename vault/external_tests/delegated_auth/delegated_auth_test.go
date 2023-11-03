@@ -33,11 +33,19 @@ func buildDaError(defaults map[string]string, d *framework.FieldData) *logical.R
 	path := fieldDataOrDefault("path", d)
 	username := fieldDataOrDefault("username", d)
 	password := fieldDataOrDefault("password", d)
+	var errorHandler logical.DelegatedAuthErrorHandler
+	if handleErrorRaw, ok := d.GetOk("handle_error"); ok {
+		if handleErrorRaw.(bool) {
+			errorHandler = func(ctx context.Context, initiatingRequest, authRequest *logical.Request, authResponse *logical.Response, err error) (*logical.Response, error) {
+				return logical.ErrorResponse(fmt.Sprintf("my custom handler: %v", err)), nil
+			}
+		}
+	}
 
 	loginPath := paths.Join(path, username)
 	data := map[string]interface{}{"password": password}
 
-	return logical.NewDelegatedAuthenticationRequest(accessor, loginPath, data, nil)
+	return logical.NewDelegatedAuthenticationRequest(accessor, loginPath, data, errorHandler)
 }
 
 func buildDelegatedAuthFactory(defaults map[string]string) logical.Factory {
@@ -98,6 +106,7 @@ func buildDelegatedAuthFactory(defaults map[string]string) logical.Factory {
 					"password":      {Type: framework.TypeString},
 					"loop":          {Type: framework.TypeBool},
 					"perform_write": {Type: framework.TypeBool},
+					"handle_error":  {Type: framework.TypeBool},
 				},
 			},
 		}
@@ -162,7 +171,13 @@ func TestDelegatedAuth(t *testing.T) {
 		"password":   "test",
 		"token_type": "batch",
 	})
-	require.NoError(t, err, "failed to create allowed-est user")
+	require.NoError(t, err, "failed to create not-allowed-est user")
+
+	_, err = client.Logical().Write("auth/userpass/users/bad-token-type-est", map[string]interface{}{
+		"password":   "test",
+		"token_type": "service",
+	})
+	require.NoError(t, err, "failed to create bad-token-type-est user")
 
 	// Setup another auth mount so we can test multiple accessors in mount tuning works later
 	err = client.Sys().EnableAuthWithOptions("userpass2", &api.EnableAuthOptions{
@@ -181,18 +196,21 @@ func TestDelegatedAuth(t *testing.T) {
 	resp, err := client.Logical().Read("/sys/mounts/auth/userpass")
 	require.NoError(t, err, "failed to query for mount accessor")
 	require.NotNil(t, resp, "received nil response from mount accessor query")
+	require.NotNil(t, resp.Data, "received response with nil Data")
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	upAccessor := resp.Data["accessor"].(string)
 
 	resp, err = client.Logical().Read("/sys/mounts/auth/userpass2")
 	require.NoError(t, err, "failed to query for mount accessor for userpass2")
 	require.NotNil(t, resp, "received nil response from mount accessor query for userpass2")
+	require.NotNil(t, resp.Data, "received response with nil Data")
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	upAccessor2 := resp.Data["accessor"].(string)
 
 	resp, err = client.Logical().Read("/sys/mounts/cubbyhole")
 	require.NoError(t, err, "failed to query for mount accessor for cubbyhole")
 	require.NotNil(t, resp, "received nil response from mount accessor query for cubbyhole")
+	require.NotNil(t, resp.Data, "received response with nil Data")
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	cubbyAccessor := resp.Data["accessor"].(string)
 
@@ -236,6 +254,7 @@ func TestDelegatedAuth(t *testing.T) {
 
 			require.NoErrorf(st, err, "failed making %s pre-auth call with allowed-est", test)
 			require.NotNilf(st, resp, "pre-auth %s call returned nil", test)
+			require.NotNil(t, resp.Data, "received response with nil Data")
 			if test != "list" {
 				require.Equalf(st, true, resp.Data["success"], "Got an incorrect response from %s call in success field", test)
 				require.NotEmptyf(st, resp.Data["token"], "no token returned by %s handler", test)
@@ -356,6 +375,14 @@ func TestDelegatedAuth(t *testing.T) {
 			password:      "test",
 			errorContains: fmt.Sprintf("requested delegate authentication mount '%s' was not an auth mount", cubbyAccessor),
 		},
+		{
+			name:          "fails-on-non-batch-token",
+			accessor:      upAccessor,
+			path:          "login",
+			username:      "bad-token-type-est",
+			password:      "test",
+			errorContains: "delegated auth requests can only use batch tokens",
+		},
 	}
 	for _, test := range failureTests {
 		t.Run(test.name, func(st *testing.T) {
@@ -375,8 +402,8 @@ func TestDelegatedAuth(t *testing.T) {
 		})
 	}
 
-	// Make sure we can add an accessor to the mount that previously failed above, and the request handling code
-	// does use both accessor values.
+	// Make sure we can add an accessor to the mount that previously failed above,
+	// and the request handling code does use both accessor values.
 	t.Run("multiple-accessors", func(st *testing.T) {
 		err = client.Sys().TuneMount("dat", api.MountConfigInput{DelegatedAuthAccessors: []string{upAccessor, upAccessor2}})
 		require.NoError(t, err, "Failed to tune mount to update delegated auth accessors")
@@ -390,7 +417,22 @@ func TestDelegatedAuth(t *testing.T) {
 
 		require.NoError(st, err, "failed making pre-auth call with allowed-est-2")
 		require.NotNil(st, resp, "pre-auth %s call returned nil with allowed-est-2")
+		require.NotNil(t, resp.Data, "received response with nil Data")
 		require.Equal(st, true, resp.Data["success"], "Got an incorrect response from call in success field with allowed-est-2")
 		require.NotEmpty(st, resp.Data["token"], "no token returned with allowed-est-2 user")
+	})
+
+	// Test we can delegate a permission denied error back to the originating
+	// backend for processing/response to the client
+	t.Run("backend-handles-permission-denied", func(st *testing.T) {
+		resp, err = clientNoToken.Logical().Write("dat/preauth-test", map[string]interface{}{
+			"accessor":     upAccessor,
+			"path":         "login",
+			"username":     "allowed-est",
+			"password":     "test2",
+			"handle_error": true,
+		})
+
+		require.ErrorContains(st, err, "my custom handler: invalid credentials")
 	})
 }

@@ -1848,9 +1848,7 @@ type invalidCredentialHandler func(err error) (*logical.Response, *logical.Auth,
 // handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuth, it is requesting that
 // an authentication workflow of its choosing be implemented prior to it being able to accept it. Normally
 // this is used for standard protocols that communicate the credential information in a non-standard Vault way
-func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuth,
-	entry *MountEntry, invalidCredHandler invalidCredentialHandler,
-) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuth, entry *MountEntry, invalidCredHandler invalidCredentialHandler) (*logical.Response, *logical.Auth, error) {
 	// Make sure we didn't get into a routing loop.
 	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
 		return nil, nil, fmt.Errorf("%w: original request had delegated auth token, "+
@@ -1922,15 +1920,22 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 			return authResp, nil, err
 		}
 	}
-	// A login request should never return a secret!
 	if authResp == nil {
 		return nil, nil, fmt.Errorf("%w: delegated auth request returned empty response for request_path: %s", ErrInternalError, authReq.Path)
 	}
+	// A login request should never return a secret!
 	if authResp.Secret != nil {
 		return nil, nil, fmt.Errorf("%w: unexpected Secret response for login path for request_path: %s", ErrInternalError, authReq.Path)
 	}
 	if authResp.Auth == nil || authResp.Auth.ClientToken == "" {
 		return nil, nil, fmt.Errorf("%w: delegated auth request did not return a client token for login path: %s", ErrInternalError, authReq.Path)
+	}
+
+	// Delegated auth tokens should only be batch tokens, as we don't want to incur
+	// the cost of storage/tidying for protocols that will be generating a token per
+	// request.
+	if !IsBatchToken(authResp.Auth.ClientToken) {
+		return nil, nil, fmt.Errorf("%w: delegated auth requests can only use batch tokens", logical.ErrPermissionDenied)
 	}
 
 	// Authentication successful, use the resulting ClientToken to reissue the original request
