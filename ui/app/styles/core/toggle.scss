@@ -79,9 +79,9 @@
         width: $size-8 * 2;
       }
       &::after {
-        width: $size-8 * 0.8;
-        height: $size-8 * 0.8;
-        transform: translateX(0.15rem);
+        width: $size-8 * 0.9;
+        height: $size-8 * 0.9;
+        transform: translateX(0.05rem);
         left: 0;
         top: calc($size-8 / 4);
       }
