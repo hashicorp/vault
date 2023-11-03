@@ -12,6 +12,7 @@ This impacts all auth methods.
 A fix will be released in Vault 1.15.2, 1.14.6, and 1.13.10.
 
 ### Workaround
+
 During authentication, Vault derives inherited policies based on the groups an
 entity belongs to. Vault returns an internal error when attaching the derived
 policy to a token when:
