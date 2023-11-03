@@ -141,7 +141,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     );
     assert.propEqual(
       this.clearDatasetStub.lastCall.args,
-      ['sync/destinations/aws-sm'],
+      ['sync/destination'],
       'Store dataset is cleared on delete success'
     );
   });
