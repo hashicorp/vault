@@ -23,9 +23,9 @@
       @actionText="Create new"
       @actionTo="roles.create"
     >
-      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-count>
+      <Hds::Text::Display @tag="h2" @size="400" @weight="medium" class="has-top-margin-m" data-test-roles-count>
         {{or @roles.length "None"}}
-      </h2>
+      </Hds::Text::Display>
     </OverviewCard>
     <OverviewCard
       @cardTitle="Libraries"
@@ -33,9 +33,9 @@
       @actionText="Create new"
       @actionTo="libraries.create"
     >
-      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-libraries-count>
+      <Hds::Text::Display @tag="h2" @size="400" @weight="medium" class="has-top-margin-m" data-test-libraries-count>
         {{or @libraries.length "None"}}
-      </h2>
+      </Hds::Text::Display>
     </OverviewCard>
   </div>
   <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">

@@ -30,7 +30,9 @@
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
-    <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>
+    <Hds::Text::Display @tag="h3" @size="400" @weight="semibold">
+      Settings
+    </Hds::Text::Display>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
       <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>

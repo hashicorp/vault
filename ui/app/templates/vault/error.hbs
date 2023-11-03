@@ -15,7 +15,7 @@
         <Icon @name="help" @size="24" class="has-text-grey" @stretched={{true}} />
       </div>
       <div class="has-left-margin-s">
-        <h1 class="is-size-4 has-text-semibold has-text-grey has-line-height-1">
+        <Hds::Text::Display @tag="h1" @size="400" @weight="medium" class="has-text-grey">
           {{#if (eq this.model.httpStatus 403)}}
             Not authorized
           {{else if (eq this.model.httpStatus 404)}}
@@ -23,7 +23,7 @@
           {{else}}
             Error
           {{/if}}
-        </h1>
+        </Hds::Text::Display>
         <p class="has-text-grey is-size-8">Error {{this.model.httpStatus}}</p>
       </div>
     </div>

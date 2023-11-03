@@ -17,10 +17,9 @@
       @actionText={{if @roles.length "View Roles" "Create Role"}}
       @actionTo={{if @roles.length "roles" "roles.create"}}
     >
-      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>{{or
-          @roles.length
-          "None"
-        }}</h2>
+      <Hds::Text::Display @tag="h2" @size="400" @weight="medium" class="has-top-margin-m" data-test-roles-card-overview-num>
+        {{or @roles.length "None"}}
+      </Hds::Text::Display>
     </OverviewCard>
     <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
       <div class="has-top-margin-m is-flex">

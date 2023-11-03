@@ -40,7 +40,9 @@
 {{#each @role.formFieldGroups as |fg|}}
   {{#each-in fg as |group fields|}}
     {{#if (not-eq group "default")}}
-      <h3 class="is-size-4 has-text-weight-semibold has-top-margin-m">{{group}}</h3>
+      <Hds::Text::Display @tag="h3" @size="400" @weight="semibold" class="has-top-margin-m">
+        {{group}}
+      </Hds::Text::Display>
     {{/if}}
     {{#each fields as |attr|}}
       {{#let (get @role attr.name) as |val|}}
