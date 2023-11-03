@@ -4,9 +4,9 @@
 ~}}
 
 <div>
-  <h2 class="is-size-5 has-text-weight-semibold has-bottom-margin-xs" data-test-title={{@title}}>
+  <Hds::Text::Display @tag="h2" @size="300" @weight="semibold" class="has-bottom-margin-xs" data-test-title={{@title}}>
     {{@title}}
-  </h2>
+  </Hds::Text::Display>
 
   {{#if @subText}}
     <div class="title is-8 has-font-weight-normal has-text-grey-dark" data-test-subtext={{@title}}>

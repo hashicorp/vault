@@ -30,7 +30,7 @@
   {{#each @tidy.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
       {{#if (or (eq @tidyType "manual") @tidy.enabled)}}
-        <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
+        <h2 class="title is-5 has-border-bottom-light page-header" data-test-tidy-header={{group}}>
           {{group}}
         </h2>
         {{#each fields as |attr|}}

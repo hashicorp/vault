@@ -7,7 +7,7 @@
   <div>
     <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
       <div class="is-flex-between">
-        <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
+        <Hds::Text::Display @tag="h3" @size="300" @weight="semibold">All accounts</Hds::Text::Display>
         {{#if @library.canCheckOut}}
           <Hds::Button
             @text="Check-out"

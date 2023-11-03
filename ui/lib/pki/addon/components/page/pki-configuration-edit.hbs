@@ -21,7 +21,7 @@
   {{/if}}
   <form {{on "submit" (perform this.save)}}>
     <fieldset class="is-shadowless is-marginless is-borderless is-fullwidth" data-test-cluster-config-edit-section>
-      <h2 class="title is-size-5 has-border-bottom-light page-header">
+      <h2 class="title is-5 has-border-bottom-light page-header">
         Cluster Config
       </h2>
       {{#if @cluster.canSet}}
@@ -40,7 +40,7 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-acme-edit-section>
-      <h2 class="title is-size-5 has-border-bottom-light page-header">
+      <h2 class="title is-5 has-border-bottom-light page-header">
         ACME Config
       </h2>
       {{#if @acme.canSet}}
@@ -59,7 +59,7 @@
     </fieldset>
 
     <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
-      <h2 class="title is-size-5 has-border-bottom-light page-header">
+      <h2 class="title is-5 has-border-bottom-light page-header">
         Global URLs
       </h2>
       {{#if @urls.canSet}}
@@ -82,7 +82,7 @@
         {{#each @crl.formFieldGroups as |fieldGroup|}}
           {{#each-in fieldGroup as |group fields|}}
             {{#if (or (not-eq group "Unified Revocation") this.isEnterprise)}}
-              <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-crl-header={{group}}>
+              <h2 class="title is-5 has-border-bottom-light page-header" data-test-crl-header={{group}}>
                 {{group}}
               </h2>
             {{/if}}

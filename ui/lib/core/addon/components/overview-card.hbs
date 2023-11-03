@@ -11,7 +11,7 @@
   ...attributes
 >
   <div class="flex row-wrap space-between has-bottom-margin-m" data-test-overview-card={{@cardTitle}}>
-    <h3 class="has-text-weight-bold is-size-5">{{@cardTitle}}</h3>
+    <Hds::Text::Display @tag="h3" @size="300" @weight="bold">{{@cardTitle}}</Hds::Text::Display>
     {{#if @actionText}}
       <Hds::Link::Standalone
         @icon={{or @actionIcon "chevron-right"}}
