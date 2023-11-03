@@ -16,8 +16,8 @@
   height: auto;
   justify-content: center;
   line-height: 1.5;
-  margin-right: $size-10;
-  padding: 0 $size-10;
+  margin-right: $spacing-8;
+  padding: 0 $spacing-8;
   white-space: nowrap;
   vertical-align: middle;
 
@@ -34,7 +34,7 @@
   }
 
   &.has-extra-padding {
-    padding: $size-11 $spacing-4;
+    padding: $spacing-4 $spacing-4;
   }
 }
 

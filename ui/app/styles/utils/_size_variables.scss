@@ -2,6 +2,7 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
+$base-font-size: 16px;
 
 /* General sizing in rem values used largely for text sizing.*/
 $size-1: 3rem; // 42px
@@ -19,8 +20,12 @@ $size-11: 0.25rem; // 3.5px
 /* Spacing vars in px */
 $spacing-4: 4px;
 $spacing-8: 8px;
+$spacing-10: 10px;
 $spacing-12: 12px;
+$spacing-14: 14px;
 $spacing-16: 16px;
+$spacing-18: 18px;
+$spacing-20: 20px;
 $spacing-24: 24px;
 $spacing-36: 36px;
 $spacing-48: 48px;

@@ -3,22 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* Helpers that define anything with the margin or padding. */
-
-/* Notes
-- these helpers are generally defined in px but some (if they use $size-xx) are using rems.
-*/
+/* Helpers that define margin and padding in pixels */
 
 .is-paddingless {
   padding: 0 !important;
 }
 
 .has-short-padding {
-  padding: $size-11 $size-5;
+  padding: $spacing-4 $spacing-18;
 }
 
 .has-tall-padding {
-  padding: $size-2;
+  padding: $spacing-36;
 }
 
 .has-side-padding-s {
@@ -91,7 +87,7 @@
 }
 
 .has-top-bottom-margin {
-  margin: $size-5 0rem;
+  margin: $spacing-18 0rem;
 }
 
 .has-top-bottom-margin-xxs {
