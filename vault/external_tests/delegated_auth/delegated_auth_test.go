@@ -381,7 +381,7 @@ func TestDelegatedAuth(t *testing.T) {
 			path:          "login",
 			username:      "bad-token-type-est",
 			password:      "test",
-			errorContains: "delegated auth requests can only use batch tokens",
+			errorContains: "delegated auth requests must be configured to issue batch tokens",
 		},
 	}
 	for _, test := range failureTests {

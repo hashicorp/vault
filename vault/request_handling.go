@@ -1935,7 +1935,7 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	// the cost of storage/tidying for protocols that will be generating a token per
 	// request.
 	if !IsBatchToken(authResp.Auth.ClientToken) {
-		return nil, nil, fmt.Errorf("%w: delegated auth requests can only use batch tokens", logical.ErrPermissionDenied)
+		return nil, nil, fmt.Errorf("%w: delegated auth requests must be configured to issue batch tokens", logical.ErrPermissionDenied)
 	}
 
 	// Authentication successful, use the resulting ClientToken to reissue the original request
