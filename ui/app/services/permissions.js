@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service, { inject as service } from '@ember/service';
@@ -64,6 +64,7 @@ export default Service.extend({
   exactPaths: null,
   globPaths: null,
   canViewAll: null,
+  readFailed: false,
   store: service(),
   auth: service(),
   namespace: service(),
@@ -80,6 +81,7 @@ export default Service.extend({
     } catch (err) {
       // If no policy can be found, default to showing all nav items.
       this.set('canViewAll', true);
+      this.set('readFailed', true);
     }
   }),
 
@@ -87,20 +89,27 @@ export default Service.extend({
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
     this.set('canViewAll', resp.data.root);
+    this.set('readFailed', false);
   },
 
   reset() {
     this.set('exactPaths', null);
     this.set('globPaths', null);
     this.set('canViewAll', null);
+    this.set('readFailed', false);
   },
 
-  hasNavPermission(navItem, routeParams) {
+  hasNavPermission(navItem, routeParams, requireAll) {
     if (routeParams) {
-      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
-      const capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
-
-      return this.hasPermission(API_PATHS[navItem][routeParams], capability);
+      // check that the user has permission to access all (requireAll = true) or any of the routes when array is passed
+      // useful for hiding nav headings when user does not have access to any of the links
+      const params = Array.isArray(routeParams) ? routeParams : [routeParams];
+      const evalMethod = !Array.isArray(routeParams) || requireAll ? 'every' : 'some';
+      return params[evalMethod]((param) => {
+        // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+        const capability = param === 'entities' || param === 'groups' ? ['list'] : [null];
+        return this.hasPermission(API_PATHS[navItem][param], capability);
+      });
     }
     return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   },

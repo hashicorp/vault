@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -10,6 +10,7 @@ import { inject as service } from '@ember/service';
 import isAfter from 'date-fns/isAfter';
 import differenceInDays from 'date-fns/differenceInDays';
 import localStorage from 'vault/lib/local-storage';
+import timestamp from 'core/utils/timestamp';
 
 /**
  * @module LicenseBanners
@@ -30,32 +31,38 @@ export default class LicenseBanners extends Component {
 
   constructor() {
     super(...arguments);
-    // do not dismiss any banners if the user has updated their version
-    const dismissedBanner = localStorage.getItem(`dismiss-license-banner-${this.currentVersion}`); // returns either warning or expired
-    this.updateDismissType(dismissedBanner);
+    // reset and show a previously dismissed license banner if:
+    // the version has been updated or the license has been updated (indicated by a change in the expiry date).
+    const bannerType = localStorage.getItem(this.dismissedBannerKey); // returns either warning or expired
+
+    this.updateDismissType(bannerType);
   }
 
   get currentVersion() {
     return this.version.version;
   }
 
+  get dismissedBannerKey() {
+    return `dismiss-license-banner-${this.currentVersion}-${this.args.expiry}`;
+  }
+
   get licenseExpired() {
     if (!this.args.expiry) return false;
-    return isAfter(new Date(), new Date(this.args.expiry));
+    return isAfter(timestamp.now(), new Date(this.args.expiry));
   }
 
   get licenseExpiringInDays() {
     // Anything more than 30 does not render a warning
     if (!this.args.expiry) return 99;
-    return differenceInDays(new Date(this.args.expiry), new Date());
+    return differenceInDays(new Date(this.args.expiry), timestamp.now());
   }
 
   @action
   dismissBanner(dismissAction) {
     // if a client's version changed their old localStorage key will still exists.
-    localStorage.cleanUpStorage('dismiss-license-banner', `dismiss-license-banner-${this.currentVersion}`);
+    localStorage.cleanupStorage('dismiss-license-banner', this.dismissedBannerKey);
     // updates localStorage and then updates the template by calling updateDismissType
-    localStorage.setItem(`dismiss-license-banner-${this.currentVersion}`, dismissAction);
+    localStorage.setItem(this.dismissedBannerKey, dismissAction);
     this.updateDismissType(dismissAction);
   }
 

@@ -1,53 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Unwrap data
+      Unwrap Data
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 {{#if @unwrap_data}}
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <nav class="tabs">
-      <ul>
-        {{! template-lint-configure no-nested-interactive "warn" }}
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "data") "is-active"}}
-        >
-          <button
-            type="button"
-            class="link link-plain tab has-text-weight-semibold"
-            {{action (mut @unwrapActiveTab) "data"}}
-            data-test-button-data
-          >
-            Data
-          </button>
-        </li>
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "details") "is-active"}}
-        >
-          <button
-            type="button"
-            class="link link-plain tab has-text-weight-semibold"
-            {{action (mut @unwrapActiveTab) "details"}}
-            data-test-button-details
-          >
-            Wrap Details
-          </button>
-        </li>
-        {{! template-lint-configure no-nested-interactive "on" }}
-      </ul>
-    </nav>
-    {{#if (eq @unwrapActiveTab "data")}}
-      <div class="field">
-        <div class="control">
-          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @readOnly={{true}} />
-        </div>
-      </div>
-    {{else}}
-      <div class="field box is-fullwidth is-shadowless is-paddingless is-marginless">
+  <Hds::Tabs as |T|>
+    <T.Tab data-test-button-data>Data</T.Tab>
+    <T.Tab data-test-button-details>Wrap Details</T.Tab>
+    <T.Panel>
+      <JsonEditor
+        class="has-top-padding-m"
+        @title="Unwrapped Data"
+        @value={{stringify @unwrap_data}}
+        @readOnly={{true}}
+        @container=".toolbar-actions"
+      />
+    </T.Panel>
+    <T.Panel>
+      <div class="has-top-padding-m">
         {{#each-in @details as |key detail|}}
           <InfoTableRow @label={{key}} @value={{key}}>
             {{#if (or (eq detail "No") (eq detail "None"))}}
@@ -62,25 +40,12 @@
           </InfoTableRow>
         {{/each-in}}
       </div>
-    {{/if}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <CopyButton
-        @clipboardText={{stringify @unwrap_data}}
-        @class="button is-primary"
-        @buttonType="button"
-        @success={{action (set-flash-message "Data copied!")}}
-      >
-        Copy
-      </CopyButton>
-    </div>
-    <div class="control">
-      <button {{on "click" this.onClear}} type="button" class="button">
-        Back
-      </button>
-    </div>
-  </div>
+    </T.Panel>
+  </Hds::Tabs>
+  <Hds::ButtonSet class="has-top-padding-m">
+    <Hds::Copy::Button @text="Copy unwrapped data" @textToCopy={{stringify @unwrap_data}} class="primary" />
+    <Hds::Button {{on "click" this.onClear}} @color="secondary" @text="Back" />
+  </Hds::ButtonSet>
 {{else}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
@@ -105,9 +70,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" data-test-tools-submit="true" class="button is-primary">
-        Unwrap data
-      </button>
+      <Hds::Button @text="Unwrap data" type="submit" data-test-tools-submit="true" />
     </div>
   </div>
 {{/if}}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -153,20 +153,33 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred), nil
 	}
 
-	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
+	tokenResp, err := stsClient.GetFederationTokenWithContext(ctx, getTokenInput)
 	if err != nil {
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	// STS credentials cannot be revoked so do not create a lease
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"access_key":     *tokenResp.Credentials.AccessKeyId,
-			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-			"security_token": *tokenResp.Credentials.SessionToken,
-			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
-		},
-	}, nil
+	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
+	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
+	//
+	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+		"ttl":            uint64(ttl.Seconds()),
+	}, map[string]interface{}{
+		"username": username,
+		"policy":   policy,
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = ttl
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
 }
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
@@ -228,21 +241,34 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if len(policyARNs) > 0 {
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
-	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
+	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
-	// STS credentials cannot be revoked so do not create a lease
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"access_key":     *tokenResp.Credentials.AccessKeyId,
-			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
-			"security_token": *tokenResp.Credentials.SessionToken,
-			"arn":            *tokenResp.AssumedRoleUser.Arn,
-			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
-		},
-	}, nil
+	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
+	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
+	//
+	ttl := tokenResp.Credentials.Expiration.Sub(time.Now())
+	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
+		"access_key":     *tokenResp.Credentials.AccessKeyId,
+		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
+		"security_token": *tokenResp.Credentials.SessionToken,
+		"arn":            *tokenResp.AssumedRoleUser.Arn,
+		"ttl":            uint64(ttl.Seconds()),
+	}, map[string]interface{}{
+		"username": roleSessionName,
+		"policy":   roleArn,
+		"is_sts":   true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = ttl
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
 }
 
 func readConfig(ctx context.Context, storage logical.Storage) (rootConfig, error) {
@@ -314,7 +340,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = iamClient.CreateUser(createUserRequest)
+	_, err = iamClient.CreateUserWithContext(ctx, createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := fmt.Errorf("error creating IAM user: %w", err)
@@ -325,7 +351,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = iamClient.AttachUserPolicyWithContext(ctx, &iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -336,7 +362,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = iamClient.PutUserPolicyWithContext(ctx, &iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -348,7 +374,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, group := range role.IAMGroups {
 		// Add user to IAM groups
-		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+		_, err = iamClient.AddUserToGroupWithContext(ctx, &iam.AddUserToGroupInput{
 			UserName:  aws.String(username),
 			GroupName: aws.String(group),
 		})
@@ -367,7 +393,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	if len(tags) > 0 {
-		_, err = iamClient.TagUser(&iam.TagUserInput{
+		_, err = iamClient.TagUserWithContext(ctx, &iam.TagUserInput{
 			Tags:     tags,
 			UserName: &username,
 		})
@@ -378,7 +404,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := iamClient.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

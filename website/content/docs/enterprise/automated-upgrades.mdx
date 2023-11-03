@@ -5,12 +5,12 @@ description: |-
   Vault Enterprise can upgrade itself automatically.
 ---
 
-# Automated Upgrades
+# Automated upgrades
 
-~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be
-configured to use Integrated Storage.
+@include 'alerts/enterprise-only.mdx'
 
-Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically.
+Operators running Vault Enterprise with integrated storage can use automated
+upgrades to upgrade the Vault version currently running in a cluster automatically.
  There are a few different ways to make this upgrade happen,
 and control which versions are being upgraded to. With no additional configuration,
 Vault will check the version of Vault that each node in the cluster is running. If a blue/green
@@ -40,7 +40,7 @@ Below is a flowchart depicting Autopilot's automated upgrade state machine.
 The status of the automated upgrade can be monitored by consulting the [Autopilot state API endpoint](/vault/api-docs/system/storage/raftautopilot#get-cluster-state).
 
 ## Examples
-### Using Vault's built-in version
+### Using vault's built-in version
 This is the easiest method to perform an automated upgrade; no configuration is needed, and automated upgrades
 are enabled by default.
 
@@ -48,3 +48,19 @@ are enabled by default.
 Specify something like: `1.11.0-release.1` for the `autopilot_upgrade_version` configuration key in your
 existing cluster. When you're ready to deploy a new set of nodes, specify `1.11.0-release.2` for the new
 nodes. Any time you need to deploy an updated set of nodes to the cluster, increment the final number.
+
+It's important to note that Autopilot uses strict [semantic versioning](https://semver.org) when parsing
+upgrade versions. This means that in the above example, `-release.1` is considered the _pre-release version_
+in semantic versioning terminology. The pre-release version is denoted by a hyphen `-` after the patch version.
+This is semantically different from the _build metadata_, which is denoted by a plus sign `+` after either the
+patch version or the pre-release version. Build metadata is ignored when parsing versions, while the pre-release
+version is not. A table with some examples will help illustrate this.
+
+| Current upgrade version | New node upgrade version | Equal? | Will the upgrade happen? | Why?                                                                               |
+|:------------------------|:-------------------------|:-------|:-------------------------|:-----------------------------------------------------------------------------------|
+| 1.11.0                  | 1.11.0                   | Yes    | No                       | Versions are equal                                                                 |
+| 1.11.0-release.1        | 1.11.0-release.2         | No     | Yes                      | New node version is greater than current version                                   |
+| 1.11.0-release.1        | 1.11.1                   | No     | Yes                      | New node version is greater than current version                                   |
+| 1.11.0                  | 1.11.0-release.1         | No     | No                       | New node version is less than current version                                      |
+| 1.11.0+release.1        | 1.11.0+release.2         | Yes    | No                       | `release.1` and `release.2` are build metadata and ignored when comparing versions |
+| 1.11.0-release.1+123    | 1.11.0-release.1+456     | Yes    | No                       | Versions are equal, build metadata is ignored. |

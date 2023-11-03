@@ -1,12 +1,10 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
 import (
 	"context"
-
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -26,8 +24,8 @@ func (s *SealAccess) StoredKeysSupported() seal.StoredKeysSupport {
 	return s.seal.StoredKeysSupported()
 }
 
-func (s *SealAccess) BarrierType() wrapping.WrapperType {
-	return s.seal.BarrierType()
+func (s *SealAccess) BarrierSealConfigType() SealConfigType {
+	return s.seal.BarrierSealConfigType()
 }
 
 func (s *SealAccess) BarrierConfig(ctx context.Context) (*SealConfig, error) {
@@ -47,12 +45,12 @@ func (s *SealAccess) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 }
 
 func (s *SealAccess) ClearCaches(ctx context.Context) {
-	s.seal.SetBarrierConfig(ctx, nil)
+	s.seal.ClearBarrierConfig(ctx)
 	if s.RecoveryKeySupported() {
-		s.seal.SetRecoveryConfig(ctx, nil)
+		s.seal.ClearRecoveryConfig(ctx)
 	}
 }
 
-func (s *SealAccess) GetAccess() *seal.Access {
+func (s *SealAccess) GetAccess() seal.Access {
 	return s.seal.GetAccess()
 }

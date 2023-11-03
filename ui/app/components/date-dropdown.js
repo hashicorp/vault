@@ -1,12 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import timestamp from 'core/utils/timestamp';
 /**
  * @module DateDropdown
  * DateDropdown components are used to display a dropdown of months and years to handle date selection. Future dates are disabled (current month and year are selectable).
@@ -14,16 +15,15 @@ import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
  *
  * @example
  * ```js
- * <DateDropdown @handleSubmit={{this.actionFromParent}} @name="startTime" @submitText="Save" @handleCancel={{this.onCancel}}/>
+ * <DateDropdown @handleSubmit={{this.actionFromParent}} @name="startTime" @submitText="Save" />
  * ```
  * @param {function} handleSubmit - callback function from parent that the date picker triggers on submit
- * @param {function} [handleCancel] - optional callback for cancel action, if exists then buttons appear modal style with a light gray background
  * @param {string} [dateType] - optional argument to give the selected month/year a type
  * @param {string} [submitText] - optional argument to change submit button text
  * @param {function} [validateDate] - parent function to validate date selection, receives date object and returns an error message that's passed to the inline alert
  */
 export default class DateDropdown extends Component {
-  currentDate = new Date();
+  currentDate = timestamp.now();
   currentYear = this.currentDate.getFullYear(); // integer of year
   currentMonthIdx = this.currentDate.getMonth(); // integer of month, 0 indexed
   dropdownMonths = ARRAY_OF_MONTHS.map((m, i) => ({ name: m, index: i }));
@@ -65,12 +65,6 @@ export default class DateDropdown extends Component {
       year: this.selectedYear,
       dateType: this.args.dateType,
     });
-    this.resetDropdown();
-  }
-
-  @action
-  handleCancel() {
-    this.args.handleCancel();
     this.resetDropdown();
   }
 

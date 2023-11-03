@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -42,20 +42,20 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress          string
-	flagAgentAddress     string
-	flagCACert           string
-	flagCAPath           string
-	flagClientCert       string
-	flagClientKey        string
-	flagNamespace        string
-	flagNS               string
-	flagPolicyOverride   bool
-	flagTLSServerName    string
-	flagTLSSkipVerify    bool
-	flagDisableRedirects bool
-	flagWrapTTL          time.Duration
-	flagUnlockKey        string
+	flagAddress           string
+	flagAgentProxyAddress string
+	flagCACert            string
+	flagCAPath            string
+	flagClientCert        string
+	flagClientKey         string
+	flagNamespace         string
+	flagNS                string
+	flagPolicyOverride    bool
+	flagTLSServerName     string
+	flagTLSSkipVerify     bool
+	flagDisableRedirects  bool
+	flagWrapTTL           time.Duration
+	flagUnlockKey         string
 
 	flagFormat           string
 	flagField            string
@@ -63,6 +63,7 @@ type BaseCommand struct {
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
+	addrWarning          string
 
 	flagMFA []string
 
@@ -81,6 +82,14 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		return c.client, nil
 	}
 
+	if c.addrWarning != "" && c.UI != nil {
+		if os.Getenv("VAULT_ADDR") == "" {
+			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
+				c.UI.Warn(wrapAtLength(c.addrWarning))
+			}
+		}
+	}
+
 	config := api.DefaultConfig()
 
 	if err := config.ReadEnvironment(); err != nil {
@@ -90,8 +99,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
 	}
-	if c.flagAgentAddress != "" {
-		config.Address = c.flagAgentAddress
+	if c.flagAgentProxyAddress != "" {
+		config.Address = c.flagAgentProxyAddress
 	}
 
 	if c.flagOutputCurlString {
@@ -222,7 +231,7 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-// getValidationRequired checks to see if the secret exists and has an MFA
+// getMFAValidationRequired checks to see if the secret exists and has an MFA
 // requirement. If MFA is required and the number of constraints is greater than
 // 1, we can assert that interactive validation is not required.
 func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
@@ -321,16 +330,18 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
+
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
+				c.addrWarning = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
 			}
 			f.StringVar(addrStringVar)
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
-				Target:     &c.flagAgentAddress,
+				Target:     &c.flagAgentProxyAddress,
 				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
@@ -588,6 +599,7 @@ func (f *FlagSets) Completions() complete.Flags {
 type (
 	ParseOptions              interface{}
 	ParseOptionAllowRawFormat bool
+	DisableDisplayFlagWarning bool
 )
 
 // Parse parses the given flags, returning any errors.
@@ -595,9 +607,17 @@ type (
 func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	err := f.mainSet.Parse(args)
 
-	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" && Format(f.ui) == "table" {
-		f.ui.Warn(warnings)
+	displayFlagWarningsDisabled := false
+	for _, opt := range opts {
+		if value, ok := opt.(DisableDisplayFlagWarning); ok {
+			displayFlagWarningsDisabled = bool(value)
+		}
+	}
+	if !displayFlagWarningsDisabled {
+		warnings := generateFlagWarnings(f.Args())
+		if warnings != "" && Format(f.ui) == "table" {
+			f.ui.Warn(warnings)
+		}
 	}
 
 	if err != nil {

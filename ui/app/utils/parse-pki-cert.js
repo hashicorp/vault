@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import * as asn1js from 'asn1js';
@@ -9,33 +9,37 @@ import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
   EXTENSION_OIDs,
-  IGNORED_OIDs,
+  OTHER_OIDs,
   KEY_USAGE_BITS,
   SAN_TYPES,
   SIGNATURE_ALGORITHM_OIDs,
   SUBJECT_OIDs,
 } from './parse-pki-cert-oids';
 
-/* 
+/*
  It may be helpful to visualize a certificate's SEQUENCE structure alongside this parsing file.
  You can do so by decoding a certificate here: https://lapo.it/asn1js/#
 
  A certificate is encoded in ASN.1 data - a SEQUENCE is how you define structures in ASN.1.
- GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs 
+ GeneralNames, Extension, AlgorithmIdentifier are all examples of SEQUENCEs
 
- * Error handling: 
-{ can_parse: false } -> returned if the external library cannot convert the certificate 
-{ parsing_errors: [] } -> returned if the certificate was converted, but there's ANY problem parsing certificate details. 
+ * Error handling:
+{ can_parse: false } -> returned if the external library cannot convert the certificate
+{ parsing_errors: [] } -> returned if the certificate was converted, but there's ANY problem parsing certificate details.
  This means we cannot cross-sign in the UI and prompt the user to do so manually using the CLI.
  */
+
+export function jsonToCertObject(jsonString) {
+  const cert_base64 = jsonString.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
+  const cert_der = fromBase64(cert_base64);
+  const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
+  return new Certificate({ schema: cert_asn1.result });
+}
 
 export function parseCertificate(certificateContent) {
   let cert;
   try {
-    const cert_base64 = certificateContent.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, '');
-    const cert_der = fromBase64(cert_base64);
-    const cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
-    cert = new Certificate({ schema: cert_asn1.result });
+    cert = jsonToCertObject(certificateContent);
   } catch (error) {
     console.debug('DEBUG: Converting Certificate', error); // eslint-disable-line
     return { can_parse: false };
@@ -60,8 +64,6 @@ export function parseCertificate(certificateContent) {
   return {
     ...parsedCertificateValues,
     can_parse: true,
-    expiry_date: expiryDate, // remove along with old PKI work
-    issue_date: issueDate, // remove along with old PKI work
     not_valid_after: getUnixTime(expiryDate),
     not_valid_before: getUnixTime(issueDate),
     ttl,
@@ -101,14 +103,72 @@ export function formatValues(subject, extension) {
   };
 }
 
+/*
+Explanation of cross-signing and how to use the verify function:
+(See setup script here: https://github.com/hashicorp/vault-tools/blob/main/vault-ui/pki/pki-cross-sign-config.sh)
+1. A trust chain exists between "old-parent-issuer-name" -> "old-intermediate"
+2. We create a new root, "my-parent-issuer-name" to phase out the old one
+
+* cross-signing step performed in the UI *
+3. Cross-sign "old-intermediate" against new root "my-parent-issuer-name" which generates a new intermediate issuer,
+"newly-cross-signed-int-name", to phase out the old intermediate
+
+* validate cross-signing accurately copied the old intermediate issuer *
+4. Generate a leaf certificate from "newly-cross-signed-int-name", let's call it "baby-leaf"
+5. Verify that "baby-leaf" validates against both chains:
+"old-parent-issuer-name" -> "old-intermediate" -> "baby-leaf"
+"my-parent-issuer-name" -> "newly-cross-signed-int-name" -> "baby-leaf"
+
+We're just concerned with the link between the leaf and both intermediates
+to confirm the UI performed the cross-sign correctly
+(which already assumes the link between each parent and intermediate is valid)
+
+verifyCertificates(oldIntermediate, crossSignedCert, leaf)
+
+*/
+export async function verifyCertificates(certA, certB, leaf) {
+  const parsedCertA = jsonToCertObject(certA);
+  const parsedCertB = jsonToCertObject(certB);
+  if (leaf) {
+    const parsedLeaf = jsonToCertObject(leaf);
+    const chainA = await verifySignature(parsedCertA, parsedLeaf);
+    const chainB = await verifySignature(parsedCertB, parsedLeaf);
+    // the leaf's issuer should be equal to the subject data of the intermediate certs
+    const isEqualA = parsedLeaf.issuer.isEqual(parsedCertA.subject);
+    const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
+    return chainA && chainB && isEqualA && isEqualB;
+  }
+  // can be used to validate if a certificate is self-signed (i.e. a root cert), by passing it as both certA and B
+  return (await verifySignature(parsedCertA, parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
+}
+
+export async function verifySignature(parent, child) {
+  try {
+    return await child.verify(parent);
+  } catch (error) {
+    // ed25519 is an unsupported signature algorithm and so verify() errors
+    // SKID (subject key ID) is the byte array of the key identifier
+    // AKID (authority key ID) is a SEQUENCE-type extension that includes the key identifier and potentially other information.
+    const skidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.subject_key_identifier);
+    const akidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.authority_key_identifier);
+    // return false if either extension is missing
+    // this could mean a false-negative but that's okay for our use-case
+    if (!skidExtension || !akidExtension) return false;
+    const skid = new Uint8Array(skidExtension.parsedValue.valueBlock.valueHex);
+    const akid = new Uint8Array(akidExtension.extnValue.valueBlock.valueHex);
+    // Check that AKID includes the SKID, which saves us from parsing the AKID and is unlikely to return false-positives.
+    return akid.toString().includes(skid.toString());
+  }
+}
+
 //* PARSING HELPERS
 /*
-  We wish to get each SUBJECT_OIDs (see utils/parse-pki-cert-oids.js) out of this certificate's subject. 
+  We wish to get each SUBJECT_OIDs (see utils/parse-pki-cert-oids.js) out of this certificate's subject.
   A subject is a list of RDNs, where each RDN is a (type, value) tuple
   and where a type is an OID. The OID for CN can be found here:
-     
+
      https://datatracker.ietf.org/doc/html/rfc5280#page-112
-  
+
   Each value is then encoded as another ASN.1 object; in the case of a
   CommonName field, this is usually a PrintableString, BMPString, or a
   UTF8String. Regardless of encoding, it should be present in the
@@ -141,7 +201,7 @@ export function parseExtensions(extensions) {
   if (!extensions) return null;
   const values = {};
   const errors = [];
-  const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
+  const allowedOids = Object.values({ ...EXTENSION_OIDs, ...OTHER_OIDs });
   const isUnknownExtension = (ext) => !allowedOids.includes(ext.extnID);
   if (extensions.any(isUnknownExtension)) {
     const unknown = extensions.filter(isUnknownExtension).map((ext) => ext.extnID);

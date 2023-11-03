@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault_test
 
@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -22,12 +23,7 @@ import (
 
 func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 	t.Parallel()
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
@@ -87,6 +83,11 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 			"sys/internal/ui/resultant-acl": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"sys/internal/ui/version": map[string]interface{}{
 				"capabilities": []interface{}{
 					"read",
 				},
@@ -193,12 +194,7 @@ func TestSystemBackend_HAStatus(t *testing.T) {
 // authenticated and thus a 403 response is expected.
 func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
 	t.Parallel()
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	client.SetToken("")
@@ -223,12 +219,7 @@ func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
 // core/versions storage entries, a single version entry should exist.
 func TestSystemBackend_VersionHistory_authenticated(t *testing.T) {
 	t.Parallel()
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	resp, err := client.Logical().List("sys/version-history")

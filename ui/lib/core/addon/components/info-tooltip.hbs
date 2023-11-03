@@ -1,0 +1,29 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<span class="is-inline-block" data-test-component="info-tooltip" data-test-tooltip>
+  <ToolTip
+    @verticalPosition={{or @verticalPosition "below"}}
+    @horizontalPosition={{or @horizontalPosition "auto-right"}}
+    data-test-component="info-tooltip"
+    data-test-tooltip
+    as |d|
+  >
+    <d.Trigger
+      @htmlTag="button"
+      @type="button"
+      class="tool-tip-trigger button is-ghost is-compact"
+      data-test-tool-tip-trigger={{true}}
+      {{on "click" this.preventSubmit}}
+    >
+      <Icon @name="info" class="auto-width" aria-label="help" />
+    </d.Trigger>
+    <d.Content @defaultClass="tool-tip">
+      <div class="box" data-test-info-tooltip-content>
+        {{yield}}
+      </div>
+    </d.Content>
+  </ToolTip>
+</span>

@@ -5,7 +5,7 @@ description: |-
   This page contains release notes for Vault 1.13.0
 ---
 
-# Vault 1.13.0 Release Notes
+# Vault 1.13.0 release notes
 
 **Software Release date:** March 1, 2023
 
@@ -20,7 +20,7 @@ we offer solutions to critical feature gaps that were identified previously.
 Please refer to the
 [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md#1130-rc1)
 within the Vault release for further information on product improvements,
-including a comprehensive list of bug fixes. 
+including a comprehensive list of bug fixes.
 
 Some of these enhancements and changes in this release include the following:
 
@@ -63,9 +63,10 @@ Some of these enhancements and changes in this release include the following:
   users from namespaces outside a namespace hierarchy to a group in a given
   namespace hierarchy. For Vault Agent, you can now grant it access to secrets
   outside the namespace where it authenticated, and reduce the number of Agents
-  you need to run. 
+  you need to run.
 - **User Lockout:** Vault now supports configuration to lock out users when they
-  have consecutive failed login attempts.
+  have consecutive failed login attempts. This feature is **enabled by default**
+  in 1.13 for the userpass, ldap, and approle auth methods.
 - **Event System (Alpha):** Vault has a new experimental event system. Events
   are currently only generated on writes to the KV secrets engine, but external
   plugins can also be updated to start generating events.
@@ -77,12 +78,12 @@ Some of these enhancements and changes in this release include the following:
 - **Kubernetes Secretes Engine on Vault UI:** Introducing Kubernetes secret
   engine support on the UI
 - **Client Count UI improvements:** Combining current month and previous history
-  into one dashboard 
+  into one dashboard
 - **OCSP Support in the TLS Certificate Auth Method:** The auth method now can
   check for revoked certificates using the OCSP protocol.
 - **UI Wizard removal:** The UI Wizard has been removed from the UI since the
   information was occasionally out-of-date and did not align with the latest
-  changes. A new and enhanced UI experience is planned in a future release. 
+  changes. A new and enhanced UI experience is planned in a future release.
 
 - **Vault Agent improvements:**
    - Auto-auth introduced `token_file` method which reads an existing token from
@@ -103,9 +104,25 @@ Some of these enhancements and changes in this release include the following:
 
 ## Known issues
 
-There are no known issues documented for this release.
+When Vault is configured without a TLS certificate on the TCP listener, the Vault UI may throw an error that blocks you from performing operational tasks.
 
-## Feature Deprecations and EOL
+The error message: `Q.randomUUID is not a function`
+
+<Note>
+
+Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/14512496697875) for more details and a workaround.
+
+</Note>
+
+The fix for this UI issue is coming in the Vault 1.13.1 release.
+
+@include 'perf-standby-token-create-forwarding-failure.mdx'
+
+@include 'known-issues/update-primary-data-loss.mdx'
+
+@include 'known-issues/internal-error-namespace-missing-policy.mdx'
+
+## Feature deprecations and EOL
 
 Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page
 for up-to-date information on feature deprecations and plans. A [Feature

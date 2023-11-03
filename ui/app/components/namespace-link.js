@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -16,10 +16,13 @@ export default Component.extend({
   //public api
   targetNamespace: null,
   showLastSegment: false,
+  // set to true if targetNamespace is passed in unmodified
+  // otherwise, this assumes it is parsed as in namespace-picker
+  unparsed: false,
 
-  normalizedNamespace: computed('targetNamespace', function () {
-    const ns = this.targetNamespace;
-    return (ns || '').replace(/\.+/g, '/').replace(/☃/g, '.');
+  normalizedNamespace: computed('targetNamespace', 'unparsed', function () {
+    const ns = this.targetNamespace || '';
+    return this.unparsed ? ns : ns.replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function () {
@@ -41,8 +44,8 @@ export default Component.extend({
       window.location.hostname +
       (window.location.port ? ':' + window.location.port : '');
 
-    if (!this.normalizedNamespace) return `${origin}/ui/vault/secrets`;
+    if (!this.normalizedNamespace) return `${origin}/ui/vault/dashboard`;
     // The full URL/origin is required so that the page is reloaded.
-    return `${origin}/ui/vault/secrets?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+    return `${origin}/ui/vault/dashboard?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
   },
 });

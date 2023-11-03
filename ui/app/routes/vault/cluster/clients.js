@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -32,16 +32,6 @@ export default class ClientsRoute extends Route {
     return hash({
       config: this.store.queryRecord('clients/config', {}).catch(() => {}),
       versionHistory: this.getVersionHistory(),
-    });
-  }
-
-  @action
-  async loading(transition) {
-    // eslint-disable-next-line ember/no-controller-access-in-routes
-    const controller = this.controllerFor(this.routeName);
-    controller.set('currentlyLoading', true);
-    transition.promise.finally(function () {
-      controller.set('currentlyLoading', false);
     });
   }
 

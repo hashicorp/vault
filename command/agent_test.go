@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -26,6 +26,8 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -105,7 +107,6 @@ func TestAgent_ExitAfterAuth(t *testing.T) {
 func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"jwt": vaultjwt.Factory,
 		},
@@ -309,7 +310,6 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -323,40 +323,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 	serverClient := cluster.Cores[0].Client
 
 	// Enable the approle auth method
-	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
-	req.BodyBytes = []byte(`{
-		"type": "approle"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
-	req.BodyBytes = []byte(`{
-	  "secret_id_num_uses": "10",
-	  "secret_id_ttl": "1m",
-	  "token_max_ttl": "1m",
-	  "token_num_uses": "10",
-	  "token_ttl": "1m"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-	roleID := data["role_id"].(string)
-
-	// Get a SecretID issued against the named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
-	secretID := data["secret_id"].(string)
-
-	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
+	roleIDPath, secretIDPath := setupAppRole(t, serverClient)
 
 	// Create a config file
 	config := `
@@ -408,14 +375,14 @@ listener "tcp" {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var output string
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
+		code = cmd.Run([]string{"-config", configPath})
 		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
 	}()
@@ -423,13 +390,16 @@ listener "tcp" {
 	select {
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
+		t.Fatalf("timeout")
 	}
 
 	// defer agent shutdown
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
+		if code != 0 {
+			t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+		}
 	}()
 
 	//----------------------------------------------------
@@ -439,7 +409,7 @@ listener "tcp" {
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
 	agentClient := newApiClient("http://"+listenAddr1, false)
-	req = agentClient.NewRequest("GET", "/v1/sys/health")
+	req := agentClient.NewRequest("GET", "/v1/sys/health")
 	request(t, agentClient, req, 200)
 
 	// Test against a listener configuration that sets 'require_request_header'
@@ -514,6 +484,190 @@ listener "tcp" {
 	}
 }
 
+// TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
+// as part of Templating requests is correct. Uses the custom handler
+// userAgentHandler struct defined in this test package, so that Vault validates the
+// User-Agent on requests sent by Agent.
+func TestAgent_Template_UserAgent(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			NumCores: 1,
+			HandlerFunc: vaulthttp.HandlerFunc(
+				func(properties *vault.HandlerProperties) http.Handler {
+					h.props = properties
+					h.userAgentToCheckFor = useragent.AgentTemplatingString()
+					h.pathToCheck = "/v1/secret/data"
+					h.requestMethodToCheck = "GET"
+					h.t = t
+					return &h
+				}),
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+
+	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+	// create temp dir for this test run
+	tmpDir, err := os.MkdirTemp(tmpDirRoot, "TestAgent_Template_UserAgent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// make some template files
+	var templatePaths []string
+	fileName := filepath.Join(tmpDir, "render_0.tmpl")
+	if err := os.WriteFile(fileName, []byte(templateContents(0)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	templatePaths = append(templatePaths, fileName)
+
+	// build up the template config to be added to the Agent config.hcl file
+	var templateConfigStrings []string
+	for i, t := range templatePaths {
+		index := fmt.Sprintf("render_%d.json", i)
+		s := fmt.Sprintf(templateConfigString, t, tmpDir, index)
+		templateConfigStrings = append(templateConfigStrings, s)
+	}
+
+	// Create a config file
+	config := `
+vault {
+  address = "%s"
+	tls_skip_verify = true
+}
+
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+            remove_secret_id_file_after_reading = false
+        }
+    }
+}
+
+%s
+`
+
+	// flatten the template configs
+	templateConfig := strings.Join(templateConfigStrings, " ")
+
+	config = fmt.Sprintf(config, serverClient.Address(), roleIDPath, secretIDPath, templateConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.client = serverClient
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		code := cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// We need to shut down the Agent command
+	defer func() {
+		cmd.ShutdownCh <- struct{}{}
+		wg.Wait()
+	}()
+
+	verify := func(suffix string) {
+		t.Helper()
+		// We need to poll for a bit to give Agent time to render the
+		// templates. Without this, the test will attempt to read
+		// the temp dir before Agent has had time to render and will
+		// likely fail the test
+		tick := time.Tick(1 * time.Second)
+		timeout := time.After(10 * time.Second)
+		var err error
+		for {
+			select {
+			case <-timeout:
+				t.Fatalf("timed out waiting for templates to render, last error: %v", err)
+			case <-tick:
+			}
+			// Check for files rendered in the directory and break
+			// early for shutdown if we do have all the files
+			// rendered
+
+			//----------------------------------------------------
+			// Perform the tests
+			//----------------------------------------------------
+
+			if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
+				err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
+				continue
+			}
+
+			for i := range templatePaths {
+				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.json", i))
+				var c []byte
+				c, err = os.ReadFile(fileName)
+				if err != nil {
+					continue
+				}
+				if string(c) != templateRendered(i)+suffix {
+					err = fmt.Errorf("expected=%q, got=%q", templateRendered(i)+suffix, string(c))
+					continue
+				}
+			}
+			return
+		}
+	}
+
+	verify("")
+
+	fileName = filepath.Join(tmpDir, "render_0.tmpl")
+	if err := os.WriteFile(fileName, []byte(templateContents(0)+"{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	verify("{}")
+}
+
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
 	//----------------------------------------------------
@@ -522,7 +676,6 @@ func TestAgent_Template_Basic(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -544,74 +697,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Setenv(api.EnvVaultAddress, serverClient.Address())
 
-	// Enable the approle auth method
-	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
-	req.BodyBytes = []byte(`{
-		"type": "approle"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// give test-role permissions to read the kv secret
-	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
-	req.BodyBytes = []byte(`{
-	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
-	req.BodyBytes = []byte(`{
-	  "token_ttl": "5m",
-		"token_policies":"default,myapp-read",
-		"policies":"default,myapp-read"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-	roleID := data["role_id"].(string)
-
-	// Get a SecretID issued against the named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
-	secretID := data["secret_id"].(string)
-
-	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
-
-	// setup the kv secrets
-	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
-	req.BodyBytes = []byte(`{
-	"options": {"version": "2"}
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate a secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "bar",
-      "password": "zap"
-    }
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate another secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "barstuff",
-      "password": "zap",
-			"cert": "something"
-    }
-	}`)
-	request(t, serverClient, req, 200)
+	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
@@ -681,7 +767,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -795,6 +881,255 @@ auto_auth {
 	}
 }
 
+func setupAppRole(t *testing.T, serverClient *api.Client) (string, string) {
+	t.Helper()
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "token_ttl": "5m",
+		"token_policies":"default,myapp-read",
+		"policies":"default,myapp-read"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+	t.Cleanup(func() {
+		os.Remove(roleIDPath)
+		os.Remove(secretIDPath)
+	})
+
+	return roleIDPath, secretIDPath
+}
+
+func setupAppRoleAndKVMounts(t *testing.T, serverClient *api.Client) (string, string) {
+	roleIDPath, secretIDPath := setupAppRole(t, serverClient)
+
+	// give test-role permissions to read the kv secret
+	req := serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
+	req.BodyBytes = []byte(`{
+	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// setup the kv secrets
+	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
+	req.BodyBytes = []byte(`{
+	"options": {"version": "2"}
+	}`)
+	request(t, serverClient, req, 200)
+
+	// Secret: myapp
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "bar",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// Secret: myapp2
+	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp2")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	// Secret: otherapp
+	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
+	req.BodyBytes = []byte(`{
+	  "data": {
+      "username": "barstuff",
+      "password": "zap",
+			"cert": "something"
+    }
+	}`)
+	request(t, serverClient, req, 200)
+
+	return roleIDPath, secretIDPath
+}
+
+// TestAgent_Template_VaultClientFromEnv tests that Vault Agent can read in its
+// required `vault` client details from environment variables instead of config.
+func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			CredentialBackends: map[string]logical.Factory{
+				"approle": credAppRole.Factory,
+			},
+			LogicalBackends: map[string]logical.Factory{
+				"kv": logicalKv.Factory,
+			},
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	serverClient := cluster.Cores[0].Client
+
+	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
+
+	// make a temp directory to hold renders. Each test will create a temp dir
+	// inside this one
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDirRoot)
+
+	vaultAddr := "https://" + cluster.Cores[0].Listeners[0].Address.String()
+	testCases := map[string]struct {
+		env map[string]string
+	}{
+		"VAULT_ADDR and VAULT_CACERT": {
+			env: map[string]string{
+				api.EnvVaultAddress: vaultAddr,
+				api.EnvVaultCACert:  cluster.CACertPEMFile,
+			},
+		},
+		"VAULT_ADDR and VAULT_CACERT_BYTES": {
+			env: map[string]string{
+				api.EnvVaultAddress:     vaultAddr,
+				api.EnvVaultCACertBytes: string(cluster.CACertPEM),
+			},
+		},
+	}
+
+	for tcname, tc := range testCases {
+		t.Run(tcname, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			tmpDir := t.TempDir()
+
+			// Make a template.
+			templateFile := filepath.Join(tmpDir, "render.tmpl")
+			if err := os.WriteFile(templateFile, []byte(templateContents(0)), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			// build up the template config to be added to the Agent config.hcl file
+			targetFile := filepath.Join(tmpDir, "render.json")
+			templateConfig := fmt.Sprintf(`
+template {
+    source      = "%s"
+    destination = "%s"
+}
+			`, templateFile, targetFile)
+
+			// Create a config file
+			config := `
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+            remove_secret_id_file_after_reading = false
+        }
+    }
+}
+
+%s
+`
+
+			config = fmt.Sprintf(config, roleIDPath, secretIDPath, templateConfig)
+			configPath := makeTempFile(t, "config.hcl", config)
+			defer os.Remove(configPath)
+
+			// Start the agent
+			ui, cmd := testAgentCommand(t, logger)
+			cmd.client = serverClient
+			cmd.startedCh = make(chan struct{})
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			go func() {
+				code := cmd.Run([]string{"-config", configPath})
+				if code != 0 {
+					t.Errorf("non-zero return code when running agent: %d", code)
+					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+				}
+				wg.Done()
+			}()
+
+			select {
+			case <-cmd.startedCh:
+			case <-time.After(5 * time.Second):
+				t.Errorf("timeout")
+			}
+
+			defer func() {
+				cmd.ShutdownCh <- struct{}{}
+				wg.Wait()
+			}()
+
+			// We need to poll for a bit to give Agent time to render the
+			// templates. Without this this, the test will attempt to read
+			// the temp dir before Agent has had time to render and will
+			// likely fail the test
+			tick := time.Tick(1 * time.Second)
+			timeout := time.After(10 * time.Second)
+			for {
+				select {
+				case <-timeout:
+					t.Fatalf("timed out waiting for templates to render, last error: %v", err)
+				case <-tick:
+				}
+
+				contents, err := os.ReadFile(targetFile)
+				if err != nil {
+					// If the file simply doesn't exist, continue waiting for
+					// the template rendering to complete.
+					if os.IsNotExist(err) {
+						continue
+					}
+					t.Fatal(err)
+				}
+
+				if string(contents) != templateRendered(0) {
+					t.Fatalf("expected=%q, got=%q", templateRendered(0), string(contents))
+				}
+
+				// Success! Break out of the retry loop.
+				break
+			}
+		})
+	}
+}
+
 func testListFiles(t *testing.T, dir, extension string) int {
 	t.Helper()
 
@@ -825,7 +1160,6 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -847,84 +1181,7 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Setenv(api.EnvVaultAddress, serverClient.Address())
 
-	// Enable the approle auth method
-	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
-	req.BodyBytes = []byte(`{
-		"type": "approle"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// give test-role permissions to read the kv secret
-	req = serverClient.NewRequest("PUT", "/v1/sys/policy/myapp-read")
-	req.BodyBytes = []byte(`{
-	  "policy": "path \"secret/*\" { capabilities = [\"read\", \"list\"] }"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
-	req.BodyBytes = []byte(`{
-	  "token_ttl": "5m",
-		"token_policies":"default,myapp-read",
-		"policies":"default,myapp-read"
-	}`)
-	request(t, serverClient, req, 204)
-
-	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-	roleID := data["role_id"].(string)
-
-	// Get a SecretID issued against the named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
-	secretID := data["secret_id"].(string)
-
-	// Write the RoleID and SecretID to temp files
-	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
-	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
-	defer os.Remove(roleIDPath)
-	defer os.Remove(secretIDPath)
-
-	// setup the kv secrets
-	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
-	req.BodyBytes = []byte(`{
-	"options": {"version": "2"}
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate a secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "bar",
-      "password": "zap"
-    }
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate another secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/myapp2")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "barstuff",
-      "password": "zap"
-    }
-	}`)
-	request(t, serverClient, req, 200)
-
-	// populate another, another secret
-	req = serverClient.NewRequest("POST", "/v1/secret/data/otherapp")
-	req.BodyBytes = []byte(`{
-	  "data": {
-      "username": "barstuff",
-      "password": "zap",
-			"cert": "something"
-    }
-	}`)
-	request(t, serverClient, req, 200)
+	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
@@ -944,7 +1201,7 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	config := `
 vault {
   address = "%s"
-	tls_skip_verify = true
+  tls_skip_verify = true
 }
 
 auto_auth {
@@ -953,7 +1210,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -979,7 +1236,7 @@ template {
 {{ end }}
 EOF
     destination = "%s/render-other.txt"
-		}
+}
 
 exit_after_auth = true
 `
@@ -1151,6 +1408,27 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	vaulthttp.Handler.Handler(h.props).ServeHTTP(resp, req)
 }
 
+// userAgentHandler makes it easy to test the User-Agent header received
+// by Vault
+type userAgentHandler struct {
+	props                *vault.HandlerProperties
+	failCount            int
+	userAgentToCheckFor  string
+	pathToCheck          string
+	requestMethodToCheck string
+	t                    *testing.T
+}
+
+func (h *userAgentHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.Method == h.requestMethodToCheck && strings.Contains(req.RequestURI, h.pathToCheck) {
+		userAgent := req.UserAgent()
+		if !(userAgent == h.userAgentToCheckFor) {
+			h.t.Fatalf("User-Agent string not as expected. Expected to find %s, got %s", h.userAgentToCheckFor, userAgent)
+		}
+	}
+	vaulthttp.Handler.Handler(h.props).ServeHTTP(w, req)
+}
+
 // TestAgent_Template_Retry verifies that the template server retries requests
 // based on retry configuration.
 func TestAgent_Template_Retry(t *testing.T) {
@@ -1161,7 +1439,6 @@ func TestAgent_Template_Retry(t *testing.T) {
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -1428,7 +1705,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-			remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1439,6 +1716,310 @@ auto_auth {
 		_ = os.Remove(secretIDFile)
 	}
 	return config, cleanup
+}
+
+// TestAgent_AutoAuth_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct when performing Auto-Auth.
+// Uses the custom handler userAgentHandler (defined above) so
+// that Vault validates the User-Agent on requests sent by Agent.
+func TestAgent_AutoAuth_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentAutoAuthString()
+				h.requestMethodToCheck = "PUT"
+				h.pathToCheck = "auth/approle/login"
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	roleIDPath, secretIDPath := setupAppRole(t, serverClient)
+
+	sinkf, err := os.CreateTemp("", "sink.test.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sink := sinkf.Name()
+	sinkf.Close()
+	os.Remove(sink)
+
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, roleIDPath, secretIDPath, sink)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+api_proxy {
+  use_auto_auth_token = true
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	agentClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	agentClient.SetToken("")
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for the token to be sent to syncs and be available to be used
+	time.Sleep(5 * time.Second)
+
+	req := agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	request(t, agentClient, req, 200)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestAgent_APIProxyWithoutCache_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct using the API proxy without
+// the cache configured. Uses the custom handler
+// userAgentHandler struct defined in this test package, so that Vault validates the
+// User-Agent on requests sent by Agent.
+func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	userAgentForProxiedClient := "proxied-client"
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
+				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.requestMethodToCheck = "GET"
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+`, serverClient.Address(), listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.AddHeader("User-Agent", userAgentForProxiedClient)
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = agentClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestAgent_APIProxyWithCache_UserAgent tests that the User-Agent sent
+// to Vault by Vault Agent is correct using the API proxy with
+// the cache configured.  Uses the custom handler
+// userAgentHandler struct defined in this test package, so that Vault validates the
+// User-Agent on requests sent by Agent.
+func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	userAgentForProxiedClient := "proxied-client"
+	var h userAgentHandler
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		NumCores: 1,
+		HandlerFunc: vaulthttp.HandlerFunc(
+			func(properties *vault.HandlerProperties) http.Handler {
+				h.props = properties
+				h.userAgentToCheckFor = useragent.AgentProxyStringWithProxiedUserAgent(userAgentForProxiedClient)
+				h.pathToCheck = "/v1/auth/token/lookup-self"
+				h.requestMethodToCheck = "GET"
+				h.t = t
+				return &h
+			}),
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	cacheConfig := `
+cache {
+}`
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+`, serverClient.Address(), listenConfig, cacheConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	agentClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentClient.AddHeader("User-Agent", userAgentForProxiedClient)
+	agentClient.SetToken(serverClient.Token())
+	agentClient.SetMaxRetries(0)
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = agentClient.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
 }
 
 func TestAgent_Cache_DynamicSecret(t *testing.T) {
@@ -1554,7 +2135,6 @@ func TestAgent_ApiProxy_Retry(t *testing.T) {
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -1706,7 +2286,6 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			// Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -2009,11 +2588,7 @@ func TestAgent_Metrics(t *testing.T) {
 	//----------------------------------------------------
 
 	// Start a vault server
-	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t,
-		&vault.CoreConfig{
-			Logger: logger,
-		},
+	cluster := vault.NewTestCluster(t, nil,
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
@@ -2036,18 +2611,18 @@ listener "tcp" {
 	defer os.Remove(configPath)
 
 	// Start the agent
-	ui, cmd := testAgentCommand(t, logger)
+	ui, cmd := testAgentCommand(t, logging.NewVaultLogger(hclog.Trace))
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var output string
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
+		code = cmd.Run([]string{"-config", configPath})
 		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
 	}()
@@ -2062,6 +2637,9 @@ listener "tcp" {
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
+		if code != 0 {
+			t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+		}
 	}()
 
 	conf := api.DefaultConfig()
@@ -2090,24 +2668,7 @@ func TestAgent_Quit(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and agent
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Error)
-	cluster := vault.NewTestCluster(t,
-		&vault.CoreConfig{
-			Logger: logger,
-			CredentialBackends: map[string]logical.Factory{
-				"approle": credAppRole.Factory,
-			},
-			LogicalBackends: map[string]logical.Factory{
-				"kv": logicalKv.Factory,
-			},
-		},
-		&vault.TestClusterOptions{
-			NumCores: 1,
-		})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -2146,7 +2707,7 @@ cache {}
 	defer os.Remove(configPath)
 
 	// Start the agent
-	_, cmd := testAgentCommand(t, logger)
+	_, cmd := testAgentCommand(t, nil)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}
@@ -2355,12 +2916,13 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	ui, cmd := testAgentCommand(t, logger)
 
+	var output string
+	var code int
 	wg.Add(1)
 	args := []string{"-config", configFile.Name()}
 	go func() {
-		if code := cmd.Run(args); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+		if code = cmd.Run(args); code != 0 {
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
 	}()
@@ -2427,8 +2989,11 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 
 	// Shut down
 	cmd.ShutdownCh <- struct{}{}
-
 	wg.Wait()
+
+	if code != 0 {
+		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+	}
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
@@ -2472,12 +3037,13 @@ vault {
 
 	cmd.startedCh = make(chan struct{})
 
+	var output string
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		if code := cmd.Run([]string{"-config", configPath}); code != 0 {
-			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
-			t.Errorf("got a non-zero exit status: %s", output)
+		if code = cmd.Run([]string{"-config", configPath}); code != 0 {
+			output = ui.ErrorWriter.String() + ui.OutputWriter.String()
 		}
 		wg.Done()
 	}()
@@ -2498,6 +3064,10 @@ vault {
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
+
+	if code != 0 {
+		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
+	}
 }
 
 // Get a randomly assigned port and then free it again before returning it.

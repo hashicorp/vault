@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
@@ -19,7 +24,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="box is-sideless is-fullwidth is-marginless">
+<div class="box is-sideless is-bottomless is-fullwidth is-marginless">
   <NamespaceReminder @mode="enable" @noun={{if (eq @mountType "secret") "Secret Engine" "Auth Method"}} />
   <MessageError @errorMessage={{this.errorMessage}} />
   {{#if @mountModel.type}}
@@ -34,23 +39,16 @@
 
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <button
+          <Hds::Button
+            @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
+            @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
             data-test-mount-submit="true"
-            class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
             disabled={{this.mountBackend.isRunning}}
-          >
-            {{#if (eq @mountType "secret")}}
-              Enable Engine
-            {{else}}
-              Enable Method
-            {{/if}}
-          </button>
+          />
         </div>
         <div class="control">
-          <button data-test-mount-back type="button" class="button" {{on "click" (fn this.setMountType "")}}>
-            Back
-          </button>
+          <Hds::Button @text="Back" @color="secondary" data-test-mount-back {{on "click" (fn this.setMountType "")}} />
         </div>
         {{#if this.invalidFormAlert}}
           <div class="control">

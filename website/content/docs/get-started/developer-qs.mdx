@@ -4,7 +4,7 @@ page_title: Developer Quick Start
 description: Learn how to store and retrieve your first secret.
 ---
 
-# Developer Quick Start
+# Developer quick start
 
 This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
@@ -15,6 +15,8 @@ The complete code samples for the steps below are available here:
 - [C#](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/dotnet/Example.cs)
 - [Python](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/python/example.py)
 - [Java (Spring)](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/java/Example.java)
+- [OpenAPI-based Go](https://github.com/hashicorp/vault-client-go/#getting-started)
+- [OpenAPI-based .NET](https://github.com/hashicorp/vault-client-dotnet/#getting-started)
 
 For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet) and [Java/Spring Boot](https://github.com/hashicorp/hello-vault-spring)).
 
@@ -25,7 +27,7 @@ For an out-of-the-box runnable demo application showcasing these concepts and mo
 
 -> **Note**: Make sure you are using the [latest version](https://docs.docker.com/engine/release-notes/) of Docker. Older versions may not work. As of 1.12.0, the recommended version of Docker is 20.10.17 or higher.
 
-## Step 1: Start Vault
+## Step 1: start Vault
 
 !> **Warning**: This in-memory “dev” server is useful for practicing with Vault locally for the first time, but is insecure and **should never be used in production**. For developers who need to manage their own production Vault installations, this [page](/vault/tutorials/operations/production-hardening) provides some guidance on how to make your setup more production-friendly.
 
@@ -33,7 +35,7 @@ Run the Vault server in a non-production "dev" mode in one of the following ways
 
 **For Docker users, run this command**:
 
-```shell-session 
+```shell-session
 $ docker run -p 8200:8200 -e 'VAULT_DEV_ROOT_TOKEN_ID=dev-only-token' vault
 ```
 
@@ -49,7 +51,7 @@ The `-dev-root-token-id` flag for dev servers tells the Vault server to allow fu
 
 Vault is now listening over HTTP on port **8200**. With all the setup out of the way, it's time to get coding!
 
-## Step 2: Install a client library
+## Step 2: install a client library
 
 To read and write secrets in your application, you need to first configure a client to connect to Vault.
 Let's install the Vault client library for your language of choice.
@@ -57,11 +59,11 @@ Let's install the Vault client library for your language of choice.
 -> **Note**: Some of these libraries are currently community-maintained.
 
 <Tabs>
-<Tab heading="Go">
+<Tab heading="Go" group="go">
 
 [Go](https://pkg.go.dev/github.com/hashicorp/vault/api) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ go get github.com/hashicorp/vault/api
 ```
 
@@ -76,12 +78,12 @@ import vault "github.com/hashicorp/vault/api"
 </CodeBlockConfig>
 
 </Tab>
-<Tab heading="Ruby">
+<Tab heading="Ruby" group="ruby">
 
-   
+
 [Ruby](https://github.com/hashicorp/vault-ruby) (official) client library:
-   
-```shell-session 
+
+```shell-session
 $ gem install vault
 ```
 
@@ -96,11 +98,11 @@ require "vault"
 </CodeBlockConfig>
 
 </Tab>
-<Tab heading="C#">
+<Tab heading="C#" group="cs">
 
-   
+
 [C#](https://github.com/rajanadar/VaultSharp) client library:
-   
+
 ```shell-session
 $ dotnet add package VaultSharp
 ```
@@ -119,12 +121,12 @@ using VaultSharp.V1.Commons;
 </CodeBlockConfig>
 
 </Tab>
-<Tab heading="Python">
+<Tab heading="Python" group="python">
 
-   
+
 [Python](https://github.com/hvac/hvac) client library:
 
-```shell-session 
+```shell-session
 $ pip install hvac
 ```
 
@@ -139,11 +141,11 @@ import hvac
 </CodeBlockConfig>
 
 </Tab>
-<Tab heading="Java">
+<Tab heading="Java" group="java">
 
-   
+
 [Java (Spring)](https://spring.io/projects/spring-vault) client library:
-   
+
 Add the following to pom.xml:
 
 ```xml
@@ -167,19 +169,73 @@ import org.springframework.vault.core.VaultTemplate;
 
 </CodeBlockConfig>
 
+</Tab>
+<Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
+
+
+[OpenAPI Go](https://github.com/hashicorp/vault-client-go) (Beta) client library:
+
+```shell-session
+$ go get github.com/hashicorp/vault-client-go
+```
+
+Now, let's add the import statements for the client library to the top of the file.
+
+<CodeBlockConfig heading="import statements for client library" lineNumbers>
+
+```go
+import (
+	"github.com/hashicorp/vault-client-go"
+	"github.com/hashicorp/vault-client-go/schema"
+)
+```
+
+</CodeBlockConfig>
+
+
+</Tab>
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
+
+
+[OpenAPI .NET](https://github.com/hashicorp/vault-client-dotnet) (Beta) client library:
+
+Vault is a package available at [Hashicorp Nuget](https://www.nuget.org/profiles/hashicorp).
+
+
+```shell-session
+$ nuget install HashiCorp.Vault -Version "0.1.0-beta"
+```
+
+**Or:**
+
+```shell-session
+$ dotnet add package Hashicorp.Vault -version "0.1.0-beta"
+```
+
+Now, let's add the import statements for the client library to the top of the file.
+
+<CodeBlockConfig heading="import statements for client library" lineNumbers>
+
+```cs
+using Vault;
+using Vault.Client;
+```
+
+</CodeBlockConfig>
 
 </Tab>
 </Tabs>
 
 
-## Step 3: Authenticate to Vault
+## Step 3: authenticate to Vault
 
 A variety of [authentication methods](/vault/docs/auth) can be used to prove your application's identity to the Vault server. To explore more secure authentication methods, such as via Kubernetes or your cloud provider, see the auth code snippets in the [vault-examples](https://github.com/hashicorp/vault-examples) repository.
 
 To keep things simple for our example, we'll just use the root token created in **Step 1**.
 Paste the following code to initialize a new Vault client that will use token-based authentication for all its requests:
 
-<CodeTabs heading="initialize a new vault client">
+<Tabs>
+<Tab heading="Go">
 
 ```go
 config := vault.DefaultConfig()
@@ -194,12 +250,18 @@ if err != nil {
 client.SetToken("dev-only-token")
 ```
 
+</Tab>
+<Tab heading="Ruby" group="ruby">
+
 ```ruby
 Vault.configure do |config|
     config.address = "http://127.0.0.1:8200"
     config.token = "dev-only-token"
 end
 ```
+
+</Tab>
+<Tab heading="C#" group="cs">
 
 ```cs
 IAuthMethodInfo authMethod = new TokenAuthMethodInfo(vaultToken: "dev-only-token");
@@ -209,12 +271,18 @@ VaultClientSettings("http://127.0.0.1:8200", authMethod);
 IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 ```
 
+</Tab>
+<Tab heading="Python" group="python">
+
 ```Python
 client = hvac.Client(
     url='http://127.0.0.1:8200',
     token='dev-only-token',
 )
 ```
+
+</Tab>
+<Tab heading="Java" group="java">
 
 ```Java
 VaultEndpoint vaultEndpoint = new VaultEndpoint();
@@ -229,19 +297,52 @@ VaultTemplate vaultTemplate = new VaultTemplate(
 );
 ```
 
+</Tab>
+<Tab heading="Bash" group="bash">
+
 ```shell-session
-export VAULT_TOKEN="dev-only-token"
+$ export VAULT_TOKEN="dev-only-token"
 ```
 
-</CodeTabs>
+</Tab>
+<Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
 
-## Step 4: Store a secret
+```go
+client, err := vault.New(
+   vault.WithAddress("http://127.0.0.1:8200"),
+   vault.WithRequestTimeout(30*time.Second),
+)
+if err != nil {
+   log.Fatal(err)
+}
+
+if err := client.SetToken("dev-only-token"); err != nil {
+   log.Fatal(err)
+}
+```
+
+</Tab>
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
+
+```cs
+string address = "http://127.0.0.1:8200";
+VaultConfiguration config = new VaultConfiguration(address);
+
+VaultClient vaultClient = new VaultClient(config);
+vaultClient.SetToken("dev-only-token");
+```
+
+</Tab>
+</Tabs>
+
+## Step 4: store a secret
 
 Secrets are sensitive data like API keys and passwords that we shouldn’t be storing in our code or configuration files. Instead, we want to store values like this in Vault.
 
 We'll use the Vault client we just initialized to write a secret to Vault, like so:
 
-<CodeTabs heading="write a secret to vault">
+<Tabs>
+<Tab heading="Go">
 
 ```go
 secretData := map[string]interface{}{
@@ -257,12 +358,18 @@ if err != nil {
 fmt.Println("Secret written successfully.")
 ```
 
+</Tab>
+<Tab heading="Ruby" group="ruby">
+
 ```ruby
 secret_data = {data: {password: "Hashi123"}}
 Vault.logical.write("secret/data/my-secret-password", secret_data)
 
 puts "Secret written successfully."
 ```
+
+</Tab>
+<Tab heading="C#" group="cs">
 
 ```cs
 var secretData = new Dictionary<string, object> { { "password", "Hashi123" } };
@@ -275,6 +382,9 @@ vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(
 Console.WriteLine("Secret written successfully.");
 ```
 
+</Tab>
+<Tab heading="Python" group="python">
+
 ```Python
 create_response = client.secrets.kv.v2.create_or_update_secret(
     path='my-secret-password',
@@ -283,6 +393,9 @@ create_response = client.secrets.kv.v2.create_or_update_secret(
 
 print('Secret written successfully.')
 ```
+
+</Tab>
+<Tab heading="Java" group="java">
 
 ```Java
 Map<String, String> data = new HashMap<>();
@@ -295,8 +408,11 @@ Versioned.Metadata createResponse = vaultTemplate
 System.out.println("Secret written successfully.");
 ```
 
+</Tab>
+<Tab heading="Bash" group="bash">
+
 ```shell-session
-curl \
+$ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --header "Content-Type: application/json" \
     --request POST \
@@ -304,7 +420,36 @@ curl \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password
 ```
 
-</CodeTabs>
+</Tab>
+<Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
+
+```go
+_, err = client.Secrets.KVv2Write(context.Background(), "my-secret-password", schema.KVv2WriteRequest{
+   Data: map[string]any{
+      "password": "Hashi123",
+   },
+})
+if err != nil {
+   log.Fatal(err)
+}
+
+log.Println("Secret written successfully.")
+```
+
+</Tab>
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
+
+```cs
+var secretData = new Dictionary<string, string> { { "password", "Hashi123" } };
+
+// Write a secret
+var kvRequestData = new KVv2WriteRequest(secretData);
+
+vaultClient.Secrets.KVv2Write("my-secret-password", kvRequestData);
+```
+
+</Tab>
+</Tabs>
 
 A common way of storing secrets is as key-value pairs using the [KV secrets engine (v2)](/vault/docs/secrets/kv/kv-v2). In the code we've just added, `password` is the key in the key-value pair, and `Hashi123` is the value.
 
@@ -312,13 +457,14 @@ We also provided the path to our secret in Vault. We will reference this path in
 
 Run the code now, and you should see `Secret written successfully`. If not, check that you've used the correct value for the root token and Vault server address.
 
-## Step 5: Retrieve a secret
+## Step 5: retrieve a secret
 
 Now that we know how to write a secret, let's practice reading one.
 
 Underneath the line where you wrote a secret to Vault, let's add a few more lines, where we will be retrieving the secret and unpacking the value:
 
-<CodeTabs heading="read a secret">
+<Tabs>
+<Tab heading="Go">
 
 ```go
 secret, err := client.KVv2("secret").Get(context.Background(), "my-secret-password")
@@ -332,10 +478,16 @@ log.Fatalf("value type assertion failed: %T %#v", secret.Data["password"], secre
 }
 ```
 
+</Tab>
+<Tab heading="Ruby" group="ruby">
+
 ```ruby
 secret = Vault.logical.read("secret/data/my-secret-password")
 password = secret.data[:data][:password]
 ```
+
+</Tab>
+<Tab heading="C#" group="cs">
 
 ```cs
 Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
@@ -346,11 +498,17 @@ Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
 var password = secret.Data.Data["password"];
 ```
 
+</Tab>
+<Tab heading="Python" group="python">
+
 ```Python
 read_response = client.secrets.kv.read_secret_version(path='my-secret-password')
 
 password = read_response['data']['data']['password']
 ```
+
+</Tab>
+<Tab heading="Java" group="java">
 
 ```Java
 Versioned<Map<String, Object>> readResponse = vaultTemplate
@@ -363,17 +521,42 @@ if (readResponse != null && readResponse.hasData()) {
 }
 ```
 
+</Tab>
+<Tab heading="Bash" group="bash">
+
 ```shell-session
-curl \
+$ curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password > secrets.json
 ```
 
-</CodeTabs>
+</Tab>
+<Tab heading="OpenAPI Go (Beta)" group="openAPI-go">
+
+```go
+s, err := client.Secrets.KVv2Read(context.Background(), "my-secret-password")
+if err != nil {
+   log.Fatal(err)
+}
+
+log.Println("Secret retrieved:", s.Data)
+```
+
+</Tab>
+<Tab heading="OpenAPI .NET (Beta)" group="openAPI-dotnet">
+
+```cs
+VaultResponse<Object> resp = vaultClient.Secrets.KVv2Read("my-secret-password");
+Console.WriteLine(resp.Data);
+```
+
+</Tab>
+</Tabs>
 
 Last, confirm that the value we unpacked from the read response is correct:
 
-<CodeTabs heading="confirm value">
+<Tabs>
+<Tab heading="Go">
 
 ```go
 if value != "Hashi123" {
@@ -383,11 +566,17 @@ if value != "Hashi123" {
 fmt.Println("Access granted!")
 ```
 
+</Tab>
+<Tab heading="Ruby" group="ruby">
+
 ```ruby
 abort "Unexpected password" if password != "Hashi123"
 
 puts "Access granted!"
 ```
+
+</Tab>
+<Tab heading="C#" group="cs">
 
 ```cs
 if (password.ToString() != "Hashi123")
@@ -398,12 +587,18 @@ if (password.ToString() != "Hashi123")
 Console.WriteLine("Access granted!");
 ```
 
+</Tab>
+<Tab heading="Python" group="python">
+
 ```Python
 if password != 'Hashi123':
     sys.exit('unexpected password')
 
 print('Access granted!')
 ```
+
+</Tab>
+<Tab heading="Java" group="java">
 
 ```Java
 if (!password.equals("Hashi123")) {
@@ -413,10 +608,15 @@ if (!password.equals("Hashi123")) {
 System.out.println("Access granted!");
 ```
 
+</Tab>
+<Tab heading="Bash" group="bash">
+
 ```shell-session
-    cat secrets.json | jq '.data.data'
+$ cat secrets.json | jq '.data.data'
 ```
-</CodeTabs>
+
+</Tab>
+</Tabs>
 
 If the secret was fetched successfully, you should see the `Access granted!` message after you run the code. If not, check to see if you provided the correct path to your secret.
 
@@ -428,4 +628,4 @@ For more secure examples of client authentication, see the auth snippets in the 
 
 For a runnable demo app that demonstrates more features, for example, how to keep your connection to Vault alive and how to connect to a database using Vault's dynamic database credentials, see the sample application hello-vault ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
 
-To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent) documentation.
+To learn how to integrate applications with Vault without needing to always change your application code, see the [Vault Agent](/vault/docs/agent-and-proxy/agent) documentation.

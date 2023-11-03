@@ -1,15 +1,17 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
 import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
+import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
 export default class PkiIssuerModel extends Model {
   secretMountPath: class;
   get useOpenAPI(): boolean;
   get backend(): string;
   get issuerRef(): string;
+  certificate: string;
   issuerId: string;
   issuerName: string;
   keyId: string;
@@ -20,6 +22,7 @@ export default class PkiIssuerModel extends Model {
   issuingCertificates: string;
   crlDistributionPoints: string;
   ocspServers: string;
+  parsedCertificate: ParsedCertificateData;
   /** these are all instances of the capabilities model which should be converted to native class and typed
   rotateExported: any;
   rotateInternal: any;
@@ -31,7 +34,7 @@ export default class PkiIssuerModel extends Model {
   importedIssuers: string[];
   importedKeys: string[];
   formFields: FormField[];
-  formFieldGroups: FormFieldGroups;
+  formFieldGroups: FormFieldGroups[];
   allFields: FormField[];
   get canRotateIssuer(): boolean;
   get canCrossSign(): boolean;

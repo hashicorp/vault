@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
@@ -5,12 +10,12 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-kms-provider-header>
       {{#if this.isDistributing}}
-        Destribute key to provider
+        Distribute Key to Provider
       {{else if this.isShowing}}
         Provider
         <span class="has-font-weight-normal">{{@model.id}}</span>
       {{else}}
-        {{if this.isCreating "Create provider" "Update credentials"}}
+        {{if this.isCreating "Create Provider" "Update Credentials"}}
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -68,15 +73,15 @@
             <div class="toolbar-separator"></div>
           {{/if}}
           {{#if (or @model.canListKeys @model.canCreateKeys)}}
-            <button
-              type="button"
-              class="toolbar-link"
+            <Hds::Button
+              @text="Distribute key"
+              @icon="chevron-right"
+              @iconPosition="trailing"
+              @color="secondary"
+              class="toolbar-button"
               {{on "click" (fn (mut this.isDistributing) true)}}
               data-test-distribute-key
-            >
-              Distribute key
-              <Icon @name="chevron-right" />
-            </button>
+            />
           {{/if}}
           {{#if @model.canEdit}}
             <ToolbarSecretLink
@@ -127,28 +132,24 @@
         {{/each}}
       </div>
       <div class="field is-grouped box is-fullwidth is-bottomless">
-        <div class="control">
-          <button
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text={{if this.isCreating "Create provider" "Update"}}
+            @icon={{if this.saveTask.isRunning "loading"}}
             type="submit"
             disabled={{this.saveTask.isRunning}}
-            class="button is-primary {{if this.saveTask.isRunning 'is-loading'}}"
             data-test-kms-provider-submit
-          >
-            {{if this.isCreating "Create provider" "Update"}}
-          </button>
-        </div>
-        <div class="control">
-          <LinkTo
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
             @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
             @model={{if this.isCreating @root.model @model.id}}
             @query={{if this.isCreating (hash tab="provider") (hash itemType="provider")}}
-            @disabled={{this.saveTask.isRunning}}
-            class="button"
+            disabled={{this.saveTask.isRunning}}
             data-test-kms-provider-cancel
-          >
-            Cancel
-          </LinkTo>
-        </div>
+          />
+        </Hds::ButtonSet>
       </div>
     </form>
   {{/if}}
@@ -170,13 +171,15 @@
                 @options={{options}}
               />
             {{/each}}
-            {{#if (gt @model.keys.meta.lastPage 1)}}
-              <PaginationControls
-                @total={{@model.keys.meta.total}}
-                @onChange={{perform this.fetchKeys}}
-                class="has-top-margin-xl has-bottom-margin-l"
-              />
-            {{/if}}
+            <Hds::Pagination::Numbered
+              @currentPage={{@model.keys.meta.currentPage}}
+              @currentPageSize={{@model.keys.meta.pageSize}}
+              @route="vault.cluster.secrets.backend.show"
+              @showSizeSelector={{false}}
+              @totalItems={{@model.keys.meta.total}}
+              @onPageChange={{perform this.fetchKeys}}
+            />
+
           {{else}}
             <EmptyState
               @title="No keys for this provider"

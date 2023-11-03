@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 //https://github.com/jgthms/bulma/blob/6ad2e3df0589e5d6ff7a9c03ee1c78a546bedeaf/sass/utilities/initial-variables.sass#L48-L59

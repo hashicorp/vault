@@ -39,4 +39,8 @@ const (
 	VaultEnableFilePermissionsCheckEnv = "VAULT_ENABLE_FILE_PERMISSIONS_CHECK"
 
 	VaultDisableUserLockout = "VAULT_DISABLE_USER_LOCKOUT"
+
+	PerformanceReplicationPathTarget = "performance"
+
+	DRReplicationPathTarget = "dr"
 )

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <SplashPage @hasAltContent={{this.mfaErrors}} as |Page|>
   <Page.altContent>
     <div class="has-top-margin-xxl" data-test-mfa-error>
@@ -7,12 +12,9 @@
         @icon="alert-circle"
         @bottomBorder={{true}}
         @subTitle={{join ". " this.mfaErrors}}
-        class="is-box-shadowless"
+        class="is-shadowless"
       >
-        <button type="button" class="button is-ghost is-transparent" {{on "click" (action "onMfaErrorDismiss")}}>
-          <Icon @name="chevron-left" />
-          Go back
-        </button>
+        <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" (action "onMfaErrorDismiss")}} />
       </EmptyState>
     </div>
   </Page.altContent>
@@ -22,15 +24,28 @@
         <LogoEdition aria-label="Sign in with Hashicorp Vault" />
       </div>
     {{else}}
+      <div class="is-flex-v-centered has-bottom-margin-xxl">
+        <div class="brand-icon-large">
+          <Icon @name="vault" @size="24" @stretched={{true}} />
+        </div>
+      </div>
       <div class="is-flex-row">
         {{#if this.mfaAuthData}}
-          <button type="button" class="icon-button" {{on "click" (fn (mut this.mfaAuthData) null)}}>
-            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
-          </button>
+          <Hds::Button
+            @text="Back to login"
+            @icon="arrow-left"
+            @isIconOnly={{true}}
+            @color="tertiary"
+            {{on "click" (fn (mut this.mfaAuthData) null)}}
+          />
         {{else if this.waitingForOktaNumberChallenge}}
-          <button type="button" class="icon-button" {{on "click" (action "cancelAuthentication")}}>
-            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
-          </button>
+          <Hds::Button
+            @text="Back to login"
+            @icon="arrow-left"
+            @isIconOnly={{true}}
+            @color="tertiary"
+            {{on "click" (action "cancelAuthentication")}}
+          />
         {{/if}}
         <h1 class="title is-3">
           {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
@@ -39,51 +54,25 @@
     {{/if}}
   </Page.header>
   {{#unless this.mfaAuthData}}
-    {{#if this.managedNamespaceRoot}}
-      <Page.sub-header>
-        <Toolbar>
-          <div class="toolbar-namespace-picker" data-test-managed-namespace-toolbar>
-            <div class="field is-horizontal">
-              <div class="field-label">
-                <label class="is-label" for="namespace">Namespace</label>
-              </div>
-              <div class="field-label">
-                <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
-              </div>
-              <div class="field-body">
-                <div class="field">
-                  <div class="control">
-                    <input
-                      value={{this.managedNamespaceChild}}
-                      placeholder="/ (Default)"
-                      oninput={{perform this.updateManagedNamespace value="target.value"}}
-                      autocomplete="off"
-                      spellcheck="false"
-                      name="namespace"
-                      id="namespace"
-                      class="input"
-                      type="text"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Toolbar>
-      </Page.sub-header>
-    {{else if (has-feature "Namespaces")}}
+    {{#if (has-feature "Namespaces")}}
       <Page.sub-header>
         <Toolbar class="toolbar-namespace-picker">
           <div class="field is-horizontal" data-test-namespace-toolbar>
             <div class="field-label is-normal">
               <label class="is-label" for="namespace">Namespace</label>
             </div>
+            {{#if this.managedNamespaceRoot}}
+              <div class="field-label">
+                <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
+              </div>
+            {{/if}}
             <div class="field-body">
               <div class="field">
                 <div class="control">
                   <input
-                    value={{this.namespaceQueryParam}}
-                    placeholder="/ (Root)"
+                    data-test-auth-form-ns-input
+                    value={{this.namespaceInput}}
+                    placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
                     oninput={{perform this.updateNamespace value="target.value"}}
                     autocomplete="off"
                     spellcheck="false"

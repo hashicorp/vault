@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -15,12 +15,26 @@ import (
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
+	pattern := "intermediate/generate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
 func pathSetSignedIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "intermediate/set-signed",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "set-signed",
+			OperationSuffix: "intermediate",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			"certificate": {
@@ -52,6 +66,16 @@ appended to the bundle.`,
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
 								Required:    true,
 							},
 						},

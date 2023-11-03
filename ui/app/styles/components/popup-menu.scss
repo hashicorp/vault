@@ -1,15 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .popup-menu-content,
 .ember-power-select-options {
-  border-radius: 2px;
+  border-radius: $radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: 2px;
+    border-radius: $radius;
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
@@ -53,17 +53,17 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: $white;
-    color: $menu-item-color;
+    color: $grey-darkest;
 
     &:hover {
-      background-color: $menu-item-hover-background-color;
-      color: $menu-item-hover-color;
+      background-color: $ui-gray-050;
+      color: $ui-gray-900;
     }
 
     &.active,
-    .is-active {
-      background-color: $menu-item-active-background-color;
-      color: $menu-item-active-color;
+    &.is-active {
+      background-color: transparent;
+      color: $blue;
     }
 
     &.is-destroy {
@@ -82,6 +82,10 @@
         background: transparent;
         cursor: default;
       }
+    }
+    &.loading-dropdown {
+      display: flex;
+      align-items: center;
     }
   }
 
@@ -129,16 +133,6 @@
     min-width: 0;
     padding: 0;
     width: 2.5rem;
-  }
-}
-
-.status-menu-content {
-  margin-top: 8px;
-
-  .box {
-    @include until($mobile) {
-      width: $drawer-width - ($spacing-xs * 2);
-    }
   }
 }
 

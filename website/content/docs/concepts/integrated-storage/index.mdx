@@ -4,7 +4,7 @@ page_title: Integrated Storage
 description: Learn about the integrated raft storage in Vault.
 ---
 
-# Integrated Storage
+# Integrated storage
 
 Vault supports a number of storage options for the durable storage of Vault's
 information. As of Vault 1.4 an Integrated Storage option is offered. This
@@ -23,7 +23,7 @@ Vault to use Integrated Storage.
 The sections below go into various details on how to operate Vault with
 Integrated Storage.
 
-## Server-to-Server Communication
+## Server-to-Server communication
 
 Once nodes are joined to one another they begin to communicate using mTLS over
 Vault's cluster port. The cluster port defaults to `8201`. The TLS information
@@ -33,7 +33,7 @@ A requirement for Integrated Storage is that the
 [`cluster_addr`](/vault/docs/concepts/ha#per-node-cluster-address) configuration option
 is set. This allows Vault to assign an address to the node ID at join time.
 
-## Cluster Membership
+## Cluster membership
 
 This section will outline how to bootstrap and manage a cluster of Vault nodes
 running Integrated Storage.
@@ -44,7 +44,7 @@ and results in a cluster of size 1. Depending on the [desired deployment
 size](/vault/docs/internals/integrated-storage/#deployment-table), nodes can be joined
 to the active Vault node.
 
-### Joining Nodes
+### Joining nodes
 
 Joining is the process of taking an uninitialized Vault node and making it a
 member of an existing cluster. In order to authenticate the new node to the
@@ -60,7 +60,7 @@ API (both methods described below). When joining a node, the API address of the 
 recommend setting the [`api_addr`](/vault/docs/concepts/ha#direct-access) configuration
 option on all nodes to make joining simpler.
 
-#### `retry_join` Configuration
+#### `retry_join` configuration
 
 This method enables setting one, or more, target leader nodes in the config file.
 When an uninitialized Vault server starts up it will attempt to join each potential
@@ -138,7 +138,7 @@ active node's API address will need to be specified:
 $ vault operator raft join https://node1.vault.local:8200
 ```
 
-#### Non-Voting Nodes (Enterprise Only)
+#### Non-Voting nodes (Enterprise only)
 
 Nodes that are joined to a cluster can be specified as non-voters. A non-voting
 node has all of Vault's data replicated to it, but does not contribute to the
@@ -150,7 +150,7 @@ a cluster in cases where a high volume of reads to servers are needed.
 $ vault operator raft join -non-voter https://node1.vault.local:8200
 ```
 
-### Removing Peers
+### Removing peers
 
 Removing a peer node is a necessary step when you no longer want the node in the
 cluster. This could happen if the node is rotated for a new one, the hostname
@@ -167,7 +167,7 @@ $ vault operator raft remove-peer node1
 Peer removed successfully!
 ```
 
-### Listing Peers
+### Listing peers
 
 To see the current peer set for the cluster you can issue a
 [`list-peers`](/vault/docs/commands/operator/raft#list-peers) command. All the voting
@@ -183,7 +183,7 @@ node2    node2.vault.local:8201    follower    true
 node3    node3.vault.local:8201    leader      true
 ```
 
-## Integrated Storage and TLS
+## Integrated storage and TLS
 
 We've glossed over some details in the above sections on bootstrapping clusters.
 The instructions are sufficient for most cases, but some users have run into
@@ -221,7 +221,7 @@ and egg problem. Nodes don't have a shared view of storage until the raft
 cluster has been formed, but we're trying to form the raft cluster! To solve
 this problem, a Vault node must speak to another Vault node using the API port
 instead of the cluster port. This is currently the only situation in which
-OSS Vault does this (Vault Enterprise also does something similar when setting
+Vault Community Edition does this (Vault Enterprise also does something similar when setting
 up replication.)
 
 - `node2` wants to join the cluster, so issues challenge API request to existing member `node1`
@@ -276,9 +276,9 @@ One potential issue here: some users want a public facing LB for clients to
 connect to Vault, but aren't comfortable with Vault internal traffic
 egressing from the internal network it normally runs on.
 
-## Outage Recovery
+## Outage recovery
 
-### Quorum Maintained
+### Quorum maintained
 
 This section outlines the steps to take when a single server or multiple servers
 are in a failed state but quorum is still maintained. This means the remaining
@@ -298,7 +298,7 @@ possible or you'd rather manually re-write the cluster membership a
 [`raft/peers.json`](#manual-recovery-using-peers-json) file can be written to
 the configured data directory.
 
-### Quorum Lost
+### Quorum lost
 
 In the event that multiple servers are lost, causing a loss of quorum and a
 complete outage, partial recovery is still possible.
@@ -329,7 +329,7 @@ In extreme cases, it should be possible to recover with just a single remaining
 server by starting that single server with itself as the only peer in the
 [`peers.json`](#manual-recovery-using-peers-json) recovery file.
 
-### Manual Recovery Using peers.json
+### Manual recovery using peers.json
 
 Using `raft/peers.json` for recovery can cause uncommitted Raft log entries to be
 implicitly committed, so this should only be used after an outage where no other
@@ -382,7 +382,7 @@ At this point, you can restart all the remaining servers. The cluster should be
 in an operable state again. One of the nodes should claim leadership and become
 active.
 
-### Other Recovery Methods
+### Other recovery methods
 
 For other, non-quorum related recovery [Vault's
 recovery](/vault/docs/concepts/recovery-mode/) mode can be used.

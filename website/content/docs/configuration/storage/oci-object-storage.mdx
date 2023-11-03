@@ -6,7 +6,7 @@ description: >-
   Storage.
 ---
 
-# OCI Object Storage Storage Backend
+# OCI object storage storage backend
 
 The OCI Object Storage backend is used to persist Vault's data in OCI Object Storage.
 
@@ -27,19 +27,19 @@ storage "oci" {
 
 For more information on OCI Object Storage, please see the Oracle's [OCI Object Storage documentation][ocios-docs].
 
-## `oci` Setup
+## `oci` setup
 
 To use the OCI Object Storage Vault storage backend, you must have a OCI account. Either using the API or web interface, create the data bucket and lock bucket if enabling high availability.
 
 The OCI Object Storage backend does not support creating the buckets automatically at this time.
 
-## `oci` Authentication
+## `oci` authentication
 
 The OCI Object Storage Vault storage backend uses the official OCI Golang SDK. This means it supports the common ways of providing credentials to OCI.
 
 For more information on service accounts, please see the [OCI Identity documentation][oci-identity].
 
-## `oci` Parameters
+## `oci` parameters
 
 - `region` `(string: <optional>)` - Specifies the OCI region where Vault should look for object storage buckets. If not specified the OCI Storage Backend will use the region specified in your OCI credentials configuration.
 
@@ -47,7 +47,7 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 - `bucket_name` `(string: <required>)` - Specifies the name of the bucket that will be used to store the Vault data.
 
-### High Availability Parameters
+### High availability parameters
 
 - `ha_enabled` `(string: "<required>")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
@@ -55,7 +55,7 @@ For more information on service accounts, please see the [OCI Identity documenta
 
 - `lock_bucket_name` `(string: "<required>")` - Specifies the name of the bucket that will be used to store the node lease data.
 
-## `oci` Examples
+## `oci` examples
 
 ### Standalone Vault instance
 
@@ -68,7 +68,7 @@ storage "oci" {
 }
 ```
 
-### High Availability
+### High availability
 
 This example shows configuring OCI Object Storage with high availability enabled.
 

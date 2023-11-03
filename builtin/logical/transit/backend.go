@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -19,8 +19,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Minimum cache size for transit backend
-const minCacheSize = 10
+const (
+	operationPrefixTransit = "transit"
+
+	// Minimum cache size for transit backend
+	minCacheSize = 10
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -53,6 +57,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathImportVersion(),
 			b.pathKeys(),
 			b.pathListKeys(),
+			b.pathBYOKExportKeys(),
 			b.pathExportKeys(),
 			b.pathKeysConfig(),
 			b.pathEncrypt(),
@@ -68,6 +73,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathTrim(),
 			b.pathCacheConfig(),
 			b.pathConfigKeys(),
+			b.pathCreateCsr(),
+			b.pathImportCertChain(),
 		},
 
 		Secrets:      []*framework.Secret{},
@@ -265,6 +272,11 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 	// If the policy's automatic rotation period is 0, it should not
 	// automatically rotate.
 	if p.AutoRotatePeriod == 0 {
+		return nil
+	}
+
+	// We can't auto-rotate managed keys
+	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		return nil
 	}
 

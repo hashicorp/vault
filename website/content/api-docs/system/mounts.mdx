@@ -8,7 +8,7 @@ description: The `/sys/mounts` endpoint is used to manage secrets engines in Vau
 
 The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 
-## List Mounted Secrets Engines
+## List mounted secrets engines
 
 This endpoints lists all the mounted secrets engines.
 
@@ -16,7 +16,7 @@ This endpoints lists all the mounted secrets engines.
 | :----- | :------------ |
 | `GET`  | `/sys/mounts` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -24,7 +24,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -117,7 +117,7 @@ $ curl \
 `default_lease_ttl` or `max_lease_ttl` values of 0 mean that the system defaults
 are used by this backend.
 
-## Enable Secrets Engine
+## Enable secrets engine
 
 This endpoint enables a new secrets engine at the given path.
 
@@ -171,6 +171,9 @@ This endpoint enables a new secrets engine at the given path.
     unversioned plugin that may have been registered, the latest versioned plugin
     registered, or a built-in plugin in that order of precendence.
 
+  - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+    that the mount in question is allowed to access.
+
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
 
@@ -192,7 +195,7 @@ relevant functionality is only supported in Vault Enterprise:
 - `external_entropy_access` `(bool: false)` - Enable the secrets engine to access
   Vault's external entropy source.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -203,7 +206,7 @@ relevant functionality is only supported in Vault Enterprise:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -213,7 +216,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
-## Disable Secrets Engine
+## Disable secrets engine
 
 This endpoint disables the mount point specified in the URL.
 
@@ -221,7 +224,7 @@ This endpoint disables the mount point specified in the URL.
 | :------- | :------------------ | ------------------ |
 | `DELETE` | `/sys/mounts/:path` | `204 (empty body)` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -230,7 +233,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
-### Force Disable
+### Force disable
 
 Because disabling a secrets engine revokes secrets associated with this mount,
 possible errors can prevent the secrets engine from being disabled if the
@@ -243,11 +246,11 @@ simple as increasing the timeout (in the event of timeout errors).
 For recovery situations where the secret was manually removed from the
 secrets backing service, one can force a secrets engine disable in Vault by
 performing a [force revoke](/vault/api-docs/system/leases)
-on the mount prefix, followed by a secrets disable when that completes. 
+on the mount prefix, followed by a secrets disable when that completes.
 If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
 
-## Get the configuration of a Secret Engine
+## Get the configuration of a secret engine
 
 This endpoint returns the configuration of a specific secret engine.
 
@@ -255,7 +258,7 @@ This endpoint returns the configuration of a specific secret engine.
 | :----- | :------------------ |
 | `GET`  | `/sys/mounts/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -263,7 +266,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/cubbyhole
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -308,7 +311,7 @@ $ curl \
 }
 ```
 
-## Read Mount Configuration
+## Read mount configuration
 
 This endpoint reads the given mount's configuration. Unlike the `mounts`
 endpoint, this will return the current time in seconds for each TTL, which may
@@ -318,7 +321,7 @@ be the system default or a mount-specific value.
 | :----- | :----------------------- |
 | `GET`  | `/sys/mounts/:path/tune` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -326,7 +329,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount/tune
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -336,7 +339,7 @@ $ curl \
 }
 ```
 
-## Tune Mount Configuration
+## Tune mount configuration
 
 This endpoint tunes configuration parameters for a given mount point.
 
@@ -379,7 +382,7 @@ This endpoint tunes configuration parameters for a given mount point.
 - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
   to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -388,7 +391,7 @@ This endpoint tunes configuration parameters for a given mount point.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

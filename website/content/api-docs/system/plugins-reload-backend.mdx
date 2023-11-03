@@ -11,7 +11,7 @@ backends. Either the plugin name (`plugin`) or the desired plugin backend mounts
 (`mounts`) must be provided, but not both. In the case that the plugin name is
 provided, all mounted paths that use that plugin backend will be reloaded.
 
-## Reload Plugins
+## Reload plugins
 
 This endpoint reloads mounted plugin backends.
 
@@ -31,7 +31,7 @@ This endpoint reloads mounted plugin backends.
   plugin or mounts on this Vault instance. If 'global', will begin reloading the
   plugin on all instances of a cluster.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -39,7 +39,7 @@ This endpoint reloads mounted plugin backends.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

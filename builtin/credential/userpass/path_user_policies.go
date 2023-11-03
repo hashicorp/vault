@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package userpass
 
@@ -16,6 +16,13 @@ import (
 func pathUserPolicies(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username") + "/policies$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "update",
+			OperationSuffix: "policies",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -29,6 +36,9 @@ func pathUserPolicies(b *backend) *framework.Path {
 			"token_policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies that will apply to the generated token for this user.",
+				},
 			},
 		},
 

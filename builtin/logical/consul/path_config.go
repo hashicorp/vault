@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package consul
 
@@ -15,6 +15,11 @@ import (
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixConsul,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"address": {
 				Type:        framework.TypeString,
@@ -55,9 +60,20 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigAccessRead,
-			logical.UpdateOperation: b.pathConfigAccessWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "access-configuration",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
 		},
 	}
 }
@@ -119,7 +135,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		}
 		token, _, err := client.ACL().Bootstrap()
 		if err != nil {
-			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
+			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs: %s", err), nil
 		}
 		config.Token = token.SecretID
 	}

@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .replication-dashboard {
   box-shadow: none;
 
-  .selectable-card {
+  .replication-summary-card {
     line-height: normal;
 
     &:hover {
@@ -62,7 +62,7 @@
         grid-template-rows: 0.2fr 1fr 0.2fr 1fr;
       }
 
-      &.has-border-danger:hover {
+      &.has-error-border:hover {
         box-shadow: none;
       }
 

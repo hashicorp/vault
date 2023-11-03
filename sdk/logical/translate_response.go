@@ -16,9 +16,10 @@ import (
 // values we don't.
 func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
-		Data:     input.Data,
-		Warnings: input.Warnings,
-		Headers:  input.Headers,
+		Data:      input.Data,
+		Warnings:  input.Warnings,
+		Headers:   input.Headers,
+		MountType: input.MountType,
 	}
 
 	if input.Secret != nil {
@@ -52,9 +53,10 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 
 func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 	logicalResp := &Response{
-		Data:     input.Data,
-		Warnings: input.Warnings,
-		Headers:  input.Headers,
+		Data:      input.Data,
+		Warnings:  input.Warnings,
+		Headers:   input.Headers,
+		MountType: input.MountType,
 	}
 
 	if input.LeaseID != "" {
@@ -99,6 +101,7 @@ type HTTPResponse struct {
 	Warnings      []string               `json:"warnings"`
 	Headers       map[string][]string    `json:"-"`
 	Auth          *HTTPAuth              `json:"auth"`
+	MountType     string                 `json:"mount_type"`
 }
 
 type HTTPAuth struct {

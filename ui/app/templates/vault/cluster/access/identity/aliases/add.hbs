@@ -1,8 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
       Create
-      {{lowercase (humanize this.model.identityType)}}
+      {{titleize (humanize this.model.identityType)}}
       for
       {{this.model.canonicalId}}
     </h1>

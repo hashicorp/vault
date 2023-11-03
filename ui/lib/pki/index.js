@@ -1,9 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 const { buildEngine } = require('ember-engines/lib/engine-addon');
 
 module.exports = buildEngine({

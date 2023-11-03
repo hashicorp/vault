@@ -1,15 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-pki-role-page-title>
-      Edit role
+      Edit Role
     </h1>
   </p.levelLeft>
 </PageHeader>
 <PkiRoleForm
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.id}}
-  @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.id}}
+  @role={{this.model.role}}
+  @issuers={{this.model.issuers}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
+  @onSave={{transition-to "vault.cluster.secrets.backend.pki.roles.role.details" this.model.role.id}}
 />

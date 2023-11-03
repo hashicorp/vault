@@ -4,7 +4,7 @@ page_title: LDAP - Auth Methods - HTTP API
 description: This is the API documentation for the Vault LDAP auth method.
 ---
 
-# LDAP Auth Method (API)
+# LDAP auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -35,6 +35,9 @@ This endpoint configures the LDAP auth method.
   names will be normalized to lower case. Case will still be preserved when
   sending the username to the LDAP server at login time; this is only for
   matching local user/group definitions.
+- `connection_timeout` `(integer: 30 or string: "30s")` - Timeout, in seconds,
+  when attempting to connect to the LDAP server before trying the next URL in
+  the configuration.
 - `request_timeout` `(integer: 90 or string: "90s")` - Timeout, in seconds, for
   the connection when making requests against the server before returning back
   an error.
@@ -71,7 +74,8 @@ This endpoint configures the LDAP auth method.
 - `userfilter` `(string: "")` – An optional LDAP user search filter.
   The template can access the following context variables: UserAttr, Username.
   The default is `({{.UserAttr}}={{.Username}})`, or `({{.UserAttr}}={{.Username@.upndomain}})`
-  if `upndomain` is set.
+  if `upndomain` is set. In order for the `userfilter` to be applied,
+  both `binddn` and `bindpass` must be set, or `discoverdn` must be set to `true`.
 - `anonymous_group_search` `(bool: false)` - Use anonymous binds when performing
   LDAP group searches (note: even when `true`, the initial credentials will still
   be used for the initial connection test).
@@ -94,12 +98,17 @@ This endpoint configures the LDAP auth method.
 - `dereference_aliases` `(string: never)` - When aliases should be dereferenced
   on search operations. Accepted values are 'never', 'finding', 'searching',
   'always'. Defaults to 'never'.
+- `max_page_size` `(int: 0)` - If set to a value greater than 0, the LDAP
+  backend will use the LDAP server's paged search control to request pages of
+  up to the given size. This can be used to avoid hitting the LDAP server's
+  maximum result size limit. Otherwise, the LDAP backend will not use the
+  paged search control.
 
 @include 'tokenfields.mdx'
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -109,7 +118,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -126,11 +135,12 @@ $ curl \
   "url": "ldaps://ldap.myorg.com:636",
   "username_as_alias": false,
   "userattr": "samaccountname",
-  "userdn": "ou=Users,dc=example,dc=com"
+  "userdn": "ou=Users,dc=example,dc=com",
+  "max_page_size": 1000
 }
 ```
 
-## Read LDAP Configuration
+## Read LDAP configuration
 
 This endpoint retrieves the LDAP configuration for the auth method.
 
@@ -138,7 +148,7 @@ This endpoint retrieves the LDAP configuration for the auth method.
 | :----- | :------------------ |
 | `GET`  | `/auth/ldap/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -146,7 +156,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -178,7 +188,7 @@ $ curl \
 }
 ```
 
-## List LDAP Groups
+## List LDAP groups
 
 This endpoint returns a list of existing groups in the method.
 
@@ -186,7 +196,7 @@ This endpoint returns a list of existing groups in the method.
 | :----- | :------------------ |
 | `LIST` | `/auth/ldap/groups` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -195,7 +205,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -211,7 +221,7 @@ $ curl \
 }
 ```
 
-## Read LDAP Group
+## Read LDAP group
 
 This endpoint returns the policies associated with a LDAP group.
 
@@ -223,7 +233,7 @@ This endpoint returns the policies associated with a LDAP group.
 
 - `name` `(string: <required>)` – The name of the LDAP group
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -231,7 +241,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -248,7 +258,7 @@ $ curl \
 }
 ```
 
-## Create/Update LDAP Group
+## Create/Update LDAP group
 
 This endpoint creates or updates LDAP group policies.
 
@@ -262,7 +272,7 @@ This endpoint creates or updates LDAP group policies.
 - `policies` `(string: "")` – Comma-separated list of policies associated to the
   group.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -270,7 +280,7 @@ This endpoint creates or updates LDAP group policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -280,7 +290,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-## Delete LDAP Group
+## Delete LDAP group
 
 This endpoint deletes the LDAP group and policy association.
 
@@ -292,7 +302,7 @@ This endpoint deletes the LDAP group and policy association.
 
 - `name` `(string: <required>)` – The name of the LDAP group
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -301,7 +311,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-## List LDAP Users
+## List LDAP users
 
 This endpoint returns a list of existing users in the method.
 
@@ -309,7 +319,7 @@ This endpoint returns a list of existing users in the method.
 | :----- | :----------------- |
 | `LIST` | `/auth/ldap/users` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -318,7 +328,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -334,7 +344,7 @@ $ curl \
 }
 ```
 
-## Read LDAP User
+## Read LDAP user
 
 This endpoint returns the policies associated with a LDAP user.
 
@@ -346,7 +356,7 @@ This endpoint returns the policies associated with a LDAP user.
 
 - `username` `(string: <required>)` – The username of the LDAP user
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -354,7 +364,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -372,7 +382,7 @@ $ curl \
 }
 ```
 
-## Create/Update LDAP User
+## Create/Update LDAP user
 
 This endpoint creates or updates LDAP users policies and group associations.
 
@@ -388,7 +398,7 @@ This endpoint creates or updates LDAP users policies and group associations.
 - `groups` `(string: "")` – Comma-separated list of groups associated to the
   user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -396,7 +406,7 @@ This endpoint creates or updates LDAP users policies and group associations.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -406,7 +416,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-## Delete LDAP User
+## Delete LDAP user
 
 This endpoint deletes the LDAP user and policy association.
 
@@ -418,7 +428,7 @@ This endpoint deletes the LDAP user and policy association.
 
 - `username` `(string: <required>)` – The username of the LDAP user
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -427,7 +437,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-## Login with LDAP User
+## Login with LDAP user
 
 This endpoint allows you to log in with LDAP credentials
 
@@ -438,9 +448,11 @@ This endpoint allows you to log in with LDAP credentials
 ### Parameters
 
 - `username` `(string: <required>)` – The username of the LDAP user
-- `password` `(string: <required>)` – The password for the LDAP user
+- `password` `(string: <required>)` – The password for the LDAP user.
+When authenticating with the Vault CLI, i.e. `vault login -method=ldap username=mitchellh`
+the password can alternatively be supplied via the `VAULT_LDAP_PASSWORD` environment variable.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -448,7 +460,7 @@ This endpoint allows you to log in with LDAP credentials
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -457,7 +469,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package version
 
@@ -22,9 +22,6 @@ func GetVersion() *VersionInfo {
 	md := VersionMetadata
 	if GitDescribe != "" {
 		ver = GitDescribe
-	}
-	if GitDescribe == "" && rel == "" && VersionPrerelease != "" {
-		rel = "dev"
 	}
 
 	return &VersionInfo{

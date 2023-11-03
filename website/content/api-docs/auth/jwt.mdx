@@ -6,7 +6,7 @@ description: |-
   method plugin.
 ---
 
-# JWT/OIDC Auth Method (API)
+# JWT/OIDC auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -43,10 +43,10 @@ set.
 - `bound_issuer` `(string: <optional>)` - The value against which to match the `iss` claim in a JWT.
 - `jwt_supported_algs` `(comma-separated string, or array of strings: <optional>)` - A list of supported signing algorithms. Defaults to [RS256] for OIDC roles. Defaults to all [available algorithms](https://github.com/hashicorp/cap/blob/main/jwt/algs.go) for JWT roles.
 - `default_role` `(string: <optional>)` - The default role to use if none is provided during login.
-- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google, SecureAuth. The options are described in each provider's section in [OIDC Provider Setup](/vault/docs/auth/jwt/oidc-providers).
+- `provider_config` `(map: <optional>)` - Configuration options for provider-specific handling. Providers with specific handling include: Azure, Google, SecureAuth, IBM ISAM. The options are described in each provider's section in [OIDC Provider Setup](/vault/docs/auth/jwt/oidc-providers).
 - `namespace_in_state` `(bool: true)` - Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -55,7 +55,7 @@ set.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -65,7 +65,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/config
 ```
 
-# Read Config
+## Read config
 
 Returns the previously configured config.
 
@@ -73,7 +73,7 @@ Returns the previously configured config.
 | :----- | :----------------- |
 | `GET`  | `/auth/jwt/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -81,7 +81,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -95,7 +95,7 @@ $ curl \
 }
 ```
 
-## Create/Update Role
+## Create/Update role
 
 Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
@@ -163,7 +163,7 @@ entities attempting to login. At least one of the bound values must be set.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -183,7 +183,7 @@ entities attempting to login. At least one of the bound values must be set.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -193,7 +193,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/role/dev-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -205,7 +205,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -213,7 +213,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/role/dev-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -239,7 +239,7 @@ $ curl \
 
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the plugin.
 
@@ -247,7 +247,7 @@ Lists all the roles that are registered with the plugin.
 | :----- | :--------------- |
 | `LIST` | `/auth/jwt/role` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -256,7 +256,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -270,7 +270,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -282,7 +282,7 @@ Deletes the previously registered role.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -291,7 +291,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/role/dev-role
 ```
 
-## OIDC Authorization URL Request
+## OIDC authorization URL request
 
 Obtain an authorization URL from Vault to start an OIDC login flow.
 
@@ -311,7 +311,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
   must match the `client_nonce` value provided during a subsequent request to the
   [callback](/vault/api-docs/auth/jwt#oidc-callback) API.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -320,7 +320,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -329,7 +329,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/oidc/auth_url
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -341,7 +341,7 @@ $ curl \
 }
 ```
 
-## OIDC Callback
+## OIDC callback
 
 Exchange an authorization code for an OIDC ID Token. The ID token will be further validated
 against any bound claims, and if valid a Vault token will be returned.
@@ -362,14 +362,14 @@ against any bound claims, and if valid a Vault token will be returned.
   match the `client_nonce` value provided during the prior request to the
   [auth_url](/vault/api-docs/auth/jwt#oidc-authorization-url-request) API.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/oidc/callback?state=n2kfh3nsl&code=mn2ldl2nv98h2jl&nonce=ni42i2idj2jj
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -388,7 +388,7 @@ $ curl \
 }
 ```
 
-## JWT Login
+## JWT login
 
 Fetch a token. This endpoint takes a signed JSON Web Token (JWT) and
 a role name for some entity. It verifies the JWT signature to authenticate that
@@ -404,7 +404,7 @@ entity and then authorizes the entity for the given role.
   attempted. Defaults to configured `default_role` if not provided.
 - `jwt` `(string: <required>)` - Signed [JSON Web Token](https://tools.ietf.org/html/rfc7519) (JWT).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -413,7 +413,7 @@ entity and then authorizes the entity for the given role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -422,7 +422,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/jwt/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

@@ -4,7 +4,7 @@ page_title: Namespace API Lock
 description: Lock the Vault API on a per-namespace basis.
 ---
 
-# Namespace Lock and Unlock
+# Namespace lock and unlock
 
 Vault makes the API available (unlocked) by default for all namespaces. In
 this state, Vault can respond to all API/CLI ('API' from here on out) requests
@@ -69,7 +69,7 @@ When the API is unlocked, it will also be unlocked for all descendants that were
 locked with it. If a descendant namespace was previously locked, that lock will
 remain in place.
 
-## API Locked Response
+## API locked response
 
 If a request is made to a non-exempt path from a locked namespace, e.g. `nsA`,
 Vault responds with an HTTP 503: Service Unavailable. It will also produce the

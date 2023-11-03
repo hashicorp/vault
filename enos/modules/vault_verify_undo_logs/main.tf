@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -45,8 +45,9 @@ resource "enos_remote_exec" "smoke-verify-undo-logs" {
   for_each = local.public_ips
 
   environment = {
-    VAULT_TOKEN = var.vault_root_token
-    VAULT_ADDR  = "http://localhost:8200"
+    VAULT_ADDR        = "http://localhost:8200"
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-undo-logs.sh")]

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -8,7 +8,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
@@ -36,6 +39,12 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
+
+	// featureFlagDisableEventLogger contains the feature flag name which can be
+	// used to disable internal eventlogger behavior for the audit system.
+	// NOTE: this is an undocumented and temporary feature flag, it should not
+	// be relied on to remain part of Vault for any subsequent releases.
+	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -155,7 +164,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, view, entry.Local)
+	c.auditBroker.Register(entry.Path, backend, entry.Local)
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -207,8 +216,9 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	c.audit = newTable
 
-	// Unmount the backend
-	c.auditBroker.Deregister(path)
+	// Unmount the backend, any returned error can be ignored since the
+	// Backend will already have been removed from the AuditBroker's map.
+	c.auditBroker.Deregister(ctx, path)
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
 	}
@@ -382,7 +392,16 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
 	c.AddLogger(brokerLogger)
-	broker := NewAuditBroker(brokerLogger)
+
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	if err != nil {
+		return err
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -416,7 +435,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, view, entry.Local)
+		broker.Register(entry.Path, backend, entry.Local)
 
 		successCount++
 	}
@@ -477,11 +496,20 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		Location: salt.DefaultLocation,
 	}
 
-	be, err := f(ctx, &audit.BackendConfig{
-		SaltView:   view,
-		SaltConfig: saltConfig,
-		Config:     conf,
-	})
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	be, err := f(
+		ctx, &audit.BackendConfig{
+			SaltView:   view,
+			SaltConfig: saltConfig,
+			Config:     conf,
+			MountPath:  entry.Path,
+		},
+		!disableEventLogger,
+		c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}

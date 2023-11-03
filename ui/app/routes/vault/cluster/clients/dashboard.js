@@ -1,15 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import getStorage from 'vault/lib/token-storage';
 import { inject as service } from '@ember/service';
+import timestamp from 'core/utils/timestamp';
 
 export default class DashboardRoute extends Route {
   @service store;
-  currentDate = new Date().toISOString();
+  currentDate = timestamp.now().toISOString();
 
   async getActivity(start_time) {
     // on init ONLY make network request if we have a start_time

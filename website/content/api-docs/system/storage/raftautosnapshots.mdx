@@ -5,13 +5,18 @@ description: |-
 
   The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
   snapshots with Vault's Raft storage backend.
-
-  This is an Enterprise-only feature.
 ---
 
-## Create/update an automated snapshots config
+# `/sys/storage/raft/snapshot-auto`
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/storage/raft/snapshot-auto` endpoints are used to manage automated
+snapshots with Vault's Raft storage backend.
+
+## Create/update an automated snapshots config
 
 **This endpoint requires sudo capability.**
 
@@ -132,7 +137,7 @@ environment variables or files on disk in predefined locations.
 - `azure_endpoint` `(string)` - Azure blob storage endpoint. This is typically
   only set when using a non-Azure implementation like Azurite.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -144,7 +149,7 @@ environment variables or files on disk in predefined locations.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -164,7 +169,7 @@ This endpoint lists named configurations.
 | :----- | :--------------------------------------- |
 | `LIST` | `/sys/storage/raft/snapshot-auto/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -173,7 +178,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -193,7 +198,7 @@ This endpoint reads a named configuration.
 | :----- | :--------------------------------------------- |
 | `GET`  | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -201,7 +206,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/config1
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -226,7 +231,7 @@ This endpoint deletes a named configuration.
 | :------- | :--------------------------------------------- |
 | `DELETE` | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -243,7 +248,7 @@ This endpoint returns the status of a named configuration.
 | :----- | :--------------------------------------------- |
 | `GET`  | `/sys/storage/raft/snapshot-auto/status/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -251,7 +256,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/status/config1
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

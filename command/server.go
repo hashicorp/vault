@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,6 +24,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
@@ -43,6 +47,7 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -50,6 +55,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	sr "github.com/hashicorp/vault/serviceregistration"
@@ -59,8 +65,8 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
-	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -72,11 +78,6 @@ var (
 )
 
 var memProfilerEnabled = false
-
-var enableFourClusterDev = func(c *ServerCommand, base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	c.logger.Error("-dev-four-cluster only supported in enterprise Vault")
-	return 1
-}
 
 const (
 	storageMigrationLock = "core/migration"
@@ -124,6 +125,7 @@ type ServerCommand struct {
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
+	flagDevTLSSANs         []string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -139,6 +141,7 @@ type ServerCommand struct {
 	flagDevFourCluster     bool
 	flagDevTransactional   bool
 	flagDevAutoSeal        bool
+	flagDevClusterJson     string
 	flagTestVerifyOnly     bool
 	flagTestServerConfig   bool
 	flagDevConsul          bool
@@ -205,8 +208,8 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:   "recovery",
 		Target: &c.flagRecovery,
-		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
-			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
+		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions. " +
+			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
@@ -245,6 +248,18 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "",
 		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
 			"specified. If left unset, files are generated in a temporary directory.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "dev-tls-san",
+		Target:  &c.flagDevTLSSANs,
+		Default: nil,
+		Usage: "Additional Subject Alternative Name (as a DNS name or IP address) " +
+			"to generate the certificate with if `-dev-tls` is specified. The " +
+			"certificate will always use localhost, localhost4, localhost6, " +
+			"localhost.localdomain, and the host name as alternate DNS names, " +
+			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
+			"multiple times to specify multiple SANs.",
 	})
 
 	f.StringVar(&StringVar{
@@ -370,6 +385,12 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.StringVar(&StringVar{
+		Name:   "dev-cluster-json",
+		Target: &c.flagDevClusterJson,
+		Usage:  "File to write cluster definition to",
+	})
+
 	// TODO: should the below flags be public?
 	f.BoolVar(&BoolVar{
 		Name:    "test-verify-only",
@@ -449,7 +470,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	// Update the 'log' related aspects of shared config based on config/env var/cli
-	c.Flags().applyLogConfigOverrides(config.SharedConfig)
+	c.flags.applyLogConfigOverrides(config.SharedConfig)
 	l, err := c.configureLogging(config)
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -515,7 +536,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var barrierSeal vault.Seal
 	var sealConfigError error
-	var wrapper wrapping.Wrapper
 
 	if len(config.Seals) == 0 {
 		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
@@ -526,46 +546,32 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	configSeal := config.Seals[0]
-	sealType := wrapping.WrapperTypeShamir.String()
-	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
-		sealType = os.Getenv("VAULT_SEAL_TYPE")
-		configSeal.Type = sealType
-	} else {
-		sealType = configSeal.Type
+	ctx := context.Background()
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
+		return 1
 	}
 
-	infoKeys = append(infoKeys, "Seal Type")
-	info["Seal Type"] = sealType
-
-	var seal vault.Seal
-	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(),
-	})
-	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
-	if sealConfigError != nil {
-		if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-			c.UI.Error(fmt.Sprintf(
-				"Error parsing Seal configuration: %s", sealConfigError))
-			return 1
-		}
+	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
+		return 1
 	}
-	if wrapper == nil {
-		seal = defaultSeal
-	} else {
-		seal, err = vault.NewAutoSeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
-		}
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
 	}
-	barrierSeal = seal
+	if setSealResponse.barrierSeal == nil {
+		c.UI.Error(fmt.Sprintf("Error setting up seal: %v", setSealResponse.sealConfigError))
+		return 1
+	}
+	barrierSeal = setSealResponse.barrierSeal
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
-		err = seal.Finalize(context.Background())
+		err = barrierSeal.Finalize(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 		}
@@ -590,7 +596,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	if err := core.InitializeRecovery(context.Background()); err != nil {
+	if err := core.InitializeRecovery(ctx); err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
 		return 1
 	}
@@ -642,7 +648,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -663,6 +669,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.UI.Output("")
+
+	// Tests might not want to start a vault server and just want to verify
+	// the configuration.
+	if c.flagTestVerifyOnly {
+		return 0
+	}
 
 	for _, ln := range lns {
 		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{
@@ -685,7 +697,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	if sealConfigError != nil {
-		init, err := core.InitializedLocally(context.Background())
+		init, err := core.InitializedLocally(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -853,9 +865,9 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 
 		if reloadFunc != nil {
-			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
+			relSlice := (*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)]
 			relSlice = append(relSlice, reloadFunc)
-			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
+			(*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)] = relSlice
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
@@ -893,6 +905,10 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_request_duration"] = lnConfig.MaxRequestDuration.String()
 
+		if lnConfig.ChrootNamespace != "" {
+			props["chroot_namespace"] = lnConfig.ChrootNamespace
+		}
+
 		lns = append(lns, listenerutil.Listener{
 			Listener: ln,
 			Config:   lnConfig,
@@ -919,6 +935,79 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 	return 0, lns, clusterAddrs, nil
 }
 
+func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
+	var devStorageType string
+
+	switch {
+	case c.flagDevConsul:
+		devStorageType = "consul"
+	case c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional_ha"
+	case !c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional"
+	case c.flagDevHA && !c.flagDevTransactional:
+		devStorageType = "inmem_ha"
+	default:
+		devStorageType = "inmem"
+	}
+
+	var certDir string
+	var err error
+	var config *server.Config
+	var f func()
+
+	if c.flagDevTLS {
+		if c.flagDevTLSCertDir != "" {
+			if _, err = os.Stat(c.flagDevTLSCertDir); err != nil {
+				return nil, nil, "", err
+			}
+
+			certDir = c.flagDevTLSCertDir
+		} else {
+			if certDir, err = os.MkdirTemp("", "vault-tls"); err != nil {
+				return nil, nil, certDir, err
+			}
+		}
+		extraSANs := c.flagDevTLSSANs
+		host, _, err := net.SplitHostPort(c.flagDevListenAddr)
+		if err == nil {
+			// 127.0.0.1 is the default, and already included in the SANs.
+			// Empty host means listen on all interfaces, but users should use the
+			// -dev-tls-san flag to get the right SANs in that case.
+			if host != "" && host != "127.0.0.1" {
+				extraSANs = append(extraSANs, host)
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir, extraSANs)
+
+		f = func() {
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			// Only delete temp directories we made.
+			if c.flagDevTLSCertDir == "" {
+				if err := os.Remove(certDir); err != nil {
+					c.UI.Error(err.Error())
+				}
+			}
+		}
+
+	} else {
+		config, err = server.DevConfig(devStorageType)
+	}
+
+	return f, config, certDir, err
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -926,6 +1015,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
+	// Don't exit just because we saw a potential deadlock.
+	deadlock.Opts.OnPotentialDeadlock = func() {}
 
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
@@ -959,74 +1051,20 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Load the configuration
 	var config *server.Config
-	var err error
 	var certDir string
 	if c.flagDev {
-		var devStorageType string
-		switch {
-		case c.flagDevConsul:
-			devStorageType = "consul"
-		case c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional_ha"
-		case !c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional"
-		case c.flagDevHA && !c.flagDevTransactional:
-			devStorageType = "inmem_ha"
-		default:
-			devStorageType = "inmem"
-		}
-
-		if c.flagDevTLS {
-			if c.flagDevTLSCertDir != "" {
-				_, err := os.Stat(c.flagDevTLSCertDir)
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-
-				certDir = c.flagDevTLSCertDir
-			} else {
-				certDir, err = os.MkdirTemp("", "vault-tls")
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-			}
-			config, err = server.DevTLSConfig(devStorageType, certDir)
-
-			defer func() {
-				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				// Only delete temp directories we made.
-				if c.flagDevTLSCertDir == "" {
-					err = os.Remove(certDir)
-					if err != nil {
-						c.UI.Error(err.Error())
-					}
-				}
-			}()
-
-		} else {
-			config, err = server.DevConfig(devStorageType)
+		df, cfg, dir, err := configureDevTLS(c)
+		if df != nil {
+			defer df()
 		}
 
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 1
 		}
+
+		config = cfg
+		certDir = dir
 
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
@@ -1111,19 +1149,16 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
-	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
-		var err error
-		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
-				"setting to default value false"))
-		}
-	}
 
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
 		c.UI.Error(err.Error())
 		return 1
+	}
+
+	for _, experiment := range config.Experiments {
+		if experiments.IsUnused(experiment) {
+			c.UI.Warn(fmt.Sprintf("WARNING! Experiment %s is no longer used", experiment))
+		}
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -1153,16 +1188,18 @@ func (c *ServerCommand) Run(args []string) int {
 	metricsHelper := metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
 	// Initialize the storage backend
-	backend, err := c.setupStorage(config)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 1
-	}
-
-	// Prevent server startup if migration is active
-	// TODO: Use OpenTelemetry to integrate this into Diagnose
-	if c.storageMigrationActive(backend) {
-		return 1
+	var backend physical.Backend
+	if !c.flagDev || config.Storage != nil {
+		backend, err = c.setupStorage(config)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 1
+		}
+		// Prevent server startup if migration is active
+		// TODO: Use OpenTelemetry to integrate this into Diagnose
+		if c.storageMigrationActive(backend) {
+			return 1
+		}
 	}
 
 	// Initialize the Service Discovery, if there is one
@@ -1200,48 +1237,67 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
-	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
-	// Check error here
+	ctx := context.Background()
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
+		return 1
+	}
+
+	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
+		return 1
+	}
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
+	if setSealResponse.sealConfigWarning != nil {
+		c.UI.Warn(fmt.Sprintf("Warnings during seal configuration: %v", setSealResponse.sealConfigWarning))
+	}
 
-	for _, seal := range seals {
-		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
-		// section.
-		if seal == nil {
-			continue
-		}
+	for _, seal := range setSealResponse.getCreatedSeals() {
 		seal := seal // capture range variable
 		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
-			err = (*seal).Finalize(context.Background())
+			err = (*seal).Finalize(ctx)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
-		}(&seal)
+		}(seal)
 	}
 
-	if barrierSeal == nil {
+	if setSealResponse.barrierSeal == nil {
 		c.UI.Error("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
 		return 1
 	}
 
 	// prepare a secure random reader for core
-	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+	entropyAugLogger := c.logger.Named("entropy-augmentation")
+	var entropySources []*configutil.EntropySourcerInfo
+	for _, sealWrapper := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+		if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
+			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
+				Sourcer: s,
+				Name:    sealWrapper.Name,
+			})
+		}
+	}
+	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, entropySources, entropyAugLogger)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
-	coreConfig := createCoreConfig(c, config, backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
+	coreConfig := createCoreConfig(c, config, backend, configSR, setSealResponse.barrierSeal, setSealResponse.unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 	if c.flagDevThreeNode {
 		return c.enableThreeNodeDevCluster(&coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	if c.flagDevFourCluster {
-		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+		return entEnableFourClusterDev(c, &coreConfig, info, infoKeys, os.Getenv("VAULT_DEV_TEMP_DIR"))
 	}
 
 	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
@@ -1293,9 +1349,9 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Apply any enterprise configuration onto the coreConfig.
-	adjustCoreConfigForEnt(config, &coreConfig)
+	entAdjustCoreConfig(config, &coreConfig)
 
-	if !storageSupportedForEnt(&coreConfig) {
+	if !entCheckStorageType(&coreConfig) {
 		c.UI.Warn("")
 		c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which is not supported for Vault Enterprise, must be \"raft\" or \"consul\"", coreConfig.StorageType)))
 		c.UI.Warn("")
@@ -1398,7 +1454,7 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -1414,6 +1470,9 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, "HCP resource ID")
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
+
+	infoKeys = append(infoKeys, "administrative namespace")
+	info["administrative namespace"] = config.AdministrativeNamespacePath
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -1437,22 +1496,23 @@ func (c *ServerCommand) Run(args []string) int {
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
-		Core: core,
+		Core:           core,
+		ListenerConfig: &configutil.Listener{},
 	}))
 
 	// Attempt unsealing in a background goroutine. This is needed for when a
 	// Vault cluster with multiple servers is configured with auto-unseal but is
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
-	if !core.IsInSealMigrationMode() {
-		go runUnseal(c, core, context.Background())
+	if !core.IsInSealMigrationMode(true) {
+		go runUnseal(c, core, ctx)
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
 	// TODO: Should we also support retry_join for ha_storage?
 	if config.Storage.Type == storageTypeRaft {
-		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+		if err := core.InitiateRetryJoin(ctx); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1
 		}
@@ -1471,7 +1531,8 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// If we're in Dev mode, then initialize the core
-	err = initDevCore(c, &coreConfig, config, core, certDir)
+	clusterJson := &testcluster.ClusterJson{}
+	err = initDevCore(c, &coreConfig, config, core, certDir, clusterJson)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1496,8 +1557,8 @@ func (c *ServerCommand) Run(args []string) int {
 		return 0
 	}
 
-	if sealConfigError != nil {
-		init, err := core.InitializedLocally(context.Background())
+	if setSealResponse.sealConfigError != nil {
+		init, err := core.InitializedLocally(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -1530,6 +1591,34 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Notify systemd that the server is ready (if applicable)
 	c.notifySystemd(systemd.SdNotifyReady)
+
+	if c.flagDev {
+		protocol := "http://"
+		if c.flagDevTLS {
+			protocol = "https://"
+		}
+		clusterJson.Nodes = []testcluster.ClusterNode{
+			{
+				APIAddress: protocol + config.Listeners[0].Address,
+			},
+		}
+		if c.flagDevTLS {
+			clusterJson.CACertPath = fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)
+		}
+
+		if c.flagDevClusterJson != "" && !c.flagDevThreeNode {
+			b, err := jsonutil.EncodeJSON(clusterJson)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
+				return 1
+			}
+			err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
+				return 1
+			}
+		}
+	}
 
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
@@ -1624,10 +1713,13 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			// Reload license file
-			if err = vault.LicenseReload(core); err != nil {
+			if err = core.EntReloadLicense(); err != nil {
 				c.UI.Error(err.Error())
 			}
 
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -1677,6 +1769,46 @@ func (c *ServerCommand) Run(args []string) int {
 
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 				f.Close()
+			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						pFile.Close()
+						break
+					}
+					pFile.Close()
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
 			}
 		}
 	}
@@ -1780,6 +1912,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	barrierConfig := &vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
+		Name:            "shamir",
 	}
 
 	if core.SealAccess().RecoveryKeySupported() {
@@ -1920,13 +2053,32 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
 		TempDir:           tempDir,
-	})
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				Profiling: configutil.ListenerProfiling{
+					UnauthenticatedPProfAccess: true,
+				},
+				Telemetry: configutil.ListenerTelemetry{
+					UnauthenticatedMetricsAccess: true,
+				},
+			},
+		},
+	}, nil)
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, conf, opts)
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	if constants.IsEnterprise {
+		err := testcluster.WaitForActiveNodeAndPerfStandbys(context.Background(), testCluster)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("perf standbys didn't become ready: %v", err))
+			return 1
+		}
+	}
 
 	info["cluster parameters path"] = testCluster.TempDir
 	infoKeys = append(infoKeys, "cluster parameters path")
@@ -1953,7 +2105,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
-	fipsStatus := getFIPSInfoKey()
+	fipsStatus := entGetFIPSInfoKey()
 	if fipsStatus != "" {
 		infoKeys = append(infoKeys, "fips")
 		info["fips"] = fipsStatus
@@ -1977,7 +2129,8 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	for _, core := range testCluster.Cores {
 		core.Server.Handler = vaulthttp.Handler.Handler(&vault.HandlerProperties{
-			Core: core.Core,
+			Core:           core.Core,
+			ListenerConfig: &configutil.Listener{},
 		})
 		core.SetClusterHandler(core.Server.Handler)
 	}
@@ -2067,6 +2220,29 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		testCluster.Cores[0].Client.Address(),
 		testCluster.TempDir,
 	))
+
+	if c.flagDevClusterJson != "" {
+		clusterJson := testcluster.ClusterJson{
+			Nodes:      []testcluster.ClusterNode{},
+			CACertPath: filepath.Join(testCluster.TempDir, "ca_cert.pem"),
+			RootToken:  testCluster.RootToken,
+		}
+		for _, core := range testCluster.Cores {
+			clusterJson.Nodes = append(clusterJson.Nodes, testcluster.ClusterNode{
+				APIAddress: core.Client.Address(),
+			})
+		}
+		b, err := jsonutil.EncodeJSON(clusterJson)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error encoding cluster.json: %s", err))
+			return 1
+		}
+		err = os.WriteFile(c.flagDevClusterJson, b, 0o600)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error writing cluster.json %q: %s", c.flagDevClusterJson, err))
+			return 1
+		}
+	}
 
 	// Output the header that the server has started
 	c.UI.Output("==> Vault server started! Log data will stream in below:\n")
@@ -2353,86 +2529,276 @@ func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) 
 	return &status, nil
 }
 
-// setSeal return barrierSeal, barrierWrapper, unwrapSeal, and all the created seals from the configs so we can close them in Run
-// The two errors are the sealConfigError and the regular error
-func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string) (vault.Seal, wrapping.Wrapper, vault.Seal, []vault.Seal, error, error) {
-	var barrierSeal vault.Seal
-	var unwrapSeal vault.Seal
+type SetSealResponse struct {
+	barrierSeal vault.Seal
+	unwrapSeal  vault.Seal
 
-	var sealConfigError error
-	var wrapper wrapping.Wrapper
-	var barrierWrapper wrapping.Wrapper
+	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
+	sealConfigError   error
+	sealConfigWarning error
+}
+
+func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
+	var ret []*vault.Seal
+	if r.barrierSeal != nil {
+		ret = append(ret, &r.barrierSeal)
+	}
+	if r.unwrapSeal != nil {
+		ret = append(ret, &r.unwrapSeal)
+	}
+	return ret
+}
+
+// setSeal return barrierSeal, barrierWrapper, unwrapSeal, all the created seals, and all the provided seals from the configs so we can close them in Run
+// The two errors are the sealConfigError and the regular error
+func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo, hasPartiallyWrappedPaths bool) (*SetSealResponse, error) {
 	if c.flagDevAutoSeal {
-		var err error
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
-		if err != nil {
-			return nil, nil, nil, nil, nil, err
-		}
-		return barrierSeal, nil, nil, nil, nil, nil
+		access, _ := vaultseal.NewTestSeal(nil)
+		barrierSeal := vault.NewAutoSeal(access)
+
+		return &SetSealResponse{barrierSeal: barrierSeal}, nil
 	}
 
 	// Handle the case where no seal is provided
 	switch len(config.Seals) {
 	case 0:
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
+		config.Seals = append(config.Seals, &configutil.KMS{
+			Type:     vault.SealConfigTypeShamir.String(),
+			Priority: 1,
+			Name:     "shamir",
+		})
 	case 1:
 		// If there's only one seal and it's disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
+			config.Seals = append(config.Seals, &configutil.KMS{
+				Type:     vault.SealConfigTypeShamir.String(),
+				Priority: 1,
+				Name:     "shamir",
+			})
 		}
 	}
-	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
+
+	var sealConfigError error
+	var sealConfigWarning error
+	recordSealConfigError := func(err error) {
+		sealConfigError = errors.Join(sealConfigError, err)
+	}
+	recordSealConfigWarning := func(err error) {
+		sealConfigWarning = errors.Join(sealConfigWarning, err)
+	}
+	enabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
+	disabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
+	allSealKmsConfigs := make([]*configutil.KMS, 0)
+
+	type infoKeysAndMap struct {
+		keys   []string
+		theMap map[string]string
+	}
+	sealWrapperInfoKeysMap := make(map[string]infoKeysAndMap)
+
+	configuredSeals := 0
 	for _, configSeal := range config.Seals {
-		sealType := wrapping.WrapperTypeShamir.String()
-		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
-			configSeal.Type = sealType
-		} else {
-			sealType = configSeal.Type
+		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
+		if configSeal.Priority > 1 {
+			sealTypeEnvVarName = sealTypeEnvVarName + "_" + configSeal.Name
 		}
 
-		var seal vault.Seal
-		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
+		if !configSeal.Disabled && os.Getenv(sealTypeEnvVarName) != "" {
+			sealType := os.Getenv(sealTypeEnvVarName)
+			configSeal.Type = sealType
+		}
+
+		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", configSeal.Type))
 		c.allLoggers = append(c.allLoggers, sealLogger)
-		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
-		var sealInfoKeys []string
-		sealInfoMap := map[string]string{}
-		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-				return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, fmt.Errorf(
-					"Error parsing Seal configuration: %s", sealConfigError)
+
+		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
+		var wrapperInfoKeys []string
+		wrapperInfoMap := map[string]string{}
+		wrapper, wrapperConfigError := configutil.ConfigureWrapper(configSeal, &wrapperInfoKeys, &wrapperInfoMap, sealLogger)
+		if wrapperConfigError == nil {
+			// for some reason configureWrapper in kms.go returns nil wrapper and nil error for wrapping.WrapperTypeShamir
+			if wrapper == nil {
+				wrapper = aeadwrapper.NewShamirWrapper()
 			}
-		}
-		if wrapper == nil {
-			seal = defaultSeal
+			configuredSeals++
+		} else if server.IsMultisealSupported() {
+			recordSealConfigWarning(fmt.Errorf("error configuring seal: %v", wrapperConfigError))
 		} else {
-			var err error
-			seal, err = vault.NewAutoSeal(&vaultseal.Access{
-				Wrapper: wrapper,
-			})
-			if err != nil {
-				return nil, nil, nil, nil, nil, err
+			// It seems that we are checking for this particular error here is to distinguish between a
+			// mis-configured seal vs one that fails for another reason. Apparently the only other reason is
+			// a key not found error. It seems the intention is for the key not found error to be returned
+			// as a seal specific error later
+			if !errwrap.ContainsType(wrapperConfigError, new(logical.KeyNotFoundError)) {
+				return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
+			} else {
+				sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
+				recordSealConfigError(wrapperConfigError)
 			}
 		}
-		infoPrefix := ""
+
+		sealWrapper := vaultseal.NewSealWrapper(
+			wrapper,
+			configSeal.Priority,
+			configSeal.Name,
+			configSeal.Type,
+			configSeal.Disabled,
+			wrapperConfigError == nil,
+		)
+
 		if configSeal.Disabled {
-			unwrapSeal = seal
-			infoPrefix = "Old "
+			disabledSealWrappers = append(disabledSealWrappers, sealWrapper)
 		} else {
-			barrierSeal = seal
-			barrierWrapper = wrapper
+			enabledSealWrappers = append(enabledSealWrappers, sealWrapper)
 		}
-		for _, k := range sealInfoKeys {
-			infoKeys = append(infoKeys, infoPrefix+k)
-			info[infoPrefix+k] = sealInfoMap[k]
+
+		sealWrapperInfoKeysMap[sealWrapper.Name] = infoKeysAndMap{
+			keys:   wrapperInfoKeys,
+			theMap: wrapperInfoMap,
 		}
-		createdSeals = append(createdSeals, seal)
 	}
-	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
+
+	if len(enabledSealWrappers) == 0 && len(disabledSealWrappers) == 0 && sealConfigWarning != nil {
+		// All of them errored out, so warnings are now errors
+		recordSealConfigError(sealConfigWarning)
+		sealConfigWarning = nil
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Set the info keys, this modifies the function arguments `info` and `infoKeys`
+	// TODO(SEALHA): Why are we doing this? What is its use?
+	appendWrapperInfoKeys := func(prefix string, sealWrappers []*vaultseal.SealWrapper) {
+		if len(sealWrappers) == 0 {
+			return
+		}
+		useName := false
+		if len(sealWrappers) > 1 {
+			useName = true
+		}
+		for _, sealWrapper := range sealWrappers {
+			if useName {
+				prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
+			}
+			for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
+				infoKeys = append(infoKeys, prefix+k)
+				info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
+			}
+		}
+	}
+	appendWrapperInfoKeys("", enabledSealWrappers)
+	appendWrapperInfoKeys("Old", disabledSealWrappers)
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Compute seal generation
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Create the Seals
+
+	containsShamir := func(sealWrappers []*vaultseal.SealWrapper) bool {
+		for _, si := range sealWrappers {
+			if vault.SealConfigTypeShamir.IsSameAs(si.SealConfigType) {
+				return true
+			}
+		}
+		return false
+	}
+
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
+
+	sealLogger := c.logger
+	switch {
+	case len(enabledSealWrappers) == 0:
+		return nil, errors.Join(sealConfigWarning, errors.New("no enabled Seals in configuration"))
+	case configuredSeals == 0:
+		return nil, errors.Join(sealConfigWarning, errors.New("no seals were successfully initialized"))
+	case containsShamir(enabledSealWrappers) && containsShamir(disabledSealWrappers):
+		return nil, errors.Join(sealConfigWarning, errors.New("shamir seals cannot be set disabled (they should simply not be set)"))
+
+	case len(enabledSealWrappers) == 1 && containsShamir(enabledSealWrappers):
+		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
+		// autoSeal.
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		if len(disabledSealWrappers) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
+		}
+
+	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
+		// The unwrap seal is Shamir, we are migrating to an autoSeal.
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
+
+	case server.IsMultisealSupported():
+		// We know we are not using Shamir seal, that we are not migrating away from one, and multi seal is supported,
+		// so just put enabled and disabled wrappers on the same seal Access
+		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealWrappers))
+		if configuredSeals < len(enabledSealWrappers) {
+			c.UI.Warn("WARNING: running with fewer than all configured seals during unseal.  Will not be fully highly available until errors are corrected and Vault restarted.")
+		}
+	case len(enabledSealWrappers) == 1:
+		// We may have multiple seals disabled, but we know Shamir is not one of them.
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		if len(disabledSealWrappers) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
+		}
+
+	default:
+		// We know there are multiple enabled seals but multi seal is not supported.
+		return nil, errors.Join(sealConfigWarning, errors.New("error: more than one enabled seal found"))
+	}
+
+	return &SetSealResponse{
+		barrierSeal:       barrierSeal,
+		unwrapSeal:        unwrapSeal,
+		sealConfigError:   sealConfigError,
+		sealConfigWarning: sealConfigWarning,
+	}, nil
+}
+
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
+	generation := uint64(1)
+
+	if existingSealGenInfo != nil {
+		// This forces a seal re-wrap on all seal related config changes, as we can't
+		// be sure what effect the config change might do. This is purposefully different
+		// from within the Validate call below that just matches on seal configs based
+		// on name/type.
+		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
+			return existingSealGenInfo, nil
+		}
+		generation = existingSealGenInfo.Generation + 1
+	}
+	c.logger.Info("incrementing seal generation", "generation", generation)
+
+	// If the stored copy doesn't match the current configuration, we introduce a new generation
+	// which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
+	newSealGenInfo := &vaultseal.SealGenerationInfo{
+		Generation: generation,
+		Seals:      sealConfigs,
+	}
+
+	if server.IsMultisealSupported() {
+		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newSealGenInfo, nil
+}
+
+func hasPartiallyWrappedPaths(ctx context.Context, backend physical.Backend) (bool, error) {
+	paths, err := vault.GetPartiallySealWrappedPaths(ctx, backend)
+	if err != nil {
+		return false, err
+	}
+
+	return len(paths) > 0, nil
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
@@ -2638,8 +3004,10 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AuditBackends:                  c.AuditBackends,
 		CredentialBackends:             c.CredentialBackends,
 		LogicalBackends:                c.LogicalBackends,
+		LogLevel:                       config.LogLevel,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
+		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,
@@ -2668,6 +3036,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
+		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 	}
 
 	if c.flagDev {
@@ -2701,12 +3070,16 @@ func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server
 	return nil
 }
 
-func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string) error {
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string, clusterJSON *testcluster.ClusterJson) error {
 	if c.flagDev && !c.flagDevSkipInit {
 
 		init, err := c.enableDev(core, coreConfig)
 		if err != nil {
 			return fmt.Errorf("Error initializing Dev mode: %s", err)
+		}
+
+		if clusterJSON != nil {
+			clusterJSON.RootToken = init.RootToken
 		}
 
 		var plugins, pluginsNotLoaded []string

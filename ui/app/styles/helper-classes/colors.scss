@@ -1,0 +1,107 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* This helper includes styles referencing background color, border color, and text color. */
+
+// background colors
+.has-background-white-bis {
+  background: $ui-gray-050;
+}
+
+.has-background-gray-100 {
+  background-color: $ui-gray-100;
+}
+
+.has-background-gray-200 {
+  background-color: $ui-gray-200;
+}
+
+.has-background-gray-300 {
+  background-color: $ui-gray-300;
+}
+
+.has-background-gray-900 {
+  background-color: $ui-gray-900;
+}
+
+.background-color-black {
+  background-color: black;
+}
+
+// borders
+.has-border-top-light {
+  border-radius: 0;
+  border-top: 1px solid $grey-light;
+}
+
+.has-border-bottom-light {
+  border-radius: 0;
+  border-bottom: 1px solid $grey-light;
+}
+
+.has-error-border,
+select.has-error-border,
+.ttl-picker-form-field-error input,
+.string-list-form-field-error .field:first-of-type textarea {
+  border: 1px solid $red-500;
+}
+
+// specifically for the SearchSelect dropdown.
+.dropdown-has-error-border > div.ember-basic-dropdown-trigger {
+  border: 1px solid $red-500;
+}
+
+// text color
+.text-grey-lightest {
+  color: $grey-lightest;
+}
+
+.has-text-grey-light {
+  color: $ui-gray-300 !important;
+}
+
+.has-text-grey-400 {
+  color: $ui-gray-400;
+}
+
+.has-text-grey {
+  color: $ui-gray-500 !important;
+}
+
+.has-text-grey-dark {
+  color: $ui-gray-700 !important;
+}
+
+.has-text-white {
+  color: $white !important;
+}
+
+.has-text-black {
+  color: $black !important;
+}
+
+.has-text-info {
+  color: $blue-500 !important;
+}
+// same without the !important
+.has-text-primary {
+  color: $blue-500;
+}
+
+.has-text-success {
+  color: $green-500 !important;
+}
+
+.has-text-highlight {
+  color: $yellow-500;
+}
+
+.has-text-danger {
+  color: $red-500 !important;
+}
+
+.has-text-primary {
+  color: $blue;
+}

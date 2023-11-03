@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -20,14 +25,14 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-provider-title>
       {{if @model.isNew "Create" "Edit"}}
-      provider
+      Provider
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 <form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     {{! name field }}
     <FormField
       data-test-field={{true}}
@@ -102,23 +107,21 @@
   </div>
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
-      <button
+      <Hds::Button
+        @text={{if @model.isNew "Create" "Update"}}
+        @icon={{if this.save.isRunning "loading"}}
         type="submit"
-        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
         data-test-oidc-provider-save
-      >
-        {{if @model.isNew "Create" "Update"}}
-      </button>
-      <button
-        type="button"
-        class="button has-left-margin-s"
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        class="has-left-margin-s"
         disabled={{this.save.isRunning}}
         {{on "click" this.cancel}}
         data-test-oidc-provider-cancel
-      >
-        Cancel
-      </button>
+      />
     </div>
     {{#if this.invalidFormAlert}}
       <div class="control">

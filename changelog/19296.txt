@@ -1,0 +1,3 @@
+```release-note:feature
+**Sidebar Navigation in UI**: A new sidebar navigation panel has been added in the UI to replace the top navigation bar.
+```

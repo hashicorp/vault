@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .control-group,
@@ -9,7 +9,7 @@
   box-shadow: $box-shadow-middle, 0 0 1px $grey-dark;
 }
 .control-group-success.is-editor {
-  background: $grey-lighter;
+  background: $grey-lightest;
 }
 
 .control-group a {
@@ -18,7 +18,7 @@
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
   padding: $size-9 $size-6;
-  background: $grey-lighter;
+  background: $grey-lightest;
   color: $grey-dark;
   position: relative;
   strong {
@@ -33,21 +33,4 @@
 
 .control-group .authorizations {
   margin-top: $size-9;
-}
-
-.control-group .hover-copy-button-static {
-  color: $orange;
-}
-
-.control-group-token-text {
-  color: $grey;
-  position: relative;
-  padding: $size-8 0;
-
-  .hover-copy-button-static {
-    position: relative;
-    top: auto;
-    left: auto;
-    display: inline-block;
-  }
 }

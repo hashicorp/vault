@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
@@ -13,7 +13,15 @@ import attachCapabilities from 'vault/lib/attach-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  path: [{ type: 'presence', message: "Path can't be blank." }],
+  path: [
+    { type: 'presence', message: "Path can't be blank." },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
 };
 
 // unsure if ember-api-actions will work on native JS class model

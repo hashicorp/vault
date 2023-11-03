@@ -1,9 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Service from '@ember/service';
+import timestamp from 'core/utils/timestamp';
 
 interface Extensions {
   csv: string;
@@ -29,7 +30,7 @@ export default class DownloadService extends Service {
     // replace spaces with hyphens, append extension to filename
     const formattedFilename =
       `${filename?.replace(/\s+/g, '-')}.${extension}` ||
-      `vault-data-${new Date().toISOString()}.${extension}`;
+      `vault-data-${timestamp.now().toISOString()}.${extension}`;
 
     // map extension to MIME type or use default
     const mimetype = EXTENSION_TO_MIME[extension as keyof Extensions] || 'text/plain';

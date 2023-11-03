@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -501,7 +501,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	// prepare certificate for signing
 	nonce := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce: %w", err)
 	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),

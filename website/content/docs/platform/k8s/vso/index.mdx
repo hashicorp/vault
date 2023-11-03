@@ -1,0 +1,53 @@
+---
+layout: docs
+page_title: Vault Secrets Operator
+description: >-
+  The Vault Secrets Operator allows Pods to consume HashiCorp secrets natively from Kubernetes Secrets.
+---
+
+# Vault Secrets Operator
+
+The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets and HCP Vault Secrets Apps natively from Kubernetes Secrets.
+
+## Overview
+
+The Vault Secrets Operator operates by watching for changes to its supported set of Custom Resource Definitions (CRD).
+Each CRD provides the specification required to allow the operator to synchronize from one of the supported sources for secrets to a Kubernetes Secret.
+The operator writes the *source* secret data directly to the *destination* Kubernetes Secret, ensuring that any
+changes made to the *source* are replicated to the *destination* over its lifetime. In this way, an application only needs
+to have access to the *destination* secret in order to make use of the secret data contained within.
+
+## Features
+
+The following features are supported by the Vault Secrets Operator:
+
+- Support for syncing from multiple secret sources.
+- Automatic secret drift and remediation.
+- Automatic secret rotation for `Deployment`, `ReplicaSet`, `StatefulSet` Kubernetes resource types.
+- Prometheus specific instrumentation for [monitoring](/vault/docs/platform/k8s/vso/telemetry) the Operator.
+- Support for installing using: `Helm` or `Kustomize`<br />
+*see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
+
+## Supported secret sources
+
+The Vault Secrets Operator supports syncing from multiple secret sources.
+Refer to the [secret sources overview](/vault/docs/platform/k8s/vso/sources) for more details.
+
+@include 'kubernetes-supported-versions.mdx'
+
+## Supported Kubernetes distributions
+
+The Vault Secrets Operator has been tested successfully in the following hosted Kubernetes environments:
+- Amazon Elastic Kubernetes Service (EKS)
+- Google Kubernetes Engine (GKE)
+- Microsoft Azure Kubernetes Service (AKS)
+- Red Hat OpenShift
+
+Basic integration tests are available in the project repository.
+Please report any issues [here](https://github.com/hashicorp/vault-secrets-operator/issues).
+
+## Tutorial
+
+Refer to the [Vault Secrets Operator on
+Kubernetes](/vault/tutorials/kubernetes/vault-secrets-operator) tutorial to
+learn the end-to-end workflow using the Vault Secrets Operator.

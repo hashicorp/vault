@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{if @model.isNew "Create role" "Edit role"}}
+      {{if @model.isNew "Create Role" "Edit Role"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -109,12 +114,16 @@
             @value={{template.rules}}
             @mode="ruby"
             @valueUpdated={{fn (mut template.rules)}}
-            @helpText={{this.roleRulesHelpText}}
+            @helpText={{sanitized-html this.roleRulesHelpText}}
           >
-            <button type="button" class="toolbar-link" {{on "click" this.resetRoleRules}} data-test-restore-example>
-              Restore example
-              <Icon @name="reload" />
-            </button>
+            <Hds::Button
+              @icon="reload"
+              @text="Restore example"
+              @color="secondary"
+              class="toolbar-button"
+              {{on "click" this.resetRoleRules}}
+              data-test-restore-example
+            />
           </JsonEditor>
         {{/let}}
       </div>
@@ -136,16 +145,13 @@
 <hr class="is-marginless has-background-gray-200" />
 
 <div class="has-top-margin-l has-bottom-margin-s">
-  <button
+  <Hds::Button
+    @text="Save"
+    @icon={{if this.save.isRunning "loading"}}
     type="submit"
     form="role"
-    class="button is-primary {{if this.save.isRunning 'is-loading'}}"
     disabled={{or (not @model.generationPreference) this.save.isRunning}}
     data-test-save
-  >
-    Save
-  </button>
-  <button type="button" class="button has-left-margin-s" data-test-cancel {{on "click" this.cancel}}>
-    Back
-  </button>
+  />
+  <Hds::Button @text="Back" @color="secondary" class="has-left-margin-s" data-test-cancel {{on "click" this.cancel}} />
 </div>

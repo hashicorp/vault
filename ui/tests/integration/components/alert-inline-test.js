@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -29,12 +29,12 @@ module('Integration | Component | alert-inline', function (hooks) {
     assert.dom('[data-test-inline-error-message]').hasText('some very important alert');
     assert
       .dom('[data-test-inline-alert]')
-      .hasAttribute('class', 'message-inline padding-top is-marginless size-small');
+      .hasAttribute('class', 'is-flex-center padding-top is-marginless size-small');
   });
 
   test('it yields to block text', async function (assert) {
     await render(hbs`
-    <AlertInline @message={{this.message}} @type={{this.type}}> 
+    <AlertInline @message={{this.message}} @type={{this.type}}>
       A much more important alert
     </AlertInline>
     `);
@@ -44,7 +44,7 @@ module('Integration | Component | alert-inline', function (hooks) {
   test('it renders correctly for type=danger', async function (assert) {
     this.set('type', 'danger');
     await render(hbs`
-    <AlertInline 
+    <AlertInline
       @type={{this.type}}
       @message={{this.message}}
     />
@@ -57,7 +57,7 @@ module('Integration | Component | alert-inline', function (hooks) {
 
   test('it renders correctly for type=warning', async function (assert) {
     await render(hbs`
-    <AlertInline 
+    <AlertInline
       @type={{this.type}}
       @message={{this.message}}
     />
@@ -68,9 +68,9 @@ module('Integration | Component | alert-inline', function (hooks) {
 
   test('it mimics loading when message changes', async function (assert) {
     await render(hbs`
-    <AlertInline 
+    <AlertInline
       @message={{this.message}}
-      @mimicRefresh={{true}} 
+      @mimicRefresh={{true}}
       @type={{this.type}}
     />
     `);

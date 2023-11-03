@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -874,14 +874,16 @@ func TestACLGrantingPolicies(t *testing.T) {
 	}
 
 	policyInfo := logical.PolicyInfo{
-		Name:        "granting_policy",
-		NamespaceId: "root",
-		Type:        "acl",
+		Name:          "granting_policy",
+		NamespaceId:   "root",
+		NamespacePath: "",
+		Type:          "acl",
 	}
 	mergedInfo := logical.PolicyInfo{
-		Name:        "granting_policy_merged",
-		NamespaceId: "root",
-		Type:        "acl",
+		Name:          "granting_policy_merged",
+		NamespaceId:   "root",
+		NamespacePath: "",
+		Type:          "acl",
 	}
 
 	tcases := []tcase{

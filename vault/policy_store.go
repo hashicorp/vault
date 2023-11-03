@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -100,6 +100,12 @@ path "identity/entity/name/{{identity.entity.name}}" {
 # based on how the internal ACL features and capabilities change.
 path "sys/internal/ui/resultant-acl" {
     capabilities = ["read"]
+}
+
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+	capabilities = ["read"]
 }
 
 # Allow a token to renew a lease via lease_id in the request body; old path for
@@ -452,6 +458,32 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	return nil
 }
 
+// GetNonEGPPolicyType returns a policy's type.
+// It will return an error if the policy doesn't exist in the store or isn't
+// an ACL or a Sentinel Role Governing Policy (RGP).
+//
+// Note: Sentinel Endpoint Governing Policies (EGPs) are not stored within the
+// policyTypeMap. We sometimes need to distinguish between ACLs and RGPs due to
+// them both being token policies, but the logic related to EGPs is separate
+// enough that it is never necessary to look up their type.
+func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyType, error) {
+	sanitizedName := ps.sanitizeName(name)
+	index := path.Join(nsID, sanitizedName)
+
+	pt, ok := ps.policyTypeMap.Load(index)
+	if !ok {
+		// Doesn't exist
+		return nil, fmt.Errorf("policy does not exist in type map: %v", index)
+	}
+
+	policyType, ok := pt.(PolicyType)
+	if !ok {
+		return nil, fmt.Errorf("unknown policy type for: %v", index)
+	}
+
+	return &policyType, nil
+}
+
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType PolicyType) (*Policy, error) {
 	return ps.switchedGetPolicy(ctx, name, policyType, true)
@@ -644,6 +676,60 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 		if deleteIndex != -1 {
 			keys = append(keys[:deleteIndex], keys[deleteIndex+1:]...)
 		}
+	}
+
+	return keys, err
+}
+
+// policiesByNamespace is used to list the available policies for the given namespace
+func (ps *PolicyStore) policiesByNamespace(ctx context.Context, policyType PolicyType, ns *namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+	var view *BarrierView
+
+	// Scan the view, since the policy names are the same as the
+	// key names.
+	switch policyType {
+	case PolicyTypeACL:
+		view = ps.getACLView(ns)
+	case PolicyTypeRGP:
+		view = ps.getRGPView(ns)
+	case PolicyTypeEGP:
+		view = ps.getEGPView(ns)
+	default:
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
+	}
+
+	if view == nil {
+		return nil, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+	}
+
+	// Get the appropriate view based on policy type and namespace
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	keys, err = logical.CollectKeys(ctx, view)
+	if err != nil {
+		return nil, err
+	}
+
+	if policyType == PolicyTypeACL {
+		// We only have non-assignable ACL policies at the moment
+		keys = strutil.Difference(keys, nonAssignablePolicies, false)
+	}
+
+	return keys, err
+}
+
+// policiesByNamespaces is used to list the available policies for the given namespaces
+func (ps *PolicyStore) policiesByNamespaces(ctx context.Context, policyType PolicyType, ns []*namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	for _, nspace := range ns {
+		ks, err := ps.policiesByNamespace(ctx, policyType, nspace)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, ks...)
 	}
 
 	return keys, err

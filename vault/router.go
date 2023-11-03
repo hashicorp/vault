@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -33,14 +33,16 @@ var wcAdjacentNonSlashRegEx = regexp.MustCompile(`\+[^/]|[^/]\+`).MatchString
 type Router struct {
 	l                  sync.RWMutex
 	root               *radix.Tree
+	binaryPaths        *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
 	tokenStoreSaltFunc func(context.Context) (*salt.Salt, error)
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
-	storagePrefix *radix.Tree
-	logger        hclog.Logger
+	storagePrefix            *radix.Tree
+	logger                   hclog.Logger
+	rollbackMetricsMountName bool
 }
 
 // NewRouter returns a new router
@@ -58,13 +60,14 @@ func NewRouter() *Router {
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       bool
+	tainted       atomic.Bool
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
 	storagePrefix string
 	rootPaths     atomic.Value
 	loginPaths    atomic.Value
+	binaryPaths   atomic.Value
 	l             sync.RWMutex
 }
 
@@ -125,7 +128,7 @@ func (entry *routeEntry) Deserialize() map[string]interface{} {
 	entry.l.RLock()
 	defer entry.l.RUnlock()
 	ret := map[string]interface{}{
-		"tainted":        entry.tainted,
+		"tainted":        entry.tainted.Load(),
 		"storage_prefix": entry.storagePrefix,
 	}
 	for k, v := range entry.mountEntry.Deserialize() {
@@ -189,18 +192,23 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:       mountEntry.Tainted,
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
+	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
 	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
 	if err != nil {
 		return err
 	}
 	re.loginPaths.Store(loginPathsEntry)
+	binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+	if err != nil {
+		return err
+	}
+	re.binaryPaths.Store(binaryPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -290,7 +298,7 @@ func (r *Router) Taint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = true
+		raw.(*routeEntry).tainted.Store(true)
 	}
 	return nil
 }
@@ -307,7 +315,7 @@ func (r *Router) Untaint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = false
+		raw.(*routeEntry).tainted.Store(false)
 	}
 	return nil
 }
@@ -581,10 +589,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	req.Path = adjustedPath
 	if !existenceCheck {
-		defer metrics.MeasureSince([]string{
-			"route", string(req.Operation),
-			strings.ReplaceAll(mount, "/", "-"),
-		}, time.Now())
+		metricName := []string{"route", string(req.Operation)}
+		if req.Operation != logical.RollbackOperation || r.rollbackMetricsMountName {
+			metricName = append(metricName, strings.ReplaceAll(mount, "/", "-"))
+		}
+		defer metrics.MeasureSince(metricName, time.Now())
 	}
 	re := raw.(*routeEntry)
 
@@ -605,7 +614,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
-	if re.tainted {
+	if re.tainted.Load() {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
@@ -618,6 +627,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
+	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+	req.SetMountClass(re.mountEntry.MountClass())
+
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -632,9 +646,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
-	case strings.HasPrefix(originalPath, "sys/"):
-	case strings.HasPrefix(originalPath, "identity/"):
-	case strings.HasPrefix(originalPath, cubbyholeMountPath):
+	case strings.HasPrefix(originalPath, mountPathSystem):
+	case strings.HasPrefix(originalPath, mountPathIdentity):
+	case strings.HasPrefix(originalPath, mountPathCubbyhole):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
 			// cubbyhole ID so just return here
@@ -733,6 +747,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
+		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+		req.SetMountClass(re.mountEntry.MountClass())
+
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil
@@ -799,7 +818,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 				}
 
 				switch re.mountEntry.Type {
-				case "token", "ns_token":
+				case mountTypeToken, mountTypeNSToken:
 					// Nothing; we respect what the token store is telling us and
 					// we don't allow tuning
 				default:
@@ -903,6 +922,57 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 		if prefixMatch {
 			// Handle the prefix match case
 			return strings.HasPrefix(remain, match)
+		}
+		if match == remain {
+			// Handle the exact match case
+			return true
+		}
+	}
+
+	// check Login Paths containing wildcards
+	reqPathParts := strings.Split(remain, "/")
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// BinaryPath checks if the given path uses binary requests
+func (r *Router) BinaryPath(ctx context.Context, path string) bool {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return false
+	}
+
+	adjustedPath := ns.Path + path
+
+	r.l.RLock()
+	mount, raw, ok := r.root.LongestPrefix(adjustedPath)
+	r.l.RUnlock()
+	if !ok {
+		return false
+	}
+	re := raw.(*routeEntry)
+
+	// Trim to get remaining path
+	remain := strings.TrimPrefix(adjustedPath, mount)
+
+	// Check the binaryPaths of this backend
+	// Check the loginPaths of this backend
+	pe := re.binaryPaths.Load().(*loginPathsEntry)
+	match, raw, ok := pe.paths.LongestPrefix(remain)
+	if !ok && len(pe.wildcardPaths) == 0 {
+		// no match found
+		return false
+	}
+
+	if ok {
+		prefixMatch := raw.(bool)
+		// Handle the prefix match case
+		if prefixMatch && strings.HasPrefix(remain, match) {
+			return true
 		}
 		if match == remain {
 			// Handle the exact match case

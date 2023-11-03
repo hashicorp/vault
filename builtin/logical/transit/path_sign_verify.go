@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -29,12 +29,12 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
-	// The key version to be used for encryption
+	// The key version to be used for signing
 	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while signing a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -58,7 +58,7 @@ type batchResponseVerifyItem struct {
 	// Valid indicates whether signature matches the signature derived from the input string
 	Valid bool `json:"valid" mapstructure:"valid"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while verifying a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -78,6 +78,13 @@ const defaultHashAlgorithm = "sha2-256"
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "sign",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -180,6 +187,13 @@ preserve the order of the batch input`,
 func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "verify",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -245,7 +259,7 @@ none on signing path.`,
 
 			"signature_algorithm": {
 				Type: framework.TypeString,
-				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
+				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
@@ -339,10 +353,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -352,7 +362,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
@@ -361,6 +371,13 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if !p.Type.SigningSupported() {
 		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	batchInputRaw := d.Raw["batch_input"]
@@ -405,8 +422,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
 		contextRaw := item["context"]
@@ -592,10 +611,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
-		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
-	}
-
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -605,7 +620,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
@@ -614,6 +629,13 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if !p.Type.SigningSupported() {
 		p.Unlock()
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
+	}
+
+	// Allow managed keys to specify no hash algo without additional conditions.
+	if hashAlgorithm == keysutil.HashTypeNone && p.Type != keysutil.KeyType_MANAGED_KEY {
+		if !prehashed || sigAlgorithm != "pkcs1v15" {
+			return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+		}
 	}
 
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
@@ -643,8 +665,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 		if p.Type.HashSignatureInput() && !prehashed {
 			hf := keysutil.HashFuncMap[hashAlgorithm]()
-			hf.Write(input)
-			input = hf.Sum(nil)
+			if hf != nil {
+				hf.Write(input)
+				input = hf.Sum(nil)
+			}
 		}
 
 		contextRaw := item["context"]

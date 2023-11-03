@@ -1,18 +1,24 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
-    {{!-- {{#if @canRotate}}
-      <ToolbarLink @route="issuers.generate-root" @type="rotate-cw" @issuer={{@issuer.id}} data-test-pki-issuer-rotate-root>
-        Rotate this root
-      </ToolbarLink>
-    {{/if}} --}}
-    {{#if @canCrossSign}}
-      <ToolbarLink
-        @route="issuers.issuer.cross-sign"
-        @type="pen-tool"
-        @issuer={{@issuer.id}}
-        data-test-pki-issuer-cross-sign
+    {{#if (and @isRotatable @canRotate)}}
+      <button
+        type="button"
+        class="toolbar-link"
+        {{on "click" (fn (mut this.showRotationModal) true)}}
+        data-test-pki-issuer-rotate-root
       >
-        Cross-sign Issuer
+        Rotate this root
+        <Icon @name="rotate-cw" />
+      </button>
+    {{/if}}
+    {{#if @canCrossSign}}
+      <ToolbarLink @route="issuers.issuer.cross-sign" @type="pen-tool" @model={{@issuer.id}} data-test-pki-issuer-cross-sign>
+        Cross-sign issuers
       </ToolbarLink>
     {{/if}}
     {{#if @canSignIntermediate}}
@@ -42,9 +48,9 @@
                   @data={{@pem}}
                   @extension="pem"
                   data-test-issuer-download-type="pem"
-                >
-                  PEM format
-                </DownloadButton>
+                  @text="PEM format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
             {{#if @der}}
@@ -56,9 +62,9 @@
                   @data={{@der}}
                   @extension="der"
                   data-test-issuer-download-type="der"
-                >
-                  DER format
-                </DownloadButton>
+                  @text="DER format"
+                  @hideIcon={{true}}
+                />
               </li>
             {{/if}}
           </ul>
@@ -67,7 +73,7 @@
     </BasicDropdown>
 
     {{#if @canConfigure}}
-      <ToolbarLink @route="issuers.issuer.edit" @issuer={{@issuer.id}} data-test-pki-issuer-configure>
+      <ToolbarLink @route="issuers.issuer.edit" @model={{@issuer.id}} data-test-pki-issuer-configure>
         Configure
       </ToolbarLink>
     {{/if}}
@@ -83,7 +89,6 @@
     You may also want to configure its usage and other behaviors.
   </p>
 {{/if}}
-
 <main data-test-issuer-details>
   {{#each @issuer.formFieldGroups as |fieldGroup|}}
     {{#each-in fieldGroup as |group fields|}}
@@ -94,14 +99,9 @@
           </h2>
         {{/if}}
         {{#each fields as |attr|}}
-          {{#if attr.options.masked}}
+          {{#if attr.options.isCertificate}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              <MaskedInput
-                @name={{or attr.options.label (humanize (dasherize attr.name))}}
-                @value={{get @issuer attr.name}}
-                @displayOnly={{true}}
-                @allowCopy={{true}}
-              />
+              <CertificateCard @data={{get @issuer attr.name}} />
             </InfoTableRow>
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
@@ -121,8 +121,64 @@
             />
           {{/if}}
         {{/each}}
+        {{#if (eq group "default")}}
+          <ParsedCertificateInfoRows @model={{@issuer.parsedCertificate}} />
+        {{/if}}
       </div>
     {{/each-in}}
   {{/each}}
-
 </main>
+{{#if (or (eq @issuer.parsedCertificate.can_parse false) this.parsingErrors)}}
+  <Hds::Alert
+    data-test-parsing-error-alert-banner
+    @type="inline"
+    @color="neutral"
+    class="has-top-margin-m has-bottom-margin-s"
+    as |A|
+  >
+    <A.Title>There was an error parsing certificate metadata</A.Title>
+    <A.Description>
+      Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you
+      wish to cross-sign this issuer it must be done manually using the CLI.
+      {{#if this.parsingErrors}}
+        <p class="sub-text is-font-mono">Parsing error(s): {{this.parsingErrors}} </p>
+      {{/if}}
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{! ROOT ROTATION MODAL }}
+{{#if this.showRotationModal}}
+  <Hds::Modal id="pki-rotate-root-modal" @size="large" @onClose={{fn (mut this.showRotationModal) false}} as |M|>
+    <M.Header @icon="rotate-cw">
+      Rotate this root
+    </M.Header>
+    <M.Body>
+      <h3 class="title is-5">Root rotation</h3>
+      <p class="has-text-grey has-bottom-padding-s">
+        Root rotation is an impactful process. Please be ready to ensure that the new root is properly distributed to
+        end-users’ trust stores. You can also do this manually by
+        <DocLink @path="/vault/docs/secrets/pki/rotation-primitives#suggested-root-rotation-procedure">
+          following our documentation.
+        </DocLink>
+      </p>
+      <h3 class="title is-5 has-top-bottom-margin">How root rotation will work</h3>
+      <p class="has-text-grey">
+        <ol class="has-left-margin-m has-bottom-margin-s">
+          <li>The new root will be generated using defaults from the old one that you can customize.</li>
+          <li>You will identify intermediates, which Vault will then cross-sign.</li>
+        </ol>
+        Then, you can begin re-issuing leaf certs and phase out the old root.
+      </p>
+      <div class="has-top-margin-l has-tall-padding">
+        <img src={{img-path "~/pki-rotate-root.png"}} alt="pki root rotation diagram" />
+      </div>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Generate new root" @route="issuers.issuer.rotate-root" data-test-root-rotate-step-one />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -18,11 +18,17 @@ module('Acceptance | mfa-login', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'mfaLogin';
   });
   hooks.beforeEach(function () {
+    this.auth = this.owner.lookup('service:auth');
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
       const value = this.element.querySelector(`${selector} option:nth-child(${option + 1})`).value;
       await fillIn(`${selector} select`, value);
     };
+    return visit('/vault/logout');
+  });
+  hooks.afterEach(function () {
+    // Manually clear token after each so that future tests don't get into a weird state
+    this.auth.deleteCurrentToken();
   });
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;
@@ -36,7 +42,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await click('[data-test-auth-submit]');
   };
   const didLogin = (assert) => {
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };
   const validate = async (multi) => {
     await fillIn('[data-test-mfa-passcode="0"]', 'test');
@@ -78,8 +84,8 @@ module('Acceptance | mfa-login', function (hooks) {
         .hasText('Check device for push notification', 'Push notification instruction renders');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled while validating');
       assert
-        .dom('[data-test-mfa-validate]')
-        .hasClass('is-loading', 'Loading class applied to button while validating');
+        .dom('[data-test-mfa-validate] [data-test-icon="loading"]')
+        .exists('Loading icon shows while validating');
       return validationHandler(schema, req);
     });
 

@@ -20,15 +20,12 @@ jobs:
   go-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - id: get-metadata
-        run: echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-      - name: Set Up Go
-        uses: actions/setup-go@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version: ${{ steps.get-metadata.outputs.go-version }}
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - run: go test -v ./${{ inputs.path }}/... 2>&1 | tee ${{ inputs.name }}.txt
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: ${{ inputs.name }}-output
           path: ${{ inputs.name }}.txt

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -15,10 +15,10 @@ import (
 	"github.com/hashicorp/vault-plugin-auth-cf/testing/certificates"
 	cfAPI "github.com/hashicorp/vault-plugin-auth-cf/testing/cf"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentcf "github.com/hashicorp/vault/command/agent/auth/cf"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentcf "github.com/hashicorp/vault/command/agentproxyshared/auth/cf"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -29,9 +29,6 @@ func TestCFEndToEnd(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cf": credCF.Factory,
 		},

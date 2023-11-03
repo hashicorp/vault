@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="level is-mobile">
   <div class="level-left">
     <label class="is-label" data-test-pgp-label>
@@ -65,9 +70,15 @@
               {{/if}}
             </label>
             {{#if this.key.filename}}
-              <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
-                <Icon @name="x" aria-label="Close" />
-              </button>
+              <Hds::Button
+                @text="Clear key"
+                @icon="x"
+                @isIconOnly={{true}}
+                @color="secondary"
+                class="file-delete-button"
+                {{on "click" (action "clearKey")}}
+                data-test-pgp-clear={{true}}
+              />
             {{/if}}
           </span>
         </div>

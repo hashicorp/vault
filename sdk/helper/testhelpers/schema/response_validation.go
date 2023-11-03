@@ -14,11 +14,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// ValidateResponseData is a test helper that validates whether the given
-// response data map conforms to the response schema (schema.Fields). It cycles
-// through the data map and validates conversions in the schema. In "strict"
-// mode, this function will also ensure that the data map has all schema's
-// requred fields and does not have any fields outside of the schema.
+// ValidateResponse is a test helper that validates whether the given response
+// object conforms to the response schema (schema.Fields). It cycles through
+// the data map and validates conversions in the schema. In "strict" mode, this
+// function will also ensure that the data map has all schema-required fields
+// and does not have any fields outside of the schema.
 func ValidateResponse(t *testing.T, schema *framework.Response, response *logical.Response, strict bool) {
 	t.Helper()
 
@@ -29,11 +29,11 @@ func ValidateResponse(t *testing.T, schema *framework.Response, response *logica
 	}
 }
 
-// ValidateResponse is a test helper that validates whether the given response
-// object conforms to the response schema (schema.Fields). It cycles through
-// the data map and validates conversions in the schema. In "strict" mode, this
-// function will also ensure that the data map has all schema-required fields
-// and does not have any fields outside of the schema.
+// ValidateResponseData is a test helper that validates whether the given
+// response data map conforms to the response schema (schema.Fields). It cycles
+// through the data map and validates conversions in the schema. In "strict"
+// mode, this function will also ensure that the data map has all schema's
+// requred fields and does not have any fields outside of the schema.
 func ValidateResponseData(t *testing.T, schema *framework.Response, data map[string]interface{}, strict bool) {
 	t.Helper()
 
@@ -51,6 +51,16 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 	// nothing to validate
 	if schema == nil {
 		return nil
+	}
+
+	// Certain responses may come through with non-2xx status codes. While
+	// these are not always errors (e.g. 3xx redirection codes), we don't
+	// consider them for the purposes of schema validation
+	if status, exists := data[logical.HTTPStatusCode]; exists {
+		s, ok := status.(int)
+		if ok && (s < 200 || s > 299) {
+			return nil
+		}
 	}
 
 	// Marshal the data to JSON and back to convert the map's values into
@@ -100,7 +110,8 @@ func validateResponseDataImpl(schema *framework.Response, data map[string]interf
 	return fd.Validate()
 }
 
-// FindResponseSchema is a test helper to extract response schema from the given framework path / operation
+// FindResponseSchema is a test helper to extract response schema from the
+// given framework path / operation.
 func FindResponseSchema(t *testing.T, paths []*framework.Path, pathIdx int, operation logical.Operation) *framework.Response {
 	t.Helper()
 
@@ -139,6 +150,18 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 	}
 
 	if len(schemaResponses) == 0 {
+		// ListOperations have a default response schema that is implicit unless overridden
+		if operation == logical.ListOperation {
+			return &framework.Response{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"keys": {
+						Type: framework.TypeStringSlice,
+					},
+				},
+			}
+		}
+
 		t.Fatalf(
 			"could not find response schema: %s: %q operation: no responses found",
 			path.Pattern,
@@ -149,8 +172,8 @@ func GetResponseSchema(t *testing.T, path *framework.Path, operation logical.Ope
 	return &schemaResponses[0]
 }
 
-// ResponseValidatingCallback can be used in setting up a [vault.TestCluster] that validates every response against the
-// openapi specifications
+// ResponseValidatingCallback can be used in setting up a [vault.TestCluster]
+// that validates every response against the openapi specifications.
 //
 // [vault.TestCluster]: https://pkg.go.dev/github.com/hashicorp/vault/vault#TestCluster
 func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Request, *logical.Response) {
@@ -164,15 +187,16 @@ func ResponseValidatingCallback(t *testing.T) func(logical.Backend, *logical.Req
 		if b == nil {
 			t.Fatalf("non-nil backend required")
 		}
+
 		backend, ok := b.(PathRouter)
 		if !ok {
 			t.Fatalf("could not cast %T to have `Route(string) *framework.Path`", b)
 		}
 
-		// the full request path includes the backend
-		// but when passing to the backend, we have to trim the mount point
-		// `sys/mounts/secret` -> `mounts/secret`
-		// `auth/token/create` -> `create`
+		// The full request path includes the backend but when passing to the
+		// backend, we have to trim the mount point:
+		//   `sys/mounts/secret` -> `mounts/secret`
+		//   `auth/token/create` -> `create`
 		requestPath := strings.TrimPrefix(req.Path, req.MountPoint)
 
 		route := backend.Route(requestPath)

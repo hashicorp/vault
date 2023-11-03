@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -11,14 +11,19 @@ import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
-import { SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
+import { OTHER_OIDs, SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
 import {
   certWithoutCN,
   loadedCert,
   pssTrueCert,
   skeletonCert,
   unsupportedOids,
+  unsupportedSignatureRoot,
+  unsupportedSignatureInt,
 } from 'vault/tests/helpers/pki/values';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
+import { jsonToCertObject } from 'vault/utils/parse-pki-cert';
+import { verifySignature } from 'vault/utils/parse-pki-cert';
 
 module('Integration | Util | parse pki certificate', function (hooks) {
   setupTest(hooks);
@@ -48,10 +53,8 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         country: 'France',
         other_sans: '1.3.1.4.1.5.9.2.6;UTF8:some-utf-string',
         exclude_cn_from_sans: true,
-        expiry_date: {},
         ip_sans: '192.158.1.38, 1234:0fd2:5621:0001:0089:0000:0000:4500',
         key_usage: 'CertSign, CRLSign',
-        issue_date: {},
         locality: 'Paris',
         max_path_length: 17,
         not_valid_after: 1678210083,
@@ -62,7 +65,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         permitted_dns_domains: 'dnsname1.com, dsnname2.com',
         postal_code: '123456',
         province: 'Champagne',
-        serial_number: 'cereal1292',
+        subject_serial_number: 'cereal1292',
         signature_bits: '256',
         street_address: '234 sesame',
         ttl: '768h',
@@ -141,7 +144,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         ou: null,
         postal_code: null,
         province: null,
-        serial_number: null,
+        subject_serial_number: null,
         street_address: null,
         uri_sans: null,
       },
@@ -164,7 +167,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
           ou: 'Finance',
           postal_code: '123456',
           province: 'Champagne',
-          serial_number: 'cereal1292',
+          subject_serial_number: 'cereal1292',
           street_address: '234 sesame',
         },
       },
@@ -229,6 +232,35 @@ module('Integration | Util | parse pki certificate', function (hooks) {
     );
   });
 
+  test('the helper verifyCertificates catches errors', async function (assert) {
+    assert.expect(5);
+    const verifiedRoot = await verifyCertificates(unsupportedSignatureRoot, unsupportedSignatureRoot);
+    assert.true(verifiedRoot, 'returns true for root certificate');
+    const verifiedInt = await verifyCertificates(unsupportedSignatureInt, unsupportedSignatureInt);
+    assert.false(verifiedInt, 'returns false for intermediate cert');
+
+    const filterExtensions = (list, oid) => list.filter((ext) => ext.extnID !== oid);
+    const { subject_key_identifier, authority_key_identifier } = OTHER_OIDs;
+    const testCert = jsonToCertObject(unsupportedSignatureRoot);
+    const certWithoutSKID = testCert;
+    certWithoutSKID.extensions = filterExtensions(testCert.extensions, subject_key_identifier);
+    assert.false(
+      await verifySignature(certWithoutSKID, certWithoutSKID),
+      'returns false if no subject key ID'
+    );
+
+    const certWithoutAKID = testCert;
+    certWithoutAKID.extensions = filterExtensions(testCert.extensions, authority_key_identifier);
+    assert.false(await verifySignature(certWithoutAKID, certWithoutAKID), 'returns false if no AKID');
+
+    const certWithoutKeyID = testCert;
+    certWithoutAKID.extensions = [];
+    assert.false(
+      await verifySignature(certWithoutKeyID, certWithoutKeyID),
+      'returns false if neither SKID or AKID'
+    );
+  });
+
   test('it fails silently when passed null', async function (assert) {
     assert.expect(3);
     const parsedCert = parseCertificate(certWithoutCN);
@@ -239,8 +271,6 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         common_name: null,
         country: null,
         exclude_cn_from_sans: false,
-        expiry_date: {},
-        issue_date: {},
         key_usage: null,
         locality: null,
         max_path_length: 10,
@@ -251,7 +281,7 @@ module('Integration | Util | parse pki certificate', function (hooks) {
         parsing_errors: [{}, {}],
         postal_code: null,
         province: null,
-        serial_number: null,
+        subject_serial_number: null,
         signature_bits: '256',
         street_address: null,
         ttl: '87600h',

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -23,6 +23,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = this.backend;
     this.pemBundle = issuerPemBundle;
+    this.onComplete = () => {};
   });
 
   test('it renders import and updates model', async function (assert) {
@@ -33,6 +34,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
+         @onComplete={{this.onComplete}}
        />
       `,
       { owner: this.engine }
@@ -57,7 +59,11 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         },
         'sends params in correct type'
       );
-      return {};
+      return {
+        data: {
+          mapping: { 'issuer-id': 'key-id' },
+        },
+      };
     });
 
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
@@ -68,6 +74,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
+         @onComplete={{this.onComplete}}
          @adapterOptions={{hash actionType="import" useIssuer=true}}
        />
       `,
@@ -76,7 +83,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
 
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', this.pemBundle);
-    assert.strictEqual(this.model.pemBundle, this.pemBundle);
+    assert.strictEqual(this.model.pemBundle, this.pemBundle, 'PEM bundle updated on model');
     await click('[data-test-pki-import-pem-bundle]');
   });
 
@@ -92,7 +99,11 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         },
         'sends params in correct type'
       );
-      return {};
+      return {
+        data: {
+          mapping: {},
+        },
+      };
     });
 
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
@@ -103,6 +114,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
          @model={{this.model}}
          @onCancel={{this.onCancel}}
          @onSave={{this.onSave}}
+         @onComplete={{this.onComplete}}
          @adapterOptions={{hash actionType="import" useIssuer=false}}
        />
       `,
@@ -115,6 +127,53 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
     await click('[data-test-pki-import-pem-bundle]');
   });
 
+  test('it shows the bundle mapping on success', async function (assert) {
+    assert.expect(9);
+    this.server.post(`/${this.backend}/issuers/import/bundle`, () => {
+      return {
+        data: {
+          imported_issuers: ['issuer-id', 'another-issuer'],
+          imported_keys: ['key-id', 'another-key'],
+          mapping: { 'issuer-id': 'key-id', 'another-issuer': null },
+        },
+      };
+    });
+
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.onComplete = () => assert.ok(true, 'onComplete callback fires on done button click');
+
+    await render(
+      hbs`
+      <PkiImportPemBundle
+         @model={{this.model}}
+         @onCancel={{this.onCancel}}
+         @onSave={{this.onSave}}
+         @onComplete={{this.onComplete}}
+         @adapterOptions={{hash actionType="import" useIssuer=true}}
+       />
+      `,
+      { owner: this.engine }
+    );
+
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
+    await click('[data-test-pki-import-pem-bundle]');
+
+    assert
+      .dom('[data-test-import-pair]')
+      .exists({ count: 3 }, 'Shows correct number of rows for imported items');
+    // Check that each row has expected values
+    assert.dom('[data-test-import-pair="issuer-id_key-id"] [data-test-imported-issuer]').hasText('issuer-id');
+    assert.dom('[data-test-import-pair="issuer-id_key-id"] [data-test-imported-key]').hasText('key-id');
+    assert
+      .dom('[data-test-import-pair="another-issuer_"] [data-test-imported-issuer]')
+      .hasText('another-issuer');
+    assert.dom('[data-test-import-pair="another-issuer_"] [data-test-imported-key]').hasText('None');
+    assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-issuer]').hasText('None');
+    assert.dom('[data-test-import-pair="_another-key"] [data-test-imported-key]').hasText('another-key');
+    await click('[data-test-done]');
+  });
+
   test('it should unload record on cancel', async function (assert) {
     assert.expect(2);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
@@ -123,6 +182,7 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
         <PkiImportPemBundle
           @model={{this.model}}
           @onCancel={{this.onCancel}}
+          @onComplete={{this.onComplete}}
           @onSave={{this.onSave}}
         />
       `,

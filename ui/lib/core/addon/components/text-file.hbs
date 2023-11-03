@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#unless @uploadOnly}}
   <div class="level is-mobile">
     <div class="level-left">
@@ -51,7 +56,7 @@
     <p class="help has-text-grey">Enter the value as text</p>
   {{else}}
     <div class="control is-expanded">
-      <div class="file has-name is-fullwidth">
+      <div class="file is-fullwidth">
         <div class="file-label" aria-label="Choose a file">
           <Input
             id="file-input-{{this.elementId}}"

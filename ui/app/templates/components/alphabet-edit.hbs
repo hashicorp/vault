@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -26,9 +31,13 @@
   <Toolbar>
     <ToolbarActions>
       {{#if this.capabilities.canDelete}}
-        <button type="button" class="toolbar-link" onclick={{action "delete"}} data-test-transformation-alphabet-delete>
-          Delete alphabet
-        </button>
+        <Hds::Button
+          @text="Delete alphabet"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (action "delete")}}
+          data-test-transformation-alphabet-delete
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if this.capabilities.canUpdate}}
@@ -74,27 +83,30 @@
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if (eq this.mode "create") "Create alphabet" "Save"}}
           type="submit"
-          disabled={{this.buttonDisabled}}
-          class="button is-primary"
-          data-test-alphabet-transform-create={{true}}
-        >
-          {{#if (eq this.mode "create")}}
-            Create alphabet
-          {{else if (eq this.mode "edit")}}
-            Save
-          {{/if}}
-        </button>
-        <SecretLink
-          @mode={{if (eq this.mode "create") "list" "show"}}
-          class="button"
-          @secret={{concat this.model.idPrefix this.model.id}}
-        >
-          Cancel
-        </SecretLink>
-      </div>
+          data-test-alphabet-transform-create
+        />
+        {{#if (eq this.mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+            @query={{hash tab="alphabet"}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend (concat "alphabet/" this.model.id)}}
+            @query={{hash tab="alphabet"}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
     </div>
   </form>
 {{else}}

@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.isMenu}}
   {{! this is the status menu }}
   <div class="level is-mobile">
-    <div class="is-flex-1">
+    <div class="is-flex-grow-1">
       {{#if this.replicationUnsupported}}
         Unsupported
       {{else if this.replicationEnabled}}
@@ -98,7 +103,12 @@
     </div>
     <div class="level-right">
       {{#if this.replicationDisabled}}
-        <LinkTo @route="mode.index" @models={{array this.cluster.name this.mode}} class="button is-primary">
+        <LinkTo
+          @route="mode.index"
+          @models={{array this.cluster.name this.mode}}
+          class="button is-primary"
+          data-test-replication-promote-secondary
+        >
           Enable
         </LinkTo>
       {{else}}

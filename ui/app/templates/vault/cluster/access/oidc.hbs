@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.header}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -6,7 +11,7 @@
       </h1>
     </p.levelLeft>
   </PageHeader>
-  <div class="box is-fullwidth is-sideless is-flex-between is-box-shadowless is-marginless" data-test-oidc-header>
+  <div class="box is-fullwidth is-sideless is-flex-between is-shadowless is-marginless" data-test-oidc-header>
     <p>
       Configure Vault to act as an OIDC identity provider, and offer
       {{"Vault’s"}}
@@ -20,14 +25,11 @@
       </DocLink>
     </p>
     {{#if this.isCta}}
-      <button
-        type="submit"
-        class="button is-primary"
-        {{on "click" (transition-to "vault.cluster.access.oidc.clients.create")}}
+      <Hds::Button
+        @text="Create your first app"
+        @route="vault.cluster.access.oidc.clients.create"
         data-test-oidc-configure
-      >
-        Create your first app
-      </button>
+      />
     {{/if}}
   </div>
   {{#unless this.isCta}}

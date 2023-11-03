@@ -6,7 +6,7 @@ description: >-
   for use with selectors.
 ---
 
-# Kubernetes Service Registration
+# Kubernetes service registration
 
 Kubernetes Service Registration tags Vault pods with their current status for
 use with selectors. Service registration is only available when Vault is running in
@@ -71,7 +71,7 @@ metadata:
     vault-initialized: "true"
     vault-perf-standby: "false"
     vault-sealed: "false"
-    vault-version: 1.3.0
+    vault-version: 1.15.1
 ```
 
 After shutdowns, Vault pods will bear the following labels:
@@ -86,10 +86,10 @@ metadata:
     vault-initialized: "false"
     vault-perf-standby: "false"
     vault-sealed: "true"
-    vault-version: 1.3.0
+    vault-version: 1.15.1
 ```
 
-## Label Definitions
+## Label definitions
 
 - `vault-active` `(string: "true"/"false")` – Vault active is updated dynamically each time Vault's active status changes.
   True indicates that this Vault pod is currently the leader. False indicates that this Vault pod is currently a standby.
@@ -102,11 +102,11 @@ metadata:
 - `vault-sealed` `(string: "true"/"false")` – Vault sealed is updated dynamically each
   time Vault's sealed/unsealed status changes. True indicates that Vault is currently sealed. False indicates that Vault
   is currently unsealed.
-- `vault-version` `(string: "1.3.0")` – Vault version is a string that will not change during a pod's lifecycle.
+- `vault-version` `(string: "1.15.1")` – Vault version is a string that will not change during a pod's lifecycle.
 
-## Working with Vault's Service Discovery Labels
+## Working with vault's service discovery labels
 
-### Example Service
+### Example service
 
 With labels applied to the pod, services can be created using selectors to filter pods with specific Vault HA roles,
 effectively allowing direct communication with subsets of Vault pods. Note the `vault-active: "true"` line below.
@@ -151,12 +151,12 @@ $ vault write -f sys/replication/performance/primary/enable \
     primary_cluster_addr='https://vault-active-us-east:8201'
 ```
 
-### Example Upgrades
+### Example upgrades
 
 In conjunction with the pod labels and the `OnDelete` upgrade strategy, upgrades are much easier to orchestrate:
 
 ```shell-session
-$ helm upgrade vault --set='server.image.tag=1.12.0'
+$ helm upgrade vault --set='server.image.tag=1.14.0'
 
 $ kubectl delete pod --selector=vault-active=false \
     --selector=vault-version=1.2.3

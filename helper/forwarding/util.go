@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package forwarding
 
@@ -17,6 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type bufCloser struct {
@@ -64,11 +65,10 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
 	ctx := req.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
+	if logical.ContextContainsMaxRequestSize(ctx) {
+		max, ok := logical.ContextMaxRequestSizeValue(ctx)
 		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
+			return nil, errors.New("could not parse max request size from request context")
 		}
 		if max > 0 {
 			reader = io.LimitReader(req.Body, max)

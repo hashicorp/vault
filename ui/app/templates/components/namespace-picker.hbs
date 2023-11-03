@@ -1,25 +1,46 @@
-{{#if (and (not this.accessibleNamespaces.length) this.inRootNamespace)}}
-  <div class="namespace-picker no-namespaces">
-    {{! Just yield the logo if they're in the root namespace and only have access to it }}
-    {{yield}}
-  </div>
-{{else}}
-  <div class="namespace-picker">
-    <BasicDropdown @horizontalPosition="auto-left" @verticalPosition="below" as |D|>
-      <D.Trigger
-        @htmlTag="button"
-        class="button is-transparent namespace-picker-trigger has-current-color"
-        data-test-namespace-toggle
-      >
-        {{yield}}
-        {{#if this.namespaceDisplay}}
-          <span class="namespace-name">{{this.namespaceDisplay}}</span>
-        {{else}}
-          <span class="namespace-name is-hidden-tablet">/ (Root)</span>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="namespace-picker" ...attributes>
+  <BasicDropdown @horizontalPosition="left" @verticalPosition="above" as |D|>
+    <D.Trigger
+      @htmlTag="button"
+      class="button is-transparent namespace-picker-trigger has-current-color"
+      data-test-namespace-toggle
+    >
+      <div class="is-flex-center is-flex-1">
+        <Icon @name="org" />
+        <span class="is-flex-1 is-word-break has-text-left is-size-6 has-left-margin-xs">{{this.namespaceDisplay}}</span>
+      </div>
+      <Icon @name="caret" />
+    </D.Trigger>
+    <D.Content @defaultClass="namespace-picker-content">
+      <div class="is-mobile level-left">
+        <h5 class="list-header">Current namespace</h5>
+      </div>
+      <div class="namespace-header-bar level is-mobile">
+        <div class="level-left">
+          <header>
+            <div class="level is-mobile namespace-link">
+              <span class="level-left" data-test-current-namespace>
+                {{if this.namespacePath (concat this.namespacePath "/") "root"}}
+              </span>
+            </div>
+          </header>
+        </div>
+      </div>
+      <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
+        {{#if this.auth.isRootToken}}
+          <div class="has-left-margin-s has-right-margin-s">
+            <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
+            <span class="is-size-8 has-text-semibold">
+              You are logged in with a root token and will have to reauthenticate when switching namespaces.
+            </span>
+          </div>
         {{/if}}
-        <Chevron @direction="down" @class="has-text-white auto-width is-status-chevron" />
-      </D.Trigger>
-      <D.Content @defaultClass="namespace-picker-content">
+
         <div class="is-mobile level-left">
           {{#unless this.isUserRootNamespace}}
             <NamespaceLink
@@ -27,51 +48,23 @@
                 (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves)
                 this.auth.authData.userRootNamespace
               }}
-              @class="namespace-link is-current button is-ghost icon"
+              @class="namespace-link is-current button is-transparent icon"
             >
               <Chevron @direction="left" @class="has-text-grey" />
             </NamespaceLink>
           {{/unless}}
-          <h5 class="list-header">Current namespace</h5>
+          <h5 class="list-header">Namespaces</h5>
         </div>
-        <div class="namespace-header-bar level is-mobile">
-          <div class="level-left">
-            <header>
-              <div class="level is-mobile namespace-link">
-                <span class="level-left" data-test-current-namespace>
-                  {{if this.namespacePath (concat this.namespacePath "/") "root"}}
-                </span>
-                <span class="level-right">
-                  <Icon @name="check-circle" class="has-text-success" />
-                </span>
-              </div>
-            </header>
+        {{#if (includes "" this.lastMenuLeaves)}}
+          {{! leaf is '' which is the root namespace, and then we need to iterate the root leaves }}
+          <div class="leaf-panel {{if (eq '' this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}} ">
+            {{#each this.rootLeaves as |rootLeaf|}}
+              <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
+            {{/each}}
           </div>
-        </div>
-        <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
-          <div class="is-mobile level-left">
-            {{#unless this.isUserRootNamespace}}
-              <NamespaceLink
-                @targetNamespace={{or
-                  (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves)
-                  this.auth.authData.userRootNamespace
-                }}
-                @class="namespace-link is-current button is-ghost icon"
-              >
-                <Chevron @direction="left" @class="has-text-grey" />
-              </NamespaceLink>
-            {{/unless}}
-            <h5 class="list-header">Namespaces</h5>
-          </div>
-          {{#if (includes "" this.lastMenuLeaves)}}
-            {{! leaf is '' which is the root namespace, and then we need to iterate the root leaves }}
-            <div class="leaf-panel {{if (eq '' this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}} ">
-              {{~#each this.rootLeaves as |rootLeaf|}}
-                <NamespaceLink @targetNamespace={{rootLeaf}} @class="namespace-link" @showLastSegment={{true}} />
-              {{/each~}}
-            </div>
-          {{/if}}
-          {{#each this.lastMenuLeaves as |leaf|}}
+        {{/if}}
+        {{#each this.lastMenuLeaves as |leaf|}}
+          {{#if leaf}}
             <div
               class="leaf-panel
                 {{if (eq leaf this.currentLeaf) 'leaf-panel-current' 'leaf-panel-left'}}
@@ -79,32 +72,38 @@
                 {{if (and (not this.isAdding) (eq leaf this.changedLeaf)) 'leaf-panel-exiting'}}
                 "
             >
-              {{~#each-in (get this.namespaceTree leaf) as |leafName|}}
+              {{#each-in (get this.namespaceTree leaf) as |leafName|}}
                 <NamespaceLink
                   @targetNamespace={{concat leaf "/" leafName}}
                   @class="namespace-link"
                   @showLastSegment={{true}}
                 />
-              {{/each-in~}}
-            </div>
-          {{/each}}
-          {{#if this.canList}}
-            <div class="leaf-panel leaf-panel-current">
-              <LinkTo @route="vault.cluster.access.namespaces" class="is-block namespace-link namespace-manage-link">
-                <div class="level is-mobile">
-                  <span class="level-left">Manage namespaces</span>
-                  <span class="level-right">
-                    <button type="button" class="button is-ghost icon" onclick={{action "refreshNamespaceList"}}>
-                      <Icon @name="reload" class="has-text-grey" />
-                    </button>
-                  </span>
-                </div>
-              </LinkTo>
+              {{/each-in}}
             </div>
           {{/if}}
-        </div>
-      </D.Content>
-    </BasicDropdown>
-  </div>
-  <div class="navbar-separator"></div>
-{{/if}}
+        {{/each}}
+        {{#if this.canList}}
+          <div class="leaf-panel leaf-panel-current">
+            <div class="level">
+              <span class="level-left">
+                <LinkTo @route="vault.cluster.access.namespaces" class="is-block namespace-link namespace-manage-link">
+                  Manage Namespaces
+                </LinkTo>
+              </span>
+              <span class="level-right">
+                <Hds::Button
+                  @text="Refresh namespace list"
+                  @icon="reload"
+                  @isIconOnly={{true}}
+                  @color="tertiary"
+                  data-test-refresh-namespaces
+                  {{on "click" (action "refreshNamespaceList")}}
+                />
+              </span>
+            </div>
+          </div>
+        {{/if}}
+      </div>
+    </D.Content>
+  </BasicDropdown>
+</div>

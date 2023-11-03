@@ -1,0 +1,3 @@
+```release-note:bug
+ui: correct doctype for index.html
+```

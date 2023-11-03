@@ -1,0 +1,175 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Toolbar>
+  <ToolbarActions>
+    <div class="toolbar-separator"></div>
+    {{#if @autoTidyConfig.enabled}}
+      <ToolbarLink @route="tidy.auto" data-test-pki-auto-tidy-config>
+        Auto-tidy configuration
+      </ToolbarLink>
+      <ToolbarLink @route="tidy.manual" data-test-pki-manual-tidy-config>
+        Perform manual tidy
+      </ToolbarLink>
+    {{else}}
+      <Hds::Button
+        class="toolbar-button"
+        @color="secondary"
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+        data-test-pki-tidy-options-modal
+        @text="Tidy"
+      />
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#if this.hasTidyConfig}}
+  <Hds::Alert
+    @type="inline"
+    @color={{this.tidyStateAlertBanner.color}}
+    @icon={{this.tidyStateAlertBanner.icon}}
+    class="has-top-margin-m"
+    data-test-tidy-status-alert
+    as |A|
+  >
+    <A.Title data-test-tidy-status-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
+    <A.Description data-test-tidy-status-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
+    {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
+      <A.Button
+        @text="Cancel tidy"
+        @color="critical"
+        @icon={{if this.cancelTidy.isRunning "loading"}}
+        {{on "click" (fn (mut this.confirmCancelTidy) true)}}
+        data-test-cancel-tidy-action
+      />
+    {{/if}}
+    {{#if @tidyStatus.responseTimestamp}}
+      <A.Description class="has-top-margin-xs" data-test-tidy-status-alert-updated-at>
+        Updated
+        {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+      </A.Description>
+    {{/if}}
+  </Hds::Alert>
+
+  {{#each this.tidyStatusGeneralFields as |attr|}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @formatDate={{if
+        (includes attr (array "time_started" "time_finished" "last_auto_tidy_finished"))
+        "MMM dd, yyyy hh:mm:ss a"
+      }}
+      @value={{get @tidyStatus attr}}
+      @alwaysRender={{true}}
+    />
+  {{/each}}
+
+  {{#if this.isEnterprise}}
+    {{#each this.crossClusterOperation.status as |attr|}}
+      <InfoTableRow @label={{humanize (dasherize attr)}} @value={{get @tidyStatus attr}} @alwaysRender={{true}} />
+    {{/each}}
+  {{/if}}
+
+  <h2 class="title is-4 has-bottom-margin-xs has-top-margin-l has-border-bottom-light has-bottom-padding-s">
+    {{if (eq this.tidyState "Running") "Current" "Last"}}
+    tidy settings
+  </h2>
+  {{#each this.tidyStatusConfigFields as |attr|}}
+    <InfoTableRow
+      @label={{humanize (dasherize attr)}}
+      @value={{get @tidyStatus attr}}
+      @formatTtl={{includes attr (array "safety_buffer" "issuer_safety_buffer")}}
+      @alwaysRender={{true}}
+    />
+  {{/each}}
+
+  {{#if this.isEnterprise}}
+    {{#each this.crossClusterOperation.config as |attr|}}
+      <InfoTableRow
+        @label={{humanize (dasherize attr)}}
+        @value={{get @tidyStatus attr}}
+        @formatTtl={{eq attr "revocation_queue_safety_buffer"}}
+        @alwaysRender={{true}}
+      />
+    {{/each}}
+  {{/if}}
+{{else}}
+  <EmptyState
+    @title="Tidy status unavailable"
+    @message="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
+  >
+    <Hds::Button
+      @color="tertiary"
+      @icon="chevron-right"
+      @iconPosition="trailing"
+      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+      data-test-tidy-empty-state-configure
+      @text="Tidy"
+    />
+  </EmptyState>
+{{/if}}
+
+{{! TIDY OPTIONS MODAL }}
+{{#if this.tidyOptionsModal}}
+  <Hds::Modal id="pki-tidy-modal" @size="large" @onClose={{fn (mut this.tidyOptionsModal) false}} as |M|>
+    <M.Header>
+      Tidy this mount
+    </M.Header>
+    <M.Body>
+      <h3 class="title is-5">How tidying will work</h3>
+      <p class="has-text-grey has-bottom-padding-s">
+        Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain
+        buffer period beyond their expiration time.
+        <DocLink @path="/vault/docs/secrets/pki/considerations#automate-crl-building-and-tidying">
+          Documentation.
+        </DocLink>
+      </p>
+      <p class="has-text-grey">
+        <ol class="has-left-margin-m has-bottom-margin-s">
+          <li>Select a tidy operation:</li>
+          <ul class="bullet has-bottom-margin-xs">
+            <li><strong>Automatic tidy</strong>
+              periodically runs a tidy operation with saved configuration settings after waiting the specified interval
+              duration between tidies
+            </li>
+            <li><strong>Manual tidy</strong> runs a tidy operation once</li>
+          </ul>
+          <li>Configure the parameters that determine how to tidy and run the operation.</li>
+        </ol>
+      </p>
+      <div class="has-top-margin-l has-padding">
+        <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
+      </div>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Automatic tidy" @route="tidy.auto.configure" data-test-tidy-modal-auto-button />
+        <Hds::Button @text="Manual tidy" @route="tidy.manual" data-test-tidy-modal-manual-button />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-tidy-modal-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
+
+{{! CANCEL TIDY CONFIRMATION MODAL }}
+{{#if this.confirmCancelTidy}}
+  <Hds::Modal id="pki-cancel-tidy-modal" @color="warning" @onClose={{fn (mut this.confirmCancelTidy) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Cancel tidy?
+    </M.Header>
+    <M.Body>
+      This will cancel the tidy at the next available checkpoint, which may process additional certificates between when the
+      operation was marked as cancelled and when the operation stopped.
+      <p class="has-top-margin-s">Click “Confirm” to cancel the running tidy operation.</p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Confirm" {{on "click" (perform this.cancelTidy)}} data-test-tidy-modal-cancel-button />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

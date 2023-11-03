@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import EmberRouter from '@ember/routing/router';
@@ -14,6 +14,7 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('dashboard');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -21,7 +22,6 @@ Router.map(function () {
       this.route('redirect');
       this.route('init');
       this.route('logout');
-      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
@@ -51,8 +51,10 @@ Router.map(function () {
       this.route('unseal');
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
+        this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -159,6 +161,8 @@ Router.map(function () {
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.mount('kubernetes');
+          this.mount('kv');
+          this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');
@@ -171,18 +175,11 @@ Router.map(function () {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
-          this.route('diff', { path: '/diff/*id' });
-          this.route('metadata', { path: '/metadata/*secret' });
-          this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
-
-          // kv v2 versions
-          this.route('versions-root', { path: '/versions/' });
-          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });

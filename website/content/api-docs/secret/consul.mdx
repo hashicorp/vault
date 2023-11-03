@@ -4,7 +4,7 @@ page_title: Consul - Secrets Engines - HTTP API
 description: This is the API documentation for the Vault Consul secrets engine.
 ---
 
-# Consul Secrets Engine (API)
+# Consul secrets engine (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -18,7 +18,7 @@ This documentation assumes the Consul secrets engine is enabled at the `/consul`
 path in Vault. Since it is possible to enable secrets engines at any location,
 please update your API calls accordingly.
 
-## Configure Access
+## Configure access
 
 This endpoint configures the access information for Consul. This access
 information is used so that Vault can communicate with Consul and generate
@@ -48,7 +48,7 @@ Consul tokens.
 - `client_key` `(string: "")` - Client key used for Consul's TLS communication,
   must be x509 PEM encoded and if this is set you need to also set client_cert.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -58,7 +58,7 @@ Consul tokens.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -68,7 +68,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/config/access
 ```
 
-## Create/Update Role
+## Create/Update role
 
 This endpoint creates or updates the Consul role definition. If the role does
 not exist, it will be created. If the role already exists, it will receive
@@ -80,7 +80,7 @@ Consul version.
 | :----- | :-------------------- |
 | `POST` | `/consul/roles/:name` |
 
-### Parameters for Consul versions 1.11 and above
+### Parameters for consul versions 1.11 and above
 
 - `partition` `(string: "")` - Specifies the Consul admin partition in which the token is generated.
   The partition must exist, and the Consul policies or roles assigned to the
@@ -95,7 +95,7 @@ To create a client token within a particular Consul admin partition:
 }
 ```
 
-### Parameters for Consul versions 1.8 and above
+### Parameters for consul versions 1.8 and above
 
 - `node_identities` `(list: <node identity or identities>)` - The list of node identities to assign to the generated
   token. This may be a comma-separated list to attach multiple node identities to a token.
@@ -111,7 +111,7 @@ To create a client token with node identities attached:
 }
 ```
 
-### Parameters for Consul versions 1.7 and above
+### Parameters for consul versions 1.7 and above
 
 - `consul_namespace` `(string: "")` - Specifies the Consul namespace in which the token is generated.
   The namespace must exist, and the Consul policies or roles assigned to the Vault role must also exist
@@ -125,7 +125,7 @@ To create a client token within a particular Consul namespace:
 }
 ```
 
-### Parameters for Consul version 1.5 and above
+### Parameters for consul version 1.5 and above
 
 - `service_identities` `(list: <service identity or identities>)` - The list of service identities to assign to the generated
   token. This may be a comma-separated list to attach multiple service identities to a token.
@@ -135,7 +135,7 @@ To create a client token within a particular Consul namespace:
 
   To create a client token with roles defined in Consul:
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -154,7 +154,7 @@ To create a client token with service identities attached:
 }
 ```
 
-### Parameters for Consul versions 1.4 and above
+### Parameters for consul versions 1.4 and above
 
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
@@ -184,7 +184,7 @@ To create a client token with service identities attached:
 - `max_ttl` `(duration: "")` – Specifies the max TTL for this role. If not
   provided, the default Vault Max TTL is used. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
-### Sample Payload
+### Sample payload
 
 To create a client token with policies defined in Consul:
 
@@ -194,7 +194,7 @@ To create a client token with policies defined in Consul:
 }
 ```
 
-### Parameters for Consul version below 1.4
+### Parameters for consul version below 1.4
 
 - `lease` <sup>DEPRECATED (1.11)</sup> `(string: "")` – Specifies the lease for this role.
   Uses [duration format strings](/vault/docs/concepts/duration-format). If not
@@ -205,7 +205,7 @@ To create a client token with policies defined in Consul:
   documentation](/consul/docs/security/acl/acl-legacy). This is
   required unless the `token_type` is `"management"`.
 
-### Sample Payload
+### Sample payload
 
 To create a client token with a base64-encoded policy:
 
@@ -223,7 +223,7 @@ To create management tokens:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -233,7 +233,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
-## Read Role
+## Read role
 
 This endpoint queries for information about a Consul role with the given name.
 If no role exists with that name, a 404 is returned.
@@ -247,7 +247,7 @@ If no role exists with that name, a 404 is returned.
 - `name` `(string: <required>)` – Specifies the name of the role to query. This
   is part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -255,7 +255,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -267,7 +267,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 This endpoint lists all existing roles in the secrets engine.
 
@@ -275,7 +275,7 @@ This endpoint lists all existing roles in the secrets engine.
 | :----- | :-------------- |
 | `LIST` | `/consul/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -284,7 +284,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -294,7 +294,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 This endpoint deletes a Consul role with the given name. Even if the role does
 not exist, this endpoint will still return a successful response.
@@ -308,7 +308,7 @@ not exist, this endpoint will still return a successful response.
 - `name` `(string: <required>)` – Specifies the name of the role to delete. This
   is part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -317,7 +317,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/roles/example-role
 ```
 
-## Generate Credential
+## Generate credential
 
 This endpoint generates a dynamic Consul token based on the given role
 definition.
@@ -331,7 +331,7 @@ definition.
 - `name` `(string: <required>)` – Specifies the name of an existing role against
   which to create this Consul credential. This is part of the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -339,7 +339,7 @@ $ curl \
     http://127.0.0.1:8200/v1/consul/creds/example-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

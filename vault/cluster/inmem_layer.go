@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cluster
 
@@ -107,7 +107,7 @@ func (l *InmemLayer) Listeners() []NetworkListener {
 
 	l.listener = &inmemListener{
 		addr:         l.addr,
-		pendingConns: make(chan net.Conn),
+		pendingConns: make(chan net.Conn, 1),
 
 		stopped: atomic.NewBool(false),
 		stopCh:  make(chan struct{}),
@@ -132,7 +132,7 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 	if l.forceTimeout == addr {
 		l.logger.Debug("forcing timeout", "addr", addr, "me", l.addr)
 
-		// gRPC sets a deadline of 20 seconds on the dail attempt, so
+		// gRPC sets a deadline of 20 seconds on the dial attempt, so
 		// matching that here.
 		time.Sleep(time.Second * 20)
 		l.l.Unlock()

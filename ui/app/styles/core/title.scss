@@ -1,27 +1,55 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
+
+// This file styles the following styles: title, subtitle, form-section.title and title sizes
 
 .title:not(:last-child),
 .subtitle:not(:last-child) {
   display: block;
   margin-bottom: 1rem;
-
-  &.has-bottom-margin-xs {
-    margin-bottom: $spacing-xs;
-  }
 }
 
 .title {
+  color: hsl(0, 0%, 21%);
+  font-size: 2rem;
   font-weight: $font-weight-bold;
+  line-height: 1.125;
+  word-break: break-word;
 
   > a {
     color: $black;
     text-decoration: none;
   }
-  .has-font-weight-normal {
-    font-weight: $font-weight-normal;
+
+  // title sizes
+  &.is-2 {
+    font-size: $size-2;
+  }
+
+  &.is-3 {
+    font-size: $size-3;
+  }
+
+  &.is-4 {
+    font-size: $size-4;
+  }
+
+  &.is-5 {
+    font-size: $size-5;
+  }
+
+  &.is-6 {
+    font-size: $size-6;
+  }
+
+  &.is-7 {
+    font-size: $size-7;
+  }
+
+  &.is-8 {
+    font-size: $size-8;
   }
 }
 

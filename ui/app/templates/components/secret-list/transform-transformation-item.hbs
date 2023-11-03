@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! CBS TODO do not let click if !canRead }}
 {{#if (eq @options.item "transformation")}}
   <LinkedBlock
@@ -26,9 +31,7 @@
               <ul class="menu-list">
                 {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
                   <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
+                    <LoadingDropdownOption />
                   </li>
                 {{else}}
                   {{#if @item.updatePath.canRead}}

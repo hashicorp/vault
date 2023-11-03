@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb" aria-label="breadcrumb">
@@ -40,14 +45,13 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <button
-      class="toolbar-link"
-      onclick={{action (mut this.showDeleteConfirmation) true}}
-      type="button"
+    <Hds::Button
+      @text="Delete"
+      @color="secondary"
+      class="toolbar-button"
+      {{on "click" (action (mut this.showDeleteConfirmation) true)}}
       data-test-enforcement-delete
-    >
-      Delete
-    </button>
+    />
     <div class="toolbar-separator"></div>
     <ToolbarLink
       @route="vault.cluster.access.mfa.enforcements.enforcement.edit"
@@ -60,47 +64,54 @@
 </Toolbar>
 
 {{#if (eq this.tab "targets")}}
-  {{#each @model.targets as |target|}}
-    <LinkedBlock
-      class="list-item-row"
-      @disabled={{not target.link}}
-      @params={{union (array target.link) target.linkModels}}
-      data-test-target={{target.title}}
-    >
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name={{target.icon}} />
-            <span class="has-text-weight-semibold has-text-black">
-              {{target.title}}
-            </span>
-            <div class="has-text-grey is-size-8">
-              <code>
-                {{target.subTitle}}
-              </code>
+  {{#if @model.targets}}
+    {{#each @model.targets as |target|}}
+      <LinkedBlock
+        class="list-item-row"
+        @disabled={{not target.link}}
+        @params={{union (array target.link) target.linkModels}}
+        data-test-target={{target.title}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name={{target.icon}} />
+              <span class="has-text-weight-semibold has-text-black">
+                {{target.title}}
+              </span>
+              <div class="has-text-grey is-size-8">
+                <code>
+                  {{target.subTitle}}
+                </code>
+              </div>
             </div>
           </div>
+          {{#if target.link}}
+            <div class="level-right is-flex is-paddingless is-marginless">
+              <div class="level-item">
+                <PopupMenu>
+                  <nav class="menu" aria-label="Enforcement target more menu">
+                    <ul class="menu-list">
+                      <li>
+                        <LinkTo @route={{target.link}} @models={{target.linkModels}} data-test-target-link={{target.title}}>
+                          Details
+                        </LinkTo>
+                      </li>
+                    </ul>
+                  </nav>
+                </PopupMenu>
+              </div>
+            </div>
+          {{/if}}
         </div>
-        {{#if target.link}}
-          <div class="level-right is-flex is-paddingless is-marginless">
-            <div class="level-item">
-              <PopupMenu>
-                <nav class="menu" aria-label="Enforcement target more menu">
-                  <ul class="menu-list">
-                    <li>
-                      <LinkTo @route={{target.link}} @models={{target.linkModels}} data-test-target-link={{target.title}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                  </ul>
-                </nav>
-              </PopupMenu>
-            </div>
-          </div>
-        {{/if}}
-      </div>
-    </LinkedBlock>
-  {{/each}}
+      </LinkedBlock>
+    {{/each}}
+  {{else}}
+    <EmptyState
+      @title="No target exists for this enforcement"
+      @message="A target might have been deleted after the enforcement was created."
+    />
+  {{/if}}
 {{else if (eq this.tab "methods")}}
   {{#each this.model.mfa_methods as |method|}}
     <Mfa::MethodListItem @model={{method}} />

@@ -1,0 +1,124 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* This helper includes styles relating to: box-shadow, border, transition, pointer, grouped css in one helper, and screen-reader only.*/
+
+// box-shadow helpers
+.has-only-top-shadow {
+  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
+
+.is-shadowless {
+  box-shadow: none !important;
+}
+
+.is-sideless {
+  box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+}
+
+// this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
+.is-bottomless {
+  box-shadow: 0 -1px 0 0 $grey-light;
+}
+
+// border helpers
+.has-default-border {
+  border: 1px solid $grey !important;
+}
+
+.is-borderless {
+  border: none !important;
+}
+
+.has-border-collapse {
+  border-collapse: collapse;
+}
+
+// pointer helpers
+.has-no-pointer {
+  pointer-events: none;
+}
+
+.has-pointer {
+  cursor: pointer;
+}
+
+// other
+.has-background-transition {
+  transition: background-color ease-out $speed;
+}
+
+.has-current-color-fill {
+  &,
+  & svg {
+    fill: currentColor;
+  }
+}
+
+// large grouped css blocks
+.is-hint {
+  color: $grey;
+  font-size: $size-8;
+  padding: $size-8 0;
+}
+
+.is-optional {
+  color: $grey;
+  font-size: $size-8;
+  text-transform: lowercase;
+}
+
+.is-word-break {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.truncate-second-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.truncate-first-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.text-overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// screen reader only
+.sr-only {
+  border: 0;
+  clip-path: inset(50%);
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0px;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+// border-radius
+.border-radius-4 {
+  border-radius: $radius-large;
+}
+
+// border-spacing
+.is-border-spacing-revert {
+  border-spacing: revert;
+}

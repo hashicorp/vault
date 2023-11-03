@@ -1,8 +1,34 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-export default class PkiConfigurationEditRoute extends Route {}
+@withConfirmLeave('model.config', ['model.urls', 'model.crl'])
+export default class PkiConfigurationEditRoute extends Route {
+  @service secretMountPath;
+
+  model() {
+    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
+    return {
+      engineId: engine.id,
+      acme,
+      cluster,
+      urls,
+      crl,
+    };
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'configuration', route: 'configuration.index' },
+      { label: 'edit' },
+    ];
+  }
+}

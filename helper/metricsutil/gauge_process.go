@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package metricsutil
 
@@ -11,23 +11,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/timeutil"
 )
-
-// This interface allows unit tests to substitute in a simulated clock.
-type clock interface {
-	Now() time.Time
-	NewTicker(time.Duration) *time.Ticker
-}
-
-type defaultClock struct{}
-
-func (_ defaultClock) Now() time.Time {
-	return time.Now()
-}
-
-func (_ defaultClock) NewTicker(d time.Duration) *time.Ticker {
-	return time.NewTicker(d)
-}
 
 // GaugeLabelValues is one gauge in a set sharing a single key, that
 // are measured in a batch.
@@ -76,7 +61,7 @@ type GaugeCollectionProcess struct {
 	maxGaugeCardinality int
 
 	// time source
-	clock clock
+	clock timeutil.Clock
 }
 
 // NewGaugeCollectionProcess creates a new collection process for the callback
@@ -101,7 +86,7 @@ func NewGaugeCollectionProcess(
 		gaugeInterval,
 		maxGaugeCardinality,
 		logger,
-		defaultClock{},
+		timeutil.DefaultClock{},
 	)
 }
 
@@ -124,7 +109,7 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 		m.GaugeInterval,
 		m.MaxGaugeCardinality,
 		logger,
-		defaultClock{},
+		timeutil.DefaultClock{},
 	)
 }
 
@@ -137,7 +122,7 @@ func newGaugeCollectionProcessWithClock(
 	gaugeInterval time.Duration,
 	maxGaugeCardinality int,
 	logger log.Logger,
-	clock clock,
+	clock timeutil.Clock,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
 		stop:                make(chan struct{}, 1),

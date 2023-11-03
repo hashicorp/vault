@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -5,11 +10,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if this.isDistributing}}
-        Distribute key
+        Distribute Key
       {{else if (eq @mode "create")}}
-        Create key
+        Create Key
       {{else if (eq @mode "edit")}}
-        Edit key
+        Edit Key
       {{else}}
         {{@model.id}}
       {{/if}}
@@ -50,25 +55,23 @@
     <Toolbar>
       <ToolbarActions>
         {{#unless @model.distribution}}
-          <button
-            type="button"
-            class="toolbar-link"
+          <Hds::Button
+            @text="Distribute key"
+            @color="secondary"
+            class="toolbar-button"
             {{on "click" (fn (mut this.isDistributing) true)}}
             data-test-keymgmt-key-distribute
-          >
-            Distribute key
-          </button>
+          />
         {{/unless}}
         {{#if @model.canDelete}}
-          <button
-            type="button"
-            class="toolbar-link"
+          <Hds::Button
+            @text="Destroy key"
+            @color="secondary"
+            class="toolbar-button"
             disabled={{not @model.deletionAllowed}}
             {{on "click" (fn (mut this.isDeleteModalOpen) true)}}
             data-test-keymgmt-key-destroy
-          >
-            Destroy key
-          </button>
+          />
         {{/if}}
         {{#if @model.provider}}
           <ConfirmAction
@@ -120,28 +123,24 @@
             <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{/each}}
           <div class="field is-grouped box is-fullwidth is-bottomless">
-            <div class="control">
-              <button
+            <Hds::ButtonSet>
+              <Hds::Button
+                @text={{if this.isCreating "Create key" "Update"}}
+                @icon={{if this.saveTask.isRunning "loading"}}
                 type="submit"
                 disabled={{this.saveTask.isRunning}}
-                class="button is-primary {{if this.saveTask.isRunning 'is-loading'}}"
                 data-test-keymgmt-key-submit
-              >
-                {{if this.isCreating "Create key" "Update"}}
-              </button>
-            </div>
-            <div class="control">
-              <LinkTo
+              />
+              <Hds::Button
+                @text="Cancel"
+                @color="secondary"
                 @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
                 @model={{if this.isCreating @root.model @model.id}}
                 @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
-                @disabled={{this.savekey.isRunning}}
-                class="button"
+                disabled={{this.savekey.isRunning}}
                 data-test-keymgmt-key-cancel
-              >
-                Cancel
-              </LinkTo>
-            </div>
+              />
+            </Hds::ButtonSet>
           </div>
         {{/let}}
       </div>
@@ -168,7 +167,7 @@
     {{/each}}
   {{else}}
     <div class="has-top-margin-xl has-bottom-margin-s">
-      <h2 class="title is-5 has-border-bottom-light">Key Details</h2>
+      <h2 class="title is-5 has-border-bottom-light has-bottom-padding-s">Key details</h2>
       {{#each @model.showFields as |attr|}}
         <InfoTableRow
           @alwaysRender={{true}}
@@ -181,7 +180,7 @@
     </div>
     <div class="has-top-margin-xl has-bottom-margin-s">
       <h2 class="title is-5 {{if @model.distribution 'has-border-bottom-light' 'is-borderless'}}">
-        Distribution Details
+        Distribution details
       </h2>
       {{#if @model.provider.permissionsError}}
         <EmptyState
@@ -203,10 +202,13 @@
           data-test-keymgmt-dist-empty-state
         >
           {{#if @model.canListProviders}}
-            <button type="button" class="link" {{on "click" (fn (mut this.isDistributing) true)}}>
-              Distribute key
-              <Icon @name="chevron-right" />
-            </button>
+            <Hds::Button
+              @text="Distribute key"
+              @icon="chevron-right"
+              @iconPosition="trailing"
+              @color="tertiary"
+              {{on "click" (fn (mut this.isDistributing) true)}}
+            />
           {{/if}}
         </EmptyState>
       {{else}}

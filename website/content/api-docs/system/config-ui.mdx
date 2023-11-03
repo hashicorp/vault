@@ -6,12 +6,14 @@ description: The '/sys/config/ui' endpoint configures the UI.
 
 # `/sys/config/ui`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/config/ui` endpoint is used to configure UI settings.
 
 - **`sudo` required** – All UI endpoints require `sudo` capability in
   addition to any path-specific capabilities.
 
-## Read UI Settings
+## Read UI settings
 
 This endpoint returns the given UI header configuration.
 
@@ -25,7 +27,7 @@ This endpoint returns the given UI header configuration.
 
 - `multivalue` `(bool: <optional>)` - Returns multiple values if true.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -33,7 +35,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -41,7 +43,7 @@ $ curl \
 }
 ```
 
-### Sample Request (Multi value)
+### Sample request (Multi value)
 
 ```shell-session
 $ curl \
@@ -49,7 +51,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header?multivalue=true
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -57,7 +59,7 @@ $ curl \
 }
 ```
 
-## Configure UI Headers
+## Configure UI headers
 
 This endpoint allows configuring the values to be returned for the UI header.
 
@@ -71,7 +73,7 @@ This endpoint allows configuring the values to be returned for the UI header.
 
 - `values` `(list: <required>)` - The values to be returned from the header.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -79,7 +81,7 @@ This endpoint allows configuring the values to be returned for the UI header.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -89,7 +91,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
 ```
 
-## Delete a UI Header
+## Delete a UI header
 
 This endpoint removes a UI header.
 
@@ -97,7 +99,7 @@ This endpoint removes a UI header.
 | :------- | :----------------------------- |
 | `DELETE` | `/sys/config/ui/headers/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -106,7 +108,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
 ```
 
-## List UI Headers
+## List UI headers
 
 This endpoint returns a list of configured UI headers.
 
@@ -114,7 +116,7 @@ This endpoint returns a list of configured UI headers.
 | :----- | :----------------------- |
 | `LIST` | `/sys/config/ui/headers` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -123,7 +125,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/ui/headers
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

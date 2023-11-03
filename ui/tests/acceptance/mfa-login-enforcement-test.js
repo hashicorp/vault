@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -24,9 +24,35 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     ENV['ember-cli-mirage'].handler = null;
   });
 
+  test('it should send the correct data when creating an enforcement', async function (assert) {
+    assert.expect(2);
+    this.server.post('/identity/mfa/login-enforcement/salad-college-setting', (schema, { requestBody }) => {
+      const data = JSON.parse(requestBody);
+      assert.deepEqual(data.auth_method_types, [], 'correctly passes empty array for auth method types');
+      assert.deepEqual(
+        data.auth_method_accessors,
+        ['auth_userpass_bb95c2b1'],
+        'Passes correct value for auth method accessors'
+      );
+      return { ...data, id: data.name };
+    });
+
+    await visit('/ui/vault/access');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    // Fill out form
+    await fillIn('[data-test-mlef-input="name"]', 'salad-college-setting');
+    await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+    await click('.ember-power-select-option');
+    await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
+    await click('[data-test-mlef-add-target]');
+    await click('[data-test-mlef-save]');
+  });
+
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     await click('[data-test-enforcement-create]');
 

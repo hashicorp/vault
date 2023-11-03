@@ -6,7 +6,7 @@ description: |-
   Describes how to set up Performance clusters with Integrated Storage (Raft)
 ---
 
-# Highly Available Vault Enterprise Performance Clusters with Integrated Storage (Raft)
+# Highly available Vault enterprise performance clusters with integrated storage (Raft)
 
 @include 'helm/version.mdx'
 
@@ -16,14 +16,14 @@ For more information on Disaster Recovery, [see the official documentation](/vau
 
 -> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
-## Primary Cluster
+## Primary cluster
 
 First, create the primary cluster:
 
 ```shell
 helm install vault-primary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.12.1-ent' \
+  --set='server.image.tag=1.15.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -67,14 +67,14 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-primary-1.vault-primary-internal:8
 4b5d7383-ff31-44df-e008-6a606828823b    vault-primary-2.vault-primary-internal:8201    follower    true
 ```
 
-## Secondary Cluster
+## Secondary cluster
 
 With the primary cluster created, next create a secondary cluster.
 
 ```shell
 helm install vault-secondary hashicorp/vault \
   --set='server.image.repository=hashicorp/vault-enterprise' \
-  --set='server.image.tag=1.12.1-ent' \
+  --set='server.image.tag=1.15.1-ent' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
@@ -118,7 +118,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-intern
 4b5d7383-ff31-44df-e008-6a606828823b    vault-secondary-2.vault-secondary-internal:8201    follower    true
 ```
 
-## Enable Performance Replication On Primary
+## Enable performance replication on primary
 
 With the initial clusters setup, we can now configure them for Performance Replication.
 
@@ -136,7 +136,7 @@ kubectl exec -ti vault-primary-0 -- vault write sys/replication/performance/prim
 
 The token in the output will be used when configuring the secondary cluster.
 
-## Enable Performance Replication On Secondary
+## Enable performance replication on secondary
 
 Using the token created in the last step, enable Performance Replication on the secondary:
 

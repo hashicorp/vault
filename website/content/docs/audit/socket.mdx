@@ -4,7 +4,7 @@ page_title: Socket - Audit Devices
 description: The "socket" audit device writes audit writes to a TCP or UDP socket.
 ---
 
-# Socket Audit Device
+# Socket audit device
 
 The `socket` audit device writes to a TCP, UDP, or UNIX socket.
 
@@ -39,3 +39,6 @@ these device-specific options:
   with <a href="https://golang.org/pkg/net/#Dial">net.Dial</a> is acceptable. It's
   important to note if TCP is used and the destination socket becomes unavailable
   Vault may become unresponsive per [Blocked Audit Devices](/vault/docs/audit/#blocked-audit-devices).
+
+- `write_timeout` `(string: 2s)` - The (deadline) time in seconds to allow writes to be completed over the socket.
+  A zero value means that write attempts will *not* time out.

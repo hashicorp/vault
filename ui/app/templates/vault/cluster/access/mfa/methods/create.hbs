@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft class="has-border-bottom-light">
     <h1 class="title is-3">
@@ -6,7 +11,7 @@
         {{this.method.name}}
         MFA
       {{else}}
-        Multi-factor authentication
+        Multi-Factor Authentication
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -25,12 +30,12 @@
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
-    <h3 class="is-size-4 has-text-semibold">Settings</h3>
+    <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
-      <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+      <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
-    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
+    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}
@@ -49,7 +54,7 @@
     <p>
       Multi-factor authentication (MFA) allows you to set up another layer of security on top of existing authentication
       methods. Vault has four available methods.
-      <DocLink @path="/api-docs/secret/identity/mfa">Learn more.</DocLink>
+      <DocLink @path="/vault/api-docs/secret/identity/mfa">Learn more.</DocLink>
     </p>
     <div class="is-flex-row has-top-margin-xl">
       {{#each this.methodNames as |methodName|}}
@@ -66,7 +71,7 @@
                 @size="24"
                 class={{if (eq methodName "TOTP") "has-text-grey"}}
               />
-              <p class="has-text-semibold has-text-align-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
+              <p class="has-text-weight-semibold has-text-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
                 {{methodName}}
               </p>
             </div>
@@ -77,7 +82,7 @@
     {{#if this.type}}
       <p class="has-top-margin-l">
         {{this.description}}
-        <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+        <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
       </p>
       {{! in a future release cards may be displayed to choose from either template or custom config for TOTP }}
       {{! if template is selected a user could choose a predefined config for common authenticators and the values would be populated on the model }}
@@ -87,16 +92,12 @@
   <div class="has-top-margin-l has-border-top-light">
     <div class="has-top-margin-l has-bottom-margin-l">
       {{#if this.showForms}}
-        <button class="button is-primary" type="button" {{on "click" (perform this.save)}} data-test-mfa-create-save>
-          Continue
-        </button>
-        <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
-          Cancel
-        </button>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-mfa-create-save />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
+        </Hds::ButtonSet>
       {{else if this.type}}
-        <button class="button is-primary" type="button" {{on "click" this.createModels}} data-test-mfa-create-next>
-          Next
-        </button>
+        <Hds::Button @text="Next" {{on "click" this.createModels}} data-test-mfa-create-next />
       {{/if}}
     </div>
   </div>

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -21,8 +21,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    const activeClusterId = this.auth.activeCluster;
-    return this.store.peekRecord('cluster', activeClusterId);
+    return this.auth.activeCluster;
   },
 
   afterModel(model) {

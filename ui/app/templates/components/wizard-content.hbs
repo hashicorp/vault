@@ -1,12 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="wizard-header">
   {{#unless this.hidePopup}}
     <PopupMenu @class="wizard-dismiss-menu">
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">
-            <button type="button" class="button link" onclick={{action "dismissWizard"}}>
-              Dismiss
-            </button>
+            <Hds::Button @text="Dismiss" @color="secondary" class="link" {{on "click" (action "dismissWizard")}} />
           </li>
         </ul>
       </nav>

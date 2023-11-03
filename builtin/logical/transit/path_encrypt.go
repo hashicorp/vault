@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -89,6 +89,12 @@ func (m ManagedKeyFactory) GetManagedKeyParameters() keysutil.ManagedKeyParamete
 func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "encrypt",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -462,6 +468,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			userErrorInBatch = true
+			continue
+		}
+
+		if item.Nonce != "" && !nonceAllowed(p) {
+			userErrorInBatch = true
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
@@ -560,6 +573,25 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	p.Unlock()
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
+}
+
+func nonceAllowed(p *keysutil.Policy) bool {
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_MANAGED_KEY:
+		return true
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	return false
 }
 
 // Depending on the errors in the batch, different status codes should be returned. User errors

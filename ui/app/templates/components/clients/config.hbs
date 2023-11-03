@@ -1,129 +1,80 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (eq @mode "edit")}}
-  <form onsubmit={{action "onSaveChanges"}} data-test-pricing-metrics-config-form>
+  <form onsubmit={{action "onSaveChanges"}} data-test-clients-config-form>
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{@model}} @errorMessage={{this.error}} />
-      {{#each @model.configAttrs as |attr|}}
-        {{#if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
+      {{#each @model.formFields as |attr|}}
+        {{#if (eq attr.name "enabled")}}
           <label class="is-label">Usage data collection</label>
-          {{#if attr.options.helpText}}
-            <p class="sub-text">
-              {{attr.options.helpText}}
-              {{#if attr.options.docLink}}
-                <DocLink @path={{attr.options.docLink}}>
-                  See our documentation
-                </DocLink>
-                for help.
-              {{/if}}
-            </p>
-          {{/if}}
+          <p class="sub-text">
+            Enable or disable client tracking. Keep in mind that disabling tracking will delete the data for the current
+            month.
+          </p>
           <div class="control is-flex has-bottom-margin-l">
             <input
-              data-test-field
+              data-test-input="enabled"
               type="checkbox"
-              id={{attr.name}}
-              name={{attr.name}}
+              id="enabled"
+              name="enabled"
               class="switch is-rounded is-success is-small"
-              checked={{eq (get @model attr.name) attr.options.trueValue}}
-              onchange={{action (action "updateBooleanValue" attr) value="target.checked"}}
+              disabled={{@model.reportingEnabled}}
+              checked={{eq @model.enabled "On"}}
+              {{on "change" this.toggleEnabled}}
             />
-            <label for={{attr.name}}>
-              {{#if (eq @model.enabled "Off")}}
-                Data collection is off
-              {{else}}
-                Data collection is on
-              {{/if}}
+            <label for="enabled">
+              Data collection is
+              {{lowercase @model.enabled}}
             </label>
           </div>
-        {{else if (eq attr.type "number")}}
-          <div class="has-top-margin-s">
-            <label for={{attr.name}} class="is-label">
-              {{attr.options.label}}
-            </label>
-            {{#if attr.options.subText}}
-              <p class="sub-text">
-                {{attr.options.subText}}
-                {{#if attr.options.docLink}}
-                  <DocLink @path={{attr.options.docLink}}>
-                    See our documentation
-                  </DocLink>
-                  for help.
-                {{/if}}
-              </p>
-            {{/if}}
-            <div class="control">
-              <input
-                data-test-field
-                id={{attr.name}}
-                disabled={{eq @model.enabled "Off"}}
-                autocomplete="off"
-                spellcheck="false"
-                onchange={{action (mut (get @model attr.name)) value="target.value"}}
-                value={{or (get @model attr.name) attr.options.defaultValue}}
-                class="input"
-                maxLength={{attr.options.characterLimit}}
-              />
-            </div>
-          </div>
+        {{else}}
+          <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.validations}} />
         {{/if}}
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button
-          type="submit"
-          disabled={{this.buttonDisabled}}
-          class="button is-primary"
-          data-test-edit-metrics-config-save={{true}}
-        >
-          Save
-        </button>
+        <Hds::Button @text="Save" type="submit" disabled={{this.buttonDisabled}} data-test-clients-config-save />
         <LinkTo @route="vault.cluster.clients.config" class="button">
           Cancel
         </LinkTo>
       </div>
     </div>
   </form>
-  <Modal
-    @title={{this.modalTitle}}
-    @onClose={{action (mut this.modalOpen) false}}
-    @isActive={{this.modalOpen}}
-    @type="warning"
-    @showCloseButton={{true}}
-  >
-    <section class="modal-card-body">
-      {{#if (eq @model.enabled "On")}}
-        <p class="has-bottom-margin-s">
-          Vault will start tracking data starting from today’s date,
-          {{date-format (now) "d MMMM yyyy"}}. You will not be able to see or query usage until the end of the month.
-        </p>
-        <p>If you’ve previously enabled usage tracking, that historical data will still be available to you.</p>
-      {{else}}
-        <p class="has-bottom-margin-s">
-          Turning usage tracking off means that all data for the current month will be deleted. You will still be able to
-          query previous months.
-        </p>
-        <p>Are you sure?</p>
-      {{/if}}
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-secondary"
-        onclick={{action (mut this.modalOpen) false}}
-        data-test-metrics-config-cancel
-      >
-        Cancel
-      </button>
-      <button type="button" class="button is-primary" onclick={{perform this.save}}>
-        Continue
-      </button>
-    </footer>
-  </Modal>
+
+  {{#if this.modalOpen}}
+    <Hds::Modal id="clients-config-modal" @color="warning" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+      <M.Header @icon="alert-triangle" data-test-clients-config-modal="title">
+        {{this.modalTitle}}
+      </M.Header>
+      <M.Body>
+        {{#if (eq @model.enabled "On")}}
+          <p class="has-bottom-margin-s" data-test-clients-config-modal="on">
+            Vault will start tracking data starting from today’s date,
+            {{date-format (now) "MMMM d, yyyy"}}. If you’ve previously enabled usage tracking, that historical data will
+            still be available to you.
+          </p>
+        {{else}}
+          <p class="has-bottom-margin-s" data-test-clients-config-modal="off">
+            Turning usage tracking off means that all data for the current month will be deleted. You will still be able to
+            query previous months.
+          </p>
+          <p>Are you sure?</p>
+        {{/if}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-clients-config-modal="continue" />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-clients-config-modal="cancel" />
+        </Hds::ButtonSet>
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
 {{else}}
-  <div
-    class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless"
-    data-test-pricing-metrics-config-table
-  >
+  <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-clients-config-table>
     {{#each this.infoRows as |item|}}
       <InfoTableRow @label={{item.label}} @helperText={{item.helperText}} @value={{get @model item.valueKey}} />
     {{/each}}

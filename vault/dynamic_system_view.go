@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -134,6 +134,20 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	req.Path = path
 	authResults := acl.AllowOperation(namespace.RootContext(ctx), req, true)
 	return authResults.RootPrivs
+}
+
+func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
+	mountEntry := e.mountEntry
+	if mountEntry == nil {
+		return false, fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {

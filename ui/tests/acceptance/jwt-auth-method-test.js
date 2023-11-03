@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -47,7 +47,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
   test('it works correctly with default name and a role', async function (assert) {
@@ -67,7 +67,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
   test('it works correctly with custom endpoint and a role', async function (assert) {
@@ -93,6 +93,6 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn('[data-test-role]', 'some-role');
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 });

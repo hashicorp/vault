@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -52,39 +57,53 @@
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="AWS role" />
       {{#if (gt this.model.credentialTypes.length 1)}}
-        <AlertBanner
-          @type="warning"
-          @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
-            Multiple credential types is deprecated and you must choose one in order to save this role."
-        />
+        <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            This role has more than one
+            <code>credential_type</code>, currently:
+            {{join ", " this.model.credentialTypes}}. Multiple credential types is deprecated and you must choose one in
+            order to save this role.
+          </A.Description>
+        </Hds::Alert>
       {{/if}}
       {{#each (if (eq this.mode "edit") (drop 1 (or this.model.fields (array))) this.model.fields) as |attr|}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-role-aws-create={{true}}>
-          {{#if (eq this.mode "create")}}
-            Create role
-          {{else if (eq this.mode "edit")}}
-            Save
-          {{/if}}
-        </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
-          Cancel
-        </SecretLink>
-      </div>
+      <Hds::ButtonSet>
+        <Hds::Button @text={{if (eq this.mode "create") "Create role" "Save"}} type="submit" data-test-role-aws-create />
+        {{#if (eq this.mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend this.model.id}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
     </div>
   </form>
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#if (gt this.model.credentialTypes.length 1)}}
-      <AlertBanner
-        @type="warning"
-        @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
-          When you next edit this role, you will have to choose a single credential type."
-      />
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>
+          This role has more than one
+          <code>credential_type</code>, currently:
+          {{join ", " this.model.credentialTypes}}. When you next edit this role, you will have to choose a single credential
+          type.
+        </A.Description>
+      </Hds::Alert>
     {{/if}}
     {{#each this.model.fields as |attr|}}
       {{#if (eq attr.name "policyDocument")}}

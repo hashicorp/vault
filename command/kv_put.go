@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -181,7 +181,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	// Add /data to v2 paths only
 	var fullPath string
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},
@@ -217,6 +217,11 @@ func (c *KVPutCommand) Run(args []string) int {
 
 	if c.flagField != "" {
 		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// If the secret is wrapped, return the wrapped response.
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
 	}
 
 	if Format(c.UI) == "table" {

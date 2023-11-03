@@ -1,69 +1,32 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .namespace-picker {
   position: relative;
-  color: $white;
+  color: var(--token-color-palette-neutral-300);
   display: flex;
-  fill: $white;
   padding: $spacing-xxs $spacing-xs;
   width: 100%;
-
-  @include from($mobile) {
-    margin-left: -$spacing-xs;
-    padding: $spacing-xxs 0 $spacing-xxs $spacing-s;
-    width: auto;
-  }
 }
 
 .namespace-picker.no-namespaces {
   border: none;
   padding-right: 0;
 }
+
 .namespace-picker-trigger {
   align-items: center;
   display: flex;
   flex: 1 1 auto;
   height: 2rem;
   justify-content: space-between;
-  padding: 0;
-  text-align: left;
-
-  @include from($mobile) {
-    height: auto;
-    padding: $spacing-xs $spacing-m;
-  }
-
-  .is-status-chevron {
-    transform: rotate(-90deg);
-
-    @include from($mobile) {
-      transform: rotate(0deg);
-    }
-  }
-
-  &.ember-basic-dropdown-trigger--below .is-status-chevron {
-    transform: rotate(0deg);
-
-    @include from($mobile) {
-      transform: rotate(180deg);
-    }
-  }
+  margin-right: $spacing-xxs;
 }
-.namespace-name {
-  display: inline-block;
-  flex: 1 1 auto;
-  font-size: 1rem;
-  margin: 0 $spacing-xs;
 
-  @include from($mobile) {
-    margin-left: $size-10;
-  }
-}
 .namespace-picker-content {
-  width: $drawer-width - ($spacing-xs * 2);
+  width: 250px;
   max-height: 300px;
   overflow: auto;
   border-radius: $radius;
@@ -72,17 +35,12 @@
   &.ember-basic-dropdown-content {
     background: $white;
   }
-
-  @include from($mobile) {
-    width: $drawer-width;
-  }
 }
+
 .namespace-picker-content .level-left {
   max-width: 210px;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  -ms-word-break: break-all;
-  word-break: break-all;
   word-break: break-word;
 }
 
@@ -95,6 +53,14 @@
 
 .namespace-manage-link {
   border-top: 1px solid rgba($black, 0.1);
+
+  .level-left {
+    font-weight: $font-weight-bold;
+    font-size: 14px;
+  }
+  .level-right {
+    margin-right: 10px;
+  }
 }
 
 .namespace-list {
@@ -112,6 +78,11 @@
 .namespace-link.is-current {
   margin-top: $size-8;
   margin-right: -$size-10;
+
+  svg {
+    margin-top: 2px;
+    color: var(--token-color-border-strong);
+  }
 }
 
 .leaf-panel {
@@ -127,9 +98,11 @@
   bottom: 0;
   z-index: 1;
 }
+
 .leaf-panel-left {
   transform: translateX(-$drawer-width);
 }
+
 .leaf-panel-adding,
 .leaf-panel-current {
   position: relative;
@@ -137,6 +110,7 @@
     margin-bottom: 4px;
   }
 }
+
 .animated-list {
   .leaf-panel-exiting,
   .leaf-panel-adding {
@@ -144,6 +118,7 @@
     z-index: 20;
   }
 }
+
 .leaf-panel-adding {
   z-index: 100;
 }

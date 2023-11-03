@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -590,6 +590,131 @@ func TestKVGetCommand(t *testing.T) {
 
 		_, cmd := testKVGetCommand(t)
 		assertNoTabs(t, cmd)
+	})
+}
+
+func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
+	tb.Helper()
+	ui := cli.NewMockUi()
+	cmd := &KVListCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+
+	return ui, cmd
+}
+
+// TestKVListCommand runs tests for `vault kv list`
+func TestKVListCommand(t *testing.T) {
+	testCases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			name:       "default",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "not_enough_args",
+			args:       []string{},
+			outStrings: []string{"Not enough arguments"},
+			code:       1,
+		},
+		{
+			name:       "v2_default_with_mount",
+			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v1_default_with_mount",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v2_not_found",
+			args:       []string{"kv/nope/not/once/never"},
+			outStrings: []string{"No value found at kv/metadata/nope/not/once/never"},
+			code:       2,
+		},
+		{
+			name:       "v1_mount_only",
+			args:       []string{"kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			name:       "v2_mount_only",
+			args:       []string{"-mount", "kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			// this is behavior that should be tested
+			// `kv` here is an explicit mount
+			// `my-prefix` is not
+			// the current kv code will ignore `my-prefix`
+			name:       "ignore_multi_part_mounts",
+			args:       []string{"-mount", "kv/my-prefix"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				// test setup
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// enable kv-v2 backend
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Second)
+
+				ctx := context.Background()
+				for i := 0; i < 3; i++ {
+					path := fmt.Sprintf("my-prefix/secret-%d", i)
+					_, err := client.KVv2("kv/").Put(ctx, path, map[string]interface{}{
+						"foo": "bar",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				ui, cmd := testKVListCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(testCase.args)
+				if code != testCase.code {
+					t.Errorf("expected %d to be %d", code, testCase.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				for _, str := range testCase.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -1396,6 +1521,156 @@ func TestPadEqualSigns(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testKVUndeleteCommand(tb testing.TB) (*cli.MockUi, *KVUndeleteCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &KVUndeleteCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestKVUndeleteCommand(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			"not_enough_args",
+			[]string{},
+			[]string{"Not enough arguments"},
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"foo", "bar"},
+			[]string{"Too many arguments"},
+			1,
+		},
+		{
+			"no_versions",
+			[]string{"-mount", "kv", "/read/foo"},
+			[]string{"No versions provided"},
+			1,
+		},
+		{
+			"v2_mount_flag_syntax",
+			[]string{"-versions", "1", "-mount", "kv", "read/foo"},
+			[]string{"Success! Data written to: kv/undelete/read/foo"},
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_complex_1",
+			[]string{"-versions", "1", "-mount", "secrets/testapp", "test"},
+			[]string{"Success! Data written to: secrets/testapp/undelete/test"},
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_complex_2",
+			[]string{"-versions", "1", "-mount", "secrets/x/testapp", "test"},
+			[]string{"Success! Data written to: secrets/x/testapp/undelete/test"},
+			0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range cases {
+			tc := tc
+
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				client, closer := testVaultServer(t)
+				defer closer()
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if err := client.Sys().Mount("secrets/testapp", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Additional layer of mount path
+				if err := client.Sys().Mount("secrets/x/testapp", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Give time for the upgrade code to run/finish
+				time.Sleep(time.Second)
+
+				if _, err := client.Logical().Write("kv/data/read/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("kv/data/read/foo"); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("secrets/testapp/data/test", map[string]interface{}{
+					"data": map[string]interface{}{
+						"complex": "yes",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("secrets/x/testapp/data/test", map[string]interface{}{
+					"data": map[string]interface{}{
+						"complex": "yes",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("secrets/x/testapp/data/test"); err != nil {
+					t.Fatal(err)
+				}
+
+				// Delete the entry so we can undelete it
+				if _, err := client.Logical().Delete("secrets/testapp/data/test"); err != nil {
+					t.Fatal(err)
+				}
+
+				ui, cmd := testKVUndeleteCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(tc.args)
+				if code != tc.code {
+					t.Errorf("expected %d to be %d", code, tc.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+
+				for _, str := range tc.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
+	})
 }
 
 func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {

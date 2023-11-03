@@ -1,0 +1,196 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* These come from bulma */
+html,
+body,
+p,
+ol,
+ul,
+li,
+dl,
+dt,
+dd,
+blockquote,
+figure,
+fieldset,
+legend,
+textarea,
+pre,
+iframe,
+hr,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+}
+
+a:hover,
+body,
+pre,
+strong,
+table th {
+  color: $ui-gray-900;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: 100%;
+  font-weight: normal;
+}
+
+ul {
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  margin: 0;
+}
+
+html {
+  box-sizing: border-box;
+}
+
+* {
+  box-sizing: inherit;
+}
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+img,
+embed,
+object {
+  max-width: 100%;
+}
+
+html {
+  background-color: $white;
+  font-size: 14px;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  min-width: 300px;
+  text-rendering: optimizeLegibility;
+  text-size-adjust: 100%;
+}
+
+article,
+aside,
+figure,
+footer,
+header,
+hgroup,
+section {
+  display: block;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: $family-sans;
+}
+
+code,
+pre {
+  -moz-osx-font-smoothing: auto;
+  -webkit-font-smoothing: inherit;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  font-smooth: inherit;
+}
+
+a strong,
+pre code {
+  color: currentColor;
+}
+
+body {
+  font-size: $size-6;
+  line-height: 1.5;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+a {
+  color: $blue-500;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover,
+  &:active,
+  &:focus {
+    position: relative;
+  }
+}
+
+a:hover {
+  color: $ui-gray-900;
+}
+
+code {
+  background-color: transparent;
+  color: $ui-gray-700;
+  font-size: 1em;
+  font-weight: 400;
+  padding: 0;
+}
+
+hr {
+  background-color: $ui-gray-300;
+  border: none;
+  display: block;
+  height: 1px;
+  margin: 1rem 0;
+}
+
+img {
+  height: auto;
+  max-width: 100%;
+}
+
+form {
+  margin: 0;
+}
+
+label {
+  cursor: pointer;
+}
+
+// HDS modifications and overrides
+// * ONLY for universal changes (i.e. to address component functionality)
+
+// <Hds::Modal>
+.hds-modal {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+.hds-modal__body {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+
+// <Hds::Dropdown>
+.hds-dropdown-list-item {
+  > button:disabled {
+    color: $black;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

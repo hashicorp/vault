@@ -1,10 +1,11 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 scenario "ui" {
   matrix {
-    edition = ["oss", "ent"]
-    backend = ["consul", "raft"]
+    edition      = ["ce", "ent"]
+    backend      = ["consul", "raft"]
+    seal_ha_beta = ["true", "false"]
   }
 
   terraform_cli = terraform_cli.default
@@ -15,37 +16,31 @@ scenario "ui" {
   ]
 
   locals {
-    arch           = "amd64"
-    distro         = "ubuntu"
-    seal           = "awskms"
-    artifact_type  = "bundle"
-    consul_version = "1.14.2"
+    arch                 = "amd64"
+    artifact_type        = "bundle"
+    backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
+    backend_tag_key      = "VaultStorage"
     build_tags = {
-      "oss" = ["ui"]
+      "ce"  = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
     }
-    bundle_path = abspath(var.vault_bundle_path)
+    bundle_path    = abspath(var.vault_artifact_path)
+    distro         = "ubuntu"
+    consul_version = "1.16.1"
+    seal           = "awskms"
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
-    vault_instance_types = {
-      amd64 = "t3a.small"
-      arm64 = "t4g.small"
-    }
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[local.arch])
-    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_install_dir_packages = {
       rhel   = "/bin"
       ubuntu = "/usr/bin"
     }
-    vault_install_dir = var.vault_install_dir
-    ui_test_filter    = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
-  }
-
-  step "get_local_metadata" {
-    module = module.get_local_metadata
+    vault_install_dir  = var.vault_install_dir
+    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
+    ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "ce") ? "!enterprise" : null
   }
 
   step "build_vault" {
@@ -62,29 +57,40 @@ scenario "ui" {
     }
   }
 
-  step "find_azs" {
-    module = module.az_finder
-
-    variables {
-      instance_type = [
-        var.backend_instance_type,
-        local.vault_instance_type
-      ]
-    }
+  step "ec2_info" {
+    module = module.ec2_info
   }
 
   step "create_vpc" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [local.arch]
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      common_tags = local.tags
     }
   }
 
-  step "read_license" {
-    skip_step = matrix.edition == "oss"
+  step "create_seal_key" {
+    module = "seal_key_${local.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
+  // This step reads the contents of the backend license if we're using a Consul backend and
+  // the edition is "ent".
+  step "read_backend_license" {
+    skip_step = matrix.backend == "raft" || var.backend_edition == "ce"
+    module    = module.read_license
+
+    variables {
+      file_name = local.backend_license_path
+    }
+  }
+
+  step "read_vault_license" {
+    skip_step = matrix.edition == "ce"
     module    = module.read_license
 
     variables {
@@ -92,8 +98,8 @@ scenario "ui" {
     }
   }
 
-  step "create_backend_cluster" {
-    module     = "backend_${matrix.backend}"
+  step "create_vault_cluster_targets" {
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -101,15 +107,50 @@ scenario "ui" {
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
-      common_tags = local.tags
-      consul_release = {
+      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.ubuntu_distro_version]
+      cluster_tag_key = local.vault_tag_key
+      common_tags     = local.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "create_vault_cluster_backend_targets" {
+    module     = matrix.backend == "consul" ? module.target_ec2_instances : module.target_ec2_shim
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      cluster_tag_key = local.backend_tag_key
+      common_tags     = local.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "create_backend_cluster" {
+    module = "backend_${matrix.backend}"
+    depends_on = [
+      step.create_vault_cluster_backend_targets,
+    ]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
+      cluster_tag_key = local.backend_tag_key
+      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      release = {
         edition = var.backend_edition
         version = local.consul_version
       }
-      instance_type = var.backend_instance_type
-      kms_key_arn   = step.create_vpc.kms_key_arn
-      vpc_id        = step.create_vpc.vpc_id
+      target_hosts = step.create_vault_cluster_backend_targets.hosts
     }
   }
 
@@ -118,6 +159,7 @@ scenario "ui" {
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -125,73 +167,110 @@ scenario "ui" {
     }
 
     variables {
-      ami_id                    = step.create_vpc.ami_ids[local.distro][local.arch]
-      common_tags               = local.tags
-      consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
-      instance_type             = local.vault_instance_type
-      kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.backend
-      unseal_method             = local.seal
-      vault_local_artifact_path = local.bundle_path
-      vault_install_dir         = local.vault_install_dir
-      vault_license             = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                    = step.create_vpc.vpc_id
-      vault_environment = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
+      backend_cluster_tag_key = local.backend_tag_key
+      cluster_name            = step.create_vault_cluster_targets.cluster_name
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      consul_release = matrix.backend == "consul" ? {
+        edition = var.backend_edition
+        version = local.consul_version
+      } : null
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
+      local_artifact_path  = local.bundle_path
+      packages             = global.distro_packages["ubuntu"]
+      seal_ha_beta         = matrix.seal_ha_beta
+      seal_key_name        = step.create_seal_key.resource_name
+      seal_type            = local.seal
+      storage_backend      = matrix.backend
+      target_hosts         = step.create_vault_cluster_targets.hosts
+    }
+  }
+
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader" {
+    module     = module.vault_wait_for_leader
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
   step "test_ui" {
-    module = module.vault_test_ui
+    module     = module.vault_test_ui
+    depends_on = [step.wait_for_leader]
 
     variables {
-      vault_addr               = step.create_vault_cluster.instance_public_ips[0]
-      vault_root_token         = step.create_vault_cluster.vault_root_token
-      vault_unseal_keys        = step.create_vault_cluster.vault_recovery_keys_b64
-      vault_recovery_threshold = step.create_vault_cluster.vault_recovery_threshold
+      vault_addr               = step.create_vault_cluster_targets.hosts[0].public_ip
+      vault_root_token         = step.create_vault_cluster.root_token
+      vault_unseal_keys        = step.create_vault_cluster.recovery_keys_b64
+      vault_recovery_threshold = step.create_vault_cluster.recovery_threshold
       ui_test_filter           = local.ui_test_filter
     }
   }
 
-  output "vault_cluster_instance_ids" {
-    description = "The Vault cluster instance IDs"
-    value       = step.create_vault_cluster.instance_ids
+  output "audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 
-  output "vault_cluster_pub_ips" {
-    description = "The Vault cluster public IPs"
-    value       = step.create_vault_cluster.instance_public_ips
+  output "cluster_name" {
+    description = "The Vault cluster name"
+    value       = step.create_vault_cluster.cluster_name
   }
 
-  output "vault_cluster_priv_ips" {
+  output "hosts" {
+    description = "The Vault cluster target hosts"
+    value       = step.create_vault_cluster.target_hosts
+  }
+
+  output "private_ips" {
     description = "The Vault cluster private IPs"
-    value       = step.create_vault_cluster.instance_private_ips
+    value       = step.create_vault_cluster.private_ips
   }
 
-  output "vault_cluster_key_id" {
-    description = "The Vault cluster Key ID"
-    value       = step.create_vault_cluster.key_id
+  output "public_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.create_vault_cluster.public_ips
   }
 
-  output "vault_cluster_root_token" {
+  output "recovery_key_shares" {
+    description = "The Vault cluster recovery key shares"
+    value       = step.create_vault_cluster.recovery_key_shares
+  }
+
+  output "recovery_keys_b64" {
+    description = "The Vault cluster recovery keys b64"
+    value       = step.create_vault_cluster.recovery_keys_b64
+  }
+
+  output "recovery_keys_hex" {
+    description = "The Vault cluster recovery keys hex"
+    value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "root_token" {
     description = "The Vault cluster root token"
-    value       = step.create_vault_cluster.vault_root_token
+    value       = step.create_vault_cluster.root_token
   }
 
-  output "vault_cluster_unseal_keys_b64" {
-    description = "The Vault cluster unseal keys"
-    value       = step.create_vault_cluster.vault_unseal_keys_b64
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.resource_name
   }
 
-  output "vault_cluster_unseal_keys_hex" {
-    description = "The Vault cluster unseal keys hex"
-    value       = step.create_vault_cluster.vault_unseal_keys_hex
-  }
-
-  output "vault_cluster_tag" {
-    description = "The Vault cluster tag"
-    value       = step.create_vault_cluster.vault_cluster_tag
+  output "ui_test_environment" {
+    value       = step.test_ui.ui_test_environment
+    description = "The environment variables that are required in order to run the test:enos yarn target"
   }
 
   output "ui_test_stderr" {
@@ -204,8 +283,13 @@ scenario "ui" {
     value       = step.test_ui.ui_test_stdout
   }
 
-  output "ui_test_environment" {
-    value       = step.test_ui.ui_test_environment
-    description = "The environment variables that are required in order to run the test:enos yarn target"
+  output "unseal_keys_b64" {
+    description = "The Vault cluster unseal keys"
+    value       = step.create_vault_cluster.unseal_keys_b64
+  }
+
+  output "unseal_keys_hex" {
+    description = "The Vault cluster unseal keys hex"
+    value       = step.create_vault_cluster.unseal_keys_hex
   }
 }

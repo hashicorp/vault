@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -14,6 +14,13 @@ import (
 func (b *backend) pathRandom() *framework.Path {
 	return &framework.Path{
 		Pattern: "random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "random|random-with-source|random-with-bytes|random-with-source-and-bytes",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"urlbytes": {
 				Type:        framework.TypeString,

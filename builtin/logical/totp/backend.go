@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package totp
 
@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	cache "github.com/patrickmn/go-cache"
 )
+
+const operationPrefixTOTP = "totp"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()

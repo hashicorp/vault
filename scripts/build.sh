@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 #
 # This script builds the application from source for multiple platforms.
@@ -50,11 +50,13 @@ ${GO_CMD} build \
 
 # Move all the compiled things to the $GOPATH/bin
 OLDIFS=$IFS
-IFS=: MAIN_GOPATH=($GOPATH)
+IFS=: FIRST=($GOPATH) BIN_PATH=${GOBIN:-${FIRST}/bin}
 IFS=$OLDIFS
 
-rm -f ${MAIN_GOPATH}/bin/vault
-cp bin/vault ${MAIN_GOPATH}/bin/
+# Ensure the go bin folder exists
+mkdir -p ${BIN_PATH}
+rm -f ${BIN_PATH}/vault
+cp bin/vault ${BIN_PATH}
 
 # Done!
 echo

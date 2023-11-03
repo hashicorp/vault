@@ -4,7 +4,7 @@ page_title: Plugin Development
 description: Learn about Vault plugin development.
 ---
 
-# Plugin Development
+# Plugin development
 
 ~> Advanced topic! Plugin development is a highly advanced topic in Vault, and
 is not required knowledge for day-to-day usage. If you don't plan on writing any
@@ -31,9 +31,9 @@ backend running the plugin.
 ~> Note: Plugins should be prepared to handle multiple concurrent requests
 from Vault.
 
-## Serving A Plugin
+## Serving a plugin
 
-### Serving A Plugin with Multiplexing
+### Serving a plugin with multiplexing
 
 ~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
 
@@ -75,7 +75,7 @@ func main() {
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
 
-## Plugin Backwards Compatibility with Vault
+### Plugin backwards compatibility with Vault
 
 Let's take a closer look at a snippet from the above main package.
 
@@ -100,7 +100,39 @@ be omitted.
 
 [api_addr]: /vault/docs/configuration#api_addr
 
-## Building a Plugin from Source
+## Leveraging plugin versioning
+
+@include 'plugin-versioning.mdx'
+
+Auth and secrets plugins based on `framework.Backend` from the SDK should set the
+[`RunningVersion`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/framework/backend.go#L95-L96)
+variable, and the framework will implement the version interface.
+
+Database plugins have a smaller API than `framework.Backend` exposes, and should
+instead implement the
+[`PluginVersioner`](https://github.com/hashicorp/vault/blob/sdk/v0.6.0/sdk/logical/logical.go#L150-L154)
+interface directly.
+
+## Plugin logging
+
+Auth and secrets plugins based on `framework.Backend` from the SDK can take
+advantage of the SDK's [default logger](https://github.com/hashicorp/vault/blob/fe55cbbf05586ec4c0cd9bdf865ec6f741a8933c/sdk/framework/backend.go#L437).
+No additional setup is required. The logger can be used like the following:
+
+```go
+func (b *backend) example() {
+    b.Logger().Trace("Trace level log")
+    b.Logger().Debug("Debug level log")
+    b.Logger().Info("Info level log")
+    b.Logger().Warn("Warn level log")
+    b.Logger().Error("Error level log")
+}
+```
+
+See the source code of [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
+for a more complete example of a plugin using logging.
+
+## Building a plugin from source
 
 To build a plugin from source, first navigate to the location holding the
 desired plugin version. Next, run `go build` to obtain a new binary for the
@@ -108,7 +140,7 @@ plugin. Finally,
 [register](/vault/docs/plugins/plugin-architecture#plugin-registration) the
 plugin and enable it.
 
-## Plugin Development - Resources
+## Plugin development - resources
 
 For more information on how to register and enable your plugin, refer to the
 [Building Plugin Backends](/vault/tutorials/app-integration/plugin-backends)
@@ -119,7 +151,7 @@ Other HashiCorp plugin development resources:
 * [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
 * [Custom Secrets Engines](/vault/tutorials/custom-secrets-engine)
 
-### Plugin Development - Resources - Community
+### Plugin development - resources - community
 
 See the [Vault Integrations](/vault/integrations) page to find Community
 plugin examples/guides developed by community members. HashiCorp does not

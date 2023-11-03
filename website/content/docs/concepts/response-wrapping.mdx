@@ -4,7 +4,7 @@ page_title: Response Wrapping
 description: Wrapping responses in cubbyholes for secure distribution.
 ---
 
-# Response Wrapping
+# Response wrapping
 
 _Note_: Some of this information relies on features of response-wrapping tokens
 introduced in Vault 0.8 and may not be available in earlier releases.
@@ -53,7 +53,7 @@ secret's exposure. Response wrapping performs all three of these duties:
   be much shorter), so if a client fails to come up and unwrap the token, the
   token can expire very quickly.
 
-## Response-Wrapping Tokens
+## Response-Wrapping tokens
 
 When a response is wrapped, the normal API response from Vault does not contain
 the original secret, but rather contains a set of information related to the
@@ -83,7 +83,7 @@ address (and in most cases the Vault address will not change or will be set via
 a service discovery mechanism). As such, we rely on the fact that the token
 itself is not carrying authoritative data and do not sign it.
 
-## Response-Wrapping Token Operations
+## Response-Wrapping token operations
 
 Via the `sys/wrapping` path, several operations can be run against wrapping
 tokens:
@@ -111,7 +111,7 @@ tokens:
   endpoint does not remove the ability for arbitrary data to be wrapped, as it
   can be done elsewhere in Vault.
 
-## Response-Wrapping Token Creation
+## Response-Wrapping token creation
 
 Response wrapping is per-request and is triggered by providing to Vault the
 desired TTL for a response-wrapping token for that request. This is set by the
@@ -137,7 +137,7 @@ Note that policies can control minimum/maximum wrapping TTLs; see the [policies
 concepts page](/vault/docs/concepts/policies) for
 more information.
 
-## Response-Wrapping Token Validation
+## Response-Wrapping token validation
 
 Proper validation of response-wrapping tokens is essential to ensure that any
 malfeasance is detected. It's also pretty straightforward.

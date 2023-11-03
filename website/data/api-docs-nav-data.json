@@ -356,6 +356,15 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -366,15 +375,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -447,6 +447,10 @@
         "path": "system/control-group"
       },
       {
+        "title": "<code>/sys/decode-token</code>",
+        "path": "system/decode-token"
+      },
+      {
         "title": "<code>/sys/experiments</code>",
         "path": "system/experiments"
       },
@@ -510,6 +514,10 @@
       {
         "title": "<code>/sys/internal/ui/resultant-acl</code>",
         "path": "system/internal-ui-resultant-acl"
+      },
+      {
+        "title": "<code>/sys/internal/ui/version</code>",
+        "path": "system/internal-ui-version"
       },
       {
         "title": "<code>/sys/key-status</code>",
@@ -602,6 +610,10 @@
         "path": "system/plugins-catalog"
       },
       {
+        "title": "<code>/sys/plugins/runtimes/catalog</code>",
+        "path": "system/plugins-runtimes-catalog"
+      },
+      {
         "title": "<code>/sys/policy</code>",
         "path": "system/policy"
       },
@@ -679,6 +691,10 @@
         "path": "system/seal-status"
       },
       {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
+      },
+      {
         "title": "<code>/sys/sealwrap/rewrap</code>",
         "path": "system/sealwrap-rewrap"
       },
@@ -706,6 +722,15 @@
             "path": "system/storage/raftautosnapshots"
           }
         ]
+      },
+      {
+        "title": "<code>/sys/sync</code>",
+        "path": "system/secrets-sync",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/tools</code>",

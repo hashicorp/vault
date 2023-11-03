@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
@@ -17,14 +17,13 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
-      const json = super.normalizeResponse(
+      return super.normalizeResponse(
         store,
         primaryModelClass,
-        { ...payload, ...parsedCert },
+        { ...payload, parsed_certificate: parsedCert, common_name: parsedCert.common_name },
         id,
         requestType
       );
-      return json;
     }
     return super.normalizeResponse(...arguments);
   }

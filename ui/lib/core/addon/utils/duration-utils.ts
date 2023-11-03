@@ -1,12 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
  * These utils are used for managing Duration type values
  * (eg. '30m', '365d'). Most often used in the context of TTLs
  */
+import Duration from '@icholy/duration';
+
 interface SecondsMap {
   s: 1;
   m: 60;
@@ -43,4 +45,16 @@ export const largestUnitFromSeconds = (seconds: number) => {
     unit = 'm';
   }
   return unit;
+};
+
+// parses duration string ('3m') and returns seconds
+export const durationToSeconds = (duration: string) => {
+  // we assume numbers are seconds
+  if (typeof duration === 'number') return duration;
+  try {
+    return Duration.parse(duration).seconds();
+  } catch (e) {
+    // since 0 is falsy, parent should explicitly check for null and decide how to handle parsing error
+    return null;
+  }
 };

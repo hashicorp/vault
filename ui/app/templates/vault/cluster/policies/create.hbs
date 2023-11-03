@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <div class="breadcrumb">
@@ -12,13 +17,16 @@
     <h1 class="title is-3">
       Create
       {{uppercase this.policyType}}
-      policy
+      Policy
     </h1>
   </p.levelLeft>
 </PageHeader>
+
+<hr class="has-background-gray-300 is-marginless" />
 
 <PolicyForm
   @model={{this.model}}
   @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
   @onCancel={{transition-to "vault.cluster.policies.index"}}
+  @renderPolicyExampleModal={{true}}
 />

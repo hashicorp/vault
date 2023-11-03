@@ -1,15 +1,20 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .env-banner {
   align-self: center;
-  border-radius: 3rem;
-  background: linear-gradient(135deg, $blue, $purple);
+  border-radius: $size-1;
+  background: linear-gradient(
+    135deg,
+    $blue,
+    hsl(271, 100%, 71%)
+  ); // only use case for purple in the app. define here instead of utils/color_var
   animation: env-banner-color-rotate 8s infinite linear alternate;
   color: $white;
   margin-top: -20px;
+  margin-bottom: 6px;
 
   .hs-icon {
     margin: 0;

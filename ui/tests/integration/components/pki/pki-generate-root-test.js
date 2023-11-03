@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -23,7 +23,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-test';
-    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test' });
+    this.urls = this.store.createRecord('pki/config/urls', { id: 'pki-test' });
     this.model = this.store.createRecord('pki/action');
     this.onSave = Sinon.spy();
     this.onCancel = Sinon.spy();
@@ -53,9 +53,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     await click(SELECTORS.additionalGroupToggle);
     assert
       .dom(SELECTORS.toggleGroupDescription)
-      .hasText(
-        'These fields provide more information about the client to which the certificate belongs. Add one item per row.'
-      );
+      .hasText('These fields provide more information about the client to which the certificate belongs.');
     assert
       .dom(`[data-test-group="Additional subject fields"] ${SELECTORS.formField}`)
       .exists({ count: 7 }, '7 form fields under Additional Fields toggle');
@@ -64,7 +62,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
     assert
       .dom(SELECTORS.toggleGroupDescription)
       .hasText(
-        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate. Add one item per row.'
+        'SAN fields are an extension that allow you specify additional host names (sites, IP addresses, common names, etc.) to be protected by a single certificate.'
       );
     assert
       .dom(`[data-test-group="Subject Alternative Name (SAN) Options"] ${SELECTORS.formField}`)

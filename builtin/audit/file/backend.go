@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package file
 
@@ -15,12 +15,19 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
+const (
+	stdout  = "stdout"
+	discard = "discard"
+)
+
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -37,53 +44,45 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// normalize path if configured for stdout
-	if strings.EqualFold(path, "stdout") {
-		path = "stdout"
+	if strings.EqualFold(path, stdout) {
+		path = stdout
 	}
-	if strings.EqualFold(path, "discard") {
-		path = "discard"
+	if strings.EqualFold(path, discard) {
+		path = discard
 	}
 
-	format, ok := conf.Config["format"]
-	if !ok {
-		format = "json"
-	}
-	switch format {
-	case "json", "jsonx":
-	default:
-		return nil, fmt.Errorf("unknown format type %q", format)
+	var cfgOpts []audit.Option
+
+	if format, ok := conf.Config["format"]; ok {
+		cfgOpts = append(cfgOpts, audit.WithFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
-	hmacAccessor := true
 	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
-		value, err := strconv.ParseBool(hmacAccessorRaw)
+		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hmacAccessor = value
+		cfgOpts = append(cfgOpts, audit.WithHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
-	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
-		b, err := strconv.ParseBool(raw)
+		v, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
 		}
-		logRaw = b
+		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	elideListResponses := false
 	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
-		value, err := strconv.ParseBool(elideListResponsesRaw)
+		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
 			return nil, err
 		}
-		elideListResponses = value
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
 	}
 
-	// Check if mode is provided
 	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
@@ -93,7 +92,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		switch m {
 		case 0:
 			// if mode is 0000, then do not modify file mode
-			if path != "stdout" && path != "discard" {
+			if path != stdout && path != discard {
 				fileInfo, err := os.Stat(path)
 				if err != nil {
 					return nil, err
@@ -102,50 +101,105 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 			}
 		default:
 			mode = os.FileMode(m)
-
 		}
+	}
 
+	cfg, err := audit.NewFormatterConfig(cfgOpts...)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
-		path:       path,
-		mode:       mode,
-		saltConfig: conf.SaltConfig,
-		saltView:   conf.SaltView,
-		salt:       new(atomic.Value),
-		formatConfig: audit.FormatterConfig{
-			Raw:                logRaw,
-			HMACAccessor:       hmacAccessor,
-			ElideListResponses: elideListResponses,
-		},
+		path:         path,
+		mode:         mode,
+		saltConfig:   conf.SaltConfig,
+		saltView:     conf.SaltView,
+		salt:         new(atomic.Value),
+		formatConfig: cfg,
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
 	// the right type
 	b.salt.Store((*salt.Salt)(nil))
 
-	switch format {
-	case "json":
-		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-			Prefix:   conf.Config["prefix"],
-			SaltFunc: b.Salt,
-		}
-	case "jsonx":
-		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
-			Prefix:   conf.Config["prefix"],
-			SaltFunc: b.Salt,
-		}
+	// Configure the formatter for either case.
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig), audit.WithPrefix(conf.Config["prefix"]))
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+	var w audit.Writer
+	switch b.formatConfig.RequiredFormat {
+	case audit.JSONFormat:
+		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
+	case audit.JSONxFormat:
+		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
+	default:
+		return nil, fmt.Errorf("unknown format type %q", b.formatConfig.RequiredFormat)
 	}
 
-	switch path {
-	case "stdout", "discard":
-		// no need to test opening file if outputting to stdout or discarding
-	default:
-		// Ensure that the file can be successfully opened for writing;
-		// otherwise it will be too late to catch later without problems
-		// (ref: https://github.com/hashicorp/vault/issues/550)
-		if err := b.open(); err != nil {
-			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+	b.formatter = fw
+
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
+
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		var sinkNode eventlogger.Node
+
+		switch path {
+		case stdout:
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewStdoutSinkNode(b.formatConfig.RequiredFormat.String())}
+		case discard:
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewNoopSink()}
+		default:
+			var err error
+
+			var opts []event.Option
+			// Check if mode is provided
+			if modeRaw, ok := conf.Config["mode"]; ok {
+				opts = append(opts, event.WithFileMode(modeRaw))
+			}
+
+			// The NewFileSink function attempts to open the file and will
+			// return an error if it can't.
+			n, err := event.NewFileSink(
+				b.path,
+				b.formatConfig.RequiredFormat.String(), opts...)
+			if err != nil {
+				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
+			}
+			sinkNode = &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
+		}
+
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
+
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
+	} else {
+		switch path {
+		case stdout:
+		case discard:
+		default:
+			// Ensure that the file can be successfully opened for writing;
+			// otherwise it will be too late to catch later without problems
+			// (ref: https://github.com/hashicorp/vault/issues/550)
+			if err := b.open(); err != nil {
+				return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+			}
 		}
 	}
 
@@ -160,7 +214,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	path string
 
-	formatter    audit.AuditFormatter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	fileLock sync.RWMutex
@@ -171,6 +225,9 @@ type Backend struct {
 	salt       *atomic.Value
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -199,26 +256,17 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	return newSalt, nil
 }
 
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return audit.HashString(salt, data), nil
-}
-
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 2000))
-	err := b.formatter.FormatRequest(ctx, buf, b.formatConfig, in)
+	err := b.formatter.FormatAndWriteRequest(ctx, buf, in)
 	if err != nil {
 		return err
 	}
@@ -226,7 +274,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	return b.log(ctx, buf, writer)
 }
 
-func (b *Backend) log(ctx context.Context, buf *bytes.Buffer, writer io.Writer) error {
+func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) error {
 	reader := bytes.NewReader(buf.Bytes())
 
 	b.fileLock.Lock()
@@ -242,7 +290,7 @@ func (b *Backend) log(ctx context.Context, buf *bytes.Buffer, writer io.Writer) 
 	if _, err := reader.WriteTo(writer); err == nil {
 		b.fileLock.Unlock()
 		return nil
-	} else if b.path == "stdout" {
+	} else if b.path == stdout {
 		b.fileLock.Unlock()
 		return err
 	}
@@ -267,14 +315,14 @@ func (b *Backend) log(ctx context.Context, buf *bytes.Buffer, writer io.Writer) 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 6000))
-	err := b.formatter.FormatResponse(ctx, buf, b.formatConfig, in)
+	err := b.formatter.FormatAndWriteResponse(ctx, buf, in)
 	if err != nil {
 		return err
 	}
@@ -283,17 +331,28 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
 	var buf bytes.Buffer
-	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -332,31 +391,61 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload(_ context.Context) error {
-	switch b.path {
-	case "stdout", "discard":
+	// When there are nodes created in the map, use the eventlogger behavior.
+	if len(b.nodeMap) > 0 {
+		for _, n := range b.nodeMap {
+			if n.Type() == eventlogger.NodeTypeSink {
+				return n.Reopen()
+			}
+		}
+
 		return nil
-	}
+	} else {
+		// old non-eventlogger behavior
+		switch b.path {
+		case stdout, discard:
+			return nil
+		}
 
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
+		b.fileLock.Lock()
+		defer b.fileLock.Unlock()
 
-	if b.f == nil {
+		if b.f == nil {
+			return b.open()
+		}
+
+		err := b.f.Close()
+		// Set to nil here so that even if we error out, on the next access open()
+		// will be tried
+		b.f = nil
+		if err != nil {
+			return err
+		}
+
 		return b.open()
 	}
-
-	err := b.f.Close()
-	// Set to nil here so that even if we error out, on the next access open()
-	// will be tried
-	b.f = nil
-	if err != nil {
-		return err
-	}
-
-	return b.open()
 }
 
 func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt.Store((*salt.Salt)(nil))
+}
+
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }

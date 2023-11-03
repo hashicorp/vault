@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki generate csr', function (hooks) {
+module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
   setupMirage(hooks);
@@ -18,6 +18,7 @@ module('Integration | Component | pki generate csr', function (hooks) {
   hooks.beforeEach(async function () {
     this.owner.lookup('service:secretMountPath').update('pki-test');
     this.store = this.owner.lookup('service:store');
+    this.onComplete = () => {};
     this.model = this.owner
       .lookup('service:store')
       .createRecord('pki/action', { actionType: 'generate-csr' });
@@ -36,6 +37,10 @@ module('Integration | Component | pki generate csr', function (hooks) {
     this.server.post('/pki-test/issuers/generate/intermediate/exported', (schema, req) => {
       const payload = JSON.parse(req.requestBody);
       assert.strictEqual(payload.common_name, 'foo', 'Request made to correct endpoint on save');
+      return {
+        request_id: '123',
+        data: {},
+      };
     });
 
     await render(hbs`<PkiGenerateCsr @model={{this.model}} @onComplete={{this.onComplete}} />`, {
@@ -47,7 +52,7 @@ module('Integration | Component | pki generate csr', function (hooks) {
       'commonName',
       'excludeCnFromSans',
       'format',
-      'serialNumber',
+      'subjectSerialNumber',
       'addBasicConstraints',
     ];
     fields.forEach((key) => {
@@ -69,9 +74,12 @@ module('Integration | Component | pki generate csr', function (hooks) {
 
     this.onCancel = () => assert.ok(true, 'onCancel action fires');
 
-    await render(hbs`<PkiGenerateCsr @model={{this.model}} @onCancel={{this.onCancel}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<PkiGenerateCsr @model={{this.model}} @onCancel={{this.onCancel}} @onComplete={{this.onComplete}} />`,
+      {
+        owner: this.engine,
+      }
+    );
 
     await click('[data-test-save]');
 
@@ -99,19 +107,19 @@ module('Integration | Component | pki generate csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.',
         'renders Next steps alert banner'
       );
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-masked-input] button')
+      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
       .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')
       .hasAttribute('data-clipboard-text', this.model.keyId, 'it renders copyable key_id');
     assert
-      .dom('[data-test-value-div="Private key"] [data-test-masked-input] button')
+      .dom('[data-test-value-div="Private key"] [data-test-certificate-card] button')
       .hasAttribute('data-clipboard-text', this.model.privateKey, 'it renders copyable private_key');
     assert
       .dom('[data-test-value-div="Private key type"]')
@@ -130,13 +138,13 @@ module('Integration | Component | pki generate csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.',
         'renders Next steps alert banner'
       );
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-masked-input] button')
+      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
       .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package consul
 
@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConsul_newConsulBackend(t *testing.T) {
@@ -442,7 +443,9 @@ func TestConsulHABackend(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+	// We used to use a timestamp here but then if you run multiple instances in
+	// parallel with one Consul they end up conflicting.
+	randPath := fmt.Sprintf("vault-%d/", rand.Int())
 	defer func() {
 		client.KV().DeleteTree(randPath, nil)
 	}()
@@ -453,6 +456,10 @@ func TestConsulHABackend(t *testing.T) {
 		"token":        config.Token,
 		"path":         randPath,
 		"max_parallel": "-1",
+		// We have to wait this out as part of the test so shorten it a little from
+		// the default 15 seconds helps with test run times, especially when running
+		// this in a loop to detect flakes!
+		"lock_wait_time": "3s",
 	}
 
 	b, err := NewConsulBackend(backendConfig, logger)
@@ -478,4 +485,44 @@ func TestConsulHABackend(t *testing.T) {
 	if host == "" {
 		t.Fatalf("bad addr: %v", host)
 	}
+
+	// Calling `Info` on a Lock that has been unlocked must still return the old
+	// sessionID (until it is locked again) otherwise we will fail to fence writes
+	// that are still in flight from before (e.g. queued WAL or Merkle flushes) as
+	// soon as the first one unlocks the session allowing corruption again.
+	l, err := b.(physical.HABackend).LockWith("test-lock-session-info", "bar")
+	require.NoError(t, err)
+
+	expectKey := randPath + "test-lock-session-info"
+
+	cl := l.(*ConsulLock)
+
+	stopCh := make(chan struct{})
+	time.AfterFunc(5*time.Second, func() {
+		close(stopCh)
+	})
+	leaderCh, err := cl.Lock(stopCh)
+	require.NoError(t, err)
+	require.NotNil(t, leaderCh)
+
+	key, sid := cl.Info()
+	require.Equal(t, expectKey, key)
+	require.NotEmpty(t, sid)
+
+	// Now Unlock the lock, sessionID should be reset to empty string
+	err = cl.Unlock()
+	require.NoError(t, err)
+	key2, sid2 := cl.Info()
+	require.Equal(t, key, key2)
+	require.Equal(t, sid, sid2)
+
+	// Lock it again, this should cause a new session to be created so SID should
+	// change.
+	leaderCh, err = cl.Lock(stopCh)
+	require.NoError(t, err)
+	require.NotNil(t, leaderCh)
+
+	key3, sid3 := cl.Info()
+	require.Equal(t, key, key3)
+	require.NotEqual(t, sid, sid3)
 }

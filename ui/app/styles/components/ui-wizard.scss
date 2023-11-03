@@ -1,8 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
+// This file is not being used. https://github.com/hashicorp/vault/pull/19220
 .ui-wizard-container {
   display: flex;
   flex-direction: column;
@@ -23,7 +24,7 @@
   padding-right: 324px;
   padding-right: calc(324px + env(safe-area-inset-right));
 
-  @include until($tablet) {
+  @include until($mobile) {
     padding-right: 0;
     padding-bottom: 50vh;
   }
@@ -38,22 +39,14 @@
   position: fixed;
   right: $size-8;
   bottom: $size-8;
-  top: calc(#{$header-height} + #{$size-8});
+  top: calc(#{4rem} + #{$size-8});
   overflow: auto;
 
   p {
     line-height: 1.33;
   }
 
-  .dismiss-collapsed {
-    position: absolute;
-    top: $size-8;
-    right: $size-8;
-    color: $grey;
-    z-index: 30;
-  }
-
-  @include until($tablet) {
+  @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
     left: 0;
@@ -79,7 +72,7 @@
   margin: $size-4 0;
   position: relative;
 
-  @include until($tablet) {
+  @include until($mobile) {
     margin-top: 0;
     padding-top: 0;
   }
@@ -103,9 +96,9 @@
   padding-bottom: $size-11;
   position: fixed;
   right: $size-8;
-  top: calc(#{$header-height} + #{$size-8});
+  top: calc(#{4rem} + #{$size-8});
 
-  @include until($tablet) {
+  @include until($mobile) {
     box-shadow: $box-shadow, 0 0 20px rgba($black, 0.24);
     bottom: 0;
     left: 0;
@@ -141,7 +134,7 @@
   margin: $size-8 0 0;
   padding: 0 $size-8;
   border-top: solid 1px $white;
-  border-image: linear-gradient(to right, $vault-gray-dark, $vault-gray) 1;
+  border-image: linear-gradient(to right, $grey-dark, $grey) 1;
   border-width: 1px 0 0;
   button {
     font-size: $size-7;
@@ -196,8 +189,8 @@
 }
 
 .progress-bar {
-  background: $progress-bar-background-color;
-  box-shadow: inset 0 0 0 1px $ui-gray-200;
+  background: $ui-gray-050;
+  box-shadow: inset $box-link-shadow;
   display: flex;
   height: $wizard-progress-bar-height;
   position: relative;
