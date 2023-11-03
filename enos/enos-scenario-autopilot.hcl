@@ -12,6 +12,7 @@ scenario "autopilot" {
     // release branch's version.
     initial_version = ["1.11.12", "1.12.11", "1.13.6"]
     seal            = ["awskms", "shamir"]
+    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
@@ -77,6 +78,15 @@ scenario "autopilot" {
     }
   }
 
+  step "create_seal_key" {
+    module = "seal_key_${matrix.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
   step "read_license" {
     module = module.read_license
 
@@ -94,11 +104,11 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.vault_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -114,22 +124,23 @@ scenario "autopilot" {
     }
 
     variables {
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      install_dir           = local.vault_install_dir
-      license               = matrix.edition != "ce" ? step.read_license.license : null
-      packages              = concat(global.packages, global.distro_packages[matrix.distro])
+      cluster_name         = step.create_vault_cluster_targets.cluster_name
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "ce" ? step.read_license.license : null
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
       release = {
         edition = matrix.edition
         version = matrix.initial_version
       }
+      seal_ha_beta    = matrix.seal_ha_beta
+      seal_key_name   = step.create_seal_key.resource_name
+      seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
         autopilot_upgrade_version = matrix.initial_version
       }
-      target_hosts         = step.create_vault_cluster_targets.hosts
-      unseal_method        = matrix.seal
-      enable_audit_devices = var.vault_enable_audit_devices
+      target_hosts = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -190,11 +201,11 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      common_tags           = global.tags
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id         = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      common_tags    = global.tags
+      cluster_name   = step.create_vault_cluster_targets.cluster_name
+      seal_key_names = step.create_seal_key.resource_names
+      vpc_id         = step.create_vpc.id
     }
   }
 
@@ -213,7 +224,7 @@ scenario "autopilot" {
 
     variables {
       artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn       = step.create_vpc.kms_key_arn
+      enable_audit_devices        = var.vault_enable_audit_devices
       cluster_name                = step.create_vault_cluster_targets.cluster_name
       log_level                   = var.vault_log_level
       force_unseal                = matrix.seal == "shamir"
@@ -224,13 +235,14 @@ scenario "autopilot" {
       manage_service              = local.manage_service
       packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
+      seal_ha_beta                = matrix.seal_ha_beta
+      seal_key_name               = step.create_seal_key.resource_name
+      seal_type                   = matrix.seal
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"
       storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
       storage_node_prefix         = "upgrade_node"
       target_hosts                = step.create_vault_cluster_upgrade_targets.hosts
-      unseal_method               = matrix.seal
-      enable_audit_devices        = var.vault_enable_audit_devices
     }
   }
 
@@ -498,9 +510,9 @@ scenario "autopilot" {
     }
   }
 
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
+  output "audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 
   output "cluster_name" {
@@ -543,6 +555,11 @@ scenario "autopilot" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.resource_name
+  }
+
   output "unseal_keys_b64" {
     description = "The Vault cluster unseal keys"
     value       = step.create_vault_cluster.unseal_keys_b64
@@ -566,10 +583,5 @@ scenario "autopilot" {
   output "upgrade_public_ips" {
     description = "The Vault cluster public IPs"
     value       = step.upgrade_vault_cluster_with_autopilot.public_ips
-  }
-
-  output "vault_audit_device_file_path" {
-    description = "The file path for the file audit device, if enabled"
-    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

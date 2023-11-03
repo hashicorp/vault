@@ -42,30 +42,6 @@ locals {
     "awskms" = 3
     "shamir" = null
   }
-  seal = {
-    "awskms" = {
-      type = "awskms"
-      attributes = {
-        kms_key_id = var.awskms_unseal_key_arn
-      }
-    }
-    "shamir" = {
-      type       = "shamir"
-      attributes = null
-    }
-  }
-  storage_config = [for idx, host in var.target_hosts : (var.storage_backend == "raft" ?
-    merge(
-      {
-        node_id = "${var.storage_node_prefix}_${idx}"
-      },
-      var.storage_backend_addl_config
-    ) :
-    {
-      address = "127.0.0.1:8500"
-      path    = "vault"
-    })
-  ]
   vault_service_user = "vault"
 }
 
@@ -148,90 +124,35 @@ resource "enos_consul_start" "consul" {
   }
 }
 
-resource "enos_vault_start" "leader" {
+module "start_vault" {
+  source = "../start_vault"
+
   depends_on = [
     enos_consul_start.consul,
     enos_bundle_install.vault,
   ]
-  for_each = local.leader
 
-  bin_path    = local.bin_path
-  config_dir  = var.config_dir
-  environment = var.config_env_vars
-  config = {
-    api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
-    cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"
-    cluster_name = var.cluster_name
-    listener = {
-      type = "tcp"
-      attributes = {
-        address     = "0.0.0.0:8200"
-        tls_disable = "true"
-      }
-    }
-    log_level = var.log_level
-    storage = {
-      type       = var.storage_backend
-      attributes = ({ for key, value in local.storage_config[each.key] : key => value })
-    }
-    seal = local.seal[var.unseal_method]
-    ui   = true
-  }
-  license        = var.license
-  manage_service = var.manage_service
-  username       = local.vault_service_user
-  unit_name      = "vault"
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
-}
-
-resource "enos_vault_start" "followers" {
-  depends_on = [
-    enos_vault_start.leader,
-  ]
-  for_each = local.followers
-
-  bin_path    = local.bin_path
-  config_dir  = var.config_dir
-  environment = var.config_env_vars
-  config = {
-    api_addr     = "http://${var.target_hosts[each.value].private_ip}:8200"
-    cluster_addr = "http://${var.target_hosts[each.value].private_ip}:8201"
-    cluster_name = var.cluster_name
-    listener = {
-      type = "tcp"
-      attributes = {
-        address     = "0.0.0.0:8200"
-        tls_disable = "true"
-      }
-    }
-    log_level = var.log_level
-    storage = {
-      type       = var.storage_backend
-      attributes = { for key, value in local.storage_config[each.key] : key => value }
-    }
-    seal = local.seal[var.unseal_method]
-    ui   = true
-  }
-  license        = var.license
-  manage_service = var.manage_service
-  username       = local.vault_service_user
-  unit_name      = "vault"
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
+  cluster_name            = var.cluster_name
+  config_dir              = var.config_dir
+  install_dir             = var.install_dir
+  license                 = var.license
+  log_level               = var.log_level
+  manage_service          = var.manage_service
+  seal_ha_beta            = var.seal_ha_beta
+  seal_key_name           = var.seal_key_name
+  seal_key_name_secondary = var.seal_key_name_secondary
+  seal_type               = var.seal_type
+  seal_type_secondary     = var.seal_type_secondary
+  service_username        = local.vault_service_user
+  storage_backend         = var.storage_backend
+  storage_backend_attrs   = var.storage_backend_addl_config
+  storage_node_prefix     = var.storage_node_prefix
+  target_hosts            = var.target_hosts
 }
 
 resource "enos_vault_init" "leader" {
   depends_on = [
-    enos_vault_start.followers,
+    module.start_vault,
   ]
   for_each = toset([
     for idx, leader in local.leader : leader
@@ -239,13 +160,13 @@ resource "enos_vault_init" "leader" {
   ])
 
   bin_path   = local.bin_path
-  vault_addr = enos_vault_start.leader[0].config.api_addr
+  vault_addr = module.start_vault.leader[0].config.api_addr
 
-  key_shares    = local.key_shares[var.unseal_method]
-  key_threshold = local.key_threshold[var.unseal_method]
+  key_shares    = local.key_shares[var.seal_type]
+  key_threshold = local.key_threshold[var.seal_type]
 
-  recovery_shares    = local.recovery_shares[var.unseal_method]
-  recovery_threshold = local.recovery_threshold[var.unseal_method]
+  recovery_shares    = local.recovery_shares[var.seal_type]
+  recovery_threshold = local.recovery_threshold[var.seal_type]
 
   transport = {
     ssh = {
@@ -256,15 +177,15 @@ resource "enos_vault_init" "leader" {
 
 resource "enos_vault_unseal" "leader" {
   depends_on = [
-    enos_vault_start.followers,
+    module.start_vault,
     enos_vault_init.leader,
   ]
   for_each = enos_vault_init.leader // only unseal the leader if we initialized it
 
   bin_path    = local.bin_path
-  vault_addr  = enos_vault_start.leader[each.key].config.api_addr
-  seal_type   = var.unseal_method
-  unseal_keys = var.unseal_method != "shamir" ? null : coalesce(var.shamir_unseal_keys, enos_vault_init.leader[0].unseal_keys_hex)
+  vault_addr  = module.start_vault.leader[each.key].config.api_addr
+  seal_type   = var.seal_type
+  unseal_keys = var.seal_type != "shamir" ? null : coalesce(var.shamir_unseal_keys, enos_vault_init.leader[0].unseal_keys_hex)
 
   transport = {
     ssh = {
@@ -282,13 +203,13 @@ resource "enos_vault_unseal" "followers" {
   // initialized the cluster
   for_each = toset([
     for idx, follower in local.followers : follower
-    if var.unseal_method == "shamir" && var.initialize_cluster
+    if var.seal_type == "shamir" && var.initialize_cluster
   ])
 
   bin_path    = local.bin_path
-  vault_addr  = enos_vault_start.followers[each.key].config.api_addr
-  seal_type   = var.unseal_method
-  unseal_keys = var.unseal_method != "shamir" ? null : coalesce(var.shamir_unseal_keys, enos_vault_init.leader[0].unseal_keys_hex)
+  vault_addr  = module.start_vault.followers[each.key].config.api_addr
+  seal_type   = var.seal_type
+  unseal_keys = var.seal_type != "shamir" ? null : coalesce(var.shamir_unseal_keys, enos_vault_init.leader[0].unseal_keys_hex)
 
   transport = {
     ssh = {
@@ -303,7 +224,7 @@ resource "enos_vault_unseal" "followers" {
 // force_unseal to true.
 resource "enos_vault_unseal" "maybe_force_unseal" {
   depends_on = [
-    enos_vault_start.followers,
+    module.start_vault.followers,
   ]
   for_each = {
     for idx, host in var.target_hosts : idx => host
@@ -312,7 +233,7 @@ resource "enos_vault_unseal" "maybe_force_unseal" {
 
   bin_path   = local.bin_path
   vault_addr = "http://localhost:8200"
-  seal_type  = var.unseal_method
+  seal_type  = var.seal_type
   unseal_keys = coalesce(
     var.shamir_unseal_keys,
     try(enos_vault_init.leader[0].unseal_keys_hex, null),
@@ -325,38 +246,11 @@ resource "enos_vault_unseal" "maybe_force_unseal" {
   }
 }
 
-resource "enos_remote_exec" "vault_write_license" {
-  for_each = toset([
-    for idx, leader in local.leader : leader
-    if var.initialize_cluster
-  ])
-
-  depends_on = [
-    enos_vault_unseal.leader,
-    enos_vault_unseal.maybe_force_unseal,
-  ]
-
-  environment = {
-    BIN_PATH    = local.bin_path,
-    LICENSE     = coalesce(var.license, "none")
-    VAULT_TOKEN = coalesce(var.root_token, try(enos_vault_init.leader[0].root_token, null), "none")
-  }
-
-  scripts = [abspath("${path.module}/scripts/vault-write-license.sh")]
-
-  transport = {
-    ssh = {
-      host = var.target_hosts[each.value].public_ip
-    }
-  }
-}
-
 # We need to ensure that the directory used for audit logs is present and accessible to the vault
 # user on all nodes, since logging will only happen on the leader.
 resource "enos_remote_exec" "create_audit_log_dir" {
   depends_on = [
-    enos_vault_start.leader,
-    enos_vault_start.followers,
+    module.start_vault,
     enos_vault_unseal.leader,
     enos_vault_unseal.followers,
     enos_vault_unseal.maybe_force_unseal,
