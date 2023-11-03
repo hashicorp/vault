@@ -71,7 +71,7 @@
   &.is-small {
     + label {
       font-size: $size-7;
-      padding-left: $size-8 * 2.5;
+      padding-left: $spacing-32;
       margin: 0 0.25rem;
       &::before {
         top: calc($size-8 / 5);
