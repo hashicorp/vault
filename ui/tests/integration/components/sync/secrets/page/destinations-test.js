@@ -64,12 +64,6 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   test('it should render toolbar filters and actions', async function (assert) {
     assert.expect(4);
 
-    const didTransition = (key, value) => {
-      return this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations', {
-        queryParams: { [key]: value },
-      });
-    };
-
     this.typeFilter = 'aws-sm';
     await this.renderComponent();
 
@@ -86,8 +80,9 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       await click('[data-option-index="0"]');
 
       const value = filter === 'type' ? 'aws-sm' : 'destination-aws';
-      assert.true(
-        didTransition(filter, value),
+      assert.deepEqual(
+        this.transitionStub.lastCall.args,
+        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filter]: value } }],
         `${filter} filter triggered transition with correct query params`
       );
     }

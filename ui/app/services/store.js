@@ -106,7 +106,7 @@ export default class StoreService extends Store {
       if (filter instanceof Function) {
         newData = filter(dataset);
       } else {
-        newData = dataset.filter(function (item) {
+        newData = dataset.filter((item) => {
           const id = item.id || item.name || item;
           return id.toLowerCase().includes(filter.toLowerCase());
         });

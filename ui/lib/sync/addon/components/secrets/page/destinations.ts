@@ -15,7 +15,7 @@ import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { EngineOwner } from 'vault/vault/app-types';
-import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/app-types';
+import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
 
 interface Args {
   destinations: Array<SyncDestinationModel>;
@@ -81,10 +81,10 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   async onDelete(destination: SyncDestinationModel) {
     try {
-      const { name, type } = destination;
+      const { name } = destination;
       const message = `Successfully deleted destination ${name}.`;
       await destination.destroyRecord();
-      this.store.clearDataset(`sync/destinations/${type}`);
+      this.store.clearDataset('sync/destination');
       this.router.transitionTo('vault.cluster.sync.secrets.destinations');
       this.flashMessages.success(message);
     } catch (error) {
