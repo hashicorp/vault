@@ -333,6 +333,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
 
+	c.AddLogger(managerLogger)
+
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -397,6 +399,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
+	c.AddLogger(expLogger)
 
 	detectDeadlocks := slices.Contains(c.detectDeadlocks, "expiration")
 	mgr := NewExpirationManager(c, view, e, expLogger, detectDeadlocks)
@@ -554,6 +557,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
+	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")
