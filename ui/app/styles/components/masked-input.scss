@@ -13,7 +13,7 @@
 }
 
 .has-label .masked-input {
-  padding-top: $spacing-s;
+  padding-top: $spacing-12;
 }
 
 .has-padding {
@@ -44,12 +44,12 @@
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
-  padding-left: $spacing-s;
+  padding-left: $spacing-12;
   background-color: transparent;
 }
 
 .button.masked-input-toggle {
-  min-width: $spacing-xl;
+  min-width: $spacing-36;
   border-left: 0;
   color: $grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
@@ -64,7 +64,7 @@
     background: transparent;
     height: auto;
     line-height: 1rem;
-    min-width: $spacing-l;
+    min-width: $spacing-24;
     border: 0;
     box-shadow: none;
     color: $grey-light;

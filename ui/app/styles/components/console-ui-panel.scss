@@ -68,7 +68,7 @@ $console-close-height: 35px;
     font-weight: $font-weight-bold;
     outline: none;
     padding: $size-10;
-    margin-right: $spacing-xs;
+    margin-right: $spacing-8;
     transition: background-color $speed;
   }
 }
@@ -132,13 +132,13 @@ $console-close-height: 35px;
 
 .console-close-button {
   position: sticky;
-  top: $spacing-xs;
+  top: $spacing-8;
   height: $console-close-height;
   display: flex;
   justify-content: flex-end;
   z-index: 210;
 
   button {
-    margin-right: $spacing-xs;
+    margin-right: $spacing-8;
   }
 }

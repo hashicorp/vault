@@ -119,21 +119,21 @@
 
   p {
     font-weight: $font-weight-semibold;
-    margin-left: $spacing-l;
-    padding-left: $spacing-xxs;
+    margin-left: $spacing-24;
+    padding-left: $spacing-4;
     padding-top: 0;
   }
 
   .confirm-action-options {
     border-top: $light-border;
     display: flex;
-    padding: $spacing-xxs;
+    padding: $spacing-4;
 
     .link {
       flex: 1;
       text-align: center;
       width: auto;
-      padding: $spacing-xs;
+      padding: $spacing-8;
     }
   }
 }
