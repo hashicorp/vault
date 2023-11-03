@@ -20,12 +20,12 @@
               type="checkbox"
               id="enabled"
               name="enabled"
-              class="switch is-rounded is-success is-small"
+              class="toggle is-success is-small"
               disabled={{@model.reportingEnabled}}
               checked={{eq @model.enabled "On"}}
               {{on "change" this.toggleEnabled}}
             />
-            <label for="enabled">
+            <label for="enabled" class="has-text-weight-bold is-size-8">
               Data collection is
               {{lowercase @model.enabled}}
             </label>
