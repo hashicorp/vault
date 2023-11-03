@@ -91,11 +91,6 @@
       transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
     }
   }
-
-  &.is-large {
-    width: 4.5rem;
-    height: 2.25rem;
-  }
 }
 .toggle[type='checkbox'].is-small + label::after {
   will-change: left;
