@@ -16,7 +16,7 @@ export default class ConfigUiEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
+    services: ['auth', 'store', 'flash-messages', 'namespace', 'router', 'version'],
   };
 }
 
