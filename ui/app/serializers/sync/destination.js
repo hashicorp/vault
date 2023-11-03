@@ -17,9 +17,6 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 
-  normalizeCreateRecordResponse() {
-    return super.normalizeCreateRecordResponse(...arguments);
-  }
   extractLazyPaginatedData(payload) {
     const transformedPayload = [];
     // loop through each destination type (keys in key_info)

@@ -10,7 +10,8 @@ export default function (server) {
   const uri = `${base}/:type/:name`;
 
   const recordToPayload = (record) => {
-    const { type, name, ...connection_details } = record;
+    delete record.id;
+    const { name, type, ...connection_details } = record;
     return {
       data: {
         connection_details,
