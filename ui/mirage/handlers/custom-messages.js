@@ -55,4 +55,66 @@ export default function (server) {
       },
     };
   });
+
+  server.post('/sys/config/ui/custom-messages', () => {});
+
+  server.get('/sys/internal/ui/unauthenticated-messages', () => {
+    return {
+      data: {
+        'key-info': {
+          '01234567-89ab-cdef-0123-456789abcdef': {
+            title: 'Unauthenticated Title One',
+            message:
+              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
+            type: 'modal',
+            authenticated: false,
+            start_time: '2023-10-15T02:36:43.986212308Z',
+            end_time: '2024-10-15T02:36:43.986212308Z',
+            options: {},
+          },
+          '76543210-89ab-cdef-0123-456789abcdef': {
+            title: 'Unauthenticated Title Two',
+            message:
+              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
+            type: 'banner',
+            authenticated: false,
+            start_time: '2021-10-15T02:36:43.986212308Z',
+            end_time: '2031-10-15T02:36:43.986212308Z',
+            options: {},
+          },
+        },
+        keys: ['01234567-89ab-cdef-0123-456789abcdef', '76543210-89ab-cdef-0123-456789abcdef'],
+      },
+    };
+  });
+
+  server.get('/sys/internal/ui/authenticated-messages', () => {
+    return {
+      data: {
+        'key-info': {
+          '6543210-89ab-cdef-0123-456780abcieh': {
+            title: 'Authenticated Title One',
+            message:
+              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
+            type: 'modal',
+            authenticated: true,
+            start_time: '2023-10-15T02:36:43.986212308Z',
+            end_time: '2024-10-15T02:36:43.986212308Z',
+            options: {},
+          },
+          '00123858-89ab-cdef-0123-789037ejhdgt': {
+            title: 'Authenticated Title One',
+            message:
+              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
+            type: 'banner',
+            authenticated: true,
+            start_time: '2021-10-15T02:36:43.986212308Z',
+            end_time: '2031-10-15T02:36:43.986212308Z',
+            options: {},
+          },
+        },
+        keys: ['6543210-89ab-cdef-0123-456780abcieh', '00123858-89ab-cdef-0123-789037ejhdgt'],
+      },
+    };
+  });
 }
