@@ -180,6 +180,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		Proxier:             apiProxy,
 		Logger:              cacheLogger.Named("leasecache"),
 		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)

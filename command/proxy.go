@@ -449,6 +449,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			CacheStaticSecrets: config.Cache.CacheStaticSecrets,
 			// dynamic secrets are configured as default-on to preserve backwards compatibility
 			CacheDynamicSecrets: !config.Cache.DisableCachingDynamicSecrets,
+			UserAgentToUse:      useragent.AgentProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))

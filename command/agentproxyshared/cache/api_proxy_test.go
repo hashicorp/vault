@@ -277,6 +277,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 			Proxier:             apiProxy,
 			Logger:              cacheLogger.Named("leasecache"),
 			CacheDynamicSecrets: true,
+			UserAgentToUse:      "test",
 		})
 		if err != nil {
 			t.Fatal(err)

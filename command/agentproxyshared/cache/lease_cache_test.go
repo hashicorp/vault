@@ -49,6 +49,7 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -71,6 +72,7 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -93,6 +95,7 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 		Storage:             storage,
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	require.NoError(t, err)
 

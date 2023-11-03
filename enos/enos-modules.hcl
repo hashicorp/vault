@@ -279,3 +279,10 @@ module "vault_wait_for_seal_rewrap" {
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
+
+module "verify_seal_type" {
+  source = "./modules/verify_seal_type"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
