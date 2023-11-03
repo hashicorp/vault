@@ -98,6 +98,8 @@ in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to s
 relatively horizontally with the number of secondaries rather than vertically as
 in the past.
 
+~> Note: Automated integrated storage snapshots are not replicated in Performance Replication. Each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) should be configured to create separate automated snapshots.
+
 ### Paths filter
 
 The primary cluster's mount configuration gets replicated across its secondary
