@@ -40,8 +40,6 @@ type InitResult struct {
 }
 
 var (
-	// TODO remove once entInitWALPassThrough is implemented in ENT
-	initPTFunc                = func(c *Core) func() { return nil }
 	initInProgress            uint32
 	ErrInitWithoutAutoloading = errors.New("cannot initialize storage without an autoloaded license")
 )
@@ -447,7 +445,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
+	if c.IsInSealMigrationMode(true) && !c.IsSealMigrated(true) {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 

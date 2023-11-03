@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
@@ -271,7 +276,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
     return await click(PAGE.backends.link(backend));
   };
 

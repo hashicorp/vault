@@ -20,13 +20,14 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -36,6 +37,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -105,11 +107,6 @@ const (
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
 
-	// defaultUserLockoutLogInterval is the default duration that Vault will
-	// emit a log informing that a user lockout is in effect when the value
-	// is not specified in the server config
-	defaultUserLockoutLogInterval = 1 * time.Minute
-
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
 	// number of failed totp passcode validations exceeds this max value, the
@@ -162,48 +159,6 @@ var (
 	// step down of the active node, to prevent instantly regrabbing the lock.
 	// It's var not const so that tests can manipulate it.
 	manualStepDownSleepPeriod = 10 * time.Second
-
-	// Functions only in the Enterprise version
-	// TODO remove once entPostUnseal is implemented in ENT
-	enterprisePostUnseal = enterprisePostUnsealImpl
-	// TODO remove once entPreSeal is implemented in ENT
-	enterprisePreSeal = enterprisePreSealImpl
-	// TODO remove once entSetupFilteredPaths is implemented in ENT
-	enterpriseSetupFilteredPaths = enterpriseSetupFilteredPathsImpl
-	// TODO remove once entSetupQuotas is implemented in ENT
-	enterpriseSetupQuotas = enterpriseSetupQuotasImpl
-	// TODO remove once entSetupAPILock is implemented in ENT
-	enterpriseSetupAPILock = setupAPILockImpl
-	// TODO remove once entStartReplication is implemented in ENT
-	startReplication = startReplicationImpl
-	// TODO remove once entStopReplication is implemented in ENT
-	stopReplication = stopReplicationImpl
-	// TODO remove once EntLastWAL is implemented in ENT
-	LastWAL = lastWALImpl
-	// TODO remove once EntLastPerformanceWAL is implemented in ENT
-	LastPerformanceWAL = lastPerformanceWALImpl
-	// TODO remove once EntLastDRWAL is implemented in ENT
-	LastDRWAL = lastDRWALImpl
-	// TODO remove once EntPerformanceMerkleRoot is implemented in ENT
-	PerformanceMerkleRoot = merkleRootImpl
-	// TODO remove once EntDRMerkleRoot is implemented in ENT
-	DRMerkleRoot = merkleRootImpl
-	// TODO remove once EntLastRemoteWAL is implemented in ENT
-	LastRemoteWAL = lastRemoteWALImpl
-	// TODO remove once entLastRemoteUpstreamWAL is implemented in ENT
-	LastRemoteUpstreamWAL = lastRemoteUpstreamWALImpl
-	// TODO remove once EntWaitUntilWALShipped is implemented in ENT
-	WaitUntilWALShipped = waitUntilWALShippedImpl
-	// TODO remove once entCheckStoredLicense is implemented in ENT
-	storedLicenseCheck = func(c *Core, conf *CoreConfig) error { return nil }
-	// TODO remove once entIsLicenseAutoloaded is implemented in ENT
-	LicenseAutoloaded = func(*Core) bool { return false }
-	// TODO remove once entCheckLicenseInit is implemented in ENT
-	LicenseInitCheck = func(*Core) error { return nil }
-	// TODO remove once EntGetLicenseState is implemented in ENT
-	LicenseSummary = func(*Core) (*LicenseState, error) { return nil, nil }
-	// TODO remove once EntReloadLicense is implemented in ENT
-	LicenseReload = func(*Core) error { return nil }
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -687,9 +642,6 @@ type Core struct {
 
 	updateLockedUserEntriesCancel context.CancelFunc
 
-	lockoutLoggerCancel    context.CancelFunc
-	userLockoutLogInterval time.Duration
-
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -739,6 +691,9 @@ type Core struct {
 
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
+
+	// Config value for "detect_deadlocks".
+	detectDeadlocks []string
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -905,8 +860,6 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
-
-	UserLockoutLogInterval time.Duration
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -954,10 +907,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
 	}
 
-	if conf.UserLockoutLogInterval == 0 {
-		conf.UserLockoutLogInterval = defaultUserLockoutLogInterval
-	}
-
 	// Validate the advertise addr if its given to us
 	if conf.RedirectAddr != "" {
 		u, err := url.Parse(conf.RedirectAddr)
@@ -1002,17 +951,26 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
 	}
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	if strings.Contains(conf.DetectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	} else {
-		stateLock = &locking.SyncRWMutex{}
-	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
+	}
+
+	var detectDeadlocks []string
+	if conf.DetectDeadlocks != "" {
+		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
+		for k, v := range detectDeadlocks {
+			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
+		}
+	}
+
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	stateLock = &locking.SyncRWMutex{}
+
+	if slices.Contains(detectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
 	}
 
 	// Setup the core
@@ -1082,13 +1040,13 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
-		userLockoutLogInterval:         conf.UserLockoutLogInterval,
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		detectDeadlocks:                detectDeadlocks,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1275,7 +1233,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,7 +1342,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	// KV
 	_, ok := logicalBackends[mountTypeKV]
 	if !ok {
-		logicalBackends[mountTypeKV] = PassthroughBackendFactory
+		logicalBackends[mountTypeKV] = kv.Factory
 	}
 
 	// Cubbyhole
@@ -1510,10 +1470,14 @@ func (c *Core) Sealed() bool {
 	return atomic.LoadUint32(c.sealed) == 1
 }
 
-// SecretProgress returns the number of keys provided so far
-func (c *Core) SecretProgress() (int, string) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// SecretProgress returns the number of keys provided so far. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) SecretProgress(lock bool) (int, string) {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	switch c.unlockInfo {
 	case nil:
 		return 0, ""
@@ -2510,13 +2474,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		sealHaEnabled, err := server.IsSealHABetaEnabled()
-		if err != nil {
-			return err
-		}
-		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
-			// Flag migration performed for seal-rewrap later
-			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+		if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
+			// Set the migration done flag so that a seal-rewrap gets triggered later.
+			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 			// triggering the rewrap when necessary.
 			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
 			atomic.StoreUint32(c.sealMigrationDone, 1)
@@ -2758,32 +2718,6 @@ func (c *Core) preSeal() error {
 	return result
 }
 
-func enterprisePostUnsealImpl(c *Core, isStandby bool) error {
-	return nil
-}
-
-func enterprisePreSealImpl(c *Core) error {
-	return nil
-}
-
-func enterpriseSetupFilteredPathsImpl(c *Core) error {
-	return nil
-}
-
-func enterpriseSetupQuotasImpl(ctx context.Context, c *Core) error {
-	return nil
-}
-
-func startReplicationImpl(c *Core) error {
-	return nil
-}
-
-func stopReplicationImpl(c *Core) error {
-	return nil
-}
-
-func setupAPILockImpl(_ *Core, _ context.Context) error { return nil }
-
 func (c *Core) ReplicationState() consts.ReplicationState {
 	return consts.ReplicationState(atomic.LoadUint32(c.replicationState))
 }
@@ -2813,34 +2747,6 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
-}
-
-func waitUntilWALShippedImpl(ctx context.Context, c *Core, index uint64) bool {
-	return true
-}
-
-func merkleRootImpl(c *Core) string {
-	return ""
-}
-
-func lastWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastPerformanceWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastDRWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastRemoteWALImpl(c *Core) uint64 {
-	return 0
-}
-
-func lastRemoteUpstreamWALImpl(c *Core) uint64 {
-	return 0
 }
 
 // physicalBarrierSealConfig reads the storage entry at configPath and parses and validates it as SealConfig.
@@ -2990,23 +2896,17 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 				return err
 			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
+		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return nil
 		case configuredType == SealConfigTypeMultiseal:
 			// The configured seal is multiseal and we know the stored type is not shamir, thus
 			// we are going from auto seal to multiseal.
-			betaEnabled, err := server.IsSealHABetaEnabled()
-			switch {
-			case err != nil:
-				return err
-			case !betaEnabled:
-				return fmt.Errorf("cannot seal migrate from %q to %q, Seal High Availability beta is not enabled",
-					existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
-			default:
-				// We are going from a single non-shamir seal to multiseal, and the seal HA beta is enabled.
-				// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
-				// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
-
-				return nil
-			}
+			return fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		case storedType == SealConfigTypeMultiseal:
 			// The stored type is multiseal and we know the type the configured type is not shamir,
 			// thus we are going from multiseal to autoseal.
@@ -3248,22 +3148,30 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 // configuration in storage is Shamir but the seal in HCL is not.  In this
 // mode we should not auto-unseal (even if the migration is done) and we will
 // accept unseal requests with and without the `migrate` option, though the migrate
-// option is required if we haven't yet performed the seal migration.
-func (c *Core) IsInSealMigrationMode() bool {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// option is required if we haven't yet performed the seal migration. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsInSealMigrationMode(lock bool) bool {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	return c.migrationInfo != nil
 }
 
 // IsSealMigrated returns true if we're in seal migration mode but migration
 // has already been performed (possibly by another node, or prior to this node's
-// current invocation.)
-func (c *Core) IsSealMigrated() bool {
-	if !c.IsInSealMigrationMode() {
+// current invocation). Lock should only be false if the caller is already
+// holding the read statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsSealMigrated(lock bool) bool {
+	if !c.IsInSealMigrationMode(lock) {
 		return false
 	}
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	done, _ := c.sealMigrated(context.Background())
 	return done
 }
@@ -3697,51 +3605,6 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
-func (c *Core) startLockoutLogger() {
-	// Are we already running a logger
-	if c.lockoutLoggerCancel != nil {
-		return
-	}
-
-	ctx, cancelFunc := context.WithCancel(c.activeContext)
-	c.lockoutLoggerCancel = cancelFunc
-
-	// Perform first check for lockout entries
-	lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-	if lockedUserCount > 0 {
-		c.Logger().Warn("user lockout(s) in effect")
-	} else {
-		// We shouldn't end up here
-		return
-	}
-
-	// Start lockout watcher
-	go func() {
-		ticker := time.NewTicker(c.userLockoutLogInterval)
-		for {
-			select {
-			case <-ticker.C:
-				// Check for lockout entries
-				lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-				if lockedUserCount > 0 {
-					c.Logger().Warn("user lockout(s) in effect")
-					break
-				}
-				c.Logger().Info("user lockout(s) cleared")
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			case <-ctx.Done():
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			}
-		}
-	}()
-}
-
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
@@ -3770,13 +3633,7 @@ func (c *Core) updateLockedUserEntries() {
 			}
 		}
 	}()
-}
-
-func (c *Core) getUserFailedLoginCount(ctx context.Context) int {
-	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
-
-	return len(c.userFailedLoginInfo)
+	return
 }
 
 // runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
@@ -4346,4 +4203,11 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) DetectStateLockDeadlocks() bool {
+	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

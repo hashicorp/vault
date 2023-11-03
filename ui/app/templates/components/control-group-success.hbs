@@ -9,9 +9,7 @@
     <code>{{this.model.requestPath}}</code>. Be careful, you can only access this data once. If you need access again in the
     future you will need to get authorized again.
     <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
-      <button data-test-navigate-button type="button" class="button is-primary" {{action (perform this.markAndNavigate)}}>
-        Visit
-      </button>
+      <Hds::Button @text="Visit" data-test-navigate-button {{on "click" (action (perform this.markAndNavigate))}} />
     </div>
   </div>
 {{else}}
@@ -63,9 +61,7 @@
           />
         </div>
         <div class="field is-grouped box is-fullwidth is-bottomless">
-          <button data-test-unwrap-button type="submit" class="button is-primary" disabled={{not this.token}}>
-            Access
-          </button>
+          <Hds::Button @text="Access" data-test-unwrap-button type="submit" disabled={{not this.token}} />
         </div>
       </form>
     </div>

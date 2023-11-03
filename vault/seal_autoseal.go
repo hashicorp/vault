@@ -194,7 +194,7 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	barrierTypeUpgradeCheck(d.BarrierSealConfigType(), conf)
 
-	if conf.Type != d.BarrierSealConfigType().String() && conf.Type != "multiseal" {
+	if conf.Type != d.BarrierSealConfigType().String() && conf.Type != SealConfigTypeMultiseal.String() && d.BarrierSealConfigType() != SealConfigTypeMultiseal {
 		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierSealConfigType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierSealConfigType())
 	}

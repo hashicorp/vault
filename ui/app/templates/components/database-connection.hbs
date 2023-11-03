@@ -25,14 +25,13 @@
     <Toolbar>
       <ToolbarActions>
         {{#if @model.canDelete}}
-          <button
-            type="button"
-            class="toolbar-link"
-            onclick={{action (mut this.isDeleteModalActive) true}}
+          <Hds::Button
+            @text="Delete connection"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (action (mut this.isDeleteModalActive) true)}}
             data-test-database-connection-delete
-          >
-            Delete connection
-          </button>
+          />
         {{/if}}
         {{#if @model.canReset}}
           <ConfirmAction
@@ -171,16 +170,15 @@
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
-        <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Create database
-          </button>
-        </div>
-        <div class="control">
-          <SecretLink @mode="list" class="button">
-            Cancel
-          </SecretLink>
-        </div>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Create database" type="submit" data-test-secret-save />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+          />
+        </Hds::ButtonSet>
       </div>
     </div>
   </form>
@@ -293,16 +291,15 @@
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
-        <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Save
-          </button>
-        </div>
-        <div class="control">
-          <SecretLink @mode="list" class="button">
-            Cancel
-          </SecretLink>
-        </div>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Save" type="submit" data-test-secret-save />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+          />
+        </Hds::ButtonSet>
       </div>
     </div>
   </form>
@@ -345,7 +342,7 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
+          @value={{if (eq attr.name "connection_url") (decode-uri (get @model attr.name)) (get @model attr.name)}}
         />
       {{/if}}
     {{/let}}

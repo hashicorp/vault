@@ -104,6 +104,28 @@
   flex: 50%;
 }
 
+// moving away from !important, fresh flex styles below
+.flex {
+  display: flex;
+  // direction
+  &.row-wrap {
+    flex-flow: row wrap;
+  }
+
+  // alignment
+  &.space-between {
+    justify-content: space-between;
+  }
+
+  &.row-gap-8 {
+    row-gap: $spacing-xs;
+  }
+
+  &.column-gap-16 {
+    column-gap: $spacing-m;
+  }
+}
+
 /* Flex Responsive */
 @media screen and (min-width: 769px), print {
   .is-flex-v-centered-tablet {

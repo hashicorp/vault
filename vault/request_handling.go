@@ -55,11 +55,6 @@ var (
 	ErrNoApplicablePolicies = errors.New("no applicable policies")
 
 	egpDebugLogging bool
-
-	// if this returns an error, the request should be blocked and the error
-	// should be returned to the client
-	// TODO remove once entBlockRequestIfError is implemented in ENT
-	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -571,9 +566,8 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
 	}
-	disable_repl_status, ok := httpCtx.Value(logical.CtxKeyDisableReplicationStatusEndpoints{}).(string)
-	if ok {
-		ctx = context.WithValue(ctx, logical.CtxKeyDisableReplicationStatusEndpoints{}, disable_repl_status)
+	if disable_repl_status, ok := logical.ContextDisableReplicationStatusEndpointsValue(httpCtx); ok {
+		ctx = logical.CreateContextDisableReplicationStatusEndpoints(ctx, disable_repl_status)
 	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
@@ -1487,7 +1481,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
-			c.startLockoutLogger()
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
@@ -1683,7 +1676,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		source := c.router.MatchingMount(ctx, req.Path)
 
 		// Login MFA
-		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
@@ -2202,8 +2195,6 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 	return mfaAny, nil
 }
 
-func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
-
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2303,8 +2294,6 @@ func (c *Core) LocalGetUserFailedLoginInfo(ctx context.Context, userKey FailedLo
 // LocalUpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
 func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
 	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
-
 	switch deleteEntry {
 	case false:
 		// update entry in the map
@@ -2347,6 +2336,7 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 		// delete the entry from the map, if no key exists it is no-op
 		delete(c.userFailedLoginInfo, userKey)
 	}
+	c.userFailedLoginInfoLock.Unlock()
 	return nil
 }
 

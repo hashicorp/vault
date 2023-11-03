@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -65,11 +65,10 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
 	ctx := req.Context()
-	maxRequestSize := ctx.Value(logical.CtxKeyMaxRequestSize{})
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
+	if logical.ContextContainsMaxRequestSize(ctx) {
+		max, ok := logical.ContextMaxRequestSizeValue(ctx)
 		if !ok {
-			return nil, fmt.Errorf("could not parse %s from request context", logical.CtxKeyMaxRequestSize{})
+			return nil, errors.New("could not parse max request size from request context")
 		}
 		if max > 0 {
 			reader = io.LimitReader(req.Body, max)

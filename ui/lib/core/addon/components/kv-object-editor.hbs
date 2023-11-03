@@ -25,6 +25,7 @@
             @value={{row.name}}
             placeholder={{this.placeholders.key}}
             {{on "change" (fn this.updateRow row index)}}
+            {{on "input" (fn this.validateKey index)}}
             class="input"
           />
         </div>
@@ -70,6 +71,15 @@
           {{/if}}
         </div>
       </div>
+      {{#if (includes index this.whitespaceWarningRows)}}
+        <div class="has-bottom-margin-s">
+          <AlertInline
+            @type="warning"
+            @message="Key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+            data-test-kv-whitespace-warning={{index}}
+          />
+        </div>
+      {{/if}}
     {{/each}}
     {{#if this.hasDuplicateKeys}}
       <Hds::Alert data-test-duplicate-keys-warning @type="inline" @color="warning" as |A|>

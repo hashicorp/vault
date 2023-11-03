@@ -20,22 +20,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
-var (
-	// TODO remove once entWrapGenericHandler is implemented in ENT
-	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
-		// Wrap the help wrapped handler with another layer with a generic
-		// handler
-		return wrapGenericHandler(core, in, props)
-	}
-
-	// TODO remove once entAdditionalRoutes is implemented in ENT
-	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
-
-	nonVotersAllowed = false
-
-	// TODO remove once entAdjustResponse is implemented in ENT
-	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
-)
+var nonVotersAllowed = false
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +95,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			}
 
 			if core.RateLimitAuditLoggingEnabled() {
-				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+				req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 				if err != nil || status != 0 {
 					respondError(w, status, err)
 					return
@@ -135,7 +120,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 
 func disableReplicationStatusEndpointWrapping(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		request := r.WithContext(context.WithValue(r.Context(), logical.CtxKeyDisableReplicationStatusEndpoints{}, true))
+		request := r.WithContext(logical.CreateContextDisableReplicationStatusEndpoints(r.Context(), true))
 
 		h.ServeHTTP(w, request)
 	})
