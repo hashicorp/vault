@@ -34,10 +34,13 @@
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <LinkTo @route="vault.cluster.access.control-groups" class="button">
-        <Chevron @direction="left" />
-        Back
-      </LinkTo>
+      <Hds::button
+        @text="Back"
+        @color="secondary"
+        @route="vault.cluster.access.control-groups"
+        @icon="chevron-left"
+        @iconPosition="leading"
+      />
     </div>
   {{else}}
     <div class="control-group-success" data-test-unwrap-form>
