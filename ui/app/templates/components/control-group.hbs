@@ -104,7 +104,7 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if this.model.canAuthorize}}
         {{#if (or this.model.approved this.currentUserHasAuthorized)}}
-          <Hds::button
+          <Hds::Button
             @text="Back"
             @color="secondary"
             @route="vault.cluster.access.control-groups"
