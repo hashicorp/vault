@@ -375,6 +375,7 @@ func (c *Core) startRollback() error {
 		return ret
 	}
 	rollbackLogger := c.baseLogger.Named("rollback")
+	c.AddLogger(rollbackLogger)
 	c.rollback = NewRollbackManager(c.activeContext, rollbackLogger, backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil

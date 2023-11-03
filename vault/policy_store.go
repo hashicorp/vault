@@ -253,6 +253,7 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 	var err error
 	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
+	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
