@@ -592,6 +592,19 @@ message ClusterInfoReply {
   string err = 3;
 }
 
+message GenerateIdentityTokenRequest {
+  string key = 1;
+  string template = 2;
+  string client_id = 3;
+  int64 ttl = 4;
+}
+
+message GenerateIdentityTokenResponse {
+  string token = 1; 
+  string client_id = 2;
+  int64 ttl = 3;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -647,6 +660,8 @@ service SystemView {
 
   // ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
   rpc ClusterInfo(Empty) returns (ClusterInfoReply);
+
+  rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
 }
 
 message Connection {
