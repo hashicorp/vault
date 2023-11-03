@@ -72,8 +72,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 	}
 
 	entitiesPackerLogger := iStore.logger.Named("storagepacker").Named("entities")
+	core.AddLogger(entitiesPackerLogger)
 	localAliasesPackerLogger := iStore.logger.Named("storagepacker").Named("local-aliases")
+	core.AddLogger(localAliasesPackerLogger)
 	groupsPackerLogger := iStore.logger.Named("storagepacker").Named("groups")
+	core.AddLogger(groupsPackerLogger)
 
 	iStore.entityPacker, err = storagepacker.NewStoragePacker(iStore.view, entitiesPackerLogger, "")
 	if err != nil {
