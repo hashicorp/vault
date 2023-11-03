@@ -90,6 +90,7 @@ func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
 	if d.logger == nil {
 		d.logger = d.core.Logger().Named("autoseal")
+		d.core.AddLogger(d.logger)
 	}
 }
 
