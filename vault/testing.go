@@ -216,8 +216,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
 
-	corehelpers.RegisterSubloggerAdder(logger, conf)
-
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
@@ -237,7 +235,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
-	conf.AllLoggers = logger.AllLoggers
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -272,8 +269,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Switch the SubloggerHook over to core
-	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -1533,8 +1528,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
-	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
-
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1703,8 +1696,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
 
-		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
-
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
@@ -1821,7 +1812,6 @@ func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.I
 
 	if opts != nil && opts.BaseListenAddress != "" {
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
-
 		if err != nil {
 			t.Fatal("could not parse given base IP")
 		}
