@@ -17,3 +17,7 @@ import (
 func adjustRequest(c *vault.Core, listener *configutil.Listener, r *http.Request) (*http.Request, int, error) {
 	return r, 0, nil
 }
+
+func handleEntPaths(nsPath string, core *vault.Core, r *http.Request) http.Handler {
+	return nil
+}

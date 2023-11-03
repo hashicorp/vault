@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -690,6 +691,9 @@ type Core struct {
 
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
+
+	// Config value for "detect_deadlocks".
+	detectDeadlocks []string
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -858,13 +862,6 @@ type CoreConfig struct {
 	NumRollbackWorkers int
 }
 
-// SubloggerHook implements the SubloggerAdder interface. This implementation
-// manages CoreConfig.AllLoggers state prior to (and during) NewCore.
-func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
-	c.AllLoggers = append(c.AllLoggers, logger)
-	return logger
-}
-
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
@@ -947,17 +944,26 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
 	}
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	if strings.Contains(conf.DetectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	} else {
-		stateLock = &locking.SyncRWMutex{}
-	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
+	}
+
+	var detectDeadlocks []string
+	if conf.DetectDeadlocks != "" {
+		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
+		for k, v := range detectDeadlocks {
+			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
+		}
+	}
+
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	stateLock = &locking.SyncRWMutex{}
+
+	if slices.Contains(detectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
 	}
 
 	// Setup the core
@@ -1033,6 +1039,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		detectDeadlocks:                detectDeadlocks,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1041,7 +1048,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
+	c.allLoggers = append(c.allLoggers, c.logger)
+
 	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
@@ -1194,6 +1205,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// MFA method
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	// Logical backends
 	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
@@ -1219,7 +1233,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+	c.allLoggers = append(c.allLoggers, quotasLogger)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
 	if err != nil {
 		return nil, err
 	}
@@ -1236,17 +1253,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Events
-	events, err := eventbus.NewEventBus(conf.Logger.Named("events"))
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	// start the event system
+	events, err := eventbus.NewEventBus(eventsLogger)
 	if err != nil {
 		return nil, err
 	}
 	c.events = events
 	c.events.Start()
-
-	// Make sure we're keeping track of the subloggers added above. We haven't
-	// yet registered core to the server command's SubloggerAdder, so any new
-	// subloggers will be in conf.AllLoggers.
-	c.allLoggers = conf.AllLoggers
 
 	return c, nil
 }
@@ -1306,7 +1321,9 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 	}
 
 	credentialBackends[mountTypeToken] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, logger.Named("token"), c, config)
+		tsLogger := logger.Named("token")
+		c.AddLogger(tsLogger)
+		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 
 	c.credentialBackends = credentialBackends
@@ -1334,7 +1351,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c, logger.Named("system"))
+		sysBackendLogger := logger.Named("system")
+		c.AddLogger(sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -1343,7 +1362,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// Identity
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config, logger.Named("identity"))
+		identityLogger := logger.Named("identity")
+		c.AddLogger(identityLogger)
+		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -3187,14 +3208,6 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggers = append(c.allLoggers, logger)
 }
 
-// SubloggerHook implements the SubloggerAdder interface. We add this method to
-// the server command after NewCore returns with a Core object. The hook keeps
-// track of newly added subloggers without manual calls to c.AddLogger.
-func (c *Core) SubloggerHook(logger log.Logger) log.Logger {
-	c.AddLogger(logger)
-	return logger
-}
-
 // SetLogLevel sets logging level for all tracked loggers to the level provided
 func (c *Core) SetLogLevel(level log.Level) {
 	c.allLoggersLock.RLock()
@@ -4187,4 +4200,11 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) DetectStateLockDeadlocks() bool {
+	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }
