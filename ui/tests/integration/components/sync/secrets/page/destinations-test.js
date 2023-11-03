@@ -134,12 +134,14 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
 
-    assert.true(
-      this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations'),
+    assert.propEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations'],
       'Transition is triggered on delete success'
     );
-    assert.true(
-      this.clearDatasetStub.calledWith('sync/destinations/aws-sm'),
+    assert.propEqual(
+      this.clearDatasetStub.lastCall.args,
+      ['sync/destinations/aws-sm'],
       'Store dataset is cleared on delete success'
     );
   });
