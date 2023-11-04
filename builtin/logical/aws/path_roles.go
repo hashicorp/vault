@@ -534,7 +534,7 @@ type awsRoleEntry struct {
 	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
-	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN fo the MFA device
+	SerialNumber             string            `json:"mfa_serial_number"`                     // Serial number or ARN of the MFA device
 }
 
 func (r *awsRoleEntry) toResponseData() map[string]interface{} {
