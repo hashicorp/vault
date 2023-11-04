@@ -164,7 +164,7 @@ delimited key pairs.`,
 
 			"mfa_serial_number": {
 				Type: framework.TypeString,
-				Description: fmt.Sprintf(`Identification number of the MFA device associated with the root config user. Only valid
+				Description: fmt.Sprintf(`Identification number or ARN of the MFA device associated with the root config user. Only valid
 when credential_type is %s. This is only required when the IAM user has an MFA device configured.`, sessionTokenCred),
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "MFA Device Serial Number",
