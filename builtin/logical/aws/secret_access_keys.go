@@ -189,7 +189,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 }
 
 // NOTE: Getting session tokens with or without MFA/TOTP has behavior that can cause confusion.
-// When an AWS IAM user has a policy attached requireing an MFA code by use of "aws:MultiFactorAuthPresent": "true",
+// When an AWS IAM user has a policy attached requiring an MFA code by use of "aws:MultiFactorAuthPresent": "true",
 // then credentials may still be returned without an MFA code provided.
 // If a Vault role associated with the IAM user is configured without both an mfa_serial_number and
 // the mfa_code is not given, the API call is successful and returns credentials. These credentials
