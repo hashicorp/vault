@@ -1,7 +1,24 @@
 ### Vault is storing references to ephemeral sub-loggers leading to a memory leak
 
-In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 when adjusting the logging levels of Vault, sub-loggers would not
-be updated accordingly on SIGHUP. A change was introduced to resolve this issue:
+In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 Vault does not honor a
+modified `log_level` configuration for certain subsystem loggers on SIGHUP.
+
+This is known to affect the `resolver.watcher` and `replication.index.*`
+subloggers.
+
+This can be seen after modifying the `log_level` and issuing a reload (SIGHUP),
+For example, after starting a server with `log_level: "debug"` and modifying it
+to `log_level: "info"` the following lines appear after reload:
+
+```
+[TRACE] resolver.watcher: dr mode doesn't have failover support, returning
+...
+[DEBUG] replication.index.perf: saved checkpoint: num_dirty=5
+[DEBUG] replication.index.local: saved checkpoint: num_dirty=0
+[DEBUG] replication.index.periodic: starting WAL GC: from=2531280 to=2531280 last=2531536
+```
+
+A change was introduced to resolve this issue:
 `core: All sub-loggers now reflect configured log level on reload. [GH-22038]`
 
 As a result of this change Vault would unexpectedly store references to ephemeral sub-loggers which prevents them from
@@ -15,8 +32,8 @@ sub-loggers not updating log levels on SIGHUP.
 
 This issue affects Vault Community and Enterprise versions:
 
-1.13.7+
-1.14.3+
-1.15.0+
+- 1.13.7+
+- 1.14.3+
+- 1.15.0+
 
 This change will be reverted in Vault 1.13.10, 1.14.6, 1.15.2, with a fix to arrive in a future Vault version.
