@@ -10,6 +10,9 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
+
+	"github.com/hashicorp/go-memdb"
+
 )
 
 func quotaTypes() []string {
