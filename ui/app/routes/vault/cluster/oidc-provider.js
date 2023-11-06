@@ -14,6 +14,7 @@ const NS_PROVIDER = 'vault.cluster.oidc-provider-ns';
 export default class VaultClusterOidcProviderRoute extends Route {
   @service auth;
   @service router;
+  @service session;
 
   get win() {
     return this.window || window;
@@ -29,17 +30,16 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   beforeModel(transition) {
-    const currentToken = this.auth.get('currentTokenName');
     const qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
     qp.redirect_to = null;
-    if (!currentToken && 'none' === qp.prompt?.toLowerCase()) {
+    if (!this.session.isAuthenticated && 'none' === qp.prompt?.toLowerCase()) {
       this._redirect(qp.redirect_uri, {
         state: qp.state,
         error: 'login_required',
       });
-    } else if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
-      const logout = !!currentToken;
+    } else if (!this.session.isAuthenticated || 'login' === qp.prompt?.toLowerCase()) {
+      const logout = this.session.isAuthenticated;
       if ('login' === qp.prompt?.toLowerCase()) {
         // need to remove before redirect to avoid infinite loop
         qp.prompt = null;

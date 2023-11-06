@@ -9,7 +9,6 @@ import { reject } from 'rsvp';
 import Route from '@ember/routing/route';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
-import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
@@ -32,6 +31,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   version: service(),
   permissions: service(),
   store: service(),
+  session: service(),
   auth: service(),
   featureFlagService: service('featureFlag'),
   currentCluster: service(),
@@ -54,17 +54,15 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   async beforeModel() {
     const params = this.paramsFor(this.routeName);
     let namespace = params.namespaceQueryParam;
-    const currentTokenName = this.auth.get('currentTokenName');
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isOSS)
     );
-    if (!namespace && currentTokenName && !Ember.testing) {
+    if (!namespace && this.session.isAuthenticated && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
-      const storage = getStorage().getItem(currentTokenName);
-      namespace = storage?.userRootNamespace;
+      namespace = this.session.data.authenticated.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });

@@ -26,7 +26,7 @@ export default class AuthV2Component extends Component {
     }
 
     if (this.session.isAuthenticated) {
-      this.args.onSuccess();
+      // TODO: Show root warning flash message
     }
   }
 }

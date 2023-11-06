@@ -11,8 +11,8 @@ import { computed } from '@ember/object';
 const ROOT_NAMESPACE = '';
 export default Service.extend({
   store: service(),
-  auth: service(),
-  userRootNamespace: alias('auth.authData.userRootNamespace'),
+  session: service(),
+  userRootNamespace: alias('session.data.authenticated.userRootNamespace'),
   //populated by the query param on the cluster route
   path: '',
   // list of namespaces available to the current user under the
@@ -42,7 +42,7 @@ export default Service.extend({
     // want to keep track of these separately
     const store = this.store;
     const adapter = store.adapterFor('namespace');
-    const userRoot = this.auth.authData.userRootNamespace;
+    const userRoot = this.userRootNamespace;
     try {
       const ns = yield adapter.findAll(store, 'namespace', null, {
         adapterOptions: {

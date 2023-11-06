@@ -1,4 +1,5 @@
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
+import ENV from 'vault/config/environment';
 
 /*{
   "body": {
@@ -34,6 +35,14 @@ export default class TokenAuthenticator extends BaseAuthenticator {
   displayNamePath = 'display_name';
   tokenPath = 'id';
 
+  async restore(data) {
+    console.log('TODO restore', data);
+    // if (data.token) {
+    //   return data;
+    // }
+    throw 'No session stored';
+  }
+
   async login(
     token,
     options = {
@@ -43,7 +52,7 @@ export default class TokenAuthenticator extends BaseAuthenticator {
   ) {
     const url = `/v1/auth/token/lookup-self`;
     const opts = {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'X-Vault-Token': token,
       },
@@ -56,20 +65,24 @@ export default class TokenAuthenticator extends BaseAuthenticator {
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return this.persistedAuthData(body, options);
+    return this.persistedAuthData(body.data, options);
   }
 
   persistedAuthData(payload, options) {
     const { entity_id, policies, renewable, namespace_path } = payload;
     const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
+    const isRootToken = policies.includes('root');
+    // Do not store root token unless dev mode
+    const token = isRootToken && ENV.environment !== 'development' ? null : payload[this.tokenPath];
     return {
       userRootNamespace,
+      isRootToken,
       displayName: payload[this.displayNamePath],
       backend: {
         mountPath: options.backend,
         type: this.type,
       },
-      token: payload[this.tokenPath],
+      token,
       policies,
       renewable,
       entity_id,
@@ -100,6 +113,7 @@ export default class TokenAuthenticator extends BaseAuthenticator {
       userRootNamespace = '';
     }
     if (typeof userRootNamespace === 'undefined') {
+      // TODO: this doesn't make any sense
       if (this.authData) {
         userRootNamespace = this.authData.userRootNamespace;
       }

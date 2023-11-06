@@ -28,6 +28,7 @@ export default Mixin.create({
   session: service(),
 
   transitionToTargetRoute(transition = {}) {
+    console.log('transitionToTargetRoute', transition.targetName);
     const targetRoute = this.targetRouteName(transition);
     if (
       targetRoute &&
@@ -72,7 +73,7 @@ export default Mixin.create({
 
   targetRouteName(transition) {
     const cluster = this.clusterModel();
-    const isAuthed = this.authToken();
+    const isAuthed = this.session.isAuthenticated;
     if (cluster.needsInit) {
       return INIT;
     }
