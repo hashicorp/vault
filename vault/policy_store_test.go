@@ -360,7 +360,7 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
 			isErrorExpected:      true,
-			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"not-in-map-rgp": {
 			policyStoreKey:       "2WxyZ/policy2",
@@ -368,7 +368,7 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
 			isErrorExpected:      true,
-			expectedErrorMessage: "policy does not exist in type map: 1AbcD/policy1",
+			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"unknown-policy-type": {
 			policyStoreKey:       "1AbcD/policy1",
