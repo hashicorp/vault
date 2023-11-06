@@ -10,8 +10,6 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
-
-	"github.com/hashicorp/go-memdb"
 )
 
 func quotaTypes() []string {
@@ -42,6 +40,10 @@ func (*entManager) Reset() error {
 }
 
 type LeaseCountQuota struct{}
+
+func (l LeaseCountQuota) GetNamespacePath() string {
+	panic("implement me")
+}
 
 func (l LeaseCountQuota) IsInheritable() bool {
 	panic("implement me")
