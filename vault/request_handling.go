@@ -49,7 +49,8 @@ var (
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
 
-	ErrNoApplicablePolicies = errors.New("no applicable policies")
+	ErrNoApplicablePolicies    = errors.New("no applicable policies")
+	ErrPolicyNotExistInTypeMap = errors.New("policy does not exist in type map")
 
 	egpDebugLogging bool
 
@@ -177,6 +178,13 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 	for _, policyName := range nsPolicies {
 		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
+			// When we attempt to get a non-EGP policy type, and receive an
+			// explicit error that it doesn't exist (in the type map) we log the
+			// ns/policy and continue without error.
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			continue
+		}
 		if err != nil || t == nil {
 			return nil, fmt.Errorf("failed to look up type of policy: %w", err)
 		}
