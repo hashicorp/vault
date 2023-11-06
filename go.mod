@@ -534,3 +534,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
