@@ -4,7 +4,7 @@ In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 Vault does not honor a
 modified `log_level` configuration for certain subsystem loggers on SIGHUP.
 
 This is known to affect the `resolver.watcher` and `replication.index.*`
-subloggers.
+sub-loggers.
 
 This can be seen after modifying the `log_level` and issuing a reload (SIGHUP),
 For example, after starting a server with `log_level: "trace"` and modifying it
