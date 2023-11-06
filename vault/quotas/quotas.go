@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -299,9 +298,9 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 		rateLimitPathManager:       pathmanager.New(),
 		globalRateLimitPathManager: pathmanager.New(),
 		config:                     new(Config),
-		quotaLock:                  new(locking.DeadlockRWMutex),
-		quotaConfigLock:            new(locking.DeadlockRWMutex),
-		dbAndCacheLock:             new(locking.DeadlockRWMutex),
+		quotaLock:                  &locking.SyncRWMutex{},
+		quotaConfigLock:            &locking.SyncRWMutex{},
+		dbAndCacheLock:             &locking.SyncRWMutex{},
 	}
 
 	if detectDeadlocks {
