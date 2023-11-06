@@ -211,6 +211,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 }
 
 func (c *BaseCommand) applyHCPConfig() error {
+	if c.hcpTokenHelper == nil {
+		return nil
+	}
+
 	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
 	if err != nil {
 		return err
