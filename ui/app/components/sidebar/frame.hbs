@@ -2,8 +2,12 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
-<Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
+<Hds::AppFrame
+  @hasSidebar={{and @showSidebar this.currentCluster.cluster}}
+  @hasHeader={{false}}
+  @hasFooter={{false}}
+  as |Frame|
+>
   <Frame.Sidebar data-test-sidebar-nav>
     <Hds::SideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
       <:header>
