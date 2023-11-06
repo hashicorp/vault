@@ -1,14 +1,22 @@
 ### Vault is storing references to ephemeral sub-loggers leading to a memory leak
 
-Vault is unexpectedly storing references to ephemeral sub-loggers which prevents them from being cleaned up, leading to
-a memory leak. This impacts many areas of Vault, but primarily logins in Enterprise.
+In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 when adjusting the logging levels of Vault, sub-loggers would not
+be updated accordingly on SIGHUP. A change was introduced to resolve this issue:
+`core: All sub-loggers now reflect configured log level on reload. [GH-22038]`
+
+As a result of this change Vault would unexpectedly store references to ephemeral sub-loggers which prevents them from
+being cleaned up, leading to a memory leak. This impacts many areas of Vault, but primarily logins in Enterprise.
 There is no workaround.
+
+The change that introduced this leak will be reverted in the next release, restoring the previously known behavior of
+sub-loggers not updating log levels on SIGHUP.
 
 #### Affected versions
 
 This issue affects Vault Community and Enterprise versions:
-- 1.13.7+
-- 1.14.3+
-- 1.15.0+
 
-A fix will be issued in the next release
+1.13.7+
+1.14.3+
+1.15.0+
+
+This change will be reverted in Vault 1.13.10, 1.14.6, 1.15.2, with a fix to arrive in a future Vault version.
