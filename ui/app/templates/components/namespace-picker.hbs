@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
-        {{#if this.auth.isRootToken}}
+        {{#if this.authData.isRootToken}}
           <div class="has-left-margin-s has-right-margin-s">
             <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
             <span class="is-size-8 has-text-semibold">
@@ -46,7 +46,7 @@
             <NamespaceLink
               @targetNamespace={{or
                 (object-at (dec 2 this.menuLeaves.length) this.lastMenuLeaves)
-                this.auth.authData.userRootNamespace
+                this.authData.userRootNamespace
               }}
               @class="namespace-link is-current button is-transparent icon"
             >

@@ -20,7 +20,10 @@
 4. Persisted auth data for authenticated users
 5. Replaced isActiveSession from the cluster and application template
 6. Added session.invaildate to the logout route
+7. Added logic for revoke and renew
+8. Add base authenticator for common/shared methods
 
 TODO:
 
-- Replace auth service
+- Move renew/revoke methods back inside expiry (user-menu.hbs)
+- Clean up auth service

@@ -20,7 +20,7 @@ export default class AuthV2Component extends Component {
     evt.preventDefault();
     const authenticator = `authenticator:${this.type}`;
     try {
-      await this.session.authenticate(authenticator, this.token);
+      await this.session.authenticate(authenticator, this.token, { backend: this.type, namespace: '' });
     } catch (e) {
       this.error = errorMessage(e);
     }

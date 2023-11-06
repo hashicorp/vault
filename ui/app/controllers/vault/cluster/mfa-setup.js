@@ -9,14 +9,14 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 export default class VaultClusterMfaSetupController extends Controller {
-  @service auth;
+  @service session;
   @tracked onStep = 1;
   @tracked warning = '';
   @tracked uuid = '';
   @tracked qrCode = '';
 
   get entityId() {
-    return this.auth.authData.entity_id;
+    return this.session.data.authenticated.entity_id;
   }
 
   @action isUUIDVerified(verified) {

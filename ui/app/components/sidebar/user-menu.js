@@ -14,6 +14,7 @@ export default class SidebarUserMenuComponent extends Component {
   @service session;
   @service currentCluster;
   @service router;
+  @service namespace;
 
   @tracked fakeRenew = false;
 
@@ -40,7 +41,13 @@ export default class SidebarUserMenuComponent extends Component {
   @action
   renewToken() {
     this.fakeRenew = true;
+    const { authenticator, backend } = this.authData;
     later(() => {
+      this.session.authenticate(authenticator, {
+        renew: true,
+        backend: backend.mountPath,
+        namespace: this.namespace.currentNamespace,
+      });
       this.auth.renew().then(() => {
         this.fakeRenew = this.auth.isRenewing;
       });
@@ -49,7 +56,7 @@ export default class SidebarUserMenuComponent extends Component {
 
   @action
   revokeToken() {
-    this.auth.revokeCurrentToken().then(() => {
+    this.session.invalidate({ revoke: true }).then(() => {
       this.transitionToRoute('vault.cluster.logout');
     });
   }

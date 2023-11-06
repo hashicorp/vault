@@ -3,6 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+{{log this.authData "authData"}}
 <BasicDropdown
   @horizontalPosition="right"
   @verticalPosition="below"
@@ -57,31 +58,32 @@
                   {{on "click" (fn (set-flash-message "Token copied!"))}}
                 />
               </li>
-              {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
-                {{#if this.authData.renewable}}
-                  <li class="action">
-                    {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
-                    <button
-                      type="button"
-                      {{on "click" this.renewToken}}
-                      class="link button {{if this.isRenewing 'is-loading'}}"
-                      data-test-user-menu-item="renew token"
-                    >
-                      Renew token
-                    </button>
-                  </li>
-                {{/if}}
+              {{#if this.authData.renewable}}
                 <li class="action">
-                  <c.Message
-                    @id={{get this.auth "authData.displayName"}}
-                    @title={{concat "Revoke " (get this.auth "authData.displayName") "?"}}
-                    @onConfirm={{action "revokeToken"}}
-                    @message="You will not be able to log in again with this token."
-                    @triggerText="Revoke token"
-                    @confirmButtonText="Revoke"
-                    data-test-user-menu-item="revoke token"
-                  />
+                  {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
+                  <button
+                    type="button"
+                    {{on "click" this.renewToken}}
+                    class="link button {{if this.isRenewing 'is-loading'}}"
+                    data-test-user-menu-item="renew token"
+                  >
+                    Renew token
+                  </button>
                 </li>
+              {{/if}}
+              <li class="action">
+                <c.Message
+                  @id={{this.authData.displayName}}
+                  @title={{concat "Revoke " this.authData.displayName "?"}}
+                  @onConfirm={{action "revokeToken"}}
+                  @message="You will not be able to log in again with this token."
+                  @triggerText="Revoke token"
+                  @confirmButtonText="Revoke"
+                  data-test-user-menu-item="revoke token"
+                />
+              </li>
+              {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
+                {{! TODO: put renew/revoke back in here }}
               {{/if}}
               <li class="action">
                 <LinkTo @route="vault.cluster.logout" @model={{this.currentCluster.cluster.name}} id="logout">
