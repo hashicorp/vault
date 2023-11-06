@@ -976,6 +976,75 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 	return retResp, nil
 }
 
+func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical.Storage, me *MountEntry, key, audience string, ttl time.Duration) (string, time.Duration, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if key == "" {
+		key = "default"
+	}
+	if ttl == 0 {
+		ttl = time.Hour
+	}
+	namedKey, err := i.getNamedKey(ctx, storage, key)
+	if err != nil {
+		return "", 0, err
+	}
+	if namedKey == nil {
+		return "", 0, fmt.Errorf("key %q not found", key)
+	}
+
+	// Validate that the role is allowed to sign with its key (the key could have been updated)
+	if !strutil.StrListContains(namedKey.AllowedClientIDs, "*") && !strutil.StrListContains(namedKey.AllowedClientIDs, audience) {
+		return "", 0, fmt.Errorf("the key %q does not list %q as an allowed audience", key, audience)
+	}
+
+	config, err := i.getOIDCConfig(ctx, storage)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if ttl > namedKey.VerificationTTL {
+		ttl = namedKey.VerificationTTL
+	}
+
+	now := time.Now()
+	claims := map[string]any{
+		"iss": config.effectiveIssuer,
+		"sub": fmt.Sprintf("plugin:%s:%s", me.namespace.Path, strings.Trim(me.Path, "/")),
+		"aud": []string{audience},
+		"nbf": now.Unix(),
+		"iat": now.Unix(),
+		"exp": now.Add(ttl).Unix(),
+		"vault.hashicorp.com": map[string]any{
+			"namespace": map[string]any{
+				"id":              ns.ID,
+				"path":            ns.Path,
+				"custom_metadata": ns.CustomMetadata,
+			},
+			"class":    me.Table,
+			"plugin":   me.Type,
+			"version":  me.RunningVersion,
+			"path":     me.Path,
+			"accessor": me.Accessor,
+			"local":    me.Local,
+		},
+	}
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", 0, err
+	}
+
+	signedIDToken, err := namedKey.signPayload(payload)
+	if err != nil {
+		return "", 0, fmt.Errorf("error signing OIDC token: %w", err)
+	}
+
+	return signedIDToken, ttl, nil
+}
+
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {

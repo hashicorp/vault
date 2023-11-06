@@ -594,15 +594,13 @@ message ClusterInfoReply {
 
 message GenerateIdentityTokenRequest {
   string key = 1;
-  string template = 2;
-  string client_id = 3;
-  int64 ttl = 4;
+  string audience = 2;
+  int64 ttl = 3;
 }
 
 message GenerateIdentityTokenResponse {
-  string token = 1; 
-  string client_id = 2;
-  int64 ttl = 3;
+  string token = 1;
+  int64 ttl = 2;
 }
 
 // SystemView exposes system configuration information in a safe way for plugins
