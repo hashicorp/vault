@@ -7,7 +7,7 @@ This is known to affect the `resolver.watcher` and `replication.index.*`
 subloggers.
 
 This can be seen after modifying the `log_level` and issuing a reload (SIGHUP),
-For example, after starting a server with `log_level: "debug"` and modifying it
+For example, after starting a server with `log_level: "trace"` and modifying it
 to `log_level: "info"` the following lines appear after reload:
 
 ```
