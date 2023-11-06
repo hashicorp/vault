@@ -144,6 +144,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 				unifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
+
+			Binary: []string{
+				"ocsp",           // OCSP POST
+				"ocsp/*",         // OCSP GET
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -430,7 +437,8 @@ func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequ
 
 func (b *backend) cleanup(ctx context.Context) {
 	sc := b.makeStorageContext(ctx, b.storage)
-	b.acmeState.validator.Closing <- struct{}{}
+
+	b.acmeState.Shutdown(b)
 
 	b.cleanupEnt(sc)
 }

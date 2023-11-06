@@ -28,6 +28,7 @@ jobs:
       compute-xlarge: ${{ steps.setup-outputs.outputs.compute-xlarge }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
       go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
+      checkout-ref: ${{ steps.checkout-ref-output.outputs.checkout-ref }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - id: setup-outputs
@@ -59,6 +60,14 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
+      # control checking out head instead of default ref by a GH label
+      # if checkout-head label is added to a PR, checkout HEAD otherwise checkout ref
+      - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.ref }}" >> "$GITHUB_ENV"
+      - if: ${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+      - id: checkout-ref-output
+        run: echo "checkout-ref=${{ env.CHECKOUT_REF }}" >> "$GITHUB_OUTPUT"
 
   verify-changes:
     name: Verify doc-ui only PRs
@@ -85,6 +94,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       test-timing-cache-key: go-test-timing-standard
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-testonly:
@@ -105,6 +115,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       test-timing-cache-enabled: false
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-race:
@@ -131,16 +142,18 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
       test-timing-cache-key: go-test-timing-race
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR is not docs/ui only
+    # Only run fips on the enterprise repo, and only if it's main or a release branch
+    # (i.e. not a PR), or is a PR with the label "fips"
     if: |
-      github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
       needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'
+      needs.verify-changes.outputs.is_ui_change == 'false' && 
+      (contains(github.event.pull_request.labels.*.name, 'fips') || github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     needs:
       - setup
       - verify-changes
@@ -157,6 +170,7 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
       test-timing-cache-key: go-test-timing-fips
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
     secrets: inherit
 
   test-ui:
@@ -233,15 +247,21 @@ jobs:
           make ci-bootstrap dev
       - id: test-ui
         name: test-ui
+        if: github.repository == 'hashicorp/vault-enterprise'
         env:
           VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
         run: |
           export PATH="${PWD}/bin:${PATH}"
-
-          if [ "${{ github.repository }}" == 'hashicorp/vault' ] ; then
-            export VAULT_LICENSE="${{ secrets.VAULT_LICENSE }}"
-          fi
-
+          # Run Ember tests
+          cd ui
+          mkdir -p test-results/qunit
+          yarn test
+      - id: test-ui-oss
+        if: github.repository == 'hashicorp/vault'
+        name: test-ui-oss
+        run: |
+          export PATH="${PWD}/bin:${PATH}"
+          
           # Run Ember tests
           cd ui
           mkdir -p test-results/qunit

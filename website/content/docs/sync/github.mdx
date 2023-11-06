@@ -1,0 +1,151 @@
+---
+layout: docs
+page_title: GitHub - Secrets Sync Destination
+description: The GitHub destination syncs secrets from Vault to GitHub.
+---
+
+# GitHub repository secrets
+
+The GitHub repository sync destination allows Vault to safely synchronize secrets as GitHub repository action secrets.
+This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
+to connect directly with Vault. This guide walks you through the configuration process.
+
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create GitHub fine-grained or personal tokens with access to modify repository secrets
+* Ability to create sync destinations and associations on your Vault server
+
+## Setup
+
+1. To get started with syncing Vault secrets to your GitHub repository, you will need an
+  [access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+  which has access to the repository you want to manage secrets for and write permissions on the repository's actions secrets.
+  In the list of GitHub permissions, this is simply called "Secrets". Choosing this will automatically include read-only Metadata.
+
+1. Configure a sync destination with the access token created in the previous step.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-dest \
+      access_token="$ACCESS_TOKEN" \
+      repository_owner="$OWNER" \
+      repository_name="$NAME"
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  connection_details    map[access_token:***** repository_owner:<owner> repository_name:<name>]
+  name                  my-dest
+  type                  gh
+  ```
+
+  </CodeBlockConfig>
+
+## Usage
+
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
+
+  ```shell-session
+  $ vault secrets enable -path=my-kv kv-v2
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```
+  Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
+
+  </CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target GitHub repository for Actions.
+
+  ```shell-session
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  ==== Secret Path ====
+  my-kv/data/my-secret
+
+  ======= Metadata =======
+  Key                Value
+  ---                -----
+  created_time       <timestamp>
+  custom_metadata    <nil>
+  deletion_time      n/a
+  destroyed          false
+  version            1
+  ```
+
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/gh/my-dest/associations/set \
+      mount=my-kv \
+      secret_name=my-secret
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  associated_secrets    map[kv_1234/my-secret:map[accessor:kv_1234 secret_name:my-secret sync_status:SYNCED updated_at:<timestamp>>]]
+  store_name            my-dest
+  store_type            gh
+  ```
+
+  </CodeBlockConfig>
+
+1. Navigate to your GitHub repository settings to confirm your secret was successfully created.
+
+Moving forward, any modification on the Vault secret will be propagated in near real time to its GitHub repository secrets
+counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
+or the association in Vault will delete the secret in GitHub as well.
+
+## Security
+
+<Note>
+
+GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
+In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
+
+</Note>
+
+It is strongly advised to mask individual values for each sub-key to prevent the unintended disclosure of secrets
+in any GitHub Action outputs. The following snippet illustrates how to mask each secret values:
+
+  ```yaml
+  name: Mask synced secret values
+
+  on:
+    workflow_dispatch
+
+  jobs:
+    synced-secret-examples:
+      runs-on: ubuntu-latest
+      steps:
+        - name: ✓ Mask synced secret values
+          run: |
+            for v in $(echo '${{ secrets.VAULT_KV_1234_MY_SECRET }}' | jq -r '.[]'); do
+              echo "::add-mask::$v"
+            done
+  ```
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

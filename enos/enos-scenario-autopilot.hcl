@@ -7,8 +7,12 @@ scenario "autopilot" {
     artifact_source = ["local", "crt", "artifactory"]
     artifact_type   = ["bundle", "package"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    // NOTE: when backporting, make sure that our initial versions are less than that
+    // release branch's version.
+    initial_version = ["1.11.12", "1.12.11", "1.13.6", "1.14.2"]
     seal            = ["awskms", "shamir"]
+    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
@@ -74,6 +78,15 @@ scenario "autopilot" {
     }
   }
 
+  step "create_seal_key" {
+    module = "seal_key_${matrix.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
   step "read_license" {
     module = module.read_license
 
@@ -91,11 +104,11 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = global.vault_tag_key
-      common_tags           = global.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -111,19 +124,23 @@ scenario "autopilot" {
     }
 
     variables {
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      install_dir           = local.vault_install_dir
-      license               = matrix.edition != "oss" ? step.read_license.license : null
-      packages              = global.packages
-      release               = var.vault_autopilot_initial_release
-      storage_backend       = "raft"
-      storage_backend_addl_config = {
-        autopilot_upgrade_version = var.vault_autopilot_initial_release.version
+      cluster_name         = step.create_vault_cluster_targets.cluster_name
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "ce" ? step.read_license.license : null
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      release = {
+        edition = matrix.edition
+        version = matrix.initial_version
       }
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = matrix.seal
-      enable_file_audit_device = var.vault_enable_file_audit_device
+      seal_ha_beta    = matrix.seal_ha_beta
+      seal_key_name   = step.create_seal_key.resource_name
+      seal_type       = matrix.seal
+      storage_backend = "raft"
+      storage_backend_addl_config = {
+        autopilot_upgrade_version = matrix.initial_version
+      }
+      target_hosts = step.create_vault_cluster_targets.hosts
     }
   }
 
@@ -141,7 +158,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_instances   = step.create_vault_cluster.target_hosts
+      vault_hosts       = step.create_vault_cluster.target_hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -184,11 +201,11 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      common_tags           = global.tags
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id         = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      common_tags    = global.tags
+      cluster_name   = step.create_vault_cluster_targets.cluster_name
+      seal_key_names = step.create_seal_key.resource_names
+      vpc_id         = step.create_vpc.id
     }
   }
 
@@ -207,24 +224,25 @@ scenario "autopilot" {
 
     variables {
       artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn       = step.create_vpc.kms_key_arn
+      enable_audit_devices        = var.vault_enable_audit_devices
       cluster_name                = step.create_vault_cluster_targets.cluster_name
       log_level                   = var.vault_log_level
       force_unseal                = matrix.seal == "shamir"
       initialize_cluster          = false
       install_dir                 = local.vault_install_dir
-      license                     = matrix.edition != "oss" ? step.read_license.license : null
+      license                     = matrix.edition != "ce" ? step.read_license.license : null
       local_artifact_path         = local.artifact_path
       manage_service              = local.manage_service
-      packages                    = global.packages
+      packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
+      seal_ha_beta                = matrix.seal_ha_beta
+      seal_key_name               = step.create_seal_key.resource_name
+      seal_type                   = matrix.seal
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"
       storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
       storage_node_prefix         = "upgrade_node"
       target_hosts                = step.create_vault_cluster_upgrade_targets.hosts
-      unseal_method               = matrix.seal
-      enable_file_audit_device    = var.vault_enable_file_audit_device
     }
   }
 
@@ -285,8 +303,8 @@ scenario "autopilot" {
     }
   }
 
-  step "get_updated_vault_cluster_ips" {
-    module = module.vault_get_cluster_ips
+  step "wait_for_leader_in_upgrade_targets" {
+    module = module.vault_wait_for_leader
     depends_on = [
       step.create_vault_cluster,
       step.create_vault_cluster_upgrade_targets,
@@ -299,11 +317,30 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_instances       = step.create_vault_cluster.target_hosts
-      vault_install_dir     = local.vault_install_dir
-      vault_root_token      = step.create_vault_cluster.root_token
-      node_public_ip        = step.get_vault_cluster_ips.leader_public_ip
-      added_vault_instances = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+    }
+  }
+
+  step "get_updated_vault_cluster_ips" {
+    module = module.vault_get_cluster_ips
+    depends_on = [
+      step.create_vault_cluster,
+      step.create_vault_cluster_upgrade_targets,
+      step.get_vault_cluster_ips,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.wait_for_leader_in_upgrade_targets,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 
@@ -388,9 +425,73 @@ scenario "autopilot" {
     }
   }
 
+  step "verify_replication" {
+    module = module.vault_verify_replication
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
+    }
+  }
+
+  step "verify_vault_version" {
+    module = module.vault_verify_version
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_edition         = matrix.edition
+      vault_install_dir     = local.vault_install_dir
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "verify_ui" {
+    module = module.vault_verify_ui
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_raft_auto_join_voter,
+      step.remove_old_nodes
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances = step.upgrade_vault_cluster_with_autopilot.target_hosts
+    }
+  }
+
   step "verify_undo_logs_status" {
-    skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
-    module    = module.vault_verify_undo_logs
+    skip_step = true
+    # NOTE: temporarily disable undo logs checking until it is fixed. See VAULT-20259
+    # skip_step = semverconstraint(var.vault_product_version, "<1.13.0-0")
+    module = module.vault_verify_undo_logs
     depends_on = [
       step.create_vault_cluster_upgrade_targets,
       step.remove_old_nodes,
@@ -409,9 +510,9 @@ scenario "autopilot" {
     }
   }
 
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
+  output "audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 
   output "cluster_name" {
@@ -454,6 +555,11 @@ scenario "autopilot" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.resource_name
+  }
+
   output "unseal_keys_b64" {
     description = "The Vault cluster unseal keys"
     value       = step.create_vault_cluster.unseal_keys_b64
@@ -477,10 +583,5 @@ scenario "autopilot" {
   output "upgrade_public_ips" {
     description = "The Vault cluster public IPs"
     value       = step.upgrade_vault_cluster_with_autopilot.public_ips
-  }
-
-  output "vault_audit_device_file_path" {
-    description = "The file path for the file audit device, if enabled"
-    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

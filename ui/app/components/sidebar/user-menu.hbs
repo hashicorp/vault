@@ -39,19 +39,28 @@
                   </LinkTo>
                 </li>
               {{/if}}
-              <li class="action">
-                <CopyButton
-                  @clipboardText={{this.auth.currentToken}}
-                  class="link"
-                  @buttonType="button"
-                  @success={{action (set-flash-message "Token copied!")}}
-                >
-                  Copy token
-                </CopyButton>
+              {{#if this.isUserpass}}
+                <li class="action">
+                  <LinkTo @route="vault.cluster.access.reset-password" data-test-user-menu-item="reset-password">
+                    Reset password
+                  </LinkTo>
+                </li>
+              {{/if}}
+              <li class="action" id="container">
+                {{! container is required in navbar collapsed state }}
+                <Hds::Copy::Button
+                  @text="Copy token"
+                  @textToCopy={{this.auth.currentToken}}
+                  @isFullWidth={{true}}
+                  @container="#container"
+                  class="in-dropdown link is-flex-start"
+                  {{on "click" (fn (set-flash-message "Token copied!"))}}
+                />
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
                 {{#if this.auth.authData.renewable}}
                   <li class="action">
+                    {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
                     <button
                       type="button"
                       {{on "click" this.renewToken}}

@@ -45,7 +45,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
@@ -70,7 +69,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
@@ -91,7 +89,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('pki');
-    await page.next();
     assert.dom('[data-test-input="maxLeaseTtl"]').exists();
     assert
       .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
@@ -102,7 +99,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // Go back and choose a different type
     await page.back();
     await page.selectType('database');
-    await page.next();
     assert.dom('[data-test-input="maxLeaseTtl"]').exists('3650');
     assert
       .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
@@ -124,12 +120,12 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
-    await page.next().path(path).submit();
+    await page.path(path).submit();
     await page.secretList();
     await settled();
     await page.enableEngine();
     await page.selectType('kv');
-    await page.next().path(path).submit();
+    await page.path(path).submit();
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
@@ -174,7 +170,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // create the engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets.next().path(enginePath).setMaxVersion(101).submit();
+    await mountSecrets.path(enginePath).setMaxVersion(101).submit();
     await settled();
     assert
       .dom('[data-test-flash-message]')
@@ -188,7 +184,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await configPage.visit({ backend: enginePath });
     await settled();
-    assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
@@ -203,7 +198,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       ]);
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
-      await mountSecrets.next().path(engine.type).submit();
+      await mountSecrets.path(engine.type).submit();
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${engine.engineRoute}`,
@@ -230,7 +225,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       ]);
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
-      await mountSecrets.next().path(engine.type);
+      await mountSecrets.path(engine.type);
       if (engine.type === 'kv') {
         await mountSecrets.toggleOptions().version(1);
       }
@@ -259,7 +254,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       ]);
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
-      await mountSecrets.next().path(engine.type).submit();
+      await mountSecrets.path(engine.type).submit();
 
       assert.strictEqual(
         currentRouteName(),
@@ -278,7 +273,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets.next().path(v2).submit();
+    await mountSecrets.path(v2).submit();
 
     assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
@@ -294,7 +289,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets.next().path(v1).toggleOptions().version(1).submit();
+    await mountSecrets.path(v1).toggleOptions().version(1).submit();
 
     assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(

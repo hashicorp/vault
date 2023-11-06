@@ -240,8 +240,6 @@ var (
 			DefaultMount: "userpass",
 		},
 	}
-
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
 func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
@@ -481,6 +479,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"operator raft snapshot": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft snapshot inspect": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotInspectCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -906,7 +909,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	return commands
 }
 

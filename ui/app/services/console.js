@@ -13,14 +13,7 @@ import { getOwner } from '@ember/application';
 import { computed } from '@ember/object';
 import { shiftCommandIndex } from 'vault/lib/console-helpers';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
-
-export function sanitizePath(path) {
-  //remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
-export function ensureTrailingSlash(path) {
-  return path.replace(/(\w+[^/]$)/g, '$1/');
-}
+import { sanitizePath, ensureTrailingSlash } from 'core/utils/sanitize-path';
 
 const VERBS = {
   read: 'GET',

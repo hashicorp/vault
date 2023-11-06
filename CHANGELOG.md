@@ -2,6 +2,404 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.15.1
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.21.3.
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* auto-auth/azure: Support setting the `authenticate_from_environment` variable to "true" and "false" string literals, too. [[GH-22996](https://github.com/hashicorp/vault/pull/22996)]
+* secrets-sync (enterprise): Added telemetry on number of destinations and associations per type.
+* ui: Adds a warning when whitespace is detected in a key of a KV secret [[GH-23702](https://github.com/hashicorp/vault/pull/23702)]
+* ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
+* ui: Surface warning banner if UI has stopped auto-refreshing token [[GH-23143](https://github.com/hashicorp/vault/pull/23143)]
+* ui: show banner when resultant-acl check fails due to permissions or wrong namespace. [[GH-23503](https://github.com/hashicorp/vault/pull/23503)]
+
+BUG FIXES:
+
+* Seal HA (enterprise/beta): Fix rejection of a seal configuration change
+from two to one auto seal due to persistence of the previous seal type being
+"multiseal". [[GH-23573](https://github.com/hashicorp/vault/pull/23573)]
+* audit: Fix bug reopening 'file' audit devices on SIGHUP. [[GH-23598](https://github.com/hashicorp/vault/pull/23598)]
+* auth/aws: Fixes a panic that can occur in IAM-based login when a [client config](https://developer.hashicorp.com/vault/api-docs/auth/aws#configure-client) does not exist. [[GH-23555](https://github.com/hashicorp/vault/pull/23555)]
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets-sync (enterprise): Fixed issue where we could sync a deleted secret
+* secrets/aws: update credential rotation deadline when static role rotation period is updated [[GH-23528](https://github.com/hashicorp/vault/pull/23528)]
+* secrets/consul: Fix revocations when Vault has an access token using specific namespace and admin partition policies [[GH-23010](https://github.com/hashicorp/vault/pull/23010)]
+* secrets/pki: Stop processing in-flight ACME verifications when an active node steps down [[GH-23278](https://github.com/hashicorp/vault/pull/23278)]
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
+* storage/consul: fix a bug where an active node in a specific sort of network
+partition could continue to write data to Consul after a new leader is elected
+potentially causing data loss or corruption for keys with many concurrent
+writers. For Enterprise clusters this could cause corruption of the merkle trees
+leading to failure to complete merkle sync without a full re-index. [[GH-23013](https://github.com/hashicorp/vault/pull/23013)]
+* ui: Assumes version 1 for kv engines when options are null because no version is specified [[GH-23585](https://github.com/hashicorp/vault/pull/23585)]
+* ui: Decode the connection url for display on the connection details page [[GH-23695](https://github.com/hashicorp/vault/pull/23695)]
+* ui: Fix AWS secret engine to allow empty policy_document field. [[GH-23470](https://github.com/hashicorp/vault/pull/23470)]
+* ui: Fix bug where auth items were not listed when within a namespace. [[GH-23446](https://github.com/hashicorp/vault/pull/23446)]
+* ui: Fix regression that broke the oktaNumberChallenge on the ui. [[GH-23565](https://github.com/hashicorp/vault/pull/23565)]
+* ui: Fix the copy token button in the sidebar navigation window when in a collapsed state. [[GH-23331](https://github.com/hashicorp/vault/pull/23331)]
+* ui: Fixes issue where you could not share the list view URL from the KV v2 secrets engine. [[GH-23620](https://github.com/hashicorp/vault/pull/23620)]
+* ui: Fixes issue with sidebar navigation links disappearing when navigating to policies when a user is not authorized [[GH-23516](https://github.com/hashicorp/vault/pull/23516)]
+* ui: Fixes issues displaying accurate TLS state in dashboard configuration details [[GH-23726](https://github.com/hashicorp/vault/pull/23726)]
+
+## 1.15.0
+### September 27, 2023
+
+SECURITY:
+
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8.[[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
+
+CHANGES:
+
+* auth/alicloud: Update plugin to v0.16.0 [[GH-22646](https://github.com/hashicorp/vault/pull/22646)]
+* auth/azure: Update plugin to v0.16.0 [[GH-22277](https://github.com/hashicorp/vault/pull/22277)]
+* auth/azure: Update plugin to v0.16.1 [[GH-22795](https://github.com/hashicorp/vault/pull/22795)]
+* auth/azure: Update plugin to v0.16.2 [[GH-23060](https://github.com/hashicorp/vault/pull/23060)]
+* auth/cf: Update plugin to v0.15.1 [[GH-22758](https://github.com/hashicorp/vault/pull/22758)]
+* auth/gcp: Update plugin to v0.16.1 [[GH-22612](https://github.com/hashicorp/vault/pull/22612)]
+* auth/jwt: Update plugin to v0.17.0 [[GH-22678](https://github.com/hashicorp/vault/pull/22678)]
+* auth/kerberos: Update plugin to v0.10.1 [[GH-22797](https://github.com/hashicorp/vault/pull/22797)]
+* auth/kubernetes: Update plugin to v0.17.0 [[GH-22709](https://github.com/hashicorp/vault/pull/22709)]
+* auth/kubernetes: Update plugin to v0.17.1 [[GH-22879](https://github.com/hashicorp/vault/pull/22879)]
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
+* auth/oci: Update plugin to v0.14.2 [[GH-22805](https://github.com/hashicorp/vault/pull/22805)]
+* core (enterprise): Ensure Role Governing Policies are only applied down the namespace hierarchy
+* core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
+which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
+* core: Bump Go version to 1.21.1.
+* database/couchbase: Update plugin to v0.9.3 [[GH-22854](https://github.com/hashicorp/vault/pull/22854)]
+* database/couchbase: Update plugin to v0.9.4 [[GH-22871](https://github.com/hashicorp/vault/pull/22871)]
+* database/elasticsearch: Update plugin to v0.13.3 [[GH-22696](https://github.com/hashicorp/vault/pull/22696)]
+* database/mongodbatlas: Update plugin to v0.10.1 [[GH-22655](https://github.com/hashicorp/vault/pull/22655)]
+* database/redis-elasticache: Update plugin to v0.2.2 [[GH-22584](https://github.com/hashicorp/vault/pull/22584)]
+* database/redis-elasticache: Update plugin to v0.2.3 [[GH-22598](https://github.com/hashicorp/vault/pull/22598)]
+* database/redis: Update plugin to v0.2.2 [[GH-22654](https://github.com/hashicorp/vault/pull/22654)]
+* database/snowflake: Update plugin to v0.9.0 [[GH-22516](https://github.com/hashicorp/vault/pull/22516)]
+* events: Log level for processing an event dropped from info to debug. [[GH-22997](https://github.com/hashicorp/vault/pull/22997)]
+* events: `data_path` will include full data path of secret, including name. [[GH-22487](https://github.com/hashicorp/vault/pull/22487)]
+* replication (enterprise): Switch to non-deprecated gRPC field for resolver target host
+* sdk/logical/events: `EventSender` interface method is now `SendEvent` instead of `Send`. [[GH-22487](https://github.com/hashicorp/vault/pull/22487)]
+* secrets/ad: Update plugin to v0.16.1 [[GH-22856](https://github.com/hashicorp/vault/pull/22856)]
+* secrets/alicloud: Update plugin to v0.15.1 [[GH-22533](https://github.com/hashicorp/vault/pull/22533)]
+* secrets/azure: Update plugin to v0.16.2 [[GH-22799](https://github.com/hashicorp/vault/pull/22799)]
+* secrets/azure: Update plugin to v0.16.3 [[GH-22824](https://github.com/hashicorp/vault/pull/22824)]
+* secrets/gcp: Update plugin to v0.17.0 [[GH-22746](https://github.com/hashicorp/vault/pull/22746)]
+* secrets/gcpkms: Update plugin to v0.15.1 [[GH-22757](https://github.com/hashicorp/vault/pull/22757)]
+* secrets/keymgmt: Update plugin to v0.9.3
+* secrets/kubernetes: Update plugin to v0.6.0 [[GH-22823](https://github.com/hashicorp/vault/pull/22823)]
+* secrets/kv: Update plugin to v0.16.1 [[GH-22716](https://github.com/hashicorp/vault/pull/22716)]
+* secrets/mongodbatlas: Update plugin to v0.10.1 [[GH-22748](https://github.com/hashicorp/vault/pull/22748)]
+* secrets/openldap: Update plugin to v0.11.2 [[GH-22734](https://github.com/hashicorp/vault/pull/22734)]
+* secrets/terraform: Update plugin to v0.7.3 [[GH-22907](https://github.com/hashicorp/vault/pull/22907)]
+* secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
+* storage/aerospike: Aerospike storage shouldn't be used on 32-bit architectures and is now unsupported on them. [[GH-20825](https://github.com/hashicorp/vault/pull/20825)]
+* telemetry: Replace `vault.rollback.attempt.{MOUNT_POINT}` and `vault.route.rollback.{MOUNT_POINT}` metrics with `vault.rollback.attempt` and `vault.route.rollback metrics` by default. Added a telemetry configuration `add_mount_point_rollback_metrics` which, when set to true, causes vault to emit the metrics with mount points in their names. [[GH-22400](https://github.com/hashicorp/vault/pull/22400)]
+
+FEATURES:
+
+* **Certificate Issuance External Policy Service (CIEPS) (enterprise)**: Allow highly-customizable operator control of certificate validation and generation through the PKI Secrets Engine.
+* **Copyable KV v2 paths in UI**: KV v2 secret paths are copyable for use in CLI commands or API calls [[GH-22551](https://github.com/hashicorp/vault/pull/22551)]
+* **Dashboard UI**: Dashboard is now available in the UI as the new landing page. [[GH-21057](https://github.com/hashicorp/vault/pull/21057)]
+* **Database Static Role Advanced TTL Management**: Adds the ability to rotate
+* **Event System**: Add subscribe capability and subscribe_event_types to policies for events. [[GH-22474](https://github.com/hashicorp/vault/pull/22474)]
+static roles on a defined schedule. [[GH-22484](https://github.com/hashicorp/vault/pull/22484)]
+* **GCP IAM Support**: Adds support for IAM-based authentication to MySQL and PostgreSQL backends using Google Cloud SQL. [[GH-22445](https://github.com/hashicorp/vault/pull/22445)]
+* **Improved KV V2 UI**: Updated and restructured secret engine for KV (version 2 only) [[GH-22559](https://github.com/hashicorp/vault/pull/22559)]
+* **Merkle Tree Corruption Detection (enterprise)**: Add a new endpoint to check merkle tree corruption.
+* **Plugin Containers**: Vault supports registering, managing, and running plugins inside a container on Linux. [[GH-22712](https://github.com/hashicorp/vault/pull/22712)]
+* **SAML Auth Method (enterprise)**: Enable users to authenticate with Vault using their identity in a SAML Identity Provider.
+* **Seal High Availability Beta (enterprise)**: operators can try out configuring more than one automatic seal for resilience against seal provider outages.  Not for production use at this time.
+* **Secrets Sync (enterprise)**: Add the ability to synchronize KVv2 secret with external secrets manager solutions.
+* **UI LDAP secrets engine**: Add LDAP secrets engine to the UI. [[GH-20790](https://github.com/hashicorp/vault/pull/20790)]
+
+IMPROVEMENTS:
+
+* Bump github.com/hashicorp/go-plugin version v1.4.9 -> v1.4.10 [[GH-20966](https://github.com/hashicorp/vault/pull/20966)]
+* api: add support for cloning a Client's tls.Config. [[GH-21424](https://github.com/hashicorp/vault/pull/21424)]
+* api: adding a new api sys method for replication status [[GH-20995](https://github.com/hashicorp/vault/pull/20995)]
+* audit: add core audit events experiment [[GH-21628](https://github.com/hashicorp/vault/pull/21628)]
+* auth/aws: Added support for signed GET requests for authenticating to vault using the aws iam method. [[GH-10961](https://github.com/hashicorp/vault/pull/10961)]
+* auth/azure: Add support for azure workload identity authentication (see issue
+#18257). Update go-kms-wrapping dependency to include [PR
+#155](https://github.com/hashicorp/go-kms-wrapping/pull/155) [[GH-22994](https://github.com/hashicorp/vault/pull/22994)]
+* auth/azure: Added Azure API configurable retry options [[GH-23059](https://github.com/hashicorp/vault/pull/23059)]
+* auth/cert: Adds support for requiring hexadecimal-encoded non-string certificate extension values [[GH-21830](https://github.com/hashicorp/vault/pull/21830)]
+* auth/ldap: improved login speed by adding concurrency to LDAP token group searches [[GH-22659](https://github.com/hashicorp/vault/pull/22659)]
+* auto-auth/azure: Added Azure Workload Identity Federation support to auto-auth (for Vault Agent and Vault Proxy). [[GH-22264](https://github.com/hashicorp/vault/pull/22264)]
+* auto-auth: added support for LDAP auto-auth [[GH-21641](https://github.com/hashicorp/vault/pull/21641)]
+* aws/auth: Adds a new config field `use_sts_region_from_client` which allows for using dynamic regional sts endpoints based on Authorization header when using IAM-based authentication. [[GH-21960](https://github.com/hashicorp/vault/pull/21960)]
+* command/server: add `-dev-tls-san` flag to configure subject alternative names for the certificate generated when using `-dev-tls`. [[GH-22657](https://github.com/hashicorp/vault/pull/22657)]
+* core (ent) : Add field that allows lease-count namespace quotas to be inherited by child namespaces.
+* core : Add field that allows rate-limit namespace quotas to be inherited by child namespaces. [[GH-22452](https://github.com/hashicorp/vault/pull/22452)]
+* core/fips: Add RPM, DEB packages of FIPS 140-2 and HSM+FIPS 140-2 Vault Enterprise.
+* core/quotas: Add configuration to allow skipping of expensive role calculations [[GH-22651](https://github.com/hashicorp/vault/pull/22651)]
+* core: Add a new periodic metric to track the number of available policies, `vault.policy.configured.count`. [[GH-21010](https://github.com/hashicorp/vault/pull/21010)]
+* core: Fix OpenAPI representation and `-output-policy` recognition of some non-standard sudo paths [[GH-21772](https://github.com/hashicorp/vault/pull/21772)]
+* core: Fix regexes for `sys/raw/` and `sys/leases/lookup/` to match prevailing conventions [[GH-21760](https://github.com/hashicorp/vault/pull/21760)]
+* core: Log rollback manager failures during unmount, remount to prevent replication failures on secondary clusters. [[GH-22235](https://github.com/hashicorp/vault/pull/22235)]
+* core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
+* core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy [[GH-22304](https://github.com/hashicorp/vault/pull/22304)]
+* core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy
+* core: remove unnecessary *BarrierView field from backendEntry struct [[GH-20933](https://github.com/hashicorp/vault/pull/20933)]
+* core: use Go stdlib functionalities instead of explicit byte/string conversions [[GH-21854](https://github.com/hashicorp/vault/pull/21854)]
+* eventbus: updated go-eventlogger library to allow removal of nodes referenced by pipelines (used for subscriptions) [[GH-21623](https://github.com/hashicorp/vault/pull/21623)]
+* events: Allow subscriptions to multiple namespaces [[GH-22540](https://github.com/hashicorp/vault/pull/22540)]
+* events: Enabled by default [[GH-22815](https://github.com/hashicorp/vault/pull/22815)]
+* events: WebSocket subscriptions add support for boolean filter expressions [[GH-22835](https://github.com/hashicorp/vault/pull/22835)]
+* framework: Make it an error for `CreateOperation` to be defined without an `ExistenceCheck`, thereby fixing misleading `x-vault-createSupported` in OpenAPI [[GH-18492](https://github.com/hashicorp/vault/pull/18492)]
+* kmip (enterprise): Add namespace lock and unlock support [[GH-21925](https://github.com/hashicorp/vault/pull/21925)]
+* openapi: Better mount points for kv-v1 and kv-v2 in openapi.json [[GH-21563](https://github.com/hashicorp/vault/pull/21563)]
+* openapi: Fix generated types for duration strings [[GH-20841](https://github.com/hashicorp/vault/pull/20841)]
+* openapi: Fix generation of correct fields in some rarer cases [[GH-21942](https://github.com/hashicorp/vault/pull/21942)]
+* openapi: Fix response definitions for list operations [[GH-21934](https://github.com/hashicorp/vault/pull/21934)]
+* openapi: List operations are now given first-class representation in the OpenAPI document, rather than sometimes being overlaid with a read operation at the same path [[GH-21723](https://github.com/hashicorp/vault/pull/21723)]
+* plugins: Containerized plugins can be configured to still work when running with systemd's PrivateTmp=true setting. [[GH-23215](https://github.com/hashicorp/vault/pull/23215)]
+* replication (enterprise): Avoid logging warning if request is forwarded from a performance standby and not a performance secondary
+* replication (enterprise): Make reindex less disruptive by allowing writes during the flush phase.
+* sdk/framework: Adds replication state helper for backends to check for read-only storage [[GH-21743](https://github.com/hashicorp/vault/pull/21743)]
+* secrets/database: Improves error logging for static role rotations by including the database and role names. [[GH-22253](https://github.com/hashicorp/vault/pull/22253)]
+* secrets/db: Remove the `service_account_json` parameter when reading DB connection details [[GH-23256](https://github.com/hashicorp/vault/pull/23256)]
+* secrets/pki: Add a parameter to allow ExtKeyUsage field usage from a role within ACME. [[GH-21702](https://github.com/hashicorp/vault/pull/21702)]
+* secrets/transform (enterprise): Switch to pgx PostgreSQL driver for better timeout handling
+* secrets/transit: Add support to create CSRs from keys in transit engine and import/export x509 certificates [[GH-21081](https://github.com/hashicorp/vault/pull/21081)]
+* storage/dynamodb: Added three permit pool metrics for the DynamoDB backend, `pending_permits`, `active_permits`, and `pool_size`. [[GH-21742](https://github.com/hashicorp/vault/pull/21742)]
+* storage/etcd: Make etcd parameter MaxCallSendMsgSize configurable [[GH-12666](https://github.com/hashicorp/vault/pull/12666)]
+* storage/raft: Cap the minimum dead_server_last_contact_threshold to 1m. [[GH-22040](https://github.com/hashicorp/vault/pull/22040)]
+* sys/metrics (enterprise): Adds a gauge metric that tracks whether enterprise builtin secret plugins are enabled. [[GH-21681](https://github.com/hashicorp/vault/pull/21681)]
+* ui: Add API Explorer link to Sidebar, under Tools. [[GH-21578](https://github.com/hashicorp/vault/pull/21578)]
+* ui: Add pagination to PKI roles, keys, issuers, and certificates list pages [[GH-23193](https://github.com/hashicorp/vault/pull/23193)]
+* ui: Added allowed_domains_template field for CA type role in SSH engine [[GH-23119](https://github.com/hashicorp/vault/pull/23119)]
+* ui: Adds mount configuration details to Kubernetes secrets engine configuration view [[GH-22926](https://github.com/hashicorp/vault/pull/22926)]
+* ui: Adds tidy_revoked_certs to PKI tidy status page [[GH-23232](https://github.com/hashicorp/vault/pull/23232)]
+* ui: Adds warning before downloading KV v2 secret values [[GH-23260](https://github.com/hashicorp/vault/pull/23260)]
+* ui: Display minus icon for empty MaskedInput value. Show MaskedInput for KV secrets without values [[GH-22039](https://github.com/hashicorp/vault/pull/22039)]
+* ui: JSON diff view available in "Create New Version" form for KV v2 [[GH-22593](https://github.com/hashicorp/vault/pull/22593)]
+* ui: KV View Secret card will link to list view if input ends in "/" [[GH-22502](https://github.com/hashicorp/vault/pull/22502)]
+* ui: Move access to  KV V2 version diff view to toolbar in Version History [[GH-23200](https://github.com/hashicorp/vault/pull/23200)]
+* ui: Update pki mount configuration details to match the new mount configuration details pattern [[GH-23166](https://github.com/hashicorp/vault/pull/23166)]
+* ui: add example modal to policy form [[GH-21583](https://github.com/hashicorp/vault/pull/21583)]
+* ui: adds allowed_user_ids field to create role form and user_ids to generate certificates form in pki [[GH-22191](https://github.com/hashicorp/vault/pull/22191)]
+* ui: display CertificateCard instead of MaskedInput for certificates in PKI [[GH-22160](https://github.com/hashicorp/vault/pull/22160)]
+* ui: enables create and update KV secret workflow when control group present [[GH-22471](https://github.com/hashicorp/vault/pull/22471)]
+* ui: implement hashicorp design system [alert](https://helios.hashicorp.design/components/alert) component [[GH-21375](https://github.com/hashicorp/vault/pull/21375)]
+* ui: update detail views that render ttl durations to display full unit instead of letter (i.e. 'days' instead of 'd') [[GH-20697](https://github.com/hashicorp/vault/pull/20697)]
+* ui: update unseal and DR operation token flow components [[GH-21871](https://github.com/hashicorp/vault/pull/21871)]
+* ui: upgrade Ember to 4.12 [[GH-22122](https://github.com/hashicorp/vault/pull/22122)]
+
+DEPRECATIONS:
+
+* auth/centrify: Centrify plugin is deprecated as of 1.15, slated for removal in 1.17 [[GH-23050](https://github.com/hashicorp/vault/pull/23050)]
+
+BUG FIXES:
+
+* activity (enterprise): Fix misattribution of entities to no or child namespace auth methods [[GH-18809](https://github.com/hashicorp/vault/pull/18809)]
+* agent: Environment variable VAULT_CACERT_BYTES now works for Vault Agent templates. [[GH-22322](https://github.com/hashicorp/vault/pull/22322)]
+* agent: Fix "generate-config" command documentation URL [[GH-21466](https://github.com/hashicorp/vault/pull/21466)]
+* api/client: Fix deadlock in client.CloneWithHeaders when used alongside other client methods. [[GH-22410](https://github.com/hashicorp/vault/pull/22410)]
+* api: Fix breakage with UNIX domain socket addresses introduced by newest Go versions as a security fix. [[GH-22523](https://github.com/hashicorp/vault/pull/22523)]
+* audit: Prevent panic due to nil pointer receiver for audit header formatting. [[GH-22694](https://github.com/hashicorp/vault/pull/22694)]
+* auth/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21800](https://github.com/hashicorp/vault/pull/21800)]
+* auth/token, sys: Fix path-help being unavailable for some list-only endpoints [[GH-18571](https://github.com/hashicorp/vault/pull/18571)]
+* auth/token: Fix parsing of `auth/token/create` fields to avoid incorrect warnings about ignored parameters [[GH-18556](https://github.com/hashicorp/vault/pull/18556)]
+* awsutil: Update awsutil to v0.2.3 to fix a regression where Vault no longer
+respects `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_SESSION_NAME`. [[GH-21951](https://github.com/hashicorp/vault/pull/21951)]
+* cli: Avoid printing "Success" message when `-field` flag is provided during a `vault write`. [[GH-21546](https://github.com/hashicorp/vault/pull/21546)]
+* cli: Fix the CLI failing to return wrapping information for KV PUT and PATCH operations when format is set to `table`. [[GH-22818](https://github.com/hashicorp/vault/pull/22818)]
+* core (enterprise): Fix sentinel policy check logic so that sentinel
+policies are not used when Sentinel feature isn't licensed.
+* core (enterprise): Remove MFA Configuration for namespace when deleting namespace
+* core/managed-keys (enterprise): Allow certain symmetric PKCS#11 managed key mechanisms (AES CBC with and without padding) to operate without an HMAC.
+* core/metrics: vault.raft_storage.bolt.write.time should be a counter not a summary [[GH-22468](https://github.com/hashicorp/vault/pull/22468)]
+* core/quotas (enterprise): Fix a case where we were applying login roles to lease count quotas in a non-login context.
+Also fix a related potential deadlock. [[GH-21110](https://github.com/hashicorp/vault/pull/21110)]
+* core/quotas: Only perform ResolveRoleOperation for role-based quotas and lease creation. [[GH-22597](https://github.com/hashicorp/vault/pull/22597)]
+* core/quotas: Reduce overhead for role calculation when using cloud auth methods. [[GH-22583](https://github.com/hashicorp/vault/pull/22583)]
+* core:  Remove "expiration manager is nil on tokenstore" error log for unauth requests on DR secondary as they do not have expiration manager. [[GH-22137](https://github.com/hashicorp/vault/pull/22137)]
+* core: All subloggers now reflect configured log level on reload. [[GH-22038](https://github.com/hashicorp/vault/pull/22038)]
+* core: Fix bug where background thread to update locked user entries runs on DR secondaries. [[GH-22355](https://github.com/hashicorp/vault/pull/22355)]
+* core: Fix readonly errors that could occur while loading mounts/auths during unseal [[GH-22362](https://github.com/hashicorp/vault/pull/22362)]
+* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-21470](https://github.com/hashicorp/vault/pull/21470)]
+* core: Fixed issue with some durations not being properly parsed to include days. [[GH-21357](https://github.com/hashicorp/vault/pull/21357)]
+* core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
+* core: fix race when updating a mount's route entry tainted status and incoming requests [[GH-21640](https://github.com/hashicorp/vault/pull/21640)]
+* events: Ensure subscription resources are cleaned up on close. [[GH-23042](https://github.com/hashicorp/vault/pull/23042)]
+* expiration: Fix a deadlock that could occur when a revocation failure happens while restoring leases on startup. [[GH-22374](https://github.com/hashicorp/vault/pull/22374)]
+* identity/mfa: Fixes to OpenAPI representation and returned error codes for `identity/mfa/method/*` APIs [[GH-20879](https://github.com/hashicorp/vault/pull/20879)]
+* identity: Remove caseSensitivityKey to prevent errors while loading groups which could result in missing groups in memDB when duplicates are found. [[GH-20965](https://github.com/hashicorp/vault/pull/20965)]
+* license: Add autoloaded license path to the cache exempt list. This is to ensure the license changes on the active node is observed on the perfStandby node. [[GH-22363](https://github.com/hashicorp/vault/pull/22363)]
+* openapi: Fix response schema for PKI Issue requests [[GH-21449](https://github.com/hashicorp/vault/pull/21449)]
+* openapi: Fix schema definitions for PKI EAB APIs [[GH-21458](https://github.com/hashicorp/vault/pull/21458)]
+* plugins: Containerized plugins can be run with mlock enabled. [[GH-23215](https://github.com/hashicorp/vault/pull/23215)]
+* plugins: Fix instance where Vault could fail to kill broken/unresponsive plugins. [[GH-22914](https://github.com/hashicorp/vault/pull/22914)]
+* plugins: Fix instance where broken/unresponsive plugins could cause Vault to hang. [[GH-22914](https://github.com/hashicorp/vault/pull/22914)]
+* plugins: Runtime catalog returns 404 instead of 500 when reading a runtime that does not exist [[GH-23171](https://github.com/hashicorp/vault/pull/23171)]
+* plugins: `vault plugin runtime list` can successfully list plugin runtimes with GET [[GH-23171](https://github.com/hashicorp/vault/pull/23171)]
+* raft/autopilot: Add dr-token flag for raft autopilot cli commands [[GH-21165](https://github.com/hashicorp/vault/pull/21165)]
+* replication (enterprise): Fix bug sync invalidate CoreReplicatedClusterInfoPath
+* replication (enterprise): Fix discovery of bad primary cluster addresses to be more reliable
+* replication (enterprise): Fix panic when update-primary was called on demoted clusters using update_primary_addrs
+* replication (enterprise): Fixing a bug by which the atomicity of a merkle diff result could be affected. This means it could be a source of a merkle-diff & sync process failing to switch into stream-wal mode afterwards.
+* replication (enterprise): Sort cluster addresses returned by echo requests, so that primary-addrs only gets persisted when the
+set of addrs changes.
+* replication (enterprise): update primary cluster address after DR failover
+* sdk/ldaputil: Properly escape user filters when using UPN domains
+sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https://github.com/hashicorp/vault/pull/22249)]
+* secrets/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21631](https://github.com/hashicorp/vault/pull/21631)]
+* secrets/ldap: Fix bug causing schema and password_policy to be overwritten in config. [[GH-22330](https://github.com/hashicorp/vault/pull/22330)]
+* secrets/pki: Fix bug with ACME tidy, 'unable to determine acme base folder path'. [[GH-21870](https://github.com/hashicorp/vault/pull/21870)]
+* secrets/pki: Fix preserving acme_account_safety_buffer on config/auto-tidy. [[GH-21870](https://github.com/hashicorp/vault/pull/21870)]
+* secrets/pki: Fix removal of issuers to clean up unreferenced CRLs. [[GH-23007](https://github.com/hashicorp/vault/pull/23007)]
+* secrets/pki: Prevent deleted issuers from reappearing when migrating from a version 1 bundle to a version 2 bundle (versions including 1.13.0, 1.12.2, and 1.11.6); when managed keys were removed but referenced in the Vault 1.10 legacy CA bundle, this the error: `no managed key found with uuid`. [[GH-21316](https://github.com/hashicorp/vault/pull/21316)]
+* secrets/pki: allowed_domains are now compared in a case-insensitive manner if they use glob patterns [[GH-22126](https://github.com/hashicorp/vault/pull/22126)]
+* secrets/transform (enterprise): Batch items with repeated tokens in the tokenization decode api will now contain the decoded_value element
+* secrets/transform (enterprise): Fix nil panic when deleting a template with tokenization transformations present
+* secrets/transform (enterprise): Fix nil panic when encoding a tokenization transformation on a non-active node
+* secrets/transform (enterprise): Grab shared locks for various read operations, only escalating to write locks if work is required
+* secrets/transform (enterprise): Tidy operations will be re-scheduled at a minimum of every minute, not a maximum of every minute
+* secrets/transit: fix panic when providing non-PEM formatted public key for import [[GH-22753](https://github.com/hashicorp/vault/pull/22753)]
+* serviceregistration: Fix bug where multiple nodes in a secondary cluster could be labelled active after updating the cluster's primary [[GH-21642](https://github.com/hashicorp/vault/pull/21642)]
+* storage/consul: Consul service registration tags are now case-sensitive. [[GH-6483](https://github.com/hashicorp/vault/pull/6483)]
+* storage/raft: Fix race where new follower joining can get pruned by dead server cleanup. [[GH-20986](https://github.com/hashicorp/vault/pull/20986)]
+* ui (enterprise): Fix error message when generating SSH credential with control group [[GH-23025](https://github.com/hashicorp/vault/pull/23025)]
+* ui: Adds missing values to details view after generating PKI certificate [[GH-21635](https://github.com/hashicorp/vault/pull/21635)]
+* ui: Fix blank page or ghost secret when canceling KV secret create [[GH-22541](https://github.com/hashicorp/vault/pull/22541)]
+* ui: Fix display for "Last Vault Rotation" timestamp for static database roles which was not rendering or copyable [[GH-22519](https://github.com/hashicorp/vault/pull/22519)]
+* ui: Fix styling for username input when editing a user [[GH-21771](https://github.com/hashicorp/vault/pull/21771)]
+* ui: Fix styling for viewing certificate in kubernetes configuration [[GH-21968](https://github.com/hashicorp/vault/pull/21968)]
+* ui: Fix the issue where confirm delete dropdown is being cut off [[GH-23066](https://github.com/hashicorp/vault/pull/23066)]
+* ui: Fixed an issue where editing an SSH role would clear `default_critical_options` and `default_extension` if left unchanged. [[GH-21739](https://github.com/hashicorp/vault/pull/21739)]
+* ui: Fixed secrets, leases, and policies filter dropping focus after a single character [[GH-21767](https://github.com/hashicorp/vault/pull/21767)]
+* ui: Fixes filter and search bug in secrets engines [[GH-23123](https://github.com/hashicorp/vault/pull/23123)]
+* ui: Fixes form field label tooltip alignment [[GH-22832](https://github.com/hashicorp/vault/pull/22832)]
+* ui: Fixes issue with certain navigational links incorrectly displaying in child namespaces [[GH-21562](https://github.com/hashicorp/vault/pull/21562)]
+* ui: Fixes login screen display issue with Safari browser [[GH-21582](https://github.com/hashicorp/vault/pull/21582)]
+* ui: Fixes problem displaying certificates issued with unsupported signature algorithms (i.e. ed25519) [[GH-21926](https://github.com/hashicorp/vault/pull/21926)]
+* ui: Fixes styling of private key input when configuring an SSH key [[GH-21531](https://github.com/hashicorp/vault/pull/21531)]
+* ui: Surface DOMException error when browser settings prevent localStorage. [[GH-21503](https://github.com/hashicorp/vault/pull/21503)]
+* ui: correct doctype for index.html [[GH-22153](https://github.com/hashicorp/vault/pull/22153)]
+* ui: don't exclude features present on license [[GH-22855](https://github.com/hashicorp/vault/pull/22855)]
+* ui: fixes `max_versions` default for secret metadata unintentionally overriding kv engine defaults [[GH-22394](https://github.com/hashicorp/vault/pull/22394)]
+* ui: fixes long namespace names overflow in the sidebar
+* ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
+* ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
+
+## 1.14.5
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.10.
+* replication (enterprise): Switch to non-deprecated gRPC field for resolver target host
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
+* ui: Adds toggle to KV secrets engine value download modal to optionally stringify value in downloaded file [[GH-23747](https://github.com/hashicorp/vault/pull/23747)]
+
+BUG FIXES:
+
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets/consul: Fix revocations when Vault has an access token using specific namespace and admin partition policies [[GH-23010](https://github.com/hashicorp/vault/pull/23010)]
+* secrets/pki: Stop processing in-flight ACME verifications when an active node steps down [[GH-23278](https://github.com/hashicorp/vault/pull/23278)]
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
+* storage/consul: fix a bug where an active node in a specific sort of network
+partition could continue to write data to Consul after a new leader is elected
+potentially causing data loss or corruption for keys with many concurrent
+writers. For Enterprise clusters this could cause corruption of the merkle trees
+leading to failure to complete merkle sync without a full re-index. [[GH-23013](https://github.com/hashicorp/vault/pull/23013)]
+* ui: Decode the connection url for display on the connection details page [[GH-23695](https://github.com/hashicorp/vault/pull/23695)]
+* ui: Fix AWS secret engine to allow empty policy_document field. [[GH-23470](https://github.com/hashicorp/vault/pull/23470)]
+* ui: Fix the copy token button in the sidebar navigation window when in a collapsed state. [[GH-23331](https://github.com/hashicorp/vault/pull/23331)]
+* ui: Fixes issue with sidebar navigation links disappearing when navigating to policies when a user is not authorized [[GH-23516](https://github.com/hashicorp/vault/pull/23516)]
+
+## 1.14.4
+### September 27, 2023
+
+SECURITY:
+
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8. [[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
+
+CHANGES:
+
+* core (enterprise): Ensure Role Governing Policies are only applied down the namespace hierarchy
+
+IMPROVEMENTS:
+
+* ui: Add pagination to PKI roles, keys, issuers, and certificates list pages [[GH-23193](https://github.com/hashicorp/vault/pull/23193)]
+* ui: Added allowed_domains_template field for CA type role in SSH engine [[GH-23119](https://github.com/hashicorp/vault/pull/23119)]
+* ui: Adds tidy_revoked_certs to PKI tidy status page [[GH-23232](https://github.com/hashicorp/vault/pull/23232)]
+* ui: Adds warning before downloading KV v2 secret values [[GH-23260](https://github.com/hashicorp/vault/pull/23260)]
+
+BUG FIXES:
+
+* core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
+* secrets/pki: Fix removal of issuers to clean up unreferenced CRLs. [[GH-23007](https://github.com/hashicorp/vault/pull/23007)]
+* ui (enterprise): Fix error message when generating SSH credential with control group [[GH-23025](https://github.com/hashicorp/vault/pull/23025)]
+* ui: Fix the issue where confirm delete dropdown is being cut off [[GH-23066](https://github.com/hashicorp/vault/pull/23066)]
+* ui: Fixes filter and search bug in secrets engines [[GH-23123](https://github.com/hashicorp/vault/pull/23123)]
+* ui: don't exclude features present on license [[GH-22855](https://github.com/hashicorp/vault/pull/22855)]
+
+## 1.14.3
+### September 13, 2023
+
+SECURITY:
+
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
+
+CHANGES:
+
+* core: Bump Go version to 1.20.8.
+
+FEATURES:
+
+* ** Merkle Tree Corruption Detection (enterprise) **: Add a new endpoint to check merkle tree corruption.
+
+IMPROVEMENTS:
+
+* auth/ldap: improved login speed by adding concurrency to LDAP token group searches [[GH-22659](https://github.com/hashicorp/vault/pull/22659)]
+* core/quotas: Add configuration to allow skipping of expensive role calculations [[GH-22651](https://github.com/hashicorp/vault/pull/22651)]
+* kmip (enterprise): reduce latency of KMIP operation handling
+
+BUG FIXES:
+
+* cli: Fix the CLI failing to return wrapping information for KV PUT and PATCH operations when format is set to `table`. [[GH-22818](https://github.com/hashicorp/vault/pull/22818)]
+* core/quotas: Only perform ResolveRoleOperation for role-based quotas and lease creation. [[GH-22597](https://github.com/hashicorp/vault/pull/22597)]
+* core/quotas: Reduce overhead for role calculation when using cloud auth methods. [[GH-22583](https://github.com/hashicorp/vault/pull/22583)]
+* core/seal: add a workaround for potential connection [[hangs](https://github.com/Azure/azure-sdk-for-go/issues/21346)] in Azure autoseals. [[GH-22760](https://github.com/hashicorp/vault/pull/22760)]
+* core: All subloggers now reflect configured log level on reload. [[GH-22038](https://github.com/hashicorp/vault/pull/22038)]
+* kmip (enterprise): fix date handling error with some re-key operations
+* raft/autopilot: Add dr-token flag for raft autopilot cli commands [[GH-21165](https://github.com/hashicorp/vault/pull/21165)]
+* replication (enterprise): Fix discovery of bad primary cluster addresses to be more reliable
+* secrets/transit: fix panic when providing non-PEM formatted public key for import [[GH-22753](https://github.com/hashicorp/vault/pull/22753)]
+* ui: fixes long namespace names overflow in the sidebar
+
 ## 1.14.2
 ### August 30, 2023
 
@@ -57,9 +455,15 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 ## 1.14.1
 ### July 25, 2023
 
+SECURITY
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
+
+
+
 CHANGES:
 
-* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
 * core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
 which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
 * secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
@@ -108,6 +512,10 @@ respects `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_SESSION_NA
 
 ## 1.14.0
 ### June 21, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 BREAKING CHANGES:
 
@@ -326,6 +734,34 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
 
+## 1.13.9
+### October 25, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.10.
+* replication (enterprise): Switch to non-deprecated gRPC field for resolver target host
+
+IMPROVEMENTS:
+
+* api/plugins: add `tls-server-name` arg for plugin registration [[GH-23549](https://github.com/hashicorp/vault/pull/23549)]
+* core: Use a worker pool for the rollback manager. Add new metrics for the rollback manager to track the queued tasks. [[GH-22567](https://github.com/hashicorp/vault/pull/22567)]
+
+BUG FIXES:
+
+* command/server: Fix bug with sigusr2 where pprof files were not closed correctly [[GH-23636](https://github.com/hashicorp/vault/pull/23636)]
+* events: Ignore sending context to give more time for events to send [[GH-23500](https://github.com/hashicorp/vault/pull/23500)]
+* expiration: Prevent large lease loads from delaying state changes, e.g. becoming active or standby. [[GH-23282](https://github.com/hashicorp/vault/pull/23282)]
+* kmip (enterprise): Improve handling of failures due to storage replication issues.
+* kmip (enterprise): Return a structure in the response for query function Query Server Information.
+* mongo-db: allow non-admin database for root credential rotation [[GH-23240](https://github.com/hashicorp/vault/pull/23240)]
+* replication (enterprise): Fix a bug where undo logs would only get enabled on the initial node in a cluster.
+* replication (enterprise): Fix a missing unlock when changing replication state
+* secrets/transit (enterprise): Address an issue using sign/verify operations with managed keys returning an error about it not containing a private key
+* secrets/transit (enterprise): Address panic when using GCP,AWS,Azure managed keys for encryption operations. At this time all encryption operations for the cloud providers have been disabled, only signing operations are supported.
+* secrets/transit (enterprise): Apply hashing arguments and defaults to managed key sign/verify operations
+* secrets/transit: Do not allow auto rotation on managed_key key types [[GH-23723](https://github.com/hashicorp/vault/pull/23723)]
+
 ## 1.13.6
 ### August 30, 2023
 
@@ -365,13 +801,113 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: Fix blank page or ghost secret when canceling KV secret create [[GH-22541](https://github.com/hashicorp/vault/pull/22541)]
 * ui: fixes `max_versions` default for secret metadata unintentionally overriding kv engine defaults [[GH-22394](https://github.com/hashicorp/vault/pull/22394)]
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
-  
-## 1.13.5
-### July 25, 2023
+
+## 1.13.8
+### September 27, 2023
+
+SECURITY:
+
+* sentinel (enterprise): Sentinel RGP policies allowed for cross-namespace denial-of-service. This vulnerability, CVE-2023-3775, is fixed in Vault Enterprise 1.15.0, 1.14.4, and 1.13.8. [[HSEC-2023-29](https://discuss.hashicorp.com/t/hcsec-2023-29-vault-enterprise-s-sentinel-rgp-policies-allowed-for-cross-namespace-denial-of-service/58653)]
 
 CHANGES:
 
-* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
+* core (enterprise): Ensure Role Governing Policies are only applied down the namespace hierarchy
+
+IMPROVEMENTS:
+
+* ui: Added allowed_domains_template field for CA type role in SSH engine [[GH-23119](https://github.com/hashicorp/vault/pull/23119)]
+
+BUG FIXES:
+
+* core: Fixes list password policy to include those with names containing / characters. [[GH-23155](https://github.com/hashicorp/vault/pull/23155)]
+* secrets/pki: Fix removal of issuers to clean up unreferenced CRLs. [[GH-23007](https://github.com/hashicorp/vault/pull/23007)]
+* ui (enterprise): Fix error message when generating SSH credential with control group [[GH-23025](https://github.com/hashicorp/vault/pull/23025)]
+* ui: Fixes old pki's filter and search roles page bug [[GH-22810](https://github.com/hashicorp/vault/pull/22810)]
+* ui: don't exclude features present on license [[GH-22855](https://github.com/hashicorp/vault/pull/22855)]
+  
+## 1.13.7
+### September 13, 2023
+
+SECURITY:
+
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. This vulnerability, CVE-2023-4680, is fixed in Vault 1.14.3, 1.13.7, and 1.12.11. [[GH-22852](https://github.com/hashicorp/vault/pull/22852), [HSEC-2023-28](https://discuss.hashicorp.com/t/hcsec-2023-28-vault-s-transit-secrets-engine-allowed-nonce-specified-without-convergent-encryption/58249)]
+
+CHANGES:
+
+* core: Bump Go version to 1.20.8.
+* database/snowflake: Update plugin to v0.7.3 [[GH-22591](https://github.com/hashicorp/vault/pull/22591)]
+
+FEATURES:
+
+* ** Merkle Tree Corruption Detection (enterprise) **: Add a new endpoint to check merkle tree corruption.
+
+IMPROVEMENTS:
+
+* auth/ldap: improved login speed by adding concurrency to LDAP token group searches [[GH-22659](https://github.com/hashicorp/vault/pull/22659)]
+* core/quotas: Add configuration to allow skipping of expensive role calculations [[GH-22651](https://github.com/hashicorp/vault/pull/22651)]
+* kmip (enterprise): reduce latency of KMIP operation handling
+
+BUG FIXES:
+
+* cli: Fix the CLI failing to return wrapping information for KV PUT and PATCH operations when format is set to `table`. [[GH-22818](https://github.com/hashicorp/vault/pull/22818)]
+* core/quotas: Only perform ResolveRoleOperation for role-based quotas and lease creation. [[GH-22597](https://github.com/hashicorp/vault/pull/22597)]
+* core/quotas: Reduce overhead for role calculation when using cloud auth methods. [[GH-22583](https://github.com/hashicorp/vault/pull/22583)]
+* core/seal: add a workaround for potential connection [[hangs](https://github.com/Azure/azure-sdk-for-go/issues/21346)] in Azure autoseals. [[GH-22760](https://github.com/hashicorp/vault/pull/22760)]
+* core: All subloggers now reflect configured log level on reload. [[GH-22038](https://github.com/hashicorp/vault/pull/22038)]
+* kmip (enterprise): fix date handling error with some re-key operations
+* raft/autopilot: Add dr-token flag for raft autopilot cli commands [[GH-21165](https://github.com/hashicorp/vault/pull/21165)]
+* replication (enterprise): Fix discovery of bad primary cluster addresses to be more reliable
+
+## 1.13.6
+### August 30, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.7.
+
+IMPROVEMENTS:
+
+* core: Log rollback manager failures during unmount, remount to prevent replication failures on secondary clusters. [[GH-22235](https://github.com/hashicorp/vault/pull/22235)]
+* replication (enterprise): Make reindex less disruptive by allowing writes during the flush phase.
+* secrets/database: Improves error logging for static role rotations by including the database and role names. [[GH-22253](https://github.com/hashicorp/vault/pull/22253)]
+* storage/raft: Cap the minimum dead_server_last_contact_threshold to 1m. [[GH-22040](https://github.com/hashicorp/vault/pull/22040)]
+* ui: KV View Secret card will link to list view if input ends in "/" [[GH-22502](https://github.com/hashicorp/vault/pull/22502)]
+* ui: enables create and update KV secret workflow when control group present [[GH-22471](https://github.com/hashicorp/vault/pull/22471)]
+
+BUG FIXES:
+
+* activity (enterprise): Fix misattribution of entities to no or child namespace auth methods [[GH-18809](https://github.com/hashicorp/vault/pull/18809)]
+* api: Fix breakage with UNIX domain socket addresses introduced by newest Go versions as a security fix. [[GH-22523](https://github.com/hashicorp/vault/pull/22523)]
+* core (enterprise): Remove MFA Configuration for namespace when deleting namespace
+* core/quotas (enterprise): Fix a case where we were applying login roles to lease count quotas in a non-login context.
+Also fix a related potential deadlock. [[GH-21110](https://github.com/hashicorp/vault/pull/21110)]
+* core:  Remove "expiration manager is nil on tokenstore" error log for unauth requests on DR secondary as they do not have expiration manager. [[GH-22137](https://github.com/hashicorp/vault/pull/22137)]
+* core: Fix bug where background thread to update locked user entries runs on DR secondaries. [[GH-22355](https://github.com/hashicorp/vault/pull/22355)]
+* core: Fix readonly errors that could occur while loading mounts/auths during unseal [[GH-22362](https://github.com/hashicorp/vault/pull/22362)]
+* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-21470](https://github.com/hashicorp/vault/pull/21470)]
+* expiration: Fix a deadlock that could occur when a revocation failure happens while restoring leases on startup. [[GH-22374](https://github.com/hashicorp/vault/pull/22374)]
+* license: Add autoloaded license path to the cache exempt list. This is to ensure the license changes on the active node is observed on the perfStandby node. [[GH-22363](https://github.com/hashicorp/vault/pull/22363)]
+* replication (enterprise): Fix bug sync invalidate CoreReplicatedClusterInfoPath
+* replication (enterprise): Fix panic when update-primary was called on demoted clusters using update_primary_addrs
+* replication (enterprise): Fixing a bug by which the atomicity of a merkle diff result could be affected. This means it could be a source of a merkle-diff & sync process failing to switch into stream-wal mode afterwards.
+* sdk/ldaputil: Properly escape user filters when using UPN domains
+sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https://github.com/hashicorp/vault/pull/22249)]
+* secrets/ldap: Fix bug causing schema and password_policy to be overwritten in config. [[GH-22331](https://github.com/hashicorp/vault/pull/22331)]
+* secrets/transform (enterprise): Tidy operations will be re-scheduled at a minimum of every minute, not a maximum of every minute
+* ui: Fix blank page or ghost secret when canceling KV secret create [[GH-22541](https://github.com/hashicorp/vault/pull/22541)]
+* ui: fixes `max_versions` default for secret metadata unintentionally overriding kv engine defaults [[GH-22394](https://github.com/hashicorp/vault/pull/22394)]
+* ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
+
+## 1.13.5
+### July 25, 2023
+
+SECURITY:
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
+
+CHANGES:
+
 * core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
 which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
 * secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
@@ -905,6 +1441,26 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 * ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: show Get credentials button for static roles detail page when a user has the proper permissions. [[GH-19190](https://github.com/hashicorp/vault/pull/19190)]
 
+## 1.12.11
+### September 13, 2023
+
+SECURITY:
+
+* secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption. [[GH-22852](https://github.com/hashicorp/vault/pull/22852)]
+
+IMPROVEMENTS:
+
+* auth/ldap: improved login speed by adding concurrency to LDAP token group searches [[GH-22659](https://github.com/hashicorp/vault/pull/22659)]
+* kmip (enterprise): reduce latency of KMIP operation handling
+
+BUG FIXES:
+
+* cli: Fix the CLI failing to return wrapping information for KV PUT and PATCH operations when format is set to `table`. [[GH-22818](https://github.com/hashicorp/vault/pull/22818)]
+* core/quotas: Reduce overhead for role calculation when using cloud auth methods. [[GH-22583](https://github.com/hashicorp/vault/pull/22583)]
+* core/seal: add a workaround for potential connection [[hangs](https://github.com/Azure/azure-sdk-for-go/issues/21346)] in Azure autoseals. [[GH-22760](https://github.com/hashicorp/vault/pull/22760)]
+* raft/autopilot: Add dr-token flag for raft autopilot cli commands [[GH-21165](https://github.com/hashicorp/vault/pull/21165)]
+* replication (enterprise): Fix discovery of bad primary cluster addresses to be more reliable
+
 ## 1.12.10
 ### August 30, 2023
 
@@ -941,6 +1497,10 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 
 ## 1.12.9
 ### July 25, 2023
+
+SECURITY:
+
+* core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
 
 CHANGES:
 
@@ -1026,6 +1586,10 @@ have its own changelog entry.  Fix wrong lock used in ListAuths link meta interf
 
 ## 1.12.7
 ### June 08, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 CHANGES:
 
@@ -1570,6 +2134,10 @@ have its own changelog entry. [[GH-21260](https://github.com/hashicorp/vault/pul
 
 ## 1.11.11
 ### June 08, 2023
+
+SECURITY:
+
+* ui: key-value v2 (kv-v2) diff viewer allowed HTML injection into the Vault web UI through key values. This vulnerability, CVE-2023-2121, is fixed in Vault 1.14.0, 1.13.3, 1.12.7, and 1.11.11. [[HSEC-2023-17](https://discuss.hashicorp.com/t/hcsec-2023-17-vault-s-kv-diff-viewer-allowed-html-injection/54814)]
 
 CHANGES:
 

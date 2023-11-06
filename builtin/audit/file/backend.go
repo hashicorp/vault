@@ -22,6 +22,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	stdout  = "stdout"
+	discard = "discard"
+)
+
 func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
@@ -39,53 +44,45 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// normalize path if configured for stdout
-	if strings.EqualFold(path, "stdout") {
-		path = "stdout"
+	if strings.EqualFold(path, stdout) {
+		path = stdout
 	}
-	if strings.EqualFold(path, "discard") {
-		path = "discard"
+	if strings.EqualFold(path, discard) {
+		path = discard
 	}
 
-	format, ok := conf.Config["format"]
-	if !ok {
-		format = audit.JSONFormat.String()
-	}
-	switch format {
-	case audit.JSONFormat.String(), audit.JSONxFormat.String():
-	default:
-		return nil, fmt.Errorf("unknown format type %q", format)
+	var cfgOpts []audit.Option
+
+	if format, ok := conf.Config["format"]; ok {
+		cfgOpts = append(cfgOpts, audit.WithFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
-	hmacAccessor := true
 	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
-		value, err := strconv.ParseBool(hmacAccessorRaw)
+		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hmacAccessor = value
+		cfgOpts = append(cfgOpts, audit.WithHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
-	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
-		b, err := strconv.ParseBool(raw)
+		v, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
 		}
-		logRaw = b
+		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	elideListResponses := false
 	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
-		value, err := strconv.ParseBool(elideListResponsesRaw)
+		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
 			return nil, err
 		}
-		elideListResponses = value
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
 	}
 
-	// Check if mode is provided
 	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
@@ -95,7 +92,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		switch m {
 		case 0:
 			// if mode is 0000, then do not modify file mode
-			if path != "stdout" && path != "discard" {
+			if path != stdout && path != discard {
 				fileInfo, err := os.Stat(path)
 				if err != nil {
 					return nil, err
@@ -107,12 +104,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		}
 	}
 
-	cfg, err := audit.NewFormatterConfig(
-		audit.WithElision(elideListResponses),
-		audit.WithFormat(format),
-		audit.WithHMACAccessor(hmacAccessor),
-		audit.WithRaw(logRaw),
-	)
+	cfg, err := audit.NewFormatterConfig(cfgOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -136,11 +128,13 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 	var w audit.Writer
-	switch format {
-	case "json":
+	switch b.formatConfig.RequiredFormat {
+	case audit.JSONFormat:
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case "jsonx":
+	case audit.JSONxFormat:
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
+	default:
+		return nil, fmt.Errorf("unknown format type %q", b.formatConfig.RequiredFormat)
 	}
 
 	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
@@ -164,16 +158,24 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		var sinkNode eventlogger.Node
 
 		switch path {
-		case "stdout":
-			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewStdoutSinkNode(format)}
-		case "discard":
+		case stdout:
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewStdoutSinkNode(b.formatConfig.RequiredFormat.String())}
+		case discard:
 			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewNoopSink()}
 		default:
 			var err error
 
+			var opts []event.Option
+			// Check if mode is provided
+			if modeRaw, ok := conf.Config["mode"]; ok {
+				opts = append(opts, event.WithFileMode(modeRaw))
+			}
+
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
-			n, err := event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
+			n, err := event.NewFileSink(
+				b.path,
+				b.formatConfig.RequiredFormat.String(), opts...)
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}
@@ -189,8 +191,8 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeMap[sinkNodeID] = sinkNode
 	} else {
 		switch path {
-		case "stdout":
-		case "discard":
+		case stdout:
+		case discard:
 		default:
 			// Ensure that the file can be successfully opened for writing;
 			// otherwise it will be too late to catch later without problems
@@ -257,9 +259,9 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
@@ -288,7 +290,7 @@ func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) er
 	if _, err := reader.WriteTo(writer); err == nil {
 		b.fileLock.Unlock()
 		return nil
-	} else if b.path == "stdout" {
+	} else if b.path == stdout {
 		b.fileLock.Unlock()
 		return err
 	}
@@ -313,9 +315,9 @@ func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) er
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
@@ -337,9 +339,9 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, conf
 	// Old behavior
 	var writer io.Writer
 	switch b.path {
-	case "stdout":
+	case stdout:
 		writer = os.Stdout
-	case "discard":
+	case discard:
 		return nil
 	}
 
@@ -389,27 +391,39 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload(_ context.Context) error {
-	switch b.path {
-	case "stdout", "discard":
+	// When there are nodes created in the map, use the eventlogger behavior.
+	if len(b.nodeMap) > 0 {
+		for _, n := range b.nodeMap {
+			if n.Type() == eventlogger.NodeTypeSink {
+				return n.Reopen()
+			}
+		}
+
 		return nil
-	}
+	} else {
+		// old non-eventlogger behavior
+		switch b.path {
+		case stdout, discard:
+			return nil
+		}
 
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
+		b.fileLock.Lock()
+		defer b.fileLock.Unlock()
 
-	if b.f == nil {
+		if b.f == nil {
+			return b.open()
+		}
+
+		err := b.f.Close()
+		// Set to nil here so that even if we error out, on the next access open()
+		// will be tried
+		b.f = nil
+		if err != nil {
+			return err
+		}
+
 		return b.open()
 	}
-
-	err := b.f.Close()
-	// Set to nil here so that even if we error out, on the next access open()
-	// will be tried
-	b.f = nil
-	if err != nil {
-		return err
-	}
-
-	return b.open()
 }
 
 func (b *Backend) Invalidate(_ context.Context) {

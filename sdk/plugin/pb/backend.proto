@@ -58,6 +58,11 @@ message Paths {
   //
   // See extended note in /sdk/logical/logical.go.
   repeated string write_forwarded_storage = 5;
+
+  // Binary are paths whose request bodies are binary, not JSON
+  //
+  // See note in /sdk/logical/logical.go.
+  repeated string binary = 6;
 }
 
 message Request {
@@ -309,6 +314,10 @@ message Response {
   // be used in the audit broker to ensure we are auditing only the allowed
   // headers.
   map<string, Header> headers = 7;
+
+  // MountType, if non-empty, provides some information about what kind
+  // of mount this secret came from.
+  string mount_type = 8;
 }
 
 message ResponseWrapInfo {

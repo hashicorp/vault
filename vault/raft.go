@@ -198,6 +198,7 @@ func (c *Core) monitorUndoLogs() error {
 	}
 
 	if persisted {
+		c.EnableUndoLogs()
 		logger.Debug("undo logs are safe, no need to check any more")
 		return nil
 	}
@@ -363,6 +364,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
+	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -1332,7 +1334,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {

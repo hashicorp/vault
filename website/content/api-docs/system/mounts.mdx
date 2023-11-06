@@ -10,8 +10,6 @@ The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 
 ## List mounted secrets engines
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoints lists all the mounted secrets engines.
 
 | Method | Path          |
@@ -121,8 +119,6 @@ are used by this backend.
 
 ## Enable secrets engine
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint enables a new secrets engine at the given path.
 
 | Method | Path                |
@@ -175,6 +171,9 @@ This endpoint enables a new secrets engine at the given path.
     unversioned plugin that may have been registered, the latest versioned plugin
     registered, or a built-in plugin in that order of precendence.
 
+  - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+    that the mount in question is allowed to access.
+
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
 
@@ -219,8 +218,6 @@ $ curl \
 
 ## Disable secrets engine
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint disables the mount point specified in the URL.
 
 | Method   | Path                |                    |
@@ -254,8 +251,6 @@ If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
 
 ## Get the configuration of a secret engine
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the configuration of a specific secret engine.
 
@@ -318,8 +313,6 @@ $ curl \
 
 ## Read mount configuration
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint reads the given mount's configuration. Unlike the `mounts`
 endpoint, this will return the current time in seconds for each TTL, which may
 be the system default or a mount-specific value.
@@ -347,8 +340,6 @@ $ curl \
 ```
 
 ## Tune mount configuration
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint tunes configuration parameters for a given mount point.
 

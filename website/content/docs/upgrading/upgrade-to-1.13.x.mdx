@@ -89,6 +89,10 @@ FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
 Affects upgrading from any version of Vault to 1.13.x. All other upgrade paths
 are unaffected.
 
+### Application of Sentinel Role Governing Policies (RGPs) via identity groups
+
+@include 'application-of-sentinel-rgps-via-identity-groups.mdx'
+
 ## Known issues
 
 @include 'tokenization-rotation-persistence.mdx'
@@ -176,3 +180,9 @@ Affects Vault 1.13.0+
 @include 'pki-double-migration-bug.mdx'
 
 @include 'known-issues/update-primary-addrs-panic.mdx'
+
+@include 'known-issues/transit-managed-keys-panics.mdx'
+
+@include 'known-issues/internal-error-namespace-missing-policy.mdx'
+
+@include 'known-issues/ephemeral-loggers-memory-leak.mdx'

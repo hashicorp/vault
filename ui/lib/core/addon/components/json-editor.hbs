@@ -7,7 +7,7 @@
   {{#if this.getShowToolbar}}
     <div data-test-component="json-editor-toolbar">
       <Toolbar>
-        <label class="is-label" data-test-component="json-editor-title">
+        <label class="has-text-weight-bold" data-test-component="json-editor-title">
           {{@title}}
           {{#if @subTitle}}
             <span class="is-size-9 is-lowercase has-text-grey">({{@subTitle}})</span>
@@ -28,14 +28,14 @@
             </button>
           {{/if}}
           <div class="toolbar-separator"></div>
-          <CopyButton
-            class="button is-transparent"
-            @clipboardText={{@value}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Data copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
+          <Hds::Copy::Button
+            @container={{@container}}
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{@value}}
+            class="transparent"
+            data-test-copy-button
+          />
         </ToolbarActions>
       </Toolbar>
     </div>
@@ -53,6 +53,7 @@
       onSetup=this.onSetup
       onUpdate=this.onUpdate
       onFocus=this.onFocus
+      autoRefresh=(if @container true false)
     }}
     class={{if @readOnly "readonly-codemirror"}}
     data-test-component="code-mirror-modifier"

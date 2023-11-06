@@ -37,9 +37,10 @@ type autoSeal struct {
 	core                  *Core
 	logger                log.Logger
 
-	allSealsHealthy bool
-	hcLock          sync.RWMutex
-	healthCheckStop chan struct{}
+	unsealedWithUnhealthySeal bool
+	allSealsHealthy           bool
+	hcLock                    sync.RWMutex
+	healthCheckStop           chan struct{}
 }
 
 // Ensure we are implementing the Seal interface
@@ -88,6 +89,7 @@ func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
 	if d.logger == nil {
 		d.logger = d.core.Logger().Named("autoseal")
+		d.core.AddLogger(d.logger)
 	}
 }
 
@@ -193,7 +195,7 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	barrierTypeUpgradeCheck(d.BarrierSealConfigType(), conf)
 
-	if conf.Type != d.BarrierSealConfigType().String() {
+	if conf.Type != d.BarrierSealConfigType().String() && conf.Type != SealConfigTypeMultiseal.String() && d.BarrierSealConfigType() != SealConfigTypeMultiseal {
 		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierSealConfigType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierSealConfigType())
 	}
@@ -471,13 +473,20 @@ func (d *autoSeal) StartHealthCheck() {
 			defer cancel()
 
 			d.logger.Trace("performing a seal health check")
-
+			for _, sw := range d.Access.GetAllSealWrappersByPriority() {
+				if !sw.Configured {
+					d.logger.Warn(`WARNING: running in degraded mode, one or more seals failed to configure at  
+startup, and Vault is running with fewer than the number of configured seals for high availability.  Please correct the 
+error and restart Vault.`)
+				}
+			}
 			allHealthy := true
 			allUnhealthy := true
-			for _, sealWrapper := range d.Access.GetAllSealWrappersByPriority() {
+			for _, sealWrapper := range d.Access.GetConfiguredSealWrappersByPriority() {
 				mLabels := []metrics.Label{{Name: "seal_wrapper_name", Value: sealWrapper.Name}}
 
 				wasHealthy := sealWrapper.IsHealthy()
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
 				if err := sealWrapper.CheckHealth(ctx, now); err != nil {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
@@ -489,8 +498,8 @@ func (d *autoSeal) StartHealthCheck() {
 					if wasHealthy {
 						d.logger.Debug("seal wrapper health test passed", "seal_name", sealWrapper.Name)
 					} else {
-						d.logger.Info("seal wrapper is now healthy again", "downtime", "seal_name", sealWrapper.Name,
-							now.Sub(sealWrapper.LastSeenHealthy()).String())
+						d.logger.Info("seal wrapper is now healthy again", "seal_name", sealWrapper.Name, "downtime",
+							now.Sub(lastSeenHealthy).String())
 					}
 					allUnhealthy = false
 				}

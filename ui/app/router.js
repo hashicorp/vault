@@ -54,6 +54,7 @@ Router.map(function () {
         this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -174,18 +175,11 @@ Router.map(function () {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
-          this.route('diff', { path: '/diff/*id' });
-          this.route('metadata', { path: '/metadata/*secret' });
-          this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
-
-          // kv v2 versions
-          this.route('versions-root', { path: '/versions/' });
-          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });

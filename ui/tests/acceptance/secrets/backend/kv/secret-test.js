@@ -51,8 +51,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click('[data-test-mount-type="kv"]');
 
-      await click('[data-test-mount-next]');
-
       await fillIn('[data-test-input="path"]', enginePath);
       await fillIn('[data-test-input="maxVersions"]', maxVersion);
       await click('[data-test-input="casRequired"]');
@@ -141,12 +139,13 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // mount version 1 engine
       await mountSecrets.visit();
       await mountSecrets.selectType('kv');
-      await mountSecrets.next().path(this.backend).toggleOptions().version(1).submit();
+      await mountSecrets.path(this.backend).toggleOptions().version(1).submit();
     });
     hooks.afterEach(async function () {
       await consoleComponent.runCommands([`delete sys/mounts/${this.backend}`]);
     });
-    test('version 1 performs the correct capabilities lookup and does not show metadata tab', async function (assert) {
+    test('version 1 performs the correct capabilities lookup', async function (assert) {
+      // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
       await listPage.create();
       await editPage.createSecret(secretPath, 'foo', 'bar');
@@ -156,8 +155,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
-      // check for metadata tab should not exist on KV version 1
-      assert.dom('[data-test-secret-metadata-tab]').doesNotExist('does not show metadata tab');
     });
     // https://github.com/hashicorp/vault/issues/5960
     test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {

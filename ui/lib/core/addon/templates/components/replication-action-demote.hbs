@@ -19,7 +19,7 @@
       type="button"
       class="button is-secondary"
       onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
+      data-test-replication-action-trigger="demote"
     >
       Demote
     </button>
@@ -30,7 +30,6 @@
   @title="Demote to secondary?"
   @onClose={{action (mut this.isModalActive) false}}
   @isActive={{this.isModalActive}}
-  @buttonClass="is-primary"
   @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="demoting this cluster"
   @onConfirm={{action "onSubmit" "demote" this.model.replicationAttrs.modeForUrl}}

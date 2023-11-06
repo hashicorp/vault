@@ -115,7 +115,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 
 	// Ensure the token backend is a singleton
-	if entry.Type == "token" {
+	if entry.Type == mountTypeToken {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
@@ -883,7 +883,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		// Check if this is the token store
-		if entry.Type == "token" {
+		if entry.Type == mountTypeToken {
 			c.tokenStore = backend.(*TokenStore)
 
 			// At some point when this isn't beta we may persist this but for
@@ -893,7 +893,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, mountPathCubbyhole).(*CubbyholeBackend)
 			}
 		}
 
@@ -997,6 +997,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
+	c.AddLogger(authLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeCredential.String(),
 		MountAccessor: entry.Accessor,
@@ -1046,7 +1047,7 @@ func (c *Core) defaultAuthTable() *MountTable {
 	tokenAuth := &MountEntry{
 		Table:            credentialTableType,
 		Path:             "token/",
-		Type:             "token",
+		Type:             mountTypeToken,
 		Description:      "token based credentials",
 		UUID:             tokenUUID,
 		Accessor:         tokenAccessor,

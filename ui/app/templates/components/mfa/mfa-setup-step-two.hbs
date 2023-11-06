@@ -46,18 +46,8 @@
       </div>
     {{/if}}
     <div class="is-flex-start has-gap has-top-margin-l">
-      <button
-        id="restart"
-        type="button"
-        class="button is-danger-outlined"
-        {{on "click" this.restartSetup}}
-        data-test-restart
-      >
-        Restart setup
-      </button>
-      <button id="cancel" type="button" {{on "click" this.redirectPreviousPage}} class="button is-primary" data-test-done>
-        Done
-      </button>
+      <Hds::Button @text="Restart setup" @color="critical" id="restart" {{on "click" this.restartSetup}} data-test-restart />
+      <Hds::Button @text="Done" id="cancel" {{on "click" this.redirectPreviousPage}} data-test-done />
     </div>
   </div>
 </div>

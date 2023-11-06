@@ -37,9 +37,7 @@
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-clients-config-save>
-          Save
-        </button>
+        <Hds::Button @text="Save" type="submit" disabled={{this.buttonDisabled}} data-test-clients-config-save />
         <LinkTo @route="vault.cluster.clients.config" class="button">
           Cancel
         </LinkTo>
@@ -47,47 +45,34 @@
     </div>
   </form>
 
-  <Modal
-    @title={{this.modalTitle}}
-    @onClose={{action (mut this.modalOpen) false}}
-    @isActive={{this.modalOpen}}
-    @type="warning"
-    @showCloseButton={{true}}
-  >
-    <section class="modal-card-body">
-      {{#if (eq @model.enabled "On")}}
-        <p class="has-bottom-margin-s" data-test-clients-config-modal="on">
-          Vault will start tracking data starting from today’s date,
-          {{date-format (now) "MMMM d, yyyy"}}. If you’ve previously enabled usage tracking, that historical data will still
-          be available to you.
-        </p>
-      {{else}}
-        <p class="has-bottom-margin-s" data-test-clients-config-modal="off">
-          Turning usage tracking off means that all data for the current month will be deleted. You will still be able to
-          query previous months.
-        </p>
-        <p>Are you sure?</p>
-      {{/if}}
-    </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        type="button"
-        class="button is-primary"
-        data-test-clients-config-modal="continue"
-        {{on "click" (perform this.save)}}
-      >
-        Continue
-      </button>
-      <button
-        type="button"
-        class="button is-secondary"
-        {{on "click" (fn (mut this.modalOpen) false)}}
-        data-test-clients-config-modal="cancel"
-      >
-        Cancel
-      </button>
-    </footer>
-  </Modal>
+  {{#if this.modalOpen}}
+    <Hds::Modal id="clients-config-modal" @color="warning" @onClose={{fn (mut this.modalOpen) false}} as |M|>
+      <M.Header @icon="alert-triangle" data-test-clients-config-modal="title">
+        {{this.modalTitle}}
+      </M.Header>
+      <M.Body>
+        {{#if (eq @model.enabled "On")}}
+          <p class="has-bottom-margin-s" data-test-clients-config-modal="on">
+            Vault will start tracking data starting from today’s date,
+            {{date-format (now) "MMMM d, yyyy"}}. If you’ve previously enabled usage tracking, that historical data will
+            still be available to you.
+          </p>
+        {{else}}
+          <p class="has-bottom-margin-s" data-test-clients-config-modal="off">
+            Turning usage tracking off means that all data for the current month will be deleted. You will still be able to
+            query previous months.
+          </p>
+          <p>Are you sure?</p>
+        {{/if}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Continue" {{on "click" (perform this.save)}} data-test-clients-config-modal="continue" />
+          <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-clients-config-modal="cancel" />
+        </Hds::ButtonSet>
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
 {{else}}
   <div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-clients-config-table>
     {{#each this.infoRows as |item|}}

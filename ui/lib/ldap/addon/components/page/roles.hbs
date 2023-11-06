@@ -1,7 +1,18 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
-    {{#if (and (not @promptConfig) @roles)}}
-      <FilterInput @placeholder="Filter roles" @onInput={{fn (mut this.filterValue)}} />
+    {{#if (and (not @promptConfig) @roles.meta.total)}}
+      <FilterInput
+        @placeholder="Filter roles"
+        @value={{@pageFilter}}
+        @wait={{500}}
+        @autofocus={{true}}
+        @onInput={{this.onFilterChange}}
+      />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
@@ -19,9 +30,9 @@
 
 {{#if @promptConfig}}
   <ConfigCta />
-{{else if (not this.filteredRoles)}}
-  {{#if this.filterValue}}
-    <EmptyState @title="There are no roles matching &quot;{{this.filterValue}}&quot;" />
+{{else if (not @roles.meta.filteredTotal)}}
+  {{#if @pageFilter}}
+    <EmptyState @title="There are no roles matching &quot;{{@pageFilter}}&quot;" />
   {{else}}
     <EmptyState
       data-test-config-cta
@@ -35,7 +46,7 @@
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">
-    {{#each this.filteredRoles as |role|}}
+    {{#each @roles as |role|}}
       <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.type role.name}} as |Item|>
         <Item.content>
           <Icon @name="user" />
@@ -45,9 +56,7 @@
         <Item.menu as |Menu|>
           {{#if role.rolePath.isLoading}}
             <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
+              <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
             </li>
           {{else}}
             <li class="action">
@@ -113,5 +122,15 @@
         </Item.menu>
       </ListItem>
     {{/each}}
+
+    <Hds::Pagination::Numbered
+      @currentPage={{@roles.meta.currentPage}}
+      @currentPageSize={{@roles.meta.pageSize}}
+      @route="roles"
+      @showSizeSelector={{false}}
+      @totalItems={{@roles.meta.filteredTotal}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
   </div>
 {{/if}}

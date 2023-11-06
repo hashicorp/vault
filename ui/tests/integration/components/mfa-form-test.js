@@ -148,7 +148,9 @@ module('Integration | Component | mfa-form', function (hooks) {
       // override to avoid authSuccess method since it expects an auth payload
       async totpValidate(authData) {
         await waitUntil(() =>
-          assert.dom('[data-test-mfa-validate]').hasClass('is-loading', 'Loading class applied to button')
+          assert
+            .dom('[data-test-mfa-validate] [data-test-icon="loading"]')
+            .exists('Loading icon shows on button')
         );
         assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled while loading');
         assert.deepEqual(authData, expectedAuthData, 'Mfa auth data passed to validate method');

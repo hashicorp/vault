@@ -15,7 +15,7 @@ module('Unit | Model | role-jwt', function (hooks) {
     const model = this.owner.lookup('service:store').createRecord('role-jwt');
     assert.ok(!!model);
     assert.strictEqual(model.providerName, null, 'no providerName');
-    assert.strictEqual(model.providerButtonComponent, null, 'no providerButtonComponent');
+    assert.strictEqual(model.providerIcon, null, 'no providerIcon');
   });
 
   test('it computes providerName when known provider url match fails', function (assert) {
@@ -24,7 +24,7 @@ module('Unit | Model | role-jwt', function (hooks) {
     });
 
     assert.strictEqual(model.providerName, null, 'no providerName');
-    assert.strictEqual(model.providerButtonComponent, null, 'no providerButtonComponent');
+    assert.strictEqual(model.providerIcon, null, 'no providerIcon');
   });
 
   test('it provides a providerName for listed known providers', function (assert) {
@@ -36,19 +36,11 @@ module('Unit | Model | role-jwt', function (hooks) {
 
       const expectedName = DOMAIN_STRINGS[domain];
       assert.strictEqual(model.providerName, expectedName, `computes providerName: ${expectedName}`);
+      let expectedIcon = null;
       if (PROVIDER_WITH_LOGO.includes(expectedName)) {
-        assert.strictEqual(
-          model.providerButtonComponent,
-          `auth-button-${expectedName.toLowerCase()}`,
-          `computes providerButtonComponent: ${domain}`
-        );
-      } else {
-        assert.strictEqual(
-          model.providerButtonComponent,
-          null,
-          `computes providerButtonComponent: ${domain}`
-        );
+        expectedIcon = expectedName.toLowerCase();
       }
+      assert.strictEqual(model.providerIcon, expectedIcon, `computes providerIcon: ${domain}`);
     });
   });
 
@@ -58,6 +50,6 @@ module('Unit | Model | role-jwt', function (hooks) {
       authUrl: `http://custom-auth0-provider.com`,
     });
     assert.strictEqual(model.providerName, null, `no providerName for custom URL`);
-    assert.strictEqual(model.providerButtonComponent, null, 'no providerButtonComponent for custom URL');
+    assert.strictEqual(model.providerIcon, null, 'no providerIcon for custom URL');
   });
 });

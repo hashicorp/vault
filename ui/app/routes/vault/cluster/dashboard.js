@@ -17,6 +17,8 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   async getVaultConfiguration() {
     try {
+      if (!this.namespace.inRootNamespace) return null;
+
       const adapter = this.store.adapterFor('application');
       const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
       return configState.data;
@@ -27,18 +29,20 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   model() {
     const clusterModel = this.modelFor('vault.cluster');
-    const replication = {
-      dr: clusterModel.dr,
-      performance: clusterModel.performance,
-    };
-
+    const hasChroot = clusterModel?.hasChrootNamespace;
+    const replication = hasChroot
+      ? null
+      : {
+          dr: clusterModel.dr,
+          performance: clusterModel.performance,
+        };
     return hash({
       replication,
       secretsEngines: this.store.query('secret-engine', {}),
       license: this.store.queryRecord('license', {}).catch(() => null),
-      isRootNamespace: this.namespace.inRootNamespace,
+      isRootNamespace: this.namespace.inRootNamespace && !hasChroot,
       version: this.version,
-      vaultConfiguration: this.getVaultConfiguration(),
+      vaultConfiguration: hasChroot ? null : this.getVaultConfiguration(),
     });
   }
 

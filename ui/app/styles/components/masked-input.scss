@@ -48,18 +48,11 @@
   background-color: transparent;
 }
 
-.button.masked-input-toggle,
-.button.copy-button,
-.button.download-button {
+.button.masked-input-toggle {
   min-width: $spacing-xl;
   border-left: 0;
   color: $grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
-}
-
-.button.copy-button,
-.button.download-button {
-  border-radius: 0;
 }
 
 .button.masked-input-toggle {
@@ -67,9 +60,7 @@
 }
 
 .display-only {
-  .button.masked-input-toggle,
-  .button.copy-button,
-  .button.download-button {
+  .button.masked-input-toggle {
     background: transparent;
     height: auto;
     line-height: 1rem;

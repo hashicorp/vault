@@ -9,6 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
+    glyph: 'lock',
     engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
@@ -33,6 +34,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'AliCloud',
     type: 'alicloud',
+    glyph: 'alibaba-color',
     category: 'cloud',
   },
   {
@@ -50,6 +52,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Consul',
     type: 'consul',
+    glyph: 'consul-color',
     category: 'infra',
   },
   {
@@ -72,17 +75,20 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    glyph: 'key-values',
     engineRoute: 'kv.list',
     category: 'generic',
   },
   {
     displayName: 'Nomad',
     type: 'nomad',
+    glyph: 'nomad-color',
     category: 'infra',
   },
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    glyph: 'certificate',
     engineRoute: 'pki.overview',
     category: 'generic',
   },
@@ -94,16 +100,19 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'SSH',
     type: 'ssh',
+    glyph: 'terminal-screen',
     category: 'generic',
   },
   {
     displayName: 'Transit',
     type: 'transit',
+    glyph: 'swap-horizontal',
     category: 'generic',
   },
   {
     displayName: 'TOTP',
     type: 'totp',
+    glyph: 'history',
     category: 'generic',
   },
   {
