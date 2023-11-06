@@ -52,7 +52,8 @@ var (
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
 
-	ErrNoApplicablePolicies = errors.New("no applicable policies")
+	ErrNoApplicablePolicies    = errors.New("no applicable policies")
+	ErrPolicyNotExistInTypeMap = errors.New("policy does not exist in type map")
 
 	egpDebugLogging bool
 
@@ -180,6 +181,13 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 	for _, policyName := range nsPolicies {
 		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
+			// When we attempt to get a non-EGP policy type, and receive an
+			// explicit error that it doesn't exist (in the type map) we log the
+			// ns/policy and continue without error.
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			continue
+		}
 		if err != nil || t == nil {
 			return nil, fmt.Errorf("failed to look up type of policy: %w", err)
 		}
@@ -1478,7 +1486,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
-			c.startLockoutLogger()
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
@@ -1674,7 +1681,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		source := c.router.MatchingMount(ctx, req.Path)
 
 		// Login MFA
-		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
@@ -2294,8 +2301,6 @@ func (c *Core) LocalGetUserFailedLoginInfo(ctx context.Context, userKey FailedLo
 // LocalUpdateUserFailedLoginInfo updates the failed login information for a user based on alias name and mountAccessor
 func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
 	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
-
 	switch deleteEntry {
 	case false:
 		// update entry in the map
@@ -2338,6 +2343,7 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 		// delete the entry from the map, if no key exists it is no-op
 		delete(c.userFailedLoginInfo, userKey)
 	}
+	c.userFailedLoginInfoLock.Unlock()
 	return nil
 }
 

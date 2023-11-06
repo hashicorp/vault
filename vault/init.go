@@ -446,7 +446,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
+	if c.IsInSealMigrationMode(true) && !c.IsSealMigrated(true) {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 

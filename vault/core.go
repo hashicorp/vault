@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -104,11 +105,6 @@ const (
 	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
 	// MfaAuthResponse when the value is not specified in the server config
 	defaultMFAAuthResponseTTL = 300 * time.Second
-
-	// defaultUserLockoutLogInterval is the default duration that Vault will
-	// emit a log informing that a user lockout is in effect when the value
-	// is not specified in the server config
-	defaultUserLockoutLogInterval = 1 * time.Minute
 
 	// defaultMaxTOTPValidateAttempts is the default value for the number
 	// of failed attempts to validate a request subject to TOTP MFA. If the
@@ -667,9 +663,6 @@ type Core struct {
 
 	updateLockedUserEntriesCancel context.CancelFunc
 
-	lockoutLoggerCancel    context.CancelFunc
-	userLockoutLogInterval time.Duration
-
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -719,6 +712,9 @@ type Core struct {
 
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
+
+	// Config value for "detect_deadlocks".
+	detectDeadlocks []string
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -885,15 +881,6 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
-
-	UserLockoutLogInterval time.Duration
-}
-
-// SubloggerHook implements the SubloggerAdder interface. This implementation
-// manages CoreConfig.AllLoggers state prior to (and during) NewCore.
-func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
-	c.AllLoggers = append(c.AllLoggers, logger)
-	return logger
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -932,10 +919,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	}
 	if conf.DefaultLeaseTTL > conf.MaxLeaseTTL {
 		return nil, fmt.Errorf("cannot have DefaultLeaseTTL larger than MaxLeaseTTL")
-	}
-
-	if conf.UserLockoutLogInterval == 0 {
-		conf.UserLockoutLogInterval = defaultUserLockoutLogInterval
 	}
 
 	// Validate the advertise addr if its given to us
@@ -982,17 +965,26 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
 	}
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	if strings.Contains(conf.DetectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	} else {
-		stateLock = &locking.SyncRWMutex{}
-	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
+	}
+
+	var detectDeadlocks []string
+	if conf.DetectDeadlocks != "" {
+		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
+		for k, v := range detectDeadlocks {
+			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
+		}
+	}
+
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	stateLock = &locking.SyncRWMutex{}
+
+	if slices.Contains(detectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
 	}
 
 	// Setup the core
@@ -1062,13 +1054,13 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
 		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
-		userLockoutLogInterval:         conf.UserLockoutLogInterval,
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		detectDeadlocks:                detectDeadlocks,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1077,7 +1069,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
+	c.allLoggers = append(c.allLoggers, c.logger)
+
 	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
@@ -1230,6 +1226,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// MFA method
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	// Logical backends
 	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
@@ -1255,7 +1254,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+	c.allLoggers = append(c.allLoggers, quotasLogger)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
 	if err != nil {
 		return nil, err
 	}
@@ -1272,17 +1274,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Events
-	events, err := eventbus.NewEventBus(conf.Logger.Named("events"))
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	// start the event system
+	events, err := eventbus.NewEventBus(eventsLogger)
 	if err != nil {
 		return nil, err
 	}
 	c.events = events
 	c.events.Start()
-
-	// Make sure we're keeping track of the subloggers added above. We haven't
-	// yet registered core to the server command's SubloggerAdder, so any new
-	// subloggers will be in conf.AllLoggers.
-	c.allLoggers = conf.AllLoggers
 
 	return c, nil
 }
@@ -1342,7 +1342,9 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 	}
 
 	credentialBackends[mountTypeToken] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, logger.Named("token"), c, config)
+		tsLogger := logger.Named("token")
+		c.AddLogger(tsLogger)
+		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 
 	c.credentialBackends = credentialBackends
@@ -1370,7 +1372,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c, logger.Named("system"))
+		sysBackendLogger := logger.Named("system")
+		c.AddLogger(sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -1379,7 +1383,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// Identity
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config, logger.Named("identity"))
+		identityLogger := logger.Named("identity")
+		c.AddLogger(identityLogger)
+		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -1490,10 +1496,14 @@ func (c *Core) Sealed() bool {
 	return atomic.LoadUint32(c.sealed) == 1
 }
 
-// SecretProgress returns the number of keys provided so far
-func (c *Core) SecretProgress() (int, string) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// SecretProgress returns the number of keys provided so far. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) SecretProgress(lock bool) (int, string) {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	switch c.unlockInfo {
 	case nil:
 		return 0, ""
@@ -3228,22 +3238,30 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 // configuration in storage is Shamir but the seal in HCL is not.  In this
 // mode we should not auto-unseal (even if the migration is done) and we will
 // accept unseal requests with and without the `migrate` option, though the migrate
-// option is required if we haven't yet performed the seal migration.
-func (c *Core) IsInSealMigrationMode() bool {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// option is required if we haven't yet performed the seal migration. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsInSealMigrationMode(lock bool) bool {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	return c.migrationInfo != nil
 }
 
 // IsSealMigrated returns true if we're in seal migration mode but migration
 // has already been performed (possibly by another node, or prior to this node's
-// current invocation.)
-func (c *Core) IsSealMigrated() bool {
-	if !c.IsInSealMigrationMode() {
+// current invocation). Lock should only be false if the caller is already
+// holding the read statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsSealMigrated(lock bool) bool {
+	if !c.IsInSealMigrationMode(lock) {
 		return false
 	}
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	done, _ := c.sealMigrated(context.Background())
 	return done
 }
@@ -3273,14 +3291,6 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
 	c.allLoggers = append(c.allLoggers, logger)
-}
-
-// SubloggerHook implements the SubloggerAdder interface. We add this method to
-// the server command after NewCore returns with a Core object. The hook keeps
-// track of newly added subloggers without manual calls to c.AddLogger.
-func (c *Core) SubloggerHook(logger log.Logger) log.Logger {
-	c.AddLogger(logger)
-	return logger
 }
 
 // SetLogLevel sets logging level for all tracked loggers to the level provided
@@ -3677,51 +3687,6 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
-func (c *Core) startLockoutLogger() {
-	// Are we already running a logger
-	if c.lockoutLoggerCancel != nil {
-		return
-	}
-
-	ctx, cancelFunc := context.WithCancel(c.activeContext)
-	c.lockoutLoggerCancel = cancelFunc
-
-	// Perform first check for lockout entries
-	lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-	if lockedUserCount > 0 {
-		c.Logger().Warn("user lockout(s) in effect")
-	} else {
-		// We shouldn't end up here
-		return
-	}
-
-	// Start lockout watcher
-	go func() {
-		ticker := time.NewTicker(c.userLockoutLogInterval)
-		for {
-			select {
-			case <-ticker.C:
-				// Check for lockout entries
-				lockedUserCount := c.getUserFailedLoginCount(ctx)
-
-				if lockedUserCount > 0 {
-					c.Logger().Warn("user lockout(s) in effect")
-					break
-				}
-				c.Logger().Info("user lockout(s) cleared")
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			case <-ctx.Done():
-				ticker.Stop()
-				c.lockoutLoggerCancel = nil
-				return
-			}
-		}
-	}()
-}
-
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
@@ -3750,13 +3715,7 @@ func (c *Core) updateLockedUserEntries() {
 			}
 		}
 	}()
-}
-
-func (c *Core) getUserFailedLoginCount(ctx context.Context) int {
-	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
-
-	return len(c.userFailedLoginInfo)
+	return
 }
 
 // runLockedUserEntryUpdates runs updates for locked user storage entries and userFailedLoginInfo map
@@ -4326,4 +4285,11 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) DetectStateLockDeadlocks() bool {
+	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

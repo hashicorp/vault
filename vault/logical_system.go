@@ -231,6 +231,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 
 	b.Backend.Invalidate = sysInvalidate(b)
 	b.Backend.InitializeFunc = sysInitialize(b)
+	b.Backend.Clean = sysClean(b)
 	return b
 }
 
@@ -3697,7 +3698,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4550,7 +4551,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -4955,7 +4961,7 @@ type SealBackendStatusResponse struct {
 	Backends       []SealBackendStatus `json:"backends"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -5008,7 +5014,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		clusterID = cluster.ID
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
 		Type:         sealConfig.Type,
@@ -5020,7 +5026,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
 		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
+		Migration:    core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
@@ -5118,7 +5124,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
