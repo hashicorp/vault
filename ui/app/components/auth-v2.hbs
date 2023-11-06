@@ -12,9 +12,19 @@
     </F.Options>
   </Hds::Form::Select::Field>
 
-  <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
-    <F.Label>Token</F.Label>
-  </Hds::Form::TextInput::Field>
+  {{#if (eq this.authType "token")}}
+    <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
+      <F.Label>Token</F.Label>
+    </Hds::Form::TextInput::Field>
+  {{else}}
+    <Hds::Form::TextInput::Field @value={{this.username}} {{on "change" this.handleUsername}} as |F|>
+      <F.Label>Username</F.Label>
+    </Hds::Form::TextInput::Field>
+    <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
+      <F.Label>Password</F.Label>
+    </Hds::Form::TextInput::Field>
+  {{/if}}
+
   <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" />
 </form>
 

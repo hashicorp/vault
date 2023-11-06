@@ -29,21 +29,15 @@ import VaultAuthenticator from './vault-authenticator';
   }
 }
 */
-export default class TokenAuthenticator extends VaultAuthenticator {
-  type = 'token';
-  displayNamePath = 'display_name';
-  tokenPath = 'id';
+export default class UserpassAuthenticator extends VaultAuthenticator {
+  type = 'userpass';
+  displayNamePath = 'metadata.username';
+  tokenPath = 'client_token';
 
-  async login(
-    token,
-    options = {
-      namespace: '',
-      backend: 'token',
-    }
-  ) {
-    const url = `/v1/auth/token/lookup-self`;
+  async login(token, options) {
+    const url = `/v1/auth/userpass/login/${encodeURIComponent(options.username)}`;
     const opts = {
-      method: 'GET',
+      method: 'POST',
       headers: this.getTokenHeader(token, options.namespace),
     };
     const result = await fetch(url, opts);

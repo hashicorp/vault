@@ -7,6 +7,7 @@ import errorMessage from 'vault/utils/error-message';
 export default class AuthV2Component extends Component {
   @service session;
   @tracked token = '';
+  @tracked username = '';
   @tracked error = '';
   @tracked authType = 'token';
 
@@ -17,6 +18,10 @@ export default class AuthV2Component extends Component {
   @action
   handleChange(evt) {
     this.token = evt.target.value;
+  }
+  @action
+  handleUsername(evt) {
+    this.username = evt.target.value;
   }
 
   @action
@@ -29,7 +34,11 @@ export default class AuthV2Component extends Component {
     evt.preventDefault();
     const authenticator = `authenticator:${this.authType}`;
     try {
-      await this.session.authenticate(authenticator, this.token, { backend: this.type, namespace: '' });
+      await this.session.authenticate(authenticator, this.token, {
+        backend: this.authType,
+        namespace: '',
+        username: this.username,
+      });
     } catch (e) {
       this.error = errorMessage(e);
     }
