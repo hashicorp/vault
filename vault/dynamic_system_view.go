@@ -156,6 +156,10 @@ func (e extendedSystemViewImpl) RequestAPIRedirect(ctx context.Context, src, des
 	return e.core.apiRedirects.TryRegister(ctx, e.core, e.mountEntry.UUID, src, dest)
 }
 
+func (e extendedSystemViewImpl) DeregisterAPIRedirect(ctx context.Context, src string) bool {
+	return e.core.apiRedirects.DeregisterSource(e.mountEntry.UUID, src)
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def

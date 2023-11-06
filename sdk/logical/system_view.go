@@ -112,7 +112,11 @@ type ExtendedSystemView interface {
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
 
+	// Register an API redirect from src to dest, where dest is a subpath of the mount.  An error
+	// is returned if that source path is already taken
 	RequestAPIRedirect(ctx context.Context, src, dest string) error
+	// Deregister a specific redirect.  Returns true if that redirect source was found
+	DeregisterAPIRedirect(ctx context.Context, src string) bool
 }
 
 type PasswordGenerator func() (password string, err error)

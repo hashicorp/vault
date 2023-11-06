@@ -676,4 +676,8 @@ func TestAPIRedirectMatching(t *testing.T) {
 			}
 		})
 	}
+
+	if found := apiRedir.DeregisterSource("my-mount", "bar/baz"); !found {
+		t.Fail()
+	}
 }

@@ -62,7 +62,7 @@ func (reg *apiRedirectRegistry) Find(path string) (*APIRedirect, string) {
 	return nil, ""
 }
 
-func (reg *apiRedirectRegistry) Unregister(uuid string) {
+func (reg *apiRedirectRegistry) DeregisterMount(uuid string) {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 	reg.paths.Walk(func(k string, v interface{}) bool {
@@ -73,6 +73,22 @@ func (reg *apiRedirectRegistry) Unregister(uuid string) {
 		}
 		return false
 	})
+}
+
+func (reg *apiRedirectRegistry) DeregisterSource(uuid, src string) bool {
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+	var found bool
+	reg.paths.Walk(func(k string, v interface{}) bool {
+		r := v.(*APIRedirect)
+		if r.mountUUID == uuid && k == src {
+			found = true
+			reg.paths.Delete(k)
+			return true
+		}
+		return false
+	})
+	return found
 }
 
 type APIRedirect struct {

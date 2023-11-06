@@ -961,7 +961,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 		}
 	}
 
-	c.apiRedirects.Unregister(entry.UUID)
+	c.apiRedirects.DeregisterMount(entry.UUID)
 
 	if c.logger.IsInfo() {
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
