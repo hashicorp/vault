@@ -19,7 +19,7 @@
       <div class="popup-menu-content" data-test-user-menu-content>
         <div class="box">
           <div class="menu-label">
-            {{capitalize this.auth.authData.displayName}}
+            {{capitalize this.authData.displayName}}
           </div>
           <nav class="menu">
             <ul class="menu-list">
@@ -50,7 +50,7 @@
                 {{! container is required in navbar collapsed state }}
                 <Hds::Copy::Button
                   @text="Copy token"
-                  @textToCopy={{this.auth.currentToken}}
+                  @textToCopy={{this.authData.token}}
                   @isFullWidth={{true}}
                   @container="#container"
                   class="in-dropdown link is-flex-start"
@@ -58,7 +58,7 @@
                 />
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
-                {{#if this.auth.authData.renewable}}
+                {{#if this.authData.renewable}}
                   <li class="action">
                     {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
                     <button

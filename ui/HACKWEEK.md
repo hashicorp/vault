@@ -19,8 +19,8 @@
 3. Made token authenticator which works for login and error handling
 4. Persisted auth data for authenticated users
 5. Replaced isActiveSession from the cluster and application template
+6. Added session.invaildate to the logout route
 
 TODO:
 
-- Logout
 - Replace auth service

@@ -11,6 +11,7 @@ import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
 export default Route.extend(ModelBoundaryRoute, {
   auth: service(),
+  session: service(),
   controlGroup: service(),
   flashMessages: service(),
   console: service(),
@@ -32,6 +33,8 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
+
+    this.session.invalidate();
 
     queryParams.with = authType;
     if (ns) {

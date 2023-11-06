@@ -1,5 +1,4 @@
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
-import ENV from 'vault/config/environment';
 
 /*{
   "body": {
@@ -36,7 +35,6 @@ export default class TokenAuthenticator extends BaseAuthenticator {
   tokenPath = 'id';
 
   async restore(data) {
-    console.log('TODO restore', data);
     // if (data.token) {
     //   return data;
     // }
@@ -72,8 +70,7 @@ export default class TokenAuthenticator extends BaseAuthenticator {
     const { entity_id, policies, renewable, namespace_path } = payload;
     const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
     const isRootToken = policies.includes('root');
-    // Do not store root token unless dev mode
-    const token = isRootToken && ENV.environment !== 'development' ? null : payload[this.tokenPath];
+    const token = payload[this.tokenPath];
     return {
       userRootNamespace,
       isRootToken,

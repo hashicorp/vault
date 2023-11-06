@@ -18,7 +18,7 @@ export default ClusterRouteBase.extend({
   session: service(),
 
   beforeModel() {
-    this.session.prohibitAuthentication('dashboard');
+    this.session.prohibitAuthentication('/vault/dashboard');
     return this._super().then(() => {
       return this.version.fetchFeatures();
     });
