@@ -1,0 +1,29 @@
+### Sublogger levels not adjusted on reload
+
+In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 Vault does not honor a
+modified `log_level` configuration for certain subsystem loggers on SIGHUP.
+
+This is known to affect the `resolver.watcher` and `replication.index.*`
+subloggers.
+
+This can be seen after modifying the `log_level` and issuing a reload (SIGHUP),
+For example, after starting a server with `log_level: "debug"` and modifying it
+to `log_level: "info"` the following lines appear after reload:
+
+```
+[TRACE] resolver.watcher: dr mode doesn't have failover support, returning
+...
+[DEBUG] replication.index.perf: saved checkpoint: num_dirty=5
+[DEBUG] replication.index.local: saved checkpoint: num_dirty=0
+[DEBUG] replication.index.periodic: starting WAL GC: from=2531280 to=2531280 last=2531536
+```
+
+The workaround is to restart the Vault server.
+
+#### Affected versions
+
+This issue affects Vault Community and Vault Enterprise versions:
+
+<1.13.7
+<1.14.3
+<1.15.0
