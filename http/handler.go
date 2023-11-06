@@ -315,12 +315,23 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 		h.ServeHTTP(cw, r)
 		data := make(map[string]interface{})
 
-		// Refactoring this code, since the returned error was being ignored.
-		jsonutil.DecodeJSON(cw.body.Bytes(), &data)
+		// Previous authors decided any error returned here should be ignored,
+		// making it explicit that we want to swallow the error.
+		_ = jsonutil.DecodeJSON(cw.body.Bytes(), &data)
 
 		httpResp := &logical.HTTPResponse{Data: data, Headers: cw.Header()}
-		input.Response = logical.HTTPResponseToLogicalResponse(httpResp)
+		logicalResp := logical.HTTPResponseToLogicalResponse(httpResp)
+
+		// If the response was already an error there isn't any point in auditing
+		// as we're not giving the caller sensitive data that needs to be entered
+		// in the audit log, just return early with the error.
+		if logicalResp.IsError() {
+			respondError(w, status, logicalResp.Error())
+		}
+
+		input.Response = logicalResp
 		err = core.AuditLogger().AuditResponse(r.Context(), input)
+
 		if err != nil {
 			respondError(w, status, err)
 		}
