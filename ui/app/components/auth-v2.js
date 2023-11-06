@@ -20,6 +20,11 @@ export default class AuthV2Component extends Component {
   }
 
   @action
+  setAuthType(evt) {
+    this.authType = evt.target?.value;
+  }
+
+  @action
   async handleLogin(evt) {
     evt.preventDefault();
     const authenticator = `authenticator:${this.authType}`;

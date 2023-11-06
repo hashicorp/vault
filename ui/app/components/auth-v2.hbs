@@ -3,14 +3,14 @@
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
   <MessageError @errorMessage={{this.error}} />
 
-  <Select
-    @label="Method"
-    @name="auth-method"
-    @options={{this.authMethods}}
-    @isFullwidth={{true}}
-    @selectedValue={{this.authType}}
-    @onChange={{fn (mut this.authType)}}
-  />
+  <Hds::Form::Select::Field {{on "change" this.setAuthType}} class="has-bottom-margin-m" as |F|>
+    <F.Label>Method</F.Label>
+    <F.Options>
+      {{#each this.authMethods as |authMethodType|}}
+        <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
+      {{/each}}
+    </F.Options>
+  </Hds::Form::Select::Field>
 
   <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
     <F.Label>Token</F.Label>
