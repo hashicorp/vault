@@ -879,7 +879,7 @@ func (m *ExpirationManager) Stop() error {
 	// for the next ExpirationManager to handle them.
 	newStrategy := ExpireLeaseStrategy(expireNoop)
 	m.expireFunc.Store(&newStrategy)
-	oldPending := m.pending
+	oldPending := &m.pending
 	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
 	m.uniquePolicies = make(map[string][]string)
@@ -2485,7 +2485,7 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 	}
 
 	m.pendingLock.RLock()
-	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
 	m.pendingLock.RUnlock()
 
 	for _, m := range toWalk {
@@ -2514,7 +2514,7 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	}
 
 	m.pendingLock.RLock()
-	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
 	m.pendingLock.RUnlock()
 
 	for _, m := range toWalk {
