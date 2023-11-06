@@ -211,6 +211,22 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	return reply.ClusterID, nil
 }
 
+func (s gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req pluginutil.IdentityTokenRequest) (pluginutil.IdentityTokenResponse, error) {
+	resp, err := s.client.GenerateIdentityToken(ctx, &pb.GenerateIdentityTokenRequest{
+		Key:      req.Key,
+		Audience: req.Audience,
+		TTL:      int64(req.TTL.Seconds()),
+	})
+	if err != nil {
+		return pluginutil.IdentityTokenResponse{}, err
+	}
+
+	return pluginutil.IdentityTokenResponse{
+		Token: resp.Token,
+		TTL:   time.Duration(resp.TTL) * time.Second,
+	}, nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
