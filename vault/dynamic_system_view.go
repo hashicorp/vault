@@ -453,10 +453,22 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	return clusterInfo.ID, nil
 }
 
-func (d dynamicSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
-	// TODO: implement plugin identity token generation using identity store
-	return &pluginutil.IdentityTokenResponse{
-		Token: "unimplemented",
-		TTL:   time.Duration(0),
+func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req pluginutil.IdentityTokenRequest) (pluginutil.IdentityTokenResponse, error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return pluginutil.IdentityTokenResponse{}, err
+	}
+	identityMountPath := ns.Path + "identity/"
+	storage := d.core.router.MatchingStorageByAPIPath(ctx, identityMountPath)
+	if storage == nil {
+		return pluginutil.IdentityTokenResponse{}, fmt.Errorf("failed to find storage entry for identity mount at %s", identityMountPath)
+	}
+	token, ttl, err := d.core.IdentityStore().generatePluginToken(ctx, storage, d.mountEntry, req.Key, req.Audience, req.TTL)
+	if err != nil {
+		return pluginutil.IdentityTokenResponse{}, err
+	}
+	return pluginutil.IdentityTokenResponse{
+		Token: token,
+		TTL:   ttl,
 	}, nil
 }
