@@ -1,12 +1,12 @@
 <Hds::Text::Display @tag="h1" class="has-padding-m">Sign in to Vault</Hds::Text::Display>
 
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
+  <MessageError @errorMessage={{this.error}} />
+
   <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
     <F.Label>Token</F.Label>
   </Hds::Form::TextInput::Field>
   <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" />
 </form>
-{{log this.error "error in hbs"}}
-<MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
 
 {{yield}}

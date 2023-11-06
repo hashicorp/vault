@@ -11,4 +11,5 @@ export default Controller.extend({
   env: config.environment,
   auth: service(),
   store: service(),
+  session: service(),
 });

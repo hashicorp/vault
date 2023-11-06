@@ -25,6 +25,7 @@ export default Mixin.create({
   auth: service(),
   store: service(),
   router: service(),
+  session: service(),
 
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
@@ -51,7 +52,9 @@ export default Mixin.create({
   },
 
   beforeModel(transition) {
-    return this.transitionToTargetRoute(transition);
+    console.log('cluster route mixin before model');
+    return RSVP.resolve();
+    // return this.transitionToTargetRoute(transition);
   },
 
   clusterModel() {

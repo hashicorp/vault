@@ -15,7 +15,10 @@ export default ClusterRouteBase.extend({
   },
   flashMessages: service(),
   version: service(),
+  session: service(),
+
   beforeModel() {
+    this.session.prohibitAuthentication('dashboard');
     return this._super().then(() => {
       return this.version.fetchFeatures();
     });

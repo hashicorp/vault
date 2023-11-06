@@ -54,27 +54,6 @@ export default Service.extend({
     },
   }),
 
-  isActiveSession: computed(
-    'router.currentRouteName',
-    'currentToken',
-    'activeCluster.{dr.isSecondary,needsInit,sealed,name}',
-    function () {
-      if (this.activeCluster) {
-        if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
-          return false;
-        }
-        if (
-          this.activeCluster.name &&
-          this.currentToken &&
-          this.router.currentRouteName !== 'vault.cluster.auth'
-        ) {
-          return true;
-        }
-      }
-      return false;
-    }
-  ),
-
   tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
     const tokenName = this.currentTokenName;
     if (!tokenName) {

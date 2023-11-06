@@ -17,3 +17,10 @@
 1. `ember install ember-simple-auth`
 2. Made AuthV2 component and got it working for token
 3. Made token authenticator which works for login and error handling
+4. Persisted auth data for authenticated users
+5. Replaced isActiveSession from the cluster and application template
+
+TODO:
+
+- Logout
+- Replace auth service

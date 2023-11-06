@@ -43,6 +43,10 @@ module.exports = function (environment) {
       timeout: 7000,
       sticky: false,
     },
+    'ember-simple-auth': {
+      useSessionSetupMethod: true,
+      routeAfterAuthentication: '/vault',
+    },
   };
   if (environment === 'development') {
     // ENV.APP.LOG_RESOLVER = true;

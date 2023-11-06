@@ -9,6 +9,7 @@ import ControlGroupError from 'vault/lib/control-group-error';
 
 export default Route.extend({
   controlGroup: service(),
+  session: service(),
   routing: service('router'),
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
@@ -66,6 +67,7 @@ export default Route.extend({
   },
 
   async beforeModel() {
+    await this.session.setup();
     const result = await fetch('/v1/sys/internal/ui/feature-flags', {
       method: 'GET',
     });

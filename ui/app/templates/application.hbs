@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Sidebar::Frame @showSidebar={{this.auth.isActiveSession}}>
+<Sidebar::Frame @showSidebar={{this.session.isAuthenticated}}>
   <div class="page-container">
     {{outlet}}
   </div>
