@@ -329,6 +329,8 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
 
+	c.AddLogger(managerLogger)
+
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -393,6 +395,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
+	c.AddLogger(expLogger)
 
 	detectDeadlocks := false
 	for _, v := range c.detectDeadlocks {
@@ -556,6 +559,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
+	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")
@@ -877,7 +881,7 @@ func (m *ExpirationManager) Stop() error {
 	// for the next ExpirationManager to handle them.
 	newStrategy := ExpireLeaseStrategy(expireNoop)
 	m.expireFunc.Store(&newStrategy)
-	oldPending := m.pending
+	oldPending := &m.pending
 	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
 	m.uniquePolicies = make(map[string][]string)
@@ -2483,7 +2487,7 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 	}
 
 	m.pendingLock.RLock()
-	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
 	m.pendingLock.RUnlock()
 
 	for _, m := range toWalk {
@@ -2512,7 +2516,7 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 	}
 
 	m.pendingLock.RLock()
-	toWalk := []sync.Map{m.pending, m.nonexpiring}
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
 	m.pendingLock.RUnlock()
 
 	for _, m := range toWalk {
