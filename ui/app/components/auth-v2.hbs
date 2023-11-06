@@ -3,6 +3,15 @@
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
   <MessageError @errorMessage={{this.error}} />
 
+  <Select
+    @label="Method"
+    @name="auth-method"
+    @options={{this.authMethods}}
+    @isFullwidth={{true}}
+    @selectedValue={{this.authType}}
+    @onChange={{fn (mut this.authType)}}
+  />
+
   <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
     <F.Label>Token</F.Label>
   </Hds::Form::TextInput::Field>

@@ -8,7 +8,11 @@ export default class AuthV2Component extends Component {
   @service session;
   @tracked token = '';
   @tracked error = '';
-  type = 'token';
+  @tracked authType = 'token';
+
+  get authMethods() {
+    return ['token', 'userpass', 'ldap', 'okta', 'jwt', 'oidc', 'radius', 'github'];
+  }
 
   @action
   handleChange(evt) {
@@ -18,7 +22,7 @@ export default class AuthV2Component extends Component {
   @action
   async handleLogin(evt) {
     evt.preventDefault();
-    const authenticator = `authenticator:${this.type}`;
+    const authenticator = `authenticator:${this.authType}`;
     try {
       await this.session.authenticate(authenticator, this.token, { backend: this.type, namespace: '' });
     } catch (e) {
