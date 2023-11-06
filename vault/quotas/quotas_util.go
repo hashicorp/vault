@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 
 	"github.com/hashicorp/go-memdb"
-
 )
 
 func quotaTypes() []string {
