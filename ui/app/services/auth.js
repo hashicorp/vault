@@ -29,6 +29,7 @@ export default Service.extend({
   permissions: service(),
   currentCluster: service(),
   router: service(),
+  session: service(),
   namespaceService: service('namespace'),
 
   IDLE_TIMEOUT: 3 * 60e3,
@@ -82,28 +83,24 @@ export default Service.extend({
     return this.tokens.find((key) => regex.test(key));
   }),
 
-  currentToken: computed('currentTokenName', function () {
-    const name = this.currentTokenName;
-    const data = name && this.getTokenData(name);
-    // data.token is undefined so that's why it returns current token undefined
-    return name && data ? data.token : null;
-  }),
+  currentToken: alias('session.data.authenticated.token'),
 
-  authData: computed('currentTokenName', function () {
-    const token = this.currentTokenName;
-    if (!token) {
-      return;
-    }
-    const backend = this.backendFromTokenName(token);
-    const stored = this.getTokenData(token);
-    return Object.assign(stored, {
-      backend: {
-        // add mount path for password reset
-        mountPath: stored.backend.mountPath,
-        ...BACKENDS.findBy('type', backend),
-      },
-    });
-  }),
+  authData: alias('session.data.authenticated'),
+  // authData: computed('currentTokenName', function () {
+  //   const token = this.currentTokenName;
+  //   if (!token) {
+  //     return;
+  //   }
+  //   const backend = this.backendFromTokenName(token);
+  //   const stored = this.getTokenData(token);
+  //   return Object.assign(stored, {
+  //     backend: {
+  //       // add mount path for password reset
+  //       mountPath: stored.backend.mountPath,
+  //       ...BACKENDS.findBy('type', backend),
+  //     },
+  //   });
+  // }),
 
   init() {
     this._super(...arguments);
