@@ -3452,7 +3452,7 @@ func (c *Core) ApplyRateLimitQuota(ctx context.Context, req *quotas.Request) (qu
 
 	if c.quotaManager != nil {
 		// skip rate limit checks for paths that are exempt from rate limiting
-		if c.quotaManager.RateLimitPathExempt(req.Path) {
+		if c.quotaManager.RateLimitPathExempt(req.Path, req.NamespacePath) {
 			return resp, nil
 		}
 
