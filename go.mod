@@ -10,7 +10,9 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.20
+go 1.21
+
+toolchain go1.21.3
 
 replace github.com/hashicorp/vault/api => ./api
 
