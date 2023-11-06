@@ -176,10 +176,11 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// Create the lease cache proxier and set its underlying proxier to
 	// the API proxier.
 	leaseCache, err := cache.NewLeaseCache(&cache.LeaseCacheConfig{
-		Client:      client,
-		BaseContext: ctx,
-		Proxier:     apiProxy,
-		Logger:      cacheLogger.Named("leasecache"),
+		Client:         client,
+		BaseContext:    ctx,
+		Proxier:        apiProxy,
+		Logger:         cacheLogger.Named("leasecache"),
+		UserAgentToUse: "test",
 	})
 	if err != nil {
 		t.Fatal(err)

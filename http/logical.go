@@ -361,6 +361,11 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			handler.ServeHTTP(w, r)
 			return
 		}
+		handler := handleEntPaths(nsPath, core, r)
+		if handler != nil {
+			handler.ServeHTTP(w, r)
+			return
+		}
 
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
