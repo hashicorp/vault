@@ -117,12 +117,34 @@ Moving forward, any modification on the Vault secret will be propagated in near 
 counterpart. Creating a new secret version in Vault will create a new version in GitHub. Deleting the secret
 or the association in Vault will delete the secret in GitHub as well.
 
+## Security
+
 <Note>
 
 GitHub only supports single value secrets, so KVv2 secrets from Vault will be stored as a JSON string.
 In the example above, the value for secret "my-secret" will be synced to GitHub as the JSON string `{"foo":"bar"}`.
 
 </Note>
+
+It is strongly advised to mask individual values for each sub-key to prevent the unintended disclosure of secrets
+in any GitHub Action outputs. The following snippet illustrates how to mask each secret values:
+
+  ```yaml
+  name: Mask synced secret values
+
+  on:
+    workflow_dispatch
+
+  jobs:
+    synced-secret-examples:
+      runs-on: ubuntu-latest
+      steps:
+        - name: ✓ Mask synced secret values
+          run: |
+            for v in $(echo '${{ secrets.VAULT_KV_1234_MY_SECRET }}' | jq -r '.[]'); do
+              echo "::add-mask::$v"
+            done
+  ```
 
 ## API
 
