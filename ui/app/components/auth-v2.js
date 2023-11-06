@@ -19,17 +19,14 @@ export default class AuthV2Component extends Component {
   async handleLogin(evt) {
     evt.preventDefault();
     const authenticator = `authenticator:${this.type}`;
-    console.log({ authenticator });
     try {
       await this.session.authenticate(authenticator, this.token);
     } catch (e) {
-      console.log('error', { e });
-      console.log('errorMessage(e)', errorMessage(e));
       this.error = errorMessage(e);
     }
 
     if (this.session.isAuthenticated) {
-      console.log('logged in!');
+      this.args.onSuccess();
     }
   }
 }

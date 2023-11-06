@@ -32,7 +32,7 @@
     {{/if}}
   </Page.header>
   <Page.content>
-    <AuthV2 />
+    <AuthV2 @onSuccess={{transition-to "vault.cluster.dashboard"}} />
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">

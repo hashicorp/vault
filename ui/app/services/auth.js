@@ -250,6 +250,39 @@ export default Service.extend({
 
   persistAuthData() {
     const [firstArg, resp] = arguments;
+    /* const firstArg =
+      {
+        "clusterId": "1",
+        "backend": "token",
+        "data": {
+            "token": "root"
+        },
+        "selectedAuth": "token"
+      }
+    */
+    /* const resp =
+      {
+        "accessor": "7qQrHrmnJGL6RhTgEUt6bawN",
+        "creation_time": 1699291270,
+        "creation_ttl": 0,
+        "display_name": "token",
+        "entity_id": "",
+        "expire_time": null,
+        "explicit_max_ttl": 0,
+        "id": "root",
+        "issue_time": "2023-11-06T09:21:10.91448-08:00",
+        "meta": null,
+        "num_uses": 0,
+        "orphan": true,
+        "path": "auth/token/create",
+        "policies": [
+            "root"
+        ],
+        "renewable": false,
+        "ttl": 0,
+        "type": "service"
+      }
+    */
     const tokens = this.tokens;
     const currentNamespace = this.namespaceService.path || '';
     // Tab vs dropdown format

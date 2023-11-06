@@ -30,20 +30,84 @@ import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
 }
 */
 export default class TokenAuthenticator extends BaseAuthenticator {
-  async login(token) {
+  type = 'token';
+  displayNamePath = 'display_name';
+  tokenPath = 'id';
+
+  async login(
+    token,
+    options = {
+      namespace: '',
+      backend: 'token',
+    }
+  ) {
     const url = `/v1/auth/token/lookup-self`;
-    const result = await fetch(url, {
+    const opts = {
       method: 'POST',
       headers: {
         'X-Vault-Token': token,
       },
-    });
+    };
+    if (options.namespace) {
+      opts.headers['X-Vault-Namespace'] = options.namespace;
+    }
+    const result = await fetch(url, opts);
     const body = await result.json();
-    console.log({ result, body });
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return body;
+    return this.persistedAuthData(body, options);
+  }
+
+  persistedAuthData(payload, options) {
+    const { entity_id, policies, renewable, namespace_path } = payload;
+    const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
+    return {
+      userRootNamespace,
+      displayName: payload[this.displayNamePath],
+      backend: {
+        mountPath: options.backend,
+        type: this.type,
+      },
+      token: payload[this.tokenPath],
+      policies,
+      renewable,
+      entity_id,
+      ...this.calculateExpiration(payload.ttl, payload.lease_duration),
+    };
+  }
+
+  calculateExpiration(payloadTtl, lease_duration) {
+    const now = Date.now();
+    const ttl = payloadTtl || lease_duration;
+    const tokenExpirationEpoch = now + ttl * 1e3;
+    return {
+      ttl,
+      tokenExpirationEpoch,
+    };
+  }
+
+  calculateRootNamespace(currentNamespace, namespace_path, backend) {
+    // here we prefer namespace_path if its defined,
+    // else we look and see if there's already a namespace saved
+    // and then finally we'll use the current query param if the others
+    // haven't set a value yet
+    // all of the typeof checks are necessary because the root namespace is ''
+    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
+    // if we're logging in with token and there's no namespace_path, we can assume
+    // that the token belongs to the root namespace
+    if (backend === 'token' && !userRootNamespace) {
+      userRootNamespace = '';
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      if (this.authData) {
+        userRootNamespace = this.authData.userRootNamespace;
+      }
+    }
+    if (typeof userRootNamespace === 'undefined') {
+      userRootNamespace = currentNamespace;
+    }
+    return userRootNamespace;
   }
 
   async authenticate(token) {

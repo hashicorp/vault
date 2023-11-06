@@ -1,4 +1,4 @@
-Log in
+<Hds::Text::Display @tag="h1" class="has-padding-m">Sign in to Vault</Hds::Text::Display>
 
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
   <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
