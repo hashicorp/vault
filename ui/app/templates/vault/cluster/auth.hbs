@@ -29,89 +29,10 @@
           <Icon @name="vault" @size="24" @stretched={{true}} />
         </div>
       </div>
-      <div class="is-flex-row">
-        {{#if this.mfaAuthData}}
-          <Hds::Button
-            @text="Back to login"
-            @icon="arrow-left"
-            @isIconOnly={{true}}
-            @color="tertiary"
-            {{on "click" (fn (mut this.mfaAuthData) null)}}
-          />
-        {{else if this.waitingForOktaNumberChallenge}}
-          <Hds::Button
-            @text="Back to login"
-            @icon="arrow-left"
-            @isIconOnly={{true}}
-            @color="tertiary"
-            {{on "click" (action "cancelAuthentication")}}
-          />
-        {{/if}}
-        <h1 class="title is-3">
-          {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
-        </h1>
-      </div>
     {{/if}}
   </Page.header>
-  {{#unless this.mfaAuthData}}
-    {{#if (has-feature "Namespaces")}}
-      <Page.sub-header>
-        <Toolbar class="toolbar-namespace-picker">
-          <div class="field is-horizontal" data-test-namespace-toolbar>
-            <div class="field-label is-normal">
-              <label class="is-label" for="namespace">Namespace</label>
-            </div>
-            {{#if this.managedNamespaceRoot}}
-              <div class="field-label">
-                <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
-              </div>
-            {{/if}}
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  <input
-                    data-test-auth-form-ns-input
-                    value={{this.namespaceInput}}
-                    placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
-                    oninput={{perform this.updateNamespace value="target.value"}}
-                    autocomplete="off"
-                    spellcheck="false"
-                    name="namespace"
-                    id="namespace"
-                    class="input"
-                    type="text"
-                    disabled={{this.oidcProvider}}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Toolbar>
-      </Page.sub-header>
-    {{/if}}
-  {{/unless}}
   <Page.content>
-    {{#if this.mfaAuthData}}
-      <Mfa::MfaForm
-        @clusterId={{this.model.id}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{action "onMfaSuccess"}}
-        @onError={{fn (mut this.mfaErrors)}}
-      />
-    {{else}}
-      <AuthForm
-        @wrappedToken={{this.wrappedToken}}
-        @cluster={{this.model}}
-        @namespace={{this.namespaceQueryParam}}
-        @redirectTo={{this.redirectTo}}
-        @selectedAuth={{this.authMethod}}
-        @onSuccess={{action "onAuthResponse"}}
-        @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
-        @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
-        @setCancellingAuth={{fn (mut this.cancelAuth)}}
-        @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
-      />
-    {{/if}}
+    <AuthV2 />
   </Page.content>
   <Page.footer>
     <div class="has-short-padding">

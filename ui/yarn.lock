@@ -12640,7 +12640,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.0.0, ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.13.2, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.19.0, ember-cli-babel@npm:^7.20.0, ember-cli-babel@npm:^7.21.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.23.1, ember-cli-babel@npm:^7.26.0, ember-cli-babel@npm:^7.26.1, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.0.0, ember-cli-babel@npm:^7.1.0, ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.13.2, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.19.0, ember-cli-babel@npm:^7.20.0, ember-cli-babel@npm:^7.20.5, ember-cli-babel@npm:^7.21.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.23.1, ember-cli-babel@npm:^7.26.0, ember-cli-babel@npm:^7.26.1, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -13455,6 +13455,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-cookies@npm:^0.5.0":
+  version: 0.5.2
+  resolution: "ember-cookies@npm:0.5.2"
+  dependencies:
+    ember-cli-babel: ^7.1.0
+    ember-getowner-polyfill: ^1.1.0 || ^2.0.0
+  checksum: f046692a6d421a1077aed0a11c25303f48860919f256c0d1618043d117f2fb331a9529fab385826f207cb2d5fa83415b844fe09c1cf88383022f349cfb2f8eff
+  languageName: node
+  linkType: hard
+
 "ember-copy@npm:2.0.1":
   version: 2.0.1
   resolution: "ember-copy@npm:2.0.1"
@@ -13566,6 +13576,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-factory-for-polyfill@npm:^1.3.1":
+  version: 1.3.1
+  resolution: "ember-factory-for-polyfill@npm:1.3.1"
+  dependencies:
+    ember-cli-version-checker: ^2.1.0
+  checksum: 1dcdecbda00311f7e792250aa169ed1e7fc3e206bf72ee7ddbbd53d739b4f30565239171bb358d0af8524961468eb43dda8d05b7766324df362defb02bff197a
+  languageName: node
+  linkType: hard
+
 "ember-fetch@npm:^8.1.2":
   version: 8.1.2
   resolution: "ember-fetch@npm:8.1.2"
@@ -13618,6 +13637,16 @@ __metadata:
     "@embroider/macros": ^0.50.0 || ^1.0.0
     ember-cli-babel: ^7.26.6
   checksum: 850bc718ad2df98ab08e566f14b857fcad3aa5f31aac2a114bcbde27000dfd727a7af3c428c73a383d1f7243819486c28f0a69a31b44027e50c4f51d8602ef19
+  languageName: node
+  linkType: hard
+
+"ember-getowner-polyfill@npm:^1.1.0 || ^2.0.0":
+  version: 2.2.0
+  resolution: "ember-getowner-polyfill@npm:2.2.0"
+  dependencies:
+    ember-cli-version-checker: ^2.1.0
+    ember-factory-for-polyfill: ^1.3.1
+  checksum: c448df6974a559401b1f86c74f681d8e05d50f0217c5e9c03720177005c936903faa8962df3f8766b68339a0ea34ef781ecabe322c9965b45118011c2642bc23
   languageName: node
   linkType: hard
 
@@ -13908,6 +13937,20 @@ __metadata:
     glob: ^7.1.6
     hash-for-dep: ^1.5.1
   checksum: 17e2f2a03cdf0ae9c5f4b0bd25a1b631849392b31e7bc4d376253511d1d6bc7338253fb36a4d7323ceb6b0eb319399a7e964a50ad9df381e64c4ac0d5b07a0b6
+  languageName: node
+  linkType: hard
+
+"ember-simple-auth@npm:5":
+  version: 5.0.0
+  resolution: "ember-simple-auth@npm:5.0.0"
+  dependencies:
+    ember-cli-babel: ^7.20.5
+    ember-cli-is-package-missing: ^1.0.0
+    ember-cookies: ^0.5.0
+    silent-error: ^1.0.0
+  peerDependencies:
+    ember-fetch: ^8.0.1
+  checksum: bf48dc20566b66d325b701200665eaf8322348966be1df57c80f9d6225a886663307950ffda075e04705da4574972cca63a9d0564786a08a968916c4d10ce0e7
   languageName: node
   linkType: hard
 
@@ -26004,6 +26047,7 @@ __metadata:
     ember-responsive: 5.0.0
     ember-router-helpers: ^0.4.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
+    ember-simple-auth: 5
     ember-sinon: ^4.0.0
     ember-source: ~4.12.0
     ember-svg-jar: 2.4.0
