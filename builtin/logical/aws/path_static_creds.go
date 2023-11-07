@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/fatih/structs"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -18,11 +19,13 @@ const (
 
 	paramAccessKeyID      = "access_key"
 	paramSecretsAccessKey = "secret_key"
+	paramSESSMTPPassword  = "ses_smtp_password"
 )
 
 type awsCredentials struct {
 	AccessKeyID     string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
 	SecretAccessKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	SESSMTPPassword string `json:"ses_smtp_password" structs:"ses_smtp_password" mapstructures:"ses_smtp_password"`
 }
 
 func pathStaticCredentials(b *backend) *framework.Path {
@@ -49,6 +52,10 @@ func pathStaticCredentials(b *backend) *framework.Path {
 							paramSecretsAccessKey: {
 								Type:        framework.TypeString,
 								Description: descSecretAccessKey,
+							},
+							paramSESSMTPPassword: {
+								Type:        framework.TypeString,
+								Description: descSESSMTPPassword,
 							},
 						},
 					}},
@@ -99,4 +106,5 @@ until they are rotated.`
 const (
 	descAccessKeyID     = "The access key of the AWS Credential"
 	descSecretAccessKey = "The secret key of the AWS Credential"
+	descSESSMTPPassword = "Secret access key converted into an SES SMTP password"
 )

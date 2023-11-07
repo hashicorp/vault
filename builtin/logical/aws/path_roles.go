@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -150,6 +151,11 @@ delimited key pairs.`,
 				Type:        framework.TypeString,
 				Description: "Use policy_document instead.",
 				Deprecated:  true,
+			},
+
+			"ses_region": {
+				Type:        framework.TypeString,
+				Description: "Region used to generate SES SMTP credentials.",
 			},
 
 			"user_path": {
@@ -303,6 +309,10 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 			return logical.ErrorResponse("cannot supply deprecated role or policy parameters with max_sts_ttl"), nil
 		}
 		roleEntry.MaxSTSTTL = time.Duration(maxSTSTTLRaw.(int)) * time.Second
+	}
+
+	if sesRegionRaw, ok := d.GetOk("ses_region"); ok {
+		roleEntry.SESRegion = sesRegionRaw.(string)
 	}
 
 	if userPathRaw, ok := d.GetOk("user_path"); ok {
@@ -519,6 +529,7 @@ type awsRoleEntry struct {
 	Version                  int               `json:"version"`                               // Version number of the role format
 	DefaultSTSTTL            time.Duration     `json:"default_sts_ttl"`                       // Default TTL for STS credentials
 	MaxSTSTTL                time.Duration     `json:"max_sts_ttl"`                           // Max allowed TTL for STS credentials
+	SESRegion                string            `json:"ses_region"`                            // Region used for generating SES SMTP credentials
 	UserPath                 string            `json:"user_path"`                             // The path for the IAM user when using "iam_user" credential type
 	PermissionsBoundaryARN   string            `json:"permissions_boundary_arn"`              // ARN of an IAM policy to attach as a permissions boundary
 }
@@ -534,6 +545,7 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 		"default_sts_ttl":          int64(r.DefaultSTSTTL.Seconds()),
 		"max_sts_ttl":              int64(r.MaxSTSTTL.Seconds()),
 		"user_path":                r.UserPath,
+		"ses_region":               r.SESRegion,
 		"permissions_boundary_arn": r.PermissionsBoundaryARN,
 	}
 
@@ -569,6 +581,15 @@ func (r *awsRoleEntry) validate() error {
 		r.DefaultSTSTTL > 0 &&
 		r.DefaultSTSTTL > r.MaxSTSTTL {
 		errors = multierror.Append(errors, fmt.Errorf(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
+	}
+
+	if r.SESRegion != "" {
+		if !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
+			errors = multierror.Append(errors, fmt.Errorf("ses_region paramenter only valid for %s credential type", iamUserCred))
+		}
+		if !strutil.StrListContains(sesRegions, r.SESRegion) {
+			errors = multierror.Append(errors, fmt.Errorf(`"ses_region" doesn't have an SMTP endpoint`))
+		}
 	}
 
 	if r.UserPath != "" {

@@ -5,19 +5,22 @@ package aws
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"time"
-
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -41,6 +44,10 @@ func secretAccessKeys(b *backend) *framework.Secret {
 			"security_token": {
 				Type:        framework.TypeString,
 				Description: "Security Token",
+			},
+			"ses_smtp_password": {
+				Type:        framework.TypeString,
+				Description: "Secret access key converted into an SES SMTP password",
 			},
 		},
 
@@ -418,11 +425,17 @@ func (b *backend) secretAccessKeysCreate(
 		return nil, fmt.Errorf("failed to commit WAL entry: %w", err)
 	}
 
+	sesSmtpPassword := ""
+	if role.SESRegion != "" {
+		sesSmtpPassword = awsSesSmtpPasswordFromSecretKey(*keyResp.AccessKey.SecretAccessKey, role.SESRegion)
+	}
+
 	// Return the info!
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *keyResp.AccessKey.AccessKeyId,
-		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
-		"security_token": nil,
+		"access_key":        *keyResp.AccessKey.AccessKeyId,
+		"secret_key":        *keyResp.AccessKey.SecretAccessKey,
+		"security_token":    nil,
+		"ses_smtp_password": sesSmtpPassword,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   role,
@@ -519,8 +532,35 @@ func convertPolicyARNs(policyARNs []string) []*sts.PolicyDescriptorType {
 	return retval
 }
 
+// See https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+func awsSesSmtpSign(key, msg []byte) []byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write(msg)
+	return mac.Sum(nil)
+}
+
+func awsSesSmtpPasswordFromSecretKey(secretKey string, region string) string {
+	date := []byte("11111111")
+	service := []byte("ses")
+	message := []byte("SendRawEmail")
+	terminal := []byte("aws4_request")
+	version := []byte{0x04}
+
+	signature := awsSesSmtpSign([]byte("AWS4"+secretKey), date)
+	signature = awsSesSmtpSign(signature, []byte(region))
+	signature = awsSesSmtpSign(signature, service)
+	signature = awsSesSmtpSign(signature, terminal)
+	signature = awsSesSmtpSign(signature, message)
+	signature_and_version := append(version, signature...)
+	smtp_password := base64.StdEncoding.EncodeToString(signature_and_version)
+	return smtp_password
+}
+
 type UsernameMetadata struct {
 	Type        string
 	DisplayName string
 	PolicyName  string
 }
+
+// See https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html
+var sesRegions = []string{"us-east-2", "us-east-1", "us-west-2", "ap-south-1", "ap-northeast-2", "ap-southeast-1", "ap-southeast-2", "ap-northeast-1", "ca-central-1", "eu-central-1", "eu-west-1", "eu-west-2", "sa-east-1", "us-gov-west-1"}

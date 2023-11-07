@@ -901,6 +901,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
 				"iam_tags":                 map[string]string(nil),
+				"ses_region":               "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
