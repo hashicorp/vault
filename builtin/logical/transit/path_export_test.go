@@ -24,14 +24,58 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTransit_Export_Unknown_ExportType(t *testing.T) {
+	t.Parallel()
+
+	b, storage := createBackendWithSysView(t)
+	keyType := "ed25519"
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+		Data: map[string]interface{}{
+			"exportable": true,
+			"type":       keyType,
+		},
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed creating key %s: %v", keyType, err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/bad-export-type/foo",
+	}
+	rsp, err := b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Fatalf("did not error on bad export type got: %v", rsp)
+	}
+	if rsp == nil || !rsp.IsError() {
+		t.Fatalf("response did not contain an error on bad export type got: %v", rsp)
+	}
+	if !strings.Contains(rsp.Error().Error(), "invalid export type") {
+		t.Fatalf("failed with unexpected error: %v", err)
+	}
+}
+
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
+	t.Parallel()
+
 	verifyExportsCorrectVersion(t, "encryption-key", "aes128-gcm96")
 	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "encryption-key", "chacha20-poly1305")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-2048")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-3072")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-4096")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p384")
 	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-2048")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-3072")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-4096")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes128-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
 	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305")
@@ -40,6 +84,13 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
 	verifyExportsCorrectVersion(t, "hmac-key", "hmac")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-2048")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-3072")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-4096")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p384")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p521")
+	verifyExportsCorrectVersion(t, "public-key", "ed25519")
 }
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
@@ -136,6 +187,8 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 }
 
 func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
+	t.Parallel()
+
 	b, storage := createBackendWithSysView(t)
 
 	// First create a key, v1
@@ -236,6 +289,8 @@ func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
 }
 
 func TestTransit_Export_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
+	t.Parallel()
+
 	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
@@ -266,6 +321,8 @@ func TestTransit_Export_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
 }
 
 func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) {
+	t.Parallel()
+
 	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
@@ -294,6 +351,8 @@ func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) 
 }
 
 func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
+	t.Parallel()
+
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p256")
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p384")
 	testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t, "ecdsa-p521")
@@ -324,11 +383,55 @@ func testTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testi
 	}
 	_, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
-		t.Fatal("Key does not support encryption but was exported without error.")
+		t.Fatalf("Key %s does not support encryption but was exported without error.", keyType)
+	}
+}
+
+func TestTransit_Export_PublicKeyDoesNotSupportEncryption_ReturnsError(t *testing.T) {
+	t.Parallel()
+
+	testTransit_Export_PublicKeyNotSupported_ReturnsError(t, "chacha20-poly1305")
+	testTransit_Export_PublicKeyNotSupported_ReturnsError(t, "aes128-gcm96")
+	testTransit_Export_PublicKeyNotSupported_ReturnsError(t, "aes256-gcm96")
+	testTransit_Export_PublicKeyNotSupported_ReturnsError(t, "hmac")
+}
+
+func testTransit_Export_PublicKeyNotSupported_ReturnsError(t *testing.T, keyType string) {
+	b, storage := createBackendWithSysView(t)
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+		Data: map[string]interface{}{
+			"type": keyType,
+		},
+	}
+	if keyType == "hmac" {
+		req.Data["key_size"] = 32
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed creating key %s: %v", keyType, err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/public-key/foo",
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Fatalf("Key %s does not support public key exporting but was exported without error.", keyType)
+	}
+	if !strings.Contains(err.Error(), fmt.Sprintf("unknown key type %s for export type public-key", keyType)) {
+		t.Fatalf("unexpected error value for key type: %s: %v", keyType, err)
 	}
 }
 
 func TestTransit_Export_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
 	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
@@ -344,6 +447,8 @@ func TestTransit_Export_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
 }
 
 func TestTransit_Export_EncryptionKey_DoesNotExportHMACKey(t *testing.T) {
+	t.Parallel()
+
 	b, storage := createBackendWithSysView(t)
 
 	req := &logical.Request{
@@ -394,6 +499,8 @@ func TestTransit_Export_EncryptionKey_DoesNotExportHMACKey(t *testing.T) {
 }
 
 func TestTransit_Export_CertificateChain(t *testing.T) {
+	t.Parallel()
+
 	generateKeys(t)
 
 	// Create Cluster
