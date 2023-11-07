@@ -46,6 +46,6 @@ export default class UserpassAuthenticator extends VaultAuthenticator {
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return this.persistedAuthData(body.data, options);
+    return this.persistedAuthData(body.auth, options);
   }
 }
