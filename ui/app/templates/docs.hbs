@@ -12,7 +12,31 @@
         </Hds::SideNav::Header>
       </:header>
       <:body>
-        <Hds::SideNav::Portal::Target aria-label="sidebar doc links" />
+        <Hds::SideNav::List as |Nav|>
+          <DocfyOutput @scope="docs" as |node|>
+            {{#each node.children as |child|}}
+              <Nav.Title>
+                {{capitalize child.label}}
+              </Nav.Title>
+
+              {{#each child.pages as |page|}}
+                <Nav.Item>
+                  <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                    {{page.title}}
+                  </DocfyLink>
+                </Nav.Item>
+              {{/each}}
+            {{/each}}
+            <Nav.Title>Contributing docs</Nav.Title>
+            {{#each node.pages as |page|}}
+              <Nav.Item>
+                <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                  {{page.title}}
+                </DocfyLink>
+              </Nav.Item>
+            {{/each}}
+          </DocfyOutput>
+        </Hds::SideNav::List>
       </:body>
       <:footer>
 
@@ -24,28 +48,3 @@
     {{outlet}}
   </Frame.Main>
 </Hds::AppFrame>
-
-<Hds::SideNav::Portal @ariaLabel="Docs nav links" as |Nav|>
-  <DocfyOutput @scope="docs" as |node|>
-    {{#each node.pages as |page|}}
-      <Nav.Item>
-        <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
-          {{page.title}}
-        </DocfyLink>
-      </Nav.Item>
-    {{/each}}
-    {{#each node.children as |child|}}
-      <Nav.Title>
-        {{child.label}}
-      </Nav.Title>
-
-      {{#each child.pages as |page|}}
-        <Nav.Item>
-          <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
-            {{page.title}}
-          </DocfyLink>
-        </Nav.Item>
-      {{/each}}
-    {{/each}}
-  </DocfyOutput>
-</Hds::SideNav::Portal>
