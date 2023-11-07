@@ -3,7 +3,7 @@
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
   <MessageError @errorMessage={{this.error}} />
 
-  <Hds::Form::Select::Field {{on "change" this.setAuthType}} class="has-bottom-margin-m" as |F|>
+  <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
     <F.Label>Method</F.Label>
     <F.Options>
       {{#each this.authMethods as |authMethodType|}}
@@ -12,8 +12,29 @@
     </F.Options>
   </Hds::Form::Select::Field>
 
-  <Hds::Form::TextInput::Field @value={{this.token}} @type="password" {{on "change" this.handleChange}} as |F|>
-    <F.Label>Token</F.Label>
+  {{!-- {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
+    <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} />
+  {{/let}} --}}
+
+  {{#each this.showFields as |field|}}
+    <Hds::Form::TextInput::Field
+      @value={{get this.form field}}
+      @type={{this.maybeMask field}}
+      name={{field}}
+      {{on "input" this.handleFormChange}}
+      as |F|
+    >
+      <F.Label>{{capitalize field}}</F.Label>
+    </Hds::Form::TextInput::Field>
+  {{/each}}
+
+  <Hds::Separator />
+  <Hds::Text::Display @color="faint">Optional</Hds::Text::Display>
+  <Hds::Form::TextInput::Field @value={{this.namespace}} name="namespace" {{on "input" this.handleChange}} as |F|>
+    <F.Label>Namespace</F.Label>
+  </Hds::Form::TextInput::Field>
+  <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
+    <F.Label>Auth Mount</F.Label>
   </Hds::Form::TextInput::Field>
   <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" />
 </form>

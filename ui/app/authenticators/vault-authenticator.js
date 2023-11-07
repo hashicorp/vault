@@ -48,12 +48,12 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     throw 'No session stored';
   }
 
-  async authenticate(token, options) {
+  async authenticate(fields, options) {
     const { renew, ...opts } = options;
     if (renew) {
-      return this.renewToken(token, opts.namespace);
+      return this.renewToken(fields, opts.namespace);
     }
-    return this.login(token, opts);
+    return this.login(fields, opts);
   }
 
   invalidate(authData, options) {
@@ -74,7 +74,7 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     });
   }
 
-  async renewToken(token, namespace) {
+  async renewToken({ token }, namespace) {
     const url = '/v1/auth/token/renew-self';
     const headers = this.getTokenHeader(token, namespace);
     return fetch(url, {

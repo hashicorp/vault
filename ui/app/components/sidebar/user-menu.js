@@ -41,13 +41,17 @@ export default class SidebarUserMenuComponent extends Component {
   @action
   renewToken() {
     this.fakeRenew = true;
-    const { authenticator, backend } = this.authData;
+    const { authenticator, backend, token, userRootNamespace } = this.authData;
     later(() => {
-      this.session.authenticate(authenticator, {
-        renew: true,
-        backend: backend.mountPath,
-        namespace: this.namespace.currentNamespace,
-      });
+      this.session.authenticate(
+        authenticator,
+        { token },
+        {
+          renew: true,
+          backend: backend.mountPath,
+          namespace: userRootNamespace,
+        }
+      );
       this.auth.renew().then(() => {
         this.fakeRenew = this.auth.isRenewing;
       });

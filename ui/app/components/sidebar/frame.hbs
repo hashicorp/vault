@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 <Hds::AppFrame
-  @hasSidebar={{and @showSidebar this.currentCluster.cluster}}
+  @hasSidebar={{and @showSidebar this.currentCluster.cluster.name}}
   @hasHeader={{false}}
   @hasFooter={{false}}
   as |Frame|
@@ -13,13 +13,7 @@
       <:header>
         <Hds::SideNav::Header>
           <:logo>
-            <Hds::SideNav::Header::HomeLink
-              @icon="vault"
-              @route="vault.cluster.dashboard"
-              @model={{this.currentCluster.cluster.name}}
-              @ariaLabel="home link"
-              data-test-sidebar-logo
-            />
+            <Hds::SideNav::Header::HomeLink @icon="vault" @route="vault" @ariaLabel="home link" data-test-sidebar-logo />
           </:logo>
           <:actions>
             <Hds::SideNav::Header::IconButton

@@ -77,7 +77,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const id = this.getClusterId(params);
     if (id) {
       this.auth.setCluster(id);
-      if (this.auth.currentToken) {
+      if (this.session.isAuthenticated) {
         await this.permissions.getPaths.perform();
       }
       return this.version.fetchFeatures();

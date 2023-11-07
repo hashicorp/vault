@@ -35,7 +35,7 @@ export default class TokenAuthenticator extends VaultAuthenticator {
   tokenPath = 'id';
 
   async login(
-    token,
+    { token },
     options = {
       namespace: '',
       backend: 'token',
