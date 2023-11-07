@@ -58,6 +58,7 @@
     "@babel/plugin-proposal-decorators": "^7.21.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.12.1",
     "@babel/plugin-transform-block-scoping": "^7.12.1",
+    "@docfy/ember": "^0.7.0",
     "@ember/legacy-built-in-components": "^0.4.1",
     "@ember/optional-features": "^2.0.0",
     "@ember/render-modifiers": "^1.0.2",

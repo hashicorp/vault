@@ -5,9 +5,10 @@
     "ember-engine"
   ],
   "dependencies": {
+    "@hashicorp/design-system-components": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-babel": "*",
-    "@docfy/ember": "^0.7.0"
+    "@docfy/ember": "*"
   },
   "ember-addon": {
     "paths": [
