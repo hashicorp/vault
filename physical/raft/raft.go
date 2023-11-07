@@ -587,7 +587,9 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 // RunRaftWalVerifier runs a raft log store verifier in the background, if configured to do so.
 // This periodically writes out special raft logs to verify that the log store is not corrupting data.
 func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
+	fmt.Println("going to run the verifier!")
 	if !b.verifierEnabled() {
+		fmt.Println("just kidding, it's not enabled!")
 		return
 	}
 
@@ -600,26 +602,10 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				l := &raft.Log{}
-				data := make([]byte, 1)
-				data[0] = byte(verifierCheckpointOp)
-				var extensions [8]byte
-				binary.LittleEndian.PutUint64(extensions[:], verifier.ExtensionMagicPrefix)
-				l.Data = data
-				l.Extensions = extensions[:]
-
-				b.permitPool.Acquire()
-				b.l.RLock()
-
-				applyFuture := b.raft.Apply(data, 0)
-				if err := applyFuture.Error(); err != nil {
-					logger.Error("error sending raft log for verification", "error", err)
+				err := b.applyVerifierCheckpoint()
+				if err != nil {
+					logger.Error("error applying verification checkpoint", "error", err)
 				}
-
-				// TODO: do we need to wait for the response?
-				_ = applyFuture.Response()
-				b.l.RUnlock()
-				b.permitPool.Release()
 				logger.Debug("sent verification checkpoint")
 			case <-ctx.Done():
 				return
@@ -628,19 +614,49 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 	}()
 }
 
+func (b *RaftBackend) applyVerifierCheckpoint() error {
+	l := &raft.Log{}
+	data := make([]byte, 1)
+	data[0] = byte(verifierCheckpointOp)
+	var extensions [8]byte
+	binary.LittleEndian.PutUint64(extensions[:], verifier.ExtensionMagicPrefix)
+	l.Data = data
+	l.Extensions = extensions[:]
+
+	b.permitPool.Acquire()
+	b.l.RLock()
+
+	var err error
+	fmt.Printf("-- about to apply the verifier checkpoint\n")
+	applyFuture := b.raft.Apply(data, 0)
+	if e := applyFuture.Error(); e != nil {
+		err = e
+	}
+
+	// TODO: do we need to wait for the response?
+	_ = applyFuture.Response()
+	b.l.RUnlock()
+	b.permitPool.Release()
+
+	return err
+}
+
 // isLogVerifyCheckpoint is the verifier.IsCheckpointFn that can decode our raft logs for
 // their type.
 func isLogVerifyCheckpoint(l *raft.Log) (bool, error) {
 	if len(l.Data) < 1 {
 		// Shouldn't be possible! But no need to make it an error if it wasn't one
 		// before.
+		fmt.Println("islogverifycheckpoint. len.data < 1 oh noes! returning false early")
 		return false, nil
 	}
 
 	if l.Data[0] == byte(verifierCheckpointOp) {
+		fmt.Println("islogverifycheckpoint. yes it is!")
 		return true, nil
 	}
 
+	fmt.Println("islogverifycheckpoint. no it's not!")
 	return false, nil
 }
 
@@ -1716,6 +1732,8 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		return err
 	}
 
+	fmt.Printf("-- num operations = %d\n", len(command.Operations))
+
 	commandBytes, err := proto.Marshal(command)
 	if err != nil {
 		return err
@@ -1768,8 +1786,11 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 
 	fsmar, ok := resp.(*FSMApplyResponse)
 	if !ok || !fsmar.Success {
+		fmt.Printf("ruh roh. the resp isn't correct. ok = %t. resp = %#v\n", ok, resp)
 		return errors.New("could not apply data")
 	}
+
+	fmt.Printf("-- num entries in apply response (should match num operations) = %d\n", len(fsmar.EntrySlice))
 
 	// populate command with our results
 	if fsmar.EntrySlice == nil {

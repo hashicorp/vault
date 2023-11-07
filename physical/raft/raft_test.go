@@ -269,33 +269,20 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 // do its thing, and nothing blows up.
 func TestRaft_VerifierEnabled(t *testing.T) {
 	conf := map[string]string{
-		"trailing_logs":                  "100",
-		raftWalConfigKey:                 "true",
-		"raft_log_verifier_enabled":      "true",
-		"raft_log_verification_interval": "10s", // minimum allowed
+		"trailing_logs":             "100",
+		raftWalConfigKey:            "true",
+		"raft_log_verifier_enabled": "true",
 	}
 
 	b, _ := GetRaftWithConfig(t, true, true, conf)
 
-	waitTime := 12 * time.Second
-	start := time.Now()
 	physical.ExerciseBackend(t, b)
-	finish := time.Now()
-	elapsed := finish.Sub(start)
 
-	if elapsed < waitTime {
-		time.Sleep(waitTime - elapsed)
+	err := b.applyVerifierCheckpoint()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	// testBothRaftBackends(t, func(useRaftWal string) {
-	// 	conf := map[string]string{
-	// 		"trailing_logs":  "100",
-	// 		raftWalConfigKey: useRaftWal,
-	// 	}
-	//
-	// 	b, _ := GetRaftWithConfig(t, true, true, conf)
-	// 	physical.ExerciseBackend(t, b)
-	// })
+	physical.ExerciseBackend(t, b)
 
 	// TODO: check the metrics at this point to see if the verifier has reported something.
 	//  It's possible that this is racy because go-metrics reports things in blocks of 10 seconds.
