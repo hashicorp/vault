@@ -39,6 +39,7 @@ export default class UserpassAuthenticator extends VaultAuthenticator {
     const opts = {
       method: 'POST',
       headers: this.getTokenHeader(token, options.namespace),
+      body: JSON.stringify({ password: token }),
     };
     const result = await fetch(url, opts);
     const body = await result.json();
