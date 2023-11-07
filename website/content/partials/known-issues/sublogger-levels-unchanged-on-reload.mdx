@@ -6,8 +6,8 @@ This issue affects all Vault Community and Vault Enterprise versions.
 
 #### Issue
 
-In Vault versions predating 1.13.7, 1.14.3, and 1.15.0 Vault does not honor a
-modified `log_level` configuration for certain subsystem loggers on SIGHUP.
+Vault does not honor a modified `log_level` configuration for certain subsystem
+loggers on SIGHUP.
 
 The issue is known to specifically affect `resolver.watcher` and
 `replication.index.*` subloggers.
