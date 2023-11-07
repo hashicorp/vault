@@ -88,7 +88,7 @@ export function withAuthForm(mountType) {
         try {
           await this.session.authenticate(authenticator, fields, {
             backend: this.mountPath,
-            namespace: this.namespace,
+            namespace: this.args.namespace,
           });
         } catch (e) {
           this.error = errorMessage(e);

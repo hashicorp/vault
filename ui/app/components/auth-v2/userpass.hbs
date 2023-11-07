@@ -5,8 +5,9 @@
     <Hds::Form::TextInput::Field
       @value={{get this.state field}}
       @type={{this.maybeMask field}}
-      name={{field}}
       {{on "input" this.handleFormChange}}
+      name={{field}}
+      class="has-bottom-margin-m"
       as |F|
     >
       <F.Label>{{capitalize field}}</F.Label>
