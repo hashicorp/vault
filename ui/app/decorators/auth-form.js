@@ -4,7 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import { assert } from '@ember/debug';
 import { tracked } from '@glimmer/tracking';
 import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { action } from '@ember/object';
@@ -44,7 +43,6 @@ export function withAuthForm(mountType) {
     return class AuthFormComponent extends SuperClass {
       @service session;
       @tracked namespace = '';
-      @tracked mountPath = '';
       @tracked error = '';
       @tracked state = new AuthState();
       static _type;
@@ -60,6 +58,10 @@ export function withAuthForm(mountType) {
       get showFields() {
         const backend = allSupportedAuthBackends().findBy('type', this._type);
         return backend.formAttributes;
+      }
+
+      get mountPath() {
+        return this.args.mountPath || this._type;
       }
 
       maybeMask = (field) => {
