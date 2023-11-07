@@ -1,5 +1,6 @@
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
 import RSVP from 'rsvp';
+import { get } from '@ember/object';
 
 /*{
   "body": {
@@ -88,10 +89,11 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
     const isRootToken = policies.includes('root');
     const token = payload[this.tokenPath];
+
     return {
       userRootNamespace,
       isRootToken,
-      displayName: payload[this.displayNamePath],
+      displayName: get(payload, this.displayNamePath),
       backend: {
         mountPath: options.backend,
         type: this.type,
