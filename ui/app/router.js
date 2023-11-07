@@ -210,4 +210,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    this.mount('docs');
+  }
 });

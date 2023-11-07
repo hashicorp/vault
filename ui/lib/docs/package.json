@@ -1,0 +1,17 @@
+{
+  "name": "docs",
+  "keywords": [
+    "ember-addon",
+    "ember-engine"
+  ],
+  "dependencies": {
+    "ember-cli-htmlbars": "*",
+    "ember-cli-babel": "*",
+    "@docfy/ember": "^0.7.0"
+  },
+  "ember-addon": {
+    "paths": [
+      "../core"
+    ]
+  }
+}

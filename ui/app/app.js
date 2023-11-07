@@ -96,6 +96,11 @@ export default class App extends Application {
         },
       },
     },
+    docs: {
+      dependencies: {
+        services: ['flash-messages'],
+      },
+    },
   };
 }
 
