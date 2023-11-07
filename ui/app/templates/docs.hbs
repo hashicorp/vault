@@ -1,0 +1,34 @@
+<Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
+  <Frame.Sidebar data-test-sidebar-nav>
+    <Hds::SideNav>
+      <:header>
+        <Hds::SideNav::Header>
+          <:logo>
+            <Hds::SideNav::Header::HomeLink @icon="vault" @route="docs" @ariaLabel="docs home" />
+          </:logo>
+          <:actions>
+            <Hds::SideNav::Header::IconButton @icon="search" @ariaLabel="Search" />
+          </:actions>
+        </Hds::SideNav::Header>
+      </:header>
+      <:body>
+        <Hds::SideNav::List>
+          <DocfyOutput @scope="docs" as |node|>
+            {{#each node.pages as |page|}}
+              <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                {{page.title}}
+              </DocfyLink>
+            {{/each}}
+          </DocfyOutput>
+        </Hds::SideNav::List>
+      </:body>
+      <:footer>
+
+      </:footer>
+    </Hds::SideNav>
+  </Frame.Sidebar>
+
+  <Frame.Main id="docs-main-content">
+    {{outlet}}
+  </Frame.Main>
+</Hds::AppFrame>
