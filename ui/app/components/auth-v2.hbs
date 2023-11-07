@@ -27,20 +27,6 @@
       </:options>
     </AuthComponent>
   {{/let}}
-
-  {{!-- {{#each this.showFields as |field|}}
-    <Hds::Form::TextInput::Field
-      @value={{get this.form field}}
-      @type={{this.maybeMask field}}
-      name={{field}}
-      {{on "input" this.handleFormChange}}
-      as |F|
-    >
-      <F.Label>{{capitalize field}}</F.Label>
-    </Hds::Form::TextInput::Field>
-  {{/each}} --}}
-
-  {{! <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" /> }}
 </div>
 
 {{yield}}
