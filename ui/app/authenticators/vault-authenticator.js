@@ -1,6 +1,7 @@
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
 import RSVP from 'rsvp';
 import { get } from '@ember/object';
+import { assert } from '@ember/debug';
 
 /*{
   "body": {
@@ -32,7 +33,6 @@ import { get } from '@ember/object';
 }
 */
 export default class VaultAuthenticator extends BaseAuthenticator {
-  /* defaults */
   getTokenHeader(token, namespace) {
     const headers = {
       'X-Vault-Token': token,
@@ -42,6 +42,7 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     }
     return headers;
   }
+
   async restore(data) {
     if (data.token) {
       return data;
@@ -52,7 +53,9 @@ export default class VaultAuthenticator extends BaseAuthenticator {
   async authenticate(fields, options) {
     const { renew, ...opts } = options;
     if (renew) {
-      return this.renewToken(fields, opts.namespace);
+      const renewed = await this.renewToken(fields.token, opts.namespace);
+      // TODO: OIDC renew endpoint doesn't return display_name
+      return this.persistedAuthData(renewed, opts, 'client_token');
     }
     return this.login(fields, opts);
   }
@@ -65,35 +68,48 @@ export default class VaultAuthenticator extends BaseAuthenticator {
   }
 
   /* methods */
-  revokeToken(token, namespace) {
+  async revokeToken(token, namespace) {
     const url = '/v1/auth/token/revoke-self';
     const headers = this.getTokenHeader(token, namespace);
 
-    return fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers,
     });
+    if (response.status !== 204) {
+      const body = await response.json();
+      throw new Error(body.errors.join(', '));
+    }
+    return;
   }
 
-  async renewToken({ token }, namespace) {
+  async renewToken(token, namespace) {
     const url = '/v1/auth/token/renew-self';
     const headers = this.getTokenHeader(token, namespace);
-    return fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers,
     });
+    const body = await response.json();
+    if (response.status !== 200) {
+      throw new Error(body.errors.join(', '));
+    }
+    return body.auth;
   }
 
-  persistedAuthData(payload, options) {
-    const { entity_id, policies, renewable, namespace_path } = payload;
+  persistedAuthData(data, options, tokenPath = 'id') {
+    if (!options?.backend) {
+      assert('persistedAuthData requires options with backend');
+    }
+    const { entity_id, policies, renewable, namespace_path } = data;
     const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
     const isRootToken = policies.includes('root');
-    const token = payload[this.tokenPath];
+    const token = data[tokenPath];
 
-    return {
+    const persisted = {
       userRootNamespace,
       isRootToken,
-      displayName: get(payload, this.displayNamePath),
+      displayName: get(data, this.displayNamePath),
       backend: {
         mountPath: options.backend,
         type: this.type,
@@ -102,8 +118,10 @@ export default class VaultAuthenticator extends BaseAuthenticator {
       policies,
       renewable,
       entity_id,
-      ...this.calculateExpiration(payload.ttl, payload.lease_duration),
+      ...this.calculateExpiration(data.ttl, data.lease_duration),
     };
+    console.log('persisted', persisted, 'from', data, this.displayNamePath);
+    return persisted;
   }
 
   calculateExpiration(payloadTtl, lease_duration) {
@@ -117,9 +135,8 @@ export default class VaultAuthenticator extends BaseAuthenticator {
   }
 
   calculateRootNamespace(currentNamespace, namespace_path, backend) {
-    // here we prefer namespace_path if its defined,
-    // else we look and see if there's already a namespace saved
-    // and then finally we'll use the current query param if the others
+    // here we prefer namespace_path from the payload if its defined,
+    // else we'll use the current query param if the others
     // haven't set a value yet
     // all of the typeof checks are necessary because the root namespace is ''
     let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
@@ -127,12 +144,6 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     // that the token belongs to the root namespace
     if (backend === 'token' && !userRootNamespace) {
       userRootNamespace = '';
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      // TODO: this doesn't make any sense
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
     }
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;

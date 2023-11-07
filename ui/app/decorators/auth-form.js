@@ -9,6 +9,7 @@ import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends'
 import { action } from '@ember/object';
 import errorMessage from 'vault/utils/error-message';
 import { service } from '@ember/service';
+import { assert } from '@ember/debug';
 
 class AuthState {
   @tracked type = '';
@@ -50,7 +51,7 @@ export function withAuthForm(mountType) {
       constructor() {
         super(...arguments);
         if (!mountType || typeof mountType !== 'string') {
-          throw new Error('must pass mount type as string');
+          assert('must pass mount type as string');
         }
         this._type = mountType;
       }

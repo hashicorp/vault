@@ -23,6 +23,8 @@
 7. Added logic for revoke and renew
 8. Add base authenticator for common/shared methods
 9. Created auth-form components by type and decorator
+10. Got OIDC login working
+11. Worked on fixing up renew token flow (it may have a bug on OIDC)
 
 TODO:
 

@@ -1,13 +1,13 @@
-<form {{on "submit" this.handleLogin}} class="has-padding-m">
+<form {{on "submit" this.handleLogin}} {{did-update (perform this.fetchRoles) @namespace @mountPath}}>
   <MessageError @errorMessage={{this.error}} />
   <Hds::Form::TextInput::Field @value={{this.roleName}} name="roleName" {{on "change" this.updateRole}} as |F|>
     <F.Label>Role</F.Label>
   </Hds::Form::TextInput::Field>
   {{yield to="options"}}
   <Hds::Button
-    disabled={{this.fetchRoles.isRunning}}
-    @text="Sign in"
+    @text={{concat "Sign in with " (or this.roleInfo.providerName "OIDC Provider" this.roleInfo.providerIcon)}}
+    @icon={{if (or this.fetchRoles.isRunning this.oidcFlow.isRunning) "loading" this.roleInfo.providerIcon}}
+    disabled={{or this.fetchRoles.isRunning this.oidcFlow.isRunning}}
     type="submit"
-    class="has-top-margin-m has-bottom-margin-m"
   />
 </form>
