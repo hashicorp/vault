@@ -96,7 +96,6 @@ func (s *logVerificationChunkingShim) Apply(l *raft.Log) interface{} {
 
 // ApplyBatch implements raft.BatchingFSM
 func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{} {
-	fmt.Println("-- shim applybatch got called")
 	// This is a hack because raftchunking doesn't play nicely with lower-level
 	// usage of Extensions field like we need for LogStore verification.
 
@@ -108,18 +107,14 @@ func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{}
 	// that was chosen, and how it ensures this property.
 
 	// So here, we need to check for the exact conditions that we encoded when we wrote the
-	// verifier log out. If they match, we're going to insert a dummy raft log that consists of
-	// a single verifyCheckpointOp, instead of the original raft log. We do this because 1) we
+	// verifier log out. If they match, we're going to insert a dummy raft log. We do this because 1) we
 	// don't want the chunking FSM to blow up on our verifier op that it won't understand and
 	// 2) we need to preserve the length of the incoming slice of raft logs because raft expects
 	// the length of the return value to match 1:1 to the length of the input operations.
 	newBatch := make([]*raft.Log, 0, len(logs))
 
-	// TODO: is this correct? do we want to ignore the verifier logs? or do we want to verify them somehow?
 	for _, l := range logs {
-		fmt.Printf("-- l = %#v\n", l)
 		if s.isVerifierLog(l) {
-			fmt.Println("-- whoops there's a verifier log, now we're gonna append an empty raft log which will likely panic")
 			newBatch = append(newBatch, &raft.Log{})
 		} else {
 			newBatch = append(newBatch, l)
@@ -144,10 +139,8 @@ func (s *logVerificationChunkingShim) RestoreState(state *raftchunking.State) er
 }
 
 func (s *logVerificationChunkingShim) isVerifierLog(l *raft.Log) bool {
-	fmt.Printf("-- isVerifierLog. data len = %d. verifiercheckpointop? %t. extensions len = %d. magic bytes equal? %t\n", len(l.Data), l.Data[0] == byte(verifierCheckpointOp), len(l.Extensions), len(l.Extensions) >= 8 && bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8]))
 	return len(l.Data) == 1 &&
 		l.Data[0] == byte(verifierCheckpointOp) &&
-		len(l.Extensions) == 8 &&
 		bytes.Equal(logVerifierMagicBytes[:], l.Extensions[0:8])
 }
 
@@ -179,7 +172,6 @@ type FSM struct {
 	restoreCb restoreCallback
 
 	chunker *logVerificationChunkingShim
-	// chunker *raftchunking.ChunkingBatchingFSM
 
 	localID         string
 	desiredSuffrage string
@@ -209,11 +201,6 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		desiredSuffrage: "voter",
 		localID:         localID,
 	}
-
-	// f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-	// 	f:   f,
-	// 	ctx: context.Background(),
-	// })
 
 	f.chunker = &logVerificationChunkingShim{
 		chunker: raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
@@ -675,7 +662,6 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 // ApplyBatch will apply a set of logs to the FSM. This is called from the raft
 // library.
 func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
-	fmt.Printf("applybatch. logs = %#v\n", logs)
 	numLogs := len(logs)
 
 	if numLogs == 0 {
@@ -828,7 +814,6 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		}
 	}
 
-	fmt.Printf("at the end of applybatch. numlogs = %d. len entryslices = %d. len resp = %d.\n", numLogs, len(entrySlices), len(resp))
 	return resp
 }
 
