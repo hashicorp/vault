@@ -53,37 +53,6 @@ export default class AuthV2Component extends Component {
     return 'text';
   };
 
-  // calcRedirect(mountPath, namespace) {
-  //   let url = `${window.location.origin}/ui/auth/${mountPath}/oidc/callback`;
-  //   console.log({ url });
-  //   if (namespace) {
-  //     url += `?namespace=${namespace}`;
-  //   }
-  //   return url;
-  // }
-
-  // @task
-  // *fetchRoles(mountPath, namespace) {
-  //   const path = this.selectedAuthPath || this.selectedAuthType;
-  //   // const id = JSON.stringify([path, this.roleName]);
-  //   const url = `/v1/auth/${mountPath}/oidc/auth_url`;
-  //   const redirect_uri = calcRedirect(mountPath, namespace);
-  //   const options = {
-  //     method: 'POST',
-  //     body: JSON.stringify({
-  //       role: this.form.role,
-  //       redirect_uri,
-  //     }),
-  //   };
-  //   try {
-  //     const role = yield fetch(url, options);
-  //     // this.set('role', role);
-  //   } catch (e) {
-  //     console.log('error fetching roles', e);
-  //     this.error = 'Could not fetch roles';
-  //   }
-  // }
-
   @action
   handleFormChange(evt) {
     this.form[evt.target.name] = evt.target.value;
@@ -96,13 +65,31 @@ export default class AuthV2Component extends Component {
     this[name] = value;
     if (name === 'authType') {
       // if the authType changes, reset the form and mount path
-      this.form.resetFields();
+      // this.form.resetFields();
       this.mountPath = '';
     }
   }
 
   @action
-  async handleLogin(evt) {
+  async authenticate(fields) {
+    const authenticator = `authenticator:${this.authType}`;
+    try {
+      await this.session.authenticate(authenticator, fields, {
+        backend: this.mountPath,
+        namespace: this.namespace,
+      });
+    } catch (e) {
+      this.error = errorMessage(e);
+    }
+
+    if (this.session.isAuthenticated) {
+      // TODO: Show root warning flash message
+      this.permissions.getPaths.perform();
+    }
+  }
+
+  @action
+  async handleFormLogin(evt) {
     evt.preventDefault();
     const authenticator = `authenticator:${this.authType}`;
     const fields = this.showFields.reduce((obj, field) => {
@@ -124,5 +111,10 @@ export default class AuthV2Component extends Component {
       // TODO: Show root warning flash message
       this.permissions.getPaths.perform();
     }
+  }
+
+  @action onSuccess() {
+    this.permissions.getPaths.perform();
+    // TODO: show flash message if root
   }
 }

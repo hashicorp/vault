@@ -1,0 +1,17 @@
+<form {{on "submit" this.handleFormLogin}}>
+  {{yield to="error"}}
+  {{log this.state}}
+  <Hds::Form::TextInput::Field
+    @value={{this.state.token}}
+    @type="password"
+    {{on "change" this.handleFormChange}}
+    name="token"
+    as |F|
+  >
+    <F.Label>Token</F.Label>
+  </Hds::Form::TextInput::Field>
+
+  {{yield to="options"}}
+
+  <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" />
+</form>

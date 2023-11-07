@@ -1,8 +1,6 @@
 <Hds::Text::Display @tag="h1" class="has-padding-m">Sign in to Vault</Hds::Text::Display>
 
-<form {{on "submit" this.handleLogin}} class="has-padding-m">
-  <MessageError @errorMessage={{this.error}} />
-
+<div class="has-padding-m">
   <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
     <F.Label>Method</F.Label>
     <F.Options>
@@ -12,11 +10,25 @@
     </F.Options>
   </Hds::Form::Select::Field>
 
-  {{!-- {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
-    <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} />
-  {{/let}} --}}
+  {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
+    <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} @onSuccess={{this.onSuccess}}>
+      <:error>
+        <MessageError @errorMessage={{this.error}} />
+      </:error>
+      <:options>
+        <Hds::Separator />
+        <Hds::Text::Display @color="faint">Optional</Hds::Text::Display>
+        <Hds::Form::TextInput::Field @value={{this.namespace}} name="namespace" {{on "input" this.handleChange}} as |F|>
+          <F.Label>Namespace</F.Label>
+        </Hds::Form::TextInput::Field>
+        <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
+          <F.Label>Auth Mount</F.Label>
+        </Hds::Form::TextInput::Field>
+      </:options>
+    </AuthComponent>
+  {{/let}}
 
-  {{#each this.showFields as |field|}}
+  {{!-- {{#each this.showFields as |field|}}
     <Hds::Form::TextInput::Field
       @value={{get this.form field}}
       @type={{this.maybeMask field}}
@@ -26,17 +38,9 @@
     >
       <F.Label>{{capitalize field}}</F.Label>
     </Hds::Form::TextInput::Field>
-  {{/each}}
+  {{/each}} --}}
 
-  <Hds::Separator />
-  <Hds::Text::Display @color="faint">Optional</Hds::Text::Display>
-  <Hds::Form::TextInput::Field @value={{this.namespace}} name="namespace" {{on "input" this.handleChange}} as |F|>
-    <F.Label>Namespace</F.Label>
-  </Hds::Form::TextInput::Field>
-  <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
-    <F.Label>Auth Mount</F.Label>
-  </Hds::Form::TextInput::Field>
-  <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" />
-</form>
+  {{! <Hds::Button @text="Sign in" type="submit" class="has-top-margin-m has-bottom-margin-m" /> }}
+</div>
 
 {{yield}}

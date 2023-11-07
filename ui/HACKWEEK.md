@@ -22,6 +22,7 @@
 6. Added session.invaildate to the logout route
 7. Added logic for revoke and renew
 8. Add base authenticator for common/shared methods
+9. Created auth-form components by type and decorator
 
 TODO:
 

@@ -1,0 +1,13 @@
+<form {{on "submit" this.handleLogin}} class="has-padding-m">
+  {{yield to="error"}}
+  <Hds::Form::TextInput::Field @value={{this.roleName}} name="roleName" {{on "change" this.updateRole}} as |F|>
+    <F.Label>Role</F.Label>
+  </Hds::Form::TextInput::Field>
+  {{yield to="options"}}
+  <Hds::Button
+    disabled={{this.fetchRoles.isRunning}}
+    @text="Sign in"
+    type="submit"
+    class="has-top-margin-m has-bottom-margin-m"
+  />
+</form>

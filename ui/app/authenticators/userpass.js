@@ -5,12 +5,12 @@ export default class UserpassAuthenticator extends VaultAuthenticator {
   displayNamePath = 'metadata.username';
   tokenPath = 'client_token';
 
-  async login(token, options) {
-    const url = `/v1/auth/userpass/login/${encodeURIComponent(options.username)}`;
+  async login({ username, password }, options) {
+    const url = `/v1/auth/userpass/login/${encodeURIComponent(username)}`;
     const opts = {
       method: 'POST',
-      headers: this.getTokenHeader(token, options.namespace),
-      body: JSON.stringify({ password: token }),
+      headers: this.getTokenHeader(password, options.namespace),
+      body: JSON.stringify({ password }),
     };
     const result = await fetch(url, opts);
     const body = await result.json();
