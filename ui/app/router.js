@@ -212,6 +212,5 @@ Router.map(function () {
   });
   if (config.environment !== 'production') {
     addDocfyRoutes(this);
-    // this.mount('docs');
   }
 });
