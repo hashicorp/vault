@@ -12,9 +12,6 @@
 
   {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
     <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} @onSuccess={{this.onSuccess}}>
-      <:error>
-        <MessageError @errorMessage={{this.error}} />
-      </:error>
       <:options>
         <Hds::Separator />
         <Hds::Text::Display @color="faint">Optional</Hds::Text::Display>

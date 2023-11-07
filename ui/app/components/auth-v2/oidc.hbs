@@ -1,5 +1,5 @@
 <form {{on "submit" this.handleLogin}} class="has-padding-m">
-  {{yield to="error"}}
+  <MessageError @errorMessage={{this.error}} />
   <Hds::Form::TextInput::Field @value={{this.roleName}} name="roleName" {{on "change" this.updateRole}} as |F|>
     <F.Label>Role</F.Label>
   </Hds::Form::TextInput::Field>

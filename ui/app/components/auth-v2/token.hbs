@@ -1,6 +1,5 @@
 <form {{on "submit" this.handleFormLogin}}>
-  {{yield to="error"}}
-  {{log this.state}}
+  <MessageError @errorMessage={{this.error}} />
   <Hds::Form::TextInput::Field
     @value={{this.state.token}}
     @type="password"

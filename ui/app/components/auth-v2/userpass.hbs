@@ -1,5 +1,5 @@
 <form {{on "submit" this.handleFormLogin}}>
-  {{yield to="error"}}
+  <MessageError @errorMessage={{this.error}} />
 
   {{#each this.showFields as |field|}}
     <Hds::Form::TextInput::Field
