@@ -3,26 +3,6 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
-class AuthState {
-  @tracked type = '';
-  @tracked token = '';
-  @tracked username = '';
-  @tracked password = '';
-  @tracked role = '';
-  @tracked jwt = '';
-
-  resetFields() {
-    this.token = '';
-    this.userame = '';
-    this.password = '';
-    this.role = '';
-    this.jwt = '';
-  }
-
-  constructor(type) {
-    this.type = type || 'token';
-  }
-}
 export default class AuthV2Component extends Component {
   @service permissions;
 
