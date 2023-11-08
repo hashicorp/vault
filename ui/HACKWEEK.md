@@ -25,8 +25,11 @@
 9. Created auth-form components by type and decorator
 10. Got OIDC login working
 11. Worked on fixing up renew token flow (it may have a bug on OIDC)
+12. Got userpass working
 
 TODO:
 
+- Allow logging in with namespace and auth mount
+- Figure why the <section class="section"><div class="container is-widescreen"></div></section> isn't showing
 - Move renew/revoke methods back inside expiry (user-menu.hbs)
 - Clean up auth service
