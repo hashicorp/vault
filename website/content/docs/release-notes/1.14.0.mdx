@@ -13,12 +13,15 @@ description: |-
 
 ## Known issues and breaking changes
 
-Version | Issue 
+Version | Issue
 ------- | ------------------------------------------------------------
 1.14.0+ | [Users limited by control groups can only access issuer detail from PKI overview page](/vault/docs/upgrading/upgrade-to-1.14.x#ui-pki-control-groups)
 All     | [API calls to update-primary may lead to data loss](/vault/docs/upgrading/upgrade-to-1.14.x#update-primary-data-loss)
 1.14.0+ | [AWS static roles ignore changes to rotation period](/vault/docs/upgrading/upgrade-to-1.14.x#aws-static-role-rotation)
 1.14.0+ | [UI Collapsed navbar does not allow certain click events](/vault/docs/upgrading/upgrade-to-1.14.x#ui-collapsed-navbar)
+1.14.3+ | [Vault storing references to ephemeral sub-loggers causing memory leak](/vault/docs/upgrading/upgrade-to-1.14.x#vault-is-storing-references-to-ephemeral-sub-loggers-leading-to-a-memory-leak)
+1.14.4+ | [Internal error when vault policy in namespace does not exist](/vault/docs/upgrading/upgrade-to-1.14.x#internal-error-when-vault-policy-in-namespace-does-not-exist)
+1.14.0+ | [Sublogger levels not adjusted on reload](/vault/docs/upgrading/upgrade-to-1.14.x#sublogger-levels-unchanged-on-reload)
 
 ## Vault companion updates
 
@@ -84,7 +87,7 @@ Follow the learn more links for more information, or browse the list of
     </tr>
   </thead>
   <tbody>
-  
+
   <tr>
     <td rowspan={2} style={{verticalAlign: 'middle'}}>
       Public Key Infrastructure (PKI)
@@ -106,7 +109,7 @@ Follow the learn more links for more information, or browse the list of
       Use the improved PKI web UI to manage your PKI instance with intuitive
       configuration and reasonable defaults for workflows, metadata, issuer
       info, mount and tidy configuration, cross signing, multi-issuers etc.and
-      includes.   
+      includes.
       <br /><br />
       Learn more:&nbsp;
       <a href="/vault/api-docs/secret/pki#acme-certificate-issuance">PKI Secrets Engine</a>
@@ -242,14 +245,14 @@ Follow the learn more links for more information, or browse the list of
     </tr>
   </thead>
   <tbody>
-  
+
   <tr>
     <td style={{verticalAlign: 'middle'}}>
       Vault replication
     </td>
     <td style={{verticalAlign: 'middle', textAlign: 'center'}}>ENHANCED</td>
     <td style={{verticalAlign: 'middle'}}>
-      Stability improvements based on customer feedback for Vault 1.13. See the 
+      Stability improvements based on customer feedback for Vault 1.13. See the
       <a href="https://raw.githubusercontent.com/hashicorp/vault/main/CHANGELOG.md">
         Vault changelog
       </a>
@@ -276,6 +279,10 @@ Follow the learn more links for more information, or browse the list of
 
   </tbody>
 </table>
+
+@include 'known-issues/internal-error-namespace-missing-policy.mdx'
+
+@include 'known-issues/ephemeral-loggers-memory-leak.mdx'
 
 ## Feature deprecations and EOL
 
