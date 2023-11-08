@@ -13,8 +13,13 @@ export default class AuthV2Component extends Component {
   constructor() {
     super(...arguments);
     this.namespace = this.args.namespace || '';
-    this.authType = this.args.authType || 'token';
     this.mountPath = this.args.mountPath || '';
+    if (this.args.wrappedToken) {
+      // Only the token component handles wrapped tokens
+      this.authType = 'token';
+    } else {
+      this.authType = this.args.authType || 'token';
+    }
   }
 
   get authMethods() {

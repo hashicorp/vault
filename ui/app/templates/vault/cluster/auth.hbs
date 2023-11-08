@@ -108,7 +108,12 @@
         @namespace={{this.namespaceQueryParam}}
         @authType={{this.authMethod}}
         @mountPath={{this.mountPath}}
-      />
+        @wrappedToken={{this.model.client_token}}
+      >
+        <:error>
+          <MessageError @errorMessage={{this.model.error}} />
+        </:error>
+      </AuthV2>
       {{!-- <AuthForm
         @wrappedToken={{this.wrappedToken}}
         @cluster={{this.model}}

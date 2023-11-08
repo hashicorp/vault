@@ -28,11 +28,11 @@
 12. Got userpass working
 13. Cleaned up auth service
 14. Trigger onSuccess and onUpdate side effects for query param updates
+15. Handle wrapped token
 
 TODO:
 
 - Nice-to-have show tabs for auth methods that configured that option (Kianna)
-- Handle wrapped token (Chelsea)
 - MFA (Chelsea)
 - Okta challenge (Kianna)
 -
