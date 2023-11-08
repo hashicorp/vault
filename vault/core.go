@@ -1285,7 +1285,7 @@ func (c *Core) configureListeners(conf *CoreConfig) error {
 	return nil
 }
 
-// configureLogRequestsLevel configures the Core with the supplied log level.
+// configureLogRequestsLevel configures the Core with the supplied log requests level.
 func (c *Core) configureLogRequestsLevel(level string) {
 	c.logRequestsLevel = uberAtomic.NewInt32(0)
 
