@@ -1233,8 +1233,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Log level
-	c.configureLogRequestLevel(conf.RawConfig.LogLevel)
+	// Log requests level
+	c.configureLogRequestsLevel(conf.RawConfig.LogRequestsLevel)
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
@@ -1298,8 +1298,8 @@ func (c *Core) configureListeners(conf *CoreConfig) error {
 	return nil
 }
 
-// configureLogRequestLevel configures the Core with the supplied log level.
-func (c *Core) configureLogRequestLevel(level string) {
+// configureLogRequestsLevel configures the Core with the supplied log requests level.
+func (c *Core) configureLogRequestsLevel(level string) {
 	c.logRequestsLevel = uberAtomic.NewInt32(0)
 
 	lvl := log.LevelFromString(level)
