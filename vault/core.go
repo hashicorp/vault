@@ -1229,7 +1229,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Log level
-	c.configureLogRequestLevel(conf.RawConfig.LogLevel)
+	c.configureLogRequestLevel(conf.RawConfig.LogRequestsLevel)
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
