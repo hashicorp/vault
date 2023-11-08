@@ -97,6 +97,7 @@ ui_copywrite() {
     fi
 
     # get the OS/Architecture specifics to build the filename
+    # eg. copywrite_0.16.6_darwin_x86_64.tar.gz
     case "$OSTYPE" in
       linux*) OS='linux' ;;
       darwin*) OS='darwin' ;;
