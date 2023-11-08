@@ -1818,6 +1818,15 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		}
 	}
 
+	// Always add the default key
+	defaultKeyIDs, err := i.keyIDsByName(ctx, s, defaultKeyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load default key IDs: %w", err)
+	}
+	for _, id := range defaultKeyIDs {
+		keyIDs[id] = struct{}{}
+	}
+
 	jwks := &jose.JSONWebKeySet{
 		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
 	}

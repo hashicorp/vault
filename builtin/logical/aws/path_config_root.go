@@ -54,6 +54,38 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Template to generate custom IAM usernames",
 			},
+			"identity_token_audience": {
+				Type:        framework.TypeString,
+				Description: "",
+				Default:     "",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "",
+				},
+			},
+			"identity_token_key": {
+				Type:        framework.TypeString,
+				Description: "",
+				Default:     "",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "",
+				},
+			},
+			"identity_token_role_arn": {
+				Type:        framework.TypeString,
+				Description: "",
+				Default:     "",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "",
+				},
+			},
+			"identity_token_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "",
+				},
+				Default: 3600,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -118,17 +150,26 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		usernameTemplate = defaultUserNameTemplate
 	}
 
+	identityTokenAudience := data.Get("identity_token_audience").(string)
+	identityTokenKey := data.Get("identity_token_key").(string)
+	identityTokenTTL := data.Get("identity_token_ttl").(int)
+	identityTokenRoleARN := data.Get("identity_token_role_arn").(string)
+
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
-		AccessKey:        data.Get("access_key").(string),
-		SecretKey:        data.Get("secret_key").(string),
-		IAMEndpoint:      iamendpoint,
-		STSEndpoint:      stsendpoint,
-		Region:           region,
-		MaxRetries:       maxretries,
-		UsernameTemplate: usernameTemplate,
+		AccessKey:               data.Get("access_key").(string),
+		SecretKey:               data.Get("secret_key").(string),
+		IAMEndpoint:             iamendpoint,
+		STSEndpoint:             stsendpoint,
+		Region:                  region,
+		MaxRetries:              maxretries,
+		UsernameTemplate:        usernameTemplate,
+		IdentityTokenRoleARN:    identityTokenRoleARN,
+		IdentityTokenAudience:   identityTokenAudience,
+		IdentityTokenKey:        identityTokenKey,
+		IdentityTokenTTLSeconds: identityTokenTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -147,13 +188,17 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 }
 
 type rootConfig struct {
-	AccessKey        string `json:"access_key"`
-	SecretKey        string `json:"secret_key"`
-	IAMEndpoint      string `json:"iam_endpoint"`
-	STSEndpoint      string `json:"sts_endpoint"`
-	Region           string `json:"region"`
-	MaxRetries       int    `json:"max_retries"`
-	UsernameTemplate string `json:"username_template"`
+	AccessKey               string `json:"access_key"`
+	SecretKey               string `json:"secret_key"`
+	IAMEndpoint             string `json:"iam_endpoint"`
+	STSEndpoint             string `json:"sts_endpoint"`
+	Region                  string `json:"region"`
+	MaxRetries              int    `json:"max_retries"`
+	UsernameTemplate        string `json:"username_template"`
+	IdentityTokenKey        string `json:"identity_token_key"`
+	IdentityTokenTTLSeconds int    `json:"identity_token_ttl_seconds"`
+	IdentityTokenAudience   string `json:"identity_token_audience"`
+	IdentityTokenRoleARN    string `json:"identity_token_role_arn"`
 }
 
 const pathConfigRootHelpSyn = `
