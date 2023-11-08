@@ -5,6 +5,17 @@
 
 {{outlet}}
 <footer class="footer has-text-grey has-text-centered">
+  {{#if (eq this.env "development")}}
+    <Hds::Button
+      target="_blank"
+      class="is-pulled-right"
+      @text="Contributing docs"
+      @isIconOnly={{true}}
+      @icon="gift"
+      @color="tertiary"
+      @route="docs"
+    />
+  {{/if}}
   <span class="is-inline-block">
     <Icon @name="hashicorp" aria-hidden="true" class="has-text-grey-light" />
     &copy;

@@ -13,6 +13,7 @@
       </:header>
       <:body>
         <Hds::SideNav::List as |Nav|>
+          <Nav.BackLink @text="Back to work" @route="vault" />
           <DocfyOutput @scope="docs" as |node|>
             {{#each node.children as |child|}}
               <Nav.Title>
