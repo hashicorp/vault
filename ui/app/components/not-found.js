@@ -4,14 +4,12 @@
  */
 
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  // public
-  model: null,
+export default class NotFound extends Component {
+  @service router;
 
-  tagName: '',
-  router: service(),
-  path: alias('router.currentURL'),
-});
+  get path() {
+    return this.router.currentURL;
+  }
+}
