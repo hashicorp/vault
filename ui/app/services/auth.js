@@ -6,22 +6,18 @@
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
 import { getOwner } from '@ember/application';
-import { isArray } from '@ember/array';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { capitalize } from '@ember/string';
 import fetch from 'fetch';
 import { resolve, reject } from 'rsvp';
 
-import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = allSupportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
@@ -35,7 +31,6 @@ export default Service.extend({
   IDLE_TIMEOUT: 3 * 60e3,
   isRenewing: false,
   mfaErrors: null,
-  isRootToken: false,
 
   get tokenExpired() {
     const expiration = this.tokenExpirationDate;
@@ -44,6 +39,7 @@ export default Service.extend({
 
   activeCluster: alias('currentCluster.cluster'),
 
+  isRootToken: alias('session.data.authenticated.isRootToken'),
   tokenExpirationDate: computed(
     'session.{isAuthenticated,data.authenticated.tokenExpirationEpoch}',
     'expirationCalcTS',
@@ -78,30 +74,6 @@ export default Service.extend({
 
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
-  },
-
-  generateTokenName({ backend, clusterId }, policies) {
-    return (policies || []).includes('root')
-      ? `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}${clusterId}`
-      : `${TOKEN_PREFIX}${backend}${TOKEN_SEPARATOR}${clusterId}`;
-  },
-
-  backendFromTokenName(tokenName) {
-    return tokenName.includes(`${TOKEN_PREFIX}${ROOT_PREFIX}`)
-      ? 'token'
-      : tokenName.slice(TOKEN_PREFIX.length).split(TOKEN_SEPARATOR)[0];
-  },
-
-  storage(tokenName) {
-    if (
-      tokenName &&
-      tokenName.indexOf(`${TOKEN_PREFIX}${ROOT_PREFIX}`) === 0 &&
-      this.environment() !== 'development'
-    ) {
-      return getStorage('memory');
-    } else {
-      return getStorage();
-    }
   },
 
   environment() {
@@ -239,14 +211,6 @@ export default Service.extend({
       this.renew();
     }
     this.set('allowExpiration', false);
-  },
-
-  getTokensFromStorage(filterFn) {
-    return this.storage()
-      .keys()
-      .reject((key) => {
-        return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
-      });
   },
 
   _parseMfaResponse(mfa_requirement) {

@@ -16,6 +16,7 @@ export default Controller.extend({
   featureFlagService: service('featureFlag'),
   auth: service(),
   router: service(),
+  session: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
@@ -92,6 +93,20 @@ export default Controller.extend({
         mfaAuthData: null,
         mfaErrors: null,
       });
+    },
+    onParamUpdate(key, value) {
+      if (key === 'namespace') {
+        this.updateNamespace.perform(value);
+      } else if (key === 'authType') {
+        this.set('authMethod', value);
+      }
+    },
+    onSuccess() {
+      if (this.session.data.authenticated.isRootToken) {
+        this.flashMessages.warning(
+          'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'
+        );
+      }
     },
     cancelAuthentication() {
       this.set('cancelAuth', true);

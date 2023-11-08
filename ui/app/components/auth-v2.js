@@ -11,7 +11,8 @@ export default class AuthV2Component extends Component {
   @tracked mountPath = '';
 
   get authMethods() {
-    return ['token', 'userpass', 'ldap', 'okta', 'jwt', 'oidc', 'radius', 'github'];
+    return ['token', 'userpass', 'oidc'];
+    // return ['token', 'userpass', 'ldap', 'okta', 'jwt', 'oidc', 'radius', 'github'];
   }
 
   @action
@@ -23,10 +24,17 @@ export default class AuthV2Component extends Component {
       // if the authType changes, reset the mount path
       this.mountPath = '';
     }
+    if (this.args.onUpdate) {
+      // Do parent side effects like update query params
+      this.args.onUpdate(name, value);
+    }
   }
 
   @action onSuccess() {
     this.permissions.getPaths.perform();
-    // TODO: show flash message if root
+    if (this.args.onSuccess) {
+      // Do parent side effects like show flash message for root token
+      this.args.onSuccess();
+    }
   }
 }

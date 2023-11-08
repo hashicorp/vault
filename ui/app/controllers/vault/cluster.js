@@ -10,6 +10,7 @@ import Controller from '@ember/controller';
 import { observer } from '@ember/object';
 export default Controller.extend({
   auth: service(),
+  session: service(),
   store: service(),
   media: service(),
   router: service(),

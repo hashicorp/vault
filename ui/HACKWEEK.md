@@ -26,12 +26,13 @@
 10. Got OIDC login working
 11. Worked on fixing up renew token flow (it may have a bug on OIDC)
 12. Got userpass working
+13. Cleaned up auth service
+14. Trigger onSuccess and onUpdate side effects for query param updates
 
 TODO:
 
-- Allow logging in with namespace and auth mount
-- Nice-to-have show tabs for auth methods that configured that option
-- Figure why the <section class="section"><div class="container is-widescreen"></div></section> isn't showing
-- Handle wrapped token
-- MFA
-- Okta challenge
+- Nice-to-have show tabs for auth methods that configured that option (Kianna)
+- Handle wrapped token (Chelsea)
+- MFA (Chelsea)
+- Okta challenge (Kianna)
+-

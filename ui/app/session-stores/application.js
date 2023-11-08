@@ -6,7 +6,6 @@ export default class ApplicationStore extends LocalStorageStore {
   persist(data) {
     // Do not persist token info if root
     if (true === data.authenticated?.isRootToken && ENV.environment !== 'development') {
-      console.log('is root');
       return RSVP.resolve();
     }
     return super.persist(data);

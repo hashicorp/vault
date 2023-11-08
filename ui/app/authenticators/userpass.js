@@ -6,7 +6,7 @@ export default class UserpassAuthenticator extends VaultAuthenticator {
   tokenPath = 'client_token';
 
   async login({ username, password }, options) {
-    const url = `/v1/auth/userpass/login/${encodeURIComponent(username)}`;
+    const url = `/v1/auth/${options.backend}/login/${encodeURIComponent(username)}`;
     const opts = {
       method: 'POST',
       headers: this.getTokenHeader(password, options.namespace),

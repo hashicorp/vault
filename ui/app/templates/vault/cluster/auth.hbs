@@ -102,7 +102,12 @@
         @onError={{fn (mut this.mfaErrors)}}
       />
     {{else}}
-      <AuthV2 />
+      <AuthV2
+        @onUpdate={{action "onParamUpdate"}}
+        @onSuccess={{action "onSuccess"}}
+        @namespace={{this.namespaceQueryParam}}
+        @authType={{this.authMethod}}
+      />
       {{!-- <AuthForm
         @wrappedToken={{this.wrappedToken}}
         @cluster={{this.model}}
