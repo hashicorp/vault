@@ -127,13 +127,12 @@ ui_copywrite() {
     cp $FILE_PATH $BINARY_DIR/.staged
   done
 
-  COPYWRITE_LOG_LEVEL=off
+  COPYWRITE_LOG_LEVEL=info
   COPY_CMD="$BINARY_DIR/copywrite headers -d $BINARY_DIR/.staged --config $DIR/.copywrite.hcl"
 
   # if staged files are missing header run the tool against temp directory
   eval $COPY_CMD --plan
   if [ $(echo $?) == 1 ]; then
-    COPYWRITE_LOG_LEVEL=info
     eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
 
     # copy files back to original locations
@@ -154,11 +153,10 @@ ui_copywrite() {
 
   # ---- Original attempt which is working but runs the tool against the full ui directory
   cd $BINARY_DIR
-  COPYWRITE_LOG_LEVEL=off
+  COPYWRITE_LOG_LEVEL=info
   COPY_CMD="./copywrite headers -d ../ --config ../.copywrite.hcl"
   eval $COPY_CMD --plan
   if [ $(echo $?) == 1 ]; then
-    COPYWRITE_LOG_LEVEL=info
     eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
     block "Copyright headers automatically added to files. Please review and commit again."
   fi
