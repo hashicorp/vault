@@ -26,7 +26,6 @@ export default Route.extend(ModelBoundaryRoute, {
   beforeModel({ to: { queryParams } }) {
     const authType = this.auth.getAuthType();
     const ns = this.namespaceService.path;
-    this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
     this.console.set('isOpen', false);

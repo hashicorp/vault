@@ -63,7 +63,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
     // because it hasn't transitioned yet
     url = url.replace(/^(\/?ui)/, '');
     if (logout) {
-      this.auth.deleteCurrentToken();
+      this.session.invalidate();
     }
     // o param can be anything, as long as it's present the auth page will change
     const queryParams = {

@@ -45,67 +45,38 @@ export default Service.extend({
 
   activeCluster: alias('currentCluster.cluster'),
 
-  // eslint-disable-next-line
-  tokens: computed({
-    get() {
-      return this._tokens || this.getTokensFromStorage() || [];
-    },
-    set(key, value) {
-      return (this._tokens = value);
-    },
-  }),
-
-  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
-    if (!tokenName) {
-      return;
+  tokenExpirationDate: computed(
+    'session.{isAuthenticated,data.authenticated.tokenExpirationEpoch}',
+    'expirationCalcTS',
+    function () {
+      if (!this.session.isAuthenticated) {
+        return;
+      }
+      const { tokenExpirationEpoch } = this.session.data.authenticated;
+      const expirationDate = new Date(0);
+      return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
     }
-    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
-    const expirationDate = new Date(0);
-    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
-  }),
+  ),
 
-  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
+  renewAfterEpoch: computed('session.data.authenticated', 'expirationCalcTS', function () {
     const { expirationCalcTS } = this;
-    const data = this.getTokenData(tokenName);
-    if (!tokenName || !data || !expirationCalcTS) {
+    const data = this.session.data.authenticated;
+    if (!data?.renewable || !expirationCalcTS) {
       return null;
     }
-    const { ttl, renewable } = data;
+    const { ttl } = data;
     // renew after last expirationCalc time + half of the ttl (in ms)
-    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
-  }),
-
-  // returns the key for the token to use
-  currentTokenName: computed('activeClusterId', 'tokens', 'tokens.[]', function () {
-    const regex = new RegExp(this.activeClusterId);
-    return this.tokens.find((key) => regex.test(key));
+    return Math.floor((ttl * 1e3) / 2) + expirationCalcTS;
   }),
 
   currentToken: alias('session.data.authenticated.token'),
 
   authData: alias('session.data.authenticated'),
-  // authData: computed('currentTokenName', function () {
-  //   const token = this.currentTokenName;
-  //   if (!token) {
-  //     return;
-  //   }
-  //   const backend = this.backendFromTokenName(token);
-  //   const stored = this.getTokenData(token);
-  //   return Object.assign(stored, {
-  //     backend: {
-  //       // add mount path for password reset
-  //       mountPath: stored.backend.mountPath,
-  //       ...BACKENDS.findBy('type', backend),
-  //     },
-  //   });
-  // }),
 
-  init() {
-    this._super(...arguments);
-    this.checkForRootToken();
-  },
+  // init() {
+  //   this._super(...arguments);
+  //   this.checkForRootToken();
+  // },
 
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
@@ -335,25 +306,6 @@ export default Service.extend({
     return this.storage(token).removeItem(token);
   },
 
-  renew() {
-    const tokenName = this.currentTokenName;
-    const currentlyRenewing = this.isRenewing;
-    if (currentlyRenewing) {
-      return;
-    }
-    this.isRenewing = true;
-    return this.renewCurrentToken().then(
-      (resp) => {
-        this.isRenewing = false;
-        return this.persistAuthData(tokenName, resp.data || resp.auth);
-      },
-      (e) => {
-        this.isRenewing = false;
-        throw e;
-      }
-    );
-  },
-
   checkShouldRenew: task(function* () {
     while (true) {
       if (Ember.testing) {
@@ -365,11 +317,12 @@ export default Service.extend({
       }
     }
   }).on('init'),
+
   shouldRenew() {
     const now = this.now();
     const lastFetch = this.lastFetch;
     const renewTime = this.renewAfterEpoch;
-    if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
+    if (!this.session.isAuthenticated || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;
     }
     if (lastFetch && now - lastFetch >= this.IDLE_TIMEOUT) {
@@ -398,19 +351,6 @@ export default Service.extend({
       .reject((key) => {
         return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
       });
-  },
-
-  checkForRootToken() {
-    if (this.environment() === 'development') {
-      return;
-    }
-
-    this.getTokensFromStorage().forEach((key) => {
-      const data = this.getTokenData(key);
-      if (data && data.policies && data.policies.includes('root')) {
-        this.removeTokenData(key);
-      }
-    });
   },
 
   _parseMfaResponse(mfa_requirement) {
@@ -484,19 +424,7 @@ export default Service.extend({
     const selectedAuth = localStorage.getItem('selectedAuth');
     if (selectedAuth) return selectedAuth;
     // fallback to authData which discerns backend type from token
-    return this.authData ? this.authData.backend.type : null;
-  },
-
-  deleteCurrentToken() {
-    const tokenName = this.currentTokenName;
-    this.deleteToken(tokenName);
-    this.removeTokenData(tokenName);
-  },
-
-  deleteToken(tokenName) {
-    const tokenNames = this.tokens.without(tokenName);
-    this.removeTokenData(tokenName);
-    this.set('tokens', tokenNames);
+    return this.authData ? this.authData.backend?.type : null;
   },
 
   getOktaNumberChallengeAnswer(nonce, mount) {

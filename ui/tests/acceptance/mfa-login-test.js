@@ -28,6 +28,7 @@ module('Acceptance | mfa-login', function (hooks) {
   });
   hooks.afterEach(function () {
     // Manually clear token after each so that future tests don't get into a weird state
+    // TODO: how do we do this with session?
     this.auth.deleteCurrentToken();
   });
   hooks.after(function () {

@@ -94,7 +94,7 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     if (response.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return body.auth;
+    return body.data || body.auth;
   }
 
   persistedAuthData(data, options, tokenPath = 'id') {
@@ -120,7 +120,6 @@ export default class VaultAuthenticator extends BaseAuthenticator {
       entity_id,
       ...this.calculateExpiration(data.ttl, data.lease_duration),
     };
-    console.log('persisted', persisted, 'from', data, this.displayNamePath);
     return persisted;
   }
 

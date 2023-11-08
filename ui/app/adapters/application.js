@@ -17,6 +17,7 @@ const { POLLING_URLS, NAMESPACE_ROOT_URLS } = APP;
 
 export default RESTAdapter.extend({
   auth: service(),
+  session: service(),
   namespaceService: service('namespace'),
   controlGroup: service(),
 
@@ -37,7 +38,7 @@ export default RESTAdapter.extend({
   },
 
   addHeaders(url, options) {
-    const token = options.clientToken || this.auth.currentToken;
+    const token = options.clientToken || this.session.data.authenticated.token;
     const headers = {};
     if (token && !options.unauthenticated) {
       headers['X-Vault-Token'] = token;
