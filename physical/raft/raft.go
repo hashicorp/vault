@@ -511,11 +511,22 @@ func (b *RaftBackend) Close() error {
 		return err
 	}
 
-	if err := b.stableStore.(*raftboltdb.BoltStore).Close(); err != nil {
-		return err
+	closeBackend := func(c io.Closer) error {
+		if err := c.Close(); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	return nil
+	switch t := b.stableStore.(type) {
+	case *raftboltdb.BoltStore:
+		return closeBackend(t)
+	case *raftwal.WAL:
+		return closeBackend(t)
+	default:
+		return nil
+	}
 }
 
 func (b *RaftBackend) FailGetInTxn(fail bool) {
