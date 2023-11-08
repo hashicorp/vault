@@ -48,7 +48,7 @@ Usage: vault namespace create [options] PATH
 }
 
 func (c *NamespaceCreateCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 	f.StringMapVar(&StringMapVar{

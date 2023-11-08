@@ -48,7 +48,7 @@ This command creates a intermediate certificate authority certificate signed by 
 }
 
 func (c *PKIIssueCACommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
@@ -92,9 +92,9 @@ func (c *PKIIssueCACommand) Run(args []string) int {
 		return 1
 	}
 
-	parentMountIssuer := sanitizePath(args[0]) // /pki/issuer/default
+	parentMountIssuer := SanitizePath(args[0]) // /pki/issuer/default
 
-	intermediateMount := sanitizePath(args[1])
+	intermediateMount := SanitizePath(args[1])
 
 	return pkiIssue(c.BaseCommand, parentMountIssuer, intermediateMount, c.flagNewIssuerName, c.flagKeyStorageSource, data)
 }
@@ -103,7 +103,7 @@ func pkiIssue(c *BaseCommand, parentMountIssuer string, intermediateMount string
 	// Check We Have a Client
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %v", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain ApiClient: %v", err))
 		return 1
 	}
 
@@ -232,7 +232,7 @@ func pkiIssue(c *BaseCommand, parentMountIssuer string, intermediateMount string
 }
 
 func readAndOutputNewCertificate(client *api.Client, intermediateMount string, issuerId string, c *BaseCommand) {
-	resp, err := client.Logical().Read(sanitizePath(intermediateMount + "/issuer/" + issuerId))
+	resp, err := client.Logical().Read(SanitizePath(intermediateMount + "/issuer/" + issuerId))
 	if err != nil || resp == nil {
 		c.UI.Error(fmt.Sprintf("Error Reading Fully Imported Certificate from %v : %v",
 			intermediateMount+"/issuer/"+issuerId, err))

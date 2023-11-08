@@ -71,7 +71,7 @@ func TestMonitorCommand_Run(t *testing.T) {
 			shutdownCh := make(chan struct{})
 
 			ui, cmd := testMonitorCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.ShutdownCh = shutdownCh
 
 			go func() {

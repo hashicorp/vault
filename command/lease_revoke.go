@@ -63,7 +63,7 @@ Usage: vault lease revoke [options] ID
 }
 
 func (c *LeaseRevokeCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -89,7 +89,7 @@ func (c *LeaseRevokeCommand) Flags() *FlagSets {
 		Name:    "sync",
 		Target:  &c.flagSync,
 		Default: false,
-		Usage: "Force a synchronous operation; on failure it is up to the client " +
+		Usage: "Force a synchronous operation; on failure it is up to the ApiClient " +
 			"to retry.",
 	})
 
@@ -143,7 +143,7 @@ func (c *LeaseRevokeCommand) Run(args []string) int {
 	}
 
 	if c.flagForce {
-		c.UI.Warn(wrapAtLength("Warning! Force-removing leases can cause Vault " +
+		c.UI.Warn(WrapAtLength("Warning! Force-removing leases can cause Vault " +
 			"to become out of sync with secret engines!"))
 	}
 

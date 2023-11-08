@@ -63,7 +63,7 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsMoveCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -85,7 +85,7 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsMoveCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/", "generic/",
@@ -117,7 +117,7 @@ func TestSecretsMoveCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsMoveCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/", "generic/",

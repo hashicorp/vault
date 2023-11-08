@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hashicorp/vault/command-server/server"
+
 	"github.com/go-test/deep"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
 )

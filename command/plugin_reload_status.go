@@ -39,7 +39,7 @@ Usage: vault plugin reload-status RELOAD_ID
 }
 
 func (c *PluginReloadStatusCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *PluginReloadStatusCommand) AutocompleteArgs() complete.Predictor {
@@ -91,6 +91,6 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 			s.Error == "",
 			s.Error))
 	}
-	c.UI.Output(tableOutput(out, nil))
+	c.UI.Output(TableOutput(out, nil))
 	return 0
 }

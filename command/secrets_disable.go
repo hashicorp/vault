@@ -42,7 +42,7 @@ Usage: vault secrets disable [options] PATH
 }
 
 func (c *SecretsDisableCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *SecretsDisableCommand) AutocompleteArgs() complete.Predictor {
@@ -77,7 +77,7 @@ func (c *SecretsDisableCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	path := ensureTrailingSlash(SanitizePath(args[0]))
 
 	if err := client.Sys().Unmount(path); err != nil {
 		c.UI.Error(fmt.Sprintf("Error disabling secrets engine at %s: %s", path, err))

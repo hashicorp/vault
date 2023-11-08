@@ -101,7 +101,7 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 				}
 
 				ui, cmd := testLeaseRevokeCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				tc.args = append(tc.args, secret.LeaseID)
 				code := cmd.Run(tc.args)
@@ -124,7 +124,7 @@ func TestLeaseRevokeCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testLeaseRevokeCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo/bar",

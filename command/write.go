@@ -76,7 +76,7 @@ Usage: vault write [options] PATH [DATA K=V...]
 }
 
 func (c *WriteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -127,7 +127,7 @@ func (c *WriteCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 
 	data, err := parseArgsData(stdin, args[1:])
 	if err != nil {
@@ -172,7 +172,7 @@ func handleWriteSecretOutput(c *BaseCommand, path string, secret *api.Secret, er
 			return 2
 		}
 	} else if c.getMFAValidationRequired(secret) {
-		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+		c.UI.Warn(WrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")
 	}

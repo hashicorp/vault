@@ -62,7 +62,7 @@ func assertNoTabs(tb testing.TB, c cli.Command) {
 }
 
 // testVaultServer creates a test vault cluster and returns a configured API
-// client and closer function.
+// ApiClient and closer function.
 func testVaultServer(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
@@ -125,16 +125,16 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
-		CredentialBackends: credentialBackends,
-		AuditBackends:      auditBackends,
-		LogicalBackends:    logicalBackends,
+		CredentialBackends: CredentialBackends,
+		AuditBackends:      AuditBackends,
+		LogicalBackends:    LogicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
 	})
 	return client, closer
 }
 
 // testVaultServerAutoUnseal creates a test vault cluster and sets it up with auto unseal
-// the function returns a client, the recovery keys, and a closer function
+// the function returns a ApiClient, the recovery keys, and a closer function
 func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	testSeal, _ := seal.NewTestSeal(nil)
 	autoSeal := vault.NewAutoSeal(testSeal)
@@ -142,7 +142,7 @@ func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
 }
 
 // testVaultServerUnseal creates a test vault cluster and returns a configured
-// API client, list of unseal keys (as strings), and a closer function.
+// API ApiClient, list of unseal keys (as strings), and a closer function.
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", nil)
 }
@@ -164,7 +164,7 @@ func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string,
 }
 
 // testVaultServerUnseal creates a test vault cluster and returns a configured
-// API client, list of unseal keys (as strings), and a closer function
+// API ApiClient, list of unseal keys (as strings), and a closer function
 // configured with the given plugin directory.
 func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []string, func()) {
 	tb.Helper()
@@ -198,7 +198,7 @@ func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConf
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(benchhelpers.TBtoT(tb), core)
 
-	// Get the client already setup for us!
+	// Get the ApiClient already setup for us!
 	client := cluster.Cores[0].Client
 	client.SetToken(cluster.RootToken)
 

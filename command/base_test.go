@@ -61,7 +61,7 @@ func TestClient_FlagHeader(t *testing.T) {
 		}
 
 		if cli == nil {
-			t.Error("client should not be nil")
+			t.Error("ApiClient should not be nil")
 		}
 
 		actualHeaders := cli.Headers()

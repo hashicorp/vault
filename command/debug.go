@@ -37,7 +37,7 @@ const (
 	debugIndexVersion = 1
 
 	// debugMinInterval is the minimum acceptable interval capture value. This
-	// value applies to duration and all interval-related flags.
+	// value applies to duration and all interval-related FlagSets.
 	debugMinInterval = 5 * time.Second
 
 	// debugDurationGrace is the grace period added to duration to allow for
@@ -118,7 +118,7 @@ type DebugCommand struct {
 	serverStatusCollection      []map[string]interface{}
 	inFlightReqStatusCollection []map[string]interface{}
 
-	// cachedClient holds the client retrieved during preflight
+	// cachedClient holds the ApiClient retrieved during preflight
 	cachedClient *api.Client
 
 	// errLock is used to lock error capture into the index file
@@ -135,7 +135,7 @@ func (c *DebugCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *DebugCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -208,7 +208,7 @@ Usage: vault debug [options]
   Certain endpoints that this command uses require ACL permissions to access.
   If not permitted, the information from these endpoints will not be part of the
   output. The command uses the Vault address and token as specified via
-  the login command, environment variables, or CLI flags.
+  the login command, environment variables, or CLI FlagSets.
 
   To create a debug package using default duration and interval values in the 
   current directory that captures all applicable targets:
@@ -381,8 +381,8 @@ func (c *DebugCommand) generateIndex() error {
 	return nil
 }
 
-// preflight performs various checks against the provided flags to ensure they
-// are valid/reasonable values. It also takes care of instantiating a client and
+// preflight performs various checks against the provided FlagSets to ensure they
+// are valid/reasonable values. It also takes care of instantiating a ApiClient and
 // index object for use by the command.
 func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	if !c.skipTimingChecks {
@@ -426,7 +426,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	// Make sure we can talk to the server
 	client, err := c.Client()
 	if err != nil {
-		return "", fmt.Errorf("unable to create client to connect to Vault: %s", err)
+		return "", fmt.Errorf("unable to create ApiClient to connect to Vault: %s", err)
 	}
 	serverHealth, err := client.Sys().Health()
 	if err != nil {
@@ -1074,7 +1074,7 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	}
 	defer out.Close()
 
-	// Create Monitor specific client based on the cached client
+	// Create Monitor specific ApiClient based on the cached ApiClient
 	mClient, err := c.cachedClient.Clone()
 	if err != nil {
 		c.captureError("log", err)

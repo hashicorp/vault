@@ -45,7 +45,7 @@ Usage: vault auth disable [options] PATH
 }
 
 func (c *AuthDisableCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *AuthDisableCommand) AutocompleteArgs() complete.Predictor {
@@ -74,7 +74,7 @@ func (c *AuthDisableCommand) Run(args []string) int {
 		return 1
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	path := ensureTrailingSlash(SanitizePath(args[0]))
 
 	client, err := c.Client()
 	if err != nil {

@@ -63,7 +63,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testDeleteCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -91,7 +91,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testDeleteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/delete/foo",
@@ -119,7 +119,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testDeleteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/delete/foo",

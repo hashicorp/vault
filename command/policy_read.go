@@ -41,7 +41,7 @@ Usage: vault policy read [options] [NAME]
 }
 
 func (c *PolicyReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PolicyReadCommand) AutocompleteArgs() complete.Predictor {

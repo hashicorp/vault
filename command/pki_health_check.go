@@ -91,7 +91,7 @@ vault pki health-check command.
 }
 
 func (c *PKIHealthCheckCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
@@ -192,7 +192,7 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		return pkiRetUsage
 	}
 
-	// Setup the client and the executor.
+	// Setup the ApiClient and the executor.
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -206,7 +206,7 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		pkiPath = args[0]
 	}
 
-	mount := sanitizePath(pkiPath)
+	mount := SanitizePath(pkiPath)
 	executor := healthcheck.NewExecutor(client, mount)
 	executor.AddCheck(healthcheck.NewCAValidityPeriodCheck())
 	executor.AddCheck(healthcheck.NewCRLValidityPeriodCheck())
@@ -326,7 +326,7 @@ func (c *PKIHealthCheckCommand) outputResultsTable(e *healthcheck.Executor, resu
 			data = append(data, strings.Join(row, hopeDelim))
 		}
 
-		c.UI.Output(tableOutput(data, &columnize.Config{
+		c.UI.Output(TableOutput(data, &columnize.Config{
 			Delim: hopeDelim,
 		}))
 		c.UI.Output("\n")

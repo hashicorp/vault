@@ -202,7 +202,7 @@ func TestParseFlagFile(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.value, func(t *testing.T) {
-			content, err := parseFlagFile(tc.value)
+			content, err := ParseFlagFile(tc.value)
 			if err != nil {
 				t.Fatalf("unexpected error parsing flag value: %v", err)
 			}

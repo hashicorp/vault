@@ -39,29 +39,29 @@ var reRemoveWhitespace = regexp.MustCompile(`[\s]+`)
 type BaseCommand struct {
 	UI cli.Ui
 
-	flags     *FlagSets
+	FlagSets  *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress           string
-	flagAgentProxyAddress string
-	flagCACert            string
-	flagCAPath            string
-	flagClientCert        string
-	flagClientKey         string
+	FlagAddress           string
+	FlagAgentProxyAddress string
+	FlagCACert            string
+	FlagCAPath            string
+	FlagClientCert        string
+	FlagClientKey         string
 	flagNamespace         string
 	flagNS                string
 	flagPolicyOverride    bool
-	flagTLSServerName     string
-	flagTLSSkipVerify     bool
+	FlagTLSServerName     string
+	FlagTLSSkipVerify     bool
 	flagDisableRedirects  bool
 	flagWrapTTL           time.Duration
 	flagUnlockKey         string
 
-	flagFormat           string
+	FlagFormat           string
 	flagField            string
 	flagDetailed         bool
-	flagOutputCurlString bool
-	flagOutputPolicy     bool
+	FlagOutputCurlString bool
+	FlagOutputPolicy     bool
 	flagNonInteractive   bool
 	addrWarning          string
 
@@ -69,23 +69,23 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
-	tokenHelper token.TokenHelper
+	TkHelper token.TokenHelper
 
-	client *api.Client
+	ApiClient *api.Client
 }
 
-// Client returns the HTTP API client. The client is cached on the command to
+// Client returns the HTTP API ApiClient. The ApiClient is cached on the command to
 // save performance on future calls.
 func (c *BaseCommand) Client() (*api.Client, error) {
-	// Read the test client if present
-	if c.client != nil {
-		return c.client, nil
+	// Read the test ApiClient if present
+	if c.ApiClient != nil {
+		return c.ApiClient, nil
 	}
 
 	if c.addrWarning != "" && c.UI != nil {
 		if os.Getenv("VAULT_ADDR") == "" {
 			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
-				c.UI.Warn(wrapAtLength(c.addrWarning))
+				c.UI.Warn(WrapAtLength(c.addrWarning))
 			}
 		}
 	}
@@ -96,30 +96,30 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		return nil, errors.Wrap(err, "failed to read environment")
 	}
 
-	if c.flagAddress != "" {
-		config.Address = c.flagAddress
+	if c.FlagAddress != "" {
+		config.Address = c.FlagAddress
 	}
-	if c.flagAgentProxyAddress != "" {
-		config.Address = c.flagAgentProxyAddress
+	if c.FlagAgentProxyAddress != "" {
+		config.Address = c.FlagAgentProxyAddress
 	}
 
-	if c.flagOutputCurlString {
-		config.OutputCurlString = c.flagOutputCurlString
+	if c.FlagOutputCurlString {
+		config.OutputCurlString = c.FlagOutputCurlString
 	}
-	if c.flagOutputPolicy {
-		config.OutputPolicy = c.flagOutputPolicy
+	if c.FlagOutputPolicy {
+		config.OutputPolicy = c.FlagOutputPolicy
 	}
 
 	// If we need custom TLS configuration, then set it
-	if c.flagCACert != "" || c.flagCAPath != "" || c.flagClientCert != "" ||
-		c.flagClientKey != "" || c.flagTLSServerName != "" || c.flagTLSSkipVerify {
+	if c.FlagCACert != "" || c.FlagCAPath != "" || c.FlagClientCert != "" ||
+		c.FlagClientKey != "" || c.FlagTLSServerName != "" || c.FlagTLSSkipVerify {
 		t := &api.TLSConfig{
-			CACert:        c.flagCACert,
-			CAPath:        c.flagCAPath,
-			ClientCert:    c.flagClientCert,
-			ClientKey:     c.flagClientKey,
-			TLSServerName: c.flagTLSServerName,
-			Insecure:      c.flagTLSSkipVerify,
+			CACert:        c.FlagCACert,
+			CAPath:        c.FlagCAPath,
+			ClientCert:    c.FlagClientCert,
+			ClientKey:     c.FlagClientKey,
+			TLSServerName: c.FlagTLSServerName,
+			Insecure:      c.FlagTLSSkipVerify,
 		}
 
 		// Setup TLS config
@@ -128,10 +128,10 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		}
 	}
 
-	// Build the client
+	// Build the ApiClient
 	client, err := api.NewClient(config)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create client")
+		return nil, errors.Wrap(err, "failed to create ApiClient")
 	}
 
 	// Turn off retries on the CLI
@@ -165,7 +165,7 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	client.SetMFACreds(c.flagMFA)
 
 	// flagNS takes precedence over flagNamespace. After resolution, point both
-	// flags to the same value to be able to use them interchangeably anywhere.
+	// FlagSets to the same value to be able to use them interchangeably anywhere.
 	if c.flagNS != notSetValue {
 		c.flagNamespace = c.flagNS
 	}
@@ -193,25 +193,25 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		}
 	}
 
-	c.client = client
+	c.ApiClient = client
 
 	return client, nil
 }
 
 // SetAddress sets the token helper on the command; useful for the demo server and other outside cases.
 func (c *BaseCommand) SetAddress(addr string) {
-	c.flagAddress = addr
+	c.FlagAddress = addr
 }
 
 // SetTokenHelper sets the token helper on the command.
 func (c *BaseCommand) SetTokenHelper(th token.TokenHelper) {
-	c.tokenHelper = th
+	c.TkHelper = th
 }
 
 // TokenHelper returns the token helper attached to the command.
 func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
-	if c.tokenHelper != nil {
-		return c.tokenHelper, nil
+	if c.TkHelper != nil {
+		return c.TkHelper, nil
 	}
 
 	helper, err := DefaultTokenHelper()
@@ -309,9 +309,9 @@ const (
 	FlagSetOutputDetailed
 )
 
-// flagSet creates the flags for this command. The result is cached on the
+// FlagSet creates the FlagSets for this command. The result is cached on the
 // command to save performance on future calls.
-func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
+func (c *BaseCommand) FlagSet(bit FlagSetBit) *FlagSets {
 	c.flagsOnce.Do(func() {
 		set := NewFlagSets(c.UI)
 
@@ -324,15 +324,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f := set.NewFlagSet("HTTP Options")
 
 			addrStringVar := &StringVar{
-				Name:       flagNameAddress,
-				Target:     &c.flagAddress,
+				Name:       FlagNameAddress,
+				Target:     &c.FlagAddress,
 				EnvVar:     api.EnvVaultAddress,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
 
-			if c.flagAddress != "" {
-				addrStringVar.Default = c.flagAddress
+			if c.FlagAddress != "" {
+				addrStringVar.Default = c.FlagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
 				c.addrWarning = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
@@ -341,7 +341,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
-				Target:     &c.flagAgentProxyAddress,
+				Target:     &c.FlagAgentProxyAddress,
 				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
@@ -349,8 +349,8 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(agentAddrStringVar)
 
 			f.StringVar(&StringVar{
-				Name:       flagNameCACert,
-				Target:     &c.flagCACert,
+				Name:       FlagNameCACert,
+				Target:     &c.FlagCACert,
 				Default:    "",
 				EnvVar:     api.EnvVaultCACert,
 				Completion: complete.PredictFiles("*"),
@@ -360,8 +360,8 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       flagNameCAPath,
-				Target:     &c.flagCAPath,
+				Name:       FlagNameCAPath,
+				Target:     &c.FlagCAPath,
 				Default:    "",
 				EnvVar:     api.EnvVaultCAPath,
 				Completion: complete.PredictDirs("*"),
@@ -370,24 +370,24 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       flagNameClientCert,
-				Target:     &c.flagClientCert,
+				Name:       FlagNameClientCert,
+				Target:     &c.FlagClientCert,
 				Default:    "",
 				EnvVar:     api.EnvVaultClientCert,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded CA " +
 					"certificate to use for TLS authentication to the Vault server. If " +
-					"this flag is specified, -client-key is also required.",
+					"this flag is specified, -ApiClient-key is also required.",
 			})
 
 			f.StringVar(&StringVar{
-				Name:       flagNameClientKey,
-				Target:     &c.flagClientKey,
+				Name:       FlagNameClientKey,
+				Target:     &c.FlagClientKey,
 				Default:    "",
 				EnvVar:     api.EnvVaultClientKey,
 				Completion: complete.PredictFiles("*"),
 				Usage: "Path on the local disk to a single PEM-encoded private key " +
-					"matching the client certificate from -client-cert.",
+					"matching the ApiClient certificate from -ApiClient-cert.",
 			})
 
 			f.StringVar(&StringVar{
@@ -411,8 +411,8 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.StringVar(&StringVar{
-				Name:       flagTLSServerName,
-				Target:     &c.flagTLSServerName,
+				Name:       FlagTLSServerName,
+				Target:     &c.FlagTLSServerName,
 				Default:    "",
 				EnvVar:     api.EnvVaultTLSServerName,
 				Completion: complete.PredictAnything,
@@ -421,8 +421,8 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
-				Name:    flagNameTLSSkipVerify,
-				Target:  &c.flagTLSSkipVerify,
+				Name:    FlagNameTLSSkipVerify,
+				Target:  &c.FlagTLSSkipVerify,
 				Default: false,
 				EnvVar:  api.EnvVaultSkipVerify,
 				Usage: "Disable verification of TLS certificates. Using this option " +
@@ -435,7 +435,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Target:  &c.flagDisableRedirects,
 				Default: false,
 				EnvVar:  api.EnvVaultDisableRedirects,
-				Usage: "Disable the default client behavior, which honors a single " +
+				Usage: "Disable the default ApiClient behavior, which honors a single " +
 					"redirect response from a request",
 			})
 
@@ -470,7 +470,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			f.BoolVar(&BoolVar{
 				Name:    "output-curl-string",
-				Target:  &c.flagOutputCurlString,
+				Target:  &c.FlagOutputCurlString,
 				Default: false,
 				Usage: "Instead of executing the request, print an equivalent cURL " +
 					"command string and exit.",
@@ -478,7 +478,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			f.BoolVar(&BoolVar{
 				Name:    "output-policy",
-				Target:  &c.flagOutputPolicy,
+				Target:  &c.FlagOutputPolicy,
 				Default: false,
 				Usage: "Instead of executing the request, print an example HCL " +
 					"policy that would be required to run this command, and exit.",
@@ -529,7 +529,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			if bit&FlagSetOutputFormat != 0 {
 				outputSet.StringVar(&StringVar{
 					Name:       "format",
-					Target:     &c.flagFormat,
+					Target:     &c.FlagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
 					Completion: complete.PredictSet("table", "json", "yaml", "pretty", "raw"),
@@ -550,16 +550,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			}
 		}
 
-		c.flags = set
+		c.FlagSets = set
 	})
 
-	return c.flags
+	return c.FlagSets
 }
 
 // FlagSets is a group of flag sets.
 type FlagSets struct {
 	flagSets    []*FlagSet
-	mainSet     *flag.FlagSet
+	MainSet     *flag.FlagSet
 	hiddens     map[string]struct{}
 	completions complete.Flags
 	ui          cli.Ui
@@ -575,7 +575,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 
 	return &FlagSets{
 		flagSets:    make([]*FlagSet, 0, 6),
-		mainSet:     mainSet,
+		MainSet:     mainSet,
 		hiddens:     make(map[string]struct{}),
 		completions: complete.Flags{},
 		ui:          ui,
@@ -585,7 +585,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 // NewFlagSet creates a new flag set from the given flag sets.
 func (f *FlagSets) NewFlagSet(name string) *FlagSet {
 	flagSet := NewFlagSet(name)
-	flagSet.mainSet = f.mainSet
+	flagSet.mainSet = f.MainSet
 	flagSet.completions = f.completions
 	f.flagSets = append(f.flagSets, flagSet)
 	return flagSet
@@ -602,10 +602,10 @@ type (
 	DisableDisplayFlagWarning bool
 )
 
-// Parse parses the given flags, returning any errors.
+// Parse parses the given FlagSets, returning any errors.
 // Warnings, if any, regarding the arguments format are sent to stdout
 func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
-	err := f.mainSet.Parse(args)
+	err := f.MainSet.Parse(args)
 
 	displayFlagWarningsDisabled := false
 	for _, opt := range opts {
@@ -628,20 +628,20 @@ func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	return generateFlagErrors(f, opts...)
 }
 
-// Parsed reports whether the command-line flags have been parsed.
+// Parsed reports whether the command-line FlagSets have been parsed.
 func (f *FlagSets) Parsed() bool {
-	return f.mainSet.Parsed()
+	return f.MainSet.Parsed()
 }
 
 // Args returns the remaining args after parsing.
 func (f *FlagSets) Args() []string {
-	return f.mainSet.Args()
+	return f.MainSet.Args()
 }
 
-// Visit visits the flags in lexicographical order, calling fn for each. It
-// visits only those flags that have been set.
+// Visit visits the FlagSets in lexicographical order, calling fn for each. It
+// visits only those FlagSets that have been set.
 func (f *FlagSets) Visit(fn func(*flag.Flag)) {
-	f.mainSet.Visit(fn)
+	f.MainSet.Visit(fn)
 }
 
 // Help builds custom help for this command, grouping by flag set.
@@ -651,7 +651,7 @@ func (f *FlagSets) Help() string {
 	for _, set := range f.flagSets {
 		printFlagTitle(&out, set.name+":")
 		set.VisitAll(func(f *flag.Flag) {
-			// Skip any hidden flags
+			// Skip any hidden FlagSets
 			if v, ok := f.Value.(FlagVisibility); ok && v.Hidden() {
 				return
 			}

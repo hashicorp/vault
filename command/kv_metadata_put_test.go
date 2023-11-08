@@ -36,7 +36,7 @@ func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 	}
 
 	ui, cmd := testKVMetadataPutCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Set a limit of 1s first.
 	code := cmd.Run([]string{"-delete-version-after=1s", basePath + "secret/my-secret"})
@@ -61,7 +61,7 @@ func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 
 	// Now verify that we can return it to 0s.
 	ui, cmd = testKVMetadataPutCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Set a limit of 1s first.
 	code = cmd.Run([]string{"-delete-version-after=0", basePath + "secret/my-secret"})
@@ -97,7 +97,7 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	}
 
 	ui, cmd := testKVMetadataPutCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	exitStatus := cmd.Run([]string{"-custom-metadata=foo=abc", "-custom-metadata=bar=123", secretPath})
 
@@ -129,7 +129,7 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	}
 
 	ui, cmd = testKVMetadataPutCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Overwrite entire custom metadata with a single key
 	exitStatus = cmd.Run([]string{"-custom-metadata=baz=abc123", secretPath})
@@ -173,7 +173,7 @@ func TestKvMetadataPutCommand_UnprovidedFlags(t *testing.T) {
 	}
 
 	_, cmd := testKVMetadataPutCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	args := []string{"-cas-required=true", "-max-versions=10", secretPath}
 	code, _ := kvMetadataPutWithRetry(t, client, args, nil)

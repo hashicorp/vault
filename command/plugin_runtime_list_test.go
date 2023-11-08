@@ -70,7 +70,7 @@ func TestPluginRuntimeListCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPluginRuntimeListCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -93,7 +93,7 @@ func TestPluginRuntimeListCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPluginRuntimeListCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{"-type=container"})
 		if exp := 2; code != exp {

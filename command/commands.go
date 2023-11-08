@@ -97,27 +97,27 @@ const (
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
 
-	// flagNameAddress is the flag used in the base command to read in the
+	// FlagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
-	flagNameAddress = "address"
+	FlagNameAddress = "address"
 	// flagnameCACert is the flag used in the base command to read in the CA
 	// cert.
-	flagNameCACert = "ca-cert"
+	FlagNameCACert = "ca-cert"
 	// flagnameCAPath is the flag used in the base command to read in the CA
 	// cert path.
-	flagNameCAPath = "ca-path"
-	// flagNameClientCert is the flag used in the base command to read in the
-	// client key
-	flagNameClientKey = "client-key"
-	// flagNameClientCert is the flag used in the base command to read in the
-	// client cert
-	flagNameClientCert = "client-cert"
-	// flagNameTLSSkipVerify is the flag used in the base command to read in
+	FlagNameCAPath = "ca-path"
+	// FlagNameClientCert is the flag used in the base command to read in the
+	// ApiClient key
+	FlagNameClientKey = "ApiClient-key"
+	// FlagNameClientCert is the flag used in the base command to read in the
+	// ApiClient cert
+	FlagNameClientCert = "ApiClient-cert"
+	// FlagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
-	flagNameTLSSkipVerify = "tls-skip-verify"
-	// flagTLSServerName is the flag used in the base command to read in
+	FlagNameTLSSkipVerify = "tls-skip-verify"
+	// FlagTLSServerName is the flag used in the base command to read in
 	// the TLS server name.
-	flagTLSServerName = "tls-server-name"
+	FlagTLSServerName = "tls-server-name"
 	// flagNameAuditNonHMACRequestKeys is the flag name used for auth/secrets enable
 	flagNameAuditNonHMACRequestKeys = "audit-non-hmac-request-keys"
 	// flagNameAuditNonHMACResponseKeys is the flag name used for auth/secrets enable
@@ -144,7 +144,7 @@ const (
 	flagNameUserLockoutCounterResetDuration = "user-lockout-counter-reset-duration"
 	// flagNameUserLockoutDisable is the flag name used for tuning the auth mount disable lockout parameter
 	flagNameUserLockoutDisable = "user-lockout-disable"
-	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	// flagNameDisableRedirects is used to prevent the ApiClient from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
 	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
 	flagNameCombineLogs = "combine-logs"
@@ -164,17 +164,17 @@ const (
 )
 
 var (
-	auditBackends = map[string]audit.Factory{
+	AuditBackends = map[string]audit.Factory{
 		"file":   auditFile.Factory,
 		"socket": auditSocket.Factory,
 		"syslog": auditSyslog.Factory,
 	}
 
-	credentialBackends = map[string]logical.Factory{
+	CredentialBackends = map[string]logical.Factory{
 		"plugin": plugin.Factory,
 	}
 
-	logicalBackends = map[string]logical.Factory{
+	LogicalBackends = map[string]logical.Factory{
 		"plugin":   plugin.Factory,
 		"database": logicalDb.Factory,
 		// This is also available in the plugin catalog, but is here due to the need to
@@ -182,7 +182,7 @@ var (
 		"kv": logicalKv.Factory,
 	}
 
-	physicalBackends = map[string]physical.Factory{
+	PhysicalBackends = map[string]physical.Factory{
 		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
@@ -213,7 +213,7 @@ var (
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
 
-	serviceRegistrations = map[string]sr.Factory{
+	ServiceRegistrations = map[string]sr.Factory{
 		"consul":     csr.NewServiceRegistration,
 		"kubernetes": ksr.NewServiceRegistration,
 	}
@@ -242,31 +242,17 @@ var (
 	}
 )
 
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
+func InitCommands(ui cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:          ui,
-			tokenHelper: runOpts.TokenHelper,
-			flagAddress: runOpts.Address,
-			client:      runOpts.Client,
+			TkHelper:    runOpts.TokenHelper,
+			FlagAddress: runOpts.Address,
+			ApiClient:   runOpts.Client,
 		}
 	}
 
 	commands := map[string]cli.CommandFactory{
-		"agent": func() (cli.Command, error) {
-			return &AgentCommand{
-				BaseCommand: &BaseCommand{
-					UI: serverCmdUi,
-				},
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
-			}, nil
-		},
-		"agent generate-config": func() (cli.Command, error) {
-			return &AgentGenerateConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"audit": func() (cli.Command, error) {
 			return &AuditCommand{
 				BaseCommand: getBaseCommand(),
@@ -410,128 +396,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator": func() (cli.Command, error) {
-			return &OperatorCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator diagnose": func() (cli.Command, error) {
-			return &OperatorDiagnoseCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator generate-root": func() (cli.Command, error) {
-			return &OperatorGenerateRootCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator init": func() (cli.Command, error) {
-			return &OperatorInitCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator key-status": func() (cli.Command, error) {
-			return &OperatorKeyStatusCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator migrate": func() (cli.Command, error) {
-			return &OperatorMigrateCommand{
-				BaseCommand:      getBaseCommand(),
-				PhysicalBackends: physicalBackends,
-				ShutdownCh:       MakeShutdownCh(),
-			}, nil
-		},
-		"operator raft": func() (cli.Command, error) {
-			return &OperatorRaftCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot get-config": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotGetConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot set-config": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotSetConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot state": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotStateCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft list-peers": func() (cli.Command, error) {
-			return &OperatorRaftListPeersCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft join": func() (cli.Command, error) {
-			return &OperatorRaftJoinCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft remove-peer": func() (cli.Command, error) {
-			return &OperatorRaftRemovePeerCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot inspect": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotInspectCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot restore": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotRestoreCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot save": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotSaveCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator rekey": func() (cli.Command, error) {
-			return &OperatorRekeyCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator rotate": func() (cli.Command, error) {
-			return &OperatorRotateCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator seal": func() (cli.Command, error) {
-			return &OperatorSealCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator step-down": func() (cli.Command, error) {
-			return &OperatorStepDownCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator usage": func() (cli.Command, error) {
-			return &OperatorUsageCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator unseal": func() (cli.Command, error) {
-			return &OperatorUnsealCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator members": func() (cli.Command, error) {
-			return &OperatorMembersCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"patch": func() (cli.Command, error) {
 			return &PatchCommand{
 				BaseCommand: getBaseCommand(),
@@ -632,15 +496,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"proxy": func() (cli.Command, error) {
-			return &ProxyCommand{
-				BaseCommand: &BaseCommand{
-					UI: serverCmdUi,
-				},
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
-			}, nil
-		},
 		"policy": func() (cli.Command, error) {
 			return &PolicyCommand{
 				BaseCommand: getBaseCommand(),
@@ -714,25 +569,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		"secrets tune": func() (cli.Command, error) {
 			return &SecretsTuneCommand{
 				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"server": func() (cli.Command, error) {
-			return &ServerCommand{
-				BaseCommand: &BaseCommand{
-					UI:          serverCmdUi,
-					tokenHelper: runOpts.TokenHelper,
-					flagAddress: runOpts.Address,
-				},
-				AuditBackends:      auditBackends,
-				CredentialBackends: credentialBackends,
-				LogicalBackends:    logicalBackends,
-				PhysicalBackends:   physicalBackends,
-
-				ServiceRegistrations: serviceRegistrations,
-
-				ShutdownCh: MakeShutdownCh(),
-				SighupCh:   MakeSighupCh(),
-				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {
@@ -909,7 +745,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 	}
 
-	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	return commands
 }
 

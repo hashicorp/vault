@@ -47,7 +47,7 @@ Usage: vault plugin runtime deregister [options] NAME
 }
 
 func (c *PluginRuntimeDeregisterCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 

@@ -51,7 +51,7 @@ func TestPolicyListCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPolicyListCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -73,7 +73,7 @@ func TestPolicyListCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyListCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 0; code != exp {
@@ -94,7 +94,7 @@ func TestPolicyListCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyListCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 2; code != exp {

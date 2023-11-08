@@ -33,7 +33,7 @@ func TestVersionCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testVersionCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run(nil)
 		if exp := 0; code != exp {

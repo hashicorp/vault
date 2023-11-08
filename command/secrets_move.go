@@ -60,7 +60,7 @@ Usage: vault secrets move [options] SOURCE DESTINATION
 }
 
 func (c *SecretsMoveCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *SecretsMoveCommand) AutocompleteArgs() complete.Predictor {

@@ -76,7 +76,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPolicyWriteCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -111,7 +111,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy", f.Name(),
@@ -151,7 +151,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -185,7 +185,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy", "-",

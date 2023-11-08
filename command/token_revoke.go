@@ -57,7 +57,7 @@ Usage: vault token revoke [options] [TOKEN | ACCESSOR]
 }
 
 func (c *TokenRevokeCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

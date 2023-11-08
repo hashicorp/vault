@@ -66,7 +66,7 @@ Usage: vault token create [options]
 }
 
 func (c *TokenCreateCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 

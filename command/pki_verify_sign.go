@@ -57,7 +57,7 @@ Usage: vault pki verify-sign POSSIBLE-ISSUER POSSIBLE-ISSUED
 }
 
 func (c *PKIVerifySignCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	return set
 }
 
@@ -88,12 +88,12 @@ func (c *PKIVerifySignCommand) Run(args []string) int {
 		return 1
 	}
 
-	issuer := sanitizePath(args[0])
-	issued := sanitizePath(args[1])
+	issuer := SanitizePath(args[0])
+	issued := SanitizePath(args[1])
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain ApiClient: %s", err))
 		return 1
 	}
 
@@ -280,7 +280,7 @@ func (c *PKIVerifySignCommand) outputResultsTable(results map[string]bool, poten
 		row := field + hopeDelim + strconv.FormatBool(finding)
 		data = append(data, row)
 	}
-	c.UI.Output(tableOutput(data, &columnize.Config{
+	c.UI.Output(TableOutput(data, &columnize.Config{
 		Delim: hopeDelim,
 	}))
 	c.UI.Output("\n")

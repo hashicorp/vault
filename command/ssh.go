@@ -86,7 +86,7 @@ Usage: vault ssh [options] username@ip [ssh options]
 }
 
 func (c *SSHCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("SSH Options")
 
@@ -280,7 +280,7 @@ func (c *SSHCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Set the client in the command
+	// Set the ApiClient in the command
 	_, err = c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -294,7 +294,7 @@ func (c *SSHCommand) Run(args []string) int {
 	//
 	// TODO: remove in 0.9.0, convert to validation error
 	if c.flagRole == "" {
-		c.UI.Warn(wrapAtLength(
+		c.UI.Warn(WrapAtLength(
 			"WARNING: No -role specified. Use -role to tell Vault which ssh role " +
 				"to use for authentication. In the future, you will need to tell " +
 				"Vault which role to use. For now, Vault will attempt to guess based " +
@@ -318,7 +318,7 @@ func (c *SSHCommand) Run(args []string) int {
 	//
 	// TODO: remove in 0.9.0, convert to validation error
 	if c.flagMode == "" {
-		c.UI.Warn(wrapAtLength(
+		c.UI.Warn(WrapAtLength(
 			"WARNING: No -mode specified. Use -mode to tell Vault which ssh " +
 				"authentication mode to use. In the future, you will need to tell " +
 				"Vault which mode to use. For now, Vault will attempt to guess based " +
@@ -344,7 +344,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Revoke the secret, since the child functions will generate their own
 		// credential. Users wishing to avoid this should specify -mode.
 		if secret != nil {
-			if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+			if err := c.ApiClient.Sys().Revoke(secret.LeaseID); err != nil {
 				c.UI.Warn(fmt.Sprintf("Failed to revoke temporary key: %s", err))
 			}
 		}
@@ -373,7 +373,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		return 1
 	}
 
-	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
+	sshClient := c.ApiClient.SSHWithMountPoint(c.flagMountPoint)
 
 	principals := username
 	if c.flagValidPrincipals != "" {
@@ -432,7 +432,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 	// download the public key, trust it with the given domains, and use that
 	// instead of the user's regular known_hosts file.
 	if c.flagHostKeyMountPoint != "" {
-		secret, err := c.client.Logical().Read(c.flagHostKeyMountPoint + "/config/ca")
+		secret, err := c.ApiClient.Logical().Read(c.flagHostKeyMountPoint + "/config/ca")
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to get host signing key: %s", err))
 			return 2
@@ -529,7 +529,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 
 	var cmd *exec.Cmd
 
-	// Check if the application 'sshpass' is installed in the client machine. If
+	// Check if the application 'sshpass' is installed in the ApiClient machine. If
 	// it is then, use it to automate typing in OTP to the prompt. Unfortunately,
 	// it was not possible to automate it without a third-party application, with
 	// only the Go libraries. Feel free to try and remove this dependency.
@@ -539,8 +539,8 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 
 	sshpassPath, err := exec.LookPath("sshpass")
 	if err != nil {
-		// No sshpass available so using normal ssh client
-		c.UI.Warn(wrapAtLength(
+		// No sshpass available so using normal ssh ApiClient
+		c.UI.Warn(WrapAtLength(
 			"Vault could not locate \"sshpass\". The OTP code for the session is " +
 				"displayed below. Enter this code in the SSH password prompt. If you " +
 				"install sshpass, Vault can automatically perform this step for you."))
@@ -598,7 +598,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	}
 
 	// Revoke the key if it's longer than expected
-	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+	if err := c.ApiClient.Sys().Revoke(secret.LeaseID); err != nil {
 		c.UI.Error(fmt.Sprintf("failed to revoke key: %s", err))
 		return 2
 	}
@@ -669,7 +669,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 	}
 
 	// Revoke the key if it's longer than expected
-	if err := c.client.Sys().Revoke(secret.LeaseID); err != nil {
+	if err := c.ApiClient.Sys().Revoke(secret.LeaseID); err != nil {
 		c.UI.Error(fmt.Sprintf("failed to revoke key: %s", err))
 		return 2
 	}
@@ -680,7 +680,7 @@ func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []stri
 // generateCredential generates a credential for the given role and returns the
 // decoded secret data.
 func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHCredentialResp, error) {
-	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
+	sshClient := c.ApiClient.SSHWithMountPoint(c.flagMountPoint)
 
 	// Attempt to generate the credential.
 	secret, err := sshClient.Credential(c.flagRole, map[string]interface{}{
@@ -751,7 +751,7 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	data := map[string]interface{}{
 		"ip": ip,
 	}
-	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
+	secret, err := c.ApiClient.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
 		return "", fmt.Errorf("error finding roles for IP %q: %w", ip, err)
 	}
@@ -798,7 +798,7 @@ func (c *SSHCommand) isSingleSSHArg(arg string) bool {
 }
 
 // Finds the hostname, username (optional) and port (optional) from any valid ssh command
-// Supports usrname@hostname but also specifying valid ssh flags like -o User=username,
+// Supports usrname@hostname but also specifying valid ssh FlagSets like -o User=username,
 // -o Port=2222 and -p 2222 anywhere in the command
 func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username string, port string, err error) {
 	lastArg := ""
@@ -882,7 +882,7 @@ func (c *SSHCommand) parseSSHCommand(args []string) (hostname string, username s
 }
 
 func (c *SSHCommand) resolveHostname(hostname string) (ip string, err error) {
-	// Resolving domain names to IP address on the client side.
+	// Resolving domain names to IP address on the ApiClient side.
 	// Vault only deals with IP addresses.
 	ipAddr, err := net.ResolveIPAddr("ip", hostname)
 	if err != nil {

@@ -52,7 +52,7 @@ Usage: vault secrets list [options]
 }
 
 func (c *SecretsListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -104,10 +104,10 @@ func (c *SecretsListCommand) Run(args []string) int {
 	switch Format(c.UI) {
 	case "table":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedMounts(mounts), nil))
+			c.UI.Output(TableOutput(c.detailedMounts(mounts), nil))
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleMounts(mounts), nil))
+		c.UI.Output(TableOutput(c.simpleMounts(mounts), nil))
 		return 0
 	default:
 		return OutputData(c.UI, mounts)

@@ -58,7 +58,7 @@ func kvPutWithRetry(t *testing.T, client *api.Client, args []string) (int, strin
 
 	return retryKVCommand(t, func() (int, string) {
 		ui, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run(args)
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
@@ -72,7 +72,7 @@ func kvPatchWithRetry(t *testing.T, client *api.Client, args []string, stdin *io
 
 	return retryKVCommand(t, func() (int, string) {
 		ui, cmd := testKVPatchCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if stdin != nil {
 			cmd.testStdin = stdin
@@ -231,7 +231,7 @@ func TestKVPutCommand(t *testing.T) {
 		}
 
 		ui, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		code = cmd.Run([]string{
 			"-cas", "1", "kv/write/cas", "bar=baz",
 		})
@@ -247,7 +247,7 @@ func TestKVPutCommand(t *testing.T) {
 		}
 
 		ui, cmd = testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		code = cmd.Run([]string{
 			"-cas", "1", "kv/write/cas", "bar=baz",
 		})
@@ -267,7 +267,7 @@ func TestKVPutCommand(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/write/data", "bar=baz",
@@ -281,7 +281,7 @@ func TestKVPutCommand(t *testing.T) {
 		}
 
 		ui, rcmd := testReadCommand(t)
-		rcmd.client = client
+		rcmd.ApiClient = client
 		code = rcmd.Run([]string{
 			"secret/write/data",
 		})
@@ -307,7 +307,7 @@ func TestKVPutCommand(t *testing.T) {
 		}()
 
 		_, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -342,7 +342,7 @@ func TestKVPutCommand(t *testing.T) {
 		}()
 
 		_, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -371,7 +371,7 @@ func TestKVPutCommand(t *testing.T) {
 		defer closer()
 
 		_, cmd := testKVPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/write/integration", "foo=bar", "zip=zap",
@@ -567,7 +567,7 @@ func TestKVGetCommand(t *testing.T) {
 				}
 
 				ui, cmd := testKVGetCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -700,7 +700,7 @@ func TestKVListCommand(t *testing.T) {
 				}
 
 				ui, cmd := testKVListCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(testCase.args)
 				if code != testCase.code {
@@ -826,7 +826,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				}
 
 				ui, cmd := testKVMetadataGetCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -1654,7 +1654,7 @@ func TestKVUndeleteCommand(t *testing.T) {
 				}
 
 				ui, cmd := testKVUndeleteCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {

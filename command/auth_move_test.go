@@ -64,7 +64,7 @@ func TestAuthMoveCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testAuthMoveCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -86,7 +86,7 @@ func TestAuthMoveCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthMoveCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
 			Type: "userpass",
@@ -124,7 +124,7 @@ func TestAuthMoveCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthMoveCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"auth/my-auth/", "auth/my-auth-2/",

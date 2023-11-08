@@ -44,7 +44,7 @@ Usage: vault policy delete [options] NAME
 }
 
 func (c *PolicyDeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *PolicyDeleteCommand) AutocompleteArgs() complete.Predictor {

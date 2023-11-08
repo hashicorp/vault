@@ -87,7 +87,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 				})
 
 				ui, cmd := testUnwrapCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				tc.args = append(tc.args, wrappedToken)
 				code := cmd.Run(tc.args)
@@ -110,7 +110,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testUnwrapCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo",
@@ -126,7 +126,7 @@ func TestUnwrapCommand_Run(t *testing.T) {
 		}
 	})
 
-	// This test needs its own client and server because it modifies the client
+	// This test needs its own ApiClient and server because it modifies the ApiClient
 	// to the wrapping token
 	t.Run("local_token", func(t *testing.T) {
 		t.Parallel()
@@ -139,8 +139,8 @@ func TestUnwrapCommand_Run(t *testing.T) {
 		})
 
 		ui, cmd := testUnwrapCommand(t)
-		cmd.client = client
-		cmd.client.SetToken(wrappedToken)
+		cmd.ApiClient = client
+		cmd.ApiClient.SetToken(wrappedToken)
 
 		// Intentionally don't pass the token here - it should use the local token
 		code := cmd.Run([]string{})

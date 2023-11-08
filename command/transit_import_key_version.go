@@ -42,7 +42,7 @@ Usage: vault transit import-version PATH KEY [...]
 }
 
 func (c *TransitImportVersionCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *TransitImportVersionCommand) AutocompleteArgs() complete.Predictor {

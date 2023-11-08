@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	server2 "github.com/hashicorp/vault/command-server/server"
+
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 
 	"github.com/armon/go-metrics"
@@ -44,7 +46,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -800,7 +801,7 @@ type CoreConfig struct {
 
 	DisableSealWrap bool
 
-	RawConfig *server.Config
+	RawConfig *server2.Config
 
 	ReloadFuncs     *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
@@ -924,7 +925,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	// Instantiate a non-nil raw config if none is provided
 	if conf.RawConfig == nil {
-		conf.RawConfig = new(server.Config)
+		conf.RawConfig = new(server2.Config)
 	}
 
 	// secureRandomReader cannot be nil
@@ -2479,7 +2480,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
+		if server2.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
 			// Set the migration done flag so that a seal-rewrap gets triggered later.
 			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 			// triggering the rewrap when necessary.
@@ -2901,7 +2902,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 				return err
 			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
-		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+		case configuredType == SealConfigTypeMultiseal && server2.IsMultisealSupported():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
@@ -3236,7 +3237,7 @@ func (c *Core) SetLogLevelByName(name string, level log.Level) bool {
 }
 
 // SetConfig sets core's config object to the newly provided config.
-func (c *Core) SetConfig(conf *server.Config) {
+func (c *Core) SetConfig(conf *server2.Config) {
 	c.rawConfig.Store(conf)
 	bz, err := json.Marshal(c.SanitizedConfig())
 	if err != nil {
@@ -3294,7 +3295,7 @@ func (c *Core) ReloadCustomResponseHeaders() error {
 	if conf == nil {
 		return fmt.Errorf("failed to load core raw config")
 	}
-	lns := conf.(*server.Config).Listeners
+	lns := conf.(*server2.Config).Listeners
 	if lns == nil {
 		return fmt.Errorf("no listener configured")
 	}
@@ -3315,13 +3316,13 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 	if conf == nil {
 		return nil
 	}
-	return conf.(*server.Config).Sanitized()
+	return conf.(*server2.Config).Sanitized()
 }
 
 // LogFormat returns the log format current in use.
 func (c *Core) LogFormat() string {
 	conf := c.rawConfig.Load()
-	return conf.(*server.Config).LogFormat
+	return conf.(*server2.Config).LogFormat
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env
@@ -3866,7 +3867,7 @@ func (c *Core) ReloadLogRequestsLevel() {
 		return
 	}
 
-	infoLevel := conf.(*server.Config).LogRequestsLevel
+	infoLevel := conf.(*server2.Config).LogRequestsLevel
 	switch {
 	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
 		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
@@ -3882,7 +3883,7 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 	}
 	c.introspectionEnabledLock.Lock()
 	defer c.introspectionEnabledLock.Unlock()
-	c.introspectionEnabled = conf.(*server.Config).EnableIntrospectionEndpoint
+	c.introspectionEnabled = conf.(*server2.Config).EnableIntrospectionEndpoint
 }
 
 type PeerNode struct {
@@ -4150,7 +4151,7 @@ func (c *Core) ListenerAddresses() ([]string, error) {
 		return nil, fmt.Errorf("failed to load core raw config")
 	}
 
-	listeners := conf.(*server.Config).Listeners
+	listeners := conf.(*server2.Config).Listeners
 	if listeners == nil {
 		return nil, fmt.Errorf("no listener configured")
 	}

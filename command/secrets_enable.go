@@ -86,7 +86,7 @@ Usage: vault secrets enable [options] TYPE
 }
 
 func (c *SecretsEnableCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

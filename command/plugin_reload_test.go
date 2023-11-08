@@ -67,7 +67,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testPluginReloadCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			args := append([]string{}, tc.args...)
 			code := cmd.Run(args)
@@ -95,7 +95,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginReloadCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
@@ -148,7 +148,7 @@ func TestPluginReloadStatusCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testPluginReloadCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			args := append([]string{}, tc.args...)
 			code := cmd.Run(args)

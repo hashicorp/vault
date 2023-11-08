@@ -48,7 +48,7 @@ Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterE
 }
 
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Subscribe Options")
 	f.StringVar(&StringVar{
 		Name: "filter",

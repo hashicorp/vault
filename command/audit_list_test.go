@@ -70,7 +70,7 @@ func TestAuditListCommand_Run(t *testing.T) {
 			}
 
 			ui, cmd := testAuditListCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -91,7 +91,7 @@ func TestAuditListCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuditListCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 2; code != exp {

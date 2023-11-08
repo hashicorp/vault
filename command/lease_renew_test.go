@@ -94,7 +94,7 @@ func TestLeaseRenewCommand_Run(t *testing.T) {
 				leaseID := testLeaseRenewCommandMountAndLease(t, client)
 
 				ui, cmd := testLeaseRenewCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				if tc.args != nil {
 					tc.args = append(tc.args, leaseID)
@@ -121,7 +121,7 @@ func TestLeaseRenewCommand_Run(t *testing.T) {
 		leaseID := testLeaseRenewCommandMountAndLease(t, client)
 
 		_, cmd := testLeaseRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{leaseID})
 		if exp := 0; code != exp {
@@ -136,7 +136,7 @@ func TestLeaseRenewCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testLeaseRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo/bar",

@@ -43,7 +43,7 @@ Usage: vault lease lookup ID
 }
 
 func (c *LeaseLookupCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	return set
 }

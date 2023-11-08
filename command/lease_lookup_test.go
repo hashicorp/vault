@@ -63,7 +63,7 @@ func TestLeaseLookupCommand_Run(t *testing.T) {
 		_ = testLeaseLookupCommandMountAndLease(t, client)
 
 		ui, cmd := testLeaseLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run(nil)
 		if exp := 1; code != exp {
@@ -86,7 +86,7 @@ func TestLeaseLookupCommand_Run(t *testing.T) {
 		leaseID := testLeaseLookupCommandMountAndLease(t, client)
 
 		_, cmd := testLeaseLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{leaseID})
 		if exp := 0; code != exp {

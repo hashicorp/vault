@@ -59,7 +59,7 @@ func TestPolicyFmtCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPolicyFmtCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -98,7 +98,7 @@ path "secret" {
 		defer closer()
 
 		_, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -141,7 +141,7 @@ path "secret" {
 		defer closer()
 
 		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -176,7 +176,7 @@ path "secret" {
 		defer closer()
 
 		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			f.Name(),
@@ -211,7 +211,7 @@ path "secret" {
 		defer closer()
 
 		ui, cmd := testPolicyFmtCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			f.Name(),

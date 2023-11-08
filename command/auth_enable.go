@@ -76,7 +76,7 @@ Usage: vault auth enable [options] TYPE
 }
 
 func (c *AuthEnableCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

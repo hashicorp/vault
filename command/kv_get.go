@@ -49,14 +49,14 @@ Usage: vault kv get [options] KEY
 
       $ vault kv get -mount=secret -version=1 foo
 
-  Additional flags and more advanced use cases are detailed below.
+  Additional FlagSets and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
 func (c *KVGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -129,7 +129,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		mountPath, v2, err = IsKVv2(SanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -141,7 +141,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		mountPath, v2, err = isKVv2(partialPath, client)
+		mountPath, v2, err = IsKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -152,7 +152,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	var fullPath string
 	// Add /data to v2 paths only
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
+		fullPath = AddPrefixToKVPath(partialPath, mountPath, "data", false)
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{
@@ -206,7 +206,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	}
 
 	// If we have wrap info print the secret normally.
-	if secret.WrapInfo != nil || c.flagFormat != "table" {
+	if secret.WrapInfo != nil || c.FlagFormat != "table" {
 		return OutputSecret(c.UI, secret)
 	}
 

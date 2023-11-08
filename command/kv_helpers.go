@@ -119,7 +119,7 @@ allow read access to that path in the format 'mount-path/data/foo', not just 'mo
 	return mountPath, 1, nil
 }
 
-func isKVv2(path string, client *api.Client) (string, bool, error) {
+func IsKVv2(path string, client *api.Client) (string, bool, error) {
 	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
 		return "", false, err
@@ -128,7 +128,7 @@ func isKVv2(path string, client *api.Client) (string, bool, error) {
 	return mountPath, version == 2, nil
 }
 
-func addPrefixToKVPath(path, mountPath, apiPrefix string, skipIfExists bool) string {
+func AddPrefixToKVPath(path, mountPath, apiPrefix string, skipIfExists bool) string {
 	if path == mountPath || path == strings.TrimSuffix(mountPath, "/") {
 		return paths.Join(mountPath, apiPrefix)
 	}
@@ -206,11 +206,11 @@ func padEqualSigns(header string, totalLen int) string {
 	return fmt.Sprintf("%s %s %s", strings.Repeat("=", equalSigns/2), header, strings.Repeat("=", equalSigns/2))
 }
 
-// walkSecretsTree dfs-traverses the secrets tree rooted at the given path
+// WalkSecretsTree dfs-traverses the secrets tree rooted at the given path
 // and calls the `visit` functor for each of the directory and leaf paths.
 // Note: for kv-v2, a "metadata" path is expected and "metadata" paths will be
 // returned in the visit functor.
-func walkSecretsTree(ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) error {
+func WalkSecretsTree(ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) error {
 	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
 		return fmt.Errorf("could not list %q path: %w", path, err)
@@ -254,7 +254,7 @@ func walkSecretsTree(ctx context.Context, client *api.Client, path string, visit
 			}
 
 			// this is not a leaf node: we need to go deeper...
-			if err := walkSecretsTree(ctx, client, child, visit); err != nil {
+			if err := WalkSecretsTree(ctx, client, child, visit); err != nil {
 				return err
 			}
 		} else {

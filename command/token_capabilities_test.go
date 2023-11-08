@@ -49,7 +49,7 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testTokenCapabilitiesCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -87,7 +87,7 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		ui, cmd := testTokenCapabilitiesCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			token, "secret/foo",
@@ -129,7 +129,7 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		client.SetToken(token)
 
 		ui, cmd := testTokenCapabilitiesCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/foo",
@@ -152,7 +152,7 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenCapabilitiesCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo", "bar",
@@ -175,7 +175,7 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		defer closer()
 
 		_, cmd := testTokenCapabilitiesCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/foo,secret/bar",

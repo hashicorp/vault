@@ -61,7 +61,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPluginInfoCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -89,7 +89,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginInfoCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			api.PluginTypeCredential.String(), pluginName,
@@ -128,7 +128,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				ui, cmd := testPluginInfoCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run([]string{
 					"-version=" + tc.version,
@@ -166,7 +166,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginInfoCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-field", "builtin",
@@ -189,7 +189,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPluginInfoCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			api.PluginTypeCredential.String(), "my-plugin",

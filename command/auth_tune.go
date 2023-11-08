@@ -63,7 +63,7 @@ Usage: vault auth tune [options] PATH
 }
 
 func (c *AuthTuneCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -298,7 +298,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 	// Append /auth (since that's where auths live) and a trailing slash to
 	// indicate it's a path in output
-	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
+	mountPath := ensureTrailingSlash(SanitizePath(args[0]))
 
 	if err := client.Sys().TuneMount("/auth/"+mountPath, mountConfigInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning auth method %s: %s", mountPath, err))

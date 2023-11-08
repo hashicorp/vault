@@ -71,7 +71,7 @@ func TestPKIHC_AllGood(t *testing.T) {
 	}
 
 	path, err := url.Parse(client.Address())
-	require.NoError(t, err, "failed parsing client address")
+	require.NoError(t, err, "failed parsing ApiClient address")
 
 	if _, err := client.Logical().Write("pki/config/cluster", map[string]interface{}{
 		"path": path.JoinPath("/v1/", "pki/").String(),
@@ -271,7 +271,7 @@ func TestPKIHC_NoPerm(t *testing.T) {
 		t.Fatalf("failed to write auto-tidy config: %v", err)
 	}
 
-	// Remove client token.
+	// Remove ApiClient token.
 	client.ClearToken()
 
 	_, _, results := execPKIHC(t, client, true)

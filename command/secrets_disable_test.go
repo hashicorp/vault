@@ -70,7 +70,7 @@ func TestSecretsDisableCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsDisableCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -98,7 +98,7 @@ func TestSecretsDisableCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testSecretsDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-secret/",
@@ -130,7 +130,7 @@ func TestSecretsDisableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"pki/",

@@ -57,7 +57,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testAuthDisableCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -83,7 +83,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testAuthDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-auth",
@@ -115,7 +115,7 @@ func TestAuthDisableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-auth",

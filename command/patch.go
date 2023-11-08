@@ -68,7 +68,7 @@ Usage: vault patch [options] PATH [DATA K=V...]
 }
 
 func (c *PatchCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -119,7 +119,7 @@ func (c *PatchCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 
 	data, err := parseArgsData(stdin, args[1:])
 	if err != nil {

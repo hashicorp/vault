@@ -52,7 +52,7 @@ Usage: vault namespace patch [options] PATH
 }
 
 func (c *NamespacePatchCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 	f.StringMapVar(&StringMapVar{

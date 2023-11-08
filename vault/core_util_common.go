@@ -6,8 +6,9 @@ package vault
 import (
 	"context"
 
+	"github.com/hashicorp/vault/command-server/server"
+
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

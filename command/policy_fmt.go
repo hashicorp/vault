@@ -47,7 +47,7 @@ Usage: vault policy fmt [options] PATH
 }
 
 func (c *PolicyFmtCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetNone)
+	return c.FlagSet(FlagSetNone)
 }
 
 func (c *PolicyFmtCommand) AutocompleteArgs() complete.Predictor {

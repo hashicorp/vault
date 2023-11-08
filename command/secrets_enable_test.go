@@ -84,7 +84,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testSecretsEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -105,7 +105,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-path", "mount_integration/",
@@ -179,7 +179,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"pki",
@@ -255,7 +255,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			expectedResult := 0
 
 			ui, cmd := testSecretsEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			actualResult := cmd.Run([]string{
 				b,

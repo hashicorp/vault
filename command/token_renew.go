@@ -60,7 +60,7 @@ Usage: vault token renew [options] [TOKEN]
 }
 
 func (c *TokenRenewCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{

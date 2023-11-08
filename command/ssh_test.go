@@ -219,7 +219,7 @@ func TestIsSingleSSHArg(t *testing.T) {
 	}
 }
 
-// TestSSHCommandOmitFlagWarning checks if flags warning messages are printed
+// TestSSHCommandOmitFlagWarning checks if FlagSets warning messages are printed
 // in the output of the CLI command or not. If so, it will fail.
 func TestSSHCommandOmitFlagWarning(t *testing.T) {
 	t.Parallel()
@@ -229,7 +229,7 @@ func TestSSHCommandOmitFlagWarning(t *testing.T) {
 	_ = cmd.Run([]string{"-mode", "ca", "-role", "otp_key_role", "user@1.2.3.4", "-extraFlag", "bug"})
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-	if strings.Contains(combined, "Command flags must be provided before positional arguments. The following arguments will not be parsed as flags") {
+	if strings.Contains(combined, "Command FlagSets must be provided before positional arguments. The following arguments will not be parsed as FlagSets") {
 		t.Fatalf("ssh command displayed flag warnings")
 	}
 }

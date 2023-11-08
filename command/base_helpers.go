@@ -36,8 +36,8 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 	return i, ok
 }
 
-// sanitizePath removes any leading or trailing things from a "path".
-func sanitizePath(s string) string {
+// SanitizePath removes any leading or trailing things from a "path".
+func SanitizePath(s string) string {
 	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
 }
 
@@ -80,8 +80,8 @@ func ensureNoLeadingSlash(s string) string {
 	return s
 }
 
-// columnOutput prints the list of items as a table with no headers.
-func columnOutput(list []string, c *columnize.Config) string {
+// ColumnOutput prints the list of items as a table with no headers.
+func ColumnOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
 	}
@@ -99,9 +99,9 @@ func columnOutput(list []string, c *columnize.Config) string {
 	return columnize.Format(list, c)
 }
 
-// tableOutput prints the list of items as columns, where the first row is
+// TableOutput prints the list of items as columns, where the first row is
 // the list of headers.
-func tableOutput(list []string, c *columnize.Config) string {
+func TableOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
 	}
@@ -127,7 +127,7 @@ func tableOutput(list []string, c *columnize.Config) string {
 	copy(list[2:], list[1:])
 	list[1] = underline
 
-	return columnOutput(list, c)
+	return ColumnOutput(list, c)
 }
 
 // parseArgsData parses the given args in the format key=value into a map of
@@ -190,9 +190,9 @@ func truncateToSeconds(d time.Duration) int {
 	return int(d.Seconds())
 }
 
-// printKeyStatus prints the KeyStatus response from the API.
-func printKeyStatus(ks *api.KeyStatus) string {
-	return columnOutput([]string{
+// PrintKeyStatus prints the KeyStatus response from the API.
+func PrintKeyStatus(ks *api.KeyStatus) string {
+	return ColumnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
 		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
@@ -224,8 +224,8 @@ func wrapAtLengthWithPadding(s string, pad int) string {
 	return strings.Join(lines, "\n")
 }
 
-// wrapAtLength wraps the given text to maxLineLength.
-func wrapAtLength(s string) string {
+// WrapAtLength wraps the given text to maxLineLength.
+func WrapAtLength(s string) string {
 	return wrapAtLengthWithPadding(s, 0)
 }
 
@@ -279,10 +279,10 @@ func humanDurationInt(i interface{}) interface{} {
 	return i
 }
 
-// parseFlagFile accepts a flag value returns the contets of that value. If the
+// ParseFlagFile accepts a flag value returns the contets of that value. If the
 // value starts with '@', that indicates the value is a file and its content
 // should be read and returned. Otherwise, the raw value is returned.
-func parseFlagFile(raw string) (string, error) {
+func ParseFlagFile(raw string) (string, error) {
 	// check if the provided argument should be read from file
 	if len(raw) > 0 && raw[0] == '@' {
 		contents, err := ioutil.ReadFile(raw[1:])
@@ -319,8 +319,8 @@ func generateFlagWarnings(args []string) string {
 	}
 
 	if len(trailingFlags) > 0 {
-		return fmt.Sprintf("Command flags must be provided before positional arguments. "+
-			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+		return fmt.Sprintf("Command FlagSets must be provided before positional arguments. "+
+			"The following arguments will not be parsed as FlagSets: [%s]", strings.Join(trailingFlags, ","))
 	} else {
 		return ""
 	}

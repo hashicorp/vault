@@ -53,7 +53,7 @@ Usage: vault kv delete [options] PATH
 
   To delete all versions and metadata, see the "vault kv metadata" subcommand.
 
-  Additional flags and more advanced use cases are detailed below.
+  Additional FlagSets and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 
@@ -61,7 +61,7 @@ Usage: vault kv delete [options] PATH
 }
 
 func (c *KVDeleteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 	// Common Options
 	f := set.NewFlagSet("Common Options")
 
@@ -131,8 +131,8 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		partialPath = SanitizePath(args[0])
+		mountPath, v2, err = IsKVv2(SanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -144,8 +144,8 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
+		partialPath = SanitizePath(args[0])
+		mountPath, v2, err = IsKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -156,7 +156,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	var fullPath string
 	if v2 {
 		secret, err = c.deleteV2(partialPath, mountPath, client)
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
+		fullPath = AddPrefixToKVPath(partialPath, mountPath, "data", false)
 	} else {
 		// v1
 		if mountFlagSyntax {
@@ -195,13 +195,13 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToKVPath(path, mountPath, "delete", false)
+		path = AddPrefixToKVPath(path, mountPath, "delete", false)
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 		secret, err = client.Logical().Write(path, data)
 	default:
-		path = addPrefixToKVPath(path, mountPath, "data", false)
+		path = AddPrefixToKVPath(path, mountPath, "data", false)
 		secret, err = client.Logical().Delete(path)
 	}
 

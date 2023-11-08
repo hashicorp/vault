@@ -38,8 +38,8 @@ Usage: vault version
 
       $ vault version
 
-  There are no arguments or flags to this command. Any additional arguments or
-  flags are ignored.
+  There are no arguments or FlagSets to this command. Any additional arguments or
+  FlagSets are ignored.
 `
 	return strings.TrimSpace(helpText)
 }

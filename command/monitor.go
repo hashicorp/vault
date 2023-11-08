@@ -47,7 +47,7 @@ Usage: vault monitor [options]
 }
 
 func (c *MonitorCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Monitor Options")
 	f.StringVar(&StringVar{

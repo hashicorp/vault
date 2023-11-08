@@ -88,7 +88,7 @@ func TestDebugCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.skipTimingChecks = true
 
 			code := cmd.Run(tc.args)
@@ -147,7 +147,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.skipTimingChecks = true
 
 			// We use tc.name as the base path and apply the extension per
@@ -268,7 +268,7 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.skipTimingChecks = true
 
 			basePath := tc.name
@@ -331,7 +331,7 @@ func TestDebugCommand_Pprof(t *testing.T) {
 	defer closer()
 
 	ui, cmd := testDebugCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 	cmd.skipTimingChecks = true
 
 	basePath := "pprof"
@@ -389,7 +389,7 @@ func TestDebugCommand_IndexFile(t *testing.T) {
 	defer closer()
 
 	ui, cmd := testDebugCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 	cmd.skipTimingChecks = true
 
 	basePath := "index-test"
@@ -484,7 +484,7 @@ func TestDebugCommand_TimingChecks(t *testing.T) {
 			}()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.ShutdownCh = shutdownCh
 
 			basePath := tc.name
@@ -542,7 +542,7 @@ func TestDebugCommand_NoConnection(t *testing.T) {
 	}
 
 	_, cmd := testDebugCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 	cmd.skipTimingChecks = true
 
 	args := []string{
@@ -595,7 +595,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.skipTimingChecks = true
 
 			outputPath := filepath.Join(testDir, tc.outputFile)
@@ -659,7 +659,7 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	client.SetToken(resp.Auth.ClientToken)
 
 	ui, cmd := testDebugCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 	cmd.skipTimingChecks = true
 
 	basePath := "with-default-policy-token"
@@ -758,7 +758,7 @@ func TestDebugCommand_InsecureUmask(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testDebugCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 			cmd.skipTimingChecks = true
 
 			outputPath := filepath.Join(testDir, tc.outputFile)

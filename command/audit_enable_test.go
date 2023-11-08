@@ -72,7 +72,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testAuditEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -93,7 +93,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuditEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-path", "audit_enable_integration/",
@@ -140,7 +140,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuditEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"pki",
@@ -183,7 +183,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 
 		for _, b := range backends {
 			ui, cmd := testAuditEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			args := []string{
 				b,

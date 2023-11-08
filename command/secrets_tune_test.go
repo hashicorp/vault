@@ -60,7 +60,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -81,7 +81,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsTuneCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		// Mount
 		if err := client.Sys().Mount("kv", &api.MountInput{
@@ -159,7 +159,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testSecretsTuneCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			// Mount
 			if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
@@ -255,7 +255,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				// Mount
 				if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
@@ -298,7 +298,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				// Mount
 				if err := client.Sys().Mount("mount_tune_integration", &api.MountInput{
@@ -345,7 +345,7 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsTuneCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"pki/",

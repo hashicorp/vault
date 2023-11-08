@@ -76,7 +76,7 @@ func TestPluginRuntimeRegisterCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testPluginRuntimeRegisterCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			args := append(tc.flags, tc.args...)
 			code := cmd.Run(args)
@@ -98,7 +98,7 @@ func TestPluginRuntimeRegisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPluginRuntimeRegisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{"-type", consts.PluginRuntimeTypeContainer.String(), "my-plugin-runtime"})
 		if exp := 2; code != exp {
@@ -120,7 +120,7 @@ func TestPluginRuntimeRegisterCommand_Run(t *testing.T) {
 	})
 }
 
-// TestPluginRuntimeFlagParsing ensures that flags passed to vault plugin runtime register correctly
+// TestPluginRuntimeFlagParsing ensures that FlagSets passed to vault plugin runtime register correctly
 // translate into the expected JSON body and request path.
 func TestPluginRuntimeFlagParsing(t *testing.T) {
 	for name, tc := range map[string]struct {
@@ -152,7 +152,7 @@ func TestPluginRuntimeFlagParsing(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ui, cmd := testPluginRuntimeRegisterCommand(t)
 			var requestLogger *recordingRoundTripper
-			cmd.client, requestLogger = mockClient(t)
+			cmd.ApiClient, requestLogger = mockClient(t)
 
 			var args []string
 			if tc.cgroupParent != "" {

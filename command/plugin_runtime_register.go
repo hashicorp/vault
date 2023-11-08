@@ -49,7 +49,7 @@ The OCI runtime must be available on Vault's host. If no OCI runtime is specifie
 }
 
 func (c *PluginRuntimeRegisterCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

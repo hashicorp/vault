@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/command-server/server"
+
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
@@ -23,7 +25,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	uberAtomic "go.uber.org/atomic"
 
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"

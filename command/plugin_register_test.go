@@ -67,7 +67,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testPluginRegisterCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			args := append([]string{"-sha256", "abcd1234"}, tc.args...)
 			code := cmd.Run(args)
@@ -95,7 +95,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		_, sha256Sum := testPluginCreate(t, pluginDir, pluginName)
 
 		ui, cmd := testPluginRegisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-sha256", sha256Sum,
@@ -148,7 +148,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		for _, typ := range types {
 			for _, version := range versions {
 				ui, cmd := testPluginRegisterCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run([]string{
 					"-version=" + version,
@@ -207,7 +207,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPluginRegisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-sha256", "abcd1234",
@@ -232,7 +232,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 	})
 }
 
-// TestFlagParsing ensures that flags passed to vault plugin register correctly
+// TestFlagParsing ensures that FlagSets passed to vault plugin register correctly
 // translate into the expected JSON body and request path.
 func TestFlagParsing(t *testing.T) {
 	for name, tc := range map[string]struct {
@@ -277,7 +277,7 @@ func TestFlagParsing(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ui, cmd := testPluginRegisterCommand(t)
 			var requestLogger *recordingRoundTripper
-			cmd.client, requestLogger = mockClient(t)
+			cmd.ApiClient, requestLogger = mockClient(t)
 
 			var args []string
 			if tc.command != "" {

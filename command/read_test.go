@@ -93,7 +93,7 @@ func TestReadCommand_Run(t *testing.T) {
 				}
 
 				ui, cmd := testReadCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -115,7 +115,7 @@ func TestReadCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testReadCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/foo",
@@ -138,7 +138,7 @@ func TestReadCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testReadCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"sys/health",

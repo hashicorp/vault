@@ -45,7 +45,7 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
 	return set
 }
 
@@ -81,7 +81,7 @@ func (c *ListCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 	secret, err := client.Logical().List(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))

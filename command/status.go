@@ -44,7 +44,7 @@ Usage: vault status [options]
 }
 
 func (c *StatusCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *StatusCommand) AutocompleteArgs() complete.Predictor {

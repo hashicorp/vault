@@ -57,7 +57,7 @@ func TestPolicyReadCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPolicyReadCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -84,7 +84,7 @@ func TestPolicyReadCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testPolicyReadCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy",
@@ -106,7 +106,7 @@ func TestPolicyReadCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyReadCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy",

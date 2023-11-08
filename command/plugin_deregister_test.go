@@ -63,7 +63,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testPluginDeregisterCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -90,7 +90,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginDeregisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
@@ -148,7 +148,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, api.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-version=" + version,
@@ -196,7 +196,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, api.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			consts.PluginTypeCredential.String(),
@@ -237,7 +237,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPluginDeregisterCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			consts.PluginTypeCredential.String(),

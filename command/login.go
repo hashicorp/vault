@@ -82,7 +82,7 @@ Usage: vault login [options] [AUTH K=V...]
 }
 
 func (c *LoginCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -127,7 +127,7 @@ func (c *LoginCommand) Flags() *FlagSets {
 		Target:  &c.flagTokenOnly,
 		Default: false,
 		Usage: "Output only the token with no verification. This flag is a " +
-			"shortcut for \"-field=token -no-store\". Setting those flags to other " +
+			"shortcut for \"-field=token -no-store\". Setting those FlagSets to other " +
 			"values will have no affect.",
 	})
 
@@ -152,7 +152,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 	args = f.Args()
 
-	// Set the right flags if the user requested token-only - this overrides
+	// Set the right FlagSets if the user requested token-only - this overrides
 	// any previously configured values, as documented.
 	if c.flagTokenOnly {
 		c.flagNoStore = true
@@ -160,13 +160,13 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	if c.flagNoStore && c.flagNoPrint {
-		c.UI.Error(wrapAtLength(
+		c.UI.Error(WrapAtLength(
 			"-no-store and -no-print cannot be used together"))
 		return 1
 	}
 
 	// Get the auth method
-	authMethod := sanitizePath(c.flagMethod)
+	authMethod := SanitizePath(c.flagMethod)
 	if authMethod == "" {
 		authMethod = "token"
 	}
@@ -181,7 +181,7 @@ func (c *LoginCommand) Run(args []string) int {
 	// Get the handler function
 	authHandler, ok := c.Handlers[authMethod]
 	if !ok {
-		c.UI.Error(wrapAtLength(fmt.Sprintf(
+		c.UI.Error(WrapAtLength(fmt.Sprintf(
 			"Unknown auth method: %s. Use \"vault auth list\" to see the "+
 				"complete list of auth methods. Additionally, some "+
 				"auth methods are only available via the HTTP API.",
@@ -211,7 +211,7 @@ func (c *LoginCommand) Run(args []string) int {
 		config["mount"] = authPath
 	}
 
-	// Create the client
+	// Create the ApiClient
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -249,7 +249,7 @@ func (c *LoginCommand) Run(args []string) int {
 		// Warn about existing login token, but return here, since the secret
 		// won't have any token information if further validation is required.
 		c.checkForAndWarnAboutLoginToken()
-		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+		c.UI.Warn(WrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")
 		return OutputSecret(c.UI, secret)
@@ -283,7 +283,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 	// If we got this far, verify we have authentication data before continuing
 	if secret.Auth == nil {
-		c.UI.Error(wrapAtLength(
+		c.UI.Error(WrapAtLength(
 			"Vault returned a secret, but the secret has no authentication " +
 				"information attached. This should never happen and is likely a " +
 				"bug."))
@@ -298,17 +298,17 @@ func (c *LoginCommand) Run(args []string) int {
 		// Grab the token helper so we can store
 		tokenHelper, err := c.TokenHelper()
 		if err != nil {
-			c.UI.Error(wrapAtLength(fmt.Sprintf(
+			c.UI.Error(WrapAtLength(fmt.Sprintf(
 				"Error initializing token helper. Please verify that the token "+
 					"helper is available and properly configured for your system. The "+
 					"error was: %s", err)))
 			return 1
 		}
 
-		// Store the token in the local client
+		// Store the token in the local ApiClient
 		if err := tokenHelper.Store(token); err != nil {
 			c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
-			c.UI.Error(wrapAtLength(
+			c.UI.Error(WrapAtLength(
 				"Authentication was successful, but the token was not persisted. The "+
 					"resulting token is shown below for your records.") + "\n")
 			OutputSecret(c.UI, secret)
@@ -318,7 +318,7 @@ func (c *LoginCommand) Run(args []string) int {
 		c.checkForAndWarnAboutLoginToken()
 	} else if !c.flagTokenOnly {
 		// If token-only the user knows it won't be stored, so don't warn
-		c.UI.Warn(wrapAtLength(
+		c.UI.Warn(WrapAtLength(
 			"The token was not stored in token helper. Set the VAULT_TOKEN "+
 				"environment variable or pass the token below with each request to "+
 				"Vault.") + "\n")
@@ -336,7 +336,7 @@ func (c *LoginCommand) Run(args []string) int {
 
 	// Print some yay! text, but only in table mode.
 	if Format(c.UI) == "table" {
-		c.UI.Output(wrapAtLength(
+		c.UI.Output(WrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
 				"below is already stored in the token helper. You do NOT need to run "+
 				"\"vault login\" again. Future Vault requests will automatically use "+
@@ -383,7 +383,7 @@ func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwr
 // will be on a different stream.
 func (c *LoginCommand) checkForAndWarnAboutLoginToken() {
 	if os.Getenv("VAULT_TOKEN") != "" {
-		c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
+		c.UI.Warn(WrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
 			"is set! The value of this variable will take precedence; if this is unwanted "+
 			"please unset VAULT_TOKEN or update its value accordingly.") + "\n")
 	}

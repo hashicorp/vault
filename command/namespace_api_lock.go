@@ -43,7 +43,7 @@ Usage: vault namespace lock PATH
 }
 
 func (c *NamespaceAPILockCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *NamespaceAPILockCommand) AutocompleteArgs() complete.Predictor {
@@ -68,7 +68,7 @@ func (c *NamespaceAPILockCommand) Run(args []string) int {
 		return 1
 	}
 
-	// current namespace is already encoded in the :client:
+	// current namespace is already encoded in the :ApiClient:
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())

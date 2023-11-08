@@ -45,14 +45,14 @@ Usage: vault kv undelete [options] KEY
 
       $ vault kv undelete -versions=3 secret/foo
 
-  Additional flags and more advanced use cases are detailed below.
+  Additional FlagSets and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
 func (c *KVUndeleteCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -128,9 +128,9 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		partialPath = SanitizePath(args[0])
+		mountPath = SanitizePath(c.flagMount)
+		_, v2, err = IsKVv2(mountPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -146,8 +146,8 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
+		partialPath = SanitizePath(args[0])
+		mountPath, v2, err = IsKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -159,7 +159,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	undeletePath := addPrefixToKVPath(partialPath, mountPath, "undelete", false)
+	undeletePath := AddPrefixToKVPath(partialPath, mountPath, "undelete", false)
 	data := map[string]interface{}{
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}

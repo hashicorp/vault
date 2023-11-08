@@ -42,7 +42,7 @@ Usage: vault namespace lookup [options] PATH
 }
 
 func (c *NamespaceLookupCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *NamespaceLookupCommand) AutocompleteArgs() complete.Predictor {

@@ -53,7 +53,7 @@ Usage: vault plugin list [options] [TYPE]
 }
 
 func (c *PluginListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -126,10 +126,10 @@ func (c *PluginListCommand) Run(args []string) int {
 	switch Format(c.UI) {
 	case "table":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedResponse(resp), nil))
+			c.UI.Output(TableOutput(c.detailedResponse(resp), nil))
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleResponse(resp, pluginType), nil))
+		c.UI.Output(TableOutput(c.simpleResponse(resp, pluginType), nil))
 		return 0
 	default:
 		res := make(map[string]interface{})

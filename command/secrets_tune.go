@@ -59,7 +59,7 @@ Usage: vault secrets tune [options] PATH
 }
 
 func (c *SecretsTuneCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -201,7 +201,7 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 	}
 
 	// Append a trailing slash to indicate it's a path in output
-	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
+	mountPath := ensureTrailingSlash(SanitizePath(args[0]))
 
 	mountConfigInput := api.MountConfigInput{
 		DefaultLeaseTTL: ttlToAPI(c.flagDefaultLeaseTTL),

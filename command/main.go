@@ -15,16 +15,17 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
 	"github.com/mitchellh/cli"
 )
 
 type VaultUI struct {
 	cli.Ui
-	format   string
-	detailed bool
+	Format   string
+	Detailed bool
 }
 
 const (
@@ -38,9 +39,9 @@ var globalFlags = []string{
 	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
 }
 
-// setupEnv parses args and may replace them and sets some env vars to known
+// SetupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
-func setupEnv(args []string) (retArgs []string, format string, detailed bool, outputCurlString bool, outputPolicy bool) {
+func SetupEnv(args []string) (retArgs []string, format string, detailed bool, outputCurlString bool, outputPolicy bool) {
 	var err error
 	var nextArgFormat bool
 	var haveDetailed bool
@@ -141,116 +142,6 @@ type RunOptions struct {
 	Client      *api.Client
 }
 
-func Run(args []string) int {
-	return RunCustom(args, nil)
-}
-
-// RunCustom allows passing in a base command template to pass to other
-// commands. Currently, this is only used for setting a custom token helper.
-func RunCustom(args []string, runOpts *RunOptions) int {
-	if runOpts == nil {
-		runOpts = &RunOptions{}
-	}
-
-	var format string
-	var detailed bool
-	var outputCurlString bool
-	var outputPolicy bool
-	args, format, detailed, outputCurlString, outputPolicy = setupEnv(args)
-
-	// Don't use color if disabled
-	useColor := true
-	if os.Getenv(EnvVaultCLINoColor) != "" || color.NoColor {
-		useColor = false
-	}
-
-	if runOpts.Stdout == nil {
-		runOpts.Stdout = os.Stdout
-	}
-	if runOpts.Stderr == nil {
-		runOpts.Stderr = os.Stderr
-	}
-
-	// Only use colored UI if stdout is a tty, and not disabled
-	if useColor && format == "table" {
-		if f, ok := runOpts.Stdout.(*os.File); ok {
-			runOpts.Stdout = colorable.NewColorable(f)
-		}
-		if f, ok := runOpts.Stderr.(*os.File); ok {
-			runOpts.Stderr = colorable.NewColorable(f)
-		}
-	} else {
-		runOpts.Stdout = colorable.NewNonColorable(runOpts.Stdout)
-		runOpts.Stderr = colorable.NewNonColorable(runOpts.Stderr)
-	}
-
-	uiErrWriter := runOpts.Stderr
-	if outputCurlString || outputPolicy {
-		uiErrWriter = &bytes.Buffer{}
-	}
-
-	ui := &VaultUI{
-		Ui: &cli.ColoredUi{
-			ErrorColor: cli.UiColorRed,
-			WarnColor:  cli.UiColorYellow,
-			Ui: &cli.BasicUi{
-				Reader:      bufio.NewReader(os.Stdin),
-				Writer:      runOpts.Stdout,
-				ErrorWriter: uiErrWriter,
-			},
-		},
-		format:   format,
-		detailed: detailed,
-	}
-
-	serverCmdUi := &VaultUI{
-		Ui: &cli.ColoredUi{
-			ErrorColor: cli.UiColorRed,
-			WarnColor:  cli.UiColorYellow,
-			Ui: &cli.BasicUi{
-				Reader: bufio.NewReader(os.Stdin),
-				Writer: runOpts.Stdout,
-			},
-		},
-		format: format,
-	}
-
-	if _, ok := Formatters[format]; !ok {
-		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
-		return 1
-	}
-
-	commands := initCommands(ui, serverCmdUi, runOpts)
-
-	hiddenCommands := []string{"version"}
-
-	cli := &cli.CLI{
-		Name:     "vault",
-		Args:     args,
-		Commands: commands,
-		HelpFunc: groupedHelpFunc(
-			cli.BasicHelpFunc("vault"),
-		),
-		HelpWriter:                 runOpts.Stdout,
-		ErrorWriter:                runOpts.Stderr,
-		HiddenCommands:             hiddenCommands,
-		Autocomplete:               true,
-		AutocompleteNoDefaultFlags: true,
-	}
-
-	exitCode, err := cli.Run()
-	if outputCurlString {
-		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
-	} else if outputPolicy {
-		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
-	} else if err != nil {
-		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
-		return 1
-	}
-
-	return exitCode
-}
-
 var commonCommands = []string{
 	"read",
 	"write",
@@ -263,7 +154,7 @@ var commonCommands = []string{
 	"unwrap",
 }
 
-func groupedHelpFunc(f cli.HelpFunc) cli.HelpFunc {
+func GroupedHelpFunc(f cli.HelpFunc) cli.HelpFunc {
 	return func(commands map[string]cli.CommandFactory) string {
 		var b bytes.Buffer
 		tw := tabwriter.NewWriter(&b, 0, 2, 6, ' ', 0)
@@ -308,6 +199,104 @@ func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
 		panic(fmt.Sprintf("failed to load %q command: %s", name, err))
 	}
 	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
+}
+
+func Run(args []string) int {
+	return RunCustom(args, nil)
+}
+
+// RunCustom allows passing in a base command template to pass to other
+// commands. Currently, this is only used for setting a custom token helper.
+func RunCustom(args []string, runOpts *RunOptions) int {
+	if runOpts == nil {
+		runOpts = &RunOptions{}
+	}
+
+	var format string
+	var detailed bool
+	var outputCurlString bool
+	var outputPolicy bool
+	args, format, detailed, outputCurlString, outputPolicy = SetupEnv(args)
+
+	// Don't use color if disabled
+	useColor := true
+	if os.Getenv(EnvVaultCLINoColor) != "" || color.NoColor {
+		useColor = false
+	}
+
+	if runOpts.Stdout == nil {
+		runOpts.Stdout = os.Stdout
+	}
+	if runOpts.Stderr == nil {
+		runOpts.Stderr = os.Stderr
+	}
+
+	// Only use colored UI if stdout is a tty, and not disabled
+	if useColor && format == "table" {
+		if f, ok := runOpts.Stdout.(*os.File); ok {
+			runOpts.Stdout = colorable.NewColorable(f)
+		}
+		if f, ok := runOpts.Stderr.(*os.File); ok {
+			runOpts.Stderr = colorable.NewColorable(f)
+		}
+	} else {
+		runOpts.Stdout = colorable.NewNonColorable(runOpts.Stdout)
+		runOpts.Stderr = colorable.NewNonColorable(runOpts.Stderr)
+	}
+
+	uiErrWriter := runOpts.Stderr
+	if outputCurlString || outputPolicy {
+		uiErrWriter = &bytes.Buffer{}
+	}
+
+	ui := &VaultUI{
+		Ui: &cli.ColoredUi{
+			ErrorColor: cli.UiColorRed,
+			WarnColor:  cli.UiColorYellow,
+			Ui: &cli.BasicUi{
+				Reader:      bufio.NewReader(os.Stdin),
+				Writer:      runOpts.Stdout,
+				ErrorWriter: uiErrWriter,
+			},
+		},
+		Format:   format,
+		Detailed: detailed,
+	}
+
+	if _, ok := Formatters[format]; !ok {
+		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
+		return 1
+	}
+
+	commands := InitCommands(ui, runOpts)
+
+	hiddenCommands := []string{"version"}
+
+	cli := &cli.CLI{
+		Name:     "vault",
+		Args:     args,
+		Commands: commands,
+		HelpFunc: GroupedHelpFunc(
+			cli.BasicHelpFunc("vault"),
+		),
+		HelpWriter:                 runOpts.Stdout,
+		ErrorWriter:                runOpts.Stderr,
+		HiddenCommands:             hiddenCommands,
+		Autocomplete:               true,
+		AutocompleteNoDefaultFlags: true,
+	}
+
+	exitCode, err := cli.Run()
+	if outputCurlString {
+		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
+	} else if outputPolicy {
+		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
+	} else if err != nil {
+		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
+		return 1
+	}
+
+	return exitCode
 }
 
 func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer) int {

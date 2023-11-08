@@ -55,7 +55,7 @@ Usage: vault auth move [options] SOURCE DESTINATION
 }
 
 func (c *AuthMoveCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *AuthMoveCommand) AutocompleteArgs() complete.Predictor {

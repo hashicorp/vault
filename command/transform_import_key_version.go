@@ -43,7 +43,7 @@ Usage: vault transform import-version PATH KEY [...]
 }
 
 func (c *TransformImportVersionCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *TransformImportVersionCommand) AutocompleteArgs() complete.Predictor {

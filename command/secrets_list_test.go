@@ -63,7 +63,7 @@ func TestSecretsListCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testSecretsListCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -85,7 +85,7 @@ func TestSecretsListCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testSecretsListCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 2; code != exp {

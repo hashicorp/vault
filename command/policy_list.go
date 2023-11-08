@@ -36,7 +36,7 @@ Usage: vault policy list [options]
 }
 
 func (c *PolicyListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PolicyListCommand) AutocompleteArgs() complete.Predictor {

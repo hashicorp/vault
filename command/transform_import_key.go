@@ -50,7 +50,7 @@ Usage: vault transform import PATH KEY [options...]
 }
 
 func (c *TransformImportCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *TransformImportCommand) AutocompleteArgs() complete.Predictor {

@@ -58,7 +58,7 @@ func TestPolicyDeleteCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testPolicyDeleteCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -85,7 +85,7 @@ func TestPolicyDeleteCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testPolicyDeleteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy",
@@ -118,7 +118,7 @@ func TestPolicyDeleteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPolicyDeleteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"my-policy",

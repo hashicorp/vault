@@ -49,7 +49,7 @@ Usage: vault read [options] PATH
 }
 
 func (c *ReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 }
 
 func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
@@ -81,7 +81,7 @@ func (c *ReadCommand) Run(args []string) int {
 		return 2
 	}
 
-	// client.ReadRaw* methods require a manual timeout override
+	// ApiClient.ReadRaw* methods require a manual timeout override
 	ctx, cancel := context.WithTimeout(context.Background(), client.ClientTimeout())
 	defer cancel()
 
@@ -91,7 +91,7 @@ func (c *ReadCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 
 	data, err := parseArgsDataStringLists(stdin, args[1:])
 	if err != nil {

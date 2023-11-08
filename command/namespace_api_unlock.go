@@ -47,7 +47,7 @@ Usage: vault namespace unlock [options] PATH
 }
 
 func (c *NamespaceAPIUnlockCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *NamespaceAPIUnlockCommand) AutocompleteArgs() complete.Predictor {
@@ -72,7 +72,7 @@ func (c *NamespaceAPIUnlockCommand) Run(args []string) int {
 		return 1
 	}
 
-	// current namespace is already encoded in the :client:
+	// current namespace is already encoded in the :ApiClient:
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())

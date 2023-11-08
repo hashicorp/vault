@@ -54,7 +54,7 @@ Usage: vault audit enable [options] TYPE [CONFIG K=V...]
 }
 
 func (c *AuditEnableCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

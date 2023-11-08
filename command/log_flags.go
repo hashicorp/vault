@@ -12,9 +12,9 @@ import (
 	"github.com/posener/complete"
 )
 
-// logFlags are the 'log' related flags that can be shared across commands.
-type logFlags struct {
-	flagCombineLogs       bool
+// LogFlags are the 'log' related FlagSets that can be shared across commands.
+type LogFlags struct {
+	FlagCombineLogs       bool
 	flagLogLevel          string
 	flagLogFormat         string
 	flagLogFile           string
@@ -24,7 +24,7 @@ type logFlags struct {
 }
 
 // valuesProvider has the intention of providing a way to supply a func with a
-// way to retrieve values for flags and environment variables without having to
+// way to retrieve values for FlagSets and environment variables without having to
 // directly call a specific implementation.
 // The reasoning for its existence is to facilitate testing.
 type valuesProvider struct {
@@ -32,11 +32,11 @@ type valuesProvider struct {
 	envVarProvider func(string) (string, bool)
 }
 
-// addLogFlags will add the set of 'log' related flags to a flag set.
-func (f *FlagSet) addLogFlags(l *logFlags) {
+// AddLogFlags will add the set of 'log' related FlagSets to a flag set.
+func (f *FlagSet) AddLogFlags(l *LogFlags) {
 	f.BoolVar(&BoolVar{
 		Name:    flagNameCombineLogs,
-		Target:  &l.flagCombineLogs,
+		Target:  &l.FlagCombineLogs,
 		Default: false,
 		Hidden:  true,
 	})
@@ -116,7 +116,7 @@ func (f *FlagSets) flagValue(flagName string) (flag.Value, bool) {
 	return result, isFlagSpecified
 }
 
-// overrideValue uses the provided keys to check CLI flags and environment
+// overrideValue uses the provided keys to check CLI FlagSets and environment
 // variables for values that may be used to override any specified configuration.
 func (p *valuesProvider) overrideValue(flagKey, envVarKey string) (string, bool) {
 	var result string
@@ -137,10 +137,10 @@ func (p *valuesProvider) overrideValue(flagKey, envVarKey string) (string, bool)
 	return result, found
 }
 
-// applyLogConfigOverrides will accept a shared config and specifically attempt to update the 'log' related config keys.
-// For each 'log' key, we aggregate file config, env vars and CLI flags to select the one with the highest precedence.
+// ApplyLogConfigOverrides will accept a shared config and specifically attempt to update the 'log' related config keys.
+// For each 'log' key, we aggregate file config, env vars and CLI FlagSets to select the one with the highest precedence.
 // This method mutates the config object passed into it.
-func (f *FlagSets) applyLogConfigOverrides(config *configutil.SharedConfig) {
+func (f *FlagSets) ApplyLogConfigOverrides(config *configutil.SharedConfig) {
 	p := &valuesProvider{
 		flagProvider:   f.flagValue,
 		envVarProvider: envVarValue,

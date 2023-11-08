@@ -114,7 +114,7 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 		return PrintRaw(ui, fmt.Sprintf("%v", val))
 	}
 
-	// Handle specific format flags as best as possible
+	// Handle specific format FlagSets as best as possible
 	formatter, ok := Formatters[format]
 	if !ok {
 		ui.Error(fmt.Sprintf("Invalid output format: %s", format))
@@ -139,25 +139,25 @@ func PrintRaw(ui cli.Ui, str string) int {
 	} else {
 		// The cli.Ui prints a CR, which is not wanted since the user probably wants
 		// just the raw value.
-		w := getWriterFromUI(ui)
+		w := GetWriterFromUI(ui)
 		fmt.Fprint(w, str)
 	}
 	return 0
 }
 
-// getWriterFromUI accepts a cli.Ui and returns the underlying io.Writer by
+// GetWriterFromUI accepts a cli.Ui and returns the underlying io.Writer by
 // unwrapping as many wrapped Uis as necessary. If there is an unknown UI
 // type, this falls back to os.Stdout.
-func getWriterFromUI(ui cli.Ui) io.Writer {
+func GetWriterFromUI(ui cli.Ui) io.Writer {
 	switch t := ui.(type) {
 	case *VaultUI:
-		return getWriterFromUI(t.Ui)
+		return GetWriterFromUI(t.Ui)
 	case *cli.BasicUi:
 		return t.Writer
 	case *cli.ColoredUi:
-		return getWriterFromUI(t.Ui)
+		return GetWriterFromUI(t.Ui)
 	case *cli.ConcurrentUi:
-		return getWriterFromUI(t.Ui)
+		return GetWriterFromUI(t.Ui)
 	case *cli.MockUi:
 		return t.OutputWriter
 	default:

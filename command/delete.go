@@ -56,7 +56,7 @@ Usage: vault delete [options] PATH
 }
 
 func (c *DeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 }
 
 func (c *DeleteCommand) AutocompleteArgs() complete.Predictor {
@@ -94,7 +94,7 @@ func (c *DeleteCommand) Run(args []string) int {
 		stdin = c.testStdin
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 
 	data, err := parseArgsDataStringLists(stdin, args[1:])
 	if err != nil {

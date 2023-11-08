@@ -59,7 +59,7 @@ Usage: vault plugin register [options] TYPE NAME
 }
 
 func (c *PluginRegisterCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

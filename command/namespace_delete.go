@@ -46,7 +46,7 @@ Usage: vault namespace delete [options] PATH
 }
 
 func (c *NamespaceDeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *NamespaceDeleteCommand) AutocompleteArgs() complete.Predictor {

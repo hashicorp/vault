@@ -67,14 +67,14 @@ Usage: vault kv metadata put [options] KEY
 
       $ vault kv metadata put -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
 
-  Additional flags and more advanced use cases are detailed below.
+  Additional FlagSets and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
 func (c *KVMetadataPutCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -173,8 +173,8 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		partialPath = SanitizePath(args[0])
+		mountPath, v2, err = IsKVv2(SanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -186,8 +186,8 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
+		partialPath = SanitizePath(args[0])
+		mountPath, v2, err = IsKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -199,7 +199,7 @@ func (c *KVMetadataPutCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
+	fullPath := AddPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	data := map[string]interface{}{}
 
 	if c.flagMaxVersions >= 0 {

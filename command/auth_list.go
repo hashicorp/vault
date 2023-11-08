@@ -51,7 +51,7 @@ Usage: vault auth list [options]
 }
 
 func (c *AuthListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -104,10 +104,10 @@ func (c *AuthListCommand) Run(args []string) int {
 	switch Format(c.UI) {
 	case "table":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedMounts(auths), nil))
+			c.UI.Output(TableOutput(c.detailedMounts(auths), nil))
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleMounts(auths), nil))
+		c.UI.Output(TableOutput(c.simpleMounts(auths), nil))
 		return 0
 	default:
 		return OutputData(c.UI, auths)

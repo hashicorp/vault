@@ -73,7 +73,7 @@ func TestStatusCommand_Run(t *testing.T) {
 				}
 
 				ui, cmd := testStatusCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -95,7 +95,7 @@ func TestStatusCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testStatusCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 1; code != exp {

@@ -57,7 +57,7 @@ Usage: vault transit import PATH KEY [options...]
 }
 
 func (c *TransitImportCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *TransitImportCommand) AutocompleteArgs() complete.Predictor {

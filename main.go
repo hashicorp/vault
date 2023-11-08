@@ -4,10 +4,9 @@
 package main // import "github.com/hashicorp/vault"
 
 import (
-	"os"
-
-	"github.com/hashicorp/vault/command"
+	command_server "github.com/hashicorp/vault/command-server"
 	"github.com/hashicorp/vault/internal"
+	"os"
 )
 
 func init() {
@@ -16,5 +15,5 @@ func init() {
 }
 
 func main() {
-	os.Exit(command.Run(os.Args[1:]))
+	os.Exit(command_server.Run(os.Args[1:]))
 }

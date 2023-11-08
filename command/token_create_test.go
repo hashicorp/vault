@@ -92,7 +92,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testTokenCreateCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -114,7 +114,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenCreateCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-field", "token",
@@ -137,7 +137,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenCreateCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-metadata", "foo=bar",
@@ -173,7 +173,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenCreateCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-policy", "foo",
@@ -213,7 +213,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenCreateCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 2; code != exp {

@@ -93,7 +93,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testTokenRevokeCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -117,7 +117,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 		token, _ := testTokenAndAccessor(t, client)
 
 		ui, cmd := testTokenRevokeCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			token,
@@ -145,7 +145,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenRevokeCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-self",
@@ -175,7 +175,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 		token, accessor := testTokenAndAccessor(t, client)
 
 		ui, cmd := testTokenRevokeCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-accessor",
@@ -204,7 +204,7 @@ func TestTokenRevokeCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenRevokeCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"abcd1234",

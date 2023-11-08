@@ -20,7 +20,7 @@ func testAuthCommand(tb testing.TB) (*cli.MockUi, *AuthCommand) {
 			UI: ui,
 
 			// Override to our own token helper
-			tokenHelper: token.NewTestingTokenHelper(),
+			TkHelper: token.NewTestingTokenHelper(),
 		},
 	}
 }

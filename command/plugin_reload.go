@@ -46,7 +46,7 @@ Usage: vault plugin reload [options]
 }
 
 func (c *PluginReloadCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

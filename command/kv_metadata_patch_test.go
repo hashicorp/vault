@@ -30,7 +30,7 @@ func kvMetadataPatchWithRetry(t *testing.T, client *api.Client, args []string, s
 
 	return retryKVCommand(t, func() (int, string) {
 		ui, cmd := testKVMetadataPatchCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if stdin != nil {
 			cmd.testStdin = stdin
@@ -48,7 +48,7 @@ func kvMetadataPutWithRetry(t *testing.T, client *api.Client, args []string, std
 
 	return retryKVCommand(t, func() (int, string) {
 		ui, cmd := testKVMetadataPutCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		if stdin != nil {
 			cmd.testStdin = stdin

@@ -76,7 +76,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 			}
 
 			ui, cmd := testAuditDisableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -106,7 +106,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testAuditDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"integration_audit_disable/",
@@ -138,7 +138,7 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuditDisableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"file",

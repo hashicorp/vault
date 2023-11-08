@@ -51,7 +51,7 @@ Usage: vault unwrap [options] [TOKEN]
 }
 
 func (c *UnwrapCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 }
 
 func (c *UnwrapCommand) AutocompleteArgs() complete.Predictor {

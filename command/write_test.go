@@ -104,7 +104,7 @@ func TestWriteCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testWriteCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -126,7 +126,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-field", "somefield",
@@ -155,7 +155,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		}
 
 		ui, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-force",
@@ -187,7 +187,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		}()
 
 		_, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -222,7 +222,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		}()
 
 		_, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -251,7 +251,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		_, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"secret/write/integration", "foo=bar", "zip=zap",
@@ -282,7 +282,7 @@ func TestWriteCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testWriteCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo/bar", "a=b",

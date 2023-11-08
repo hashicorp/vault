@@ -79,7 +79,7 @@ var Formatters = map[string]Formatter{
 func Format(ui cli.Ui) string {
 	switch ui := ui.(type) {
 	case *VaultUI:
-		return ui.format
+		return ui.Format
 	}
 
 	format := os.Getenv(EnvVaultFormat)
@@ -93,7 +93,7 @@ func Format(ui cli.Ui) string {
 func Detailed(ui cli.Ui) bool {
 	switch ui := ui.(type) {
 	case *VaultUI:
-		return ui.detailed
+		return ui.Detailed
 	}
 
 	return false
@@ -332,7 +332,6 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 	out = append(out, fmt.Sprintf("Seal Type | %s", status.Type))
 	if status.RecoverySeal {
 		sealPrefix = "Recovery "
-		out = append(out, fmt.Sprintf("Recovery Seal Type | %s", status.RecoverySealType))
 	}
 	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
@@ -410,7 +409,7 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 		out = append(out, fmt.Sprintf("Warnings | %v", status.Warnings))
 	}
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	ui.Output(TableOutput(out, &columnize.Config{
 		Delim: "|",
 	}))
 	return nil
@@ -431,7 +430,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 	switch data := data.(type) {
 	case []interface{}:
 	case []string:
-		ui.Output(tableOutput(data, nil))
+		ui.Output(TableOutput(data, nil))
 		return nil
 	default:
 		return errors.New("error: table formatter cannot output list for this data type")
@@ -514,7 +513,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 
 		// Prepend the header to the formatted rows.
 		output := append([]string{header}, rows...)
-		ui.Output(tableOutput(output, &columnize.Config{
+		ui.Output(TableOutput(output, &columnize.Config{
 			Delim: hopeDelim,
 		}))
 	}
@@ -625,7 +624,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	// Prepend the header
 	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	ui.Output(TableOutput(out, &columnize.Config{
 		Delim: hopeDelim,
 	}))
 	return nil
@@ -661,7 +660,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 	// Prepend the header
 	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	ui.Output(TableOutput(out, &columnize.Config{
 		Delim: hopeDelim,
 	}))
 	return nil

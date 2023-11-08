@@ -54,7 +54,7 @@ Usage: vault lease renew [options] ID
 }
 
 func (c *LeaseRenewCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.DurationVar(&DurationVar{

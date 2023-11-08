@@ -51,7 +51,7 @@ Usage: vault policy write [options] NAME PATH
 }
 
 func (c *PolicyWriteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *PolicyWriteCommand) AutocompleteArgs() complete.Predictor {

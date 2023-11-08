@@ -75,7 +75,7 @@ func TestAddPrefixToKVPath(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actual := addPrefixToKVPath(
+			actual := AddPrefixToKVPath(
 				tc.path,
 				tc.mountPath,
 				tc.apiPrefix,
@@ -249,7 +249,7 @@ func TestWalkSecretsTree(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var descendants []treePath
 
-			err := walkSecretsTree(ctx, client, tc.path, func(path string, directory bool) error {
+			err := WalkSecretsTree(ctx, client, tc.path, func(path string, directory bool) error {
 				descendants = append(descendants, treePath{
 					path:      path,
 					directory: directory,

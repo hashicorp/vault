@@ -49,7 +49,7 @@ Usage: vault plugin runtime list [options]
 }
 
 func (c *PluginRuntimeListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 
@@ -113,7 +113,7 @@ func (c *PluginRuntimeListCommand) Run(args []string) int {
 
 	switch Format(c.UI) {
 	case "table":
-		c.UI.Output(tableOutput(c.tableResponse(resp), nil))
+		c.UI.Output(TableOutput(c.tableResponse(resp), nil))
 		return 0
 	default:
 		return OutputData(c.UI, resp.Runtimes)

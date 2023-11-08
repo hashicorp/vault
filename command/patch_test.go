@@ -103,7 +103,7 @@ func TestPatchCommand_Run(t *testing.T) {
 			}
 
 			ui, cmd := testPatchCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -147,7 +147,7 @@ func TestPatchCommand_Run(t *testing.T) {
 		}()
 
 		ui, cmd := testPatchCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 		cmd.testStdin = stdinR
 
 		code := cmd.Run([]string{
@@ -180,7 +180,7 @@ func TestPatchCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testPatchCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo/bar", "a=b",

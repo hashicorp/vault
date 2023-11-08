@@ -44,7 +44,7 @@ Usage: vault audit disable [options] PATH
 }
 
 func (c *AuditDisableCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *AuditDisableCommand) AutocompleteArgs() complete.Predictor {
@@ -73,7 +73,7 @@ func (c *AuditDisableCommand) Run(args []string) int {
 		return 1
 	}
 
-	path := ensureTrailingSlash(sanitizePath(args[0]))
+	path := ensureTrailingSlash(SanitizePath(args[0]))
 
 	client, err := c.Client()
 	if err != nil {

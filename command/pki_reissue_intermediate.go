@@ -43,7 +43,7 @@ Usage: vault pki reissue PARENT TEMPLATE CHILD_MOUNT options
 }
 
 func (c *PKIReIssueCACommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
@@ -90,13 +90,13 @@ func (c *PKIReIssueCACommand) Run(args []string) int {
 	// Check We Have a Client
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %v", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain ApiClient: %v", err))
 		return 1
 	}
 
-	parentIssuer := sanitizePath(args[0]) // /pki/issuer/default
-	templateIssuer := sanitizePath(args[1])
-	intermediateMount := sanitizePath(args[2])
+	parentIssuer := SanitizePath(args[0]) // /pki/issuer/default
+	templateIssuer := SanitizePath(args[1])
+	intermediateMount := SanitizePath(args[2])
 
 	templateIssuerBundle, err := readIssuer(client, templateIssuer)
 	if err != nil {

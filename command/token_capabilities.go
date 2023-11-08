@@ -50,7 +50,7 @@ Usage: vault token capabilities [options] [TOKEN] PATH
 }
 
 func (c *TokenCapabilitiesCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *TokenCapabilitiesCommand) AutocompleteArgs() complete.Predictor {

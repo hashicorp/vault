@@ -59,7 +59,7 @@ Usage: vault pki list-intermediates PARENT [CHILD] [CHILD] [CHILD] ...
 }
 
 func (c *PKIListIntermediateCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.BoolVar(&BoolVar{
@@ -136,15 +136,15 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to obtain client: %s", err))
+		c.UI.Error(fmt.Sprintf("Failed to obtain ApiClient: %s", err))
 		return 1
 	}
 
-	issuer := sanitizePath(args[0])
+	issuer := SanitizePath(args[0])
 	var issued []string
 	if len(args) > 1 {
 		for _, arg := range args[1:] {
-			cleanPath := sanitizePath(arg)
+			cleanPath := SanitizePath(arg)
 			// Arg Might be a Fully Qualified Path
 			if strings.Contains(cleanPath, "/issuer/") ||
 				strings.Contains(cleanPath, "/certs/") ||
@@ -168,7 +168,7 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 		for path, rawValueMap := range mountListRaw.Data {
 			valueMap := rawValueMap.(map[string]interface{})
 			if valueMap["type"].(string) == "pki" {
-				mountCaList, err := c.getIssuerListFromMount(client, sanitizePath(path))
+				mountCaList, err := c.getIssuerListFromMount(client, SanitizePath(path))
 				if err != nil {
 					c.UI.Error(err.Error())
 					return 1
@@ -196,7 +196,7 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 	}
 
 	for _, child := range issued {
-		path := sanitizePath(child)
+		path := SanitizePath(child)
 		if path != "" {
 			verifyResults, err := verifySignBetween(client, issuerResp, path)
 			if err != nil {
@@ -218,7 +218,7 @@ func (c *PKIListIntermediateCommand) Run(args []string) int {
 
 func (c *PKIListIntermediateCommand) getIssuerListFromMount(client *api.Client, mountString string) ([]string, error) {
 	var issuerList []string
-	issuerListEndpoint := sanitizePath(mountString) + "/issuers"
+	issuerListEndpoint := SanitizePath(mountString) + "/issuers"
 	rawIssuersResp, err := client.Logical().List(issuerListEndpoint)
 	if err != nil {
 		return issuerList, fmt.Errorf("failed to read list of issuers within mount %v: %v", mountString, err)
@@ -231,9 +231,9 @@ func (c *PKIListIntermediateCommand) getIssuerListFromMount(client *api.Client, 
 	for _, certId := range certList {
 		identifier := certId.(string)
 		if c.flagUseNames {
-			issuerReadResp, err := client.Logical().Read(sanitizePath(mountString) + "/issuer/" + identifier)
+			issuerReadResp, err := client.Logical().Read(SanitizePath(mountString) + "/issuer/" + identifier)
 			if err != nil {
-				c.UI.Warn(fmt.Sprintf("Unable to Fetch Issuer to Recover Name at: %v", sanitizePath(mountString)+"/issuer/"+identifier))
+				c.UI.Warn(fmt.Sprintf("Unable to Fetch Issuer to Recover Name at: %v", SanitizePath(mountString)+"/issuer/"+identifier))
 			}
 			if issuerReadResp != nil {
 				issuerName := issuerReadResp.Data["issuer_name"].(string)
@@ -242,7 +242,7 @@ func (c *PKIListIntermediateCommand) getIssuerListFromMount(client *api.Client, 
 				}
 			}
 		}
-		issuerList = append(issuerList, sanitizePath(mountString)+"/issuer/"+identifier)
+		issuerList = append(issuerList, SanitizePath(mountString)+"/issuer/"+identifier)
 	}
 	return issuerList, nil
 }
@@ -275,7 +275,7 @@ func (c *PKIListIntermediateCommand) outputResultsTable(results map[string]bool)
 		row := field + hopeDelim + strconv.FormatBool(finding)
 		data = append(data, row)
 	}
-	c.UI.Output(tableOutput(data, &columnize.Config{
+	c.UI.Output(TableOutput(data, &columnize.Config{
 		Delim: hopeDelim,
 	}))
 	c.UI.Output("\n")

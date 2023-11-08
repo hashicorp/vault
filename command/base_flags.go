@@ -25,12 +25,12 @@ type FlagExample interface {
 
 // FlagVisibility is an interface which declares whether a flag should be
 // hidden from help and completions. This is usually used for deprecations
-// on "internal-only" flags.
+// on "internal-only" FlagSets.
 type FlagVisibility interface {
 	Hidden() bool
 }
 
-// FlagBool is an interface which boolean flags implement.
+// FlagBool is an interface which boolean FlagSets implement.
 type FlagBool interface {
 	IsBoolFlag() bool
 }
@@ -805,7 +805,7 @@ type VarFlag struct {
 func (f *FlagSet) VarFlag(i *VarFlag) {
 	// If the flag is marked as hidden, just add it to the set and return to
 	// avoid unnecessary computations here. We do not want to add completions or
-	// generate help output for hidden flags.
+	// generate help output for hidden FlagSets.
 	if v, ok := i.Value.(FlagVisibility); ok && v.Hidden() {
 		f.Var(i.Value, i.Name, "")
 		return
@@ -854,7 +854,7 @@ func (f *FlagSet) VarFlag(i *VarFlag) {
 	f.completions["-"+i.Name] = i.Completion
 }
 
-// Var is a lower-level API for adding something to the flags. It should be used
+// Var is a lower-level API for adding something to the FlagSets. It should be used
 // with caution, since it bypasses all validation. Consider VarFlag instead.
 func (f *FlagSet) Var(value flag.Value, name, usage string) {
 	f.mainSet.Var(value, name, usage)

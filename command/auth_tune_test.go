@@ -60,7 +60,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testAuthTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -85,7 +85,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testAuthTuneCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			// Mount
 			if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
@@ -177,7 +177,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testAuthTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				// Mount
 				if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
@@ -220,7 +220,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testAuthTuneCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				// Mount
 				if err := client.Sys().EnableAuthWithOptions("my-auth", &api.EnableAuthOptions{
@@ -267,7 +267,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthTuneCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"userpass/",

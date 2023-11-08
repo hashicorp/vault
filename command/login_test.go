@@ -34,7 +34,7 @@ func testLoginCommand(tb testing.TB) (*cli.MockUi, *LoginCommand) {
 			UI: ui,
 
 			// Override to our own token helper
-			tokenHelper: token.NewTestingTokenHelper(),
+			TkHelper: token.NewTestingTokenHelper(),
 		},
 		Handlers: map[string]LoginHandler{
 			"token":    &credToken.CLIHandler{},
@@ -60,7 +60,7 @@ func TestCustomPath(t *testing.T) {
 	}
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	tokenHelper, err := cmd.TokenHelper()
 	if err != nil {
@@ -113,7 +113,7 @@ func TestNoStore(t *testing.T) {
 	token := secret.Auth.ClientToken
 
 	_, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	tokenHelper, err := cmd.TokenHelper()
 	if err != nil {
@@ -159,7 +159,7 @@ func TestStores(t *testing.T) {
 	token := secret.Auth.ClientToken
 
 	_, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	tokenHelper, err := cmd.TokenHelper()
 	if err != nil {
@@ -200,7 +200,7 @@ func TestTokenOnly(t *testing.T) {
 	}
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	tokenHelper, err := cmd.TokenHelper()
 	if err != nil {
@@ -236,7 +236,7 @@ func TestFailureNoStore(t *testing.T) {
 	defer closer()
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	tokenHelper, err := cmd.TokenHelper()
 	if err != nil {
@@ -278,10 +278,10 @@ func TestWrapAutoUnwrap(t *testing.T) {
 	}
 
 	_, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Set the wrapping ttl to 5s. We can't set this via the flag because we
-	// override the client object before that particular flag is parsed.
+	// override the ApiClient object before that particular flag is parsed.
 	client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
 
 	code := cmd.Run([]string{
@@ -337,10 +337,10 @@ func TestWrapTokenOnly(t *testing.T) {
 	}
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Set the wrapping ttl to 5s. We can't set this via the flag because we
-	// override the client object before that particular flag is parsed.
+	// override the ApiClient object before that particular flag is parsed.
 	client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
 
 	code := cmd.Run([]string{
@@ -398,10 +398,10 @@ func TestWrapNoStore(t *testing.T) {
 	}
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	// Set the wrapping ttl to 5s. We can't set this via the flag because we
-	// override the client object before that particular flag is parsed.
+	// override the ApiClient object before that particular flag is parsed.
 	client.SetWrappingLookupFunc(func(string, string) string { return "5m" })
 
 	code := cmd.Run([]string{
@@ -440,7 +440,7 @@ func TestCommunicationFailure(t *testing.T) {
 	defer closer()
 
 	ui, cmd := testLoginCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	code := cmd.Run([]string{
 		"token",
@@ -479,9 +479,9 @@ func TestLoginMFASinglePhase(t *testing.T) {
 		time.Sleep(time.Duration(waitPeriod) * time.Second)
 		totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 		ui, cmd := testLoginCommand(t)
-		cmd.client = userClient
+		cmd.ApiClient = userClient
 		// login command bails early for test clients, so we have to explicitly set this
-		cmd.client.SetMFACreds([]string{methodIdentifier + ":" + totpCode})
+		cmd.ApiClient.SetMFACreds([]string{methodIdentifier + ":" + totpCode})
 		code := cmd.Run([]string{
 			"-method", "userpass",
 			"username=testuser1",
@@ -520,12 +520,12 @@ func TestLoginMFATwoPhase(t *testing.T) {
 	ui, cmd := testLoginCommand(t)
 
 	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, "", 5)
-	cmd.client = userclient
+	cmd.ApiClient = userclient
 
 	_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 	// clear the MFA creds just to be sure
-	cmd.client.SetMFACreds([]string{})
+	cmd.ApiClient.SetMFACreds([]string{})
 
 	code := cmd.Run([]string{
 		"-method", "userpass",
@@ -566,12 +566,12 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 	methodName := "foo"
 	waitPeriod := 5
 	userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client, methodName, waitPeriod)
-	cmd.client = userclient
+	cmd.ApiClient = userclient
 
 	engineName := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
 
 	// clear the MFA creds just to be sure
-	cmd.client.SetMFACreds([]string{})
+	cmd.ApiClient.SetMFACreds([]string{})
 
 	code := cmd.Run([]string{
 		"-method", "userpass",
@@ -597,7 +597,7 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 		time.Sleep(time.Duration(waitPeriod) * time.Second)
 		totpPasscode1 := "passcode=" + testhelpers.GetTOTPCodeFromEngine(t, client, engineName)
 
-		secret, err := cmd.client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+		secret, err := cmd.ApiClient.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": mfaReqID,
 			"mfa_payload": map[string][]string{
 				methodIdentifier: {totpPasscode1},
@@ -608,7 +608,7 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 		}
 
 		if secret.Auth == nil || secret.Auth.ClientToken == "" {
-			t.Fatalf("mfa validation did not return a client token")
+			t.Fatalf("mfa validation did not return a ApiClient token")
 		}
 	}
 

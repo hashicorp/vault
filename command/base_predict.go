@@ -57,17 +57,17 @@ func (p *Predict) Client() *api.Client {
 // that returning nothing.
 var defaultPredictVaultMounts = []string{"cubbyhole/"}
 
-// predictClient is the API client to use for prediction. We create this at the
+// predictClient is the API ApiClient to use for prediction. We create this at the
 // beginning once, because completions are generated for each command (and this
 // doesn't change), and the only way to configure the predict/autocomplete
-// client is via environment variables. Even if the user specifies a flag, we
+// ApiClient is via environment variables. Even if the user specifies a flag, we
 // can't parse that flag until after the command is submitted.
 var (
 	predictClient     *api.Client
 	predictClientOnce sync.Once
 )
 
-// PredictClient returns the cached API client for the predictor.
+// PredictClient returns the cached API ApiClient for the predictor.
 func PredictClient() *api.Client {
 	predictClientOnce.Do(func() {
 		if predictClient == nil { // For tests
@@ -119,7 +119,7 @@ func (b *BaseCommand) PredictVaultAvailableAuths() complete.Predictor {
 }
 
 // PredictVaultFiles returns a predictor for Vault mounts and paths based on the
-// configured client for the base command. Unfortunately this happens pre-flag
+// configured ApiClient for the base command. Unfortunately this happens pre-flag
 // parsing, so users must rely on environment variables for autocomplete if they
 // are not using Vault at the default endpoints.
 func (b *BaseCommand) PredictVaultFiles() complete.Predictor {
@@ -308,7 +308,7 @@ func (p *Predict) paths(mountType, mountVersion, path string, includeFiles bool)
 
 	// Vault does not support listing based on a sub-key, so we have to back-pedal
 	// to the last "/" and return all paths on that "folder". Then we perform
-	// client-side filtering.
+	// ApiClient-side filtering.
 	root := path
 	idx := strings.LastIndex(root, "/")
 	if idx > 0 && idx < len(root) {

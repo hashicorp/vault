@@ -29,7 +29,7 @@ func TestVersionHistoryCommand_TableOutput(t *testing.T) {
 	defer closer()
 
 	ui, cmd := testVersionHistoryCommand(t)
-	cmd.client = client
+	cmd.ApiClient = client
 
 	code := cmd.Run([]string{})
 
@@ -60,7 +60,7 @@ func TestVersionHistoryCommand_JsonOutput(t *testing.T) {
 		Client: client,
 	}
 
-	args, format, _, _, _ := setupEnv([]string{"version-history", "-format", "json"})
+	args, format, _, _, _ := SetupEnv([]string{"version-history", "-format", "json"})
 	if format != "json" {
 		t.Fatalf("expected format to be %q, actual %q", "json", format)
 	}

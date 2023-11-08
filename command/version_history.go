@@ -40,7 +40,7 @@ Usage: vault version-history
 }
 
 func (c *VersionHistoryCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetOutputFormat)
+	return c.FlagSet(FlagSetOutputFormat)
 }
 
 func (c *VersionHistoryCommand) AutocompleteArgs() complete.Predictor {
@@ -81,7 +81,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		return 2
 	}
 
-	if c.flagFormat == "json" {
+	if c.FlagFormat == "json" {
 		c.UI.Warn("")
 		c.UI.Warn(versionTrackingWarning)
 		c.UI.Warn("")
@@ -128,7 +128,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 	c.UI.Warn("")
 	c.UI.Warn(versionTrackingWarning)
 	c.UI.Warn("")
-	c.UI.Output(tableOutput(table, columnConfig))
+	c.UI.Output(TableOutput(table, columnConfig))
 
 	return 0
 }

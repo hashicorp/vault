@@ -55,7 +55,7 @@ func TestEventsSubscribeCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testEventsSubscribeCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {

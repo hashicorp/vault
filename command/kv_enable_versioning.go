@@ -33,14 +33,14 @@ Usage: vault kv enable-versioning [options] KEY
 
       $ vault kv enable-versioning secret
 
-  Additional flags and more advanced use cases are detailed below.
+  Additional FlagSets and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 
 func (c *KVEnableVersioningCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 
 	return set
 }
@@ -78,7 +78,7 @@ func (c *KVEnableVersioningCommand) Run(args []string) int {
 	}
 
 	// Append a trailing slash to indicate it's a path in output
-	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
+	mountPath := ensureTrailingSlash(SanitizePath(args[0]))
 
 	if err := client.Sys().TuneMount(mountPath, api.MountConfigInput{
 		Options: map[string]string{

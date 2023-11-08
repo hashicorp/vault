@@ -75,7 +75,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 				client.SetToken(token)
 
 				ui, cmd := testTokenRenewCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -99,7 +99,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		token, _ := testTokenAndAccessor(t, client)
 
 		_, cmd := testTokenRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-increment", "30m",
@@ -133,7 +133,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		token, accessor := testTokenAndAccessor(t, client)
 
 		_, cmd := testTokenRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-increment", "30m",
@@ -168,12 +168,12 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		token, _ := testTokenAndAccessor(t, client)
 
 		// Get the old token and login as the new token. We need the old token
-		// to query after the lookup, but we need the new token on the client.
+		// to query after the lookup, but we need the new token on the ApiClient.
 		oldToken := client.Token()
 		client.SetToken(token)
 
 		_, cmd := testTokenRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-increment", "30m",
@@ -205,7 +205,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenRenewCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"foo/bar",

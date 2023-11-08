@@ -55,7 +55,7 @@ Usage: vault auth help [options] TYPE | PATH
 }
 
 func (c *AuthHelpCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.FlagSet(FlagSetHTTP)
 }
 
 func (c *AuthHelpCommand) AutocompleteArgs() complete.Predictor {
@@ -106,7 +106,7 @@ func (c *AuthHelpCommand) Run(args []string) int {
 			return 2
 		}
 
-		authPath := ensureTrailingSlash(sanitizePath(args[0]))
+		authPath := ensureTrailingSlash(SanitizePath(args[0]))
 		auth, ok := auths[authPath]
 		if !ok {
 			c.UI.Warn(fmt.Sprintf(
@@ -116,7 +116,7 @@ func (c *AuthHelpCommand) Run(args []string) int {
 
 		authHandler, ok = c.Handlers[auth.Type]
 		if !ok {
-			c.UI.Warn(wrapAtLength(fmt.Sprintf(
+			c.UI.Warn(WrapAtLength(fmt.Sprintf(
 				"No method-specific CLI handler available for auth method %q",
 				authType)))
 			return 2

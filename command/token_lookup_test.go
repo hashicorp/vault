@@ -63,7 +63,7 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 				defer closer()
 
 				ui, cmd := testTokenLookupCommand(t)
-				cmd.client = client
+				cmd.ApiClient = client
 
 				code := cmd.Run(tc.args)
 				if code != tc.code {
@@ -87,7 +87,7 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 		token, _ := testTokenAndAccessor(t, client)
 
 		ui, cmd := testTokenLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			token,
@@ -110,7 +110,7 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 0; code != exp {
@@ -133,7 +133,7 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 		_, accessor := testTokenAndAccessor(t, client)
 
 		ui, cmd := testTokenLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-accessor",
@@ -157,7 +157,7 @@ func TestTokenLookupCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testTokenLookupCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{})
 		if exp := 2; code != exp {

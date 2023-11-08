@@ -50,7 +50,7 @@ Usage: vault plugin deregister [options] TYPE NAME
 }
 
 func (c *PluginDeregisterCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.FlagSet(FlagSetHTTP)
 
 	f := set.NewFlagSet("Command Options")
 

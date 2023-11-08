@@ -67,7 +67,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			defer closer()
 
 			ui, cmd := testAuthEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
@@ -88,7 +88,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"-path", "auth_integration/",
@@ -147,7 +147,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		defer closer()
 
 		ui, cmd := testAuthEnableCommand(t)
-		cmd.client = client
+		cmd.ApiClient = client
 
 		code := cmd.Run([]string{
 			"userpass",
@@ -224,7 +224,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			}
 
 			ui, cmd := testAuthEnableCommand(t)
-			cmd.client = client
+			cmd.ApiClient = client
 
 			actualResult := cmd.Run([]string{
 				b,

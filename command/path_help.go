@@ -58,7 +58,7 @@ Usage: vault path-help [options] PATH
 }
 
 func (c *PathHelpCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	return c.FlagSet(FlagSetHTTP | FlagSetOutputFormat)
 }
 
 func (c *PathHelpCommand) AutocompleteArgs() complete.Predictor {
@@ -93,7 +93,7 @@ func (c *PathHelpCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
+	path := SanitizePath(args[0])
 
 	help, err := client.Help(path)
 	if err != nil {
@@ -105,7 +105,7 @@ func (c *PathHelpCommand) Run(args []string) int {
 		return 2
 	}
 
-	switch c.flagFormat {
+	switch c.FlagFormat {
 	case "json":
 		b, err := json.Marshal(help.OpenAPI)
 		if err != nil {

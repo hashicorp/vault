@@ -46,7 +46,7 @@ Usage: vault plugin runtime info [options] NAME
 }
 
 func (c *PluginRuntimeInfoCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.FlagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
 

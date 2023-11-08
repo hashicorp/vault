@@ -169,22 +169,21 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 	var sealStatusResponseMock api.SealStatusResponse
 	if !emptyFields {
 		sealStatusResponseMock = api.SealStatusResponse{
-			Type:             "type",
-			Initialized:      true,
-			Sealed:           true,
-			T:                1,
-			N:                2,
-			Progress:         3,
-			Nonce:            "nonce",
-			Version:          "version",
-			BuildDate:        "build date",
-			Migration:        true,
-			ClusterName:      "cluster name",
-			ClusterID:        "cluster id",
-			RecoverySeal:     true,
-			RecoverySealType: "type",
-			StorageType:      "storage type",
-			Warnings:         []string{"warning"},
+			Type:         "type",
+			Initialized:  true,
+			Sealed:       true,
+			T:            1,
+			N:            2,
+			Progress:     3,
+			Nonce:        "nonce",
+			Version:      "version",
+			BuildDate:    "build date",
+			Migration:    true,
+			ClusterName:  "cluster name",
+			ClusterID:    "cluster id",
+			RecoverySeal: true,
+			StorageType:  "storage type",
+			Warnings:     []string{"warning"},
 		}
 
 		// must initialize this struct without explicit field names due to embedding
@@ -203,21 +202,20 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 		}
 	} else {
 		sealStatusResponseMock = api.SealStatusResponse{
-			Type:             "type",
-			Initialized:      true,
-			Sealed:           true,
-			T:                1,
-			N:                2,
-			Progress:         3,
-			Nonce:            "nonce",
-			Version:          "version",
-			BuildDate:        "build date",
-			Migration:        true,
-			ClusterName:      "",
-			ClusterID:        "",
-			RecoverySeal:     true,
-			StorageType:      "",
-			RecoverySealType: "type",
+			Type:         "type",
+			Initialized:  true,
+			Sealed:       true,
+			T:            1,
+			N:            2,
+			Progress:     3,
+			Nonce:        "nonce",
+			Version:      "version",
+			BuildDate:    "build date",
+			Migration:    true,
+			ClusterName:  "",
+			ClusterID:    "",
+			RecoverySeal: true,
+			StorageType:  "",
 		}
 
 		// must initialize this struct without explicit field names due to embedding
