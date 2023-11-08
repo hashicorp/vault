@@ -1101,6 +1101,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 // this function should be called with activityLogLock.
 func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
+	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
 		if c.CensusLicensingEnabled() {

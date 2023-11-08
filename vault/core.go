@@ -883,13 +883,6 @@ type CoreConfig struct {
 	NumRollbackWorkers int
 }
 
-// SubloggerHook implements the SubloggerAdder interface. This implementation
-// manages CoreConfig.AllLoggers state prior to (and during) NewCore.
-func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
-	c.AllLoggers = append(c.AllLoggers, logger)
-	return logger
-}
-
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
@@ -1076,7 +1069,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
+	c.allLoggers = append(c.allLoggers, c.logger)
+
 	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
@@ -1229,6 +1226,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// MFA method
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	// Logical backends
 	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
@@ -1249,11 +1249,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Log level
-	c.configureLogRequestLevel(conf.RawConfig.LogLevel)
+	// Log requests level
+	c.configureLogRequestsLevel(conf.RawConfig.LogRequestsLevel)
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
+	c.allLoggers = append(c.allLoggers, quotasLogger)
 
 	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
@@ -1273,17 +1274,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Events
-	events, err := eventbus.NewEventBus(conf.Logger.Named("events"))
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	// start the event system
+	events, err := eventbus.NewEventBus(eventsLogger)
 	if err != nil {
 		return nil, err
 	}
 	c.events = events
 	c.events.Start()
-
-	// Make sure we're keeping track of the subloggers added above. We haven't
-	// yet registered core to the server command's SubloggerAdder, so any new
-	// subloggers will be in conf.AllLoggers.
-	c.allLoggers = conf.AllLoggers
 
 	return c, nil
 }
@@ -1307,8 +1306,8 @@ func (c *Core) configureListeners(conf *CoreConfig) error {
 	return nil
 }
 
-// configureLogRequestLevel configures the Core with the supplied log level.
-func (c *Core) configureLogRequestLevel(level string) {
+// configureLogRequestsLevel configures the Core with the supplied log requests level.
+func (c *Core) configureLogRequestsLevel(level string) {
 	c.logRequestsLevel = uberAtomic.NewInt32(0)
 
 	lvl := log.LevelFromString(level)
@@ -1343,7 +1342,9 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 	}
 
 	credentialBackends[mountTypeToken] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, logger.Named("token"), c, config)
+		tsLogger := logger.Named("token")
+		c.AddLogger(tsLogger)
+		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 
 	c.credentialBackends = credentialBackends
@@ -1371,7 +1372,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c, logger.Named("system"))
+		sysBackendLogger := logger.Named("system")
+		c.AddLogger(sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -1380,7 +1383,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// Identity
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config, logger.Named("identity"))
+		identityLogger := logger.Named("identity")
+		c.AddLogger(identityLogger)
+		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -3286,14 +3291,6 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
 	c.allLoggers = append(c.allLoggers, logger)
-}
-
-// SubloggerHook implements the SubloggerAdder interface. We add this method to
-// the server command after NewCore returns with a Core object. The hook keeps
-// track of newly added subloggers without manual calls to c.AddLogger.
-func (c *Core) SubloggerHook(logger log.Logger) log.Logger {
-	c.AddLogger(logger)
-	return logger
 }
 
 // SetLogLevel sets logging level for all tracked loggers to the level provided
