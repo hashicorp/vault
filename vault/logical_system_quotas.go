@@ -285,8 +285,10 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		b.Core.quotaManager.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
-		b.Core.quotaManager.SetGlobalRateLimitExemptPaths(config.AbsoluteRateLimitExemptPaths)
-		b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
+		if ns.ID == namespace.RootNamespaceID {
+			b.Core.quotaManager.SetGlobalRateLimitExemptPaths(config.AbsoluteRateLimitExemptPaths)
+			b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
+		}
 
 		return nil, nil
 	}
