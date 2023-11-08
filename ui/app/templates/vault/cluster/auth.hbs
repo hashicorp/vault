@@ -47,9 +47,9 @@
             {{on "click" (action "cancelAuthentication")}}
           />
         {{/if}}
-        <h1 class="title is-3">
+        {{!-- <h1 class="title is-3">
           {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
-        </h1>
+        </h1> --}}
       </div>
     {{/if}}
     <Hds::Text::Display class="has-bottom-padding-s" @tag="h2" @size="500">
@@ -58,7 +58,7 @@
   </Page.header>
   {{#unless this.mfaAuthData}}
     {{#if (has-feature "Namespaces")}}
-      <Page.sub-header>
+      {{!-- <Page.sub-header>
         <Toolbar class="toolbar-namespace-picker">
           <div class="field is-horizontal" data-test-namespace-toolbar>
             <div class="field-label is-normal">
@@ -90,7 +90,7 @@
             </div>
           </div>
         </Toolbar>
-      </Page.sub-header>
+      </Page.sub-header> --}}
     {{/if}}
   {{/unless}}
   <Page.content>

@@ -33,7 +33,6 @@ export default Service.extend({
   namespaceService: service('namespace'),
 
   IDLE_TIMEOUT: 3 * 60e3,
-  expirationCalcTS: null,
   isRenewing: false,
   mfaErrors: null,
   isRootToken: false,
@@ -58,25 +57,24 @@ export default Service.extend({
     }
   ),
 
-  renewAfterEpoch: computed('session.data.authenticated', 'expirationCalcTS', function () {
-    const { expirationCalcTS } = this;
-    const data = this.session.data.authenticated;
-    if (!data?.renewable || !expirationCalcTS) {
-      return null;
+  renewAfterEpoch: computed(
+    'session.data.authenticated.data.{renewable,ttl}',
+    'expirationCalcTS',
+    function () {
+      const { expirationCalcTS } = this;
+      const data = this.session.data.authenticated;
+      if (!data?.renewable || !expirationCalcTS) {
+        return null;
+      }
+      const { ttl } = data;
+      // renew after last expirationCalc time + half of the ttl (in ms)
+      return Math.floor((ttl * 1e3) / 2) + expirationCalcTS;
     }
-    const { ttl } = data;
-    // renew after last expirationCalc time + half of the ttl (in ms)
-    return Math.floor((ttl * 1e3) / 2) + expirationCalcTS;
-  }),
+  ),
 
   currentToken: alias('session.data.authenticated.token'),
 
   authData: alias('session.data.authenticated'),
-
-  // init() {
-  //   this._super(...arguments);
-  //   this.checkForRootToken();
-  // },
 
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
@@ -161,16 +159,7 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp) {
-    const now = this.now();
-    const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = now + ttl * 1e3;
-    this.set('expirationCalcTS', now);
-    return {
-      ttl,
-      tokenExpirationEpoch,
-    };
-  },
+  expirationCalcTS: alias('session.data.authenticated.expirationCalcTS'),
 
   calculateRootNamespace(currentNamespace, namespace_path, backend) {
     // here we prefer namespace_path if its defined,
@@ -195,115 +184,22 @@ export default Service.extend({
     return userRootNamespace;
   },
 
-  persistAuthData() {
-    const [firstArg, resp] = arguments;
-    /* const firstArg =
-      {
-        "clusterId": "1",
-        "backend": "token",
-        "data": {
-            "token": "root"
-        },
-        "selectedAuth": "token"
-      }
-    */
-    /* const resp =
-      {
-        "accessor": "7qQrHrmnJGL6RhTgEUt6bawN",
-        "creation_time": 1699291270,
-        "creation_ttl": 0,
-        "display_name": "token",
-        "entity_id": "",
-        "expire_time": null,
-        "explicit_max_ttl": 0,
-        "id": "root",
-        "issue_time": "2023-11-06T09:21:10.91448-08:00",
-        "meta": null,
-        "num_uses": 0,
-        "orphan": true,
-        "path": "auth/token/create",
-        "policies": [
-            "root"
-        ],
-        "renewable": false,
-        "ttl": 0,
-        "type": "service"
-      }
-    */
-    const tokens = this.tokens;
-    const currentNamespace = this.namespaceService.path || '';
-    // Tab vs dropdown format
-    const mountPath = firstArg?.selectedAuth || firstArg?.data?.path;
-    let tokenName;
-    let options;
-    let backend;
-    if (typeof firstArg === 'string') {
-      tokenName = firstArg;
-      backend = this.backendFromTokenName(tokenName);
-    } else {
-      options = firstArg;
-      backend = options.backend;
+  renew() {
+    const currentlyRenewing = this.isRenewing;
+    if (currentlyRenewing) {
+      return;
     }
-
-    const currentBackend = {
-      mountPath,
-      ...BACKENDS.findBy('type', backend),
-    };
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
-
-    const { entity_id, policies, renewable, namespace_path } = resp;
-    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
-    const data = {
-      userRootNamespace,
-      displayName,
-      backend: currentBackend,
-      token: resp.client_token || get(resp, currentBackend.tokenPath),
-      policies,
-      renewable,
-      entity_id,
-    };
-
-    tokenName = this.generateTokenName(
-      {
-        backend,
-        clusterId: (options && options.clusterId) || this.activeClusterId,
-      },
-      resp.policies
-    );
-
-    if (resp.renewable) {
-      Object.assign(data, this.calculateExpiration(resp));
-    }
-
-    if (!data.displayName) {
-      data.displayName = (this.getTokenData(tokenName) || {}).displayName;
-    }
-    tokens.addObject(tokenName);
-    this.set('tokens', tokens);
-    this.set('allowExpiration', false);
-    this.setTokenData(tokenName, data);
-    return resolve({
-      namespace: currentNamespace || data.userRootNamespace,
-      token: tokenName,
-      isRoot: policies.includes('root'),
-    });
-  },
-
-  setTokenData(token, data) {
-    this.storage(token).setItem(token, data);
-  },
-
-  getTokenData(token) {
-    return this.storage(token).getItem(token);
-  },
-
-  removeTokenData(token) {
-    return this.storage(token).removeItem(token);
+    this.isRenewing = true;
+    const { authenticator, backend, token, userRootNamespace } = this.session.data.authenticated;
+    return this.session
+      .authenticate(
+        authenticator,
+        { token },
+        { renew: true, backend: backend.mountPath, namespace: userRootNamespace }
+      )
+      .finally(() => {
+        this.isRenewing = false;
+      });
   },
 
   checkShouldRenew: task(function* () {

@@ -32,5 +32,6 @@ TODO:
 - Allow logging in with namespace and auth mount
 - Nice-to-have show tabs for auth methods that configured that option
 - Figure why the <section class="section"><div class="container is-widescreen"></div></section> isn't showing
-- Move renew/revoke methods back inside expiry (user-menu.hbs)
-- Clean up auth service
+- Handle wrapped token
+- MFA
+- Okta challenge

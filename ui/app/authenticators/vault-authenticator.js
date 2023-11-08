@@ -130,6 +130,7 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     return {
       ttl,
       tokenExpirationEpoch,
+      expirationCalcTS: now, // timestamp of base when the lease should be claculated
     };
   }
 
