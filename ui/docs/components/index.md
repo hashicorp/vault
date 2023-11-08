@@ -2,7 +2,7 @@
 
 Components can range from small, highly reusable "atoms" to large units with lots of business logic specific to one workflow or action. In any scenario, these are things to keep in mind while developing components for the Vault UI.
 
-Please note that these guidelines are aspirational and you will see instances of antipatterns in the codebase. Many of these should be updated as we move forward. As with any ruleset, sometimes it is appropriate to break the rule.
+Please note that these guidelines are aspirational and you will see instances of anti-patterns in the codebase. Many of these should be updated as we move forward. As with any rule set, sometimes it is appropriate to break the rule.
 
 ## Page components for every route
 
@@ -24,38 +24,13 @@ Generally, we want the burden of deciding whether a component should render to l
 
 ## Reusable components
 
-When developing components, make sure to:
+- Consider yielding something instead of passing a new arg
+- Less is more! Adding lots of rendering logic means the component is likely doing too much
 
-- Add splattributes to the top level, eg:
-
-  ```hbs
-  <div data-test-stuff ...attributes>Stuff!</div>
-  ```
-
-- Consider passing splattributes or yielding something instead of passing a new arg
-
-  ❌ **Instead of:** passing a new arg that controls a style
-
-  ```
-  <Block @title="Example" @hasPadding={{false}} />
-  ```
-
-  ✅ **Prefer:** passing a class or helper that controls a style
-
-  ```
-  <Block @title="Example" class="padding-0" />
-  ```
-
-- Minimize the number of args that must be passed
-
-  ❌ **Instead of:** Passing in separate args that are both required for icon to render
-
-  ```
-  <Block @title="Example" @hasIcon={{true}} @iconName="key" />
-  ```
-
-  ✅ **Prefer:** One arg that is rendered if present
-
-  ```
-  <Block @title="Example" @icon="key" />
-  ```
+| 💡 Tips for reusability                                           | Example                                                                    |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ✅ Add splattributes to the top level                             | <pre>`<div ...attributes> Something! </div>`</pre>                         |
+| ✅ Pass a class or helper that controls a style                   | <pre>`<Block @title="Example" class="padding-0" />`</pre>                  |
+| ❌ Don't pass a new arg that controls a style                     | <pre>`<Block @title="Example" @hasPadding={{false}} />` </pre>             |
+| ✅ Minimize args passed, pass one arg that is rendered if present | <pre>`<Block @title="Example" @icon="key" />`</pre>                        |
+| ❌ Don't pass separate args required for icon to render           | <pre>`<Block @title="Example" @hasIcon={{true}} @iconName="key" />` </pre> |

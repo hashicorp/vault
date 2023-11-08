@@ -8,6 +8,7 @@
 @import 'ember-power-select';
 @import '@hashicorp/design-system-components';
 @import './core';
+@import './docs';
 
 @mixin font-face($name) {
   @font-face {

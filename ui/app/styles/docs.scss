@@ -1,0 +1,72 @@
+#docfy-content {
+  font-size: 16px;
+  font-family: var(--token-typography-display-300-font-family);
+  margin-left: 1.5rem;
+  margin-right: 2rem;
+  margin-top: 1.5rem;
+  max-width: 80%;
+
+  h1,
+  h2,
+  h3 {
+    border-bottom: 1px solid $grey-light;
+    padding-bottom: 0.5rem;
+  }
+
+  h1 {
+    margin-bottom: 1.15rem;
+    font-size: var(--token-typography-display-500-font-size);
+    line-height: var(--token-typography-display-500-line-height);
+  }
+
+  h2 {
+    padding-top: 1rem;
+    font-size: var(--token-typography-display-400-font-size);
+    line-height: var(--token-typography-display-400-line-height);
+  }
+
+  ul {
+    list-style: disc;
+    padding-left: $spacing-m;
+    padding-bottom: $spacing-m;
+    li {
+      margin-top: 1rem;
+    }
+  }
+
+  pre,
+  blockquote,
+  code {
+    background-color: $ui-gray-100;
+  }
+
+  code {
+    font-size: var(--token-typography-body-300-font-size);
+    font-family: var(--token-typography-font-stack-code);
+  }
+
+  pre code {
+    overflow-x: scroll;
+    max-width: 700px;
+  }
+
+  pre,
+  table {
+    padding: 1rem;
+    text-align: left;
+    border: 1px solid $grey-light;
+    border-radius: 6px;
+  }
+
+  table {
+    border: none;
+    border-collapse: collapse;
+    td {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+    }
+    tr {
+      border-bottom: 1px solid $grey-light;
+    }
+  }
+}
