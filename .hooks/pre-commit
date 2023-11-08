@@ -117,21 +117,22 @@ ui_copywrite() {
   # since we want to block the commit if headers are added run --plan first to identify if files have missing headers
 
   # ---- EXPERIMENTAL workaround to only run tool on staged files
-  STAGED_FILES=$(git diff --name-only --cached)
+  STAGED_FILES=($(git diff --name-only --cached))
 
   rm -rf $BINARY_DIR/.staged
   mkdir $BINARY_DIR/.staged
   
-  # copy staged files to temp directory
-  for FILE_PATH in $STAGED_FILES; do
+  # copy staged files to .staged directory
+  echo $STAGED_FILES;
+  for FILE_PATH in "${STAGED_FILES[@]}"; do
     cp $FILE_PATH $BINARY_DIR/.staged
   done
 
   COPYWRITE_LOG_LEVEL=info
   COPY_CMD="$BINARY_DIR/copywrite headers -d $BINARY_DIR/.staged --config $DIR/.copywrite.hcl"
 
-  # if staged files are missing header run the tool against temp directory
-  eval $COPY_CMD --plan
+  # if staged files are missing header run the tool on .staged directory
+  VALIDATE=$(eval $COPY_CMD --plan) # assigning to var so output is suppressed since it is repeated during second run
   if [ $(echo $?) == 1 ]; then
     eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
 
@@ -145,7 +146,7 @@ ui_copywrite() {
     
     # this will result in unstaged changes
     # block so they can be added to existing commit
-    block "Copyright headers automatically added to files. Please review and commit again."
+    block "Copyright headers automatically added to files. Please review and stage the changes."
   fi
   return 0;
   # ----
