@@ -1,0 +1,22 @@
+### Fatal error during expiration metrics gathering causing Vault crash
+
+#### Affected versions
+
+This issue affects Vault Community and Enterprise versions:
+- 1.13.9
+- 1.14.5
+- 1.15.1
+
+A fix will be issued in Vault 1.13.10, 1.14.6, and 1.15.2.
+
+#### Issue
+
+A recent change to Vault to improve state change speed (e.g. becoming active or standby) introduced a concurrency issue
+which can lead to a concurrent iteration and write on a map, causing a fatal error and crashing Vault. This error occurs
+when gathering lease and token metrics from the expiration manager. These metrics originate from the active node in a HA
+cluster, as such a standby node will take over active duties and the cluster will remain functional should the original
+active node encounter this bug. The new active node will be vulnerable to the same bug, but may not encounter it immediately.
+
+There is no workaround.
+
+
