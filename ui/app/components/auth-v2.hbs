@@ -23,7 +23,7 @@
   {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
     <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} @onSuccess={{this.onSuccess}}>
       <:options>
-        <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth">
+        <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
           <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
             <F.Label>Auth Mount</F.Label>
           </Hds::Form::TextInput::Field>

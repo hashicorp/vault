@@ -17,13 +17,14 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   session: service(),
-  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+  queryParams: [{ authMethod: 'with', oidcProvider: 'o', mountPath: 'at' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
+  mountPath: '',
 
   get namespaceInput() {
     const namespaceQP = this.clusterController.namespaceQueryParam;
@@ -99,6 +100,8 @@ export default Controller.extend({
         this.updateNamespace.perform(value);
       } else if (key === 'authType') {
         this.set('authMethod', value);
+      } else if (key === 'mountPath') {
+        this.set('mountPath', value);
       }
     },
     onSuccess() {

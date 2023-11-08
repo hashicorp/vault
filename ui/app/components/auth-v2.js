@@ -6,9 +6,16 @@ import { tracked } from '@glimmer/tracking';
 export default class AuthV2Component extends Component {
   @service permissions;
 
-  @tracked namespace = '';
-  @tracked authType = 'token';
-  @tracked mountPath = '';
+  @tracked namespace;
+  @tracked authType;
+  @tracked mountPath;
+
+  constructor() {
+    super(...arguments);
+    this.namespace = this.args.namespace || '';
+    this.authType = this.args.authType || 'token';
+    this.mountPath = this.args.mountPath || '';
+  }
 
   get authMethods() {
     return ['token', 'userpass', 'oidc'];
