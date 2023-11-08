@@ -1,6 +1,16 @@
-<Hds::Text::Display @tag="h1" class="has-padding-m">Sign in to Vault</Hds::Text::Display>
+<div class="has-background-white-bis border-radius-6 has-short-padding has-top-padding-m has-bottom-padding-s">
+  <Hds::Form::TextInput::Field
+    @value={{this.namespace}}
+    {{on "input" this.handleChange}}
+    name="namespace"
+    placeholder="/ (Root)"
+    as |F|
+  >
+    <F.Label class="has-text-grey-800">Namespace</F.Label>
+  </Hds::Form::TextInput::Field>
+</div>
 
-<div class="has-padding-m">
+<div class="has-short-padding has-top-padding-m has-bottom-padding-s">
   <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
     <F.Label>Method</F.Label>
     <F.Options>
@@ -13,14 +23,11 @@
   {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
     <AuthComponent @namespace={{this.namespace}} @mountPath={{this.mountPath}} @onSuccess={{this.onSuccess}}>
       <:options>
-        <Hds::Separator />
-        <Hds::Text::Display @color="faint">Optional</Hds::Text::Display>
-        <Hds::Form::TextInput::Field @value={{this.namespace}} name="namespace" {{on "input" this.handleChange}} as |F|>
-          <F.Label>Namespace</F.Label>
-        </Hds::Form::TextInput::Field>
-        <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
-          <F.Label>Auth Mount</F.Label>
-        </Hds::Form::TextInput::Field>
+        <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth">
+          <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
+            <F.Label>Auth Mount</F.Label>
+          </Hds::Form::TextInput::Field>
+        </Hds::Reveal>
       </:options>
     </AuthComponent>
   {{/let}}
