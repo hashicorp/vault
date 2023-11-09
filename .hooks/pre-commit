@@ -115,9 +115,6 @@ ui_copywrite() {
   # run the copywrite tool
   # if a --path option is added we could apply the headers to only the staged files much easier
   # as of the latest version 0.16.6 there is only support for --dirPath
-  # since we want to block the commit if headers are added run --plan first to identify if files have missing headers
-
-  # ---- EXPERIMENTAL workaround to only run tool on staged files
   STAGED_FILES=($(git diff --name-only --cached))
 
   rm -rf $BINARY_DIR/.staged
@@ -145,19 +142,6 @@ ui_copywrite() {
       git add "${STAGED_FILES[$i]}"
       i=$(( i + 1 ))
     done
-  fi
-  return 0;
-  # ----
-  
-
-  # ---- Original attempt which is working but runs the tool against the full ui directory
-  cd $BINARY_DIR
-  COPYWRITE_LOG_LEVEL=info
-  COPY_CMD="./copywrite headers -d ../ --config ../.copywrite.hcl"
-  eval $COPY_CMD --plan
-  if [ $(echo $?) == 1 ]; then
-    eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
-    block "Copyright headers automatically added to files. Please review and commit again."
   fi
 }
 
