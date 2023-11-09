@@ -13,11 +13,12 @@
 
 const fs = require('fs');
 const jsdoc2md = require('jsdoc-to-markdown');
-const [name, addonOrEngine] = process.argv.slice(2);
+const [nameOrFile, addonOrEngine] = process.argv.slice(2);
 
-const inputFile = addonOrEngine
-  ? `lib/${addonOrEngine}/addon/components/${name}.js`
-  : `app/components/${name}.js`;
+const name = nameOrFile.includes('.') ? nameOrFile?.split('.')[0] : nameOrFile; // can pass component-name or component-name.js
+const path = nameOrFile.includes('.') ? nameOrFile : `${nameOrFile}.js`; // default to js
+
+const inputFile = addonOrEngine ? `lib/${addonOrEngine}/addon/components/${path}` : `app/components/${path}`;
 const outputFile = `docs/components/${name}.md`;
 
 const outputFormat = `
@@ -32,5 +33,10 @@ const options = {
   'example-lang': 'hbs preview-template',
   template: outputFormat,
 };
-const md = jsdoc2md.renderSync(options);
-fs.writeFileSync(outputFile, md);
+
+try {
+  const md = jsdoc2md.renderSync(options);
+  fs.writeFileSync(outputFile, md);
+} catch (error) {
+  console.log(name, error);
+}
