@@ -5,7 +5,7 @@
  */
 
 /* eslint-disable */
-// run this script via yarn in the ui directory:
+// run this script the ui directory:
 // yarn docfy-md some-component
 //
 // or if the story is for a component in an in-repo-addon or an engine:
