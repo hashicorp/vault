@@ -28,7 +28,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
-* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
@@ -356,7 +356,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
-* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
@@ -819,7 +819,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
-* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
