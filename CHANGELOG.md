@@ -28,6 +28,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
@@ -355,6 +356,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
@@ -521,8 +523,6 @@ SECURITY
 
 * auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
 * core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
-
-
 
 CHANGES:
 
@@ -819,6 +819,7 @@ on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
 * core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
 * core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
 * core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory leak [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
 * core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
 * core: fix bug where deadlock detection was always on for expiration and quotas. 
 These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
