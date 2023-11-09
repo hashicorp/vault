@@ -9,19 +9,14 @@ import { tracked } from '@glimmer/tracking';
 import { guidFor } from '@ember/object/internals';
 /**
  * @module TextFile
- * `TextFile` components render a file upload input with the option to toggle a "Enter as text" button
+ * TextFile components render a file upload input with the option to toggle a "Enter as text" button
  *  that changes the input into a textarea
  *
  * @example
- * <TextFile
- *  @uploadOnly={{true}}
- *  @helpText="help text"
- *  @onChange={{this.handleChange}}
- *  @label="PEM Bundle"
- * />
+ * <TextFile @uploadOnly={{true}} @helpText="help text" @onChange={{this.handleChange}} @label="PEM Bundle" />
  *
  * @param {function} onChange - Callback function to call when the value of the input changes, returns an object in the shape of { value: fileContents, filename: 'some-file.txt' }
- * @param {bool} [uploadOnly=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
+ * @param {boolean} [uploadOnly=false] - When true, renders a static file upload input and removes the option to toggle and input plain text
  * @param {string} [helpText] - Text underneath label.
  * @param {string} [label='File']  - Text to use as the label for the file input. If none, default of 'File' is rendered
  */

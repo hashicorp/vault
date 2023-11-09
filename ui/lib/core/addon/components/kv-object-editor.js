@@ -17,15 +17,11 @@ import KVObject from 'vault/lib/kv-object';
  * KvObjectEditor components are called in FormFields when the editType on the model is kv.  They are used to show a key-value input field.
  *
  * @example
- * <KvObjectEditor
- *  @value={{get model valuePath}}
- *  @onChange={{action "setAndBroadcast" valuePath }}
- *  @label="some label"
-   />
+  <KvObjectEditor @value={{hash foo=bar}} @onChange={{action "setAndBroadcast" valuePath }} @label="some label" />
  *
  * @param {string} value - the value is captured from the model.
  * @param {function} onChange - function that captures the value on change
- * @param {boolean} [isMasked = false] - when true the <MaskedInput> renders instead of the default <textarea> to input the value portion of the key/value object 
+ * @param {boolean} [isMasked=false] - when true the <MaskedInput> renders instead of the default <textarea> to input the value portion of the key/value object 
  * @param {function} [onKeyUp] - function passed in that handles the dom keyup event. Used for validation on the kv custom metadata.
  * @param {string} [label] - label displayed over key value inputs
  * @param {string} [labelClass] - override default label class in FormFieldLabel component

@@ -9,17 +9,14 @@ import { setComponentTemplate } from '@ember/component';
 
 /**
  * @module MessageError
- * Renders form errors using the <Hds::Alert> component and extracts errors from
- * a model, passed errorMessage or array of errors and displays each in a separate banner.
+ * Renders form errors using the `<Hds::Alert>` component and extracts errors from a model, passed errorMessage or array of errors and displays each in a separate banner.
  *
  * @example
- * <MessageError @model={{model}} />
+ * <MessageError @errorMessage="there is something very wrong" />
  *
- *
- * @param {object} [model=null] - An Ember data model that will be used to bind error states to the internal
- * `errors` property.
- * @param {array} [errors=null] - An array of error strings to show.
- * @param {string} [errorMessage=null] - An Error string to display.
+ * @param {object} [model] - An Ember data model that will be used to bind error states to the internal `errors` property.
+ * @param {array} [errors] - An array of error strings to show.
+ * @param {string} [errorMessage] - An Error string to display.
  */
 
 class MessageError extends Component {

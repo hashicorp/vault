@@ -11,7 +11,7 @@ import { action } from '@ember/object';
  * AutocompleteInput components are used as standard string inputs or optionally select options to append to input value
  *
  * @example
- * <AutocompleteInput @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <AutocompleteInput @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}} />
  *
  * @callback inputChangeCallback
  * @param {string} value - input value

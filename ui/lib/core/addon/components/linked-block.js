@@ -13,13 +13,8 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * LinkedBlock components are linkable divs that yield any content nested within them. They are often used in list views such as when listing the secret engines.
  *
  * @example
- * <LinkedBlock
- *  @params={{array 'vault.cluster.secrets.backend.show 'my-secret-path'}}
- *  @queryParams={{hash version=1}}
- *  @class="list-item-row"
- *  data-test-list-item-link
- *  >
- * // Use any wrapped content here
+ * <LinkedBlock @params={{array 'vault.cluster.secrets.backend.show' 'my-secret-path'}} @queryParams={{hash version=1}} @class="list-item-row">
+ Yield
  * </LinkedBlock>
  *
  *
