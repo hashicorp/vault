@@ -1,19 +1,19 @@
-### Vault is storing references to ephemeral sub-loggers leading to a memory leak
+### Vault is storing references to ephemeral sub-loggers leading to unbound memory consumption
 
 #### Affected versions
 
-This memory leak affects Vault Community and Enterprise versions:
+This memory consumption bug affects Vault Community and Enterprise versions:
 
 - 1.13.7 - 1.13.9
 - 1.14.3 - 1.14.5
 - 1.15.0 - 1.15.1
 
-This change that introduced this leak has been reverted as of 1.13.10, 1.14.6, and 1.15.2
+This change that introduced this bug has been reverted as of 1.13.10, 1.14.6, and 1.15.2
 
 #### Issue
 Vault is unexpectedly storing references to ephemeral sub-loggers which prevents them from being cleaned up, leading to
-a memory leak. This came about from a change to address a previously known issue around [sub-logger levels not being adjusted
-on reload](#sublogger-levels-unchanged-on-reload).
+unbound memory consumption for loggers. This came about from a change to address a previously known issue around
+[sub-logger levels not being adjusted on reload](#sublogger-levels-unchanged-on-reload).
 This impacts many areas of Vault, but primarily logins in Enterprise.
 
 #### Workaround
