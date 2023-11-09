@@ -80,7 +80,8 @@
     padding: 1rem;
 
     .docfy-demo__example {
-      & pre {
+      & pre,
+      code {
         background: none;
         margin: 0;
         padding: 0;
