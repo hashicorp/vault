@@ -16,7 +16,7 @@ import Component from '@glimmer/component';
  *    @policyType={{@model.policyType}}
  *    @container="#search-select-modal"
  *  />
- * ```
+ *
  * @param {string} policyType - policy type to decide which template to render; can either be "acl" or "rgp"
  * @param {string} container - selector for the container the example renders inside, passed to the copy button in JsonEditor
  */

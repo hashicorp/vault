@@ -21,14 +21,13 @@ import { tracked } from '@glimmer/tracking';
  * 4. Check complete
  *
  * @example
- * ```js
  * <Shamir::Flow
  *  @action="unseal"
  *  @threshold={{5}}
  *  @progress={{3}}
  *  @onShamirSuccess={{transition-to "vault.cluster"}}
  * />
- * ```
+ *
  *
  * @param {string} action - adapter method name (kebab case) to call on attempt
  * @param {number} threshold - number of keys required to unlock

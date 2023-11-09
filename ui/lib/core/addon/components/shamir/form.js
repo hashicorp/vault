@@ -14,7 +14,6 @@ import { tracked } from '@glimmer/tracking';
  * progress and optional
  *
  * @example
- * ```js
  * <Shamir::Form
  *  @onSubmit={{this.handleKeySubmit}}
  *  @threshold={{cluster.threshold}}
@@ -22,7 +21,7 @@ import { tracked } from '@glimmer/tracking';
  *  @fetchOnInit={{true}}
  *  @onShamirSuccess={{transition-to "vault.cluster"}}
  * />
- * ```
+ *
  *
  * @param {Function} onSubmit - method which handles the action for shamir. Receives { key }
  * @param {number} threshold - min number of keys required to unlock shamir seal

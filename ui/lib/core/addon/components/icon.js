@@ -15,9 +15,8 @@ const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
  * Flight icon documentation at https://flight-hashicorp.vercel.app/
  *
  * @example
- * ```js
  * <Icon @name="cancel-square-outline" @size="24" />
- * ```
+ *
  * @param {string} name=null - The name of the SVG to render inline.
  * @param {string} [size=16] - size for flight icon, can be 16 or 24
  *

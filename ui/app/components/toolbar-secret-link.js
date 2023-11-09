@@ -10,7 +10,6 @@ import Component from '@glimmer/component';
  * It should only be used inside of `Toolbar`.
  *
  * @example
- * ```js
  * <Toolbar>
  *   <ToolbarActions>
  *     <ToolbarSecretLink @params={{array 'vault.cluster.policies.create'}} @type="add">
@@ -18,7 +17,7 @@ import Component from '@glimmer/component';
  *     </ToolbarSecretLink>
  *   </ToolbarActions>
  * </Toolbar>
- * ```
+ *
  *
  * @param type="" {String} - Use "add" to change icon
  */

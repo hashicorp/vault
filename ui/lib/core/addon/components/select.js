@@ -11,9 +11,8 @@ import layout from '../templates/components/select';
  * Select components are used to render a dropdown.
  *
  * @example
- * ```js
  * <Select @label='Date Range' @options={{[{ value: 'berry', label: 'Berry' }]}} @onChange={{onChange}}/>
- * ```
+ *
  *
  * @param {string} [label=null] - The label for the select element.
  * @param {Array} [options=null] - A list of items that the user will select from. This can be an array of strings or objects.

@@ -10,9 +10,8 @@ import Component from '@glimmer/component';
  * DashboardVaultConfigurationCard component are used to display vault configuration.
  *
  * @example
- * ```js
  * <DashboardVaultConfigurationCard @vaultConfiguration={{@model.vaultConfiguration}} />
- * ```
+ *
  * @param {object} vaultConfiguration - object of vault configuration key/values
  */
 

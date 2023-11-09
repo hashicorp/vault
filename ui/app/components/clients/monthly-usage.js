@@ -11,13 +11,12 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  * MonthlyUsage components show how many total clients use Vault each month. Displaying the average totals to the left of a stacked, vertical bar chart.
  *
  * @example
- * ```js
   <Clients::MonthlyUsage
     @chartLegend={{this.chartLegend}}
     @responseTimestamp={{this.responseTimestamp}}
     @verticalBarChartData={{this.byMonthActivityData}}
   />
- * ```
+ *
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  * @param {array} verticalBarChartData - array of flattened objects

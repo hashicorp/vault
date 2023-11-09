@@ -26,9 +26,8 @@ import { formatNumber } from 'core/helpers/format-number';
  * LineChart components are used to display data in a line plot with accompanying tooltip
  *
  * @example
- * ```js
  * <LineChart @dataset={{dataset}} @upgradeData={{this.versionHistory}}/>
- * ```
+ *
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
  * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
  * @param {array} upgradeData - array of objects containing version history from the /version-history endpoint

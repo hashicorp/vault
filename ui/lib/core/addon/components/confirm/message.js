@@ -12,7 +12,6 @@ import layout from '../../templates/components/confirm/message';
  * `Message` components trigger and display a confirmation message. They should only be used within a `Confirm` component.
  *
  * @example
- * ```js
  * <div class="box">
  * <Confirm as |c|>
  *   <c.Message
@@ -23,7 +22,7 @@ import layout from '../../templates/components/confirm/message';
  *     />
  * </Confirm>
  * </div>
- * ```
+ *
  *
  * @property id=null {ID} - A unique identifier used to bind a trigger to a confirmation message.
  * @property onConfirm=null {Func} - The action to take when the user clicks the confirm button.

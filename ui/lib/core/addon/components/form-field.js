@@ -15,11 +15,10 @@ import { assert } from '@ember/debug';
  * `FormField` components are field elements associated with a particular model.
  *
  * @example
- * ```js
  * {{#each @model.fields as |attr|}}
  *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
  * {{/each}}
- * ```
+ *
  * example attr object:
  * attr = {
  *   name: "foo", // name of attribute -- used to populate various fields and pull value from model

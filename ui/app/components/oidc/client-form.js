@@ -13,9 +13,8 @@ import { task } from 'ember-concurrency';
  * OidcClientForm components are used to create and update OIDC clients (a.k.a. applications)
  *
  * @example
- * ```js
  * <OidcClientForm @model={{this.model}} />
- * ```
+ *
  * @param {Object} model - oidc client model
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered on save success

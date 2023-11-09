@@ -12,7 +12,6 @@ import { action } from '@ember/object';
  * `FormFieldGroups` components are field groups associated with a particular model. They render individual `FormField` components.
  *
  * @example
- * ```js
  * {{if model.fieldGroups}}
  *  <FormFieldGroups @model={{model}} />
  * {{/if}}
@@ -26,7 +25,7 @@ import { action } from '@ember/object';
  *  @onKeyUp={{action "onKeyUp"}}
  *  @validationMessages={{validationMessages}}
  * />
- * ```
+ *
  * @callback onChangeCallback
  * @callback onKeyUpCallback
  * @param {Model} model- Model to be passed down to form-field component. If `fieldGroups` is present on the model then it will be iterated over and groups of `FormField` components will be rendered.

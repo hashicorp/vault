@@ -8,9 +8,8 @@
  * ClientsConfig components are used to show and edit the client count config information.
  *
  * @example
- * ```js
  * <Clients::Config @model={{model}} @mode="edit" />
- * ```
+ *
  * @param {object} model - model is the DS clients/config model which should be passed in
  * @param {string} [mode=show] - mode is either show or edit. Show results in a table with the config, show has a form.
  */

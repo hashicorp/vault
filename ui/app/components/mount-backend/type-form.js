@@ -15,9 +15,8 @@ import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-eng
  * mounting either an auth method or secret engine.
  *
  * @example
- * ```js
  * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType="secret" />
- * ```
+ *
  * @param {CallableFunction} setMountType - function will receive the mount type string. Should update the model type value
  * @param {string} [mountType=auth] - mount type can be `auth` or `secret`
  */

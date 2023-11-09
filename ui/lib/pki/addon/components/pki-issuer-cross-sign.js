@@ -35,9 +35,8 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
  *    -> POST /:intermediateMount/issuer/:issuer_id
  *
  * @example
- * ```js
  * <PkiIssuerCrossSign @parentIssuer={{this.model}} />
- * ```
+ *
  * @param {object} parentIssuer - the model of the issuing certificate that will sign the issuer to-be cross-signed
  */
 

@@ -18,7 +18,7 @@ import { tracked } from '@glimmer/tracking';
  *    @onSave={{this.closeModal}}
  *    @onCancel={{@onCancel}}
  *  />
- * ```
+ *
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered when save button is clicked
  * @param {string} nameInput - the name of the newly created assignment

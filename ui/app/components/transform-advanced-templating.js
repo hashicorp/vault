@@ -12,9 +12,8 @@ import { action, set } from '@ember/object';
  * TransformAdvancedTemplating components are used to modify encode/decode formats of transform templates
  *
  * @example
- * ```js
  * <TransformAdvancedTemplating @model={{this.model}} />
- * ```
+ *
  * @param {Object} model - transform template model
  */
 

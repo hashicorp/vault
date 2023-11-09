@@ -13,7 +13,6 @@ import { next } from '@ember/runloop';
  * `Confirm` components prevent users from performing actions they do not intend to by showing a confirmation message as an overlay. This is a contextual component that should always be rendered with a `Message` which triggers the message.
  *
  * @example
- * ```js
  * <div class="box">
  * <Confirm as |c|>
  *   <c.Message
@@ -24,7 +23,7 @@ import { next } from '@ember/runloop';
  *     />
  * </Confirm>
  * </div>
- * ```
+ *
  */
 
 export default Component.extend({

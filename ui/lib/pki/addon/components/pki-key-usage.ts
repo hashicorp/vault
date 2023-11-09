@@ -13,9 +13,8 @@ import { action } from '@ember/object';
  * key_usage options: https://pkg.go.dev/crypto/x509#KeyUsage
  * ext_key_usage options (not all are include on purpose): https://pkg.go.dev/crypto/x509#ExtKeyUsage
  * @example
- * ```js
  * <PkiKeyUsage @model={@model} @group={group}/>
- * ```
+ *
  * @param {class} model - The pki/pki-role-engine model.
  * @param {string} group - The name of the group created in the model. In this case, it's the "Key usage" group.
  */

@@ -8,7 +8,6 @@
  * RegexValidator components are used to provide input forms for regex values, along with a toggle-able validation input which does not get saved to the model.
  *
  * @example
- * ```js
  * const attrExample = {
  *    name: 'valName',
  *    options: {
@@ -19,7 +18,7 @@
  *    }
  * }
  * <RegexValidator @onChange={action 'myAction'} @attr={attrExample} @labelString="Label String" @value="initial value" />
- * ```
+ *
  * @param {string} value - the value of the main input which will be updated in onChange
  * @param {func} [onChange] - the action that should trigger when pattern input is changed. Required when attr is provided.
  * @param {string} [labelString] - Form label. Anticipated from form-field. Required when attr is provided.

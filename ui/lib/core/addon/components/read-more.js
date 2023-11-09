@@ -15,9 +15,8 @@ import { tracked } from '@glimmer/tracking';
  * Text which is shorter than the surrounding div will not truncate or show the See More button.
  *
  * @example
- * ```js
  * <ReadMore>My <em>super</em> long text goes in here</ReadMore>
- * ```
+ *
  */
 
 class ReadMoreComponent extends Component {

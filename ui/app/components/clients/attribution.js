@@ -16,7 +16,6 @@ import { format, isSameMonth } from 'date-fns';
  * A horizontal bar chart shows on the right, with the top namespace/auth method and respective client totals on the left.
  *
  * @example
- * ```js
  *  <Clients::Attribution
  *    @chartLegend={{this.chartLegend}}
  *    @totalUsageCounts={{this.totalUsageCounts}}
@@ -30,7 +29,7 @@ import { format, isSameMonth } from 'date-fns';
  *    @responseTimestamp={{this.responseTimestamp}}
  *    @upgradeExplanation="We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data."
  *  />
- * ```
+ *
  * @param {array} chartLegend - (passed to child) array of objects with key names 'key' and 'label' so data can be stacked
  * @param {object} totalUsageCounts - object with total client counts for chart tooltip text
  * @param {object} newUsageCounts - object with new client counts for chart tooltip text

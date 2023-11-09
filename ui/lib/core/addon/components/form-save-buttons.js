@@ -11,12 +11,11 @@ import Component from '@glimmer/component';
  * To show an overall inline error message, use the :error yielded block like shown below.
  *
  * @example
- * ```js
  * <FormSaveButtons @saveButtonText="Save" @isSaving={{isSaving}} @cancelLinkParams={{array
  * "foo.route"}}>
  *   <:error>This is an error</:error>
  * </FormSaveButtons>
- * ```
+ *
  *
  * @param [saveButtonText="Save" {String}] - The text that will be rendered on the Save button.
  * @param [cancelButtonText="Cancel" {String}] - The text that will be rendered on the Cancel button.

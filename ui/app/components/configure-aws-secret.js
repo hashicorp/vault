@@ -10,7 +10,6 @@ import { action } from '@ember/object';
  * @module ConfigureAwsSecretComponent
  *
  * @example
- * ```js
  * <ConfigureAwsSecret
     @model={{model}}
     @tab={{tab}}
@@ -21,7 +20,7 @@ import { action } from '@ember/object';
     @stsEndpoint={{stsEndpoint}}
     @saveAWSRoot={{action "save" "saveAWSRoot"}}
     @saveAWSLease={{action "save" "saveAWSLease"}} />
- * ```
+ *
  *
  * @param {object} model - aws secret engine model
  * @param {string} tab - current tab selection

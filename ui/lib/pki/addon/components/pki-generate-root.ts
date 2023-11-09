@@ -39,9 +39,8 @@ interface Args {
  * side effects in the parent.
  *
  * @example
- * ```js
  * <PkiGenerateRoot @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{fn (mut this.title) "Successful"}} @adapterOptions={{hash actionType="import" useIssuer=false}} />
- * ```
+ *
  *
  * @param {Object} model - pki/action model.
  * @callback onCancel - Callback triggered when cancel button is clicked, after model is unloaded

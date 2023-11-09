@@ -15,9 +15,8 @@ const pgpKeyFileDefault = () => ({ value: '' });
  * an interface for the user to upload or paste a PGP key for use
  *
  * @example
- * ```js
  * <ChoosePgpKeyForm @onCancel={{this.reset}} @onSubmit={{handleGenerateWithPgpKey}}>
- * ```
+ *
  * @param {function} onCancel - required - This function will be triggered when the modal intends to be closed
  * @param {function} onSubmit - required - When the PGP key is confirmed, it will call this method with the pgpKey value as the only param
  * @param {string} buttonText - Button text for onSubmit. Defaults to "Continue with key"

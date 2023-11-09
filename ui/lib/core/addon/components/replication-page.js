@@ -15,11 +15,10 @@ import { task } from 'ember-concurrency';
  * It is the top level component on routes displaying replication dashboards.
  *
  * @example
- * ```js
  * <ReplicationPage
     @model={{cluster}}
     />
- * ```
+ *
  * @param {Object} cluster=null - An Ember data object that is pulled from the Ember Cluster Model.
  */
 

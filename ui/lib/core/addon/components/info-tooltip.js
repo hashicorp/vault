@@ -10,9 +10,8 @@ import { action } from '@ember/object';
  * @module JsonEditor
  *
  * @example
- * ```js
  * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
- * ```
+ *
  *
  * @param {string} [verticalPosition] - vertical position specification (above, below)
  * @param {string} [horizontalPosition] - horizontal position specification (center, auto-right)

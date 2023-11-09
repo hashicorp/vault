@@ -10,9 +10,8 @@ import { action } from '@ember/object';
  * @module JsonEditor
  *
  * @example
- * ```js
  * <JsonEditor @title="Policy" @value={{codemirror.string}} @valueUpdated={{ action "codemirrorUpdate"}} />
- * ```
+ *
  *
  * @param {string} [title] - Name above codemirror view
  * @param {string} value - a specific string the comes from codemirror. It's the value inside the codemirror display

@@ -15,9 +15,8 @@ import { waitFor } from '@ember/test-waiters';
  * The `GeneratedItem` component is the form to configure generated items related to mounts (e.g. groups, roles, users)
  *
  * @example
- * ```js
  * <GeneratedItem @model={{model}} @mode={{mode}} @itemType={{itemType/>
- * ```
+ *
  *
  * @property model=null {DS.Model} - The corresponding item model that is being configured.
  * @property mode {String} - which config mode to use. either `show`, `edit`, or `create`

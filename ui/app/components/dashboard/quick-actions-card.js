@@ -14,9 +14,8 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * kv, pki and database and perform certain actions based on the type of secret engine selected
  *
  * @example
- * ```js
  *   <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
- * ```
+ *
  */
 
 const QUICK_ACTION_ENGINES = ['pki', 'database'];

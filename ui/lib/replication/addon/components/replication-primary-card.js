@@ -12,13 +12,12 @@ import { clusterStates } from 'core/helpers/cluster-states';
  * The `ReplicationPrimaryCard` component is a card-like component.  It displays cluster mode details specific for DR and Performance Primaries.
  *
  * @example
- * ```js
  * <ReplicationPrimaryCard
     @title='Last WAL entry'
     @description='Index of last Write Ahead Logs entry written on local storage.'
     @metric={{replicationAttrs.lastWAL}}
     />
- * ```
+ *
  * @param {String} [title=null] - The title to be displayed on the top left corner of the card.
  * @param {String} [description=null] - Helper text to describe the metric on the card.
  * @param {String} [glyph=null] - The glyph to display beside the metric.

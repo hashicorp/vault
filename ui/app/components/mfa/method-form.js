@@ -13,9 +13,8 @@ import { task } from 'ember-concurrency';
  * MfaMethodForm component
  *
  * @example
- * ```js
  * <Mfa::MethodForm @model={{this.model}} @hasActions={{true}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
- * ```
+ *
  * @param {Object} model - MFA method model
  * @param {boolean} [hasActions] - whether the action buttons will be rendered or not
  * @param {onSave} [onSave] - callback when save is successful

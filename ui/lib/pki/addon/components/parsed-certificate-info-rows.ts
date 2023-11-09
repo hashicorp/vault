@@ -15,7 +15,7 @@ import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
  *
  * @example ```js
  * <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
- * ```
+ *
  *
  * @param {object} model - object of parsed attributes from parse-pki-cert util
  */

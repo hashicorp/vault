@@ -16,7 +16,6 @@ import layout from '../templates/components/replication-dashboard';
  * It is the parent contextual component of the replication-<name>-card components.
  *
  * @example
- * ```js
  * <ReplicationDashboard
     @data={{model}}
     @componentToRender='replication-primary-card'
@@ -27,7 +26,7 @@ import layout from '../templates/components/replication-dashboard';
     @clusterMode=primary
     @reindexingDetails={{reindexingDetails}}
     />
- * ```
+ *
  * @param {Object} data=null - An Ember data object that is pulled from the Ember Cluster Model.
  * @param {String} [componentToRender=''] - A string that determines which card component is displayed.  There are three options, replication-primary-card, replication-secondary-card, replication-summary-card.
  * @param {Boolean} [isSecondary=false] - Used to determine the title and display logic.

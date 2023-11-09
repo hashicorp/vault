@@ -10,9 +10,8 @@ import Component from '@glimmer/component';
  * DashboardLearnMoreCard component are used to display external links
  *
  * @example
- * ```js
  * <DashboardLearnMoreCard  />
- * ```
+ *
  */
 
 export default class DashboardLearnMoreCard extends Component {

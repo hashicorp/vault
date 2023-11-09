@@ -10,7 +10,6 @@ import Component from '@glimmer/component';
  * It should only be used inside of `Toolbar`.
  *
  * @example
- * ```js
  * <Toolbar>
  *   <ToolbarActions>
  *     <ToolbarLink @route="vault.cluster.policies.create" @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
@@ -18,7 +17,7 @@ import Component from '@glimmer/component';
  *     </ToolbarLink>
  *   </ToolbarActions>
  * </Toolbar>
- * ```
+ *
  *
  * @param {string} route - route to pass to LinkTo
  * @param {Model} model - model to pass to LinkTo

@@ -14,12 +14,11 @@ import { clusterStates } from 'core/helpers/cluster-states';
  * The `ReplicationSecondaryCard` component is a card-like component.  It displays cluster mode details specific for DR and Performance Secondaries.
  *
  * @example
- * ```js
  * <ReplicationSecondaryCard
     @title='States'
     @replicationDetails={{replicationDetails}}
     />
- * ```
+ *
  * @param {String} [title=null] - The title to be displayed on the top left corner of the card.
  * @param {Object} replicationDetails=null - An Ember data object pulled from the Ember Model. It contains details specific to the mode's replication.
  */

@@ -11,14 +11,13 @@ import layout from '../templates/components/replication-header';
  * The `ReplicationHeader` is a header component used on the Replication Dashboards.
  *
  * @example
- * ```js
  * <ReplicationHeader
     @data={{model}}
     @title="Secondary"
     @secondaryID="meep_123"
     @isSummaryDashboard=false
     />
- * ```
+ *
  * @param {Object} model=null - An Ember data object pulled from the Ember cluster model.
  * @param {String} title=null - The title of the header.
  * @param {String} [secondaryID=null] - The secondaryID pulled off of the model object.

@@ -13,7 +13,6 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * LinkedBlock components are linkable divs that yield any content nested within them. They are often used in list views such as when listing the secret engines.
  *
  * @example
- * ```js
  * <LinkedBlock
  *  @params={{array 'vault.cluster.secrets.backend.show 'my-secret-path'}}
  *  @queryParams={{hash version=1}}
@@ -22,7 +21,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  *  >
  * // Use any wrapped content here
  * </LinkedBlock>
- * ```
+ *
  *
  * @param {Array} params=null - These are values sent to the router's transitionTo method.  First item is route, second is the optional path.
  * @param {Object} [queryParams=null] - queryParams can be passed via this property. It needs to be an object.

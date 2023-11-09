@@ -19,7 +19,7 @@ import Component from '@glimmer/component';
  *     {{/each}}
  *   </:list>
  * </PkiPaginatedList>
- * ```
+ *
  */
 
 interface Args {

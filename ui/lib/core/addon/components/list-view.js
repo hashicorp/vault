@@ -11,7 +11,6 @@ import { pluralize } from 'ember-inflector';
  * `ListView` components are used in conjunction with `ListItem` for rendering a list.
  *
  * @example
- * ```js
  * <ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
  *   {{#if list.empty}}
  *     <list.empty @title="No roles here" />
@@ -21,7 +20,7 @@ import { pluralize } from 'ember-inflector';
  *     </div>
  *   {{/if}}
  * </ListView>
- * ```
+ *
  *
  * @param {array} [items=null] - An Ember array of items (objects) to render as a list. Because it's an Ember array it has properties like length an meta on it.
  * @param {string} [itemNoun=item] - A noun to use in the empty state of message and title.

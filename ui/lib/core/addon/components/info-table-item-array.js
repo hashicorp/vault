@@ -17,17 +17,17 @@ import { action } from '@ember/object';
  * return a wildcard count similar to what is done in the searchSelect component.
  *
  * @example
- * ```js
  * <InfoTableItemArray
  * @label="Roles"
- * @displayArray={{['test-1','test-2','test-3']}}
+ * @displayArray={{array 'test-1' 'test-2' 'test-3'}}
  * @isLink={{true}}
  * @rootRoute="vault.cluster.secrets.backend.list-root"
  * @itemRoute="vault.cluster.secrets.backend.show"
  * @modelType="transform/role"
  * @queryParam="role"
  * @backend="transform"
- * ```
+ * />
+ *
  *
  * @param {string} label - used to render lowercased display text for "View all <label>."
  * @param {array} displayArray - The array of data to be displayed. (In InfoTableRow this comes from the @value arg.) If the array length > 10, and @doNotTruncate is false only 5 will show with a count of the number hidden.

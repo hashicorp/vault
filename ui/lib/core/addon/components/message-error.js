@@ -13,9 +13,8 @@ import { setComponentTemplate } from '@ember/component';
  * a model, passed errorMessage or array of errors and displays each in a separate banner.
  *
  * @example
- * ```js
  * <MessageError @model={{model}} />
- * ```
+ *
  *
  * @param {object} [model=null] - An Ember data model that will be used to bind error states to the internal
  * `errors` property.

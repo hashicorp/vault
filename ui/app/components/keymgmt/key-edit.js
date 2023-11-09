@@ -15,9 +15,8 @@ import { waitFor } from '@ember/test-waiters';
  * KeymgmtKeyEdit components are used to display KeyMgmt Secrets engine UI for Key items
  *
  * @example
- * ```js
  * <KeymgmtKeyEdit @model={model} @mode="show" @tab="versions" />
- * ```
+ *
  * @param {object} model - model is the data from the store
  * @param {string} [mode=show] - mode controls which view is shown on the component
  * @param {string} [tab=details] - Options are "details" or "versions" for the show mode only

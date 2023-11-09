@@ -14,9 +14,8 @@ import { waitFor } from '@ember/test-waiters';
  * The `AuthConfigForm/Config` is the base form to configure auth methods.
  *
  * @example
- * ```js
  * {{auth-config-form/config model.model}}
- * ```
+ *
  *
  * @property model=null {DS.Model} - The corresponding auth model that is being configured.
  *

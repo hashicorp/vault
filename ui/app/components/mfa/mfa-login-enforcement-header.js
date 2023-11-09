@@ -13,10 +13,9 @@ import { action } from '@ember/object';
  * MfaLoginEnforcementHeader components are used to display information when creating and editing login enforcements
  *
  * @example
- * ```js
  * <MfaLoginEnforcementHeader @heading="New enforcement" />
  * <MfaLoginEnforcementHeader @radioCardGroupValue={{this.enforcementPreference}} @onRadioCardSelect={{fn (mut this.enforcementPreference)}} @onEnforcementSelect={{fn (mut this.enforcement)}} />
- * ```
+ *
  * @callback onRadioCardSelect
  * @callback onEnforcementSelect
  * @param {boolean} [isInline] - toggle component display when used inline with mfa method form -- overrides heading and shows radio cards and enforcement select

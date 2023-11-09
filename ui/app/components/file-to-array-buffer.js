@@ -14,9 +14,8 @@ import filesize from 'filesize';
  * loaded, this file will be emitted as a JS ArrayBuffer to the passed `onChange` callback.
  *
  * @example
- * ```js
  *   <FileToArrayBuffer @onChange={{action (mut file)}} />
- * ```
+ *
  * @param {function} onChange - The function to call when the file read is complete. Receives the file as a JS ArrayBuffer
  * @param {string} [label] - Text to use as the label for the file input
  * @param {string} [fileHelpText] - Text to use as help under the file input

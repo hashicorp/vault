@@ -11,9 +11,8 @@ import { inject as service } from '@ember/service';
  * DashboardVaultVersionTitle component are use to display the vault version title and the badges
  *
  * @example
- * ```js
  * <Dashboard::VaultVersionTitle />
- * ```
+ *
  */
 
 export default class DashboardVaultVersionTitle extends Component {

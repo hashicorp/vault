@@ -9,7 +9,6 @@ import Component from '@glimmer/component';
  * They are used for extremely destructive actions that require extra consideration before confirming.
  *
  * @example
- * ```js
  * <ConfirmationModal
  *   @onConfirm={action "destructiveAction"}
  *   @title="Do Dangerous Thing?"
@@ -18,7 +17,7 @@ import Component from '@glimmer/component';
  *   @confirmText="yes"
  *   @onConfirmMsg="deleting this thing to delete."
  * />
- * ```
+ *
  * @param {function} onConfirm - onConfirm is the action that happens when user clicks onConfirm after filling in the confirmation block
  * @param {function} onClose - specify what to do when user attempts to close modal
  * @param {boolean} isActive - Controls whether the modal is "active" eg. visible or not.

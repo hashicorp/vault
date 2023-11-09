@@ -21,9 +21,8 @@ import type { ValidationMap } from 'vault/app-types';
  * PkiRoleForm components are used to create and update PKI roles.
  *
  * @example
- * ```js
  * <PkiRoleForm @model={{this.model}}/>
- * ```
+ *
  * @callback onCancel
  * @callback onSave
  * @param {Object} role - pki/role model.

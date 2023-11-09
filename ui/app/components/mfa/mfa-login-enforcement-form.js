@@ -16,9 +16,8 @@ import handleHasManySelection from 'core/utils/search-select-has-many';
  * MfaLoginEnforcementForm components are used to create and edit login enforcements
  *
  * @example
- * ```js
  * <MfaLoginEnforcementForm @model={{this.model}} @isInline={{false}} @onSave={{this.onSave}} @onClose={{this.onClose}} />
- * ```
+ *
  * @callback onSave
  * @callback onClose
  * @param {Object} model - login enforcement model

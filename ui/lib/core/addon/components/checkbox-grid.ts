@@ -26,14 +26,13 @@ interface Field {
  * number of predetermined options, aligned in a 3-column grid.
  *
  * @example
- * ```js
  * <CheckboxGrid
  *   @name="modelKey"
  *   @label="Model Attribute Label"
  *   @fields={{options}}
  *   @value={{['Hello', 'Yes']}}
  * />
- * ```
+ *
  */
 
 export default class CheckboxGrid extends Component<CheckboxGridArgs> {

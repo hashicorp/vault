@@ -21,7 +21,7 @@ import { tracked } from '@glimmer/tracking';
  *    @onCancel={{transition-to "vault.cluster.policies.index"}}
  *    @renderPolicyExampleModal={{true}}
  *  />
- * ```
+ *
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered when save button is clicked. Passes saved model
  * @param {object} model - ember data model from createRecord

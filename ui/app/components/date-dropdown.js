@@ -14,9 +14,8 @@ import timestamp from 'core/utils/timestamp';
  * The component returns an object with selected date info, example: { dateType: 'start', monthIdx: 0, monthName: 'January', year: 2022 }
  *
  * @example
- * ```js
  * <DateDropdown @handleSubmit={{this.actionFromParent}} @name="startTime" @submitText="Save" />
- * ```
+ *
  * @param {function} handleSubmit - callback function from parent that the date picker triggers on submit
  * @param {string} [dateType] - optional argument to give the selected month/year a type
  * @param {string} [submitText] - optional argument to change submit button text

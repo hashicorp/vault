@@ -9,9 +9,8 @@
  * SecretEdit component manages the secret and model data, and displays either the create, update, empty state or show view of a KV secret.
  *
  * @example
- * ```js
  * <SecretEdit @model={{model}} @mode="create" @baseKey={{this.baseKey}} @key={{this.model}} @initialKey={{this.initialKey}} @onRefresh={{action "refresh"}} @onToggleAdvancedEdit={{action "toggleAdvancedEdit"}} @preferAdvancedEdit={{this.preferAdvancedEdit}}/>
- * ```
+ *
 /This component is initialized from the secret-edit-layout.hbs file
  * @param {object} model - Secret model which is generated in the secret-edit route
  * @param {string} mode - Edit, create, etc.

@@ -14,12 +14,11 @@ import { tracked } from '@glimmer/tracking';
  * Oidc::AssignmentForm components are used to display the create view for OIDC providers assignments.
  *
  * @example
- * ```js
  * <Oidc::AssignmentForm @model={this.model}
  * @onCancel={transition-to "vault.cluster.access.oidc.assignment"} @param1={{param1}}
  * @onSave={transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}
  * />
- * ```
+ *
 
  * @param {object} model - The parent's model
  * @callback onCancel - callback triggered when cancel button is clicked

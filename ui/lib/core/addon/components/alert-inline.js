@@ -14,9 +14,8 @@ import { messageTypes } from 'core/helpers/message-types';
  * `AlertInline` components are used to inform users of important messages.
  *
  * @example
- * ```js
  * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
- * ```
+ *
  *
  * @param {string} type=null - The alert type passed to the message-types helper.
  * @param {string} [message=null] - The message to display within the alert.

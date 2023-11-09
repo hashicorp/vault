@@ -13,9 +13,8 @@ import { getOwner } from '@ember/application';
  * The `GeneratedItemList` component lists generated items related to mounts (e.g. groups, roles, users)
  *
  * @example
- * ```js
  * <GeneratedItemList @model={{model}} @itemType={{itemType}} @paths={{this.paths}} @methodModel={{this.methodModel}}/>
- * ```
+ *
  *
  * @param {class} model=null - The corresponding item model that is being configured.
  * @param {string} itemType - The type of item displayed.

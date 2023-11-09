@@ -14,9 +14,8 @@ import { task } from 'ember-concurrency';
  * OidcKeyForm components are used to create and update OIDC providers
  *
  * @example
- * ```js
  * <OidcKeyForm @model={{this.model}} />
- * ```
+ *
  * @callback onCancel
  * @callback onSave
  * @param {Object} model - oidc client model

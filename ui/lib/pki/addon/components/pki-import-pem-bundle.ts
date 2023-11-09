@@ -19,9 +19,8 @@ import type PkiActionModel from 'vault/models/pki/action';
  * https://github.com/hashicorp/vault/blob/main/website/content/api-docs/secret/pki.mdx#import-ca-certificates-and-keys
  *
  * @example
- * ```js
  * <PkiImportPemBundle @model={{this.model}} />
- * ```
+ *
  *
  * @param {Object} model - certificate model from route
  * @callback onCancel - Callback triggered when cancel button is clicked.

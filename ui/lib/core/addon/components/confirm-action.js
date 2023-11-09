@@ -13,13 +13,12 @@ import { tracked } from '@glimmer/tracking';
  * `ConfirmAction` is a button followed by a pop up confirmation message and button used to prevent users from performing actions they do not intend to.
  *
  * @example
- * ```js
  *  <ConfirmAction
  *    @onConfirmAction={{ () => { console.log('Action!') } }}
  *    @confirmMessage="Are you sure you want to delete this config?">
  *    Delete
  *  </ConfirmAction>
- * ```
+ *
  *
  * @param {Func} [onConfirmAction=null] - The action to take upon confirming.
  * @param {String} [confirmTitle=Delete this?] - The title to display when confirming.

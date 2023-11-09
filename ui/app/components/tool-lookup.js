@@ -11,7 +11,6 @@ import { action } from '@ember/object';
  * ToolLookup components are components that sys/wrapping/lookup functionality.  Most of the functionality is passed through as actions from the tool-actions-form and then called back with properties.
  *
  * @example
- * ```js
  * <ToolLookup
  *  @creation_time={{creation_time}}
  *  @creation_ttl={{creation_ttl}}
@@ -21,7 +20,7 @@ import { action } from '@ember/object';
  *  @token={{token}}
  *  @onClear={{action "onClear"}}
  *  @errors={{errors}}/>
- * ```
+ *
  * @param creation_time {Function} - parent action that is passed through.
  * @param creation_ttl {Function} - parent action that is passed through.
  * @param creation_path {Function} - parent action that is passed through.

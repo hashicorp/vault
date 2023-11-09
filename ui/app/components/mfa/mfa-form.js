@@ -14,9 +14,8 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * The MfaForm component is used to enter a passcode when mfa is required to login
  *
  * @example
- * ```js
  * <Mfa::MfaForm @clusterId={this.model.id} @authData={this.authData} />
- * ```
+ *
  * @param {string} clusterId - id of selected cluster
  * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }
  * @param {function} onSuccess - fired when passcode passes validation

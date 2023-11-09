@@ -13,9 +13,8 @@ import Component from '@glimmer/component';
  * button to copy the data.
  *
  * @example
- * ```js
  *  <CertificateCard @data={{value}} @isPem={{true}} />
- * ```
+ *
  * @param {string} data - the data to be displayed in the component (usually in PEM or DER format)
  * @param {boolean} isPem - optional argument for if the data is required to be in PEM format (and should thus have the PEM Format label)
  */

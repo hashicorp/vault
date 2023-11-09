@@ -8,9 +8,8 @@
  * OidcConsentBlock components are used to show the consent form for the OIDC Authorization Code Flow
  *
  * @example
- * ```js
  * <OidcConsentBlock @redirect="https://example.com/oidc-callback" @code="abcd1234" @state="string-for-state" />
- * ```
+ *
  * @param {string} redirect - redirect is the URL where successful consent will redirect to
  * @param {string} code - code is the string required to pass back to redirect on successful OIDC auth
  * @param {string} [state] - state is a string which is required to return on redirect if provided, but optional generally

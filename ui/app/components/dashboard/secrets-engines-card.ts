@@ -11,9 +11,8 @@ import type SecretEngineModel from 'vault/models/secret-engine';
  * DashboardSecretsEnginesCard component are used to display 5 secrets engines to the user.
  *
  * @example
- * ```js
  * <DashboardSecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
- * ```
+ *
  * @param {array} secretsEngines - list of secrets engines
  */
 

@@ -14,9 +14,8 @@ import parseURL from 'core/utils/parse-url';
  * OidcProviderForm components are used to create and update OIDC providers
  *
  * @example
- * ```js
  * <OidcProviderForm @model={{this.model}} />
- * ```
+ *
  * @callback onCancel
  * @callback onSave
  * @param {Object} model - oidc client model

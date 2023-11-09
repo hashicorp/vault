@@ -17,9 +17,8 @@ import timestamp from 'core/utils/timestamp';
  * LicenseBanners components are used to display Vault-specific license expiry messages
  *
  * @example
- * ```js
  * <LicenseBanners @expiry={expiryDate} />
- * ```
+ *
  * @param {string} expiry - RFC3339 date timestamp
  */
 

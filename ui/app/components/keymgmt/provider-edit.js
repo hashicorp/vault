@@ -15,9 +15,8 @@ import { waitFor } from '@ember/test-waiters';
  * ProviderKeyEdit components are used to display KeyMgmt Secrets engine UI for Key items
  *
  * @example
- * ```js
  * <KeymgmtProviderEdit @model={model} @mode="show" />
- * ```
+ *
  * @param {object} model - model is the data from the store
  * @param {string} mode - mode controls which view is shown on the component - show | create |
  * @param {string} [tab] - Options are "details" or "keys" for the show mode only

@@ -11,9 +11,8 @@ import { inject as service } from '@ember/service';
  * LinkStatus components are used to indicate link status to the hashicorp cloud platform
  *
  * @example
- * ```js
  * <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
- * ```
+ *
  *
  * @param {string} status - cluster.hcpLinkStatus value from currentCluster service -- returned from seal-status endpoint
  */

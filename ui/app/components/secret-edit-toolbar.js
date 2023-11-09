@@ -8,7 +8,6 @@
  * SecretEditToolbar component is the toolbar component displaying the JSON toggle and the actions like delete in the show mode.
  *
  * @example
- * ```js
  * <SecretEditToolbar
  * @mode={{mode}}
  * @model={{this.model}}
@@ -22,7 +21,7 @@
     refresh=(action "refresh")
   }}
  * />
- * ```
+ *
 
  * @param {string} mode - show, create, edit. The view.
  * @param {object} model - the model passed from the parent secret-edit

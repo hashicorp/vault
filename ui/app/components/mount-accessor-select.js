@@ -13,9 +13,8 @@ import { action } from '@ember/object';
  * The MountAccessorSelect component is used to selectDrop down mount options.
  *
  * @example
- * ```js
  * <MountAccessorSelect @value={this.aliasMountAccessor} @onChange={this.onChange} />
- * ```
+ *
  * @param {string} value - the selected value.
  * @param {function} onChange - the parent function that handles when a new value is selected.
  * @param {boolean} [showAccessor] - whether or not you should show the value or the more detailed accessor off the class.

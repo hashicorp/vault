@@ -13,7 +13,6 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
  *
  *
  * @example
- * ```js
       <Clients::RunningTotal
         @chartLegend={{this.chartLegend}}
         @selectedNamespace={{this.selectedNamespace}}
@@ -21,7 +20,7 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
         @runningTotals={{this.runningTotals}}
         @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
       />
- * ```
+ *
 
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} selectedAuthMethod - string of auth method label for empty state message in bar chart

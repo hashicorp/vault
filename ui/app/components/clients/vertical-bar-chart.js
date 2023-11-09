@@ -26,9 +26,8 @@ import { formatNumber } from 'core/helpers/format-number';
  * VerticalBarChart components are used to display stacked data in a vertical bar chart with accompanying tooltip
  *
  * @example
- * ```js
  * <VerticalBarChart @dataset={dataset} @chartLegend={chartLegend} />
- * ```
+ *
  * @param {array} dataset - dataset for the chart, must be an array of flattened objects
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset

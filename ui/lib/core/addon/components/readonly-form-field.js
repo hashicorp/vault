@@ -8,9 +8,8 @@
  * ReadonlyFormField components are used to...
  *
  * @example
- * ```js
  * <ReadonlyFormField @attr={attr} />
- * ```
+ *
  * @param {object} attr - Should be an attribute from a model exported with expandAttributeMeta
  * @param {any} value - The value that should be displayed on the input
  */

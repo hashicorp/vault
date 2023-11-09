@@ -19,9 +19,8 @@ import type FlashMessageService from 'vault/services/flash-messages';
  * PkiKeyImport components are used to import PKI keys.
  *
  * @example
- * ```js
  * <PkiKeyImport @model={{this.model}} />
- * ```
+ *
  *
  * @param {Object} model - pki/key model.
  * @callback onCancel - Callback triggered when cancel button is clicked.

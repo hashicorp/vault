@@ -10,14 +10,13 @@ import { action } from '@ember/object';
  * @module ConfigureSshSecretComponent
  *
  * @example
- * ```js
  * <ConfigureSshSecret
  *    @model={{this.model}}
  *    @configured={{this.configured}}
  *    @saveConfig={{action "saveConfig"}}
  *    @loading={{this.loading}}
  *  />
- * ```
+ *
  *
  * @param {string} model - ssh secret engine model
  * @param {Function} saveConfig - parent action which updates the configuration

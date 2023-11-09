@@ -14,9 +14,8 @@ import { inject as service } from '@ember/service';
  * Oidc scope form components are used to create and edit oidc scopes
  *
  * @example
- * ```js
  * <Oidc::ScopeForm @model={{this.model}} />
- * ```
+ *
  * @callback onCancel
  * @callback onSave
  * @param {Object} model - oidc scope model

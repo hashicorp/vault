@@ -15,14 +15,13 @@ import timestamp from 'core/utils/timestamp';
  * The component returns an object with selected date info, example: { dateType: 'endDate', monthIdx: 0, monthName: 'January', year: 2022 }
  *
  * @example
- * ```js
  * <CalendarWidget @startTimestamp={{this.startTime}} @endTimestamp={{this.endTime}} @selectMonth={{this.handleSelection}} />
  *
  *    @param {string} startTimestamp - ISO timestamp string of the calendar widget's start time, displays in dropdown trigger
  *    @param {string} endTimestamp - ISO timestamp string for the calendar widget's end time, displays in dropdown trigger
  *    @param {function} selectMonth - callback function from parent - fires when selecting a month or clicking "Current billing period"
  *  />
- * ```
+ *
  */
 export default class CalendarWidget extends Component {
   currentDate = timestamp.now();

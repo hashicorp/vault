@@ -16,7 +16,6 @@ import { assert } from '@ember/debug';
  * * NOTE: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
  * [ember-docs](https://ember-engines.com/docs/services)
  * @example
- * ```js
  *   <DownloadButton
  *     @text="Download this stuff"
  *     @color="secondary"
@@ -26,7 +25,7 @@ import { assert } from '@ember/debug';
  *     @extension={{this.extension}}
  *     @stringify={{true}}
  *  />
- * ```
+ *
  * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
  * @param {string} [data] - data to download
  * @param {function} [fetchData] - function that fetches data and returns download content

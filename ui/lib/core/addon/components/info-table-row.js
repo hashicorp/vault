@@ -14,9 +14,8 @@ import { action } from '@ember/object';
  * that the value breaks under the label on smaller viewports.
  *
  * @example
- * ```js
  * <InfoTableRow @value={{5}} @label="TTL" @helperText="Some description"/>
- * ```
+ *
  *
  * @param {string} label=null - The display name for the value.
  * @param {string} helperText=null - Text to describe the value displayed beneath the label.

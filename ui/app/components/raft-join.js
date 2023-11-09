@@ -12,9 +12,8 @@ import { inject as service } from '@ember/service';
  *
  *
  * @example
- * ```js
  * <RaftJoin @onDismiss={{action (mut attr)}} />
- * ```
+ *
  * @param {function} onDismiss - This function will be called if the user decides not to join an existing
  * raft cluster
  *

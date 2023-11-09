@@ -9,9 +9,8 @@
  * This component automatically handles read-only list items if capabilities are not granted or the item is internal only.
  *
  * @example
- * ```js
  * <DatabaseListItem @item={item} />
- * ```
+ *
  * @param {object} item - item refers to the model item used on the list item partial
  */
 

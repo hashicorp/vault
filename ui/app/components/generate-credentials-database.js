@@ -9,9 +9,8 @@
  * The component assumes that you will need to make an ajax request using queryRecord to return a model for the component that has username, password, leaseId and leaseDuration
  *
  * @example
- * ```js
  * <GenerateCredentialsDatabase @backendPath="database" @backendType="database" @roleName="my-role"/>
- * ```
+ *
  * @param {string} backendPath - the secret backend name.  This is used in the breadcrumb.
  * @param {string} roleType - either 'static', 'dynamic', or falsey.
  * @param {string} roleName - the id of the credential returning.

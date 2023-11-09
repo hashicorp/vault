@@ -19,9 +19,8 @@ import keys from 'core/utils/key-codes';
  * `NavigateInput` components are used to filter list data.
  *
  * @example
- * ```js
  * <NavigateInput @filter={@roleFiltered} @placeholder="placeholder text" urls="{{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}"/>
- * ```
+ *
  *
  * @param {String} filter=null  - The filtered string.
  * @param {String} [placeholder="Filter items"] - The message inside the input to indicate what the user should enter into the space.

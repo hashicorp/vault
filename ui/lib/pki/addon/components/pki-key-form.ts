@@ -18,9 +18,8 @@ import type { ValidationMap } from 'vault/app-types';
  * PkiKeyForm components are used to create and update PKI keys.
  *
  * @example
- * ```js
  * <PkiKeyForm @model={{this.model}} @onCancel={{transition-to "vault.cluster"}} @onSave={{transition-to "vault.cluster"}} />
- * ```
+ *
  *
  * @param {Object} model - pki/key model.
  * @callback onCancel - Callback triggered when cancel button is clicked.

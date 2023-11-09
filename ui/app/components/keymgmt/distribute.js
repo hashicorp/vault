@@ -16,9 +16,8 @@ import { waitFor } from '@ember/test-waiters';
  * KeymgmtDistribute components are used to provide a form to distribute Keymgmt keys to a provider.
  *
  * @example
- * ```js
  * <KeymgmtDistribute @backend="keymgmt" @key="my-key" @provider="my-kms" />
- * ```
+ *
  * @param {string} backend - name of backend, which will be the basis of other store queries
  * @param {string} [key] - key is the name of the existing key which is being distributed. Will hide the key field in UI
  * @param {string} [provider] - provider is the name of the existing provider which is being distributed to. Will hide the provider field in UI

@@ -13,9 +13,8 @@ const DIRECTIONS = ['right', 'left', 'up', 'down'];
  * `Chevron` components render `Icon` with one of the `chevron-` glyphs.
  *
  * @example
- * ```js
  * <Chevron @direction="up" />
- * ```
+ *
  *
  * @param [direction="right"] {String} - the direction the chevron icon points. Accepted values are
  * "right", "down", "left", "up".

@@ -8,7 +8,6 @@
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
  *
  * @example
- * ```js
  * <SecretCreateOrUpdate
  *  @mode="create"
  *  @model={{model}}
@@ -17,7 +16,7 @@
  *  @secretData={{@secretData}}
  *  @buttonDisabled={{this.saving}}
  * />
- * ```
+ *
  * @param {string} mode - create, edit, show determines what view to display
  * @param {object} model - the route model
  * @param {boolean} showAdvancedMode - whether or not to show the JSON editor

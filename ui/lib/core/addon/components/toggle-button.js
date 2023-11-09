@@ -10,7 +10,6 @@ import Component from '@glimmer/component';
  * `ToggleButton` components are used to expand and collapse content with a toggle.
  *
  * @example
- * ```js
  *   <ToggleButton @isOpen={{this.showOptions}} @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @onClick={{fn (mut this.showOptions}} />
  *  {{#if showOptions}}
  *     <div>
@@ -19,7 +18,7 @@ import Component from '@glimmer/component';
  *       </p>
  *     </div>
  *   {{/if}}
- * ```
+ *
  * @callback onClickCallback
  * @param {boolean} isOpen - determines whether to show open or closed label
  * @param {onClickCallback} onClick - fired when button is clicked

@@ -20,9 +20,8 @@ import { formatNumber } from 'core/helpers/format-number';
  * HorizontalBarChart components are used to display data in the form of a horizontal, stacked bar chart with accompanying tooltip.
  *
  * @example
- * ```js
  * <HorizontalBarChart @dataset={{@dataset}} @chartLegend={{@chartLegend}}/>
- * ```
+ *
  * @param {array} dataset - dataset for the chart, must be an array of flattened objects
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} labelKey - string of key name for label value in chart data

@@ -9,7 +9,6 @@ import { allFeatures } from 'vault/helpers/all-features';
  * @module LicenseInfo
  *
  * @example
- * ```js
  * <LicenseInfo
  *   @startTime="2020-03-12T23:20:50.52Z"
  *   @expirationTime="2021-05-12T23:20:50.52Z"

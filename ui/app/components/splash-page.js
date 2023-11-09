@@ -9,11 +9,10 @@
  *
  *
  * @example
- * ```js
  * <SplashPage >
  * content here
  * </SplashPage
- * ```
+ *
  * @param {boolean} [hasAltContent] - boolean to bypass container styling
  * @param {boolean} [showTruncatedNavBar = true] - boolean to hide or show the navBar. By default this is true.
  *

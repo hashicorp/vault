@@ -10,14 +10,13 @@
  * overview page to select a role and generate credentials
  *
  * @example
- * ```js
  * <GetCredentialsCard
  * @title="Get Credentials"
  * @searchLabel="Role to use"
  * @models={{array 'database/roles'}}
  * @backend={{model.backend}}
  * />
- * ```
+ *
  * @param {string} title - The title displays the card title
  * @param {string} searchLabel - The text above the searchSelect component
  * @param {array} models - An array of model types to fetch from the API. Passed through to SearchSelect component

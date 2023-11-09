@@ -9,9 +9,8 @@
  * You will end up with an array of two objects. One no longer with the array of params, and the second with just the array of params.
  *
  * @example
- * ```js
  * splitObject(data, ['max_versions', 'delete_version_after', 'cas_required'])
- * ```
+ *
 
  * @param {object} - The object you want to split into two. This object will have all the keys from the second param (the array param).
  * @param {array} - An array of params that you want to split off the object and turn into its own object.

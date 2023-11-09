@@ -8,9 +8,8 @@
  * OperationFieldDisplay components are used on KMIP role show pages to display the allowed operations on that model
  *
  * @example
- * ```js
  * <OperationFieldDisplay @model={{model}} />
- * ```
+ *
  *
  * @param model {DS.Model} - model is the KMIP role model that needs to display its allowed operations
  *

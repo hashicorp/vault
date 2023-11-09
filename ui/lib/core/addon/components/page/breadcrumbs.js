@@ -11,9 +11,8 @@ import { assert } from '@ember/debug';
  * Page::Breadcrumbs components are used to display breadcrumb links. This is component will be replaced when HDS system is incorporated
  *
  * @example
- * ```js
  * <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}}  />
- * ```
+ *
  * @param {array} breadcrumbs - array of objects with a label and route to display as breadcrumbs
  */
 

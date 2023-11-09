@@ -11,9 +11,8 @@ import Component from '@glimmer/component';
  *  To link to developer.hashicorp.com, use DocLink .
  *
  * @example
- * ```js
     <ExternalLink @href="https://hashicorp.com">Arbitrary Link</ExternalLink>
- * ```
+ *
  *
  * @param {string} href="https://example.com/" - The full href with protocol
  * @param {boolean} [sameTab=false] - by default, these links open in new tab. To override, pass @sameTab={{true}}
