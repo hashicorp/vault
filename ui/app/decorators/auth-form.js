@@ -87,10 +87,15 @@ export function withAuthForm(mountType) {
         }, {});
 
         try {
-          await this.session.authenticate(authenticator, fields, {
-            backend: this.mountPath,
-            namespace: this.args.namespace,
-          });
+          await this.session.authenticate(
+            authenticator,
+            fields,
+            {
+              backend: this.mountPath,
+              namespace: this.args.namespace,
+            },
+            this.args.handleData
+          );
         } catch (e) {
           this.error = errorMessage(e);
         }

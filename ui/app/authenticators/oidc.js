@@ -3,7 +3,8 @@ import VaultAuthenticator from './vault-authenticator';
 export default class OidcAuthenticator extends VaultAuthenticator {
   type = 'oidc';
   displayNamePath = 'display_name';
-  tokenPath = 'client_token';
+  // By the time tokenPath is used the payload is from lookup selfs
+  tokenPath = 'id';
 
   async lookupSelf(
     token,
@@ -22,7 +23,14 @@ export default class OidcAuthenticator extends VaultAuthenticator {
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return this.persistedAuthData(body.data, options, 'id');
+    return body;
+  }
+
+  async afterAuth(payload, options) {
+    // Finally, lookup the token returned from the oidc endpoint
+    // so the UI has all the data it needs
+    const { client_token } = payload.data || payload.auth;
+    return this.lookupSelf(client_token, options);
   }
 
   async login(
@@ -48,8 +56,6 @@ export default class OidcAuthenticator extends VaultAuthenticator {
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    // Finally, lookup the token returned from the oidc endpoint
-    // so the UI has all the data it needs
-    return this.lookupSelf(body.auth[this.tokenPath], options);
+    return body;
   }
 }

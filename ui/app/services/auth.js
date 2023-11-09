@@ -254,9 +254,8 @@ export default Service.extend({
     return this.authSuccess(options, resp.auth || resp.data);
   },
 
-  async totpValidate({ mfa_requirement, ...options }) {
-    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
-    return this.authSuccess(options, resp.auth || resp.data);
+  async totpValidate({ mfa_requirement }) {
+    return this.clusterAdapter().mfaValidate(mfa_requirement);
   },
 
   async authSuccess(options, response) {

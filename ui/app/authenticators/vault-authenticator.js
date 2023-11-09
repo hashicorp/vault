@@ -1,7 +1,6 @@
 import BaseAuthenticator from 'ember-simple-auth/authenticators/base';
 import RSVP from 'rsvp';
 import { get } from '@ember/object';
-import { assert } from '@ember/debug';
 
 /*{
   "body": {
@@ -32,6 +31,10 @@ import { assert } from '@ember/debug';
   }
 }
 */
+/**
+ * VaultAuthenticator is a common base for other authenticators
+ * tokenPath, displayNamePath, type, and a login method must be defined
+ */
 export default class VaultAuthenticator extends BaseAuthenticator {
   getTokenHeader(token, namespace) {
     const headers = {
@@ -50,14 +53,25 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     throw 'No session stored';
   }
 
-  async authenticate(fields, options) {
+  async authenticate(fields, options, dataCallback) {
     const { renew, ...opts } = options;
     if (renew) {
       const renewed = await this.renewToken(fields.token, opts.namespace);
       // TODO: OIDC renew endpoint doesn't return display_name
       return this.persistedAuthData(renewed, opts, 'client_token');
     }
-    return this.login(fields, opts);
+    let data = await this.login(fields, opts);
+    if (dataCallback) {
+      // This callback is for triggering side effects on the parent (flash warnings)
+      // and optionally waiting for MFA
+      data = await dataCallback(data, options.backend, fields);
+    }
+    if (this.afterAuth) {
+      // if this is defined on the authenticator it needs to make another call
+      // eg. lookup-self to get the full auth data payload
+      data = await this.afterAuth(data, options);
+    }
+    return this.persistedAuthData(data, options, this.tokenPath);
   }
 
   invalidate(authData, options) {
@@ -94,18 +108,18 @@ export default class VaultAuthenticator extends BaseAuthenticator {
     if (response.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return body.data || body.auth;
+    return body;
   }
 
-  persistedAuthData(data, options, tokenPath = 'id') {
-    if (!options?.backend) {
-      assert('persistedAuthData requires options with backend');
+  persistedAuthData(payload, options, tokenPath = 'id') {
+    if (!options?.backend || !this.displayNamePath || !this.type) {
+      throw new Error('Required fields are missing');
     }
+    const data = payload.data || payload.auth;
     const { entity_id, policies, renewable, namespace_path } = data;
     const userRootNamespace = this.calculateRootNamespace(options.namespace, namespace_path, options.backend);
     const isRootToken = policies.includes('root');
     const token = data[tokenPath];
-
     const persisted = {
       userRootNamespace,
       isRootToken,

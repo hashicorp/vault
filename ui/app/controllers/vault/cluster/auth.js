@@ -16,6 +16,7 @@ export default Controller.extend({
   featureFlagService: service('featureFlag'),
   auth: service(),
   router: service(),
+  permissions: service(),
   session: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o', mountPath: 'at' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
@@ -105,6 +106,7 @@ export default Controller.extend({
       }
     },
     onSuccess() {
+      this.permissions.getPaths.perform();
       if (this.session.data.authenticated.isRootToken) {
         this.flashMessages.warning(
           'You have logged in with a root token. As a security precaution, this root token will not be stored by your browser and you will need to re-authenticate after the window is closed or refreshed.'

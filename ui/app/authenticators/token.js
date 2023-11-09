@@ -25,6 +25,6 @@ export default class TokenAuthenticator extends VaultAuthenticator {
     if (result.status !== 200) {
       throw new Error(body.errors.join(', '));
     }
-    return this.persistedAuthData(body.data, options, this.tokenPath);
+    return body;
   }
 }

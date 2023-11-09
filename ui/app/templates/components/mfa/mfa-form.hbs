@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="auth-form" data-test-mfa-form>
-  <div class="box is-marginless is-shadowless">
+<div data-test-mfa-form>
+  <div>
     <p data-test-mfa-description>
       {{this.description}}
     </p>
@@ -61,18 +61,21 @@
           <AlertInline @type="danger" @sizeSmall={{true}} @message={{this.codeDelayMessage}} />
         </div>
       {{/if}}
-      <Hds::Button
-        @text="Verify"
-        @icon={{if this.validate.isRunning "loading"}}
-        id="validate"
-        type="submit"
-        disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-        data-test-mfa-validate
-      />
-      {{#if this.newCodeDelay.isRunning}}
-        <Icon @name="delay" class="has-text-grey" />
-        <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
-      {{/if}}
+      <Hds::ButtonSet>
+        <Hds::Button @color="secondary" @text="Cancel" {{on "click" @onCancel}} />
+        <Hds::Button
+          @text="Verify"
+          @icon={{if this.validate.isRunning "loading"}}
+          id="validate"
+          type="submit"
+          disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
+          data-test-mfa-validate
+        />
+        {{#if this.newCodeDelay.isRunning}}
+          <Icon @name="delay" class="has-text-grey" />
+          <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>
+        {{/if}}
+      </Hds::ButtonSet>
     </form>
   </div>
 </div>

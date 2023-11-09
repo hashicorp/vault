@@ -1,42 +1,54 @@
-<div class="has-background-white-bis border-radius-6 has-short-padding has-top-padding-m has-bottom-padding-s">
-  <Hds::Form::TextInput::Field
-    @value={{this.namespace}}
-    {{on "input" this.handleChange}}
-    name="namespace"
-    placeholder="/ (Root)"
-    as |F|
-  >
-    <F.Label class="has-text-grey-800">Namespace</F.Label>
-  </Hds::Form::TextInput::Field>
-</div>
-
-<div class="has-short-padding has-top-padding-m has-bottom-padding-s">
-  {{yield to="error"}}
-  <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
-    <F.Label>Method</F.Label>
-    <F.Options>
-      {{#each this.authMethods as |authMethodType|}}
-        <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
-      {{/each}}
-    </F.Options>
-  </Hds::Form::Select::Field>
-
-  {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
-    <AuthComponent
-      @namespace={{this.namespace}}
-      @mountPath={{this.mountPath}}
-      @onSuccess={{this.onSuccess}}
-      @wrappedToken={{@wrappedToken}}
+{{#if this.mfa.enforcement}}
+  <div class="has-short-padding has-top-padding-m has-bottom-padding-s">
+    <MessageError @errorMessage={{this.mfa.error}} />
+    <Mfa::MfaForm
+      @clusterId={{1}}
+      @authData={{this.mfa.enforcement}}
+      @onSuccess={{this.onMfaSuccess}}
+      @onError={{fn (mut this.mfa.error)}}
+      @onCancel={{this.cancelMfa}}
+    />
+  </div>
+{{else}}
+  <div class="has-background-white-bis border-radius-6 has-short-padding has-top-padding-m has-bottom-padding-s">
+    <Hds::Form::TextInput::Field
+      @value={{this.namespace}}
+      {{on "input" this.handleChange}}
+      name="namespace"
+      placeholder="/ (Root)"
+      as |F|
     >
-      <:options>
-        <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
-          <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
-            <F.Label>Auth Mount</F.Label>
-          </Hds::Form::TextInput::Field>
-        </Hds::Reveal>
-      </:options>
-    </AuthComponent>
-  {{/let}}
-</div>
+      <F.Label class="has-text-grey-800">Namespace</F.Label>
+    </Hds::Form::TextInput::Field>
+  </div>
 
-{{yield}}
+  <div class="has-short-padding has-top-padding-m has-bottom-padding-s">
+    {{yield to="error"}}
+    <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
+      <F.Label>Method</F.Label>
+      <F.Options>
+        {{#each this.authMethods as |authMethodType|}}
+          <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
+        {{/each}}
+      </F.Options>
+    </Hds::Form::Select::Field>
+
+    {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
+      <AuthComponent
+        @namespace={{this.namespace}}
+        @mountPath={{this.mountPath}}
+        @onSuccess={{this.onSuccess}}
+        @wrappedToken={{@wrappedToken}}
+        @handleData={{this.handleData}}
+      >
+        <:options>
+          <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
+            <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
+              <F.Label>Auth Mount</F.Label>
+            </Hds::Form::TextInput::Field>
+          </Hds::Reveal>
+        </:options>
+      </AuthComponent>
+    {{/let}}
+  </div>
+{{/if}}
