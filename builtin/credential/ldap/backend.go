@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -17,8 +18,9 @@ import (
 )
 
 const (
-	operationPrefixLDAP = "ldap"
-	errUserBindFailed   = "ldap operation failed: failed to bind as user"
+	operationPrefixLDAP   = "ldap"
+	errUserBindFailed     = "ldap operation failed: failed to bind as user"
+	defaultPasswordLength = 64 // length to use for configured root password on rotations by default
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -51,6 +53,7 @@ func Backend() *backend {
 			pathUsers(&b),
 			pathUsersList(&b),
 			pathLogin(&b),
+			pathConfigRotateRoot(&b),
 		},
 
 		AuthRenew:   b.pathLoginRenew,
@@ -62,6 +65,8 @@ func Backend() *backend {
 
 type backend struct {
 	*framework.Backend
+
+	mu sync.RWMutex
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
