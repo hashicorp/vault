@@ -5,6 +5,9 @@
 ## 1.15.2
 ### November 09, 2023
 
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
+
 CHANGES:
 
 * auth/approle: Normalized error response messages when invalid credentials are provided [[GH-23786](https://github.com/hashicorp/vault/pull/23786)]
@@ -334,6 +337,9 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 
 ## 1.14.6
 ### November 09, 2023
+
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
 
 CHANGES:
 
@@ -798,6 +804,9 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 
 ## 1.13.10
 ### November 09, 2023
+
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
 
 CHANGES:
 
