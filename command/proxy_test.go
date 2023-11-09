@@ -1165,12 +1165,10 @@ log_level = "trace"
 // update as opposed to receiving the event.
 func TestProxy_Cache_EventSystemPreEventStreamUpdateWorks(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.VersionedKVFactory,
 		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
 	})
 
 	serverClient := cluster.Cores[0].Client
@@ -1246,9 +1244,7 @@ log_level = "trace"
 	proxyClient.SetToken(serverClient.Token())
 	proxyClient.SetMaxRetries(0)
 	err = proxyClient.SetAddress("http://" + listenAddr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	secretData := map[string]interface{}{
 		"foo": "bar",
@@ -1262,31 +1258,23 @@ log_level = "trace"
 	err = serverClient.Sys().Mount("secret-v2", &api.MountInput{
 		Type: "kv-v2",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Create kvv2 secret
 	_, err = serverClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// We use raw requests so we can check the headers for cache hit/miss.
 	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret-v2/data/my-secret")
 	resp1, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	cacheValue := resp1.Header.Get("X-Cache")
 	require.Equal(t, "MISS", cacheValue)
 
 	// Update the secret using the proxy client
 	_, err = proxyClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Give some time for the event system to run and update the secret as part of the
 	// pre-event stream run. Likely, this will be the period in which the event subsystem
@@ -1296,9 +1284,7 @@ log_level = "trace"
 
 	// We expect this to be a cache hit, with the new value
 	resp2, err := proxyClient.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	cacheValue = resp2.Header.Get("X-Cache")
 	require.Equal(t, "HIT", cacheValue)
@@ -1306,17 +1292,13 @@ log_level = "trace"
 	// Lastly, we check to make sure the actual data we received is
 	// as we expect. We must use ParseSecret due to the raw requests.
 	secret1, err := api.ParseSecret(resp1.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	data, ok := secret1.Data["data"]
 	require.True(t, ok)
 	require.Equal(t, secretData, data)
 
 	secret2, err := api.ParseSecret(resp2.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	data2, ok := secret2.Data["data"]
 	require.True(t, ok)
 	// We expect that the cached value got updated by the event system.
