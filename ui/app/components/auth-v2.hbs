@@ -21,34 +21,110 @@
       <F.Label class="has-text-grey-800">Namespace</F.Label>
     </Hds::Form::TextInput::Field>
   </div>
+  {{#if this.hasMethodsWithPath}}
+    <Hds::Tabs class="has-top-margin-m" as |T|>
+      {{#each this.methodsToShow as |method|}}
+        <T.Tab>{{capitalize method.type}}</T.Tab>
+        <T.Panel class="has-short-padding has-top-padding-m has-bottom-padding-s">
+          {{#let (component (concat "auth-v2/" method.type)) as |AuthComponent|}}
+            <AuthComponent
+              @namespace={{this.namespace}}
+              @mountPath={{this.mountPath}}
+              @onSuccess={{this.onSuccess}}
+              @wrappedToken={{@wrappedToken}}
+              @handleData={{this.handleData}}
+            >
+              <:options>
+                <Hds::Reveal
+                  @text="More options"
+                  @textWhenOpen="Hide options"
+                  class="is-fullwidth"
+                  @isOpen={{this.mountPath}}
+                >
+                  <Hds::Form::TextInput::Field
+                    @value={{this.mountPath}}
+                    name="mountPath"
+                    {{on "input" this.handleChange}}
+                    as |F|
+                  >
+                    <F.Label>Auth Mount</F.Label>
+                  </Hds::Form::TextInput::Field>
+                </Hds::Reveal>
+              </:options>
+            </AuthComponent>
+          {{/let}}
+        </T.Panel>
+      {{/each}}
+      <T.Tab>Other</T.Tab>
+      <T.Panel class="has-short-padding has-top-padding-m has-bottom-padding-s">
+        {{yield to="error"}}
+        <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
+          <F.Label>Method</F.Label>
+          <F.Options>
+            {{#each this.authMethods as |authMethodType|}}
+              <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
+            {{/each}}
+          </F.Options>
+        </Hds::Form::Select::Field>
 
-  <div class="has-short-padding has-top-padding-m has-bottom-padding-s">
-    {{yield to="error"}}
-    <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
-      <F.Label>Method</F.Label>
-      <F.Options>
-        {{#each this.authMethods as |authMethodType|}}
-          <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
-        {{/each}}
-      </F.Options>
-    </Hds::Form::Select::Field>
+        {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
+          <AuthComponent
+            @namespace={{this.namespace}}
+            @mountPath={{this.mountPath}}
+            @onSuccess={{this.onSuccess}}
+            @wrappedToken={{@wrappedToken}}
+            @handleData={{this.handleData}}
+          >
+            <:options>
+              <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
+                <Hds::Form::TextInput::Field
+                  @value={{this.mountPath}}
+                  name="mountPath"
+                  {{on "input" this.handleChange}}
+                  as |F|
+                >
+                  <F.Label>Auth Mount</F.Label>
+                </Hds::Form::TextInput::Field>
+              </Hds::Reveal>
+            </:options>
+          </AuthComponent>
+        {{/let}}
+      </T.Panel>
+    </Hds::Tabs>
+  {{else}}
+    <div class="has-short-padding has-top-padding-m has-bottom-padding-s">
+      {{yield to="error"}}
+      <Hds::Form::Select::Field {{on "change" this.handleChange}} name="authType" class="has-bottom-margin-m" as |F|>
+        <F.Label>Method</F.Label>
+        <F.Options>
+          {{#each this.authMethods as |authMethodType|}}
+            <option value={{authMethodType}} selected={{eq this.authType authMethodType}}>{{authMethodType}}</option>
+          {{/each}}
+        </F.Options>
+      </Hds::Form::Select::Field>
 
-    {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
-      <AuthComponent
-        @namespace={{this.namespace}}
-        @mountPath={{this.mountPath}}
-        @onSuccess={{this.onSuccess}}
-        @wrappedToken={{@wrappedToken}}
-        @handleData={{this.handleData}}
-      >
-        <:options>
-          <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
-            <Hds::Form::TextInput::Field @value={{this.mountPath}} name="mountPath" {{on "input" this.handleChange}} as |F|>
-              <F.Label>Auth Mount</F.Label>
-            </Hds::Form::TextInput::Field>
-          </Hds::Reveal>
-        </:options>
-      </AuthComponent>
-    {{/let}}
-  </div>
+      {{#let (component (concat "auth-v2/" this.authType)) as |AuthComponent|}}
+        <AuthComponent
+          @namespace={{this.namespace}}
+          @mountPath={{this.mountPath}}
+          @onSuccess={{this.onSuccess}}
+          @wrappedToken={{@wrappedToken}}
+          @handleData={{this.handleData}}
+        >
+          <:options>
+            <Hds::Reveal @text="More options" @textWhenOpen="Hide options" class="is-fullwidth" @isOpen={{this.mountPath}}>
+              <Hds::Form::TextInput::Field
+                @value={{this.mountPath}}
+                name="mountPath"
+                {{on "input" this.handleChange}}
+                as |F|
+              >
+                <F.Label>Auth Mount</F.Label>
+              </Hds::Form::TextInput::Field>
+            </Hds::Reveal>
+          </:options>
+        </AuthComponent>
+      {{/let}}
+    </div>
+  {{/if}}
 {{/if}}

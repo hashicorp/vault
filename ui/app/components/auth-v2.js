@@ -19,10 +19,12 @@ class MfaState {
 
 export default class AuthV2Component extends Component {
   @service flashMessages;
+  @service store;
   @tracked namespace;
   @tracked authType;
   @tracked mountPath;
   @tracked mfa = new MfaState();
+  @tracked methods;
 
   constructor() {
     super(...arguments);
@@ -34,11 +36,43 @@ export default class AuthV2Component extends Component {
     } else {
       this.authType = this.args.authType || 'token';
     }
+    this.fetchAuthenticatedMethods();
   }
 
   get authMethods() {
-    return ['token', 'userpass', 'oidc'];
+    return ['token', 'userpass', 'oidc', 'ldap'];
     // return ['token', 'userpass', 'ldap', 'okta', 'jwt', 'oidc', 'radius', 'github'];
+  }
+
+  get methodsToShow() {
+    const methods = this.methods || [];
+    const shownMethods = methods.filter((m) =>
+      this.authMethods.find((b) => b.toLowerCase() === m.type.toLowerCase())
+    );
+    return shownMethods.length ? shownMethods : [];
+  }
+
+  get hasMethodsWithPath() {
+    return this.methodsToShow.isAny('path');
+  }
+
+  async fetchAuthenticatedMethods() {
+    try {
+      const methods = await this.store.findAll('auth-method', {
+        adapterOptions: {
+          unauthenticated: true,
+        },
+      });
+      this.methods = methods.map((m) => {
+        const method = m.serialize({ includeId: true });
+        return {
+          ...method,
+          mountDescription: method.description,
+        };
+      });
+    } catch (e) {
+      return e;
+    }
   }
 
   @action
