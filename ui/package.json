@@ -11,6 +11,7 @@
   "scripts": {
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
+    "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
     "lint:css:fix": "yarn lint:css --fix",
     "lint:fix": "npm-run-all --print-name --aggregate-output --continue-on-error --parallel \"lint:*:fix\"",
@@ -177,6 +178,7 @@
     "eslint-plugin-qunit": "^7.3.4",
     "filesize": "^4.2.1",
     "flat": "^6.0.1",
+    "jsdoc-to-markdown": "^8.0.0",
     "jsondiffpatch": "^0.4.1",
     "jsonlint": "^1.6.3",
     "lint-staged": "^10.5.1",

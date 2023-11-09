@@ -12,9 +12,8 @@
  * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
- * ```js
  * <TtlPicker @onChange={{this.handleChange}} @initialEnabled={{@model.myAttribute}} @initialValue={{@model.myAttribute}}/>
- * ```
+ *
  * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
  * @param initialEnabled=false {Boolean} - Set this value if you want the toggle on when component is mounted
  * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle. Yielded values will replace the label
