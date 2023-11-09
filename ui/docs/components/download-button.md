@@ -22,5 +22,5 @@ DownloadButton wraps an `<Hds::Button>` to perform a download action. [HDS butto
 **Example**
 
 ```hbs preview-template
-<DownloadButton @text='Download this stuff' @color='secondary' />
+<DownloadButton @text='Download this stuff' @color='secondary' @data='download content' />
 ```

@@ -15,13 +15,13 @@ import { tracked } from '@glimmer/tracking';
  * @module StringList
  *
  * @example
- * <StringList @label={label} @onChange={{this.setAndBroadcast}} @inputValue={{this.valuePath}}/>
+ * <StringList @label="Label here" @onChange={{log "onChange called!"}} @inputValue="input value" @subText="very important subtext" />
  *
  * @param {string} label - Text displayed in the header above all the inputs.
  * @param {function} onChange - Function called when any of the inputs change.
  * @param {string} inputValue - A string or an array of strings.
  * @param {string} helpText - Text displayed as a tooltip.
- * @param {string} type=array - Optional type for inputValue.
+ * @param {string} [type=array] - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
  * @param {string} subText - Text below the label.
  */

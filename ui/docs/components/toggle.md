@@ -9,10 +9,11 @@ They are a stylistic alternative to checkboxes, but still use the input[type&#x3
 | name | <code>string</code> |  | name is passed along to the form field, as well as to generate the ID of the input & "for" value of the label |
 | [checked] | <code>boolean</code> | <code>false</code> | checked status of the input, and must be passed in and mutated from the parent |
 | [disabled] | <code>boolean</code> | <code>false</code> | disabled makes the switch unclickable |
-| [size] | <code>string</code> | <code>&quot;&#x27;medium&#x27;&quot;</code> | Sizing can be small or medium |
-| [status] | <code>string</code> | <code>&quot;&#x27;normal&#x27;&quot;</code> | Status can be normal or success, which makes the switch have a blue background when checked=true |
+| [size] | <code>string</code> | <code>&quot;medium&quot;</code> | Sizing can be small or medium |
+| [status] | <code>string</code> | <code>&quot;normal&quot;</code> | Status can be normal or success, which makes the switch have a blue background when checked=true |
 
 **Example**  
 ```hbs preview-template
-<Toggle @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+<Toggle @name="My checked toggle" @checked={{true}}/>
+<Toggle @name="Disabled toggle" @disabled={{true}}/>
 ```

@@ -12,17 +12,17 @@
  * - recalculates the time when the unit is changed by the user (eg 60s -> 1m)
  *
  * @example
- * <TtlPicker @onChange={{this.handleChange}} @initialEnabled={{@model.myAttribute}} @initialValue={{@model.myAttribute}}/>
+ * <TtlPicker @helperTextDisabled="Something that happens when disabled" @helperTextEnabled="Value when enabled" @initialEnabled={{true}} @initialValue="145d" />
  *
- * @param onChange {Function} - This function will be passed a TTL object, which includes enabled{bool}, seconds{number}, timeString{string}, goSafeTimeString{string}.
- * @param initialEnabled=false {Boolean} - Set this value if you want the toggle on when component is mounted
- * @param label="Time to live (TTL)" {String} - Label is the main label that lives next to the toggle. Yielded values will replace the label
- * @param labelDisabled=Label to display when TTL is toggled off
- * @param helperTextEnabled="" {String} - This helper text is shown under the label when the toggle is switched on
- * @param helperTextDisabled="" {String} - This helper text is shown under the label when the toggle is switched off
- * @param initialValue=null {string} - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
- * @param changeOnInit=false {boolean} - if true, calls the onChange hook when component is initialized
- * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
+ * @param {function} onChange  - This function will be passed a TTL object, which includes `{ enabled: boolean, seconds: number, timeString: string, goSafeTimeString: string }`.
+ * @param {boolean} initialEnabled=false - Set this value if you want the toggle on when component is mounted
+ * @param {string} [label=Time to live (TTL)]  - Label is the main label that lives next to the toggle. Yielded values will replace the label
+ * @param {string} [labelDisabled] - Label to display when TTL is toggled off
+ * @param {string} [helperTextEnabled] - This helper text is shown under the label when the toggle is switched on
+ * @param {string} [helperTextDisabled] - This helper text is shown under the label when the toggle is switched off
+ * @param {string} [initialValue] - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
+ * @param {boolean} [changeOnInit=false] - if true, calls the onChange hook when component is initialized
+ * @param {boolean} [hideToggle=false] - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
 import Component from '@glimmer/component';

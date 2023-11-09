@@ -6,23 +6,26 @@
 import Component from '@glimmer/component';
 /**
  * @module ToolbarLink
- * `ToolbarLink` components style links and buttons for the Toolbar
- * It should only be used inside of `Toolbar`.
+ * ToolbarLink components style links and buttons for the Toolbar
+ * It should only be used inside of Toolbar component.
  *
  * @example
- * <Toolbar>
- *   <ToolbarActions>
- *     <ToolbarLink @route="vault.cluster.policies.create" @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
- *       Create policy
- *     </ToolbarLink>
- *   </ToolbarActions>
- * </Toolbar>
+  <Toolbar>
+   <ToolbarActions>
+     <ToolbarLink @route="vault"  @disabled={{true}} @disabledTooltip="This link is disabled">
+       Disabled link
+     </ToolbarLink>
+     <ToolbarLink @route="vault" @type="add">
+       Create item
+     </ToolbarLink>
+   </ToolbarActions>
+ </Toolbar>
  *
  *
  * @param {string} route - route to pass to LinkTo
- * @param {Model} model - model to pass to LinkTo
- * @param {Array} models - array of models to pass to LinkTo
- * @param {Object} query - query params to pass to LinkTo
+ * @param {model} model - model to pass to LinkTo
+ * @param {array} models - array of models to pass to LinkTo
+ * @param {object} query - query params to pass to LinkTo
  * @param {boolean} replace - replace arg to pass to LinkTo
  * @param {string} type - Use "add" to change icon to plus sign, or pass in your own kind of icon.
  * @param {boolean} disabled - pass true to disable link

@@ -11,14 +11,13 @@ import layout from '../templates/components/select';
  * Select components are used to render a dropdown.
  *
  * @example
- * <Select @label='Date Range' @options={{[{ value: 'berry', label: 'Berry' }]}} @onChange={{onChange}}/>
+ * <Select @label='Fruits' @options={{array (hash value="berry" label="Berry") (hash value="watermelon" label="Watermelon") }} />
  *
- *
- * @param {string} [label=null] - The label for the select element.
- * @param {Array} [options=null] - A list of items that the user will select from. This can be an array of strings or objects.
- * @param {string} [selectedValue=null] - The currently selected item. Can also be used to set the default selected item. This should correspond to the `value` of one of the `<option>`s.
- * @param {string} [name = null] - The name of the select, used for the test selector.
- * @param {string} [valueAttribute = value]- When `options` is an array objects, the key to check for when assigning the option elements value.
+ * @param {string} [label] - The label for the select element.
+ * @param {Array} [options] - A list of items that the user will select from. This can be an array of strings or objects.
+ * @param {string} [selectedValue] - The currently selected item. Can also be used to set the default selected item. This should correspond to the `value` of one of the `<option>`s.
+ * @param {string} [name] - The name of the select, used for the test selector.
+ * @param {string} [valueAttribute = value] - When `options` is an array objects, the key to check for when assigning the option elements value.
  * @param {string} [labelAttribute = label] - When `options` is an array objects, the key to check for when assigning the option elements' inner text.
  * @param {boolean} [isInline = false] - Whether or not the select should be displayed as inline-block or block.
  * @param {boolean} [isFullwidth = false] - Whether or not the select should take up the full width of the parent element.

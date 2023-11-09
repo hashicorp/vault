@@ -4,7 +4,7 @@
   margin-left: 1.5rem;
   margin-right: 2rem;
   margin-top: 1.5rem;
-  max-width: 80%;
+  max-width: 90%;
 
   h1,
   h2,
@@ -56,7 +56,6 @@
     margin-bottom: 1rem;
     padding: 1rem;
     text-align: left;
-    border: 1px solid $grey-light;
     border-radius: 6px;
   }
 
@@ -72,6 +71,20 @@
     }
     tr {
       border-bottom: 1px solid $grey-light;
+    }
+  }
+
+  .docfy-demo {
+    border: 1px solid $grey-lightest;
+    border-radius: 6px;
+    padding: 1rem;
+
+    .docfy-demo__example {
+      & pre {
+        background: none;
+        margin: 0;
+        padding: 0;
+      }
     }
   }
 }

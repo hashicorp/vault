@@ -19,9 +19,5 @@ KvObjectEditor components are called in FormFields when the editType on the mode
 **Example**
 
 ```hbs preview-template
-<KvObjectEditor
-  @value={{hash foo=bar}}
-  @onChange={{action 'setAndBroadcast' valuePath}}
-  @label='some label'
-/>
+<KvObjectEditor @value={{hash foo='bar'}} @onChange={{log 'on change called!'}} @label='Label here' />
 ```

@@ -5,10 +5,10 @@
 
 /**
  * @module ReadonlyFormField
- * ReadonlyFormField components are used to...
+ * ReadonlyFormField components are used to display read only, non-editable attributes
  *
  * @example
- * <ReadonlyFormField @attr={attr} />
+ * <ReadonlyFormField @attr={{hash name="my attr"}} @value="some value" />
  *
  * @param {object} attr - Should be an attribute from a model exported with expandAttributeMeta
  * @param {any} value - The value that should be displayed on the input
