@@ -8,7 +8,7 @@ This memory leak affects Vault Community and Enterprise versions:
 - 1.14.3 - 1.14.5
 - 1.15.0 - 1.15.1
 
-This change that introduced this leak will be reverted in the next release
+This change that introduced this leak has been reverted as of 1.13.10, 1.14.6, and 1.15.2
 
 #### Issue
 Vault is unexpectedly storing references to ephemeral sub-loggers which prevents them from being cleaned up, leading to
