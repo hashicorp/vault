@@ -66,6 +66,9 @@
     td {
       padding-left: 0.5rem;
       padding-right: 0.5rem;
+      code {
+        background: none;
+      }
     }
     tr {
       border-bottom: 1px solid $grey-light;
