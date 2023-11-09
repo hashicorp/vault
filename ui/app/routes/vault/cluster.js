@@ -31,7 +31,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   version: service(),
   permissions: service(),
   store: service(),
-  session: service(),
   auth: service(),
   featureFlagService: service('featureFlag'),
   currentCluster: service(),
@@ -59,10 +58,10 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
       !(managedRoot && this.version.isOSS)
     );
-    if (!namespace && this.session.isAuthenticated && !Ember.testing) {
+    if (!namespace && this.auth.isAuthenticated && !Ember.testing) {
       // if no namespace queryParam and user authenticated,
       // use user's root namespace to redirect to properly param'd url
-      namespace = this.session.data.authenticated.userRootNamespace;
+      namespace = this.auth.authData.userRootNamespace;
       // only redirect if something other than nothing
       if (namespace) {
         this.transitionTo({ queryParams: { namespace } });
@@ -77,7 +76,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const id = this.getClusterId(params);
     if (id) {
       this.auth.setCluster(id);
-      if (this.session.isAuthenticated) {
+      if (this.auth.isAuthenticated) {
         await this.permissions.getPaths.perform();
       }
       return this.version.fetchFeatures();

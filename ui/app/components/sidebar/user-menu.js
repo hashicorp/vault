@@ -19,7 +19,7 @@ export default class SidebarUserMenuComponent extends Component {
   @tracked fakeRenew = false;
 
   get authData() {
-    return this.session.data.authenticated;
+    return this.auth.authData;
   }
   get hasEntityId() {
     // root users will not have an entity_id because they are not associated with an entity.

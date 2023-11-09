@@ -10,7 +10,7 @@ import { inject as service } from '@ember/service';
 
 export default Component.extend({
   flashMessages: service(),
-  session: service(),
+  auth: service(),
 
   useServiceWorker: null,
 
@@ -43,7 +43,7 @@ export default Component.extend({
     const [port] = event.ports;
 
     if (action === 'getToken') {
-      port.postMessage({ token: this.session.data.authenticated.token });
+      port.postMessage({ token: this.auth.currentToken });
     } else {
       console.error('Unknown event', event); // eslint-disable-line
       port.postMessage({ error: 'Unknown request' });

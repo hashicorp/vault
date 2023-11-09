@@ -25,10 +25,8 @@ export default Mixin.create({
   auth: service(),
   store: service(),
   router: service(),
-  session: service(),
 
   transitionToTargetRoute(transition = {}) {
-    console.log('transitionToTargetRoute', transition.targetName);
     const targetRoute = this.targetRouteName(transition);
     if (
       targetRoute &&
@@ -53,9 +51,7 @@ export default Mixin.create({
   },
 
   beforeModel(transition) {
-    console.log('cluster route mixin before model');
-    return RSVP.resolve();
-    // return this.transitionToTargetRoute(transition);
+    return this.transitionToTargetRoute(transition);
   },
 
   clusterModel() {
@@ -73,7 +69,7 @@ export default Mixin.create({
 
   targetRouteName(transition) {
     const cluster = this.clusterModel();
-    const isAuthed = this.session.isAuthenticated;
+    const isAuthed = this.auth.isAuthenticated;
     if (cluster.needsInit) {
       return INIT;
     }

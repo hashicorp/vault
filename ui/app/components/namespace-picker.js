@@ -18,7 +18,6 @@ export default Component.extend({
   tagName: '',
   namespaceService: service('namespace'),
   auth: service(),
-  session: service(),
   store: service(),
   namespace: null,
   listCapability: null,
@@ -98,7 +97,7 @@ export default Component.extend({
   }),
 
   maybeAddRoot(leaves) {
-    const userRoot = this.session.data.authenticated.userRootNamespace;
+    const userRoot = this.auth.authData.userRootNamespace;
     if (userRoot === '') {
       leaves.unshift('');
     }
@@ -151,8 +150,8 @@ export default Component.extend({
 
   currentLeaf: alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
-  isUserRootNamespace: computed('session.data.authenticated.userRootNamespace', 'namespacePath', function () {
-    return this.session.data.authenticated.userRootNamespace === this.namespacePath;
+  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function () {
+    return this.auth.authData.userRootNamespace === this.namespacePath;
   }),
 
   namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
