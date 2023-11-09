@@ -29,10 +29,10 @@
 13. Cleaned up auth service
 14. Trigger onSuccess and onUpdate side effects for query param updates
 15. Handle wrapped token
+16. Handle MFA
 
 TODO:
 
 - Nice-to-have show tabs for auth methods that configured that option (Kianna)
-- MFA (Chelsea)
 - Okta challenge (Kianna)
 -

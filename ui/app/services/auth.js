@@ -9,7 +9,6 @@ import { getOwner } from '@ember/application';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
-import { capitalize } from '@ember/string';
 import fetch from 'fetch';
 import { resolve, reject } from 'rsvp';
 
@@ -38,39 +37,30 @@ export default Service.extend({
   },
 
   activeCluster: alias('currentCluster.cluster'),
-
-  isRootToken: alias('session.data.authenticated.isRootToken'),
-  tokenExpirationDate: computed(
-    'session.{isAuthenticated,data.authenticated.tokenExpirationEpoch}',
-    'expirationCalcTS',
-    function () {
-      if (!this.session.isAuthenticated) {
-        return;
-      }
-      const { tokenExpirationEpoch } = this.session.data.authenticated;
-      const expirationDate = new Date(0);
-      return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
-    }
-  ),
-
-  renewAfterEpoch: computed(
-    'session.data.authenticated.data.{renewable,ttl}',
-    'expirationCalcTS',
-    function () {
-      const { expirationCalcTS } = this;
-      const data = this.session.data.authenticated;
-      if (!data?.renewable || !expirationCalcTS) {
-        return null;
-      }
-      const { ttl } = data;
-      // renew after last expirationCalc time + half of the ttl (in ms)
-      return Math.floor((ttl * 1e3) / 2) + expirationCalcTS;
-    }
-  ),
-
-  currentToken: alias('session.data.authenticated.token'),
-
+  isAuthenticated: alias('session.isAuthenticated'),
   authData: alias('session.data.authenticated'),
+  isRootToken: alias('session.data.authenticated.isRootToken'),
+  currentToken: alias('session.data.authenticated.token'),
+  expirationCalcTS: alias('session.data.authenticated.expirationCalcTS'),
+
+  tokenExpirationDate: computed('isAuthenticated', 'authData', 'expirationCalcTS', function () {
+    if (!this.isAuthenticated) {
+      return;
+    }
+    const { tokenExpirationEpoch } = this.authData;
+    const expirationDate = new Date(0);
+    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
+  }),
+
+  renewAfterEpoch: computed('authData.{renewable,ttl}', 'expirationCalcTS', function () {
+    const { expirationCalcTS } = this;
+    if (!this.authData?.renewable || !expirationCalcTS) {
+      return null;
+    }
+    const { ttl } = this.authData;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return Math.floor((ttl * 1e3) / 2) + expirationCalcTS;
+  }),
 
   clusterAdapter() {
     return getOwner(this).lookup('adapter:cluster');
@@ -119,50 +109,13 @@ export default Service.extend({
     });
   },
 
-  renewCurrentToken() {
-    const namespace = this.authData.userRootNamespace;
-    const url = '/v1/auth/token/renew-self';
-    return this.ajax(url, 'POST', { namespace });
-  },
-
-  revokeCurrentToken() {
-    const namespace = this.authData.userRootNamespace;
-    const url = '/v1/auth/token/revoke-self';
-    return this.ajax(url, 'POST', { namespace });
-  },
-
-  expirationCalcTS: alias('session.data.authenticated.expirationCalcTS'),
-
-  calculateRootNamespace(currentNamespace, namespace_path, backend) {
-    // here we prefer namespace_path if its defined,
-    // else we look and see if there's already a namespace saved
-    // and then finally we'll use the current query param if the others
-    // haven't set a value yet
-    // all of the typeof checks are necessary because the root namespace is ''
-    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
-    // if we're logging in with token and there's no namespace_path, we can assume
-    // that the token belongs to the root namespace
-    if (backend === 'token' && !userRootNamespace) {
-      userRootNamespace = '';
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
-    }
-    if (typeof userRootNamespace === 'undefined') {
-      userRootNamespace = currentNamespace;
-    }
-    return userRootNamespace;
-  },
-
   renew() {
     const currentlyRenewing = this.isRenewing;
     if (currentlyRenewing) {
       return;
     }
     this.isRenewing = true;
-    const { authenticator, backend, token, userRootNamespace } = this.session.data.authenticated;
+    const { authenticator, backend, token, userRootNamespace } = this.authData;
     return this.session
       .authenticate(
         authenticator,
@@ -190,7 +143,7 @@ export default Service.extend({
     const now = this.now();
     const lastFetch = this.lastFetch;
     const renewTime = this.renewAfterEpoch;
-    if (!this.session.isAuthenticated || this.tokenExpired || this.allowExpiration || !renewTime) {
+    if (!this.isAuthenticated || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;
     }
     if (lastFetch && now - lastFetch >= this.IDLE_TIMEOUT) {
@@ -213,77 +166,8 @@ export default Service.extend({
     this.set('allowExpiration', false);
   },
 
-  _parseMfaResponse(mfa_requirement) {
-    // mfa_requirement response comes back in a shape that is not easy to work with
-    // convert to array of objects and add necessary properties to satisfy the view
-    if (mfa_requirement) {
-      const { mfa_request_id, mfa_constraints } = mfa_requirement;
-      const constraints = [];
-      for (const key in mfa_constraints) {
-        const methods = mfa_constraints[key].any;
-        const isMulti = methods.length > 1;
-
-        // friendly label for display in MfaForm
-        methods.forEach((m) => {
-          const typeFormatted = m.type === 'totp' ? m.type.toUpperCase() : capitalize(m.type);
-          m.label = `${typeFormatted} ${m.uses_passcode ? 'passcode' : 'push notification'}`;
-        });
-        constraints.push({
-          name: key,
-          methods,
-          selectedMethod: isMulti ? null : methods[0],
-        });
-      }
-
-      return {
-        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
-      };
-    }
-    return {};
-  },
-
-  async authenticate(/*{clusterId, backend, data, selectedAuth}*/) {
-    const [options] = arguments;
-    const adapter = this.clusterAdapter();
-    const resp = await adapter.authenticate(options);
-
-    if (resp.auth?.mfa_requirement) {
-      return this._parseMfaResponse(resp.auth?.mfa_requirement);
-    }
-
-    return this.authSuccess(options, resp.auth || resp.data);
-  },
-
   async totpValidate({ mfa_requirement }) {
     return this.clusterAdapter().mfaValidate(mfa_requirement);
-  },
-
-  async authSuccess(options, response) {
-    // persist selectedAuth to localStorage to rehydrate auth form on logout
-    localStorage.setItem('selectedAuth', options.selectedAuth);
-    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
-    await this.permissions.getPaths.perform();
-    return authData;
-  },
-
-  handleError(e) {
-    if (e.errors) {
-      return e.errors.map((error) => {
-        if (error.detail) {
-          return error.detail;
-        }
-        return error;
-      });
-    }
-    return [e];
-  },
-
-  getAuthType() {
-    // check localStorage first
-    const selectedAuth = localStorage.getItem('selectedAuth');
-    if (selectedAuth) return selectedAuth;
-    // fallback to authData which discerns backend type from token
-    return this.authData ? this.authData.backend?.type : null;
   },
 
   getOktaNumberChallengeAnswer(nonce, mount) {

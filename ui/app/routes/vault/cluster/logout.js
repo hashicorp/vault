@@ -23,8 +23,15 @@ export default Route.extend(ModelBoundaryRoute, {
     return ['secret', 'secret-engine'];
   }),
 
+  getAuthType() {
+    const selectedAuth = localStorage.getItem('selectedAuth');
+    if (selectedAuth) return selectedAuth;
+    // fallback to authData which discerns backend type from token
+    return this.auth.authData ? this.auth.authData.backend?.type : null;
+  },
+
   beforeModel({ to: { queryParams } }) {
-    const authType = this.auth.getAuthType();
+    const authType = this.getAuthType();
     const ns = this.namespaceService.path;
     this.controlGroup.deleteTokens();
     this.namespaceService.reset();
