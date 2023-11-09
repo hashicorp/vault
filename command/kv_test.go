@@ -1522,6 +1522,7 @@ func TestPadEqualSigns(t *testing.T) {
 		})
 	}
 }
+
 func testKVUndeleteCommand(tb testing.TB) (*cli.MockUi, *KVUndeleteCommand) {
 	tb.Helper()
 
