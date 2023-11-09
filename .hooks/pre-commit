@@ -137,17 +137,14 @@ ui_copywrite() {
   if [ $(echo $?) == 1 ]; then
     eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
 
-    # copy files back to original locations
+    # copy files back to original locations and stage changes
     local TMP_FILES=$(ls $BINARY_DIR/.staged)
     i=0
     for FILE in $TMP_FILES; do
       cp $BINARY_DIR/.staged/$FILE "${STAGED_FILES[$i]}"
+      git add "${STAGED_FILES[$i]}"
       i=$(( i + 1 ))
     done
-    
-    # this will result in unstaged changes
-    # block so they can be added to existing commit
-    block "Copyright headers automatically added to files. Please review and stage the changes."
   fi
   return 0;
   # ----
