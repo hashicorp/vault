@@ -39,7 +39,7 @@
   {{/each}}
 </div>
 
-{{#if this.session.isAuthenticated}}
+{{#if this.auth.isAuthenticated}}
   <TokenExpireWarning @expirationDate={{this.auth.tokenExpirationDate}} @allowingExpiration={{this.auth.allowExpiration}}>
     {{outlet}}
   </TokenExpireWarning>

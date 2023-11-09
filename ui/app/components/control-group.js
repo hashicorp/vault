@@ -12,7 +12,6 @@ import { task } from 'ember-concurrency';
 export default Component.extend({
   tagName: '',
   auth: service(),
-  session: service(),
   controlGroup: service(),
 
   // public API
@@ -25,7 +24,7 @@ export default Component.extend({
     this.set('controlGroupResponse', data);
   },
 
-  currentUserEntityId: alias('session.data.authenticated.entity_id'),
+  currentUserEntityId: alias('auth.authData.entity_id'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function () {
     if (!this.model.requestEntity) return false;

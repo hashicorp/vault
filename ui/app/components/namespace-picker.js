@@ -85,8 +85,6 @@ export default Component.extend({
   accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
   inRootNamespace: alias('namespaceService.inRootNamespace'),
 
-  authData: alias('session.data.authenticated'),
-
   namespaceTree: computed('accessibleNamespaces', function () {
     const nsList = this.accessibleNamespaces;
 

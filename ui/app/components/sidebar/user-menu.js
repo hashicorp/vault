@@ -11,23 +11,19 @@ import { tracked } from '@glimmer/tracking';
 
 export default class SidebarUserMenuComponent extends Component {
   @service auth;
-  @service session;
   @service currentCluster;
   @service router;
-  @service namespace;
+  @service session;
 
   @tracked fakeRenew = false;
 
-  get authData() {
-    return this.auth.authData;
-  }
   get hasEntityId() {
     // root users will not have an entity_id because they are not associated with an entity.
     // in order to use the MFA end user setup they need an entity_id
-    return !!this.authData?.entity_id;
+    return !!this.auth.authData?.entity_id;
   }
   get isUserpass() {
-    return this.authData?.backend?.type === 'userpass';
+    return this.auth.authData?.backend?.type === 'userpass';
   }
 
   get isRenewing() {

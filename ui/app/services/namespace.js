@@ -11,8 +11,8 @@ import { computed } from '@ember/object';
 const ROOT_NAMESPACE = '';
 export default Service.extend({
   store: service(),
-  session: service(),
-  userRootNamespace: alias('session.data.authenticated.userRootNamespace'),
+  auth: service(),
+  userRootNamespace: alias('auth.authData.userRootNamespace'),
   //populated by the query param on the cluster route
   path: '',
   // list of namespaces available to the current user under the
