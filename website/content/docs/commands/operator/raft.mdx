@@ -192,6 +192,18 @@ Usage: vault operator raft snapshot restore <snapshot_file>
 	  $ vault operator raft snapshot restore raft.snap
 ```
 
+### snapshot inspect
+
+Inspects a snapshot file taken from a Vault Raft cluster and prints a table showing the number of keys and the amount of space used.
+
+```text
+Usage: vault operator raft snapshot inspect <snapshot_file>
+
+  Inspects a snapshot file.
+
+    $ vault operator raft snapshot inspect raft.snap
+```
+
 ## autopilot
 
 This command groups subcommands for operators interacting with the autopilot
