@@ -447,6 +447,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			Proxier:            apiProxy,
 			Logger:             cacheLogger.Named("leasecache"),
 			CacheStaticSecrets: config.Cache.CacheStaticSecrets,
+			UserAgentToUse:     useragent.AgentProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
