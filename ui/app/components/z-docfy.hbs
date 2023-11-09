@@ -1,0 +1,7 @@
+<Hds::Form::TextInput::Field @type="search" placeholder="Filter components" {{on "input" this.filterComponents}} />
+
+{{#each this.componentList as |component|}}
+  <DocfyLink @to={{component.url}} class="hds-side-nav__list-item-link">
+    {{component.title}}
+  </DocfyLink>
+{{/each}}

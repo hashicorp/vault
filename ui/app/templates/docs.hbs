@@ -6,28 +6,21 @@
           <:logo>
             <Hds::SideNav::Header::HomeLink @icon="vault" @route="docs" @ariaLabel="docs home" />
           </:logo>
-          <:actions>
-            <Hds::SideNav::Header::IconButton @icon="search" @ariaLabel="Search" />
-          </:actions>
         </Hds::SideNav::Header>
       </:header>
       <:body>
         <Hds::SideNav::List as |Nav|>
           <Nav.BackLink @text="Back to work" @route="vault" />
           <DocfyOutput @scope="docs" as |node|>
-            {{#each node.children as |child|}}
-              <Nav.Title>
-                {{capitalize child.label}}
-              </Nav.Title>
+            <Nav.Title>
+              Components
+            </Nav.Title>
+            {{#let (find-by "name" "components" node.children) as |component|}}
+              <Nav.Item>
+                <ZDocfy @components={{component.pages}} />
+              </Nav.Item>
+            {{/let}}
 
-              {{#each child.pages as |page|}}
-                <Nav.Item>
-                  <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
-                    {{page.title}}
-                  </DocfyLink>
-                </Nav.Item>
-              {{/each}}
-            {{/each}}
             <Nav.Title>Contributing docs</Nav.Title>
             {{#each node.pages as |page|}}
               <Nav.Item>
@@ -36,12 +29,26 @@
                 </DocfyLink>
               </Nav.Item>
             {{/each}}
+
+            {{! Any other directories within docs/ (aside from 'components') }}
+            {{#each node.children as |child|}}
+              {{#if (not-eq child.name "components")}}
+                <Nav.Title>
+                  {{capitalize child.label}}
+                </Nav.Title>
+
+                {{#each child.pages as |page|}}
+                  <Nav.Item>
+                    <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                      {{page.title}}
+                    </DocfyLink>
+                  </Nav.Item>
+                {{/each}}
+              {{/if}}
+            {{/each}}
           </DocfyOutput>
         </Hds::SideNav::List>
       </:body>
-      <:footer>
-
-      </:footer>
     </Hds::SideNav>
   </Frame.Sidebar>
 
