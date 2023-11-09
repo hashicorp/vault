@@ -9,7 +9,7 @@ export default class UserpassAuthenticator extends VaultAuthenticator {
     const url = `/v1/auth/${options.backend}/login/${encodeURIComponent(username)}`;
     const opts = {
       method: 'POST',
-      headers: this.getTokenHeader(password, options.namespace),
+      headers: this.getTokenHeader(null, options.namespace),
       body: JSON.stringify({ password }),
     };
     const result = await fetch(url, opts);

@@ -87,7 +87,7 @@ export default class AuthV2Component extends Component {
         this.flashMessages.info(message);
       });
     }
-    if (payload.auth.mfa_requirement) {
+    if (payload.auth?.mfa_requirement) {
       // Show MFA form
       const { mfa_requirement } = this._parseMfaResponse(payload.auth.mfa_requirement);
       // this.mfa.enforcement = { mfa_requirement, backend, data };

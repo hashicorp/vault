@@ -46,10 +46,8 @@ export default class OidcAuthenticator extends VaultAuthenticator {
     const url = `/v1/auth/${encodeURIComponent(options.backend)}/oidc/callback?state=${state}&code=${code}`;
     const opts = {
       method: 'GET',
+      headers: this.getTokenHeader(null, options.namespace),
     };
-    if (options.namespace) {
-      opts.headers['X-Vault-Namespace'] = options.namespace;
-    }
     // Exchange the authorization code for an OIDC ID Token
     const result = await fetch(url, opts);
     const body = await result.json();

@@ -15,7 +15,7 @@ export default class TokenAuthenticator extends VaultAuthenticator {
     const url = `/v1/auth/token/lookup-self`;
     const opts = {
       method: 'GET',
-      headers: this.getTokenHeader(token),
+      headers: this.getTokenHeader(token, options.namespace),
     };
     if (options.namespace) {
       opts.headers['X-Vault-Namespace'] = options.namespace;
