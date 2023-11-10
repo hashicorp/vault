@@ -4,7 +4,7 @@
 ~}}
 
 {{#if this.canLoginSaml}}
-  <form id="auth-form" onsubmit={{action "startSAMLAuth" @onSubmit (hash role=this.roleName)}}>
+  <form id="auth-form" {{on "submit" (fn this.startSAMLAuth @onSubmit (hash role=@roleName))}}>
     <div class="field">
       <label for="role" class="is-label">Role</label>
       <div class="control">
@@ -25,7 +25,7 @@
         @sizeSmall={{true}}
         @paddingTop={{true}}
         @type="info"
-        @message="Leave blank to sign in with the default role if one is configured"
+        @message="Leave blank to sign in with the default role if one is configured."
       />
     </div>
     <div data-test-yield-content>
