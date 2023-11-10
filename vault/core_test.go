@@ -254,12 +254,12 @@ func TestNewCore_configureLogRequestLevel(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// We need to supply a logger, as configureLogRequestLevel emits
+			// We need to supply a logger, as configureLogRequestsLevel emits
 			// warnings to the logs in certain circumstances.
 			core := &Core{
 				logger: corehelpers.NewTestLogger(t),
 			}
-			core.configureLogRequestLevel(tc.level)
+			core.configureLogRequestsLevel(tc.level)
 			require.Equal(t, tc.expectedLevel, log.Level(core.logRequestsLevel.Load()))
 		})
 	}
