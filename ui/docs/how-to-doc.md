@@ -31,3 +31,7 @@ order: 1
    `yarn docfy-md some-component-name core`
 
 3. Check the markdown file for syntax errors or typos, then navigate to the component url `http://localhost:4200/ui/docs/components/some-component-name`
+
+### More info
+
+- [Building and consuming components](./building-components.md)
