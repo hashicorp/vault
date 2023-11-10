@@ -6,6 +6,6 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 
-export default class logoEdition extends Component {
+export default class LogoEdition extends Component {
   @service version;
 }
