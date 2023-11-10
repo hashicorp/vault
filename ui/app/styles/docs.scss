@@ -27,17 +27,27 @@
 
   ul {
     list-style: disc;
-    padding-left: $spacing-m;
-    padding-bottom: $spacing-m;
     li {
       margin-top: 1rem;
     }
   }
 
+  ul,
+  ol {
+    padding-left: $spacing-m;
+    padding-bottom: $spacing-m;
+  }
+
   pre,
-  blockquote,
   code {
     background-color: $ui-gray-100;
+  }
+
+  blockquote {
+    margin-left: 1rem;
+    padding: 0.5rem;
+    background: $ui-gray-010;
+    border-radius: 6px;
   }
 
   code {

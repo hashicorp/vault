@@ -8,7 +8,7 @@
 // run this script the ui directory:
 // yarn docfy-md some-component
 //
-// or if the story is for a component in an in-repo-addon or an engine:
+// or if the docs are for a component in an in-repo-addon or an engine:
 // yarn docfy-md some-component name-of-engine
 
 const fs = require('fs');

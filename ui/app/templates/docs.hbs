@@ -1,55 +1,73 @@
 <Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
   <Frame.Sidebar data-test-sidebar-nav>
-    <Hds::SideNav>
-      <:header>
-        <Hds::SideNav::Header>
-          <:logo>
-            <Hds::SideNav::Header::HomeLink @icon="vault" @route="docs" @ariaLabel="docs home" />
-          </:logo>
-        </Hds::SideNav::Header>
-      </:header>
-      <:body>
-        <Hds::SideNav::List as |Nav|>
-          <Nav.BackLink @text="Back to work" @route="vault" />
-          <DocfyOutput @scope="docs" as |node|>
-            <Nav.Title>
-              Components
-            </Nav.Title>
-            {{#let (find-by "name" "components" node.children) as |component|}}
-              <Nav.Item>
-                <ZDocfy @components={{component.pages}} />
-              </Nav.Item>
-            {{/let}}
+    <DocfyOutput @scope="docs" as |docs|>
+      {{#let docs.children as |directories|}}
+        {{#let docs.pages as |pages|}}
+          <Hds::SideNav>
+            <:header>
+              <Hds::SideNav::Header>
+                <:logo>
+                  <Hds::SideNav::Header::HomeLink @icon="vault" @route="vault" @ariaLabel="Vault dashboard" />
+                </:logo>
+                <:actions>
+                  <Hds::SideNav::Header::IconButton @icon="home" @ariaLabel="Docs index" @route="docs" />
+                </:actions>
+              </Hds::SideNav::Header>
+            </:header>
+            <:body>
+              <Hds::SideNav::List as |Nav|>
+                <Nav.BackLink @text="Back to work (Vault UI)" @route="vault" />
 
-            <Nav.Title>Contributing docs</Nav.Title>
-            {{#each node.pages as |page|}}
-              <Nav.Item>
-                <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
-                  {{page.title}}
-                </DocfyLink>
-              </Nav.Item>
-            {{/each}}
+                <Nav.Item>
+                  <DocfyLink @to={{get (find-by "title" "Index" pages) "url"}} class="hds-side-nav__list-item-link">
+                    Index
+                  </DocfyLink>
+                </Nav.Item>
+                <Nav.Item>
+                  <DocfyLink @to={{get (find-by "title" "How to doc" pages) "url"}} class="hds-side-nav__list-item-link">
+                    How to write component docs
+                  </DocfyLink>
+                </Nav.Item>
 
-            {{! Any other directories within docs/ (aside from 'components') }}
-            {{#each node.children as |child|}}
-              {{#if (not-eq child.name "components")}}
                 <Nav.Title>
-                  {{capitalize child.label}}
+                  Components
                 </Nav.Title>
 
-                {{#each child.pages as |page|}}
+                <Nav.Item>
+                  <ZDocfy @components={{get (find-by "name" "components" directories) "pages"}} />
+                </Nav.Item>
+
+                <Nav.Title>Contributing docs</Nav.Title>
+                {{#each pages as |page|}}
                   <Nav.Item>
                     <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
                       {{page.title}}
                     </DocfyLink>
                   </Nav.Item>
                 {{/each}}
-              {{/if}}
-            {{/each}}
-          </DocfyOutput>
-        </Hds::SideNav::List>
-      </:body>
-    </Hds::SideNav>
+
+                {{! Any other directories within docs/ (aside from 'components') }}
+                {{#each directories as |directory|}}
+                  {{#if (not-eq directory.name "components")}}
+                    <Nav.Title>
+                      {{capitalize directory.label}}
+                    </Nav.Title>
+
+                    {{#each directory.pages as |page|}}
+                      <Nav.Item>
+                        <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                          {{page.title}}
+                        </DocfyLink>
+                      </Nav.Item>
+                    {{/each}}
+                  {{/if}}
+                {{/each}}
+              </Hds::SideNav::List>
+            </:body>
+          </Hds::SideNav>
+        {{/let}}
+      {{/let}}
+    </DocfyOutput>
   </Frame.Sidebar>
 
   <Frame.Main id="docfy-content">
