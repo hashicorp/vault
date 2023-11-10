@@ -118,8 +118,8 @@ export default class AuthSaml extends Component {
   }
 
   @action
-  setRole(roleName) {
-    this.args.onRoleName(roleName);
+  setRole(event) {
+    this.args.onRoleName(event.target.value);
   }
   /* Saml auth flow on login button click:
    * 1. find role-saml record which returns role info

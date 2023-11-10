@@ -11,7 +11,7 @@
         <input
           value={{@roleName}}
           placeholder="Default"
-          oninput={{action "setRole" value="target.value"}}
+          {{on "input" this.setRole}}
           autocomplete="off"
           spellcheck="false"
           name="role"
