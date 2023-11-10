@@ -5,7 +5,7 @@
 
 <Identity::EntityNav @identityType={{this.identityType}} @model={{this.model}} />
 {{#if this.model.meta.total}}
-  {{#each this.model as |item|}}
+  {{#each (sort-objects this.model "name") as |item|}}
     <LinkedBlock
       @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}}
       class="list-item-row"
