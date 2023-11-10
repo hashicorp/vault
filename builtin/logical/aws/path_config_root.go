@@ -70,7 +70,7 @@ func pathConfigRoot(b *backend) *framework.Path {
 					Name: "",
 				},
 			},
-			"identity_token_role_arn": {
+			"role_arn": {
 				Type:        framework.TypeString,
 				Description: "",
 				Default:     "",
@@ -153,7 +153,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	identityTokenAudience := data.Get("identity_token_audience").(string)
 	identityTokenKey := data.Get("identity_token_key").(string)
 	identityTokenTTL := data.Get("identity_token_ttl").(int)
-	identityTokenRoleARN := data.Get("identity_token_role_arn").(string)
+	roleARN := data.Get("role_arn").(string)
 
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
@@ -166,7 +166,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		Region:                  region,
 		MaxRetries:              maxretries,
 		UsernameTemplate:        usernameTemplate,
-		IdentityTokenRoleARN:    identityTokenRoleARN,
+		RoleARN:                 roleARN,
 		IdentityTokenAudience:   identityTokenAudience,
 		IdentityTokenKey:        identityTokenKey,
 		IdentityTokenTTLSeconds: identityTokenTTL,
@@ -198,7 +198,7 @@ type rootConfig struct {
 	IdentityTokenKey        string `json:"identity_token_key"`
 	IdentityTokenTTLSeconds int    `json:"identity_token_ttl_seconds"`
 	IdentityTokenAudience   string `json:"identity_token_audience"`
-	IdentityTokenRoleARN    string `json:"identity_token_role_arn"`
+	RoleARN                 string `json:"role_arn"`
 }
 
 const pathConfigRootHelpSyn = `

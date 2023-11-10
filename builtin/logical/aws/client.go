@@ -68,7 +68,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
 			credsConfig.WebIdentityTokenFetcher = fetcher
-			credsConfig.RoleARN = config.IdentityTokenRoleARN
+			credsConfig.RoleARN = config.RoleARN
 		}
 	}
 
