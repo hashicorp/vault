@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-
 	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -578,4 +578,136 @@ func TestUpdateStaticSecret_HandlesNonCachedPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.Nil(t, err)
+}
+
+// TestPreEventStreamUpdate tests that preEventStreamUpdate correctly
+// updates old static secrets in the cache.
+func TestPreEventStreamUpdate(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	leaseCache := updater.leaseCache
+
+	// First, create the secret in the cache that we expect to be updated:
+	path := "secret-v2/data/foo"
+	indexId := hashStaticSecretIndex(path)
+	initialTime := time.Now().UTC()
+	// pre-populate the leaseCache with a secret to update
+	index := &cachememdb.Index{
+		Namespace:   "root/",
+		RequestPath: path,
+		LastRenewed: initialTime,
+		ID:          indexId,
+		// Valid token provided, so update should work.
+		Tokens:   map[string]struct{}{client.Token(): {}},
+		Response: []byte{},
+		Type:     cacheboltdb.StaticSecretType,
+	}
+	err := leaseCache.db.Set(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put a secret (with different values to what's currently in the cache)
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// perform the pre-event stream update:
+	err = updater.preEventStreamUpdate(context.Background())
+	require.Nil(t, err)
+
+	// Then, do a GET to see if the event got updated
+	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	require.Nil(t, err)
+	require.NotNil(t, newIndex)
+	require.NotEqual(t, []byte{}, newIndex.Response)
+	require.Truef(t, initialTime.Before(newIndex.LastRenewed), "last updated time not updated on index")
+	require.Equal(t, index.RequestPath, newIndex.RequestPath)
+	require.Equal(t, index.Tokens, newIndex.Tokens)
+}
+
+// TestPreEventStreamUpdateErrorUpdating tests that preEventStreamUpdate correctly responds
+// to errors on secret updates
+func TestPreEventStreamUpdateErrorUpdating(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	leaseCache := updater.leaseCache
+
+	// First, create the secret in the cache that we expect to be updated:
+	path := "secret-v2/data/foo"
+	indexId := hashStaticSecretIndex(path)
+	initialTime := time.Now().UTC()
+	// pre-populate the leaseCache with a secret to update
+	index := &cachememdb.Index{
+		Namespace:   "root/",
+		RequestPath: path,
+		LastRenewed: initialTime,
+		ID:          indexId,
+		// Valid token provided, so update should work.
+		Tokens:   map[string]struct{}{client.Token(): {}},
+		Response: []byte{},
+		Type:     cacheboltdb.StaticSecretType,
+	}
+	err := leaseCache.db.Set(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	err = client.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put a secret (with different values to what's currently in the cache)
+	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Seal Vault, so that the update will fail
+	cluster.EnsureCoresSealed(t)
+
+	// perform the pre-event stream update:
+	err = updater.preEventStreamUpdate(context.Background())
+	require.Nil(t, err)
+
+	// Then, we expect the index to be evicted since the token failed to update
+	_, err = leaseCache.db.Get(cachememdb.IndexNameID, indexId)
+	require.Equal(t, cachememdb.ErrCacheItemNotFound, err)
 }
