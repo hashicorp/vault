@@ -87,11 +87,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"message": "hi",
-		},
-	}, nil
+	return nil, nil
 }
 
 const pathConfigRotateRootHelpSyn = `
