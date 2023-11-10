@@ -20,13 +20,14 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -36,6 +37,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -689,6 +691,9 @@ type Core struct {
 
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
+
+	// Config value for "detect_deadlocks".
+	detectDeadlocks []string
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -857,13 +862,6 @@ type CoreConfig struct {
 	NumRollbackWorkers int
 }
 
-// SubloggerHook implements the SubloggerAdder interface. This implementation
-// manages CoreConfig.AllLoggers state prior to (and during) NewCore.
-func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
-	c.AllLoggers = append(c.AllLoggers, logger)
-	return logger
-}
-
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
 // not exist.
 func (c *CoreConfig) GetServiceRegistration() sr.ServiceRegistration {
@@ -946,17 +944,26 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
 	}
-	// Use imported logging deadlock if requested
-	var stateLock locking.RWMutex
-	if strings.Contains(conf.DetectDeadlocks, "statelock") {
-		stateLock = &locking.DeadlockRWMutex{}
-	} else {
-		stateLock = &locking.SyncRWMutex{}
-	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
 	if effectiveSDKVersion == "" {
 		effectiveSDKVersion = version.GetVersion().Version
+	}
+
+	var detectDeadlocks []string
+	if conf.DetectDeadlocks != "" {
+		detectDeadlocks = strings.Split(conf.DetectDeadlocks, ",")
+		for k, v := range detectDeadlocks {
+			detectDeadlocks[k] = strings.ToLower(strings.TrimSpace(v))
+		}
+	}
+
+	// Use imported logging deadlock if requested
+	var stateLock locking.RWMutex
+	stateLock = &locking.SyncRWMutex{}
+
+	if slices.Contains(detectDeadlocks, "statelock") {
+		stateLock = &locking.DeadlockRWMutex{}
 	}
 
 	// Setup the core
@@ -1032,6 +1039,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		detectDeadlocks:                detectDeadlocks,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1040,7 +1048,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
+	c.allLoggers = append(c.allLoggers, c.logger)
+
 	c.router.logger = c.logger.Named("router")
+	c.allLoggers = append(c.allLoggers, c.router.logger)
+
 	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
@@ -1193,6 +1205,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// MFA method
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	// Logical backends
 	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
@@ -1213,12 +1228,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Log level
-	c.configureLogRequestLevel(conf.RawConfig.LogLevel)
+	// Log requests level
+	c.configureLogRequestsLevel(conf.RawConfig.LogRequestsLevel)
 
 	// Quotas
 	quotasLogger := conf.Logger.Named("quotas")
-	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
+	c.allLoggers = append(c.allLoggers, quotasLogger)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "quotas")
+	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink, detectDeadlocks)
 	if err != nil {
 		return nil, err
 	}
@@ -1235,17 +1253,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Events
-	events, err := eventbus.NewEventBus(conf.Logger.Named("events"))
+	eventsLogger := conf.Logger.Named("events")
+	c.allLoggers = append(c.allLoggers, eventsLogger)
+	// start the event system
+	events, err := eventbus.NewEventBus(eventsLogger)
 	if err != nil {
 		return nil, err
 	}
 	c.events = events
 	c.events.Start()
-
-	// Make sure we're keeping track of the subloggers added above. We haven't
-	// yet registered core to the server command's SubloggerAdder, so any new
-	// subloggers will be in conf.AllLoggers.
-	c.allLoggers = conf.AllLoggers
 
 	return c, nil
 }
@@ -1269,8 +1285,8 @@ func (c *Core) configureListeners(conf *CoreConfig) error {
 	return nil
 }
 
-// configureLogRequestLevel configures the Core with the supplied log level.
-func (c *Core) configureLogRequestLevel(level string) {
+// configureLogRequestsLevel configures the Core with the supplied log requests level.
+func (c *Core) configureLogRequestsLevel(level string) {
 	c.logRequestsLevel = uberAtomic.NewInt32(0)
 
 	lvl := log.LevelFromString(level)
@@ -1305,7 +1321,9 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 	}
 
 	credentialBackends[mountTypeToken] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewTokenStore(ctx, logger.Named("token"), c, config)
+		tsLogger := logger.Named("token")
+		c.AddLogger(tsLogger)
+		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 
 	c.credentialBackends = credentialBackends
@@ -1325,7 +1343,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	// KV
 	_, ok := logicalBackends[mountTypeKV]
 	if !ok {
-		logicalBackends[mountTypeKV] = PassthroughBackendFactory
+		logicalBackends[mountTypeKV] = kv.Factory
 	}
 
 	// Cubbyhole
@@ -1333,7 +1351,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		b := NewSystemBackend(c, logger.Named("system"))
+		sysBackendLogger := logger.Named("system")
+		c.AddLogger(sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
@@ -1342,7 +1362,9 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	// Identity
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
-		return NewIdentityStore(ctx, c, config, logger.Named("identity"))
+		identityLogger := logger.Named("identity")
+		c.AddLogger(identityLogger)
+		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 
 	c.logicalBackends = logicalBackends
@@ -1453,10 +1475,14 @@ func (c *Core) Sealed() bool {
 	return atomic.LoadUint32(c.sealed) == 1
 }
 
-// SecretProgress returns the number of keys provided so far
-func (c *Core) SecretProgress() (int, string) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// SecretProgress returns the number of keys provided so far. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) SecretProgress(lock bool) (int, string) {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	switch c.unlockInfo {
 	case nil:
 		return 0, ""
@@ -2445,23 +2471,43 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		// store the sealGenInfo
-		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-		err := c.SetPhysicalSealGenInfo(context.Background(), sealGenerationInfo)
+		// Retrieve the seal generation information from storage
+		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
 		if err != nil {
-			c.logger.Error("failed to store seal generation info", "error", err)
+			c.logger.Error("cannot read existing seal generation info from storage", "error", err)
 			return err
 		}
 
-		sealHaEnabled, err := server.IsSealHABetaEnabled()
-		if err != nil {
-			return err
+		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
+
+		switch {
+		case existingGenerationInfo == nil:
+			// This is the first time we store seal generation information
+			fallthrough
+		case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
+			// We have incremented the seal generation
+			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+				c.logger.Error("failed to store seal generation info", "error", err)
+				return err
+			}
+
+		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
+			// Same generation, update the rewrapped flag in case the previous active node
+			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
+			// started but not completed.
+			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+
+		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
+			// Our seal information is out of date. The previous active node used a newer generation.
+			c.logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
 		}
-		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
-			// Flag migration performed for seal-rewrap later
-			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+
+		if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
+			// Set the migration done flag so that a seal-rewrap gets triggered later.
+			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 			// triggering the rewrap when necessary.
-			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
+			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
 
@@ -2879,23 +2925,17 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 				return err
 			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
+		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return nil
 		case configuredType == SealConfigTypeMultiseal:
 			// The configured seal is multiseal and we know the stored type is not shamir, thus
 			// we are going from auto seal to multiseal.
-			betaEnabled, err := server.IsSealHABetaEnabled()
-			switch {
-			case err != nil:
-				return err
-			case !betaEnabled:
-				return fmt.Errorf("cannot seal migrate from %q to %q, Seal High Availability beta is not enabled",
-					existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
-			default:
-				// We are going from a single non-shamir seal to multiseal, and the seal HA beta is enabled.
-				// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
-				// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
-
-				return nil
-			}
+			return fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		case storedType == SealConfigTypeMultiseal:
 			// The stored type is multiseal and we know the type the configured type is not shamir,
 			// thus we are going from multiseal to autoseal.
@@ -3137,22 +3177,30 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 // configuration in storage is Shamir but the seal in HCL is not.  In this
 // mode we should not auto-unseal (even if the migration is done) and we will
 // accept unseal requests with and without the `migrate` option, though the migrate
-// option is required if we haven't yet performed the seal migration.
-func (c *Core) IsInSealMigrationMode() bool {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+// option is required if we haven't yet performed the seal migration. Lock
+// should only be false if the caller is already holding the read
+// statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsInSealMigrationMode(lock bool) bool {
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	return c.migrationInfo != nil
 }
 
 // IsSealMigrated returns true if we're in seal migration mode but migration
 // has already been performed (possibly by another node, or prior to this node's
-// current invocation.)
-func (c *Core) IsSealMigrated() bool {
-	if !c.IsInSealMigrationMode() {
+// current invocation). Lock should only be false if the caller is already
+// holding the read statelock (such as calls originating from switchedLockHandleRequest).
+func (c *Core) IsSealMigrated(lock bool) bool {
+	if !c.IsInSealMigrationMode(lock) {
 		return false
 	}
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+
+	if lock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	done, _ := c.sealMigrated(context.Background())
 	return done
 }
@@ -3182,14 +3230,6 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggersLock.Lock()
 	defer c.allLoggersLock.Unlock()
 	c.allLoggers = append(c.allLoggers, logger)
-}
-
-// SubloggerHook implements the SubloggerAdder interface. We add this method to
-// the server command after NewCore returns with a Core object. The hook keeps
-// track of newly added subloggers without manual calls to c.AddLogger.
-func (c *Core) SubloggerHook(logger log.Logger) log.Logger {
-	c.AddLogger(logger)
-	return logger
 }
 
 // SetLogLevel sets logging level for all tracked loggers to the level provided
@@ -3436,7 +3476,7 @@ func (c *Core) ApplyRateLimitQuota(ctx context.Context, req *quotas.Request) (qu
 
 	if c.quotaManager != nil {
 		// skip rate limit checks for paths that are exempt from rate limiting
-		if c.quotaManager.RateLimitPathExempt(req.Path) {
+		if c.quotaManager.RateLimitPathExempt(req.Path, req.NamespacePath) {
 			return resp, nil
 		}
 
@@ -4184,4 +4224,11 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) DetectStateLockDeadlocks() bool {
+	if _, ok := c.stateLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

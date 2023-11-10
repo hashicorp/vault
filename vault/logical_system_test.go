@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -1146,7 +1147,13 @@ func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 }
 
 func TestSystemBackend_leases(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1186,7 +1193,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	// validate the response structure for Update
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1205,7 +1212,13 @@ func TestSystemBackend_leases(t *testing.T) {
 }
 
 func TestSystemBackend_leases_list(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1244,7 +1257,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	// validate the response body for list
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -1370,7 +1383,13 @@ func TestSystemBackend_leases_list(t *testing.T) {
 }
 
 func TestSystemBackend_renew(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1409,7 +1428,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	// Validate lease renewal response structure
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -1549,7 +1568,13 @@ func TestSystemBackend_renew_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revoke(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1712,7 +1737,13 @@ func TestSystemBackend_revoke_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1752,7 +1783,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	// validate the response structure for lease revoke-prefix
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
 		resp,
 		true,
 	)
@@ -1769,7 +1800,13 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -4096,7 +4133,13 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 }
 
 func TestSystemBackend_OpenAPI(t *testing.T) {
-	_, b, rootToken := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, rootToken := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := c.systemBackend
 
 	// Ensure no paths are reported if there is no token
 	{
@@ -5624,13 +5667,6 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			false,
 		},
 		{
-			"events",
-			"invalid",
-			"does-not-matter",
-			true,
-			false,
-		},
-		{
 			"",
 			"info",
 			"does-not-matter",
@@ -5652,9 +5688,10 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
 			t.Parallel()
 
-			core, _, _ := TestCoreUnsealed(t)
+			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+			})
 			b := core.systemBackend
-			testLoggerName := t.Name() + "." + tc.logger
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -5683,7 +5720,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			initialLoggers := resp.Data
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
 					"level": tc.level,
@@ -5728,14 +5765,14 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
 					}
 
-					if loggerName != testLoggerName && levelStr != initialLevelStr {
-						t.Errorf("expected level of logger %q to be unchanged, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+					if loggerName != tc.logger && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 					}
 				}
 			}
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
 				Operation: logical.DeleteOperation,
 			}
 
@@ -5752,7 +5789,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectDeleteError {
 				req = &logical.Request{
-					Path:      fmt.Sprintf("loggers/%s", testLoggerName),
+					Path:      fmt.Sprintf("loggers/%s", tc.logger),
 					Operation: logical.ReadOperation,
 				}
 
@@ -5761,18 +5798,18 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
 
-				currentLevel, ok := resp.Data[testLoggerName].(string)
+				currentLevel, ok := resp.Data[tc.logger].(string)
 				if !ok {
-					t.Fatalf("expected resp to include %q, resp: %#v", testLoggerName, resp)
+					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
 				}
 
-				initialLevel, ok := initialLoggers[testLoggerName].(string)
+				initialLevel, ok := initialLoggers[tc.logger].(string)
 				if !ok {
-					t.Fatalf("expected initial loggers to include %q, resp: %#v", testLoggerName, initialLoggers)
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
 				}
 
 				if currentLevel != initialLevel {
-					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", testLoggerName, initialLevel, currentLevel)
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
 				}
 			}
 		})

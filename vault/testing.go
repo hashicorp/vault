@@ -36,6 +36,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	raftlib "github.com/hashicorp/raft"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -141,6 +142,20 @@ func TestCoreWithSeal(t testing.T, testSeal Seal, enableRaw bool) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
 
+func TestCoreWithDeadlockDetection(t testing.T, testSeal Seal, enableRaw bool) *Core {
+	conf := &CoreConfig{
+		Seal:            testSeal,
+		EnableUI:        false,
+		EnableRaw:       enableRaw,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+		DetectDeadlocks: "expiration,quotas,statelock",
+	}
+	return TestCoreWithSealAndUI(t, conf)
+}
+
 func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders map[string]map[string]string, enableUI bool) (*Core, [][]byte, string) {
 	confRaw := &server.Config{
 		SharedConfig: &configutil.SharedConfig{
@@ -205,8 +220,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
 
-	corehelpers.RegisterSubloggerAdder(logger, conf)
-
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
@@ -225,7 +238,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
-	conf.AllLoggers = logger.AllLoggers
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
@@ -261,8 +273,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Switch the SubloggerHook over to core
-	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -296,7 +306,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		logicalBackends[backendName] = backendFactory
 	}
 
-	logicalBackends["kv"] = LeasedPassthroughBackendFactory
+	logicalBackends["kv"] = kv.Factory
 	for backendName, backendFactory := range testLogicalBackends {
 		logicalBackends[backendName] = backendFactory
 	}
@@ -395,6 +405,14 @@ func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics
 	return core, keys, root, sink
 }
 
+func TestCoreUnsealedWithMetricsAndConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte, string, *metrics.InmemSink) {
+	t.Helper()
+	conf.BuiltinRegistry = corehelpers.NewMockBuiltinRegistry()
+	sink := SetupMetrics(conf)
+	core, keys, root := TestCoreUnsealedWithConfig(t, conf)
+	return core, keys, root, sink
+}
+
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
 // initialized, unsealed, and with raw endpoints enabled.
 func TestCoreUnsealedRaw(t testing.T) (*Core, [][]byte, string) {
@@ -415,7 +433,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
 	token, keys := TestInitUnsealCore(t, core)
 
-	testCoreAddSecretMount(t, core, token)
+	testCoreAddSecretMount(t, core, token, "1")
 	return core, keys, token
 }
 
@@ -433,7 +451,7 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	return token, keys
 }
 
-func testCoreAddSecretMount(t testing.T, core *Core, token string) {
+func testCoreAddSecretMount(t testing.T, core *Core, token, kvVersion string) {
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
@@ -443,7 +461,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": kvVersion,
 			},
 		},
 	}
@@ -1538,8 +1556,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
-	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
-
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1716,8 +1732,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
 
-		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
-
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
 		coreConfigs = append(coreConfigs, &localConfig)
@@ -1827,7 +1841,6 @@ func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.I
 
 	if opts != nil && opts.BaseListenAddress != "" {
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
-
 		if err != nil {
 			t.Fatal("could not parse given base IP")
 		}
@@ -2136,28 +2149,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		kvVersion = opts.KVVersion
 	}
 
-	// Existing tests rely on this; we can make a toggle to disable it
-	// later if we want
-	kvReq := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: tc.RootToken,
-		Path:        "sys/mounts/secret",
-		Data: map[string]interface{}{
-			"type":        "kv",
-			"path":        "secret/",
-			"description": "key/value secret storage",
-			"options": map[string]string{
-				"version": kvVersion,
-			},
-		},
-	}
-	resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), kvReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.IsError() {
-		t.Fatal(err)
-	}
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
@@ -2217,7 +2209,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 				"type": "noop",
 			},
 		}
-		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
+		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
 			t.Fatal(err)
 		}

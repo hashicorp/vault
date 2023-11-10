@@ -447,6 +447,7 @@ func (c *ProxyCommand) Run(args []string) int {
 			Proxier:            apiProxy,
 			Logger:             cacheLogger.Named("leasecache"),
 			CacheStaticSecrets: config.Cache.CacheStaticSecrets,
+			UserAgentToUse:     useragent.AgentProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
@@ -491,6 +492,18 @@ func (c *ProxyCommand) Run(args []string) int {
 				c.UI.Error(fmt.Sprintf("Error creating static secret cache updater: %v", err))
 				return 1
 			}
+
+			capabilityManager, err := cache.NewStaticSecretCapabilityManager(&cache.StaticSecretCapabilityManagerConfig{
+				LeaseCache: leaseCache,
+				Logger:     c.logger.Named("cache.staticsecretcapabilitymanager"),
+				Client:     client,
+				StaticSecretTokenCapabilityRefreshInterval: config.Cache.StaticSecretTokenCapabilityRefreshInterval,
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating static secret capability manager: %v", err))
+				return 1
+			}
+			leaseCache.SetCapabilityManager(capabilityManager)
 		}
 	}
 

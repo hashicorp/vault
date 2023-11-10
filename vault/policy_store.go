@@ -102,6 +102,12 @@ path "sys/internal/ui/resultant-acl" {
     capabilities = ["read"]
 }
 
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+	capabilities = ["read"]
+}
+
 # Allow a token to renew a lease via lease_id in the request body; old path for
 # old clients, new path for newer
 path "sys/renew" {
@@ -256,6 +262,7 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 	var err error
 	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
+	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
@@ -466,7 +473,7 @@ func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyTyp
 	pt, ok := ps.policyTypeMap.Load(index)
 	if !ok {
 		// Doesn't exist
-		return nil, fmt.Errorf("policy does not exist in type map: %v", index)
+		return nil, ErrPolicyNotExistInTypeMap
 	}
 
 	policyType, ok := pt.(PolicyType)
