@@ -2,14 +2,13 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
 {{#if (and @item.updatePath.canRead (not this.isBuiltin))}}
   <LinkedBlock
     @params={{array "vault.cluster.secrets.backend.show" @itemPath}}
     class="list-item-row"
     data-test-secret-link={{@itemPath}}
     @encode={{true}}
-    @queryParams={{secret-query-params @backendType}}
+    @queryParams={{secret-query-params "transform"}}
   >
     <div class="columns is-mobile">
       <div class="column is-10">
