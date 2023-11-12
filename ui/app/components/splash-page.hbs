@@ -1,0 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{yield to="altContent"}}
+
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
+  <div class="columns is-centered is-gapless is-fullwidth">
+    <div class="column is-4-desktop is-6-tablet">
+      <div class="splash-page-header">
+        {{yield to="pageHeader"}}
+      </div>
+      <div class="splash-page-sub-header">
+        {{yield to="pageSubHeader"}}
+      </div>
+      <div class="login-form box is-paddingless is-relative">
+        {{yield to="pageContent"}}
+      </div>
+      {{yield to="pageFooter"}}
+    </div>
+  </div>
+</div>
