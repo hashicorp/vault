@@ -3,22 +3,25 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<SplashPage @hasAltContent={{this.mfaErrors}} as |Page|>
-  <Page.altContent>
-    <div class="has-top-margin-xxl" data-test-mfa-error>
-      <EmptyState
-        @title="Unauthorized"
-        @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
-        @icon="alert-circle"
-        @bottomBorder={{true}}
-        @subTitle={{join ". " this.mfaErrors}}
-        class="is-shadowless"
-      >
-        <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" (action "onMfaErrorDismiss")}} />
-      </EmptyState>
-    </div>
-  </Page.altContent>
-  <Page.header>
+<SplashPage>
+  <:altContent>
+    {{#if this.mfaErrors}}
+      <div class="has-top-margin-xxl" data-test-mfa-error>
+        <EmptyState
+          @title="Unauthorized"
+          @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+          @icon="alert-circle"
+          @bottomBorder={{true}}
+          @subTitle={{join ". " this.mfaErrors}}
+          class="is-shadowless"
+        >
+          <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" (action "onMfaErrorDismiss")}} />
+        </EmptyState>
+      </div>
+    {{/if}}
+  </:altContent>
+
+  <:pageHeader>
     {{#if this.oidcProvider}}
       <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
         <LogoEdition aria-label="Sign in with Hashicorp Vault" />
@@ -52,10 +55,11 @@
         </h1>
       </div>
     {{/if}}
-  </Page.header>
-  {{#unless this.mfaAuthData}}
+  </:pageHeader>
+
+  <:pageSubHeader>
     {{#if (has-feature "Namespaces")}}
-      <Page.sub-header>
+      {{#unless this.mfaAuthData}}
         <Toolbar class="toolbar-namespace-picker">
           <div class="field is-horizontal" data-test-namespace-toolbar>
             <div class="field-label is-normal">
@@ -73,7 +77,7 @@
                     data-test-auth-form-ns-input
                     value={{this.namespaceInput}}
                     placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
-                    oninput={{perform this.updateNamespace value="target.value"}}
+                    {{on "input" (perform this.updateNamespace value="target.value")}}
                     autocomplete="off"
                     spellcheck="false"
                     name="namespace"
@@ -87,10 +91,11 @@
             </div>
           </div>
         </Toolbar>
-      </Page.sub-header>
+      {{/unless}}
     {{/if}}
-  {{/unless}}
-  <Page.content>
+  </:pageSubHeader>
+
+  <:pageContent>
     {{#if this.mfaAuthData}}
       <Mfa::MfaForm
         @clusterId={{this.model.id}}
@@ -112,17 +117,18 @@
         @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
       />
     {{/if}}
-  </Page.content>
-  <Page.footer>
+  </:pageContent>
+
+  <:pageFooter>
     <div class="has-short-padding">
       <p class="help has-text-grey-dark" data-test-auth-helptext>
         {{#if this.oidcProvider}}
           Once you log in, you will be redirected back to your application. If you require login credentials, contact your
           administrator.
         {{else}}
-          Contact your administrator for login credentials
+          Contact your administrator for login credentials.
         {{/if}}
       </p>
     </div>
-  </Page.footer>
+  </:pageFooter>
 </SplashPage>

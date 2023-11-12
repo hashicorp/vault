@@ -3,18 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<SplashPage as |Page|>
-  {{#if (and this.model.usingRaft (not this.prefersInit))}}
-    <Page.header>
+<SplashPage>
+  <:pageHeader>
+    {{#if (and this.model.usingRaft (not this.prefersInit))}}
       <h1 class="title is-4">
         Raft Storage
       </h1>
-    </Page.header>
-    <Page.content>
-      <RaftJoin @onDismiss={{action (mut this.prefersInit) true}} />
-    </Page.content>
-  {{else if this.keyData}}
-    <Page.header>
+    {{else if this.keyData}}
       {{#let (or this.keyData.recovery_keys this.keyData.keys) as |keyArray|}}
         <h1 class="title is-4">
           Vault has been initialized!
@@ -26,8 +21,16 @@
           {{/if}}
         </h1>
       {{/let}}
-    </Page.header>
-    <Page.content>
+    {{else}}
+      <h1 class="title h5">
+        Let's set up the initial set of root keys that you will need in case of an emergency.
+      </h1>
+    {{/if}}
+  </:pageHeader>
+  <:pageContent>
+    {{#if (and this.model.usingRaft (not this.prefersInit))}}
+      <RaftJoin @onDismiss={{action (mut this.prefersInit) true}} />
+    {{else if this.keyData}}
       <div class="box is-marginless is-shadowless">
         <div class="content">
           <p>
@@ -104,14 +107,7 @@
           />
         </div>
       </div>
-    </Page.content>
-  {{else}}
-    <Page.header>
-      <h1 class="title h5">
-        Let's set up the initial set of root keys that you’ll need in case of an emergency
-      </h1>
-    </Page.header>
-    <Page.content>
+    {{else}}
       <form
         {{action
           "initCluster"
@@ -217,6 +213,6 @@
           </div>
         </div>
       </form>
-    </Page.content>
-  {{/if}}
+    {{/if}}
+  </:pageContent>
 </SplashPage>
