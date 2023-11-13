@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import sortObjects from 'vault/utils/sort-objects';
 import { module, test } from 'qunit';
 
