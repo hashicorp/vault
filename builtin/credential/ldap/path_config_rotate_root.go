@@ -78,7 +78,6 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	b.Logger().Info("new", "password", newPassword) // TODO: REMOVE PLX
 	lreq.Replace("userPassword", []string{newPassword})
 
 	err = conn.Modify(lreq)
