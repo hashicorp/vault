@@ -14,10 +14,8 @@ export default IdentitySerializer.extend(EmbeddedRecordsMixin, {
   },
   extractLazyPaginatedData(payload) {
     return payload.data.keys.map((key) => {
-      const model = {
-        id: key,
-        name: payload.data.key_info[key].name,
-      };
+      const model = payload.data.key_info[key];
+      model.id = key;
       if (payload.backend) {
         model.backend = payload.backend;
       }
