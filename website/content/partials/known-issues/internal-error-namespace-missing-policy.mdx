@@ -1,7 +1,7 @@
 ### Internal error when vault policy in namespace does not exist
-If a user is a member of a group that gets a policy from a 
-namespace other than the one they’re trying to log into, 
-and that policy doesn’t exist, Vault returns an internal error. 
+If a user is a member of a group that gets a policy from a
+namespace other than the one they’re trying to log into,
+and that policy doesn’t exist, Vault returns an internal error.
 This impacts all auth methods.
 
 #### Affected versions
@@ -9,4 +9,135 @@ This impacts all auth methods.
 - 1.14.4 and 1.14.5
 - 1.15.0 and 1.15.1
 
-A fix will be released in Vault 1.15.2, 1.14.6, and 1.13.10.
+A fix has been released in Vault 1.13.10, 1.14.6, and 1.15.2.
+
+### Workaround
+
+During authentication, Vault derives inherited policies based on the groups an
+entity belongs to. Vault returns an internal error when attaching the derived
+policy to a token when:
+
+1. the token belongs to a different namespace than the one handling
+   authentication, and
+2. the derived policy does not exist under the namespace.
+
+
+You can resolve the error by adding the policy to the relevant namespace or
+deleting the group policy mapping that uses the derived policy.
+
+As an example, consider the following userpass auth method failure. The error is
+due to the fact that Vault expects a group policy under the namespace that does
+not exist.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+# Failed login
+$ vault login -method=userpass username=user1 password=123
+Error authenticating: Error making API request.
+
+URL: PUT http://127.0.0.1:8200/v1/auth/userpass/login/user1
+Code: 500. Errors:
+
+* internal error
+```
+
+</CodeBlockConfig>
+
+To confirm the problem is a missing policy, start by identifying the relevant
+entity and group IDs:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault read -format=json identity/entity/name/user1 | \
+  jq '{"entity_id": .data.id, "group_ids": .data.group_ids} '
+{
+  "entity_id": "420c82de-57c3-df2e-2ef6-0690073b1636",
+  "group_ids": [
+    "6cb152b7-955d-272b-4dcf-a2ed668ca1ea"
+  ]
+}
+```
+
+</CodeBlockConfig>
+
+Use the group ID to fetch the relevant policies for the group under the `ns1`
+namespace:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault read -format=json -namespace=ns1 \
+  identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea | \
+  jq '.data.policies'
+[
+  "group_policy"
+]
+```
+
+</CodeBlockConfig>
+
+Now that we know Vault is looking for a policy called `group_policy`, we can
+check whether that policy exists under the `ns1` namespace:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy list -namespace=ns1
+default
+```
+
+</CodeBlockConfig>
+
+The only policy in the `ns1` namespace is `default`, which confirms that the
+missing policy (`group_policy`) is causing the error.
+
+
+To fix the problem, we can either remove the missing policy from the
+`6cb152b7-955d-272b-4dcf-a2ed668ca1ea` group or create the missing policy under
+the `ns1` namespace.
+
+<Tabs>
+
+<Tab heading="Remove the group policy">
+
+To remove `group_policy` from group ID `6cb152b7-955d-272b-4dcf-a2ed668ca1ea`,
+use the `vault write` command to set the applicable policies to just include
+`default`:
+
+```shell-session
+$ vault write                                             \
+  -namespace=ns1                                          \
+  identity/group/id/6cb152b7-955d-272b-4dcf-a2ed668ca1ea  \
+  name="test"                                             \
+  policies="default"
+```
+
+</Tab>
+
+<Tab heading="Add the policy to ns1">
+
+To create the missing policy, use `vault policy write` and define the
+appropriate capabilities:
+
+```shell-session
+$ vault policy write -namespace=ns1 group_policy - << EOF
+    path "secret/data/*" {
+	    capabilities = ["create", "update"]
+    }
+EOF
+```
+
+</Tab>
+</Tabs>
+
+Verify the fix by re-running the login command:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault login -method=userpass username=user1 password=123
+```
+
+</CodeBlockConfig>

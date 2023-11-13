@@ -1,0 +1,34 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="box is-sideless is-fullwidth is-marginless">
+  {{#if this.error}}
+    <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-m" data-test-seal-error as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>
+        {{this.error}}
+      </A.Description>
+    </Hds::Alert>
+  {{/if}}
+  <p>
+    Sealing a vault tells the Vault server to stop responding to any access operations until it is unsealed again. A sealed
+    vault throws away its root key to unlock the data, so it physically is blocked from responding to operations again until
+    the Vault is unsealed again with the "unseal" command or via the API.
+  </p>
+</div>
+
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  <ConfirmAction
+    @buttonClasses="button is-primary"
+    @confirmTitle="Seal this cluster?"
+    @confirmMessage="You will not be able to read or write any data until the cluster is unsealed again."
+    @confirmButtonText="Seal"
+    @horizontalPosition="auto-left"
+    @onConfirmAction={{this.handleSeal}}
+    data-test-seal
+  >
+    Seal
+  </ConfirmAction>
+</div>
