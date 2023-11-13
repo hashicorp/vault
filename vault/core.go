@@ -1353,7 +1353,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := logger.Named("system")
 		c.AddLogger(sysBackendLogger)
-		b := NewSystemBackend(c, sysBackendLogger)
+		b := NewSystemBackend(c, sysBackendLogger, config)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
