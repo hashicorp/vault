@@ -1,33 +1,7 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: BUSL-1.1
- */
-
+import sortObjects from 'vault/utils/sort-objects';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
-import { hbs } from 'ember-cli-htmlbars';
-import { sortObjects } from 'core/helpers/sort-objects';
 
-module('Integration | Helper | sort-objects', function (hooks) {
-  setupRenderingTest(hooks);
-
-  test('it sorts-objects in template view', async function (assert) {
-    this.array = [
-      { foo: 'something-a', bar: 'third' },
-      { foo: 'd-something', bar: 'second' },
-      { foo: 'something-b', bar: 'fourth' },
-      { foo: 'a-something', bar: 'first' },
-    ];
-    await render(hbs`
-      {{#each (sort-objects this.array "foo") as |item|}}
-      <p data-test-item> {{item.bar}} </p>
-      {{/each}}
-      `);
-
-    assert.dom('[data-test-item]').hasText('first', 'renders items alphabetically');
-  });
-
+module('Unit | Utility | sort-objects', function () {
   test('it sorts array of objects', function (assert) {
     const originalArray = [
       { foo: 'grape', bar: 'third' },
@@ -42,7 +16,7 @@ module('Integration | Helper | sort-objects', function (hooks) {
       { bar: 'fourth', foo: 'lemon' },
     ];
 
-    assert.propEqual(sortObjects([originalArray, 'foo']), expectedArray, 'it sorts array of objects');
+    assert.propEqual(sortObjects(originalArray, 'foo'), expectedArray, 'it sorts array of objects');
 
     const originalWithNumbers = [
       { foo: 'Z', bar: 'fourth' },
@@ -57,7 +31,7 @@ module('Integration | Helper | sort-objects', function (hooks) {
       { bar: 'fourth', foo: 'Z' },
     ];
     assert.propEqual(
-      sortObjects([originalWithNumbers, 'foo']),
+      sortObjects(originalWithNumbers, 'foo'),
       expectedWithNumbers,
       'it sorts strings with numbers and letters'
     );
@@ -79,7 +53,7 @@ module('Integration | Helper | sort-objects', function (hooks) {
     ];
 
     assert.propEqual(
-      sortObjects([originalArray, 'foo']),
+      sortObjects(originalArray, 'foo'),
       expectedArray,
       'it sorts array of objects regardless of capitalization'
     );
@@ -91,15 +65,11 @@ module('Integration | Helper | sort-objects', function (hooks) {
       { foo: 'a', bar: 'one' },
     ];
     assert.propEqual(
-      sortObjects([originalArray, 'someKey']),
+      sortObjects(originalArray, 'someKey'),
       originalArray,
       'it returns original array if key does not exist'
     );
-    assert.deepEqual(
-      sortObjects(['not an array']),
-      'not an array',
-      'it returns original arg if not an array'
-    );
+    assert.deepEqual(sortObjects('not an array'), 'not an array', 'it returns original arg if not an array');
 
     const notStrings = [
       { foo: '1', bar: 'third' },
@@ -108,7 +78,7 @@ module('Integration | Helper | sort-objects', function (hooks) {
       { foo: 2, bar: 'first' },
     ];
     assert.propEqual(
-      sortObjects([notStrings, 'foo']),
+      sortObjects(notStrings, 'foo'),
       notStrings,
       'it returns original array if values are not all strings'
     );
