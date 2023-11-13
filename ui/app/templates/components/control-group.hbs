@@ -104,10 +104,14 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if this.model.canAuthorize}}
         {{#if (or this.model.approved this.currentUserHasAuthorized)}}
-          <LinkTo @route="vault.cluster.access.control-groups" class="button" data-test-back-link={{true}}>
-            <Chevron @direction="left" />
-            Back
-          </LinkTo>
+          <Hds::Button
+            @text="Back"
+            @color="secondary"
+            @route="vault.cluster.access.control-groups"
+            @icon="chevron-left"
+            @iconPosition="leading"
+            data-test-back-link
+          />
         {{else}}
           <Hds::Button
             @text="Authorize"
