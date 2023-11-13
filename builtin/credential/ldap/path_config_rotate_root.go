@@ -84,6 +84,16 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+	// update config with new password
+	cfg.BindPassword = newPassword
+	entry, err := logical.StorageEntryJSON("config", cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(ctx, entry); err != nil {
+		// we might have to roll-back the password here?
+		return nil, err
+	}
 
 	return nil, nil
 }
