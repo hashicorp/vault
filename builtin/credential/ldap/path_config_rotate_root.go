@@ -70,7 +70,6 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 
 	var newPassword string
 	if cfg.PasswordPolicy != "" {
-		b.Logger().Info("cfg", "password policy", cfg.PasswordPolicy)
 		newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
 	} else {
 		newPassword, err = base62.Random(defaultPasswordLength)
