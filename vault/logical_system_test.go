@@ -1868,7 +1868,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}), bc)
 	err := b.Backend.Setup(namespace.RootContext(nil), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1932,7 +1932,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}), bc)
 	err := b.Backend.Setup(namespace.RootContext(nil), bc)
 	if err != nil {
 		t.Fatal(err)
