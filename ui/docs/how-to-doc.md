@@ -1,9 +1,11 @@
 ---
-title: How to doc
+title: Writing component docs
 order: 1
 ---
 
 # How to write component docs
+
+Steps to generate documentation for a component
 
 1. Write properly formatted `jsdoc` for the component. The component under `@example` needs the accurate syntax so docfy can render an actual example of the component. If the component args span multiple lines, do not add an asterisk at the beginning of each line.
 

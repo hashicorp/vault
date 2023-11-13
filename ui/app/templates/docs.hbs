@@ -17,48 +17,46 @@
             <:body>
               <Hds::SideNav::List as |Nav|>
                 <Nav.BackLink @text="Back to work (Vault UI)" @route="vault" />
-
-                <Nav.Item>
-                  <DocfyLink @to={{get (find-by "title" "Index" pages) "url"}} class="hds-side-nav__list-item-link">
-                    Index
-                  </DocfyLink>
-                </Nav.Item>
-                <Nav.Item>
-                  <DocfyLink @to={{get (find-by "title" "How to doc" pages) "url"}} class="hds-side-nav__list-item-link">
-                    How to write component docs
-                  </DocfyLink>
-                </Nav.Item>
+                <Nav.Link @icon="home" @route="docs.index">
+                  Home
+                </Nav.Link>
+                <Nav.Link @icon="edit" @route="docs.how-to-doc">
+                  Writing component docs
+                </Nav.Link>
 
                 <Nav.Title>
                   Components
                 </Nav.Title>
-
                 <Nav.Item>
+                  {{! FILTER + COMPONENT LIST }}
                   <ZDocfy @components={{get (find-by "name" "components" directories) "pages"}} />
                 </Nav.Item>
 
-                <Nav.Title>Contributing docs</Nav.Title>
+                <Nav.Title>
+                  Contributing docs
+                </Nav.Title>
+                {{! Top level files in docs/ directory }}
                 {{#each pages as |page|}}
-                  <Nav.Item>
-                    <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                  {{#let (concat "docs." (if page.relativeUrl page.relativeUrl "index")) as |url|}}
+                    <Nav.Link @route={{url}}>
                       {{page.title}}
-                    </DocfyLink>
-                  </Nav.Item>
+                    </Nav.Link>
+                  {{/let}}
                 {{/each}}
 
-                {{! Any other directories within docs/ (aside from 'components') }}
-                {{#each directories as |directory|}}
-                  {{#if (not-eq directory.name "components")}}
+                {{! Sub directories within docs/ (aside from 'components') }}
+                {{#each directories as |subDirectory|}}
+                  {{#if (not-eq subDirectory.name "components")}}
                     <Nav.Title>
-                      {{capitalize directory.label}}
+                      {{capitalize subDirectory.label}}
                     </Nav.Title>
 
-                    {{#each directory.pages as |page|}}
-                      <Nav.Item>
-                        <DocfyLink @to={{page.url}} class="hds-side-nav__list-item-link">
+                    {{#each subDirectory.pages as |page|}}
+                      {{#let (concat "docs." (if page.relativeUrl page.relativeUrl "index")) as |url|}}
+                        <Nav.Link @route={{url}}>
                           {{page.title}}
-                        </DocfyLink>
-                      </Nav.Item>
+                        </Nav.Link>
+                      {{/let}}
                     {{/each}}
                   {{/if}}
                 {{/each}}

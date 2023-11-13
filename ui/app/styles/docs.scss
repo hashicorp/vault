@@ -1,3 +1,16 @@
+.docs-collapse-toggle {
+  .hds-button {
+    color: var(--token-side-nav-color-foreground-primary);
+    background: var(--token-side-nav-color-surface-primary);
+    border-color: transparent;
+    border-radius: var(--token-side-nav-body-list-item-border-radius);
+    &:hover {
+      background: var(--token-side-nav-color-surface-interactive-hover);
+      border-color: transparent;
+    }
+  }
+}
+
 #docfy-content {
   font-size: 16px;
   font-family: var(--token-typography-display-300-font-family);

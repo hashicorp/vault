@@ -1,7 +1,14 @@
 <Hds::Form::TextInput::Field @type="search" placeholder="Filter components" {{on "input" this.filterComponents}} />
 
-{{#each this.componentList as |component|}}
-  <DocfyLink @to={{component.url}} class="hds-side-nav__list-item-link">
-    {{component.title}}
-  </DocfyLink>
-{{/each}}
+<Hds::Reveal
+  class="docs-collapse-toggle has-top-padding-s"
+  @text="Expand component list"
+  @textWhenOpen="Collapse component list"
+  @isOpen={{true}}
+>
+  {{#each this.componentList as |component|}}
+    <DocfyLink @to={{component.url}} class="hds-side-nav__list-item-link docs-hover">
+      {{component.title}}
+    </DocfyLink>
+  {{/each}}
+</Hds::Reveal>
