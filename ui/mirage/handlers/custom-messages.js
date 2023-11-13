@@ -56,7 +56,18 @@ export default function (server) {
     };
   });
 
-  server.post('/sys/config/ui/custom-messages', () => {});
+  server.post('/sys/config/ui/custom-messages', () => {
+    return {
+      id: '01234567-89ab-cdef-0123-456789abcdef',
+      data: {
+        active: true,
+        start_time: '2023-10-15T02:36:43.986212308Z',
+        end_time: '2024-10-15T02:36:43.986212308Z',
+        type: 'modal',
+        authenticated: false,
+      },
+    };
+  });
 
   server.get('/sys/internal/ui/unauthenticated-messages', () => {
     return {
