@@ -139,8 +139,6 @@
     {{! Togglable Text Input }}
     <Toggle
       @name="show-{{@attr.name}}"
-      @status="success"
-      @size="small"
       @onChange={{this.toggleShow}}
       @checked={{this.showInput}}
       data-test-toggle={{@attr.name}}
