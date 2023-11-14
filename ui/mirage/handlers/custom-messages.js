@@ -5,10 +5,10 @@
 
 export default function (server) {
   server.get('/sys/config/ui/custom-messages', (schema, request) => {
-    if (request.queryParams.authenticated === 'true') {
+    if (JSON.parse(request.queryParams.authenticated)) {
       return {
         data: {
-          'key-info': {
+          key_info: {
             '01234567-89ab-cdef-0123-456789abcdef': {
               title: 'Authenticated custom message title',
               type: 'modal',
@@ -33,7 +33,7 @@ export default function (server) {
 
     return {
       data: {
-        'key-info': {
+        key_info: {
           '8d6ba39-5c23-50af-3d79-76c26a2845f49': {
             title: 'Unauthenticated custom message title',
             type: 'modal',
@@ -72,7 +72,7 @@ export default function (server) {
   server.get('/sys/internal/ui/unauthenticated-messages', () => {
     return {
       data: {
-        'key-info': {
+        key_info: {
           '01234567-89ab-cdef-0123-456789abcdef': {
             title: 'Unauthenticated Title One',
             message:
@@ -102,7 +102,7 @@ export default function (server) {
   server.get('/sys/internal/ui/authenticated-messages', () => {
     return {
       data: {
-        'key-info': {
+        key_info: {
           '6543210-89ab-cdef-0123-456780abcieh': {
             title: 'Authenticated Title One',
             message:
