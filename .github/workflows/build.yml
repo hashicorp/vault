@@ -138,10 +138,13 @@ jobs:
       matrix:
         goos: [linux]
         goarch: [arm, arm64, 386, amd64]
+        include:
+          - {goos: linux, goarch: arm, goarm: 6}
       fail-fast: true
     uses: ./.github/workflows/build-vault-ce.yml
     with:
       goarch: ${{ matrix.goarch }}
+      goarm: ${{matrix.goarm}}
       goos: ${{ matrix.goos }}
       go-tags: ui
       package-name: ${{ needs.product-metadata.outputs.package-name }}
