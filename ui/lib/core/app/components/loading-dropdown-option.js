@@ -3,7 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-.overview-card {
-  padding: $spacing-24;
-  line-height: initial;
-}
+export { default } from 'core/components/loading-dropdown-option';
