@@ -13,6 +13,7 @@ export default Route.extend(ListRoute, {
         responsePath: 'data.keys',
         page: params.page,
         pageFilter: params.pageFilter,
+        sortBy: 'name',
       })
       .catch((err) => {
         if (err.httpStatus === 404) {
