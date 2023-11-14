@@ -19,6 +19,10 @@ Version | Issue
 All     | [API calls to update-primary may lead to data loss](/vault/docs/upgrading/upgrade-to-1.14.x#update-primary-data-loss)
 1.14.0+ | [AWS static roles ignore changes to rotation period](/vault/docs/upgrading/upgrade-to-1.14.x#aws-static-role-rotation)
 1.14.0+ | [UI Collapsed navbar does not allow certain click events](/vault/docs/upgrading/upgrade-to-1.14.x#ui-collapsed-navbar)
+1.14.3 - 1.14.5 | [Vault storing references to ephemeral sub-loggers leading to unbounded memory consumption](/vault/docs/upgrading/upgrade-to-1.14.x#vault-is-storing-references-to-ephemeral-sub-loggers-leading-to-unbounded-memory-consumption)
+1.14.4 - 1.14.5 | [Internal error when vault policy in namespace does not exist](/vault/docs/upgrading/upgrade-to-1.14.x#internal-error-when-vault-policy-in-namespace-does-not-exist)
+1.14.0+ | [Sublogger levels not adjusted on reload](/vault/docs/upgrading/upgrade-to-1.14.x#sublogger-levels-unchanged-on-reload)
+1.14.5  | [Fatal error during expiration metrics gathering causing Vault crash](/vault/docs/upgrading/upgrade-to-1.15.x#fatal-error-during-expiration-metrics-gathering-causing-vault-crash)
 
 ## Vault companion updates
 
@@ -276,10 +280,6 @@ Follow the learn more links for more information, or browse the list of
 
   </tbody>
 </table>
-
-@include 'known-issues/internal-error-namespace-missing-policy.mdx'
-
-@include 'known-issues/ephemeral-loggers-memory-leak.mdx'
 
 ## Feature deprecations and EOL
 
