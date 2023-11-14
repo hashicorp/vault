@@ -5,6 +5,8 @@
 
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { isAfter } from 'date-fns';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 export default class MessageModel extends Model {
   @attr('boolean') active;
@@ -16,6 +18,12 @@ export default class MessageModel extends Model {
   @attr('string') startTime;
   @attr('string') endTime;
 
+  // date helpers
+  get isStartTimeAfterToday() {
+    return isAfter(parseAPITimestamp(this.startTime), new Date());
+  }
+
+  // capabilities
   @lazyCapabilities(apiPath`sys/config/ui/custom-messages`) customMessagesPath;
 
   get canCreateCustomMessages() {

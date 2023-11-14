@@ -39,3 +39,14 @@
     </ul>
   </nav>
 </div>
+
+{{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+  <Toolbar>
+    <ToolbarFilters>
+      {{yield to="toolbarFilters"}}
+    </ToolbarFilters>
+    <ToolbarActions>
+      {{yield to="toolbarActions"}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}

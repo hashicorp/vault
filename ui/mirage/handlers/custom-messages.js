@@ -10,23 +10,44 @@ export default function (server) {
         data: {
           key_info: {
             '01234567-89ab-cdef-0123-456789abcdef': {
-              title: 'Authenticated custom message title',
+              title: 'Has expiration date',
               type: 'modal',
               authenticated: true,
               start_time: '2023-10-15T02:36:43.986212308Z',
-              end_time: '2024-10-15T02:36:43.986212308Z',
+              end_time: '2023-12-17T02:36:43.986212308Z',
+              active: true,
+            },
+            '22234567-89ab-cdef-0123-456789abcdef': {
+              title: 'No expiration date',
+              type: 'modal',
+              authenticated: true,
+              start_time: '2023-10-15T02:36:43.986212308Z',
+              end_time: '',
               active: true,
             },
             '76543210-89ab-cdef-0123-456789abcdef': {
-              title: 'Authenticated custom message title two',
+              title: 'Inactive message',
               type: 'banner',
               authenticated: true,
-              start_time: '2021-10-15T02:36:43.986212308Z',
-              end_time: '2021-11-15T02:36:43.986212308Z',
+              start_time: '2023-10-15T02:36:43.986212308Z',
+              end_time: '2023-11-15T02:36:43.986212308Z',
+              active: false,
+            },
+            '11543210-89ab-cdef-0123-456789abcdef': {
+              title: 'Inactive, but start time is past current date',
+              type: 'banner',
+              authenticated: true,
+              start_time: '2024-10-15T02:36:43.986212308Z',
+              end_time: '2024-11-15T02:36:43.986212308Z',
               active: false,
             },
           },
-          keys: ['01234567-89ab-cdef-0123-456789abcdef', '76543210-89ab-cdef-0123-456789abcdef'],
+          keys: [
+            '01234567-89ab-cdef-0123-456789abcdef',
+            '22234567-89ab-cdef-0123-456789abcdef',
+            '76543210-89ab-cdef-0123-456789abcdef',
+            '11543210-89ab-cdef-0123-456789abcdef',
+          ],
         },
       };
     }
