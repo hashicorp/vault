@@ -6,63 +6,79 @@
   </:toolbarActions>
 </TabPageHeader>
 
-{{#each @messages as |message|}}
-  <LinkedBlock
-    data-test-list-item={{message.id}}
-    class="list-item-row"
-    @params={{array "messages.message.details" message.id}}
-    @linkPrefix={{this.mountPoint}}
-  >
-    <div class="level is-mobile">
-      <div class="level-left">
-        <div>
-          <Hds::Text::Display @tag="h2" data-linked-block-title={{message.id}}>
-            <Icon @name="message-circle" class="auto-width" aria-label="message" />
-            {{message.title}}
-          </Hds::Text::Display>
-          <div class="has-top-margin-xs">
-            <Hds::Badge
-              @text={{if
-                message.active
-                (if
-                  message.endTime
-                  (concat "Active until " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
-                  "Active"
-                )
-                (if
-                  message.isStartTimeAfterToday
-                  (concat "Scheduled: " (date-format message.startTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
-                  (concat "Inactive: " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
-                )
-              }}
-              @color={{if message.active "highlight" "neutral"}}
-            />
-            <Hds::Badge @text={{(capitalize message.type)}} @color={{if message.active "highlight" "neutral"}} />
+{{#if this.model.messages.length}}
+  {{#each @messages as |message|}}
+    <LinkedBlock
+      data-test-list-item={{message.id}}
+      class="list-item-row"
+      @params={{array "messages.message.details" message.id}}
+      @linkPrefix={{this.mountPoint}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Hds::Text::Display @tag="h2" data-linked-block-title={{message.id}}>
+              <Icon @name="message-circle" class="auto-width" aria-label="message" />
+              {{message.title}}
+            </Hds::Text::Display>
+            <div class="has-top-margin-xs">
+              <Hds::Badge
+                @text={{if
+                  message.active
+                  (if
+                    message.endTime
+                    (concat "Active until " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
+                    "Active"
+                  )
+                  (if
+                    message.isStartTimeAfterToday
+                    (concat "Scheduled: " (date-format message.startTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
+                    (concat "Inactive: " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
+                  )
+                }}
+                @color={{if message.active "highlight" "neutral"}}
+              />
+              <Hds::Badge @text={{(capitalize message.type)}} @color={{if message.active "highlight" "neutral"}} />
+            </div>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu>
+              <nav class="menu">
+                <ul class="menu-list">
+                  {{#if message.canEditCustomMessages}}
+                    <li>
+                      <LinkTo @route="messages.message.edit" @model={{message.id}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                  {{/if}}
+                  {{#if message.canDeleteCustomMessages}}
+                    <li>
+                      Delete
+                    </li>
+                  {{/if}}
+                </ul>
+              </nav>
+            </PopupMenu>
           </div>
         </div>
       </div>
-      <div class="level-right is-flex is-paddingless is-marginless">
-        <div class="level-item">
-          <PopupMenu>
-            <nav class="menu">
-              <ul class="menu-list">
-                {{#if message.canEditCustomMessages}}
-                  <li>
-                    <LinkTo @route="messages.message.edit" @model={{message.id}}>
-                      Edit
-                    </LinkTo>
-                  </li>
-                {{/if}}
-                {{#if message.canDeleteCustomMessages}}
-                  <li>
-                    Delete
-                  </li>
-                {{/if}}
-              </ul>
-            </nav>
-          </PopupMenu>
-        </div>
-      </div>
-    </div>
-  </LinkedBlock>
-{{/each}}
+    </LinkedBlock>
+  {{/each}}
+{{else}}
+  <EmptyState
+    @title="No messages yet"
+    @message="Add a custom message for all users after they log into Vault. Create message to get started"
+  >
+    <Hds::Link::Standalone
+      @icon="plus"
+      @iconPosition="leading"
+      @text="Create message"
+      @route="messages.create"
+      class="is-no-underline"
+      data-test-action-text="Create message"
+    />
+  </EmptyState>
+{{/if}}
