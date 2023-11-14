@@ -262,7 +262,7 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.Cache != nil && !c.Cache.CacheStaticSecrets && c.Cache.DisableCachingDynamicSecrets {
-		return fmt.Errorf("to enable the cache, the cache must be configured to either cache static secrets of dynamic secrets")
+		return fmt.Errorf("to enable the cache, the cache must be configured to either cache static secrets or dynamic secrets")
 	}
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
