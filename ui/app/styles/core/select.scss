@@ -21,8 +21,8 @@ select {
   max-width: 100%;
   outline: none;
   padding-bottom: calc(0.375em - 1px);
-  padding-left: $size-8;
-  padding-right: $size-8;
+  padding-left: $spacing-10;
+  padding-right: $spacing-10;
   padding-top: calc(0.375em - 1px);
   text-rendering: auto !important;
 
@@ -44,7 +44,7 @@ select {
 }
 
 .select select:not([multiple]) {
-  padding-right: $size-2;
+  padding-right: $spacing-36;
 }
 
 .select select[disabled] {
@@ -76,7 +76,7 @@ select {
   margin: 0;
   pointer-events: none;
   position: absolute;
-  right: $spacing-xs;
+  right: $spacing-8;
   top: 50%;
   transform: translateY(-50%);
   width: 24px;

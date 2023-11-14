@@ -215,8 +215,6 @@
                       <div class="field">
                         <Toggle
                           @name="show-{{attr.name}}"
-                          @status="success"
-                          @size="small"
                           @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
                           @checked={{this.showPasswordField}}
                           data-test-toggle={{attr.name}}

@@ -6,7 +6,7 @@
 {{#unless @uploadOnly}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label for="input-{{this.elementId}}" class="is-label" data-test-text-file-label>
+      <label for="input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
           <InfoTooltip>
@@ -22,12 +22,12 @@
         <Input
           data-test-text-toggle
           id="use-text-{{this.elementId}}"
-          class="switch is-rounded is-success is-small"
+          class="toggle is-success is-small"
           @type="checkbox"
           @checked={{this.showTextArea}}
           {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
         />
-        <label for="use-text-{{this.elementId}}">
+        <label for="use-text-{{this.elementId}}" class="has-text-weight-bold is-size-8">
           Enter as text
         </label>
       </div>

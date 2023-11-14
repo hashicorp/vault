@@ -26,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/namespace"
 	nshelper "github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -85,6 +84,10 @@ type LeaseCache struct {
 	baseCtxInfo *cachememdb.ContextInfo
 	l           *sync.RWMutex
 
+	// userAgentToUse is the user agent to use when making independent requests
+	// to Vault.
+	userAgentToUse string
+
 	// idLocks is used during cache lookup to ensure that identical requests made
 	// in parallel won't trigger multiple renewal goroutines.
 	idLocks []*locksutil.LockEntry
@@ -115,6 +118,7 @@ type LeaseCacheConfig struct {
 	BaseContext        context.Context
 	Proxier            Proxier
 	Logger             hclog.Logger
+	UserAgentToUse     string
 	Storage            *cacheboltdb.BoltStorage
 	CacheStaticSecrets bool
 }
@@ -150,6 +154,10 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		return nil, fmt.Errorf("nil API client")
 	}
 
+	if conf.UserAgentToUse == "" {
+		return nil, fmt.Errorf("no user agent specified -- see useragent.go")
+	}
+
 	db, err := cachememdb.New()
 	if err != nil {
 		return nil, err
@@ -162,6 +170,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		client:             conf.Client,
 		proxier:            conf.Proxier,
 		logger:             conf.Logger,
+		userAgentToUse:     conf.UserAgentToUse,
 		db:                 db,
 		baseCtxInfo:        baseCtxInfo,
 		l:                  &sync.RWMutex{},
@@ -460,6 +469,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
+		// We set the request path to be the canonical static secret path, so that
+		// two differently shaped (but equivalent) requests to the same path
+		// will be the same.
+		// This differs slightly from dynamic secrets, where the /v1/ will be
+		// included in the request path.
+		index.RequestPath = getStaticSecretPathFromRequest(req)
+
 		err := c.cacheStaticSecret(ctx, req, resp, index)
 		if err != nil {
 			return nil, err
@@ -738,11 +754,10 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 		headers = make(http.Header)
 	}
 
-	// We do not preserve the initial User-Agent here (i.e. use
-	// AgentProxyStringWithProxiedUserAgent) since these requests are from
-	// the proxy subsystem, but are made by Agent's lifetime watcher,
+	// We do not preserve any initial User-Agent here since these requests are from
+	// the proxy subsystem, but are made by the lease cache's lifetime watcher,
 	// not triggered by a specific request.
-	headers.Set("User-Agent", useragent.AgentProxyString())
+	headers.Set("User-Agent", c.userAgentToUse)
 	client.SetHeaders(headers)
 
 	watcher, err := client.NewLifetimeWatcher(&api.LifetimeWatcherInput{
