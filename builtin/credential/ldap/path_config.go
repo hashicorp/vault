@@ -134,6 +134,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 
 	data := cfg.PasswordlessMap()
 	cfg.PopulateTokenData(data)
+	data["password_policy"] = cfg.PasswordPolicy
 
 	resp := &logical.Response{
 		Data: data,
