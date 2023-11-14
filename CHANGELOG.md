@@ -2,6 +2,43 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.15.2
+### November 09, 2023
+
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
+
+CHANGES:
+
+* auth/approle: Normalized error response messages when invalid credentials are provided [[GH-23786](https://github.com/hashicorp/vault/pull/23786)]
+* secrets/mongodbatlas: Update plugin to v0.10.2 [[GH-23849](https://github.com/hashicorp/vault/pull/23849)]
+
+FEATURES:
+
+* cli/snapshot: Add CLI tool to inspect Vault snapshots [[GH-23457](https://github.com/hashicorp/vault/pull/23457)]
+
+IMPROVEMENTS:
+
+* api (enterprise): Enable the sys/license/features from any namespace
+* storage/etcd: etcd should only return keys when calling List() [[GH-23872](https://github.com/hashicorp/vault/pull/23872)]
+* ui: Update flat, shell-quote and swagger-ui-dist packages. Remove swagger-ui styling overrides. [[GH-23700](https://github.com/hashicorp/vault/pull/23700)]
+* ui: Update sidebar Secrets engine to title case. [[GH-23964](https://github.com/hashicorp/vault/pull/23964)]
+
+BUG FIXES:
+
+* api/seal-status: Fix deadlock on calls to sys/seal-status with a namespace configured
+on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
+* core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
+* core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
+* core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
+* core: fix bug where deadlock detection was always on for expiration and quotas. 
+These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
+* core: fix policies with wildcards not matching list operations due to the policy path not having a trailing slash [[GH-23874](https://github.com/hashicorp/vault/pull/23874)]
+* expiration: Fix fatal error "concurrent map iteration and map write" when collecting metrics from leases. [[GH-24027](https://github.com/hashicorp/vault/pull/24027)]
+* ui: fix broken GUI when accessing from listener with chroot_namespace defined [[GH-23942](https://github.com/hashicorp/vault/pull/23942)]
+
 ## 1.15.1
 ### October 25, 2023
 
@@ -299,6 +336,39 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
 * ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
 
+## 1.14.6
+### November 09, 2023
+
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
+
+CHANGES:
+
+* auth/approle: Normalized error response messages when invalid credentials are provided [[GH-23786](https://github.com/hashicorp/vault/pull/23786)]
+* secrets/mongodbatlas: Update plugin to v0.10.2 [[GH-23849](https://github.com/hashicorp/vault/pull/23849)]
+
+FEATURES:
+
+* cli/snapshot: Add CLI tool to inspect Vault snapshots [[GH-23457](https://github.com/hashicorp/vault/pull/23457)]
+
+IMPROVEMENTS:
+
+* storage/etcd: etcd should only return keys when calling List() [[GH-23872](https://github.com/hashicorp/vault/pull/23872)]
+
+BUG FIXES:
+
+* api/seal-status: Fix deadlock on calls to sys/seal-status with a namespace configured
+on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
+* core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
+* core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
+* core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
+* core: fix bug where deadlock detection was always on for expiration and quotas. 
+These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
+* core: fix policies with wildcards not matching list operations due to the policy path not having a trailing slash [[GH-23874](https://github.com/hashicorp/vault/pull/23874)]
+* expiration: Fix fatal error "concurrent map iteration and map write" when collecting metrics from leases. [[GH-24027](https://github.com/hashicorp/vault/pull/24027)]
+
 ## 1.14.5
 ### October 25, 2023
 
@@ -459,8 +529,6 @@ SECURITY
 
 * auth/ldap: Normalize HTTP response codes when invalid credentials are provided to prevent user enumeration. This vulnerability, CVE-2023-3462, is fixed in Vault 1.14.1 and 1.13.5. [[GH-21282](https://github.com/hashicorp/vault/pull/21282), [HSEC-2023-24](https://discuss.hashicorp.com/t/hcsec-2023-24-vaults-ldap-auth-method-allows-for-user-enumeration/56714)]
 * core/namespace (enterprise): An unhandled error in Vault Enterprise’s namespace creation may cause the Vault process to crash, potentially resulting in denial of service. This vulnerability, CVE-2023-3774, is fixed in Vault Enterprise 1.14.1, 1.13.5, and 1.12.9. [[HSEC_2023-23](https://discuss.hashicorp.com/t/hcsec-2023-23-vault-enterprise-namespace-creation-may-lead-to-denial-of-service/56617)]
-
-
 
 CHANGES:
 
@@ -733,6 +801,39 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes bug in kmip role form that caused `operation_all` to persist after deselecting all operation checkboxes [[GH-19139](https://github.com/hashicorp/vault/pull/19139)]
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
+
+## 1.13.10
+### November 09, 2023
+
+SECURITY:
+* core: inbound client requests triggering a policy check can lead to an unbounded consumption of memory. A large number of these requests may lead to denial-of-service. This vulnerability, CVE-2023-5954, was introduced in Vault 1.15.0, 1.14.3, and 1.13.7, and is fixed in Vault 1.15.2, 1.14.6, and 1.13.10. [[HSEC-2023-33](https://discuss.hashicorp.com/t/hcsec-2023-33-vault-requests-triggering-policy-checks-may-lead-to-unbounded-memory-consumption/59926)]
+
+CHANGES:
+
+* auth/approle: Normalized error response messages when invalid credentials are provided [[GH-23786](https://github.com/hashicorp/vault/pull/23786)]
+* secrets/mongodbatlas: Update plugin to v0.9.2 [[GH-23849](https://github.com/hashicorp/vault/pull/23849)]
+
+FEATURES:
+
+* cli/snapshot: Add CLI tool to inspect Vault snapshots [[GH-23457](https://github.com/hashicorp/vault/pull/23457)]
+
+IMPROVEMENTS:
+
+* storage/etcd: etcd should only return keys when calling List() [[GH-23872](https://github.com/hashicorp/vault/pull/23872)]
+
+BUG FIXES:
+
+* api/seal-status: Fix deadlock on calls to sys/seal-status with a namespace configured
+on the request. [[GH-23861](https://github.com/hashicorp/vault/pull/23861)]
+* core (enterprise): Do not return an internal error when token policy type lookup fails, log it instead and continue.
+* core/activity: Fixes segments fragment loss due to exceeding entry record size limit [[GH-23781](https://github.com/hashicorp/vault/pull/23781)]
+* core/mounts: Fix reading an "auth" mount using "sys/internal/ui/mounts/" when filter paths are enforced returns 500 error code from the secondary [[GH-23802](https://github.com/hashicorp/vault/pull/23802)]
+* core: Revert PR causing memory consumption bug [[GH-23986](https://github.com/hashicorp/vault/pull/23986)]
+* core: Skip unnecessary deriving of policies during Login MFA Check. [[GH-23894](https://github.com/hashicorp/vault/pull/23894)]
+* core: fix bug where deadlock detection was always on for expiration and quotas. 
+These can now be configured individually with `detect_deadlocks`. [[GH-23902](https://github.com/hashicorp/vault/pull/23902)]
+* core: fix policies with wildcards not matching list operations due to the policy path not having a trailing slash [[GH-23874](https://github.com/hashicorp/vault/pull/23874)]
+* expiration: Fix fatal error "concurrent map iteration and map write" when collecting metrics from leases. [[GH-24027](https://github.com/hashicorp/vault/pull/24027)]
 
 ## 1.13.9
 ### October 25, 2023

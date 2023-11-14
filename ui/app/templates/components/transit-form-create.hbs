@@ -124,7 +124,7 @@
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
+    <Hds::ButtonSet>
       <Hds::Button
         @text="Create encryption key"
         @icon={{if @requestInFlight "loading"}}
@@ -132,11 +132,7 @@
         type="submit"
         disabled={{@requestInFlight}}
       />
-    </div>
-    <div class="control">
-      <SecretLink @mode="list" class="button">
-        Cancel
-      </SecretLink>
-    </div>
+      <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.list-root" />
+    </Hds::ButtonSet>
   </div>
 </form>

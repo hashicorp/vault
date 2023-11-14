@@ -21,11 +21,11 @@
         id={{concat "useText-" this.elementId}}
         type="checkbox"
         name={{concat "useText-" this.elementId}}
-        class="switch is-rounded is-success is-small"
+        class="toggle is-success is-small"
         checked={{this.key.enterAsText}}
         onchange={{action (toggle "enterAsText" this.key)}}
       />
-      <label for={{concat "useText-" this.elementId}}>
+      <label for={{concat "useText-" this.elementId}} class="has-text-weight-bold is-size-8">
         Enter as text
       </label>
     </div>
