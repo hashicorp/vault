@@ -54,16 +54,15 @@
       {{on "click" (fn (mut this.modalOpen) true)}}
     />
   {{/if}}
-  <button
-    onclick={{this.toggleMask}}
-    type="button"
-    aria-label={{if this.showValue "mask value" "show value"}}
-    title={{if this.showValue "mask value" "show value"}}
-    class="masked-input-toggle button"
+  <Hds::Button
+    @text={{if this.showValue "hide value" "show value"}}
+    @icon={{if this.showValue "eye" "eye-off"}}
+    @isIconOnly={{true}}
+    @color="tertiary"
+    class="has-padding-xxs"
     data-test-button="toggle-masked"
-  >
-    <Icon @name={{if this.showValue "eye" "eye-off"}} />
-  </button>
+    {{on "click" this.toggleMask}}
+  />
 </div>
 
 {{! CONFIRM DOWNLOAD MODAL }}
