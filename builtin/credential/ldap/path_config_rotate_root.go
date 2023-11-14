@@ -24,7 +24,9 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathConfigRotateRootUpdate,
+				Callback:                    b.pathConfigRotateRootUpdate,
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 
