@@ -5,6 +5,7 @@ package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/x509"
@@ -273,18 +274,31 @@ func encodeRSAPublicKey(key *keysutil.KeyEntry) (string, error) {
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-	blockType := "RSA PUBLIC KEY"
-	derBytes, err := x509.MarshalPKIXPublicKey(key.RSAPublicKey)
-	if err != nil {
-		return "", err
+	var publicKey crypto.PublicKey
+	publicKey = key.RSAPublicKey
+	if key.RSAKey != nil {
+		// Prefer the private key if it exists
+		publicKey = key.RSAKey.Public()
 	}
 
-	pemBlock := pem.Block{
-		Type:  blockType,
+	if publicKey == nil {
+		return "", errors.New("requested to encode an RSA public key with no RSA key present")
+	}
+
+	// Encode the RSA public key in PEM format to return over the API
+	derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling RSA public key: %w", err)
+	}
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
 		Bytes: derBytes,
 	}
+	pemBytes := pem.EncodeToMemory(pemBlock)
+	if pemBytes == nil || len(pemBytes) == 0 {
+		return "", fmt.Errorf("failed to PEM-encode RSA public key")
+	}
 
-	pemBytes := pem.EncodeToMemory(&pemBlock)
 	return string(pemBytes), nil
 }
 
