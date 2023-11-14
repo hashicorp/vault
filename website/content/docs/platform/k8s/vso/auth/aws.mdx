@@ -1,23 +1,31 @@
 ---
 layout: docs
-page_title: Vault Secrets Operator AWS Auth
+page_title: AWS auth support for Vault Secrets Operator
 description: >-
   The Vault Secrets Operator supports authenticating to Vault with the AWS auth method
 ---
 
-# AWS auth method support
+# AWS auth support for Vault Secrets Operator
 
-The Vault Secrets Operator (VSO) supports authenticating to Vault's [AWS auth](/vault/docs/auth/aws) method. AWS credentials can be retrieved in several ways:
+The Vault Secrets Operator (VSO) supports
+ [AWS authentication](/vault/docs/auth/aws) when accessing Vault. VSO
+ can retrieve AWS credentials:
 
-- From an [IRSA-enabled Kubernetes service account][aws-irsa]
-- Inferred from the underlying EKS node role or EC2 instance profile of the instance where the operator pod is running
-- Specified as a static access key id and secret key
+- from an [IRSA-enabled Kubernetes service account][aws-irsa].
+- by inferring credentials from the underlying EKS node role.
+- by inferring credentials from the EC2 instance profile of the instance
+   where the operator pod is running.
+- from an explicitly provided static access key id and secret key.
 
-The examples below illustrate how to configure a Vault role and the corresponding VaultAuth for the possible AWS auth scenarios with the operator.
+The following examples illustrate how to configure a Vault role and the corresponding VaultAuth profile in VSO for different AWS authentication scenarios.
 
 ## IRSA
 
-See Amazons's [IAM roles for service accounts][aws-irsa] for information on enabling authentication using IRSA on an EKS cluster, including how to add an OIDC provider and allow a Kubernetes service account to assume an IAM role. If using Terraform, the AWS [EKS module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest) has support for [IRSA integration](https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/docs/irsa_integration.md) with the [IRSA submodule](https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role-for-service-accounts-eks).
+1. Follow the Amazon documentation for [IAM roles for service accounts][aws-irsa]
+   to add an OIDC provider so your Kubernetes service account can assume an IAM
+   role.
+
+1. Create an appropriate authentication role in your Vault instance:
 
 <CodeTabs>
 <CodeBlockConfig>
@@ -47,6 +55,8 @@ resource "vault_aws_auth_backend_role" "aws_irsa_role" {
 </CodeBlockConfig>
 </CodeTabs>
 
+1. Create the corresponding authentication entry in VSO:
+
 ```yaml
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
@@ -63,7 +73,18 @@ spec:
     irsaServiceAccount: <SERVICE_ACCOUNT>
 ```
 
+<Tip title="Terraform has built-in IRSA support">
+
+  If you use Terraform to manage your Elastic Kubernetes (EKS) cluster, the
+  [AWS EKS module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
+  includes IRSA support  through the 
+  [IRSA submodule](https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role-for-service-accounts-eks).
+
+</Tip>
+
 ## Node role
+
+1. Create an appropriate authentication role in your Vault instance:
 
 <CodeTabs>
 <CodeBlockConfig>
@@ -93,6 +114,8 @@ resource "vault_aws_auth_backend_role" "aws_node_role" {
 </CodeBlockConfig>
 </CodeTabs>
 
+1. Create the corresponding authentication entry in VSO:
+
 ```yaml
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
@@ -109,6 +132,8 @@ spec:
 ```
 
 ## Instance profile
+
+1. Create an appropriate authentication role in your Vault instance:
 
 <CodeTabs>
 <CodeBlockConfig>
@@ -144,6 +169,8 @@ resource "vault_aws_auth_backend_role" "aws_node_role" {
 </CodeBlockConfig>
 </CodeTabs>
 
+1. Create the corresponding authentication entry in VSO:
+
 ```yaml
 apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultAuth
@@ -160,6 +187,8 @@ spec:
 ```
 
 ## Static credentials
+
+1. Create an appropriate authentication role in your Vault instance:
 
 <CodeTabs>
 <CodeBlockConfig>
@@ -189,6 +218,8 @@ resource "vault_aws_auth_backend_role" "aws_static_role" {
 </CodeBlockConfig>
 </CodeTabs>
 
+1. Create the corresponding authentication entry in VSO:
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -217,6 +248,6 @@ spec:
 
 # API
 
-See the full list of AWS VaultAuth options on the [API page](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigaws).
+See the full list of AWS VaultAuth options on the [VSO API page](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigaws).
 
 [aws-irsa]: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
