@@ -4,14 +4,23 @@
  */
 
 import ApplicationAdapter from '../application';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class MessageAdapter extends ApplicationAdapter {
+  getCustomMessagesUrl(id) {
+    let url = `${this.buildURL()}/config/ui/custom-messages`;
+
+    if (id) {
+      url = url + '/' + encodePath(id);
+    }
+    return url;
+  }
+
   async query(store, type, query) {
     const { authenticated } = query;
-    const url = `/v1/sys/config/ui/custom-messages`;
 
     try {
-      return await this.ajax(url, 'GET', { data: { authenticated } });
+      return await this.ajax(this.getCustomMessagesUrl(), 'GET', { data: { authenticated } });
     } catch (e) {
       if (e.httpStatus === 404) {
         return [];
