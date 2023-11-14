@@ -6,7 +6,7 @@
   </:toolbarActions>
 </TabPageHeader>
 
-{{#if this.model.messages.length}}
+{{#if @messages.length}}
   {{#each @messages as |message|}}
     <LinkedBlock
       data-test-list-item={{message.id}}
@@ -44,23 +44,33 @@
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  {{#if message.canEditCustomMessages}}
-                    <li>
-                      <LinkTo @route="messages.message.edit" @model={{message.id}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  {{/if}}
-                  {{#if message.canDeleteCustomMessages}}
-                    <li>
-                      Delete
-                    </li>
-                  {{/if}}
-                </ul>
-              </nav>
+            <PopupMenu @name="engine-menu">
+              <Confirm as |c|>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if message.canEditCustomMessages}}
+                      <li class="action">
+                        <LinkTo @route="messages.message.edit" @model={{message.id}}>
+                          Edit
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if message.canDeleteCustomMessages}}
+                      <li class="action">
+                        <c.Message
+                          @id={{message.id}}
+                          @triggerText="Delete"
+                          @message="This will delete this message permanently. You cannot undo this action."
+                          @title="Are you sure?"
+                          @confirmButtonText="Delete"
+                          @onConfirm={{perform this.deleteMessage message}}
+                          data-test-delete-custom-message
+                        />
+                      </li>
+                    {{/if}}
+                  </ul>
+                </nav>
+              </Confirm>
             </PopupMenu>
           </div>
         </div>

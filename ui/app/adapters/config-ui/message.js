@@ -28,4 +28,9 @@ export default class MessageAdapter extends ApplicationAdapter {
       throw e;
     }
   }
+
+  deleteRecord(store, type, snapshot) {
+    const { id } = snapshot;
+    return this.ajax(this.getCustomMessagesUrl(id), 'DELETE');
+  }
 }

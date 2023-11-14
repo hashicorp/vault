@@ -5,6 +5,8 @@
 
 import Component from '@glimmer/component';
 import { getOwner } from '@ember/application';
+import { inject as service } from '@ember/service';
+import { task } from 'ember-concurrency';
 
 /**
  * @module Page::MessagesList
@@ -18,8 +20,15 @@ import { getOwner } from '@ember/application';
  */
 
 export default class MessagesList extends Component {
+  @service store;
+
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
+  }
+
+  @task
+  *deleteMessage(message) {
+    yield message.destroyRecord(message.id);
   }
 }
