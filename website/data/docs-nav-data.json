@@ -1984,24 +1984,25 @@
                   },
                   {
                     "title": "Vault",
-                    "path": "platform/k8s/vso/sources/vault"
+                    "routes": [
+                      {
+                        "title": "Overview",
+                        "path": "platform/k8s/vso/sources/vault"
+                      },
+                      {
+                        "title": "Auth Methods",
+                        "routes": [
+                          {
+                            "title": "GCP",
+                            "path": "platform/k8s/vso/sources/vault/gcp-auth"
+                          }
+                        ]
+                      }
+                    ]
                   },
                   {
                     "title": "HCP Vault Secrets",
                     "path": "platform/k8s/vso/sources/hvs"
-                  }
-                ]
-              },
-              {
-                "title": "Auth Methods",
-                "routes": [
-                  {
-                    "title": "Overview",
-                    "path": "platform/k8s/vso/auth"
-                  },
-                  {
-                    "title": "GCP",
-                    "path": "platform/k8s/vso/auth/gcp"
                   }
                 ]
               },
