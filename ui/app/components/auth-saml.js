@@ -25,11 +25,6 @@ export default class AuthSaml extends Component {
 
   @tracked errorMessage;
 
-  constructor() {
-    super(...arguments);
-    this.errorMessage = null;
-  }
-
   getWindow() {
     return this.window || window;
   }
