@@ -15,14 +15,15 @@
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <button type="submit" class="button is-primary" data-test-config-save>
-          Update
-        </button>
+        <Hds::Button @text="Update" type="submit" data-test-config-save />
       </div>
       <div class="control">
-        <LinkTo @route="mode.secondaries.config-show" @model={{this.model.config.id}} class="button">
-          Cancel
-        </LinkTo>
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route="mode.secondaries.config-show"
+          @model={{this.model.config.id}}
+        />
       </div>
     </div>
   </div>

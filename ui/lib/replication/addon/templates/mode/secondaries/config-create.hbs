@@ -13,14 +13,11 @@
   <PathFilterConfigList @paths={{this.model.paths}} @config={{this.model.config}} />
   <div class="field is-grouped box is-fullwidth is-shadowless">
     <div class="control">
-      <button type="submit" class="button is-primary">
-        Create
-      </button>
+      <Hds::Button @text="Create" type="submit" />
     </div>
     <div class="control">
-      <LinkTo @route="mode.secondaries.config-show" @model={{this.model.config.id}} class="button">
-        Cancel
-      </LinkTo>
+      <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries.config-show" @model={{this.model.config.id}} />
+
     </div>
   </div>
 </form>

@@ -47,14 +47,10 @@
   {{/if}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary" data-test-secondary-add={{true}}>
-        Generate token
-      </button>
+      <Hds::Button @text="Generate token" type="submit" data-test-secondary-add={{true}} />
     </div>
     <div class="control">
-      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
-        Cancel
-      </LinkTo>
+      <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
     </div>
   </div>
 </form>
