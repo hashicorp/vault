@@ -433,10 +433,9 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 							RawQuery: r.URL.RawQuery,
 						}
 						w.Header().Set("Location", dest.String())
-						switch r.Method {
-						case http.MethodGet:
+						if r.Method == http.MethodGet || r.Proto == "HTTP/1.0" {
 							w.WriteHeader(http.StatusFound)
-						default:
+						} else {
 							w.WriteHeader(http.StatusTemporaryRedirect)
 						}
 						cancelFunc()

@@ -75,14 +75,18 @@ func (reg *wellKnownRedirectRegistry) Find(path string) (*wellKnownRedirect, str
 func (reg *wellKnownRedirectRegistry) DeregisterMount(mountUuid string) {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
+
+	var toDelete []string
 	reg.paths.Walk(func(k string, v interface{}) bool {
 		r := v.(*wellKnownRedirect)
 		if r.mountUUID == mountUuid {
-			reg.paths.Delete(k)
-			return true
+			toDelete = append(toDelete, k)
 		}
 		return false
 	})
+	for _, d := range toDelete {
+		reg.paths.Delete(d)
+	}
 }
 
 // Remove a specific redirect for a mount
@@ -109,7 +113,7 @@ func (a *wellKnownRedirect) Destination(remaining string) (string, error) {
 		// Just for testing
 		destPath = a.prefix
 	} else {
-		m := a.c.mounts.findByMountUUID(a.mountUUID)
+		m := a.c.router.MatchingMountByUUID(a.mountUUID)
 
 		if m == nil {
 			return "", fmt.Errorf("cannot find backend with uuid: %s", a.mountUUID)

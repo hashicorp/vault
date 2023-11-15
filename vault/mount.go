@@ -298,17 +298,6 @@ func (t *MountTable) findByBackendUUID(ctx context.Context, backendUUID string) 
 	return nil, nil
 }
 
-func (t *MountTable) findByMountUUID(mountUUID string) *MountEntry {
-	n := len(t.Entries)
-
-	for i := 0; i < n; i++ {
-		if entry := t.Entries[i]; entry.UUID == mountUUID {
-			return entry
-		}
-	}
-	return nil
-}
-
 // sortEntriesByPath sorts the entries in the table by path and returns the
 // table; this is useful for tests
 func (t *MountTable) sortEntriesByPath() *MountTable {
