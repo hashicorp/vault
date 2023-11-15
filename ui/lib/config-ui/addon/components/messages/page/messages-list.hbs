@@ -38,7 +38,7 @@
                   (if
                     message.isStartTimeAfterToday
                     (concat "Scheduled: " (date-format message.startTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
-                    (concat "Inactive: " (date-format message.endTime "MMM d, yyyy hh:mm asa" withTimeZone=true))
+                    (concat "Inactive: " (date-format message.endTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
                   )
                 }}
                 @color={{if message.active "highlight" "neutral"}}
