@@ -424,6 +424,10 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for the event stream to be fully up and running. Should be faster than this in reality, but
+	// we make it five seconds to protect against CI flakiness.
+	time.Sleep(5 * time.Second)
+
 	// Put a secret, which should trigger an event
 	_, err = client.KVv2("secret-v2").Put(context.Background(), "foo", secretData)
 	if err != nil {
@@ -434,7 +438,7 @@ func Test_StreamStaticSecretEvents_UpdatesCacheWithNewSecrets(t *testing.T) {
 	// than this, but we make it five seconds to protect against CI flakiness.
 	time.Sleep(5 * time.Second)
 
-	// Then, do a GET to see if the event got updated
+	// Then, do a GET to see if the index got updated by the event
 	newIndex, err := leaseCache.db.Get(cachememdb.IndexNameID, indexId)
 	if err != nil {
 		t.Fatal(err)
