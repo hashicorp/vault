@@ -14,18 +14,18 @@ import (
 	"github.com/armon/go-radix"
 )
 
-type apiRedirectRegistry struct {
+type wellKnownRedirectRegistry struct {
 	lock  sync.Mutex
 	paths *radix.Tree
 }
 
-func NewAPIRedirects() *apiRedirectRegistry {
-	return &apiRedirectRegistry{
+func NewWellKnownRedirects() *wellKnownRedirectRegistry {
+	return &wellKnownRedirectRegistry{
 		paths: radix.New(),
 	}
 }
 
-func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mountUUID, src, dest string) error {
+func (reg *wellKnownRedirectRegistry) TryRegister(ctx context.Context, core *Core, mountUUID, src, dest string) error {
 	if strings.HasPrefix(dest, "/") {
 		return errors.New("redirect targets must be relative")
 	}
@@ -35,7 +35,7 @@ func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mou
 	if found {
 		return fmt.Errorf("api redirect conflict for %s", src)
 	}
-	reg.paths.Insert(src, &APIRedirect{
+	reg.paths.Insert(src, &wellKnownRedirect{
 		c:         core,
 		mountUUID: mountUUID,
 		prefix:    dest,
@@ -43,7 +43,7 @@ func (reg *apiRedirectRegistry) TryRegister(ctx context.Context, core *Core, mou
 	return nil
 }
 
-func (reg *apiRedirectRegistry) Find(path string) (*APIRedirect, string) {
+func (reg *wellKnownRedirectRegistry) Find(path string) (*wellKnownRedirect, string) {
 	s, a, found := reg.paths.LongestPrefix(path)
 	if found {
 		remaining := strings.TrimPrefix(path, s)
@@ -57,16 +57,16 @@ func (reg *apiRedirectRegistry) Find(path string) (*APIRedirect, string) {
 				return nil, ""
 			}
 		}
-		return a.(*APIRedirect), remaining
+		return a.(*wellKnownRedirect), remaining
 	}
 	return nil, ""
 }
 
-func (reg *apiRedirectRegistry) DeregisterMount(uuid string) {
+func (reg *wellKnownRedirectRegistry) DeregisterMount(uuid string) {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 	reg.paths.Walk(func(k string, v interface{}) bool {
-		r := v.(*APIRedirect)
+		r := v.(*wellKnownRedirect)
 		if r.mountUUID == uuid {
 			reg.paths.Delete(k)
 			return true
@@ -75,12 +75,12 @@ func (reg *apiRedirectRegistry) DeregisterMount(uuid string) {
 	})
 }
 
-func (reg *apiRedirectRegistry) DeregisterSource(uuid, src string) bool {
+func (reg *wellKnownRedirectRegistry) DeregisterSource(uuid, src string) bool {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 	var found bool
 	reg.paths.Walk(func(k string, v interface{}) bool {
-		r := v.(*APIRedirect)
+		r := v.(*wellKnownRedirect)
 		if r.mountUUID == uuid && k == src {
 			found = true
 			reg.paths.Delete(k)
@@ -91,14 +91,14 @@ func (reg *apiRedirectRegistry) DeregisterSource(uuid, src string) bool {
 	return found
 }
 
-type APIRedirect struct {
+type wellKnownRedirect struct {
 	c             *Core
 	mountUUID     string
 	prefix        string
 	isPrefixMatch bool
 }
 
-func (a *APIRedirect) Destination(remaining string) (string, error) {
+func (a *wellKnownRedirect) Destination(remaining string) (string, error) {
 	var destPath string
 	if a.c == nil {
 		// Just for testing

@@ -133,6 +133,8 @@ const (
 		"disable Vault from using it. To disable Vault from using it,\n" +
 		"set the `disable_mlock` configuration option in your configuration\n" +
 		"file."
+
+	WellKnownPrefix = "/.well-known/"
 )
 
 var (
@@ -693,7 +695,7 @@ type Core struct {
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 
-	apiRedirects *apiRedirectRegistry
+	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 }
@@ -1048,7 +1050,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
-		apiRedirects:                   NewAPIRedirects(),
+		WellKnownRedirects:             NewWellKnownRedirects(),
 		detectDeadlocks:                detectDeadlocks,
 	}
 
@@ -4208,17 +4210,18 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
-func (c *Core) GetAPIRedirect(ctx context.Context, path string) (string, error) {
-	if c.apiRedirects == nil {
+func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {
+	if c.WellKnownRedirects == nil {
 		return "", nil
 	}
-	redir, remaining := c.apiRedirects.Find(path)
+	path = strings.TrimPrefix(path, WellKnownPrefix)
+	redir, remaining := c.WellKnownRedirects.Find(path)
 	if redir != nil {
 		dest, err := redir.Destination(remaining)
 		if err != nil {
 			return "", err
 		}
-		return paths.Join("v1", dest), nil
+		return paths.Join("/v1", dest), nil
 	}
 	return "", nil
 }

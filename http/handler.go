@@ -413,25 +413,35 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			r = newR
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
-		default:
-			redir, err := core.GetAPIRedirect(r.Context(), r.URL.Path)
+			// RFC 5785
+		case strings.HasPrefix(r.URL.Path, "/.well-known"):
+			standby, err := core.Standby()
 			if err != nil {
-				core.Logger().Warn("error resolving potential API redirect", "error", err)
+				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
+			} else if standby {
+				respondStandby(core, w, r.URL)
+				cancelFunc()
+				return
 			} else {
-				if redir != "" {
-					dest := url.URL{
-						Path:     redir,
-						RawQuery: r.URL.RawQuery,
+				redir, err := core.GetWellKnownRedirect(r.Context(), r.URL.Path)
+				if err != nil {
+					core.Logger().Warn("error resolving potential API redirect", "error", err)
+				} else {
+					if redir != "" {
+						dest := url.URL{
+							Path:     redir,
+							RawQuery: r.URL.RawQuery,
+						}
+						w.Header().Set("Location", dest.String())
+						switch r.Method {
+						case http.MethodGet:
+							w.WriteHeader(http.StatusFound)
+						default:
+							w.WriteHeader(http.StatusTemporaryRedirect)
+						}
+						cancelFunc()
+						return
 					}
-					w.Header().Set("Location", dest.String())
-					switch r.Method {
-					case http.MethodGet:
-						w.WriteHeader(http.StatusFound)
-					default:
-						w.WriteHeader(http.StatusTemporaryRedirect)
-					}
-					cancelFunc()
-					return
 				}
 			}
 			respondError(nw, http.StatusNotFound, nil)

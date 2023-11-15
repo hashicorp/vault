@@ -635,7 +635,7 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 	}
 }
 
-func TestAPIRedirectMatching(t *testing.T) {
+func TestWellKnownRedirectMatching(t *testing.T) {
 	a := assert.New(t)
 	// inputs
 	redirs := map[string]string{
@@ -653,7 +653,7 @@ func TestAPIRedirectMatching(t *testing.T) {
 		"bar/baz":       {"/v1/two-paths", false},
 		"bar/baz/extra": {"/v1/two-paths/extra", false},
 	}
-	apiRedir := NewAPIRedirects()
+	apiRedir := NewWellKnownRedirects()
 	for s, d := range redirs {
 		if err := apiRedir.TryRegister(context.Background(), nil, "my-mount", s, d); err != nil {
 			t.Fatal(err)
