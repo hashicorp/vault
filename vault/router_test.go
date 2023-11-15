@@ -641,6 +641,7 @@ func TestWellKnownRedirectMatching(t *testing.T) {
 	redirs := map[string]string{
 		"foo":     "v1/one-path",
 		"bar/baz": "v1/two-paths",
+		"baz/":    "v1/trailing-slash",
 	}
 
 	tests := map[string]struct {
@@ -652,6 +653,8 @@ func TestWellKnownRedirectMatching(t *testing.T) {
 		"foo/extra":     {"/v1/one-path/extra", false},
 		"bar/baz":       {"/v1/two-paths", false},
 		"bar/baz/extra": {"/v1/two-paths/extra", false},
+		"baz":           {"/v1/trailing-slash", false},
+		"baz/extra":     {"/v1/trailing-slash/extra", false},
 	}
 	apiRedir := NewWellKnownRedirects()
 	for s, d := range redirs {

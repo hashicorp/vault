@@ -37,6 +37,7 @@ func (reg *wellKnownRedirectRegistry) TryRegister(ctx context.Context, core *Cor
 	if strings.HasPrefix(dest, "/") {
 		return errors.New("redirect targets must be relative")
 	}
+	src = strings.TrimSuffix(src, "/")
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 	_, _, found := reg.paths.LongestPrefix(src)
