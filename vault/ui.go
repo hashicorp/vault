@@ -28,6 +28,8 @@ type UIConfig struct {
 	physicalStorage physical.Backend
 	barrierStorage  logical.Storage
 
+	customMessageLock sync.RWMutex
+
 	enabled        bool
 	defaultHeaders http.Header
 }
