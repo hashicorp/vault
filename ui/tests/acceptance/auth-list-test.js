@@ -124,4 +124,20 @@ module('Acceptance | auth backend list', function (hooks) {
       }
     }
   });
+
+  test('enterprise: token config within namespace', async function (assert) {
+    const ns = 'ns-wxyz';
+    await runCmd(`write sys/namespaces/${ns} -f`);
+    await authPage.loginNs(ns);
+    // go directly to token configure route
+    await visit('/vault/settings/auth/configure/token/options');
+    await fillIn('[data-test-input="description"]', 'My custom description');
+    await click('[data-test-save-config="true"]');
+    assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+    await click('[data-test-auth-backend-link="token"]');
+    assert
+      .dom('[data-test-row-value="Description"]')
+      .hasText('My custom description', 'description was saved');
+    await runCmd(`delete sys/namespaces/${ns}`);
+  });
 });
