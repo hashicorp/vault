@@ -132,7 +132,7 @@ func TestWellKnownRedirect_HA(t *testing.T) {
 		}
 	}
 
-	if err := active.Core..WellKnownRedirects.TryRegister(context.Background(), active.Core, mountUUID, "foo", "bar"); err != nil {
+	if err := active.Core.WellKnownRedirects.TryRegister(context.Background(), active.Core, mountUUID, "foo", "bar"); err != nil {
 		t.Fatal(err)
 	}
 
