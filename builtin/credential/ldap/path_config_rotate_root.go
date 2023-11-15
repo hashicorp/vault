@@ -36,7 +36,10 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// TODO: What do we need to mutex here
+	// lock the backend's state - really just the config state - for mutating
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
