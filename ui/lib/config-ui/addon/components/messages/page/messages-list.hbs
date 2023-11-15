@@ -84,7 +84,7 @@
   {{/each}}
   <Hds::Pagination::Numbered
     class="has-top-margin-m"
-    @currentPage={{@page}}
+    @currentPage={{@messages.meta.currentPage}}
     @currentPageSize={{@messages.meta.pageSize}}
     @route="messages.index"
     @showSizeSelector={{false}}
