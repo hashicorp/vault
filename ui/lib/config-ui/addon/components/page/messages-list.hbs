@@ -77,6 +77,14 @@
       </div>
     </LinkedBlock>
   {{/each}}
+  <Hds::Pagination::Numbered
+    @currentPage={{@page}}
+    @currentPageSize={{@messages.meta.pageSize}}
+    @route="messages.index"
+    @showSizeSelector={{false}}
+    @totalItems={{@messages.meta.total}}
+    @queryFunction={{this.paginationQueryParams}}
+  />
 {{else}}
   <EmptyState
     @title="No messages yet"

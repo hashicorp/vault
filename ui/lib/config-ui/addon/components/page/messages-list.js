@@ -27,8 +27,18 @@ export default class MessagesList extends Component {
     return getOwner(this).mountPoint;
   }
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  }
+
   @task
   *deleteMessage(message) {
+    this.store.clearDataset('config-ui/message');
     yield message.destroyRecord(message.id);
   }
 }
