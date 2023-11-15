@@ -1,9 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+
+// TODO: test file needs to be updated to use mirage handler and to have the correct META pagination numbers
 
 const META = {
   currentPage: 1,
@@ -26,7 +33,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
     this.store.pushPayload('config-ui/message', {
       modelName: 'config-ui/message',
-
       id: '01234567-89ab-cdef-0123-456789abcdef',
       active: true,
       type: 'banner',
