@@ -4,7 +4,6 @@
  */
 
 import Controller from '@ember/controller';
-
 export default class MessagesController extends Controller {
   queryParams = ['authenticated', 'page'];
 

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::TabPageHeader>
+<Messages::TabPageHeader @authenticated={{@authenticated}}>
   <:toolbarActions>
     <ToolbarLink data-test-toolbar-create-message @route="messages.create" @type="add">
       Create message
