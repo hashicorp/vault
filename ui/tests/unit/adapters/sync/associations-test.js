@@ -21,6 +21,12 @@ module('Unit | Adapter | sync | association', function (hooks) {
       mount: 'foo',
       secret_name: 'bar',
     });
+    this.newModel = this.store.createRecord('sync/association', {
+      destinationType: 'aws-sm',
+      destinationName: 'us-west-1',
+      mount: 'foo',
+      secretName: 'bar',
+    });
   });
 
   test('it should make request to correct endpoint when querying', async function (assert) {
@@ -54,14 +60,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
       return associationsResponse(schema, req);
     });
 
-    const model = this.store.createRecord('sync/association', {
-      destinationType: 'aws-sm',
-      destinationName: 'us-west-1',
-      mount: 'foo',
-      secretName: 'bar',
-    });
-
-    await model.save();
+    await this.newModel.save({ adapterOptions: { action: 'set' } });
   });
 
   test('it should make request to correct endpoint when updating record', async function (assert) {
@@ -88,7 +87,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
     });
     const model = this.store.peekRecord('sync/association', 'foo/bar');
 
-    await model.save();
+    await model.save({ adapterOptions: { action: 'remove' } });
   });
 
   test('it should parse response from set/remove request', async function (assert) {
@@ -103,11 +102,13 @@ module('Unit | Adapter | sync | association', function (hooks) {
       serialize() {
         return { mount: 'foo', secret_name: 'bar' };
       },
+      adapterOptions: { action: 'set' },
     };
     const response = await adapter._setOrRemove(this.store, { modelName: 'sync/association' }, snapshot);
-    const { mount, secret_name, sync_status, name, type, updated_at } = this.association;
+    const { accessor, mount, secret_name, sync_status, name, type, updated_at } = this.association;
     const expected = {
       id: 'foo/bar',
+      accessor,
       mount,
       secret_name,
       sync_status,
@@ -121,5 +122,18 @@ module('Unit | Adapter | sync | association', function (hooks) {
       expected,
       'Custom create/update record method makes request and parses response'
     );
+  });
+
+  test('it should throw error if save action is not passed in adapterOptions', async function (assert) {
+    assert.expect(1);
+
+    try {
+      await this.newModel.save();
+    } catch (e) {
+      assert.strictEqual(
+        e.message,
+        "Assertion Failed: action type of set or remove required when saving association => association.save({ adapterOptions: { action: 'set' }})"
+      );
+    }
   });
 });

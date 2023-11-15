@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from 'vault/serializers/application';
 
-export default class SyncDestinationSerializer extends ApplicationSerializer {
+export default class SyncAssociationSerializer extends ApplicationSerializer {
   attrs = {
     destinationName: { serialize: false },
     destinationType: { serialize: false },
