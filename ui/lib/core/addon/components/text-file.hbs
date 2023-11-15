@@ -18,16 +18,17 @@
       </label>
     </div>
     <div class="level-right">
-      <Toggle
+      <Input
         data-test-text-toggle
         id="use-text-{{this.elementId}}"
+        class="toggle is-success is-small"
+        @type="checkbox"
         @checked={{this.showTextArea}}
-        @onChange={{fn (mut this.showTextArea) (not this.showTextArea)}}
-      >
-        <span class="has-text-weight-bold is-size-8">
-          Input as text
-        </span>
-      </Toggle>
+        {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
+      />
+      <label for="use-text-{{this.elementId}}" class="has-text-weight-bold is-size-8">
+        Enter as text
+      </label>
     </div>
   </div>
 {{/unless}}
