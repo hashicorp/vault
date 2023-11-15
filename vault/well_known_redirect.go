@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	url2 "net/url"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -110,16 +110,16 @@ func (a *wellKnownRedirect) Destination(remaining string) (string, error) {
 			return "", fmt.Errorf("cannot find backend with uuid: %s", a.mountUUID)
 		}
 		var err error
-		destPath, err = url2.JoinPath(m.Namespace().Path, m.Path, a.prefix)
+		destPath, err = url.JoinPath(m.Namespace().Path, m.Path, a.prefix)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	u := url2.URL{
+	u := url.URL{
 		Path: destPath + "/",
 	}
-	r, err := url2.Parse(remaining)
+	r, err := url.Parse(remaining)
 	if err != nil {
 		return "", err
 	}
