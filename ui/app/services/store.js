@@ -7,6 +7,7 @@ import { assert } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
+import sortObjects from 'vault/utils/sort-objects';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
@@ -176,11 +177,12 @@ export default Store.extend({
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
   storeDataset(modelName, query, response, array) {
-    const dataSet = {
+    const dataset = query.sortBy ? sortObjects(array, query.sortBy) : array;
+    const value = {
       response,
-      dataset: array,
+      dataset,
     };
-    this.setLazyCacheForModel(modelName, query, dataSet);
+    this.setLazyCacheForModel(modelName, query, value);
   },
 
   clearDataset(modelName) {

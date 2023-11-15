@@ -7,4 +7,14 @@ export default IdentitySerializer.extend(EmbeddedRecordsMixin, {
   attrs: {
     aliases: { embedded: 'always' },
   },
+  extractLazyPaginatedData(payload) {
+    return payload.data.keys.map((key) => {
+      const model = payload.data.key_info[key];
+      model.id = key;
+      if (payload.backend) {
+        model.backend = payload.backend;
+      }
+      return model;
+    });
+  },
 });
