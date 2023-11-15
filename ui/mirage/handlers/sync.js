@@ -5,11 +5,33 @@
 
 import { Response } from 'miragejs';
 
+export const associationsResponse = (schema, req) => {
+  const { type, name } = req.params;
+  const records = schema.db.syncAssociations.where({ type, name });
+
+  if (!records.length) {
+    return new Response(404, {}, { errors: [] });
+  }
+  return {
+    data: {
+      associated_secrets: records.reduce((associations, association) => {
+        const key = `${association.mount}/${association.secret_name}`;
+        delete association.type;
+        delete association.name;
+        associations[key] = association;
+        return associations;
+      }, {}),
+      store_name: name,
+      store_type: type,
+    },
+  };
+};
+
 export default function (server) {
   const base = '/sys/sync/destinations';
   const uri = `${base}/:type/:name`;
 
-  const recordToPayload = (record) => {
+  const destinationResponse = (record) => {
     delete record.id;
     const { name, type, ...connection_details } = record;
     return {
@@ -45,7 +67,7 @@ export default function (server) {
     const { type, name } = req.params;
     const record = schema.db.syncDestinations.findBy({ type, name });
     if (record) {
-      return recordToPayload(record);
+      return destinationResponse(record);
     }
     return new Response(404, {}, { errors: [] });
   });
@@ -54,7 +76,7 @@ export default function (server) {
     const data = { ...JSON.parse(req.requestBody), type, name };
     schema.db.syncDestinations.firstOrCreate({ type, name }, data);
     const record = schema.db.syncDestinations.update({ type, name }, data);
-    return recordToPayload(record);
+    return destinationResponse(record);
   });
   server.delete(uri, (schema, req) => {
     const { type, name } = req.params;
@@ -63,36 +85,19 @@ export default function (server) {
   });
   // associations
   server.get(`${uri}/associations`, (schema, req) => {
-    const { type, name } = req.params;
-    const records = schema.db.syncAssociations.where({ type, name });
-    if (!records.length) {
-      return new Response(404, {}, { errors: [] });
-    }
-    return {
-      data: {
-        associated_secrets: records.reduce((associations, association) => {
-          const key = `${association.accessor}/${association.secret_name}`;
-          delete association.type;
-          delete association.name;
-          associations[key] = association;
-          return associations;
-        }, {}),
-        store_name: name,
-        store_type: type,
-      },
-    };
+    return associationsResponse(schema, req);
   });
   server.post(`${uri}/associations/set`, (schema, req) => {
     const { type, name } = req.params;
-    const { secret_name, mount: accessor } = JSON.parse(req.requestBody);
-    const data = { type, name, accessor, secret_name };
+    const { secret_name, mount } = JSON.parse(req.requestBody);
+    const data = { type, name, mount, secret_name };
     schema.db.syncAssociations.firstOrCreate({ type, name }, data);
-    schema.db.syncAssociations.update({ type, name }, data);
-    return new Response(204);
+    schema.db.syncAssociations.update({ type, name }, { ...data, sync_status: 'SYNCED' });
+    return associationsResponse(schema, req);
   });
   server.post(`${uri}/associations/remove`, (schema, req) => {
     const { type, name } = req.params;
-    schema.db.syncAssociations.remove({ type, name });
-    return new Response(204);
+    schema.db.syncAssociations.update({ type, name }, { sync_status: 'UNSYNCED' });
+    return associationsResponse(schema, req);
   });
 }
