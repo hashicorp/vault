@@ -1,0 +1,3 @@
+```release-note:bug
+core/quotas: Close rate-limit blocked client purge goroutines when sealing
+```
