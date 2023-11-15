@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	paths "path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -132,6 +133,8 @@ const (
 		"disable Vault from using it. To disable Vault from using it,\n" +
 		"set the `disable_mlock` configuration option in your configuration\n" +
 		"file."
+
+	WellKnownPrefix = "/.well-known/"
 )
 
 var (
@@ -692,6 +695,7 @@ type Core struct {
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 
+	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 }
@@ -1039,6 +1043,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
+		WellKnownRedirects:             NewWellKnownRedirects(),
 		detectDeadlocks:                detectDeadlocks,
 	}
 
@@ -4224,6 +4229,22 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {
+	if c.WellKnownRedirects == nil {
+		return "", nil
+	}
+	path = strings.TrimPrefix(path, WellKnownPrefix)
+	redir, remaining := c.WellKnownRedirects.Find(path)
+	if redir != nil {
+		dest, err := redir.Destination(remaining)
+		if err != nil {
+			return "", err
+		}
+		return paths.Join("/v1", dest), nil
+	}
+	return "", nil
 }
 
 func (c *Core) DetectStateLockDeadlocks() bool {
