@@ -9,7 +9,7 @@
     <div class="columns">
       {{#each-in row as |inputKey value|}}
         {{#let (find-by "key" inputKey @objectKeys) as |field|}}
-          <div class="column is-4">
+          <div class="column">
             {{#if (eq index 0)}}
               <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
             {{/if}}
