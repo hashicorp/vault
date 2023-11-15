@@ -414,7 +414,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 			// RFC 5785
-		case strings.HasPrefix(r.URL.Path, "/.well-known"):
+		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
 			standby, err := core.Standby()
 			if err != nil {
 				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
