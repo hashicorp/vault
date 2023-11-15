@@ -142,6 +142,8 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				"wrapping/pubkey",
 				"replication/status",
 				"internal/specs/openapi",
+				"internal/ui/custom-messages",
+				"internal/ui/custom-messages/*",
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
@@ -189,6 +191,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 
 	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.uiCustomMessagePaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
@@ -5525,6 +5528,318 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	}
 
 	return nil
+}
+
+func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var filters ListUICustomMessagesFilters
+
+	authenticatedValue, ok := d.GetOk("authenticated")
+	if ok {
+		v, ok := authenticatedValue.(bool)
+		if !ok {
+			return logical.ErrorResponse("invalid value for authenticated parameter"), logical.ErrInvalidRequest
+		}
+		filters.Authenticated(v)
+	}
+
+	typeValue, ok := d.GetOk("type")
+	if ok {
+		v, ok := typeValue.(string)
+		if !ok {
+			return logical.ErrorResponse("invalid value for type parameter"), logical.ErrInvalidRequest
+		}
+		filters.MessageType(v)
+	}
+
+	activeValue, ok := d.GetOk("active")
+	if ok {
+		v, ok := activeValue.(bool)
+		if !ok {
+			return logical.ErrorResponse("invalid value for active parameter"), logical.ErrInvalidRequest
+		}
+		filters.Active(v)
+	}
+
+	entries, err := b.Core.uiConfig.ListCustomMessages(ctx, filters)
+	if err != nil {
+		return logical.ErrorResponse("failed to retrieve list of custom messages"), err
+	}
+
+	messages := make(map[string]any)
+	keys := make([]string, len(entries))
+
+	for i, entry := range entries {
+		entryMap := make(map[string]any)
+		entryMap["title"] = entry.Title
+		entryMap["type"] = entry.MessageType
+		entryMap["authenticated"] = entry.Authenticated
+		entryMap["start_time"] = entry.StartTime
+		entryMap["end_time"] = entry.EndTime
+		entryMap["active"] = entry.active
+
+		messages[entry.Id] = entryMap
+		keys[i] = entry.Id
+	}
+
+	return logical.ListResponseWithInfo(keys, messages), nil
+}
+
+func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var err error
+
+	var title string
+	if titleValue, ok := req.Data["title"]; ok {
+		title, err = parseutil.ParseString(titleValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid title value"), err
+		}
+	}
+
+	var authenticated bool
+	if authenticatedValue, ok := req.Data["authenticated"]; ok {
+		authenticated, err = parseutil.ParseBool(authenticatedValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid authenticated value"), err
+		}
+	}
+
+	var messageType string
+	if typeValue, ok := req.Data["type"]; ok {
+		messageType, err = parseutil.ParseString(typeValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid message type value"), err
+		}
+	}
+
+	var message string
+	if messageValue, ok := req.Data["message"]; ok {
+		message, err = parseutil.ParseString(messageValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid message value"), err
+		}
+	}
+
+	var startTime time.Time
+	if startTimeValue, ok := req.Data["start_time"]; ok {
+		startTime, err = parseutil.ParseAbsoluteTime(startTimeValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid start time", err), nil
+		}
+	}
+
+	var endTime time.Time
+	if endTimeValue, ok := req.Data["end_time"]; ok {
+		endTime, err = parseutil.ParseAbsoluteTime(endTimeValue)
+		if err != nil {
+			return logical.ErrorResponse("invalid end time", err), nil
+		}
+	}
+
+	linkMap := make(map[string]any)
+	if linkMapValue, ok := req.Data["link"]; ok {
+		if m, ok := linkMapValue.(map[string]any); ok {
+			for k, v := range m {
+				linkMap[k] = v
+			}
+		}
+	}
+
+	entry := &UICustomMessagesEntry{
+		Title:         title,
+		Authenticated: authenticated,
+		MessageType:   messageType,
+		Message:       message,
+		StartTime:     startTime,
+		EndTime:       endTime,
+		Link:          linkMap,
+	}
+
+	entry, err = b.Core.uiConfig.CreateCustomMessage(ctx, *entry)
+	if err != nil {
+		return logical.ErrorResponse("failed to create custom message", err), logical.ErrInvalidRequest
+	}
+
+	return &logical.Response{
+		Data: map[string]any{
+			"id": entry.Id,
+			"data": map[string]any{
+				"authenticated": entry.Authenticated,
+				"type":          entry.MessageType,
+				"message":       entry.Message,
+				"start_time":    entry.StartTime.Format(time.RFC3339Nano),
+				"end_time":      entry.EndTime.Format(time.RFC3339Nano),
+				"link":          entry.Link,
+				"options":       map[string]any{},
+				"active":        entry.active,
+			},
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var id string
+	id, ok := d.Get("id").(string)
+	if !ok {
+		return logical.ErrorResponse("invalid custom message id parameter value"), logical.ErrInvalidRequest
+	}
+
+	entry, err := b.Core.uiConfig.retrieveCustomMessage(ctx, id)
+	if err != nil {
+		return logical.ErrorResponse("failed to retrieve custom message"), err
+	}
+
+	return &logical.Response{
+		Data: map[string]any{
+			"id": id,
+			"data": map[string]any{
+				"authenticated": entry.Authenticated,
+				"type":          entry.MessageType,
+				"message":       entry.Message,
+				"start_time":    entry.StartTime.Format(time.RFC3339Nano),
+				"end_time":      entry.EndTime.Format(time.RFC3339Nano),
+				"link":          entry.Link,
+				"options":       entry.Options,
+				"active":        entry.active,
+				"title":         entry.Title,
+			},
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var messageId string
+	messageIdValue, ok := d.GetOk("id")
+	if !ok {
+		return logical.ErrorResponse("missing id parameter value"), logical.ErrInvalidRequest
+	}
+
+	if messageId, ok = messageIdValue.(string); !ok {
+		return logical.ErrorResponse("invalid id parameter value"), logical.ErrInvalidRequest
+	}
+
+	if err := b.Core.uiConfig.DeleteCustomMessage(ctx, messageId); err != nil {
+		return logical.ErrorResponse("failed to delete custom message"), err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var messageId string
+	messageIdValue, ok := d.GetOk("id")
+	if !ok {
+		return logical.ErrorResponse("missing id parameter value"), logical.ErrInvalidRequest
+	}
+
+	if messageId, ok = messageIdValue.(string); !ok {
+		return logical.ErrorResponse("invalid id parameter value"), logical.ErrInvalidRequest
+	}
+
+	var title string
+	titleValue, ok := d.GetOk("title")
+	if !ok {
+		return logical.ErrorResponse("missing title parameter value"), logical.ErrInvalidRequest
+	}
+
+	if title, ok = titleValue.(string); !ok {
+		return logical.ErrorResponse("invalid title parameter value"), logical.ErrInvalidRequest
+	}
+
+	var authenticated bool
+	authenticatedValue, ok := d.GetOk("authenticated")
+	if !ok {
+		return logical.ErrorResponse("missing authenticated parameter value"), logical.ErrInvalidRequest
+	}
+
+	if authenticated, ok = authenticatedValue.(bool); !ok {
+		return logical.ErrorResponse("invalid authenticated parameter value"), logical.ErrInvalidRequest
+	}
+
+	var messageType string
+	messageTypeValue, ok := d.GetOk("type")
+	if !ok {
+		return logical.ErrorResponse("missing type parameter value"), logical.ErrInvalidRequest
+	}
+
+	if messageType, ok = messageTypeValue.(string); !ok {
+		return logical.ErrorResponse("invalid type parameter value"), logical.ErrInvalidRequest
+	}
+
+	var message string
+	messageValue, ok := d.GetOk("message")
+	if !ok {
+		return logical.ErrorResponse("missing message parameter value"), logical.ErrInvalidRequest
+	}
+
+	if message, ok = messageValue.(string); !ok {
+		return logical.ErrorResponse("invalid message parameter value"), logical.ErrInvalidRequest
+	}
+
+	var link map[string]any
+	linkValue, ok := d.GetOk("link")
+	if ok {
+		if link, ok = linkValue.(map[string]any); !ok {
+			return logical.ErrorResponse("invalid link parameter value"), logical.ErrInvalidRequest
+		}
+	}
+
+	var options map[string]any
+	optionsValue, ok := d.GetOk("options")
+	if ok {
+		if options, ok = optionsValue.(map[string]any); !ok {
+			return logical.ErrorResponse("invalid options parameter value"), logical.ErrInvalidRequest
+		}
+	}
+
+	var startTime time.Time
+	startTimeValue, ok := d.GetOk("start_time")
+	if !ok {
+		return logical.ErrorResponse("missing start_time parameter value"), logical.ErrInvalidRequest
+	}
+
+	if startTime, ok = startTimeValue.(time.Time); !ok {
+		return logical.ErrorResponse("invalid start_time parameter value"), logical.ErrInvalidRequest
+	}
+
+	var endTime time.Time
+	endTimeValue, ok := d.GetOk("end_time")
+	if !ok {
+		return logical.ErrorResponse("missing end_time parameter value"), logical.ErrInvalidRequest
+	}
+
+	if endTime, ok = endTimeValue.(time.Time); !ok {
+		return logical.ErrorResponse("invalid end_time parameter value"), logical.ErrInvalidRequest
+	}
+
+	entry := &UICustomMessagesEntry{
+		Id:            messageId,
+		Title:         title,
+		Authenticated: authenticated,
+		MessageType:   messageType,
+		Message:       message,
+		Link:          link,
+		Options:       options,
+		StartTime:     startTime,
+		EndTime:       endTime,
+	}
+
+	entry, err := b.Core.uiConfig.UpdateCustomMessage(ctx, *entry)
+	if err != nil {
+		return logical.ErrorResponse("failed to update custom message"), err
+	}
+
+	return &logical.Response{
+		Data: map[string]any{
+			"id": entry.Id,
+			"data": map[string]any{
+				"active":        entry.active,
+				"start_time":    entry.StartTime.Format(time.RFC3339Nano),
+				"end_time":      entry.EndTime.Format(time.RFC3339Nano),
+				"type":          entry.MessageType,
+				"authenticated": entry.Authenticated,
+			},
+		},
+	}, nil
 }
 
 const sysHelpRoot = `
