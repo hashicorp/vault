@@ -1,10 +1,10 @@
-<TabPageHeader>
+<Messages::TabPageHeader>
   <:toolbarActions>
     <ToolbarLink data-test-toolbar-create-message @route="messages.create" @type="add">
       Create message
     </ToolbarLink>
   </:toolbarActions>
-</TabPageHeader>
+</Messages::TabPageHeader>
 
 {{#if @messages.length}}
   {{#each @messages as |message|}}
