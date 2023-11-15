@@ -21,41 +21,41 @@
     position: absolute;
     right: 0;
     top: 0;
-    width: $spacing-xxs;
+    width: $spacing-4;
     z-index: 2;
   }
 
   .input,
   .select {
-    min-width: 190px;
+    min-width: max-content;
   }
 }
 
 .toolbar-label {
-  padding: $spacing-xs;
+  padding: $spacing-8;
   color: $grey;
 }
 
 .toolbar-scroller {
   align-items: center;
   display: flex;
-  height: 44px;
+  height: 3rem;
   justify-content: space-between;
   overflow-x: auto;
   width: 100%;
 
   @include from($mobile) {
-    padding: 0 $spacing-xxs;
+    padding: 0 $spacing-4;
   }
 
   &::-webkit-scrollbar {
     border-bottom: $base-border;
-    height: $spacing-xxs;
+    height: $spacing-4;
   }
 
   &::-webkit-scrollbar-thumb {
     background: $ui-gray-300;
-    border-radius: $spacing-xxs;
+    border-radius: $spacing-4;
   }
 }
 
@@ -74,8 +74,8 @@
 .toolbar-filters + .toolbar-actions {
   @include until($mobile) {
     border-left: $base-border;
-    margin-left: $spacing-xs;
-    padding-left: $spacing-xs;
+    margin-left: $spacing-8;
+    padding-left: $spacing-8;
   }
 }
 
@@ -105,7 +105,7 @@
 
   &.popup-menu-trigger {
     height: 2.5rem;
-    padding: $size-10 $size-8;
+    padding: $spacing-8 $spacing-12;
   }
 
   &.disabled {
@@ -133,6 +133,6 @@ a.disabled.toolbar-link {
 .toolbar-separator {
   border-right: $light-border;
   height: 32px;
-  margin: 0 $spacing-xs;
+  margin: 0 $spacing-8;
   width: 0;
 }
