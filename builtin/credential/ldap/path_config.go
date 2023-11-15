@@ -124,6 +124,9 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 }
 
 func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
@@ -171,6 +174,9 @@ func (b *backend) checkConfigUserFilter(cfg *ldapConfigEntry) []string {
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return nil, err
