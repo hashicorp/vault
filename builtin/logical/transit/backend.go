@@ -77,11 +77,10 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathImportCertChain(),
 		},
 
-		Secrets:        []*framework.Secret{},
-		Invalidate:     b.invalidate,
-		BackendType:    logical.TypeLogical,
-		PeriodicFunc:   b.periodicFunc,
-		InitializeFunc: b.initialize,
+		Secrets:      []*framework.Secret{},
+		Invalidate:   b.invalidate,
+		BackendType:  logical.TypeLogical,
+		PeriodicFunc: b.periodicFunc,
 	}
 
 	b.backendUUID = conf.BackendUUID
@@ -291,9 +290,4 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 
 	}
 	return nil
-}
-
-func (b *backend) initialize(ctx context.Context, request *logical.InitializationRequest) error {
-	sv := b.System()
-	return sv.(logical.ExtendedSystemView).RequestAPIRedirect(ctx, "/foo", "keys/foo")
 }
