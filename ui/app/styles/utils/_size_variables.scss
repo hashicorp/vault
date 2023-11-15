@@ -3,27 +3,36 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* General sizing in rem values used largely for text sizing.*/
-$size-1: 3rem; // 48px, same as $spacing-xxl
+$base-font-size: 16px;
+
+/* 
+General sizing in rem values
+* Deprecated - please use the HDS text component to style fonts https://helios.hashicorp.design/components/text 
+*/
 $size-2: 2.5rem; // 40px
 $size-3: calc(24 / 14) + 0rem; // ~1.714rem ~27px
-$size-4: 1.5rem; // 24px same as $spacing-l
+$size-4: 1.5rem; // 24px
 $size-5: 1.25rem; // 20px
-$size-6: 1rem; // 16px same as $spacing-m
+$size-6: 1rem; // 16px
 $size-7: calc(13 / 14) + 0rem; // ~.929rem ~15px
 $size-8: calc(12 / 14) + 0rem; // ~.857rem  ~13.7px
-$size-9: 0.75rem; // 12px same as $spacing-s
-$size-10: 0.5rem; // 8px same as $spacing-xs
-$size-11: 0.25rem; // 4px same as spacing-xxs
+$size-9: 0.75rem; // 12px
+$size-10: 0.5rem; // 8px
+$size-11: 0.25rem; // 4px
 
 /* Spacing vars in px */
-$spacing-xxs: 4px;
-$spacing-xs: 8px;
-$spacing-s: 12px;
-$spacing-m: 16px;
-$spacing-l: 24px;
-$spacing-xl: 36px;
-$spacing-xxl: 48px;
+$spacing-4: 4px;
+$spacing-8: 8px;
+$spacing-10: 10px;
+$spacing-12: 12px;
+$spacing-14: 14px;
+$spacing-16: 16px;
+$spacing-18: 18px;
+$spacing-20: 20px;
+$spacing-24: 24px;
+$spacing-32: 32px;
+$spacing-36: 36px;
+$spacing-48: 48px;
 
 /* Border radius */
 $radius: 2px;

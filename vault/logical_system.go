@@ -81,15 +81,20 @@ type PolicyMFABackend struct {
 	*MFABackend
 }
 
-func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
+func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConfig) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
+
+	syncBackend := NewSecretsSyncBackend(core, logger)
+	if err := syncBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
 
 	b := &SystemBackend{
 		Core:        core,
 		db:          db,
 		logger:      logger,
 		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: NewSecretsSyncBackend(core, logger),
+		syncBackend: syncBackend,
 	}
 
 	b.Backend = &framework.Backend{

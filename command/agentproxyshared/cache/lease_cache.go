@@ -475,6 +475,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
+		// We set the request path to be the canonical static secret path, so that
+		// two differently shaped (but equivalent) requests to the same path
+		// will be the same.
+		// This differs slightly from dynamic secrets, where the /v1/ will be
+		// included in the request path.
+		index.RequestPath = getStaticSecretPathFromRequest(req)
+
 		err := c.cacheStaticSecret(ctx, req, resp, index)
 		if err != nil {
 			return nil, err
