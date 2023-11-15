@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Messages::TabPageHeader>
   <:toolbarActions>
     <ToolbarLink data-test-toolbar-create-message @route="messages.create" @type="add">
@@ -27,13 +32,13 @@
                   message.active
                   (if
                     message.endTime
-                    (concat "Active until " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
+                    (concat "Active until " (date-format message.endTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
                     "Active"
                   )
                   (if
                     message.isStartTimeAfterToday
-                    (concat "Scheduled: " (date-format message.startTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
-                    (concat "Inactive: " (date-format message.endTime "MMM dd, yyyy hh:mm aa" withTimezone=true))
+                    (concat "Scheduled: " (date-format message.startTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
+                    (concat "Inactive: " (date-format message.endTime "MMM d, yyyy hh:mm asa" withTimeZone=true))
                   )
                 }}
                 @color={{if message.active "highlight" "neutral"}}

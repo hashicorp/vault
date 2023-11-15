@@ -43,7 +43,7 @@ function dateFromString(str) {
   return null;
 }
 
-export function dateFormat([value, style], withTimeZone = false) {
+export function dateFormat([value, style], { withTimeZone = false }) {
   // see format breaking in upgrade to date-fns 2.x https://github.com/date-fns/date-fns/blob/master/CHANGELOG.md#changed-5
   let date;
   switch (checkType(value)) {
