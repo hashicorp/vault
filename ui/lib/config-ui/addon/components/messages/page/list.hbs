@@ -42,8 +42,13 @@
                   )
                 }}
                 @color={{if message.active "highlight" "neutral"}}
+                data-test-badge={{concat "active:" message.active}}
               />
-              <Hds::Badge @text={{(capitalize message.type)}} @color={{if message.active "highlight" "neutral"}} />
+              <Hds::Badge
+                @text={{(capitalize message.type)}}
+                @color={{if message.active "highlight" "neutral"}}
+                data-test-badge={{message.type}}
+              />
             </div>
           </div>
         </div>
