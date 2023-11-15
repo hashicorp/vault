@@ -20,14 +20,16 @@ export default class MessagesRoute extends Route {
   };
 
   async model(params) {
-    const { authenticated, page } = params;
+    let { authenticated, page } = params;
+    page = page || 1;
+
     return hash({
       messages: this.store.lazyPaginatedQuery('config-ui/message', {
         authenticated,
         responsePath: 'data.keys',
-        page: page || 1,
+        page,
       }),
-      page: page || 1,
+      page,
     });
   }
 }

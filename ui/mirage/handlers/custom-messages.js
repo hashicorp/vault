@@ -5,7 +5,7 @@
 
 export default function (server) {
   server.get('/sys/config/ui/custom-messages', (schema, request) => {
-    if (JSON.parse(request.queryParams.authenticated)) {
+    if (request.queryParams.authenticated && JSON.parse(request.queryParams.authenticated)) {
       return {
         data: {
           key_info: {
