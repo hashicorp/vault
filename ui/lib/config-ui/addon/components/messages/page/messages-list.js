@@ -23,7 +23,7 @@ export default class MessagesList extends Component {
   @service store;
 
   get mountPoint() {
-    // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
+    // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.config-ui
     return getOwner(this).mountPoint;
   }
 
