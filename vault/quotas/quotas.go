@@ -814,6 +814,13 @@ func (m *Manager) resetCache() error {
 		}
 		if quota != nil {
 			rlq := quota.(*RateLimitQuota)
+
+			// Cancel the quota's purgeBlockedClients goroutine
+			err = rlq.close(context.Background())
+			if err != nil {
+				return err
+			}
+
 			err = rlq.store.Close(context.Background())
 			if err != nil {
 				return err
