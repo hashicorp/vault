@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/go-test/deep"
 )
 
@@ -40,8 +42,8 @@ func TestCacheMemDB_Get(t *testing.T) {
 
 	// Test on empty cache
 	index, err := cache.Get(IndexNameID, "foo")
-	if err != nil {
-		t.Fatal(err)
+	if err != ErrCacheItemNotFound {
+		t.Fatal("expected cache item to be not found", err)
 	}
 	if index != nil {
 		t.Fatalf("expected nil index, got: %v", index)
@@ -56,6 +58,7 @@ func TestCacheMemDB_Get(t *testing.T) {
 		TokenAccessor: "test_accessor",
 		Lease:         "test_lease",
 		Response:      []byte("hello world"),
+		Tokens:        map[string]struct{}{},
 	}
 
 	if err := cache.Set(in); err != nil {
@@ -97,7 +100,7 @@ func TestCacheMemDB_Get(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			out, err := cache.Get(tc.indexName, tc.indexValues...)
-			if err != nil {
+			if err != nil && err != ErrCacheItemNotFound {
 				t.Fatal(err)
 			}
 			if diff := deep.Equal(in, out); diff != nil {
@@ -169,22 +172,22 @@ func TestCacheMemDB_GetByPrefix(t *testing.T) {
 	}{
 		{
 			"by_request_path",
-			"request_path",
+			IndexNameRequestPath,
 			[]interface{}{"test_ns/", "/v1/request/path"},
 		},
 		{
 			"by_lease",
-			"lease",
+			IndexNameLease,
 			[]interface{}{"path/to/test_lease"},
 		},
 		{
 			"by_token_parent",
-			"token_parent",
+			IndexNameTokenParent,
 			[]interface{}{"test_token_parent"},
 		},
 		{
 			"by_lease_token",
-			"lease_token",
+			IndexNameLeaseToken,
 			[]interface{}{"test_lease_token"},
 		},
 	}
@@ -348,10 +351,9 @@ func TestCacheMemDB_Evict(t *testing.T) {
 
 			// Verify that the cache doesn't contain the entry any more
 			index, err := cache.Get(tc.indexName, tc.indexValues...)
-			if (err != nil) != tc.wantErr {
-				t.Fatal(err)
+			if err != ErrCacheItemNotFound && !tc.wantErr {
+				t.Fatal("expected cache item to be not found", err)
 			}
-
 			if index != nil {
 				t.Fatalf("expected nil entry, got = %#v", index)
 			}
@@ -386,10 +388,99 @@ func TestCacheMemDB_Flush(t *testing.T) {
 
 	// Check the cache doesn't contain inserted index
 	out, err := cache.Get(IndexNameID, "test_id")
-	if err != nil {
-		t.Fatal(err)
+	if err != ErrCacheItemNotFound {
+		t.Fatal("expected cache item to be not found", err)
 	}
 	if out != nil {
 		t.Fatalf("expected cache to be empty, got = %v", out)
 	}
+}
+
+// TestCacheMemDB_EvictCapabilitiesIndex tests EvictCapabilitiesIndex works as expected.
+func TestCacheMemDB_EvictCapabilitiesIndex(t *testing.T) {
+	cache, err := New()
+	require.Nil(t, err)
+
+	// Test on empty cache
+	err = cache.EvictCapabilitiesIndex(IndexNameID, "foo")
+	require.Nil(t, err)
+
+	capabilitiesIndex := &CapabilitiesIndex{
+		ID:    "id",
+		Token: "token",
+	}
+
+	err = cache.SetCapabilitiesIndex(capabilitiesIndex)
+	require.Nil(t, err)
+
+	err = cache.EvictCapabilitiesIndex(IndexNameID, capabilitiesIndex.ID)
+	require.Nil(t, err)
+
+	// Verify that the cache doesn't contain the entry anymore
+	index, err := cache.GetCapabilitiesIndex(IndexNameID, capabilitiesIndex.ID)
+	require.Equal(t, ErrCacheItemNotFound, err)
+	require.Nil(t, index)
+}
+
+// TestCacheMemDB_GetCapabilitiesIndex tests GetCapabilitiesIndex works as expected.
+func TestCacheMemDB_GetCapabilitiesIndex(t *testing.T) {
+	cache, err := New()
+	require.Nil(t, err)
+
+	capabilitiesIndex := &CapabilitiesIndex{
+		ID:    "id",
+		Token: "token",
+	}
+
+	err = cache.SetCapabilitiesIndex(capabilitiesIndex)
+	require.Nil(t, err)
+
+	// Verify that we can retrieve the index
+	index, err := cache.GetCapabilitiesIndex(IndexNameID, capabilitiesIndex.ID)
+	require.Nil(t, err)
+	require.Equal(t, capabilitiesIndex, index)
+
+	// Verify behaviour on a non-existing ID
+	index, err = cache.GetCapabilitiesIndex(IndexNameID, "not a real id")
+	require.Equal(t, ErrCacheItemNotFound, err)
+	require.Nil(t, index)
+
+	// Verify behaviour with a non-existing index name
+	index, err = cache.GetCapabilitiesIndex("not a real name", capabilitiesIndex.ID)
+	require.NotNil(t, err)
+}
+
+// TestCacheMemDB_SetCapabilitiesIndex tests SetCapabilitiesIndex works as expected.
+func TestCacheMemDB_SetCapabilitiesIndex(t *testing.T) {
+	cache, err := New()
+	require.Nil(t, err)
+
+	capabilitiesIndex := &CapabilitiesIndex{
+		ID:    "id",
+		Token: "token",
+	}
+
+	err = cache.SetCapabilitiesIndex(capabilitiesIndex)
+	require.Nil(t, err)
+
+	// Verify we can retrieve the index
+	index, err := cache.GetCapabilitiesIndex(IndexNameID, capabilitiesIndex.ID)
+	require.Nil(t, err)
+	require.Equal(t, capabilitiesIndex, index)
+
+	// Verify behaviour on a nil index
+	err = cache.SetCapabilitiesIndex(nil)
+	require.NotNil(t, err)
+
+	// Verify behaviour on an index without id
+	err = cache.SetCapabilitiesIndex(&CapabilitiesIndex{
+		Token: "token",
+	})
+	require.NotNil(t, err)
+
+	// Verify behaviour on an index with only ID
+	err = cache.SetCapabilitiesIndex(&CapabilitiesIndex{
+		ID: "id",
+	})
+	require.Nil(t, err)
 }

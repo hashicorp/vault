@@ -39,7 +39,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 1 }, 'Nav links are hidden other than secrets');
+      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -47,7 +47,8 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should render nav links', async function (assert) {
     const links = [
-      'Secrets engines',
+      'Dashboard',
+      'Secrets Engines',
       'Access',
       'Policies',
       'Tools',

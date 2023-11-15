@@ -5,6 +5,7 @@ package audit
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -12,8 +13,9 @@ import (
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow:    time.Now(),
-		withFormat: JSONFormat,
+		withNow:          time.Now(),
+		withFormat:       JSONFormat,
+		withHMACAccessor: true,
 	}
 }
 
@@ -107,11 +109,7 @@ func WithFormat(f string) Option {
 // WithPrefix provides an Option to represent a prefix for a file sink.
 func WithPrefix(prefix string) Option {
 	return func(o *options) error {
-		prefix = strings.TrimSpace(prefix)
-
-		if prefix != "" {
-			o.withPrefix = prefix
-		}
+		o.withPrefix = prefix
 
 		return nil
 	}
@@ -150,9 +148,13 @@ func WithHMACAccessor(h bool) Option {
 }
 
 // WithHeaderFormatter provides an Option to supply a HeaderFormatter.
+// If the HeaderFormatter interface supplied is nil (type or value), the option will not be applied.
 func WithHeaderFormatter(f HeaderFormatter) Option {
 	return func(o *options) error {
-		o.withHeaderFormatter = f
+		if f != nil && !reflect.ValueOf(f).IsNil() {
+			o.withHeaderFormatter = f
+		}
+
 		return nil
 	}
 }

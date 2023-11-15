@@ -167,11 +167,11 @@ func validateInitParameters(core *vault.Core, req InitRequest) error {
 	switch core.SealAccess().RecoveryKeySupported() {
 	case true:
 		if len(barrierFlags) > 0 {
-			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags, ","), core.SealAccess().BarrierType())
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags, ","), core.SealAccess().BarrierSealConfigType())
 		}
 	default:
 		if len(recoveryFlags) > 0 {
-			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags, ","), core.SealAccess().BarrierType())
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags, ","), core.SealAccess().BarrierSealConfigType())
 		}
 
 	}

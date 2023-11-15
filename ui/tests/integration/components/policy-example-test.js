@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
   policyDescription: (type) => `[data-test-example-modal-text=${type}]`,
-  jsonText: '[data-test-example-modal-json-text]',
+  jsonText: '[data-test-component="code-mirror-modifier"]',
   informationLink: '[data-test-example-modal-information-link]',
 };
 

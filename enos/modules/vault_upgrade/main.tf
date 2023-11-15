@@ -92,10 +92,12 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
 resource "enos_remote_exec" "get_leader_public_ip" {
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  content = templatefile("${path.module}/templates/get-leader-public-ip.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  scripts = [abspath("${path.module}/scripts/get-leader-public-ip.sh")]
+
+  environment = {
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_INSTANCES   = jsonencode(local.instances)
+  }
 
   transport = {
     ssh = {
@@ -107,10 +109,12 @@ resource "enos_remote_exec" "get_leader_public_ip" {
 resource "enos_remote_exec" "get_follower_public_ips" {
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  content = templatefile("${path.module}/templates/get-follower-public-ips.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  environment = {
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_INSTANCES   = jsonencode(local.instances)
+  }
+
+  scripts = [abspath("${path.module}/scripts/get-follower-public-ips.sh")]
 
   transport = {
     ssh = {
@@ -123,7 +127,7 @@ resource "enos_remote_exec" "restart_followers" {
   for_each   = local.followers
   depends_on = [enos_remote_exec.get_follower_public_ips]
 
-  content = file("${path.module}/templates/restart-vault.sh")
+  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {
@@ -153,7 +157,7 @@ resource "enos_vault_unseal" "followers" {
 resource "enos_remote_exec" "restart_leader" {
   depends_on = [enos_vault_unseal.followers]
 
-  content = file("${path.module}/templates/restart-vault.sh")
+  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {

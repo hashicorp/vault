@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,13 @@ type Index struct {
 	// Required: true, Unique: true
 	Token string
 
+	// Tokens is a set of tokens that can access this cached response,
+	// which is used for static secret caching, and enabling multiple
+	// tokens to be able to access the same cache entry for static secrets.
+	// Implemented as a map so that all values are unique.
+	// Required: false, Unique: false
+	Tokens map[string]struct{}
+
 	// TokenParent is the parent token of the token held by this index
 	// Required: false, Unique: false
 	TokenParent string
@@ -36,6 +44,12 @@ type Index struct {
 
 	// RequestPath is the path of the request that resulted in the response
 	// held by this index.
+	// For dynamic secrets, this will be the actual path sent to the request,
+	// e.g. /v1/foo/bar (which will not include the namespace if it was included
+	// in the headers).
+	// For static secrets, this will be the canonical path to the secret (i.e.
+	// after calling getStaticSecretPathFromRequest--see its godocs for more
+	// information).
 	// Required: true, Unique: false
 	RequestPath string
 
@@ -69,8 +83,35 @@ type Index struct {
 	// LastRenewed is the timestamp of last renewal
 	LastRenewed time.Time
 
-	// Type is the index type (token, auth-lease, secret-lease)
+	// Type is the index type (token, auth-lease, secret-lease, static-secret)
 	Type string
+
+	// IndexLock is a lock held for some indexes to prevent data
+	// races upon update.
+	IndexLock sync.RWMutex
+}
+
+// CapabilitiesIndex holds the capabilities for cached static secrets.
+// This type of index does not represent a response.
+type CapabilitiesIndex struct {
+	// ID is a value that uniquely represents the request held by this
+	// index. This is computed by hashing the token that this capabilities
+	// index represents the capabilities of.
+	// Required: true, Unique: true
+	ID string
+
+	// Token is the token that fetched the response held by this index
+	// Required: true, Unique: true
+	Token string
+
+	// ReadablePaths is a set of paths with read capabilities for the given token.
+	// Implemented as a map for uniqueness. The key to the map is a path (such as
+	// `foo/bar` that we've demonstrated we can read.
+	ReadablePaths map[string]struct{}
+
+	// IndexLock is a lock held for some indexes to prevent data
+	// races upon update.
+	IndexLock sync.RWMutex
 }
 
 type IndexName uint32
@@ -96,17 +137,29 @@ const (
 
 	// IndexNameLeaseToken is the token that created the lease.
 	IndexNameLeaseToken = "lease_token"
+
+	// CapabilitiesIndexNameID is the ID of the capabilities index.
+	CapabilitiesIndexNameID = "id"
 )
 
 func validIndexName(indexName string) bool {
 	switch indexName {
-	case "id":
-	case "lease":
-	case "request_path":
-	case "token":
-	case "token_accessor":
-	case "token_parent":
-	case "lease_token":
+	case IndexNameID:
+	case IndexNameLease:
+	case IndexNameRequestPath:
+	case IndexNameToken:
+	case IndexNameTokenAccessor:
+	case IndexNameTokenParent:
+	case IndexNameLeaseToken:
+	default:
+		return false
+	}
+	return true
+}
+
+func validCapabilitiesIndexName(indexName string) bool {
+	switch indexName {
+	case CapabilitiesIndexNameID:
 	default:
 		return false
 	}
@@ -146,6 +199,25 @@ func (i Index) Serialize() ([]byte, error) {
 // Note: RenewCtxInfo will need to be reconstructed elsewhere.
 func Deserialize(indexBytes []byte) (*Index, error) {
 	index := new(Index)
+	if err := json.Unmarshal(indexBytes, index); err != nil {
+		return nil, err
+	}
+	return index, nil
+}
+
+// SerializeCapabilitiesIndex returns a json marshal'ed CapabilitiesIndex object
+func (i CapabilitiesIndex) SerializeCapabilitiesIndex() ([]byte, error) {
+	indexBytes, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return indexBytes, nil
+}
+
+// DeserializeCapabilitiesIndex converts json bytes to an CapabilitiesIndex object
+func DeserializeCapabilitiesIndex(indexBytes []byte) (*CapabilitiesIndex, error) {
+	index := new(CapabilitiesIndex)
 	if err := json.Unmarshal(indexBytes, index); err != nil {
 		return nil, err
 	}

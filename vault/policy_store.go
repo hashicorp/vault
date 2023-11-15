@@ -102,6 +102,12 @@ path "sys/internal/ui/resultant-acl" {
     capabilities = ["read"]
 }
 
+# Allow a token to look up the Vault version. This path is not subject to
+# redaction like the unauthenticated endpoints that provide the Vault version.
+path "sys/internal/ui/version" {
+	capabilities = ["read"]
+}
+
 # Allow a token to renew a lease via lease_id in the request body; old path for
 # old clients, new path for newer
 path "sys/renew" {
@@ -256,6 +262,7 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 	var err error
 	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
+	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
@@ -449,6 +456,32 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	}
 
 	return nil
+}
+
+// GetNonEGPPolicyType returns a policy's type.
+// It will return an error if the policy doesn't exist in the store or isn't
+// an ACL or a Sentinel Role Governing Policy (RGP).
+//
+// Note: Sentinel Endpoint Governing Policies (EGPs) are not stored within the
+// policyTypeMap. We sometimes need to distinguish between ACLs and RGPs due to
+// them both being token policies, but the logic related to EGPs is separate
+// enough that it is never necessary to look up their type.
+func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyType, error) {
+	sanitizedName := ps.sanitizeName(name)
+	index := path.Join(nsID, sanitizedName)
+
+	pt, ok := ps.policyTypeMap.Load(index)
+	if !ok {
+		// Doesn't exist
+		return nil, ErrPolicyNotExistInTypeMap
+	}
+
+	policyType, ok := pt.(PolicyType)
+	if !ok {
+		return nil, fmt.Errorf("unknown policy type for: %v", index)
+	}
+
+	return &policyType, nil
 }
 
 // GetPolicy is used to fetch the named policy

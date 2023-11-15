@@ -10,9 +10,9 @@
       class="button is-transparent namespace-picker-trigger has-current-color"
       data-test-namespace-toggle
     >
-      <div class="is-flex-center">
+      <div class="is-flex-center is-flex-1">
         <Icon @name="org" />
-        <span class="namespace-name">{{this.namespaceDisplay}}</span>
+        <span class="is-flex-1 is-word-break has-text-left is-size-6 has-left-margin-xs">{{this.namespaceDisplay}}</span>
       </div>
       <Icon @name="caret" />
     </D.Trigger>
@@ -32,6 +32,15 @@
         </div>
       </div>
       <div class="namespace-list {{if this.isAnimating 'animated-list'}}">
+        {{#if this.auth.isRootToken}}
+          <div class="has-left-margin-s has-right-margin-s">
+            <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
+            <span class="is-size-8 has-text-semibold">
+              You are logged in with a root token and will have to reauthenticate when switching namespaces.
+            </span>
+          </div>
+        {{/if}}
+
         <div class="is-mobile level-left">
           {{#unless this.isUserRootNamespace}}
             <NamespaceLink
@@ -82,14 +91,14 @@
                 </LinkTo>
               </span>
               <span class="level-right">
-                <button
-                  type="button"
-                  class="button is-ghost icon has-right-margin-m"
+                <Hds::Button
+                  @text="Refresh namespace list"
+                  @icon="reload"
+                  @isIconOnly={{true}}
+                  @color="tertiary"
                   data-test-refresh-namespaces
-                  onclick={{action "refreshNamespaceList"}}
-                >
-                  <Icon @name="reload" class="has-text-grey" />
-                </button>
+                  {{on "click" (action "refreshNamespaceList")}}
+                />
               </span>
             </div>
           </div>

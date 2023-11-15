@@ -6,11 +6,12 @@
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
+  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
     @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-    @text="Secrets engines"
-    data-test-sidebar-nav-link="Secrets engines"
+    @text="Secrets Engines"
+    data-test-sidebar-nav-link="Secrets Engines"
   />
   {{#if (has-permission "access")}}
     <Nav.Link

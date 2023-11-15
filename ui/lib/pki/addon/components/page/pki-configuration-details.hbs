@@ -105,47 +105,24 @@
       <InfoTableRow @label="Unified CRL on existing paths" @value={{@crl.unifiedCrlOnExistingPaths}} />
     {{/if}}
   {{/if}}
-{{else}}
-  <Toolbar>
-    <ToolbarActions>
-      <ToolbarLink @route="configuration.create" data-test-configure-pki-button>
-        Configure
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
 {{/if}}
 
-<h2
-  class="title is-4 has-bottom-margin-xs has-border-bottom-light has-bottom-padding-s
-    {{if (or @hasConfig (and (eq @crl 403) (eq @urls 403))) 'has-top-margin-xl' 'has-top-margin-m'}}"
->
-  Mount Configuration
-</h2>
-<InfoTableRow @label="Secret engine type" @value={{@mountConfig.engineType}} />
-<InfoTableRow @label="Path" @value={{@mountConfig.path}} />
-<InfoTableRow @label="Accessor" @value={{@mountConfig.accessor}} />
-<InfoTableRow @label="Local" @value={{@mountConfig.local}} />
-<InfoTableRow @label="Seal wrap" @value={{@mountConfig.sealWrap}} />
-<InfoTableRow @label="Default lease TTL" @value={{@mountConfig.config.defaultLeaseTtl}} />
-<InfoTableRow @label="Max lease TTL" @value={{@mountConfig.config.maxLeaseTtl}} />
-<InfoTableRow @label="Allowed managed keys" @value={{or @mountConfig.config.allowedManagedKeys "None"}} />
-<div class="has-top-margin-l"></div>
+<div class="has-top-margin-m"></div>
 
 {{#if this.showDeleteAllIssuers}}
   <ConfirmationModal
-    @title="Delete All Issuers?"
+    @title="Delete all issuers?"
     @toConfirmMsg="deleting all issuers and keys."
-    @buttonText="Confirm"
     @confirmText="delete-all"
     @isActive={{this.showDeleteAllIssuers}}
     @onClose={{action (mut this.showDeleteAllIssuers) false}}
     @onConfirm={{this.deleteAllIssuers}}
   >
-    <section class="modal-card-custom">
+    <p>
       This endpoint deletes
       <strong>all</strong>
       issuers and keys within the mount. It is highly recommended to use the individual delete operations instead. This mount
       will be unusable until new issuers and keys are provisioned.
-    </section>
+    </p>
   </ConfirmationModal>
 {{/if}}

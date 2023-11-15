@@ -159,10 +159,11 @@ to specify where the configuration is.
   maximum request duration allowed before Vault cancels the request. This can
   be overridden per listener via the `max_request_duration` value.
 
-- `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
-potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
-to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this can have
-a negative effect on performance due to the tracking of each lock attempt.
+- `detect_deadlocks` `(string: "")` - A comma separated string that specifies the internal 
+mutex locks that should be monitored for potential deadlocks. Currently supported values 
+include `statelock`, `quotas` and `expiration` which will cause "POTENTIAL DEADLOCK:"
+to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this 
+can have a negative effect on performance due to the tracking of each lock attempt.
 
 - `raw_storage_endpoint` `(bool: false)` – Enables the `sys/raw` endpoint which
   allows the decryption/encryption of raw data into and out of the security
@@ -220,6 +221,10 @@ a negative effect on performance due to the tracking of each lock attempt.
   incompatible changes between releases. Additional experiments can also be specified via
   the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`-experiment`](/vault/docs/commands/server#experiment) flag.
+
+- `imprecise_lease_role_tracking` `(bool: "false")` - Skip lease counting by role if there are no role based quotas enabled.
+  When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
+  `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
 ### High availability parameters
 

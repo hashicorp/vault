@@ -161,7 +161,8 @@ type Manager struct {
 	// config containing operator preferences and quota behaviors
 	config *Config
 
-	rateLimitPathManager *pathmanager.PathManager
+	rateLimitPathManager       *pathmanager.PathManager
+	globalRateLimitPathManager *pathmanager.PathManager
 
 	storage logical.Storage
 	ctx     context.Context
@@ -170,13 +171,13 @@ type Manager struct {
 	metricSink *metricsutil.ClusterMetricSink
 
 	// quotaLock is a lock for manipulating quotas and anything not covered by a more specific lock
-	quotaLock *locking.DeadlockRWMutex
+	quotaLock locking.RWMutex
 
 	// quotaConfigLock is a lock for accessing config items, such as RateLimitExemptPaths
-	quotaConfigLock *locking.DeadlockRWMutex
+	quotaConfigLock locking.RWMutex
 
 	// dbAndCacheLock is a lock for db and path caches that need to be reset during Reset()
-	dbAndCacheLock *locking.DeadlockRWMutex
+	dbAndCacheLock locking.RWMutex
 }
 
 // QuotaLeaseInformation contains all of the information lease-count quotas require
@@ -214,6 +215,9 @@ type Quota interface {
 	// Inheritable indicates if this quota can be applied to child namespaces
 	IsInheritable() bool
 
+	// GetNamespacePath gets the namespace path of the quota
+	GetNamespacePath() string
+
 	// handleRemount updates the mount and namesapce paths of the quota
 	handleRemount(string, string)
 }
@@ -247,7 +251,14 @@ type Config struct {
 	// RateLimitExemptPaths defines the set of exempt paths used for all rate limit
 	// quotas. Any request path that exists in this set is exempt from rate limiting.
 	// If the set is empty, no paths are exempt.
+	// The paths specified here are relative and are appended to every namespace during search.
 	RateLimitExemptPaths []string `json:"rate_limit_exempt_paths"`
+
+	// AbsoluteRateLimitExemptPaths defines the set of exempt paths used for all rate limit
+	// quotas. Any request path that exists in this set is exempt from rate limiting.
+	// If it is empty, no paths are exempt.
+	// The paths specified here are absolute paths, and can only be set from the root namespace
+	AbsoluteRateLimitExemptPaths []string `json:"absolute_rate_limit_exempt_paths"`
 }
 
 // Request contains information required by the quota manager to query and
@@ -275,21 +286,29 @@ type Request struct {
 
 // NewManager creates and initializes a new quota manager to hold all the quota
 // rules and to process incoming requests.
-func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink) (*Manager, error) {
+func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.ClusterMetricSink, detectDeadlocks bool) (*Manager, error) {
 	db, err := memdb.NewMemDB(dbSchema())
 	if err != nil {
 		return nil, err
 	}
 
 	manager := &Manager{
-		db:                   db,
-		logger:               logger,
-		metricSink:           ms,
-		rateLimitPathManager: pathmanager.New(),
-		config:               new(Config),
-		quotaLock:            new(locking.DeadlockRWMutex),
-		quotaConfigLock:      new(locking.DeadlockRWMutex),
-		dbAndCacheLock:       new(locking.DeadlockRWMutex),
+		db:                         db,
+		logger:                     logger,
+		metricSink:                 ms,
+		rateLimitPathManager:       pathmanager.New(),
+		globalRateLimitPathManager: pathmanager.New(),
+		config:                     new(Config),
+		quotaLock:                  &locking.SyncRWMutex{},
+		quotaConfigLock:            &locking.SyncRWMutex{},
+		dbAndCacheLock:             &locking.SyncRWMutex{},
+	}
+
+	if detectDeadlocks {
+		logger.Debug("enabling deadlock detection")
+		manager.quotaLock = &locking.DeadlockRWMutex{}
+		manager.quotaConfigLock = &locking.DeadlockRWMutex{}
+		manager.dbAndCacheLock = &locking.DeadlockRWMutex{}
 	}
 
 	manager.init(walkFunc)
@@ -617,6 +636,37 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	return nil, nil
 }
 
+// QueryResolveRoleQuotas checks if there's a quota for the request mount path
+// which requires ResolveRoleOperation.
+func (m *Manager) QueryResolveRoleQuotas(req *Request) (bool, error) {
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
+
+	txn := m.db.Txn(false)
+
+	// ns would have been made non-empty during insertion. Use non-empty
+	// value during query as well.
+	if req.NamespacePath == "" {
+		req.NamespacePath = "root"
+	}
+
+	// Check for any role-based quotas on the request namespaces/mount path.
+	for _, qType := range quotaTypes() {
+		// Use the namespace and mount as indexes and find all matches with a
+		// set Role field (see: 'true' as the last argument). We can't use
+		// indexNamespaceMountRole for this, because Role is a StringFieldIndex,
+		// which won't match on an empty string.
+		quota, err := txn.First(qType, indexNamespaceMount, req.NamespacePath, req.MountPath, false, true)
+		if err != nil {
+			return false, err
+		}
+		if quota != nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // DeleteQuota removes a quota rule from the db for a given name
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
 	m.quotaLock.Lock()
@@ -726,6 +776,25 @@ func (m *Manager) setRateLimitExemptPathsLocked(vals []string) {
 	m.rateLimitPathManager.AddPaths(vals)
 }
 
+// SetGlobalRateLimitExemptPaths updates the global rate limit exempt paths in the Manager's
+// configuration in addition to updating the path manager. Every call to
+// SetGlobalRateLimitExemptPaths will wipe out the existing path manager and set the
+// paths based on the provided argument.
+func (m *Manager) SetGlobalRateLimitExemptPaths(vals []string) {
+	m.quotaConfigLock.Lock()
+	defer m.quotaConfigLock.Unlock()
+	m.setGlobalRateLimitExemptPathsLocked(vals)
+}
+
+func (m *Manager) setGlobalRateLimitExemptPathsLocked(vals []string) {
+	if vals == nil {
+		vals = []string{}
+	}
+	m.config.AbsoluteRateLimitExemptPaths = vals
+	m.globalRateLimitPathManager = pathmanager.New()
+	m.globalRateLimitPathManager.AddPaths(vals)
+}
+
 // RateLimitAuditLoggingEnabled returns if the quota configuration allows audit
 // logging of request rejections due to rate limiting quota rule violations.
 func (m *Manager) RateLimitAuditLoggingEnabled() bool {
@@ -747,15 +816,18 @@ func (m *Manager) RateLimitResponseHeadersEnabled() bool {
 // RateLimitPathExempt returns a boolean dictating if a given path is exempt from
 // any rate limit quota. If not rate limit path manager is defined, false is
 // returned.
-func (m *Manager) RateLimitPathExempt(path string) bool {
+func (m *Manager) RateLimitPathExempt(path string, namespacePath string) bool {
 	m.quotaConfigLock.RLock()
 	defer m.quotaConfigLock.RUnlock()
 
 	if m.rateLimitPathManager == nil {
 		return false
 	}
-
-	return m.rateLimitPathManager.HasPath(path)
+	globalRateLimitPath := path
+	if namespacePath != "root" {
+		globalRateLimitPath = strings.Join([]string{namespace.Canonicalize(namespacePath), path}, "")
+	}
+	return m.globalRateLimitPathManager.HasPath(globalRateLimitPath) || m.rateLimitPathManager.HasPath(path)
 }
 
 // Config returns the operator preferences in the quota manager
@@ -793,6 +865,13 @@ func (m *Manager) resetCache() error {
 		}
 		if quota != nil {
 			rlq := quota.(*RateLimitQuota)
+
+			// Cancel the quota's purgeBlockedClients goroutine
+			err = rlq.close(context.Background())
+			if err != nil {
+				return err
+			}
+
 			err = rlq.store.Close(context.Background())
 			if err != nil {
 				return err
@@ -952,6 +1031,7 @@ func (m *Manager) Invalidate(key string) {
 
 		m.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		m.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		m.SetGlobalRateLimitExemptPaths(config.AbsoluteRateLimitExemptPaths)
 		m.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 	default:
@@ -1125,8 +1205,7 @@ func (m *Manager) setupQuotaType(ctx context.Context, storage logical.Storage, q
 	return nil
 }
 
-// QuotaStoragePath returns the storage path suffix for persisting the quota
-// rule.
+// QuotaStoragePath returns the storage path suffix for persisting the quota rule.
 func QuotaStoragePath(quotaType, name string) string {
 	return path.Join(StoragePrefix+quotaType, name)
 }
@@ -1287,4 +1366,11 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 	txn.Commit()
 
 	return nil
+}
+
+func (m *Manager) DetectDeadlocks() bool {
+	if _, ok := m.quotaLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

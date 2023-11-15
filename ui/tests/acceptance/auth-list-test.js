@@ -4,82 +4,76 @@
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
-import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, settled, visit, currentURL } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
-import { create } from 'ember-cli-page-object';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { deleteAuthCmd, mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 
-const consoleComponent = create(consoleClass);
-
+const SELECTORS = {
+  backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
+  createUser: '[data-test-entity-create-link="user"]',
+  input: (attr) => `[data-test-input="${attr}"]`,
+  password: '[data-test-textarea]',
+  saveBtn: '[data-test-save-config]',
+  methods: '[data-test-access-methods]',
+  listItem: '[data-test-list-item-content]',
+};
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
-    return authPage.login();
+  hooks.beforeEach(async function () {
+    await authPage.login();
+    this.path1 = `userpass-${uuidv4()}`;
+    this.path2 = `userpass-${uuidv4()}`;
+    this.user1 = 'user1';
+    this.user2 = 'user2';
+
+    await runCmd(mountAuthCmd('userpass', this.path1));
+    await runCmd(mountAuthCmd('userpass', this.path2));
+  });
+
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd(deleteAuthCmd(this.path1));
+    await runCmd(deleteAuthCmd(this.path2));
+    return;
   });
 
   test('userpass secret backend', async function (assert) {
-    let n = Math.random();
-    const path1 = `userpass-${++n}`;
-    const path2 = `userpass-${++n}`;
-    const user1 = 'user1';
-    const user2 = 'user2';
+    assert.expect(5);
+    // enable a user in first userpass backend
+    await visit('/vault/access');
+    await click(SELECTORS.backendLink(this.path1));
+    await click(SELECTORS.createUser);
+    await fillIn(SELECTORS.input('username'), this.user1);
+    await fillIn(SELECTORS.password, this.user1);
+    await click(SELECTORS.saveBtn);
+    assert.strictEqual(currentURL(), `/vault/access/${this.path1}/item/user`);
 
-    // enable the first userpass method with one username
-    await enablePage.enable('userpass', path1);
-    await settled();
-    await click('[data-test-save-config="true"]');
+    await click(SELECTORS.methods);
+    assert.strictEqual(currentURL(), '/vault/access');
 
-    await visit(`/vault/access/${path1}/item/user/create`);
-    await waitUntil(() => find('[data-test-input="username"]') && find('[data-test-textarea]'));
-    await fillIn('[data-test-input="username"]', user1);
-    await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
-    await fillIn('[data-test-textarea]', user1);
-    await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
-    await click('[data-test-save-config="true"]');
+    // enable a user in second userpass backend
+    await click(SELECTORS.backendLink(this.path2));
+    await click(SELECTORS.createUser);
+    await fillIn(SELECTORS.input('username'), this.user2);
+    await fillIn(SELECTORS.password, this.user2);
+    await click(SELECTORS.saveBtn);
+    assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
 
-    // enable the first userpass method with one username
-    await visit(`/vault/settings/auth/enable`);
+    // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
+    assert.dom(SELECTORS.listItem).hasText(this.user2, 'user2 exists in the list');
 
-    await click('[data-test-mount-type="userpass"]');
-
-    await click('[data-test-mount-next]');
-
-    await fillIn('[data-test-input="path"]', path2);
-
-    await click('[data-test-mount-submit="true"]');
-
-    await click('[data-test-save-config="true"]');
-
-    await click(`[data-test-auth-backend-link="${path2}"]`);
-
-    await click('[data-test-entity-create-link="user"]');
-
-    await fillIn('[data-test-input="username"]', user2);
-    await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
-    await fillIn('[data-test-textarea]', user2);
-    await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
-
-    await click('[data-test-save-config="true"]');
-
-    //confirming that the user was created.  There was a bug where the apiPath was not being updated when toggling between auth routes
-    assert
-      .dom('[data-test-list-item-content]')
-      .hasText(user2, 'user just created shows in current auth list');
-
-    //confirm that the auth method 1 shows the user1.  There was a bug where it was not updated the list when toggling between auth routes
-    await visit(`/vault/access/${path1}/item/user`);
-
-    assert
-      .dom('[data-test-list-item-content]')
-      .hasText(user1, 'first user created shows in current auth list');
+    // Confirm that the auth method 1 shows user1. There was a bug where the user was not listed when toggling between auth routes.
+    await click(SELECTORS.methods);
+    await click(SELECTORS.backendLink(this.path1));
+    assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
   });
 
   test('auth methods are linkable and link to correct view', async function (assert) {
@@ -115,7 +109,45 @@ module('Acceptance | auth backend list', function (hooks) {
           .dom('[data-test-auth-section-tab]')
           .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
         // cleanup method
-        await consoleComponent.runCommands(`delete sys/auth/${path}`);
+        await runCmd(deleteAuthCmd(path));
+      }
+    }
+  });
+
+  test('enterprise: auth methods are linkable and link to correct view', async function (assert) {
+    assert.expect(19);
+    const uid = uuidv4();
+    await visit('/vault/access');
+
+    const supportManaged = supportedManagedAuthBackends();
+    const backends = allSupportedAuthBackends();
+    for (const backend of backends) {
+      const { type } = backend;
+      const path = `auth-list-${type}-${uid}`;
+      if (type !== 'token') {
+        await enablePage.enable(type, path);
+      }
+      await settled();
+      await visit('/vault/access');
+
+      // all auth methods should be linkable
+      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
+      if (!supportManaged.includes(type)) {
+        assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
+        assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+      } else {
+        let expectedTabs = 2;
+        if (type == 'ldap' || type === 'okta') {
+          expectedTabs = 3;
+        }
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+        // cleanup method
+        await runCmd(deleteAuthCmd(path));
       }
     }
   });

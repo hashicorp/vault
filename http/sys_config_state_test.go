@@ -175,6 +175,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				},
 				"storage":                       tc.expectedStorageOutput,
 				"administrative_namespace_path": "",
+				"imprecise_lease_role_tracking": false,
 			}
 
 			if tc.expectedHAStorageOutput != nil {
@@ -189,6 +190,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"warnings":       nil,
 				"auth":           nil,
 				"data":           configResp,
+				"mount_type":     "system",
 			}
 
 			testResponseBody(t, resp, &actual)

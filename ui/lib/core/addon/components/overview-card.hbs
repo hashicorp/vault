@@ -6,21 +6,21 @@
 <Hds::Card::Container
   @level="mid"
   @hasBorder={{true}}
-  class="overview-card border-radius-2"
+  class="overview-card"
   data-test-overview-card-container={{@cardTitle}}
+  ...attributes
 >
-  <div class="is-flex-between" data-test-overview-card={{@cardTitle}}>
-    <h3 class="title is-5">{{@cardTitle}}</h3>
+  <div class="flex row-wrap space-between has-bottom-margin-m" data-test-overview-card={{@cardTitle}}>
+    <h3 class="has-text-weight-bold is-size-5">{{@cardTitle}}</h3>
     {{#if @actionText}}
-      <LinkTo
-        class="has-icon-right is-ghost is-no-underline has-text-weight-semibold"
+      <Hds::Link::Standalone
+        @icon={{or @actionIcon "chevron-right"}}
+        @iconPosition="trailing"
+        @text={{@actionText}}
         @route={{@actionTo}}
-        @query={{hash @actionQuery}}
+        @query={{@actionQuery}}
         data-test-action-text={{@actionText}}
-      >
-        {{@actionText}}
-        <Icon @name="chevron-right" />
-      </LinkTo>
+      />
     {{/if}}
   </div>
   <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>

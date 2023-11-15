@@ -4,15 +4,6 @@
  */
 
 .overview-card {
-  padding: $spacing-l;
-  display: initial;
+  padding: $spacing-24;
   line-height: initial;
-
-  .title-number {
-    color: $black;
-    padding-top: $spacing-s;
-    font-size: 36px;
-    font-weight: 500;
-    line-height: 1.33;
-  }
 }

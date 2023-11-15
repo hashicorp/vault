@@ -91,15 +91,16 @@
     <div class="field is-grouped">
       {{#if @capabilities.canUpdate}}
         <div class="control">
-          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight 'is-loading'}}">
-            Update transit key
-          </button>
+          <Hds::Button
+            @text="Update transit key"
+            @icon={{if @requestInFlight "loading"}}
+            type="submit"
+            disabled={{@requestInFlight}}
+          />
         </div>
       {{/if}}
       <div class="control">
-        <SecretLink @mode="show" @secret={{@key.id}} class="button">
-          Cancel
-        </SecretLink>
+        <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.show" @model={{@key.id}} />
       </div>
     </div>
     {{#if (and @key.canDelete @capabilities.canDelete)}}

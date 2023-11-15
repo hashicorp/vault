@@ -29,11 +29,11 @@ import (
 
 var (
 	port                 uint
-	ignoreStopSignal     bool
 	sleepAfterStopSignal time.Duration
 	useSigusr1StopSignal bool
 	stopAfter            time.Duration
 	exitCode             int
+	logToStdout          bool
 )
 
 func init() {
@@ -42,6 +42,7 @@ func init() {
 	flag.BoolVar(&useSigusr1StopSignal, "use-sigusr1", false, "use SIGUSR1 as the stop signal, instead of the default SIGTERM")
 	flag.DurationVar(&stopAfter, "stop-after", 0, "stop the process after duration (overrides all other flags if set)")
 	flag.IntVar(&exitCode, "exit-code", 0, "exit code to return when this script exits")
+	flag.BoolVar(&logToStdout, "log-to-stdout", false, "log to stdout instead of stderr")
 }
 
 type Response struct {
@@ -78,8 +79,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	logger := log.New(os.Stderr, "test-app: ", log.LstdFlags)
+	flag.Parse()
 
+	logOut := os.Stderr
+	if logToStdout {
+		logOut = os.Stdout
+	}
+	logger := log.New(logOut, "test-app: ", log.LstdFlags)
+
+	logger.Printf("running on port %d", port)
 	if err := run(logger); err != nil {
 		log.Fatalf("error: %v\n", err)
 	}
@@ -95,8 +103,6 @@ func run(logger *log.Logger) error {
 
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelContextFunc()
-
-	flag.Parse()
 
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%d", port),

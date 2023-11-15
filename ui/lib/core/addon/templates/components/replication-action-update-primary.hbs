@@ -14,121 +14,113 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) true}}
-      data-test-update-primary-action-trigger
-    >
-      Update
-    </button>
+    <Hds::Button
+      @text="Update"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
+      data-test-replication-action-trigger="update-primary"
+    />
   </div>
 </div>
 
-<Modal
-  @title="Update primary"
-  @onClose={{action (mut this.isModalActive) false}}
-  @isActive={{this.isModalActive}}
-  @type="warning"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <p class="has-bottom-margin-m">
-      Use a secondary activation token to change this secondary’s assigned primary. This does not wipe all data in the
-      cluster.
-    </p>
+{{#if this.isModalActive}}
+  <Hds::Modal id="replication-update-primary-modal" @color="warning" @onClose={{fn (mut this.isModalActive) false}} as |M|>
+    <M.Header @icon="alert-triangle">
+      Update primary
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-m">
+        Use a secondary activation token to change this secondary’s assigned primary. This does not wipe all data in the
+        cluster.
+      </p>
 
-    <div data-test-update-primary-inputs>
-      {{#if (eq this.replicationMode "dr")}}
+      <div data-test-update-primary-inputs>
+        {{#if (eq this.replicationMode "dr")}}
+          <div class="field">
+            <label for="dr_operation_token_primary" class="is-label">
+              DR operation token
+            </label>
+            <div class="control">
+              <Input
+                class="input"
+                id="dr_operation_token_primary"
+                name="dr_operation_token_primary"
+                @value={{this.dr_operation_token_primary}}
+              />
+            </div>
+          </div>
+        {{/if}}
         <div class="field">
-          <label for="dr_operation_token_primary" class="is-label">
-            DR operation token
+          <label for="secondary-token" class="is-label">
+            Secondary activation token
           </label>
           <div class="control">
-            <Input
-              class="input"
-              id="dr_operation_token_primary"
-              name="dr_operation_token_primary"
-              @value={{this.dr_operation_token_primary}}
-            />
+            <Textarea @value={{this.token}} id="secondary-token" name="secondary-token" class="textarea" />
           </div>
         </div>
-      {{/if}}
-      <div class="field">
-        <label for="secondary-token" class="is-label">
-          Secondary activation token
-        </label>
-        <div class="control">
-          <Textarea @value={{this.token}} id="secondary-token" name="secondary-token" class="textarea" />
+        <div class="field">
+          <label for="primary_api_addr" class="is-label">
+            Primary API address
+            <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            <Input class="input" @value={{this.primary_api_addr}} id="primary_api_addr" name="primary_api_addr" />
+          </div>
+          <p class="help">
+            Set this to the API address (normal Vault address) to override the value embedded in the token.
+          </p>
+        </div>
+        <div class="field">
+          <label for="ca_file" class="is-label">
+            CA file
+            <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            <Input @value={{this.ca_file}} id="ca_file" name="ca_file" class="input" />
+          </div>
+          <p class="help">
+            Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the
+            primary.
+          </p>
+        </div>
+        <div class="field">
+          <label for="ca_path" class="is-label">
+            CA path
+            <em class="is-optional">(optional)</em>
+          </label>
+          <div class="control">
+            <Input @value={{this.ca_path}} id="ca_path" name="ca_file" class="input" />
+          </div>
+          <p class="help">
+            Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping
+            the token from the primary.
+          </p>
         </div>
       </div>
-      <div class="field">
-        <label for="primary_api_addr" class="is-label">
-          Primary API address
-          <em class="is-optional">(optional)</em>
-        </label>
-        <div class="control">
-          <Input class="input" @value={{this.primary_api_addr}} id="primary_api_addr" name="primary_api_addr" />
-        </div>
-        <p class="help">
-          Set this to the API address (normal Vault address) to override the value embedded in the token.
-        </p>
-      </div>
-      <div class="field">
-        <label for="ca_file" class="is-label">
-          CA file
-          <em class="is-optional">(optional)</em>
-        </label>
-        <div class="control">
-          <Input @value={{this.ca_file}} id="ca_file" name="ca_file" class="input" />
-        </div>
-        <p class="help">
-          Specifies the path to a CA root file (PEM format) that the secondary can use when unwrapping the token from the
-          primary.
-        </p>
-      </div>
-      <div class="field">
-        <label for="ca_path" class="is-label">
-          CA path
-          <em class="is-optional">(optional)</em>
-        </label>
-        <div class="control">
-          <Input @value={{this.ca_path}} id="ca_path" name="ca_file" class="input" />
-        </div>
-        <p class="help">
-          Specifies the path to a CA root directory containing PEM-format files that the secondary can use when unwrapping
-          the token from the primary.
-        </p>
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      onclick={{action
-        "onSubmit"
-        "update-primary"
-        this.model.replicationAttrs.modeForUrl
-        (hash
-          token=this.token
-          dr_operation_token_primary=this.dr_operation_token_primary
-          primary_api_addr=this.primary_api_addr
-          ca_path=this.ca_path
-          ca_file=this.ca_file
-        )
-      }}
-      data-test-confirm-action-trigger
-    >
-      Update
-    </button>
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) false}}
-      data-test-update-primary-cancel-button
-    >
-      Cancel
-    </button>
-  </footer>
-</Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button
+          {{on
+            "click"
+            (fn
+              this.onSubmit
+              "update-primary"
+              this.model.replicationAttrs.modeForUrl
+              (hash
+                token=this.token
+                dr_operation_token_primary=this.dr_operation_token_primary
+                primary_api_addr=this.primary_api_addr
+                ca_path=this.ca_path
+                ca_file=this.ca_file
+              )
+            )
+          }}
+          data-test-confirm-button
+          @text="Update"
+        />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-update-primary-cancel-button />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

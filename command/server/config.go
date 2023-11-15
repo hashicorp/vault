@@ -34,14 +34,8 @@ const (
 	VaultDevKeyFilename  = "vault-key.pem"
 )
 
-var (
-	entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
-		return nil
-	}
-
-	// Modified internally for testing.
-	validExperiments = experiments.ValidExperiments()
-)
+// Modified internally for testing.
+var validExperiments = experiments.ValidExperiments()
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -112,6 +106,8 @@ type Config struct {
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
+	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -135,12 +131,8 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
 	}
-	results = append(results, c.validateEnt(sourceFilePath)...)
+	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
-}
-
-func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
-	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -176,13 +168,13 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
@@ -412,6 +404,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
+	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
+	if c2.ImpreciseLeaseRoleTracking {
+		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -505,6 +502,10 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 	sealMap := make(map[string]*configutil.KMS)
 	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
+		}
+
 		if _, ok := sealMap[seal.Name]; ok {
 			return nil, errors.New("seals: seal names must be unique")
 		}
@@ -780,7 +781,7 @@ func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []s
 	return nil
 }
 
-// Validate checks each experiment is a known experiment.
+// validateExperiments checks each experiment is a known experiment.
 func validateExperiments(experiments []string) error {
 	var invalid []string
 
@@ -1140,6 +1141,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

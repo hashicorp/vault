@@ -7,7 +7,7 @@ description: |-
 
 # Oracle TDE
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-only.mdx'
 
 [Oracle Transparent Data Encryption](https://docs.oracle.com/en/database/oracle/oracle-database/19/asoag/introduction-to-transparent-data-encryption.html) (TDE)
 is supported with the [Vault PKCS#11 provider](/vault/docs/enterprise/pkcs11-provider).
@@ -114,13 +114,7 @@ TDE is complex, but an example way to enable it is:
 
 1. Open a `sqlplus` session into the root container (or switch into it with `ALTER SESSION SET CONTAINER = CDB$ROOT;`).
 
-1. Set WALLET_ROOT and TDE_CONFIGURATION parameters on the Oracle database.
-
-<Note>
-  The wallet root directory is only used to set the TDE configuration parameter.
-  To learn more about the wallet parameters refer to the
-  <a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/TDE_CONFIGURATION.html">Oracle TDE documentation</a>.
-</Note>
+1. Set WALLET_ROOT and TDE_CONFIGURATION parameters on the Oracle database. The wallet root directory is only used to set the TDE configuration parameter. To learn more about the wallet parameters refer to the [Oracle TDE documentation](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/TDE_CONFIGURATION.html).
 
     ```sql
     SQL> alter system set wallet_root='/opt/oracle/admin/ORCLCDB/wallet' scope=spfile;

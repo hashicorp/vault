@@ -65,7 +65,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await backendsPage.visit();
     await settled();
 
-    const rows = document.querySelectorAll('[data-test-auth-backend-link]');
+    const rows = document.querySelectorAll('[data-test-secrets-backend-link]');
     const rowUnsupported = Array.from(rows).filter((row) => row.innerText.includes('nomad'));
     const rowSupported = Array.from(rows).filter((row) => row.innerText.includes('cubbyhole'));
     assert
@@ -93,7 +93,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await clickTrigger('#filter-by-engine-type');
     await searchSelect.options.objectAt(0).click();
 
-    const rows = document.querySelectorAll('[data-test-auth-backend-link]');
+    const rows = document.querySelectorAll('[data-test-secrets-backend-link]');
     const rowsAws = Array.from(rows).filter((row) => row.innerText.includes('aws'));
 
     assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
@@ -101,12 +101,12 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await clickTrigger('#filter-by-engine-name');
     const firstItemToSelect = searchSelect.options.objectAt(0).text;
     await searchSelect.options.objectAt(0).click();
-    const singleRow = document.querySelectorAll('[data-test-auth-backend-link]');
+    const singleRow = document.querySelectorAll('[data-test-secrets-backend-link]');
     assert.strictEqual(singleRow.length, 1, 'returns only one row');
     assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by name engine');
     // clear filter by engine name
     await searchSelect.deleteButtons.objectAt(1).click();
-    const rowsAgain = document.querySelectorAll('[data-test-auth-backend-link]');
+    const rowsAgain = document.querySelectorAll('[data-test-secrets-backend-link]');
     assert.ok(rowsAgain.length > 1, 'filter has been removed');
 
     // cleanup

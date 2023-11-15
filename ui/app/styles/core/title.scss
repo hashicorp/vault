@@ -47,10 +47,14 @@
   &.is-7 {
     font-size: $size-7;
   }
+
+  &.is-8 {
+    font-size: $size-8;
+  }
 }
 
 .form-section .title {
-  margin-bottom: $spacing-s;
+  margin-bottom: $spacing-12;
 }
 
 .is-subtitle-gray {

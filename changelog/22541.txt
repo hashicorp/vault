@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix blank page or ghost secret when canceling KV secret create
+```

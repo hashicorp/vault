@@ -23,6 +23,13 @@
 }
 
 // position
+.top-right-absolute {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
 .is-in-bottom-right {
   position: absolute;
   bottom: 1rem;
@@ -34,6 +41,10 @@
   position: relative;
 }
 
+.top-xxs {
+  top: $spacing-4;
+}
+
 // visibility
 .is-invisible {
   visibility: hidden;
@@ -42,6 +53,10 @@
 // width and height
 .is-fullwidth {
   width: 100%;
+}
+
+.is-three-fourths-width {
+  width: 75%;
 }
 
 .is-auto-width {

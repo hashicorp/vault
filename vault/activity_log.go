@@ -60,18 +60,18 @@ const (
 	activitySegmentWriteTimeout = 1 * time.Minute
 
 	// Number of client records to store per segment. Each ClientRecord may
-	// consume upto 99 bytes; rounding it to 100bytes. Considering the storage
-	// limit of 512KB per storage entry, we can roughly store 512KB/100bytes =
-	// 5241 clients; rounding down to 5000 clients.
-	activitySegmentClientCapacity = 5000
+	// consume upto 99 bytes; rounding it to 100bytes. This []byte undergo JSON marshalling
+	// before adding them in storage increasing the size by approximately 4/3 times. Considering the storage
+	// limit of 512KB per storage entry, we can roughly store 512KB/(100bytes * 4/3) yielding approximately 3820 records.
+	ActivitySegmentClientCapacity = 3820
 
 	// Maximum number of segments per month. This allows for 700K entities per
-	// month; 700K/5K. These limits are geared towards controlling the storage
+	// month; 700K/3820 (ActivitySegmentClientCapacity). These limits are geared towards controlling the storage
 	// implications of persisting activity logs. If we hit a scenario where the
 	// storage consequences are less important in comparison to the accuracy of
 	// the client activity, these limits can be further relaxed or even be
 	// removed.
-	activityLogMaxSegmentPerMonth = 140
+	activityLogMaxSegmentPerMonth = 184
 
 	// trackedTWESegmentPeriod is a time period of a little over a month, and represents
 	// the amount of time that needs to pass after a 1.9 or later upgrade to result in
@@ -209,6 +209,8 @@ type ActivityLogCoreConfig struct {
 	// Clock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	Clock timeutil.Clock
+
+	DisableInvalidation bool
 }
 
 // NewActivityLog creates an activity log.
@@ -349,7 +351,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	}
 
 	// Will all new entities fit?  If not, roll over to a new segment.
-	available := activitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
+	available := ActivitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
 	remaining := available - len(newEntities)
 	excess := 0
 	if remaining < 0 {
@@ -387,9 +389,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 
 		// Rotate to next segment
 		a.currentSegment.clientSequenceNumber += 1
-		if len(excessClients) > activitySegmentClientCapacity {
+		if len(excessClients) > ActivitySegmentClientCapacity {
 			a.logger.Warn("too many new active clients, dropping tail", "clients", len(excessClients))
-			excessClients = excessClients[:activitySegmentClientCapacity]
+			excessClients = excessClients[:ActivitySegmentClientCapacity]
 		}
 		a.currentSegment.currentClients.Clients = excessClients
 		err := a.saveCurrentSegmentInternal(ctx, force)
@@ -1099,6 +1101,7 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 // this function should be called with activityLogLock.
 func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
+	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
 		if c.CensusLicensingEnabled() {
@@ -1569,16 +1572,16 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 }
 
 type ResponseCounts struct {
-	DistinctEntities int `json:"distinct_entities"`
-	EntityClients    int `json:"entity_clients"`
-	NonEntityTokens  int `json:"non_entity_tokens"`
-	NonEntityClients int `json:"non_entity_clients"`
+	DistinctEntities int `json:"distinct_entities" mapstructure:"distinct_entities"`
+	EntityClients    int `json:"entity_clients" mapstructure:"entity_clients"`
+	NonEntityTokens  int `json:"non_entity_tokens" mapstructure:"non_entity_tokens"`
+	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 }
 
 type ResponseNamespace struct {
-	NamespaceID   string           `json:"namespace_id"`
-	NamespacePath string           `json:"namespace_path"`
+	NamespaceID   string           `json:"namespace_id" mapstructure:"namespace_id"`
+	NamespacePath string           `json:"namespace_path" mapstructure:"namespace_path"`
 	Counts        ResponseCounts   `json:"counts"`
 	Mounts        []*ResponseMount `json:"mounts"`
 }
@@ -1596,7 +1599,7 @@ type ResponseNewClients struct {
 }
 
 type ResponseMount struct {
-	MountPath string          `json:"mount_path"`
+	MountPath string          `json:"mount_path" mapstructure:"mount_path"`
 	Counts    *ResponseCounts `json:"counts"`
 }
 

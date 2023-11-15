@@ -74,7 +74,8 @@ delay) mode. The maximum allowed value is 10.
   snapshot size and high write throughput causing log truncation before a
   snapshot can be fully installed. If you need to use this to recover a cluster,
   consider reducing write throughput or the amount of data stored on Vault. The
-  default value is 10000 which is suitable for all normal workloads.
+  default value is 10000 which is suitable for all normal workloads. The
+  `trailing_logs` metric is not the same as `max_trailing_logs`.
 
 - `snapshot_threshold` `(integer: 8192)` - This controls the minimum number of Raft
   commit entries between snapshots that are saved to disk. This is a low-level
@@ -85,6 +86,13 @@ delay) mode. The maximum allowed value is 10.
   larger and the space in the `raft.db` file can't be reclaimed till the next
   snapshot. Servers may take longer to recover from crashes or failover if this
   is increased significantly as more logs will need to be replayed.
+
+- `snapshot_interval` `(integer: 120 seconds)` - The snapshot interval
+   controls how often Raft checks whether a snapshot operation is
+   required. Raft randomly staggers snapshots between the configured
+   interval and twice the configured interval to keep the entire cluster
+   from performing a snapshot at once. The default snapshot interval is
+   120 seconds.
 
 - `retry_join` `(list: [])` - There can be one or more
   [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
@@ -116,6 +124,11 @@ delay) mode. The maximum allowed value is 10.
   breaking a large value into chunks. By default, the chunk size is the same as
   Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
+  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](https://developer.hashicorp.com/consul/docs/agent/config/config-files#kv_max_value_size) for
+    Vault clusters using a Consul storage backend.  If you are migrating from Consul
+    storage to Raft Integrated Storage,  and have changed this value in Consul from its
+    default to a value larger than the Integrated Storage default of 1MB, then you will 
+    need to make the same change in Vault's Integrated Storage config.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple

@@ -46,26 +46,12 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       unifiedCrl: true,
       unifiedCrlOnExistingPaths: true,
     });
-    this.mountConfig = {
-      id: 'pki-test',
-      engineType: 'pki',
-      path: '/pki-test',
-      accessor: 'pki_33345b0d',
-      local: false,
-      sealWrap: true,
-      config: this.store.createRecord('mount-config', {
-        defaultLease: '12h',
-        maxLeaseTtl: '400h',
-        allowedManagedKeys: true,
-      }),
-    };
   });
 
   test('shows the correct information on cluster config', async function (assert) {
     await render(hbs`<Page::PkiConfigurationDetails @cluster={{this.cluster}} @hasConfig={{true}} />,`, {
       owner: this.engine,
     });
-
     assert
       .dom(SELECTORS.rowValue("Mount's API path"))
       .hasText('https://pr-a.vault.example.com/v1/ns1/pki-root', 'mount API path row renders');
@@ -74,7 +60,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on global urls section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -86,7 +72,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('example.com', 'issuing certificate value renders');
     this.urls.issuingCertificates = null;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert
@@ -102,7 +88,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('shows the correct information on crl section', async function (assert) {
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
 
@@ -122,13 +108,13 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('15m', 'it renders delta build duration');
     assert
       .dom(SELECTORS.rowValue('Responder APIs'))
-      .hasText('Enabled', 'responder apis value renders Enabled if oscp_disable=false');
+      .hasText('Enabled', 'responder apis value renders Enabled if ocsp_disable=false');
     assert.dom(SELECTORS.rowValue('Interval')).hasText('77h', 'interval value renders');
     // check falsy aut_rebuild and _enable_delta hides duration values
     this.crl.autoRebuild = false;
     this.crl.enableDelta = false;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.rowValue('Auto-rebuild')).hasText('Off', 'it renders falsy auto build');
@@ -148,7 +134,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.crl.disable = true;
     this.crl.ocspDisable = true;
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.rowValue('CRL building')).hasText('Disabled', 'disabled renders');
@@ -167,7 +153,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).hasText('Yes');
@@ -182,74 +168,11 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1';
     await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
+      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
     assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Unified CRL')).doesNotExist();
     assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).doesNotExist();
-  });
-
-  test('shows the correct information on mount configuration section', async function (assert) {
-    await render(
-      hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @mountConfig={{this.mountConfig}} @hasConfig={{true}} />,`,
-      { owner: this.engine }
-    );
-
-    assert
-      .dom(SELECTORS.rowLabel('Secret engine type'))
-      .hasText('Secret engine type', 'engine type row label renders');
-    assert.dom(SELECTORS.rowValue('Secret engine type')).hasText('pki', 'engine type row value renders');
-    assert.dom(SELECTORS.rowLabel('Path')).hasText('Path', 'path row label renders');
-    assert.dom(SELECTORS.rowValue('Path')).hasText('/pki-test', 'path row value renders');
-    assert.dom(SELECTORS.rowLabel('Accessor')).hasText('Accessor', 'accessor row label renders');
-    assert.dom(SELECTORS.rowValue('Accessor')).hasText('pki_33345b0d', 'accessor row value renders');
-    assert.dom(SELECTORS.rowLabel('Local')).hasText('Local', 'local row label renders');
-    assert.dom(SELECTORS.rowValue('Local')).hasText('No', 'local row value renders');
-    assert.dom(SELECTORS.rowLabel('Seal wrap')).hasText('Seal wrap', 'seal wrap row label renders');
-    assert
-      .dom(SELECTORS.rowValue('Seal wrap'))
-      .hasText('Yes', 'seal wrap row value renders Yes if sealWrap is true');
-    assert.dom(SELECTORS.rowLabel('Max lease TTL')).hasText('Max lease TTL', 'max lease label renders');
-    assert.dom(SELECTORS.rowValue('Max lease TTL')).hasText('400h', 'max lease value renders');
-    assert
-      .dom(SELECTORS.rowLabel('Allowed managed keys'))
-      .hasText('Allowed managed keys', 'allowed managed keys label renders');
-    assert
-      .dom(SELECTORS.rowValue('Allowed managed keys'))
-      .hasText('Yes', 'allowed managed keys value renders');
-  });
-
-  test('shows mount configuration when hasConfig is false', async function (assert) {
-    this.urls = 403;
-    this.crl = 403;
-
-    await render(
-      hbs`<Page::PkiConfigurationDetails @mountConfig={{this.mountConfig}} @hasConfig={{false}} />,`,
-      { owner: this.engine }
-    );
-
-    assert
-      .dom(SELECTORS.rowLabel('Secret engine type'))
-      .hasText('Secret engine type', 'engine type row label renders');
-    assert.dom(SELECTORS.rowValue('Secret engine type')).hasText('pki', 'engine type row value renders');
-    assert.dom(SELECTORS.rowLabel('Path')).hasText('Path', 'path row label renders');
-    assert.dom(SELECTORS.rowValue('Path')).hasText('/pki-test', 'path row value renders');
-    assert.dom(SELECTORS.rowLabel('Accessor')).hasText('Accessor', 'accessor row label renders');
-    assert.dom(SELECTORS.rowValue('Accessor')).hasText('pki_33345b0d', 'accessor row value renders');
-    assert.dom(SELECTORS.rowLabel('Local')).hasText('Local', 'local row label renders');
-    assert.dom(SELECTORS.rowValue('Local')).hasText('No', 'local row value renders');
-    assert.dom(SELECTORS.rowLabel('Seal wrap')).hasText('Seal wrap', 'seal wrap row label renders');
-    assert
-      .dom(SELECTORS.rowValue('Seal wrap'))
-      .hasText('Yes', 'seal wrap row value renders Yes if sealWrap is true');
-    assert.dom(SELECTORS.rowLabel('Max lease TTL')).hasText('Max lease TTL', 'max lease label renders');
-    assert.dom(SELECTORS.rowValue('Max lease TTL')).hasText('400h', 'max lease value renders');
-    assert
-      .dom(SELECTORS.rowLabel('Allowed managed keys'))
-      .hasText('Allowed managed keys', 'allowed managed keys label renders');
-    assert
-      .dom(SELECTORS.rowValue('Allowed managed keys'))
-      .hasText('Yes', 'allowed managed keys value renders');
   });
 });

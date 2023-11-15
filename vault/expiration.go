@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -114,7 +115,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock locking.DeadlockRWMutex
+	pendingLock locking.RWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -147,7 +148,7 @@ type ExpirationManager struct {
 	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
-	expireFunc          ExpireLeaseStrategy
+	expireFunc          atomic.Pointer[ExpireLeaseStrategy]
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -327,10 +328,12 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
+func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger, detectDeadlocks bool) *ExpirationManager {
 	managerLogger := logger.Named("job-manager")
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
+
+	c.AddLogger(managerLogger)
 
 	exp := &ExpirationManager{
 		core:        c,
@@ -340,6 +343,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		tokenStore:  c.tokenStore,
 		logger:      logger,
 		pending:     sync.Map{},
+		pendingLock: &locking.SyncRWMutex{},
 		nonexpiring: sync.Map{},
 		leaseCount:  0,
 		tidyLock:    new(int32),
@@ -360,11 +364,11 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          e,
 
 		jobManager:      jobManager,
 		revokeRetryBase: c.expirationRevokeRetryBase,
 	}
+	exp.expireFunc.Store(&e)
 	if exp.revokeRetryBase == 0 {
 		exp.revokeRetryBase = revokeRetryBase
 	}
@@ -373,6 +377,11 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	if exp.logger == nil {
 		opts := log.LoggerOptions{Name: "expiration_manager"}
 		exp.logger = log.New(&opts)
+	}
+
+	if detectDeadlocks {
+		managerLogger.Debug("enabling deadlock detection")
+		exp.pendingLock = &locking.DeadlockRWMutex{}
 	}
 
 	go exp.uniquePoliciesGc()
@@ -390,7 +399,10 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
-	mgr := NewExpirationManager(c, view, e, expLogger)
+	c.AddLogger(expLogger)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "expiration")
+	mgr := NewExpirationManager(c, view, e, expLogger, detectDeadlocks)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -545,6 +557,7 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
+	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")
@@ -846,6 +859,8 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	return nil
 }
 
+func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {}
+
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
@@ -860,26 +875,23 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	// Replacing the entire map would cause a race with
-	// a simultaneous WalkTokens, which doesn't hold pendingLock.
-	m.pending.Range(func(key, value interface{}) bool {
-		info := value.(pendingInfo)
-		info.timer.Stop()
-		m.pending.Delete(key)
-		return true
-	})
+	// We don't want any lease timers that fire to do anything; they can wait
+	// for the next ExpirationManager to handle them.
+	newStrategy := ExpireLeaseStrategy(expireNoop)
+	m.expireFunc.Store(&newStrategy)
+	oldPending := &m.pending
+	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
-	m.nonexpiring.Range(func(key, value interface{}) bool {
-		m.nonexpiring.Delete(key)
-		return true
-	})
 	m.uniquePolicies = make(map[string][]string)
-	m.irrevocable.Range(func(key, _ interface{}) bool {
-		m.irrevocable.Delete(key)
-		return true
-	})
 	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
+
+	go oldPending.Range(func(key, value interface{}) bool {
+		info := value.(pendingInfo)
+		// We need to stop the timers to prevent memory leaks.
+		info.timer.Stop()
+		return true
+	})
 
 	if m.inRestoreMode() {
 		for {
@@ -1881,7 +1893,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseID, namespace := le.LeaseID, le.namespace
 			// Extend the timer by the lease total
 			timer := time.AfterFunc(leaseTotal, func() {
-				m.expireFunc(m.quitContext, m, leaseID, namespace)
+				expFn := *m.expireFunc.Load() // Load and deref the pointer
+				expFn(m.quitContext, m, leaseID, namespace)
 			})
 			pending = pendingInfo{
 				timer: timer,
@@ -2471,8 +2484,13 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 		return true
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2495,8 +2513,13 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 		return walkFn(key.(string), expireTime)
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2810,4 +2833,11 @@ func (le *leaseEntry) isIncorrectlyNonExpiring() bool {
 func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
 	return out, jsonutil.DecodeJSON(buf, out)
+}
+
+func (e *ExpirationManager) DetectDeadlocks() bool {
+	if _, ok := e.pendingLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

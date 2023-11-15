@@ -5,13 +5,10 @@
 
 import ApplicationSerializer from '../application';
 
-export default class KubernetesConfigSerializer extends ApplicationSerializer {
+export default class KubernetesRoleSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
-  serialize() {
-    const json = super.serialize(...arguments);
-    // remove backend value from payload
-    delete json.backend;
-    return json;
-  }
+  attrs = {
+    backend: { serialize: false },
+  };
 }

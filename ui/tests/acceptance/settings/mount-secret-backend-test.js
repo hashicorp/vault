@@ -15,10 +15,13 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // allEngines() includes enterprise engines, those are tested elsewhere
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 const consoleComponent = create(consoleClass);
 
+// enterprise backends are tested separately
+const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
 module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -42,7 +45,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
@@ -67,7 +69,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
     await page
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()
@@ -88,7 +89,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('pki');
-    await page.next();
     assert.dom('[data-test-input="maxLeaseTtl"]').exists();
     assert
       .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
@@ -99,7 +99,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // Go back and choose a different type
     await page.back();
     await page.selectType('database');
-    await page.next();
     assert.dom('[data-test-input="maxLeaseTtl"]').exists('3650');
     assert
       .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
@@ -121,19 +120,19 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
-    await page.next().path(path).submit();
+    await page.path(path).submit();
     await page.secretList();
     await settled();
     await page.enableEngine();
     await page.selectType('kv');
-    await page.next().path(path).submit();
+    await page.path(path).submit();
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
     await page.secretList();
     await settled();
     assert
-      .dom(`[data-test-auth-backend-link=${path}]`)
+      .dom(`[data-test-secrets-backend-link=${path}]`)
       .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
@@ -171,7 +170,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // create the engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets.next().path(enginePath).setMaxVersion(101).submit();
+    await mountSecrets.path(enginePath).setMaxVersion(101).submit();
     await settled();
     assert
       .dom('[data-test-flash-message]')
@@ -180,27 +179,123 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       );
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath}/list`,
+      `/vault/secrets/${enginePath}/kv/list`,
       'After mounting, redirects to secrets list page'
     );
     await configPage.visit({ backend: enginePath });
     await settled();
-    assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
-  test('it should transition to engine route on success if defined in mount config', async function (assert) {
+  test('it should transition to mountable addon engine after mount success', async function (assert) {
+    // test supported backends that ARE ember engines (enterprise only engines are tested individually)
+    const addons = mountableEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
+    assert.expect(addons.length);
+
+    for (const engine of addons) {
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.path(engine.type).submit();
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backend.${engine.engineRoute}`,
+        `Transitions to ${engine.displayName} route on mount success`
+      );
+      await consoleComponent.runCommands([
+        // cleanup after
+        `delete sys/mounts/${engine.type}`,
+      ]);
+    }
+  });
+
+  test('it should transition to mountable non-addon engine after mount success', async function (assert) {
+    // test supported backends that are not ember engines (enterprise only engines are tested individually)
+    const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
+    // add back kv because we want to test v1
+    const engines = mountableEngines().filter((e) => nonEngineBackends.includes(e.type) || e.type === 'kv');
+    assert.expect(engines.length);
+
+    for (const engine of engines) {
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.path(engine.type);
+      if (engine.type === 'kv') {
+        await mountSecrets.toggleOptions().version(1);
+      }
+      await mountSecrets.submit();
+
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backend.list-root`,
+        `${engine.type} navigates to list view`
+      );
+      await consoleComponent.runCommands([
+        // cleanup after
+        `delete sys/mounts/${engine.type}`,
+      ]);
+    }
+  });
+
+  test('it should transition back to backend list for unsupported backends', async function (assert) {
+    const unsupported = mountableEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+    assert.expect(unsupported.length);
+
+    for (const engine of unsupported) {
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.path(engine.type).submit();
+
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backends`,
+        `${engine.type} returns to backends list`
+      );
+    }
+  });
+
+  test('it should transition to different locations for kv v1 and v2', async function (assert) {
+    assert.expect(4);
+    const v2 = 'kv-v2';
     await consoleComponent.runCommands([
       // delete any previous mount with same name
-      `delete sys/mounts/kubernetes`,
+      `delete sys/mounts/${v2}`,
     ]);
     await mountSecrets.visit();
-    await mountSecrets.selectType('kubernetes');
-    await mountSecrets.next().path('kubernetes').submit();
-    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    await mountSecrets.selectType('kv');
+    await mountSecrets.path(v2).submit();
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
-      `vault.cluster.secrets.backend.${engineRoute}`,
-      'Transitions to engine route on mount success'
+      `vault.cluster.secrets.backend.kv.list`,
+      `${v2} navigates to list url`
+    );
+
+    const v1 = 'kv-v1';
+    await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/${v1}`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await mountSecrets.path(v1).toggleOptions().version(1).submit();
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.list-root`,
+      `${v1} navigates to list route`
     );
   });
 });

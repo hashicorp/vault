@@ -5,18 +5,9 @@
 
 <PkiPageHeader @backend={{this.model.parentModel}} />
 
-{{outlet}}
-<Toolbar>
-  {{#if this.model.certificates.length}}
-    <ToolbarFilters>
-      {{! TODO add NavigateInput component }}
-    </ToolbarFilters>
-  {{/if}}
-</Toolbar>
-
-{{#if this.model.hasConfig}}
-  {{#if this.model.certificates.length}}
-    {{#each this.model.certificates as |pkiCertificate|}}
+<PkiPaginatedList @listRoute="certificates.index" @list={{this.model.certificates}} @hasConfig={{this.model.hasConfig}}>
+  <:list as |certs|>
+    {{#each certs as |pkiCertificate|}}
       <LinkedBlock
         class="list-item-row"
         @params={{array "certificates.certificate.details" pkiCertificate.id}}
@@ -43,7 +34,6 @@
                         Details
                       </LinkTo>
                     </li>
-                    {{! ARG TODO ask Ivana if we wnat revoke or maybe download action here? }}
                   </ul>
                 </nav>
               </PopupMenu>
@@ -52,7 +42,8 @@
         </div>
       </LinkedBlock>
     {{/each}}
-  {{else}}
+  </:list>
+  <:empty>
     <EmptyState @title="No certificates yet">
       <div>
         <p>When created, certificates will be listed here. Select a role to start generating certificates.</p>
@@ -63,11 +54,12 @@
         </div>
       </div>
     </EmptyState>
-  {{/if}}
-{{else}}
-  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
-{{/if}}
+  </:empty>
+  <:configure>
+    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+      <LinkTo @route="configuration.create">
+        Configure PKI
+      </LinkTo>
+    </EmptyState>
+  </:configure>
+</PkiPaginatedList>

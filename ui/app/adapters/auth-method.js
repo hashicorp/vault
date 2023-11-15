@@ -68,8 +68,20 @@ export default ApplicationAdapter.extend({
     return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
   },
 
+  pollSAMLToken(path, token_poll_id, client_verifier) {
+    return this.ajax(`/v1/auth/${encodePath(path)}/token`, 'PUT', {
+      data: { token_poll_id, client_verifier },
+    });
+  },
+
   tune(path, data) {
     const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
     return this.ajax(url, 'POST', { data });
+  },
+
+  resetPassword(backend, username, password) {
+    // For userpass auth types only
+    const url = `/v1/auth/${encodePath(backend)}/users/${encodePath(username)}/password`;
+    return this.ajax(url, 'POST', { data: { password } });
   },
 });

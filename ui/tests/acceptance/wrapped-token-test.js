@@ -39,14 +39,22 @@ module('Acceptance | wrapped_token query param functionality', function (hooks) 
     const token = await setupWrapping();
     await auth.visit({ wrapped_token: token });
     await settled();
-    assert.strictEqual(currentURL(), '/vault/secrets', 'authenticates and redirects to home');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/dashboard',
+      'authenticates and redirects to home (dashboard page)'
+    );
   });
 
   test('it authenticates when used with the with=token query param', async function (assert) {
     const token = await setupWrapping();
     await auth.visit({ wrapped_token: token, with: 'token' });
     await settled();
-    assert.strictEqual(currentURL(), '/vault/secrets', 'authenticates and redirects to home');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/dashboard',
+      'authenticates and redirects to home (dashboard page)'
+    );
   });
 
   test('it should authenticate when hitting logout url with wrapped_token when logged out', async function (assert) {
@@ -55,6 +63,10 @@ module('Acceptance | wrapped_token query param functionality', function (hooks) 
     });
 
     await visit(`/vault/logout?wrapped_token=1234`);
-    assert.strictEqual(currentURL(), '/vault/secrets', 'authenticates and redirects to home');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/dashboard',
+      'authenticates and redirects to home (dashboard page)'
+    );
   });
 });

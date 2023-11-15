@@ -101,8 +101,12 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	Persist      *agentproxyshared.PersistConfig `hcl:"persist"`
-	InProcDialer transportDialer                 `hcl:"-"`
+	Persist                                       *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer                                  transportDialer                 `hcl:"-"`
+	CacheStaticSecrets                            bool                            `hcl:"cache_static_secrets"`
+	DisableCachingDynamicSecrets                  bool                            `hcl:"disable_caching_dynamic_secrets"`
+	StaticSecretTokenCapabilityRefreshIntervalRaw interface{}                     `hcl:"static_secret_token_capability_refresh_interval"`
+	StaticSecretTokenCapabilityRefreshInterval    time.Duration                   `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -246,10 +250,19 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.AutoAuth != nil {
+		cacheStaticSecrets := c.Cache != nil && c.Cache.CacheStaticSecrets
 		if len(c.AutoAuth.Sinks) == 0 &&
-			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) {
-			return fmt.Errorf("auto_auth requires at least one sink or api_proxy.use_auto_auth_token=true")
+			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) && !cacheStaticSecrets {
+			return fmt.Errorf("auto_auth requires at least one sink, api_proxy.use_auto_auth_token=true, or cache.cache_static_secrets=true")
 		}
+	}
+
+	if c.Cache != nil && c.Cache.CacheStaticSecrets && c.AutoAuth == nil {
+		return fmt.Errorf("cache.cache_static_secrets=true requires an auto-auth block configured, to use the token to connect with Vault's event system")
+	}
+
+	if c.Cache != nil && !c.Cache.CacheStaticSecrets && c.Cache.DisableCachingDynamicSecrets {
+		return fmt.Errorf("to enable the cache, the cache must be configured to either cache static secrets or dynamic secrets")
 	}
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
@@ -613,6 +626,14 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 	subList := subs.List
 	if err := parsePersist(result, subList); err != nil {
 		return fmt.Errorf("error parsing persist: %w", err)
+	}
+
+	if result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw != nil {
+		var err error
+		if result.Cache.StaticSecretTokenCapabilityRefreshInterval, err = parseutil.ParseDurationSecond(result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw); err != nil {
+			return fmt.Errorf("error parsing static_secret_token_capability_refresh_interval, must be provided as a duration string: %w", err)
+		}
+		result.Cache.StaticSecretTokenCapabilityRefreshIntervalRaw = nil
 	}
 
 	return nil

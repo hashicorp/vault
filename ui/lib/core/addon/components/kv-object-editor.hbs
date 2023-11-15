@@ -21,16 +21,24 @@
       <div class="columns is-variable" data-test-kv-row>
         <div class="column is-one-quarter">
           <Input
-            data-test-kv-key={{true}}
+            data-test-kv-key={{index}}
             @value={{row.name}}
             placeholder={{this.placeholders.key}}
             {{on "change" (fn this.updateRow row index)}}
+            {{on "input" (fn this.validateKey index)}}
             class="input"
           />
         </div>
         <div class="column">
           {{#if (has-block)}}
             {{yield row this.kvData}}
+          {{else if @isMasked}}
+            <MaskedInput
+              data-test-kv-value={{index}}
+              @name={{row.name}}
+              @onChange={{fn this.updateRow row index}}
+              @value={{row.value}}
+            />
           {{else}}
             <Textarea
               data-test-kv-value={{index}}
@@ -47,7 +55,7 @@
         </div>
         <div class="column is-narrow">
           {{#if (eq this.kvData.length (inc index))}}
-            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{true}}>
+            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{index}}>
               Add
             </button>
           {{else}}
@@ -63,6 +71,15 @@
           {{/if}}
         </div>
       </div>
+      {{#if (includes index this.whitespaceWarningRows)}}
+        <div class="has-bottom-margin-s">
+          <AlertInline
+            @type="warning"
+            @message="Key contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+            data-test-kv-whitespace-warning={{index}}
+          />
+        </div>
+      {{/if}}
     {{/each}}
     {{#if this.hasDuplicateKeys}}
       <Hds::Alert data-test-duplicate-keys-warning @type="inline" @color="warning" as |A|>

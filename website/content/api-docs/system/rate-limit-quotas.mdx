@@ -6,6 +6,8 @@ description: The `/sys/quotas/rate-limit` endpoint is used to create, edit and d
 
 # `/sys/quotas/rate-limit`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate limit quotas.
 
 ## Create or update a rate limit quota
@@ -44,6 +46,10 @@ the mount to restrict more specific API paths.
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
   requests to that mount that are made with the specified role. The request will fail if
   the auth mount does not have a concept of roles, or `path` is not an auth mount.
+- `inheritable` `(bool: false)` - If set to `true` on a quota where `path` is set to a namespace,
+  the same quota will be cumulatively applied to all child namespace. The `inheritable`
+  parameter cannot be set to `true` if the `path` does not specify a namespace. Only quotas
+  associated with the root namespace quotas are inheritable by default.
 
 ### Sample payload
 

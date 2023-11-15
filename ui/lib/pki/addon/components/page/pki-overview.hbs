@@ -10,7 +10,9 @@
     @actionText="View issuers"
     @actionTo="issuers"
   >
-    <h2 class="title-number">{{format-number (if (eq @issuers 404) 0 @issuers.length)}}</h2>
+    <Hds::Text::Display @tag="h2" @size="500">
+      {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
+    </Hds::Text::Display>
   </OverviewCard>
   {{#if (not-eq @roles 403)}}
     <OverviewCard
@@ -19,13 +21,15 @@
       @actionText="View roles"
       @actionTo="roles"
     >
-      <h2 class="title-number">{{format-number (if (eq @roles 404) 0 @roles.length)}}</h2>
+      <Hds::Text::Display @tag="h2" @size="500">
+        {{format-number (if (eq @roles 404) 0 @roles.length)}}
+      </Hds::Text::Display>
     </OverviewCard>
   {{/if}}
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -50,7 +54,7 @@
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
     <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -75,7 +79,7 @@
   <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/issuer"}}
         @backend={{@engine.id}}

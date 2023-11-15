@@ -57,6 +57,21 @@ on:
         required: false
         default: false
         type: boolean
+      test-timing-cache-enabled:
+        description: Cache the gotestsum test timing data.
+        required: false
+        default: true
+        type: boolean
+      test-timing-cache-key:
+        description: The cache key to use for gotestsum test timing data.
+        required: false
+        default: go-test-reports
+        type: string
+      checkout-ref:
+        description: The ref to use for checkout.
+        required: false
+        default: ${{ github.ref }}
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -68,6 +83,8 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -106,13 +123,21 @@ jobs:
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
       - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
-      - name: List cached results
-        id: list-cached-results
-        run: ls -lhR test-results/go-test
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
+      - name: Sanitize timing files
+        id: sanitize-timing-files
+        run: |
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
       - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
         if: ${{ !inputs.testonly }}
@@ -196,6 +221,8 @@ jobs:
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -237,6 +264,36 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
       - uses: ./.github/actions/set-up-gotestsum
+      - name: Install gVisor
+        # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
+        if: ${{ !inputs.enterprise }}
+        run: |
+          (
+            set -e
+            ARCH="$(uname -m)"
+            URL="https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}"
+            wget --quiet "${URL}/runsc" "${URL}/runsc.sha512" \
+              "${URL}/containerd-shim-runsc-v1" "${URL}/containerd-shim-runsc-v1.sha512"
+            sha512sum -c runsc.sha512 \
+              -c containerd-shim-runsc-v1.sha512
+            rm -f -- *.sha512
+            chmod a+rx runsc containerd-shim-runsc-v1
+            sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+          )
+          sudo tee /etc/docker/daemon.json <<EOF
+          {
+            "runtimes": {
+              "runsc": {
+                "path": "/usr/local/bin/runsc",
+                "runtimeArgs": [
+                  "--host-uds=all",
+                  "--host-fifo=open"
+                ]
+              }
+            }
+          }
+          EOF
+          sudo systemctl reload docker
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -286,9 +343,16 @@ jobs:
           # shellcheck disable=SC2193 # can get false positive for this comparision
           if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
           then
-           RERUN_FAILS="--rerun-fails"
+            # TODO remove this extra condition once 1.15 is about to released GA
+            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
+            then
+              RERUN_FAILS="--rerun-fails"
+            fi
           fi
 
+          export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
+          mkdir -p $VAULT_TEST_LOG_DIR
+          
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
@@ -396,20 +460,30 @@ jobs:
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
-    if: ${{ ! cancelled() }}
+    if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
           path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
       - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
           path: test-results/go-test
       - run: |
+          rm -rf test-results/go-test/logs
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
+
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+
           ls -lhR test-results/go-test

@@ -52,12 +52,14 @@
     {{/if}}
     <div class="box is-marginless is-shadowless">
       <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
-      <div class="has-bottom-margin-s">
-        <p class="is-label">{{this.selectedAuthBackend.path}}</p>
-        <span class="description has-text-grey" data-test-description={{true}}>
-          {{this.selectedAuthBackend.mountDescription}}
-        </span>
-      </div>
+      {{#if this.selectedAuthBackend.path}}
+        <div class="has-bottom-margin-s">
+          <p class="is-label">{{this.selectedAuthBackend.path}}</p>
+          <span class="description has-text-grey" data-test-description={{true}}>
+            {{this.selectedAuthBackend.mountDescription}}
+          </span>
+        </div>
+      {{/if}}
       {{#if (or (not this.hasMethodsWithPath) (not this.selectedAuthIsPath))}}
         <Select
           @label="Method"
@@ -89,6 +91,25 @@
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         </AuthJwt>
+      {{else if (eq this.selectedAuthBackend.type "saml")}}
+        <AuthSaml
+          @onError={{action "handleError"}}
+          @onLoading={{action (mut this.isLoading)}}
+          @namespace={{this.namespace}}
+          @onNamespace={{action (mut this.namespace)}}
+          @onSubmit={{action "doSubmit"}}
+          @onRoleName={{action (mut this.roleName)}}
+          @roleName={{this.roleName}}
+          @selectedAuthType={{this.selectedAuthBackend.type}}
+          @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
+          @disabled={{or this.authenticate.isRunning this.isLoading}}
+        >
+          <AuthFormOptions
+            @customPath={{this.customPath}}
+            @onPathChange={{action (mut this.customPath)}}
+            @selectedAuthIsPath={{this.selectedAuthIsPath}}
+          />
+        </AuthSaml>
       {{else}}
         <form id="auth-form" onsubmit={{action "doSubmit" null}}>
           {{#if (eq this.providerName "github")}}
@@ -160,15 +181,14 @@
               @selectedAuthIsPath={{this.selectedAuthIsPath}}
             />
           {{/if}}
-          <button
+          <Hds::Button
+            @text="Sign in"
+            @icon={{if this.authenticate.isRunning "loading"}}
             data-test-auth-submit={{true}}
             type="submit"
             disabled={{this.authenticate.isRunning}}
-            class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}"
             id="auth-submit"
-          >
-            Sign In
-          </button>
+          />
           {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
             <AlertInline
               @paddingTop={{true}}

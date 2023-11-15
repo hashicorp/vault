@@ -27,7 +27,7 @@
   }
 
   .menu {
-    padding: $size-11 0;
+    padding: $spacing-4 0;
   }
 
   button.link,
@@ -42,7 +42,7 @@
     height: auto;
     font-size: $size-7;
     font-weight: $font-weight-semibold;
-    padding: $size-9 $size-8;
+    padding: $spacing-10 $spacing-12;
     text-align: left;
     text-decoration: none;
     width: 100%;
@@ -83,6 +83,10 @@
         cursor: default;
       }
     }
+    &.loading-dropdown {
+      display: flex;
+      align-items: center;
+    }
   }
 
   .menu-label {
@@ -91,12 +95,12 @@
     font-weight: $font-weight-normal;
     letter-spacing: 0;
     margin: 0;
-    padding: $size-10 $size-8 0;
+    padding: $spacing-8 $spacing-12 0;
     text-transform: uppercase;
   }
 
   .menu-content {
-    padding: $size-10 $size-8;
+    padding: $spacing-8 $spacing-12;
   }
 
   hr {
@@ -107,7 +111,7 @@
 
 .popup-menu-content p {
   box-shadow: none;
-  padding-top: $size-10;
+  padding-top: $spacing-8;
   font-weight: $font-weight-semibold;
 }
 

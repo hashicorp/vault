@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication/dr`
 
-@include 'alerts/enterprise-only.mdx'
-
 ## Check DR status
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
@@ -38,6 +38,8 @@ primary, it will look something like:
   "data": {
     "cluster_id": "d4095d41-3aee-8791-c421-9bc7f88f7c3e",
     "known_secondaries": ["3"],
+    "corrupted_merkle_tree": false,
+    "last_corruption_check_epoch": "1694456090",
     "last_wal": 241,
     "merkle_root": "56794a98e52598f35974024fba6691f047e772e9",
     "mode": "primary",
@@ -84,6 +86,10 @@ secondary, it will look something like:
 
 ## Enable DR primary replication
 
+@include 'alerts/restricted-root.mdx'
+
+@include 'alerts/enterprise-only.mdx'
+
 This endpoint enables DR replication in primary mode. This is used when DR replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
@@ -117,6 +123,10 @@ $ curl \
 
 ## Demote DR primary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint demotes a DR primary cluster to a secondary. This DR secondary cluster
 will not attempt to connect to a primary (see the update-primary call), but will
 maintain knowledge of its cluster ID and can be reconnected to the same
@@ -136,6 +146,10 @@ $ curl \
 ```
 
 ## Disable DR primary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint disables DR replication entirely on the cluster. Any secondaries will
 no longer be able to connect. Caution: re-enabling this node as a primary or
@@ -158,6 +172,10 @@ $ curl \
 ```
 
 ## Generate DR secondary token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint generates a DR secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
@@ -220,6 +238,10 @@ $ curl \
 
 ## Revoke DR secondary token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
 the DR secondary will immediately be disconnected and will not be allowed to
 connect again unless given a new activation token.  This command can be run from any node on the DR primary cluster.
@@ -252,7 +274,9 @@ $ curl \
 
 ## Generate DR secondary public key
 
-(Vault 1.3+)
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint allows generating a public key that is used to encrypt the returned
 credential information (instead of using a response wrapped token). This avoids
@@ -272,6 +296,10 @@ $ curl \
 ```
 
 ## Enable DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint enables replication on a DR secondary using a DR secondary activation
 token.
@@ -320,6 +348,10 @@ $ curl \
 ```
 
 ## Promote DR secondary
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint promotes the DR secondary cluster to DR primary. For data safety and
 security reasons, new secondary tokens will need to be issued to other
@@ -404,6 +436,10 @@ $ curl \
 
 ## Disable DR secondary
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint disables DR replication entirely on the cluster. The cluster will no
 longer be able to connect to the DR primary.
 
@@ -423,7 +459,7 @@ underlying storage.
 
 ```json
 {
-  "dr_operation_token": "...",
+  "dr_operation_token": "..."
 }
 ```
 
@@ -438,12 +474,33 @@ $ curl \
 
 ## Update DR secondary's primary
 
-This endpoint changes a DR secondary cluster's assigned primary cluster using a
-secondary activation token. This does not wipe all data in the cluster.
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The update endpoint changes the primary cluster assigned to a DR
+secondary cluster. Changing the primary cluster assignment does not
+ wipe data in the secondary cluster.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
 docs](#generate-disaster-recovery-operation-token) for more information.
+
+There are two ways to update the primary assignment:
+
+1. **Use a secondary activation token with the `token` parameter**. An
+    activation token is required after a DR failover when updating a newly
+    demoted DR secondary cluster.
+
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
+    During the update, cluster addresses are pinged one at a time via gRPC.
+    The first cluster to respond successfully is assigned as the new primary
+    address. Updating with cluster addresses is not allowed after a DR
+    failover when updating a newly demoted DR secondary cluster.
+
+The two update methods are mutually exclusive. You may use one or the
+other, but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -475,8 +532,7 @@ docs](#generate-disaster-recovery-operation-token) for more information.
   primary clusters. These addresses will be pinged in sequence, and if any of them
   respond successfully, these will be recorded as the new primary addresses. This is
   a lighter weight version of specifying a token and should result in less disruption
-  of replication. Note that it's invalid to specify this and `token` in the same API call.
-  They are mutually exclusive.
+  of replication.
 
 ### Sample payload
 
@@ -497,7 +553,30 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
 ```
 
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "...",
+  "update_primary_addrs": ["10.0.0.2:8201"]
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
+```
+
 ## Generate disaster recovery operation token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 The `/sys/replication/dr/secondary/generate-operation-token` endpoint is used to create a new Disaster
 Recovery operation token for a DR secondary. These tokens are used to authorize
@@ -505,6 +584,8 @@ certain DR Operations. They should be treated like traditional root tokens by
 being generated when needed and deleted soon after.
 
 ## Read generation progress
+
+@include 'alerts/enterprise-only.mdx'
 
 This endpoint reads the configuration and process of the current generation
 attempt.
@@ -542,6 +623,10 @@ token, its fingerprint will be returned. Note that if an OTP is being used to
 encode the final token, it will never be returned.
 
 ## Start token generation
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint initializes a new generation attempt. Only a single
 generation attempt can take place at a time.
@@ -581,6 +666,10 @@ $ curl \
 
 ## Cancel generation
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint cancels any in-progress generation attempt. This clears any
 progress made. This must be called to change the OTP or PGP key being used.
 
@@ -597,6 +686,10 @@ $ curl \
 ```
 
 ## Provide key share to generate token
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint is used to enter a single root key share to progress the
 generation attempt. If the threshold number of root key shares is reached,
@@ -651,6 +744,10 @@ status, and the encoded token, if the attempt is complete.
 
 ## Delete DR operation token
 
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
 This endpoint revokes the DR Operation Token. This token does not have a TTL
 and therefore should be deleted when it is no longer needed.
 
@@ -681,6 +778,10 @@ $ curl \
 ```
 
 ## Reindex Replication
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
 
 This endpoint reindexes the local data storage. This can cause a very long delay
 depending on the number and size of objects in the data store.
@@ -730,5 +831,78 @@ $ curl \
 ```json
 {
   "warnings": ["..."]
+}
+```
+
+## `/sys/replication/dr/secondary/merkle-check`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-root.mdx'
+
+The Merkle check endpoint prints information about the corruption status of the Merkle tree on a DR
+secondary cluster. Check [merkle tree corruption](/vault/api-docs/system/replication#check-merkle-tree-corruption) for more details.
+
+Requests to `/sys/replication/dr/secondary/merkle-check` must provide a DR
+Operation Token as authorization. See the [DR Operation Token API
+docs](#generate-disaster-recovery-operation-token) for more information.
+
+| Method  | Path                                         |
+| :------ | :------------------------------------------- |
+| `POST`  | `/sys/replication/dr/secondary/merkle-check` |
+
+### Parameters
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize the request.
+
+### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/merkle-check
+```
+
+### Sample response
+
+The response provides information about the health of the Merkle composite tree.
+It indicates whether the root of the tree is corrupted and also identifies any
+corruption in the roots of its subtrees, including replicated and local subtrees.
+In the event of corruption within a page or subpage of the tree, it includes the
+page number along with a list of corrupted subpage numbers. The status details
+indicate the extent of corruption within the Merkle tree.
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
 }
 ```

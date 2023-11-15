@@ -171,6 +171,9 @@ This endpoint enables a new secrets engine at the given path.
     unversioned plugin that may have been registered, the latest versioned plugin
     registered, or a built-in plugin in that order of precendence.
 
+  - `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+    that the mount in question is allowed to access.
+
 - `options` `(map<string|string>: nil)` - Specifies mount type specific options
   that are passed to the backend.
 
@@ -243,7 +246,7 @@ simple as increasing the timeout (in the event of timeout errors).
 For recovery situations where the secret was manually removed from the
 secrets backing service, one can force a secrets engine disable in Vault by
 performing a [force revoke](/vault/api-docs/system/leases)
-on the mount prefix, followed by a secrets disable when that completes. 
+on the mount prefix, followed by a secrets disable when that completes.
 If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
 

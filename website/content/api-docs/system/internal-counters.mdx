@@ -9,8 +9,6 @@ description: >-
 
 The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
 
-~> **NOTE**: These endpoints are only available in Vault version 1.3+. Backwards compatibility is not guaranteed. These endpoints are subject to change or may disappear without notice.
-
 ## Entities
 
 This endpoint returns the total number of Entities.
@@ -94,19 +92,19 @@ period, which is represented by the `start_time` and `end_time` parameters.
 
 There are a few things to keep in mind while using this API.
 
-- For Vault versions before 1.11, the activity information only accounts for 
-the activity of the latest contiguous months in the billing period. 
+- For Vault versions before 1.11, the activity information only accounts for
+the activity of the latest contiguous months in the billing period.
 For example, if the billing period is from Jan 2022 to June 2022, and the
 activity subsystem in Vault was not capturing data for the months Jan to March,
-the response will only include information for May and June. Note that if no 
-`start_time` and `end_time` parameters are specified, the billing period defaults 
-to 12 months, so the endpoint will return activity information from the end of the 
-previous month to the start of 12 months prior to that date. 
+the response will only include information for May and June. Note that if no
+`start_time` and `end_time` parameters are specified, the billing period defaults
+to 12 months, so the endpoint will return activity information from the end of the
+previous month to the start of 12 months prior to that date.
 
-- As of 1.11, this behavior has been modified to return all available data within 
+- As of 1.11, this behavior has been modified to return all available data within
 the specified billing period.
 
-- As of 1.12, the `end_time` can be the current month. 
+- As of 1.12, the `end_time` can be the current month.
 
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
@@ -259,10 +257,10 @@ information, it will not be added to the API response.
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
-- Note that if the `end_date` specified is the current month, 
+- Note that if the `end_date` specified is the current month,
 the last element in the `months` response stanza, signifying the current month, will
-not have namespace attribution for the `new_clients` stanza. Furthermore, the 
-`new_clients` counts returned for the current month will be an approximation. 
+not have namespace attribution for the `new_clients` stanza. Furthermore, the
+`new_clients` counts returned for the current month will be an approximation.
 That is to say, the response will appear as follows.
 
 ```json
@@ -270,7 +268,7 @@ That is to say, the response will appear as follows.
    "months":[
       {
          "timestamp":"current_month_timestamp",
-         "counts":{ 
+         "counts":{
             "distinct_entities":"exact int value",
             "entity_clients":"exact int value",
             "non_entity_tokens":"exact int value",
@@ -281,7 +279,7 @@ That is to say, the response will appear as follows.
                {
                   "namespace_id":"root",
                   "namespace_path":"path",
-                  "counts":{ 
+                  "counts":{
                      "distinct_entities":"exact int value",
                      "entity_clients":"exact int value",
                      "non_entity_tokens":"exact int value",
@@ -291,7 +289,7 @@ That is to say, the response will appear as follows.
                   "mounts":[
                      {
                         "path":"auth/up2/",
-                        "counts":{ 
+                        "counts":{
                            "distinct_entities":"exact int value",
                            "entity_clients":"exact int value",
                            "non_entity_tokens":"exact int value",
@@ -320,7 +318,7 @@ That is to say, the response will appear as follows.
 
 Please visit the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
-counted, or for more information about how the new clients for the current month 
+counted, or for more information about how the new clients for the current month
 are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
@@ -330,6 +328,8 @@ queries in the root namespace because the information about the namespace path
 is unknown.
 
 This endpoint was added in Vault 1.6.
+
+@include 'alerts/restricted-root.mdx'
 
 | Method | Path                              |
 | :----- | :-------------------------------- |
@@ -344,7 +344,7 @@ This endpoint was added in Vault 1.6.
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
-   be used to return the client counts for the specified number of namespaces having highest activity. 
+   be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
 - `current_billing_period` `(bool, optional)` - Uses the builtin billing start
   timestamp as `start_time` and the current time as the `end_time`, returning a
@@ -733,6 +733,8 @@ loading of client data has completed.
 
 This endpoint was added in Vault 1.7.
 
+@include 'alerts/restricted-root.mdx'
+
 | Method | Path                                      |
 | :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/monthly` |
@@ -863,6 +865,8 @@ $ curl \
 
 ## Update the client count configuration
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.
 
 | Method | Path                            |
@@ -902,6 +906,10 @@ $ curl \
 ## Read the client count configuration
 
 Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
+
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET` | `/sys/internal/counters/config` |
 
 - `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
 - `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
@@ -956,6 +964,8 @@ information returned by this API will include activity for this month, however
 it may be up to 20 minutes delayed.
 
 This endpoint was added in Vault 1.11.
+
+@include 'alerts/restricted-root.mdx'
 
 | Method | Path                                      |
 | :----- | :---------------------------------------- |

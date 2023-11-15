@@ -1,0 +1,56 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.canLoginSaml}}
+  <form id="auth-form" {{on "submit" (fn this.startSAMLAuth @onSubmit (hash role=@roleName))}}>
+    <div class="field">
+      <label for="role" class="is-label">Role</label>
+      <div class="control">
+        <input
+          value={{@roleName}}
+          placeholder="Default"
+          {{on "input" this.setRole}}
+          autocomplete="off"
+          spellcheck="false"
+          name="role"
+          id="role"
+          class="input"
+          type="text"
+          data-test-role
+        />
+      </div>
+      <AlertInline
+        @sizeSmall={{true}}
+        @paddingTop={{true}}
+        @type="info"
+        @message="Leave blank to sign in with the default role if one is configured."
+      />
+    </div>
+    <div data-test-yield-content>
+      {{yield}}
+    </div>
+    <Hds::Button
+      @text="Sign in with SAML provider"
+      @icon={{if @disabled "loading"}}
+      data-test-auth-submit={{true}}
+      type="submit"
+      disabled={{@disabled}}
+      id="auth-submit"
+    />
+  </form>
+{{else}}
+  <Hds::Alert @type="inline" @color="warning" data-test-saml-auth-not-allowed as |A|>
+    <A.Title>Nonsecure context detected</A.Title>
+    <A.Description>
+      Logging in with a SAML auth method requires a browser in a secure context.
+    </A.Description>
+    <A.Description class="has-top-margin-xs">
+      <ExternalLink @href="https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts">
+        Read more about secure contexts.
+        <Icon @name="external-link" />
+      </ExternalLink>
+    </A.Description>
+  </Hds::Alert>
+{{/if}}

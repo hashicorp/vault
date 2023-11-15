@@ -91,6 +91,8 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
+				// previous rotation attempt was interrupted, so we set the
+				// Priority as highest to be processed immediately
 				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
@@ -215,19 +217,39 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	logger = logger.With("database", role.DBName)
 
-	// If "now" is less than the Item priority, then this item does not need to
-	// be rotated
-	if time.Now().Unix() < item.Priority {
+	input := &setStaticAccountInput{
+		RoleName: roleName,
+		Role:     role,
+	}
+
+	now := time.Now()
+	if !role.StaticAccount.ShouldRotate(item.Priority, now) {
+		if !role.StaticAccount.IsInsideRotationWindow(now) {
+			// We are a schedule-based rotation and we are outside a rotation
+			// window so we update priority and NextVaultRotation
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(now).Unix()
+			role.StaticAccount.SetNextVaultRotation(now)
+			b.logger.Trace("outside schedule-based rotation window, update priority", "next", role.StaticAccount.NextRotationTime())
+
+			// write to storage after updating NextVaultRotation so the next
+			// time this item is checked for rotation our role that we retrieve
+			// from storage reflects that change
+			entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
+			if err != nil {
+				logger.Error("unable to encode entry for storage", "error", err)
+				return false
+			}
+			if err := s.Put(ctx, entry); err != nil {
+				logger.Error("unable to write to storage", "error", err)
+				return false
+			}
+		}
+		// do not rotate now, push item back onto queue to be rotated later
 		if err := b.pushItem(item); err != nil {
 			logger.Error("unable to push item on to queue", "error", err)
 		}
 		// Break out of the for loop
 		return false
-	}
-
-	input := &setStaticAccountInput{
-		RoleName: roleName,
-		Role:     role,
 	}
 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
@@ -264,8 +286,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	}
 
 	// Update priority and push updated Item to the queue
-	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
-	item.Priority = nextRotation.Unix()
+	item.Priority = role.StaticAccount.NextRotationTimeFromInput(lvr).Unix()
+
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
 	}
@@ -490,6 +512,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
+	input.Role.StaticAccount.SetNextVaultRotation(lvr)
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)

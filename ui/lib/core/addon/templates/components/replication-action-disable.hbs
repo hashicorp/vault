@@ -16,14 +16,12 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-danger"
-      onclick={{action (mut this.isModalActive) true}}
-      data-test-replication-action-trigger
-    >
-      Disable Replication
-    </button>
+    <Hds::Button
+      @text="Disable Replication"
+      @color="critical"
+      {{on "click" (action (mut this.isModalActive) true)}}
+      data-test-replication-action-trigger="disable"
+    />
   </div>
 </div>
 

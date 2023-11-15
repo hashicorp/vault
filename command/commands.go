@@ -218,11 +218,7 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
-)
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
-	loginHandlers := map[string]LoginHandler{
+	loginHandlers = map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
@@ -244,7 +240,9 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			DefaultMount: "userpass",
 		},
 	}
+)
 
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:          ui,
@@ -484,6 +482,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator raft snapshot inspect": func() (cli.Command, error) {
+			return &OperatorRaftSnapshotInspectCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator raft snapshot restore": func() (cli.Command, error) {
 			return &OperatorRaftSnapshotRestoreCommand{
 				BaseCommand: getBaseCommand(),
@@ -601,6 +604,31 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 		"plugin reload-status": func() (cli.Command, error) {
 			return &PluginReloadStatusCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime": func() (cli.Command, error) {
+			return &PluginRuntimeCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime register": func() (cli.Command, error) {
+			return &PluginRuntimeRegisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime deregister": func() (cli.Command, error) {
+			return &PluginRuntimeDeregisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime info": func() (cli.Command, error) {
+			return &PluginRuntimeInfoCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin runtime list": func() (cli.Command, error) {
+			return &PluginRuntimeListCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -881,7 +909,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	return commands
 }
 

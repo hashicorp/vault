@@ -68,86 +68,31 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary">
-        Create datakey
-      </button>
+      <Hds::Button @text="Create datakey" type="submit" />
     </div>
   </div>
 </form>
-<Modal @title="Copy your generated key" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-datakey-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your generated key
+    </M.Header>
+    <M.Body>
       {{#if (eq @param "plaintext")}}
-        <h2 class="title is-6">Plaintext</h2>
-        <div class="copy-text level">
-          <code class="level-left">{{@plaintext}}</code>
-          <CopyButton
-            class="button is-compact is-transparent level-right"
-            data-test-button="modal-copy"
-            @clipboardText={{@plaintext}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Plaintext copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
-        </div>
-        <p class="help has-bottom-margin-m">Plaintext is base64 encoded</p>
-        <h2 class="title is-6">Ciphertext</h2>
-        <div class="copy-text level">
-          <code class="level-left">{{@ciphertext}}</code>
-          <CopyButton
-            class="button is-compact is-transparent level-right"
-            data-test-button="modal-copy"
-            @clipboardText={{@ciphertext}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Ciphertext copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
-        </div>
-        <CopyButton
-          class="button is-primary"
-          data-test-button="modal-copy-close"
-          @clipboardText={{@plaintext}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Plaintext copied!")}}
-        >
-          Copy Plaintext
-        </CopyButton>
-        <CopyButton
-          class="button is-primary"
-          data-test-button="modal-copy-close"
-          @clipboardText={{@ciphertext}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Ciphertext copied!")}}
-        >
-          Copy Ciphertext
-        </CopyButton>
-        <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
-      {{else}}
-        <h2 class="title is-6">Ciphertext</h2>
-        <div class="copy-text level">
-          <code class="level-left">{{@ciphertext}}</code>
-          <CopyButton
-            class="button is-compact is-transparent level-right"
-            data-test-button="modal-copy"
-            @clipboardText={{@ciphertext}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Ciphertext copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
-        </div>
-        <CopyButton
-          class="button is-primary copy-close"
-          data-test-button="modal-copy-close"
-          @clipboardText={{@ciphertext}}
-          @buttonType="button"
-          @success={{action @toggleModal "Ciphertext copied!"}}
-        >
-          Copy &amp; Close
-        </CopyButton>
+        <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+        <p class="sub-text">Plaintext is base64 encoded</p>
+        <Hds::Copy::Snippet
+          class="has-bottom-margin-m"
+          @textToCopy={{@plaintext}}
+          @color="secondary"
+          @container="#transit-datakey-modal"
+        />
       {{/if}}
-    </div>
-  </section>
-</Modal>
+      <h2 class="has-text-weight-semibold is-6">Ciphertext</h2>
+      <Hds::Copy::Snippet @textToCopy={{@ciphertext}} @color="secondary" @container="#transit-datakey-modal" />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

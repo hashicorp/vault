@@ -10,10 +10,6 @@
   box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
 }
 
-.has-bottom-shadow {
-  box-shadow: $box-shadow !important;
-}
-
 .is-shadowless {
   box-shadow: none !important;
 }
@@ -34,6 +30,10 @@
 
 .is-borderless {
   border: none !important;
+}
+
+.has-border-collapse {
+  border-collapse: collapse;
 }
 
 // pointer helpers
@@ -61,7 +61,7 @@
 .is-hint {
   color: $grey;
   font-size: $size-8;
-  padding: $size-8 0;
+  padding: $spacing-12 0;
 }
 
 .is-optional {
@@ -85,6 +85,20 @@
   overflow: hidden;
 }
 
+.truncate-first-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.text-overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 // screen reader only
 .sr-only {
   border: 0;
@@ -100,6 +114,11 @@
 }
 
 // border-radius
-.border-radius-2 {
-  border-radius: $radius;
+.border-radius-4 {
+  border-radius: $radius-large;
+}
+
+// border-spacing
+.is-border-spacing-revert {
+  border-spacing: revert;
 }

@@ -85,11 +85,6 @@ access to the root key shares.
 
 ## Auto unseal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this
-reason, the seal provider (HSM or cloud KMS) must be available throughout
-Vault's runtime and not just during the unseal process. Refer to the [Seal
-Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
-
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
 securing the unseal key from users to a trusted device or service. At startup
@@ -174,6 +169,10 @@ operation from the CLI or the matching API calls. The rekey operation is
 authorized by meeting the threshold of recovery keys. After rekeying, the new
 barrier key is wrapped by the HSM or KMS and stored like the previous key; it is not
 returned to the users that submitted their recovery keys.
+
+<EnterpriseAlert product="vault">
+  Seal wrapping requires Vault Enterprise
+</EnterpriseAlert>
 
 #### Recovery key
 
@@ -316,3 +315,81 @@ When the quorum of nodes are back up, Raft will elect a leader and the leader
 node that will perform the migration. The migrated information will be replicated to
 all other cluster peers and when the peers eventually become the leader,
 migration will not happen again on the peer nodes.
+
+## Seal High Availability (Enterprise, Beta)
+
+
+-> **Warning:** This feature is available as a Beta for evaluation and should not 
+be used in production deployments of Vault.
+
+Seal High Availability (Seal HA) allows the configuration of more than one auto 
+seal mechanism such that Vault can tolerate the temporary loss of a seal service 
+or device for a time.  With Seal HA configured with at least two and no more than
+three auto seals, Vault can also start up and unseal if one of the 
+configured seals is still available (though Vault will remain in a degraded mode in 
+this case). While seals are unavailable, seal wrapping and entropy augmentation can 
+still occur using the remaining seals, and values produced while a seal is down will
+be re-wrapped with all the seals when all seals become healthy again.
+
+An operator should choose two seals that are unlikely to become unavailable at the 
+same time.  For example, they may choose KMS keys in two cloud regions, from
+two different providers; or a mix of HSM, KMS, or Transit seals.
+
+When an operator configures an additional seal or removes a seal (one at a time)
+and restarts Vault, Vault will automatically detect that it needs to re-wrap
+CSPs and seal wrapped values, and will start the process.  Seal re-wrapping can
+be monitored via the logs or via the `sys/seal-status` endpoint.  While a 
+re-wrap is in progress (or could not complete successfully), changes to the
+seal configuration are not allowed.
+
+In additional to high availability, Seal HA can be used to migrate between two 
+auto seals in a simplified manner.  To migrate in this way:
+
+1. Edit the Vault configuration, and add the new, target seal configuration.
+1. Restart Vault, allowing re-wrapping to complete.
+1. Edit the Vault configuration, removing the old seal configuration.
+1. Restart Vault, again allowing re-wrapping to complete.
+
+By default, Seal HA is unavailable.  To try the beta, one must set an environment
+variable which enables it:
+
+`VAULT_ENABLE_SEAL_HA_BETA=true`
+
+### Use and Configuration
+
+Refer to the [configuration](/vault/docs/configuration/seal/seal-ha) section
+for details on configuring Seal HA.
+
+### Seal Re-Wrapping
+
+Whenever seal configuration changes, Vault must re-wrap all CSPs and seal
+wrapped values, to ensure each value has an entry encrypted by all configured
+seals.  Vault detects these configuration changes automatically, and triggers
+a re-wrap.  Re-wraps can take some time, depending on the number of
+seal wrapped values.  While re-wrapping is in progress, no configuration changes
+to the seals can be made.
+
+Progress of the re-wrap can be monitored using 
+the [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) endpoint.
+
+### Limitations and Known Issues
+
+As Seal HA is in beta, there are certain restrictions that may not be present in 
+the generally available version of the feature:
+
+* Changing seal configurations requires a restart of Vault.
+* Vault must be configured for a single seal at the time of initialization.
+Extra seals can then be added.
+* Upon upgrading to Vault 1.15 or higher, Vault must start with a
+conventional single seal and the beta flag enabled.  Afterward an additional seal 
+may be added.
+* Seals must be added or removed one at a time.
+* Only auto seals can be used in HA configurations.  Shamir and auto cannot
+be mixed.
+* A maximum of three seals can be configured.
+* As seal wrapped values must be wrapped by all configured seals, it is possible
+that large values may fail to persist as the size of the entry is multiplied by 
+the number of seals causing it to exceed the storage entry size limit.   An example
+would be storing a large document in KVv2 with seal wrapping enabled.
+
+

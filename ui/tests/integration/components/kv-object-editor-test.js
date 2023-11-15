@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, fillIn, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 import { create } from 'ember-cli-page-object';
@@ -22,29 +22,35 @@ module('Integration | Component | kv-object-editor', function (hooks) {
   });
 
   test('it renders with no initial value', async function (assert) {
-    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
     assert.strictEqual(component.rows.length, 1, 'renders a single row');
     await component.addRow();
     assert.strictEqual(component.rows.length, 1, 'will only render row with a blank key');
   });
 
   test('it calls onChange when the val changes', async function (assert) {
-    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
     await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
     assert.strictEqual(this.spy.callCount, 2, 'calls onChange each time change is triggered');
     assert.deepEqual(
       this.spy.lastCall.args[0],
       { foo: 'bar' },
-      'calls onChange with the JSON respresentation of the data'
+      'calls onChange with the JSON representation of the data'
     );
     await component.addRow();
-    assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');
+    await assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');
+    await component.rows.objectAt(1).kvKey('another').kvVal('row');
+    assert.propEqual(
+      this.spy.lastCall.args[0],
+      { foo: 'bar', another: 'row' },
+      'calls onChange with second row of data'
+    );
   });
 
   test('it renders passed data', async function (assert) {
     const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
-    await render(hbs`{{kv-object-editor value=this.value}}`);
+    await render(hbs`<KvObjectEditor @value={{this.value}} />`);
     assert.strictEqual(
       component.rows.length,
       Object.keys(metadata).length + 1,
@@ -53,7 +59,7 @@ module('Integration | Component | kv-object-editor', function (hooks) {
   });
 
   test('it deletes a row', async function (assert) {
-    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
     await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
     await component.addRow();
     assert.strictEqual(component.rows.length, 2);
@@ -68,7 +74,7 @@ module('Integration | Component | kv-object-editor', function (hooks) {
   test('it shows a warning if there are duplicate keys', async function (assert) {
     const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
-    await render(hbs`{{kv-object-editor value=this.value onChange=this.spy}}`);
+    await render(hbs`<KvObjectEditor @value={{this.value}} @onChange={{this.spy}} />`);
     await component.rows.objectAt(0).kvKey('foo');
 
     assert.ok(component.showsDuplicateError, 'duplicate keys are allowed but an error message is shown');
@@ -90,5 +96,18 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     );
     assert.dom('textarea').doesNotExist('Value input hidden when block is provided');
     assert.dom('[data-test-yield]').exists('Component yields block');
+  });
+
+  test('it should display whitespace warning for keys', async function (assert) {
+    await render(hbs`<KvObjectEditor @onChange={{this.spy}} />`);
+    await fillIn('[data-test-kv-key="0"]', 'test ');
+    assert.dom('[data-test-kv-whitespace-warning="0"]').exists();
+    await fillIn('[data-test-kv-key="0"]', 'test');
+    assert.dom('[data-test-kv-whitespace-warning="0"]').doesNotExist();
+    await fillIn('[data-test-kv-key="0"]', 'test ');
+    await click('[data-test-kv-add-row="0"]');
+    assert.dom('[data-test-kv-whitespace-warning="0"]').exists();
+    await click('[data-test-kv-delete-row="0"]');
+    assert.dom('[data-test-kv-whitespace-warning="0"]').doesNotExist();
   });
 });

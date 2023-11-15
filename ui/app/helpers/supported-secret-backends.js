@@ -18,6 +18,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'transform',
   'keymgmt',
   'kubernetes',
+  'ldap',
 ];
 
 export function supportedSecretBackends() {
