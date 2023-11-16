@@ -3,13 +3,22 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Hds::Button
-  data-test-confirm-action-trigger
-  @text={{@buttonText}}
-  @color={{@buttonColor}}
-  {{on "click" (fn (mut this.showConfirmModal) true)}}
-  ...attributes
-/>
+{{#if @isInDropdown}}
+  <Hds::Dropdown::ListItem::Interactive
+    @text={{@buttonText}}
+    @color={{or @buttonColor "critical"}}
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+  />
+{{else}}
+  <Hds::Button
+    data-test-confirm-action-trigger
+    @text={{@buttonText}}
+    @color={{or @buttonColor "critical"}}
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+  />
+{{/if}}
 
 {{#if this.showConfirmModal}}
   <Hds::Modal

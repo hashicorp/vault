@@ -101,17 +101,15 @@
                         </li>
                       {{/if}}
                       {{#if metadata.canDeleteMetadata}}
-                        <li>
-                          <ConfirmAction
-                            @buttonClasses="link is-destroy"
-                            @onConfirmAction={{fn this.onDelete metadata}}
-                            @confirmMessage="This will permanently delete this secret and all its versions."
-                            @cancelButtonText="Cancel"
-                            data-test-delete-metadata={{metadata.path}}
-                          >
-                            Permanently delete
-                          </ConfirmAction>
-                        </li>
+                        <ConfirmAction
+                          class="hds-confirm-action-critical"
+                          @buttonText="Permanently delete"
+                          @buttonColor="critical"
+                          @isInDropdown={{true}}
+                          @onConfirmAction={{fn this.onDelete metadata}}
+                          @confirmMessage="This will permanently delete this secret and all its versions."
+                          data-test-delete-metadata={{metadata.path}}
+                        />
                       {{/if}}
                     {{/if}}
                   </ul>
