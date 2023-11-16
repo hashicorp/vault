@@ -385,3 +385,26 @@ spec:
 
 [pkiCert]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert
 [writeToFile]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#writeToFile
+
+## Auto-auth with IRSA on EKS
+
+You may also use an IRSA service account for auto-auth with Vault Agent.
+
+Using the IAM role created above, and AWS auth enabled at `auth/aws`, setup Vault's auth method accordingly:
+
+```console
+vault write auth/aws/role/dev-role-iam \
+  auth_type=iam \
+  bound_iam_principal_arn="arn:aws:iam::123456789012:role/<NEW_IAM_ROLE_NAME>" \
+  policies=internal-app ttl=24h
+```
+
+Deploy a Kubernetes pod that includes these auth annotations:
+
+```yaml
+  annotations:
+    vault.hashicorp.com/role: "dev-role-iam"
+    vault.hashicorp.com/auth-type: "aws"
+    vault.hashicorp.com/auth-path: "auth/aws"
+    vault.hashicorp.com/auth-config-type: "iam"
+```

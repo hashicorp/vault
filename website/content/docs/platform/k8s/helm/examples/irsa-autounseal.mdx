@@ -1,0 +1,63 @@
+---
+layout: docs
+page_title: Auto-unseal with EKS IRSA
+sidebar_current: 'docs-platform-k8s-examples-irsa-autounseal'
+description: |-
+  Learn how to configure Vault auto-unseal on EKS with IRSA
+---
+
+# Auto-unseal with EKS IRSA
+
+1. Configure your EKS cluster for IRSA as described in (/vault/content/docs/platform/aws/eks-irsa-auth)
+
+  (Including binding an IAM role to a k8s service account <IAM_SERVICEACCOUNT>)
+
+1. To use this with vault-helm, set the service account name and awskms seal config in the chart override values.
+
+  Example `my-values.yaml`:
+
+  ```yaml
+  server:
+    ha:
+      enabled: true
+      raft:
+        config: |
+         ui = false
+
+         listener "tcp" {
+           tls_disable = 1
+           address = "[::]:8200"
+           cluster_address = "[::]:8201"
+         }
+
+         storage "raft" {
+           path    = "/vault/data"
+         }
+
+         service_registration "kubernetes" {}
+
+         seal "awskms" {
+           region     = "us-west-2"
+           kms_key_id = "alias/my-vault-key"
+         }
+
+       enabled: true
+       setNodeId: true
+
+   serviceAccount:
+     ## the service account was already created by terraform
+     ## or the `eksctl create iamserviceaccount` command
+     create: false
+     name: <IAM_SERVICEACCOUNT>
+  ```
+
+1. Install the chart and proceed with `init` and `raft join`:
+
+  ```console
+  helm install vault hashicorp/vault -f my-values.yaml
+
+  kubectl exec -ti vault-0 -- vault operator init
+  kubectl exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+  kubectl exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
+  ...
+  ```
