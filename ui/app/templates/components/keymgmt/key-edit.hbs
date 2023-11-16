@@ -76,7 +76,8 @@
         {{#if @model.provider}}
           <ConfirmAction
             @buttonText="Remove key"
-            @buttonClasses="toolbar-link"
+            class="toolbar-button"
+            @buttonColor="secondary"
             @onConfirmAction={{perform this.removeKey}}
             @confirmTitle="Remove this key?"
             @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
@@ -90,7 +91,9 @@
         {{/if}}
         <ConfirmAction
           @buttonText="Rotate key"
-          @buttonClasses="toolbar-link"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @modalColor="warning"
           @onConfirmAction={{perform this.rotateKey}}
           @confirmTitle="Rotate this key?"
           @confirmMessage="After rotation, all key actions will default to using the newest version of the key."

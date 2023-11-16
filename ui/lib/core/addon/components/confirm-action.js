@@ -28,7 +28,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
  * @param {String} buttonText - Text for the button that triggers modal to open.
  * @param {String} [buttonColor] - Color of button that triggers modal. Default is primary, other options are secondary, tertiary, and critical
- * @param {String} [modalColor=critical] - Modal banner theme, styles modal confirm button and banner color
+ * @param {String} [modalColor=critical] - Styles modal color, if 'critical' confirm button is styled as well. Possible values: critical, warning or neutral
  * @param {String} [confirmButtonText=Confirm] - Text for button inside modal that confirms the action
  * @param {Boolean} [isRunning] - Disables the confirm button if action is still running
  * @param {Boolean} [disabled] - Disables the modal's confirm button.
