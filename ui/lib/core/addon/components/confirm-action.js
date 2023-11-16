@@ -34,6 +34,8 @@ import { tracked } from '@glimmer/tracking';
     @confirmTitle="Delete item?"
     @onConfirmAction={{log "my action!"}}
     @confirmMessage="Are you sure you want to delete this config?"
+    @isRunning={{this.rotateKey.isRunning}}
+    @disabledMessage={{if true "A secondary ID is required perform revocation."}}
    />
  * ```
  *
@@ -44,8 +46,8 @@ import { tracked } from '@glimmer/tracking';
  * @param {String} buttonText - Text for the button that toggles modal to open.
  * @param {String} [buttonColor] - Color of button that toggles modal. Default is primary, other options are secondary, tertiary, and critical (recommended for dropdowns)
  * @param {String} [modalColor=critical] - Styles modal color, if 'critical' confirm button is also 'critical'. Possible values: critical, warning or neutral
- * @param {Boolean} [isRunning] - Disables the confirm button if action is still running
- * @param {Boolean} [disabled] - Disables the modal's confirm button.
+ * @param {Boolean} [isRunning] - Disables the modal confirm button - usually a concurrency task that informs the modal if a process is still running
+ * @param {String} [disabledMessage] - A message explaining why the confirm action is not allowed, usually combined with a conditional that returns a string if true 
  *
  */
 

@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, triggerEvent, settled, fillIn } from '@ember/test-helpers';
+import { click, settled, fillIn } from '@ember/test-helpers';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -104,16 +104,21 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom('[data-test-secret-link]').exists({ count: 2 }, 'Keys list renders');
 
     await changeTab('details');
-    assert.dom(`[${ts}-delete] button`).isDisabled('Delete action disabled when keys exist');
-    await triggerEvent(`[data-test-tooltip-trigger]`, 'mouseenter');
-    assert.dom(`[${ts}-delete-tooltip]`).exists('Tooltip is show when delete action is disabled');
-
+    await click(`[${ts}-delete]`);
+    assert.dom('[data-test-confirm-button]').isDisabled('Confirm button is disabled when keys exist');
+    assert
+      .dom('[data-test-disabled-message]')
+      .hasText(
+        'This provider cannot be deleted until all 2 key(s) distributed to it are revoked. This can be done from the Keys tab.',
+        'Renders disabled message'
+      );
+    await click('[data-test-confirm-cancel-button]');
     this.model.keys = [];
     await settled();
     assert
       .dom('[data-test-value-div="Keys"]')
       .hasText('None', 'None is displayed when no keys exist for provider');
-    await click(`[${ts}-delete] button`);
+    await click(`[${ts}-delete]`);
     await click('[data-test-confirm-button]');
   });
 

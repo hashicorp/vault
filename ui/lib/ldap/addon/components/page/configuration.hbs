@@ -14,7 +14,7 @@
         @confirmTitle="Rotate root?"
         @confirmMessage="After rotation, Vault will generate a new root password in your directory server."
         @modalColor="warning"
-        @disabled={{this.rotateRoot.isRunning}}
+        @isRunning={{this.rotateRoot.isRunning}}
         data-test-toolbar-rotate-action
       />
     {{/if}}

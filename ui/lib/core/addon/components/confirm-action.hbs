@@ -38,7 +38,7 @@
       <Hds::ButtonSet>
         <Hds::Button
           data-test-confirm-button
-          disabled={{or @disabled @isRunning}}
+          disabled={{or @disabledMessage @isRunning}}
           @icon={{if @isRunning "loading"}}
           @color={{if (eq this.modalColor "critical") "critical" "primary"}}
           @text="Confirm"
@@ -46,6 +46,11 @@
         />
         <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
       </Hds::ButtonSet>
+      {{#if @disabledMessage}}
+        <Hds::Alert data-test-disabled-message class="has-top-margin-xs" @type="compact" as |A|>
+          <A.Description> {{@disabledMessage}} </A.Description>
+        </Hds::Alert>
+      {{/if}}
     </M.Footer>
   </Hds::Modal>
 {{/if}}

@@ -5,28 +5,16 @@
 
 <Toolbar>
   <ToolbarActions>
-    {{#if this.model.canDelete}}
-      <ToolTip @verticalPosition="above" as |T|>
-        <T.Trigger tabindex="-1">
-          <ConfirmAction
-            @buttonText="Delete key"
-            data-test-oidc-key-delete
-            @disabled={{eq this.model.name "default"}}
-            class="toolbar-button"
-            @buttonColor="secondary"
-            @onConfirmAction={{this.delete}}
-            @confirmTitle="Delete key?"
-            @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
-          />
-        </T.Trigger>
-        {{#if (eq this.model.name "default")}}
-          <T.Content @defaultClass="tool-tip smaller-font">
-            <div class="box">
-              This is a built-in key that cannot be deleted.
-            </div>
-          </T.Content>
-        {{/if}}
-      </ToolTip>
+    {{#if (and (not-eq this.model.name "default") this.model.canDelete)}}
+      <ConfirmAction
+        @buttonText="Delete key"
+        data-test-oidc-key-delete
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete key?"
+        @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canRotate}}

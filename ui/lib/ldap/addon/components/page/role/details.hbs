@@ -39,7 +39,7 @@
         @confirmTitle="Rotate credentials?"
         @confirmMessage="When manually rotating credentials, the rotation period will start over."
         @modalColor="warning"
-        @disabled={{this.rotateCredentials.isRunning}}
+        @isRunning={{this.rotateCredentials.isRunning}}
         @onConfirmAction={{perform this.rotateCredentials}}
         data-test-rotate-credentials
       />
