@@ -44,6 +44,7 @@ export default class ConfirmActionComponent extends Component {
       '<ConfirmAction> component expects @onConfirmAction arg to be a function',
       typeof this.args.onConfirmAction === 'function'
     );
+    assert(`@buttonText is required for ConfirmAction components`, this.args.buttonText);
   }
 
   get confirmMessage() {
