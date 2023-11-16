@@ -152,23 +152,16 @@
     </fieldset>
 
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
+          @icon={{if this.saveModel.isRunning "loading"}}
           type="submit"
-          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
-          class="button is-primary"
           data-test-secret-save={{true}}
-        >
-          {{#if this.createDistribution.isRunning}}
-            <span class="loader is-inline-block"></span>
-          {{else}}
-            {{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
-          {{/if}}
-        </button>
-      </div>
-      <div class="control">
+          disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
+        />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onClose}} />
-      </div>
+      </Hds::ButtonSet>
     </div>
   </form>
 {{/if}}
