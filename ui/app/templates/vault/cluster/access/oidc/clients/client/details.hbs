@@ -9,11 +9,11 @@
       <ConfirmAction
         data-test-oidc-client-delete
         @buttonText="Delete application"
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete application?"
         @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
-        @confirmButtonText="Delete"
       />
       <div class="toolbar-separator"></div>
     {{/if}}

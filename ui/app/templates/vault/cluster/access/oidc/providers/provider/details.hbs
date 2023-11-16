@@ -12,11 +12,11 @@
             data-test-oidc-provider-delete
             @buttonText="Delete provider"
             @disabled={{eq this.model.name "default"}}
-            @buttonClasses="toolbar-link"
+            class="toolbar-button"
+            @buttonColor="secondary"
             @onConfirmAction={{this.delete}}
             @confirmTitle="Delete provider?"
             @confirmMessage="This provider will be permanently deleted. You will need to re-create it to use it again."
-            @confirmButtonText="Delete"
           />
         </T.Trigger>
         {{#if (eq this.model.name "default")}}

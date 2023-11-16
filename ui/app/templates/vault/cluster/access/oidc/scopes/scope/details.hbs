@@ -39,11 +39,11 @@
       <ConfirmAction
         data-test-oidc-scope-delete
         @buttonText="Delete scope"
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete scope?"
         @confirmMessage="This scope will be permanently deleted. You will not be able to recover it."
-        @confirmButtonText="Delete"
       />
       <div class="toolbar-separator"></div>
     {{/if}}

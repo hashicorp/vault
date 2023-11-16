@@ -27,12 +27,12 @@
     <ToolbarActions>
       <ConfirmAction
         @buttonText="Revoke lease"
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @confirmTitle="Revoke this?"
-        @confirmMessage={{concat "All leases under this one will also be removed"}}
-        @confirmButtonText="Confirm"
+        @confirmMessage="All leases under this one will also be removed."
         @onConfirmAction={{action "revokeLease" this.model}}
-        data-test-lease-revoke="true"
+        data-test-lease-revoke
       />
     </ToolbarActions>
   </Toolbar>

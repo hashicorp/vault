@@ -31,10 +31,12 @@
     <ToolbarActions>
       {{#if (and (not-eq this.model.id "default") this.capabilities.canDelete)}}
         <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @confirmMessage="This may affect access to Vault data."
+          @buttonText="Delete policy"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @confirmMessage="Deleting this policy may affect access to Vault data."
           @onConfirmAction={{this.deletePolicy}}
-          data-test-policy-delete="true"
+          data-test-policy-delete
         />
         <div class="toolbar-separator"></div>
       {{/if}}
