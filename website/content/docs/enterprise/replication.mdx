@@ -7,14 +7,12 @@ description: >-
   recovery workloads.
 ---
 
-# Vault enterprise replication
+# Vault Enterprise replication
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 ## Overview
-
--> **Note**: All versions of [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-have support for Disaster Recovery replication. Performance Replication requires
-Vault Enterprise Premium.
-
+ 
 Many organizations have infrastructure that spans multiple datacenters. Vault
 provides the critical services of identity management, secrets storage, and
 policy management. This functionality is expected to be highly available and
@@ -86,6 +84,8 @@ secondaries to have a different configuration than their primary.  Tokens and le
 `local` storage entries.
 
 ## Performance replication
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 In Performance Replication, secondaries keep track of their own tokens and leases
 but share the underlying configuration, policies, and supporting secrets (K/V values,

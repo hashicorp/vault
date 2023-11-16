@@ -65,6 +65,10 @@ capabilities, the credentials are fetched automatically.
 - `sts_region` `(string: "")` - Region to override the default region for making
   AWS STS API calls. Should only be set if `sts_endpoint` is set. If so, should
   be set to the region in which the custom `sts_endpoint` resides.
+- `use_sts_region_from_client` `(boolean: false)` - If set, overrides both `sts_endpoint`
+  and `sts_region` to instead use the region specified in the client request headers for
+  IAM-based authentication . This can be useful when you have client requests coming from
+  different regions and want flexibility in which regional STS API is used.
 - `iam_server_id_header_value` `(string: "")` - The value to require in the
   `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
   are used in the iam auth method. If not set, then no value is required or
@@ -123,6 +127,7 @@ $ curl \
     "iam_endpoint": "",
     "sts_endpoint": "",
     "sts_region": "",
+    "use_sts_region_from_client": false,
     "iam_server_id_header_value": ""
   }
 }
@@ -1073,18 +1078,18 @@ for more information on the signature types.
   enabled on either the role or the role tag, the `nonce` holds no significance.
   This is ignored unless using the ec2 auth method.
 - `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the
-  signed request. Currently only POST is supported, but other methods may be
-  supported in the future. This is required when using the iam auth method.
+  signed request. This is required when using the iam auth method.
 - `iam_request_url` `(string: <required-iam>)` - Base64-encoded HTTP URL used in
   the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=`
   (base64-encoding of `https://sts.amazonaws.com/`) as most requests will
-  probably use POST with an empty URI. This is required when using the iam auth
-  method.
+  probably use POST with an empty URI. If using GET method this will contain
+  the authentication headers that have been hoisted out of the message body.
+  This is required when using the iam auth method.
 - `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`, which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
-  required when using the iam auth method.
+  required when using the iam auth method with POST signed requests.
 - `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
   for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
   Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The

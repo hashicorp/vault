@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -32,7 +32,7 @@ export default AuthConfigComponent.extend({
       data.description = this.model.description;
 
       // token_type should not be tuneable for the token auth method.
-      if (this.model.type === 'token') {
+      if (this.model.methodType === 'token') {
         delete data.token_type;
       }
 

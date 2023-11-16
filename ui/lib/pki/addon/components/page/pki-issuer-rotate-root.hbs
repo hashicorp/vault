@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -48,9 +53,9 @@
                   @extension="pem"
                   @fetchData={{fn this.fetchDataForDownload "pem"}}
                   data-test-issuer-download-type="pem"
-                >
-                  PEM format
-                </DownloadButton>
+                  @text="PEM format"
+                  @hideIcon={{true}}
+                />
               </li>
               <li class="action">
                 <DownloadButton
@@ -59,9 +64,9 @@
                   @extension="der"
                   @fetchData={{fn this.fetchDataForDownload "der"}}
                   data-test-issuer-download-type="der"
-                >
-                  DER format
-                </DownloadButton>
+                  @text="DER format"
+                  @hideIcon={{true}}
+                />
               </li>
             </ul>
           </nav>

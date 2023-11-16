@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="auth-form" data-test-mfa-form>
   <div class="box is-marginless is-shadowless">
     <p data-test-mfa-description>
@@ -56,15 +61,14 @@
           <AlertInline @type="danger" @sizeSmall={{true}} @message={{this.codeDelayMessage}} />
         </div>
       {{/if}}
-      <button
+      <Hds::Button
+        @text="Verify"
+        @icon={{if this.validate.isRunning "loading"}}
         id="validate"
         type="submit"
         disabled={{or this.validate.isRunning this.newCodeDelay.isRunning}}
-        class="button is-primary {{if this.validate.isRunning 'is-loading'}}"
         data-test-mfa-validate
-      >
-        Verify
-      </button>
+      />
       {{#if this.newCodeDelay.isRunning}}
         <Icon @name="delay" class="has-text-grey" />
         <span class="has-text-grey is-v-centered" data-test-mfa-countdown>{{this.countdown}}</span>

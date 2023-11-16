@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -216,6 +216,7 @@ data "aws_iam_policy_document" "enos_scenario" {
       "kms:ListKeys",
       "kms:ListResourceTags",
       "kms:ScheduleKeyDeletion",
+      "kms:TagResource",
       "servicequotas:ListServiceQuotas"
     ]
 

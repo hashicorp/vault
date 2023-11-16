@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="level is-mobile">
   <div class="level-left">
-    <label class="is-label" data-test-pgp-label>
+    <label class="has-text-weight-bold" data-test-pgp-label>
       {{#if this.label}}
         {{this.label}}
       {{else}}
@@ -16,11 +21,11 @@
         id={{concat "useText-" this.elementId}}
         type="checkbox"
         name={{concat "useText-" this.elementId}}
-        class="switch is-rounded is-success is-small"
+        class="toggle is-success is-small"
         checked={{this.key.enterAsText}}
         onchange={{action (toggle "enterAsText" this.key)}}
       />
-      <label for={{concat "useText-" this.elementId}}>
+      <label for={{concat "useText-" this.elementId}} class="has-text-weight-bold is-size-8">
         Enter as text
       </label>
     </div>
@@ -65,9 +70,15 @@
               {{/if}}
             </label>
             {{#if this.key.filename}}
-              <button type="button" class="file-delete-button" {{action "clearKey"}} data-test-pgp-clear={{true}}>
-                <Icon @name="x" aria-label="Close" />
-              </button>
+              <Hds::Button
+                @text="Clear key"
+                @icon="x"
+                @isIconOnly={{true}}
+                @color="secondary"
+                class="file-delete-button"
+                {{on "click" (action "clearKey")}}
+                data-test-pgp-clear={{true}}
+              />
             {{/if}}
           </span>
         </div>

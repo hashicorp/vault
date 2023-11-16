@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -17,11 +17,11 @@ import (
 	"github.com/hashicorp/vault/version"
 )
 
-func handleSysHealth(core *vault.Core) http.Handler {
+func handleSysHealth(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysHealthGet(core, w, r)
+			handleSysHealthGet(core, w, r, opt...)
 		case "HEAD":
 			handleSysHealthHead(core, w, r)
 		default:
@@ -43,7 +43,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 	return statusCode, false, true
 }
 
-func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
@@ -54,6 +54,16 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	if body == nil {
 		respondError(w, code, nil)
 		return
+	}
+
+	opts, err := getOpts(opt...)
+
+	if opts.withRedactVersion {
+		body.Version = opts.withRedactionValue
+	}
+
+	if opts.withRedactClusterName {
+		body.ClusterName = opts.withRedactionValue
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -198,7 +208,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ClusterID:                  clusterID,
 	}
 
-	licenseState, err := vault.LicenseSummary(core)
+	licenseState, err := core.EntGetLicenseState()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
 	}
@@ -214,7 +224,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	}
 
 	if init && !sealed && !standby {
-		body.LastWAL = vault.LastWAL(core)
+		body.LastWAL = core.EntLastWAL()
 	}
 
 	return code, body, nil

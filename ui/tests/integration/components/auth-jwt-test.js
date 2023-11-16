@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
@@ -138,7 +138,7 @@ module('Integration | Component | auth jwt', function (hooks) {
 
     await component.role('okta');
     // 1 for initial render, 1 for each time role changed = 3
-    assert.strictEqual(this.server.handledRequests.length, 4, 'fetches the auth_url when the path changes');
+    assert.strictEqual(this.server.handledRequests.length, 3, 'fetches the auth_url when the path changes');
     assert.strictEqual(
       component.loginButtonText,
       'Sign in with Okta',

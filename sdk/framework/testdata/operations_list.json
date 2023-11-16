@@ -10,7 +10,7 @@
     }
   },
   "paths": {
-    "/foo/{id}": {
+    "/foo/{id}/": {
       "description": "Synopsis",
       "x-vault-sudo": true,
       "x-vault-displayAttrs": {

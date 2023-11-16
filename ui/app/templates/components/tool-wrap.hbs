@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -24,19 +29,10 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton
-        @clipboardText={{@token}}
-        @class="button is-primary"
-        @buttonType="button"
-        @success={{action (set-flash-message "Token copied!")}}
-      >
-        Copy
-      </CopyButton>
+      <Hds::Copy::Button @text="Copy" @textToCopy={{@token}} class="primary" />
     </div>
     <div class="control">
-      <button {{on "click" this.onClear}} type="button" class="button">
-        Back
-      </button>
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
     </div>
   </div>
 {{else}}
@@ -64,9 +60,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary" data-test-tools-submit="true" disabled={{@buttonDisabled}}>
-        Wrap data
-      </button>
+      <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit="true" disabled={{@buttonDisabled}} />
     </div>
   </div>
 {{/if}}

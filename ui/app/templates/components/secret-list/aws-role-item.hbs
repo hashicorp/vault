@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   @params={{array (concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")) @item.id}}
   class="list-item-row"
@@ -24,9 +29,7 @@
             <ul class="menu-list">
               {{#if @item.generatePath.isPending}}
                 <li class="action">
-                  <button disabled type="button" class="link button is-loading is-transparent">
-                    loading
-                  </button>
+                  <LoadingDropdownOption />
                 </li>
               {{else if @item.canGenerate}}
                 <li class="action">
@@ -41,14 +44,10 @@
               {{/if}}
               {{#if @item.updatePath.isPending}}
                 <li class="action">
-                  <button disabled type="button" class="link button is-loading is-transparent">
-                    loading
-                  </button>
+                  <LoadingDropdownOption />
                 </li>
                 <li class="action">
-                  <button disabled type="button" class="link button is-loading is-transparent">
-                    loading
-                  </button>
+                  <LoadingDropdownOption />
                 </li>
               {{else}}
                 {{#if @item.canRead}}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -52,11 +52,10 @@ var (
 	// to complete, unless overridden on a per-handler basis
 	DefaultMaxRequestDuration = 90 * time.Second
 
-	egpDebugLogging bool
+	ErrNoApplicablePolicies    = errors.New("no applicable policies")
+	ErrPolicyNotExistInTypeMap = errors.New("policy does not exist in type map")
 
-	// if this returns an error, the request should be blocked and the error
-	// should be returned to the client
-	enterpriseBlockRequestIfError = blockRequestIfErrorImpl
+	egpDebugLogging bool
 )
 
 // HandlerProperties is used to seed configuration into a vaulthttp.Handler.
@@ -115,36 +114,104 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 			return nil, nil, err
 		}
 
-		policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+		policiesByNS, err := c.filterGroupPoliciesByNS(ctx, tokenNS, groupPolicies)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		// Filter and add the policies to the resultant set
-		for nsID, nsPolicies := range groupPolicies {
-			ns, err := NamespaceByID(ctx, nsID, c)
-			if err != nil {
-				return nil, nil, err
-			}
-			if ns == nil {
-				return nil, nil, namespace.ErrNoNamespace
-			}
-			// If we're only applying policies to namespaces within the same
-			// hierarchy, then skip any policies not found in the same
-			// hierarchy
-			if policyApplicationMode == groupPolicyApplicationModeWithinNamespaceHierarchy {
-				if tokenNS.Path != ns.Path && !ns.HasParent(tokenNS) {
-					continue
-				}
-			}
-			nsPolicies = strutil.RemoveDuplicates(nsPolicies, false)
-			if len(nsPolicies) != 0 {
-				policies[nsID] = append(policies[nsID], nsPolicies...)
-			}
+		for nsID, pss := range policiesByNS {
+			policies[nsID] = append(policies[nsID], pss...)
 		}
 	}
 
 	return entity, policies, err
+}
+
+// filterGroupPoliciesByNS takes a context, token namespace, and a map of
+// namespace IDs to slices of group policy names and returns a similar map,
+// but filtered down to the policies that should apply to the token based on the
+// relationship between the namespace of the token and the namespace of the
+// policy.
+func (c *Core) filterGroupPoliciesByNS(ctx context.Context, tokenNS *namespace.Namespace, groupPolicies map[string][]string) (map[string][]string, error) {
+	policies := make(map[string][]string)
+
+	policyApplicationMode, err := c.GetGroupPolicyApplicationMode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for nsID, nsPolicies := range groupPolicies {
+		filteredPolicies, err := c.getApplicableGroupPolicies(ctx, tokenNS, nsID, nsPolicies, policyApplicationMode)
+		if err != nil && err != ErrNoApplicablePolicies {
+			return nil, err
+		}
+		filteredPolicies = strutil.RemoveDuplicates(filteredPolicies, false)
+		if len(filteredPolicies) != 0 {
+			policies[nsID] = append(policies[nsID], filteredPolicies...)
+		}
+	}
+
+	return policies, nil
+}
+
+// getApplicableGroupPolicies returns a slice of group policies that should
+// apply to the token based on the group policy application mode,
+// and the relationship between the token namespace and the group namespace.
+func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespace.Namespace, nsID string, nsPolicies []string, policyApplicationMode string) ([]string, error) {
+	policyNS, err := NamespaceByID(ctx, nsID, c)
+	if err != nil {
+		return nil, err
+	}
+	if policyNS == nil {
+		return nil, namespace.ErrNoNamespace
+	}
+
+	var filteredPolicies []string
+
+	if tokenNS.Path == policyNS.Path {
+		// Same namespace - add all and continue
+		for _, policyName := range nsPolicies {
+			filteredPolicies = append(filteredPolicies, policyName)
+		}
+		return filteredPolicies, nil
+	}
+
+	for _, policyName := range nsPolicies {
+		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
+			// When we attempt to get a non-EGP policy type, and receive an
+			// explicit error that it doesn't exist (in the type map) we log the
+			// ns/policy and continue without error.
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			continue
+		}
+		if err != nil || t == nil {
+			return nil, fmt.Errorf("failed to look up type of policy: %w", err)
+		}
+
+		switch *t {
+		case PolicyTypeRGP:
+			if tokenNS.HasParent(policyNS) {
+				filteredPolicies = append(filteredPolicies, policyName)
+			}
+		case PolicyTypeACL:
+			if policyApplicationMode != groupPolicyApplicationModeWithinNamespaceHierarchy {
+				// Group policy application mode isn't set to enforce
+				// the namespace hierarchy, so apply all the ACLs,
+				// regardless of their namespaces.
+				filteredPolicies = append(filteredPolicies, policyName)
+				continue
+			}
+			if policyNS.HasParent(tokenNS) {
+				filteredPolicies = append(filteredPolicies, policyName)
+			}
+		default:
+			return nil, fmt.Errorf("unexpected policy type: %v", t)
+		}
+	}
+	if len(filteredPolicies) == 0 {
+		return nil, ErrNoApplicablePolicies
+	}
+	return filteredPolicies, nil
 }
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
@@ -264,6 +331,20 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
+// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock, and also checking that we aren't in the
+// process of shutting down.
+func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	// first check that we aren't shutting down
+	if c.Sealed() {
+		return nil, nil, errors.New("core is sealed")
+	} else if c.activeContext != nil && c.activeContext.Err() != nil {
+		return nil, nil, c.activeContext.Err()
+	}
+	return c.CheckToken(ctx, req, unauth)
+}
+
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
@@ -271,12 +352,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	var te *logical.TokenEntry
 	var entity *identity.Entity
 	var identityPolicies map[string][]string
-	var err error
 
 	// Even if unauth, if a token is provided, there's little reason not to
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
+		var err error
 		acl, te, entity, identityPolicies, err = c.fetchACLTokenEntryAndEntity(ctx, req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
@@ -438,9 +519,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RLock()
 	activityLog := c.activityLog
 	c.activityLogLock.RUnlock()
-	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		if err != nil {
+			return auth, te, err
+		}
 	}
 	return auth, te, nil
 }
@@ -485,6 +569,13 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
+	}
+	requestRole, ok := httpCtx.Value(logical.CtxKeyRequestRole{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
+	}
+	if disable_repl_status, ok := logical.ContextDisableReplicationStatusEndpointsValue(httpCtx); ok {
+		ctx = logical.CreateContextDisableReplicationStatusEndpoints(ctx, disable_repl_status)
 	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
@@ -810,16 +901,16 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		walState.ClusterID = c.ClusterID()
 		if walState.LocalIndex == 0 {
 			if c.perfStandby {
-				walState.LocalIndex = LastRemoteWAL(c)
+				walState.LocalIndex = c.EntLastRemoteWAL()
 			} else {
-				walState.LocalIndex = LastWAL(c)
+				walState.LocalIndex = c.EntLastWAL()
 			}
 		}
 		if walState.ReplicatedIndex == 0 {
 			if c.perfStandby {
-				walState.ReplicatedIndex = LastRemoteUpstreamWAL(c)
+				walState.ReplicatedIndex = c.entLastRemoteUpstreamWAL()
 			} else {
-				walState.ReplicatedIndex = LastRemoteWAL(c)
+				walState.ReplicatedIndex = c.EntLastRemoteWAL()
 			}
 		}
 
@@ -1017,7 +1108,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
@@ -1054,6 +1145,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
+		// Add mount type information to the response
+		if entry != nil {
+			resp.MountType = entry.Type
+		}
 
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -1245,7 +1340,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						Path:        resp.Auth.CreationPath,
 						NamespaceID: ns.ID,
 					}
-					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+
+					// Only logins apply to role based quotas, so we can omit the role here, as we are not logging in.
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, ""); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
 						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1469,9 +1566,16 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// by placing this after the authorization check, we don't leak
 		// information about locked namespaces to unauthenticated clients.
-		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+		if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 			retErr = multierror.Append(retErr, err)
 			return
+		}
+
+		// Check for request role in context to role based quotas
+		var role string
+		reqRole := ctx.Value(logical.CtxKeyRequestRole{})
+		if reqRole != nil {
+			role = reqRole.(string)
 		}
 
 		// The request successfully authenticated itself. Run the quota checks
@@ -1479,7 +1583,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-			Role:          c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx),
+			Role:          role,
 			NamespacePath: ns.Path,
 		})
 
@@ -1580,7 +1684,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		source := c.router.MatchingMount(ctx, req.Path)
 
 		// Login MFA
-		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, true)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
@@ -1671,7 +1775,20 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Data)
+		requiresLease := resp.Auth.TokenType != logical.TokenTypeBatch
+
+		// If role was not already determined by http.rateLimitQuotaWrapping
+		// and a lease will be generated, calculate a role for the leaseEntry.
+		// We can skip this step if there are no pre-existing role-based quotas
+		// for this mount and Vault is configured to skip lease role-based lease counting
+		// until after they're created. This effectively zeroes out the lease count
+		// for new role-based quotas upon creation, rather than counting old leases toward
+		// the total.
+		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
+			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
+		}
+
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
@@ -1713,7 +1830,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	// this check handles the bad login credential case
-	if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
+	if err := c.entBlockRequestIfError(ns.Path, req.Path); err != nil {
 		return nil, nil, multierror.Append(retErr, err)
 	}
 
@@ -1723,9 +1840,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 // LoginCreateToken creates a token as a result of a login request.
 // If MFA is enforced, mfa/validate endpoint calls this functions
 // after successful MFA validation to generate the token.
-func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response, loginRequestData map[string]interface{}) (bool, *logical.Response, error) {
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint, role string, resp *logical.Response) (bool, *logical.Response, error) {
 	auth := resp.Auth
-
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
 	source = strings.ReplaceAll(source, "/", "-")
 
@@ -1785,7 +1901,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	}
 
 	leaseGenerated := false
-	err = registerFunc(ctx, tokenTTL, reqPath, auth, c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx))
+	err = registerFunc(ctx, tokenTTL, reqPath, auth, role)
 	switch {
 	case err == nil:
 		if auth.TokenType != logical.TokenTypeBatch {
@@ -2086,8 +2202,6 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*
 	}
 	return mfaAny, nil
 }
-
-func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.

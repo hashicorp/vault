@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .form-section {
@@ -12,4 +12,13 @@
 .box > .field > .field.form-section.string-list {
   padding: 0;
   box-shadow: none;
+}
+
+// renders below secret data input to display kv v2 diff when editing
+.visual-diff {
+  background-color: black;
+
+  pre {
+    color: $ui-gray-010;
+  }
 }

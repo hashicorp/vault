@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -18,6 +18,10 @@ const CREDENTIAL_TYPES = [
   {
     value: 'federation_token',
     displayName: 'Federation Token',
+  },
+  {
+    value: 'session_token',
+    displayName: 'Session Token',
   },
 ];
 
@@ -47,7 +51,7 @@ export default Model.extend({
     setDefault: true,
     label: 'TTL',
     helpText:
-      'Specifies the TTL for the use of the STS token. Valid only when credential_type is assumed_role or federation_token.',
+      'Specifies the TTL for the use of the STS token. Valid only when credential_type is assumed_role, federation_token, or session_token.',
   }),
   leaseId: attr('string'),
   renewable: attr('boolean'),
@@ -62,6 +66,7 @@ export default Model.extend({
       iam_user: ['credentialType'],
       assumed_role: ['credentialType', 'ttl', 'roleArn'],
       federation_token: ['credentialType', 'ttl'],
+      session_token: ['ttl'],
     };
     if (this.accessKey || this.securityToken) {
       return expandAttributeMeta(this, DISPLAY_FIELDS.slice(0));

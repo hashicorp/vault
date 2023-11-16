@@ -9,6 +9,8 @@ description: |-
 
 # `/sys/storage/raft/autopilot`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot
 with Vault's [Integrated Storage backend](/vault/docs/internals/integrated-storage).
 Refer to the [Integrated Storage Autopilot](/vault/tutorials/raft/raft-autopilot) tutorial to learn how to manage raft clusters using autopilot.
@@ -210,7 +212,8 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 - `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
   a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is `true`.
+  takes effect only when `cleanup_dead_servers` is `true`. This can not be set to a value
+  smaller than 1m.
 
 - `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy.

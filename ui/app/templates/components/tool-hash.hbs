@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -17,19 +22,10 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton
-        @clipboardText={{@sum}}
-        @class="button is-primary"
-        @buttonType="button"
-        @success={{action (set-flash-message "Hashed data copied!")}}
-      >
-        Copy
-      </CopyButton>
+      <Hds::Copy::Button @text="Copy" @textToCopy={{@sum}} class="primary" />
     </div>
     <div class="control">
-      <button {{on "click" this.onClear}} type="button" class="button" data-test-tools-back={{true}}>
-        Back
-      </button>
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} data-test-tools-back={{true}} />
     </div>
   </div>
 {{else}}
@@ -79,9 +75,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary" data-test-tools-submit="true">
-        Hash
-      </button>
+      <Hds::Button @text="Hash" type="submit" data-test-tools-submit="true" />
     </div>
   </div>
 {{/if}}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -9,8 +14,7 @@ import { capitalize } from '@ember/string';
 const renderComponent = () => {
   return render(hbs`
     <Sidebar::Frame @isVisible={{true}}>
-      <div id="modal-wormhole"></div>
-      <Sidebar::Nav::Tools />
+            <Sidebar::Nav::Tools />
     </Sidebar::Frame>
   `);
 };

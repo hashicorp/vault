@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
@@ -32,7 +37,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       </Sidebar::Frame>
     `);
 
-    assert.dom('.link-status').exists('Link status component renders');
+    assert.dom('[data-test-link-status]').exists('Link status component renders');
     assert.dom('[data-test-component="console/ui-panel"]').exists('Console UI panel renders');
     assert.dom('.page-container').exists('Block yields for app content');
   });

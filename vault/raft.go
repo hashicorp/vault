@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -198,6 +198,7 @@ func (c *Core) monitorUndoLogs() error {
 	}
 
 	if persisted {
+		c.EnableUndoLogs()
 		logger.Debug("undo logs are safe, no need to check any more")
 		return nil
 	}
@@ -802,8 +803,8 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		if err != nil {
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
-			switch c.seal.BarrierType() {
-			case wrapping.WrapperTypeShamir:
+			switch c.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -947,8 +948,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType().String() {
-		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+	if sealConfig.Type != c.seal.BarrierSealConfigType().String() {
+		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
 
 	challengeB64, ok := secret.Data["challenge"]
@@ -1056,7 +1057,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !c.isRaftHAOnly() {
 			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
@@ -1079,7 +1080,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !isRaftHAOnly {
 			// Reset the state
 			c.raftInfo.Store((*raftInformation)(nil))
 
@@ -1282,7 +1283,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
+	multiWrapValue := &seal.MultiWrapValue{
+		Generation: sealAccess.Generation(),
+		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
+	}
+	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
@@ -1325,7 +1330,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {

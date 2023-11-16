@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     # We need to specify the provider source in each module until we publish it
@@ -10,7 +13,6 @@ terraform {
 }
 
 variable "ami_id" { default = null }
-variable "awskms_unseal_key_arn" { default = null }
 variable "cluster_name" { default = null }
 variable "cluster_tag_key" { default = null }
 variable "common_tags" { default = null }
@@ -22,6 +24,7 @@ variable "instance_mem_min" { default = null }
 variable "instance_types" { default = null }
 variable "max_price" { default = null }
 variable "project_name" { default = null }
+variable "seal_key_names" { default = null }
 variable "ssh_allow_ips" { default = null }
 variable "ssh_keypair" { default = null }
 variable "vpc_id" { default = null }

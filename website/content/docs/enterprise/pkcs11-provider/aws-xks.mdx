@@ -7,6 +7,8 @@ description: |-
 
 # Vault with AWS KMS external key store (XKS) via PKCS#11 and XKS proxy
 
+@include 'alerts/enterprise-only.mdx'
+
 ~> **Note**: AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) is used in this document as a sample implementation.
 
 Vault's KMIP Secrets Engine can be used as an external key store for the AWS KMS [External Key Store (XKS)](https://aws.amazon.com/blogs/aws/announcing-aws-kms-external-key-store-xks/) protocol using the AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) along

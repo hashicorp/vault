@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -31,9 +36,12 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if (and @model.canRotateRoleCredentials (eq @model.type "static"))}}
-        <button type="button" class="toolbar-link" {{on "click" (fn this.rotateRoleCred @model.id)}}>
-          Rotate credentials
-        </button>
+        <Hds::Button
+          @text="Rotate credentials"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (fn this.rotateRoleCred @model.id)}}
+        />
       {{/if}}
       {{#if
         (or
@@ -41,14 +49,13 @@
           (and (eq @model.type "dynamic") @model.canGenerateCredentials)
         )
       }}
-        <button
-          type="button"
-          class="toolbar-link"
+        <Hds::Button
+          @text={{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
+          @color="secondary"
+          class="toolbar-button"
           {{on "click" (fn this.generateCreds @model.id @model.type)}}
           data-test-database-role-creds={{@model.type}}
-        >
-          {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
-        </button>
+        />
       {{/if}}
       {{#if @model.canEditRole}}
         <ToolbarSecretLink
@@ -117,45 +124,35 @@
         @mode={{@mode}}
         @dbType={{await this.databaseType}}
       />
-
       <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
         <div class="field is-grouped">
-          <div class="control">
-            {{#if (is-empty-value this.warningMessages)}}
-              <button
-                data-test-secret-save
-                type="submit"
-                disabled={{this.loading}}
-                class="button is-primary {{if this.loading 'is-loading'}}"
-              >
-                {{#if (eq @mode "create")}}
-                  Create role
-                {{else}}
-                  Save
-                {{/if}}
-              </button>
-            {{else}}
-              <ToolTip @horizontalPosition="left" as |T|>
-                <T.Trigger>
-                  <button data-test-secret-save type="submit" disabled={{true}} class="button is-primary">
-                    Save
-                  </button>
-                </T.Trigger>
-                <T.Content @defaultClass="tool-tip">
-                  <div class="box">
-                    You don't have permissions required to
-                    {{if (eq @mode "create") "create" "update"}}
-                    this role. See form for details.
-                  </div>
-                </T.Content>
-              </ToolTip>
-            {{/if}}
-          </div>
-          <div class="control">
-            <SecretLink @mode="list" class="button">
-              Cancel
-            </SecretLink>
-          </div>
+          <Hds::ButtonSet>
+            <Hds::Button
+              @text={{if (eq @mode "create") "Create role" "Save"}}
+              @icon={{if this.loading "loading"}}
+              type="submit"
+              disabled={{this.loading}}
+              data-test-secret-save
+            />
+            <Hds::Button
+              @text="Cancel"
+              @color="secondary"
+              @route="vault.cluster.secrets.backend.list-root"
+              @model={{@model.backend}}
+              @query={{hash tab="role"}}
+              data-test-database-role-cancel
+            />
+          </Hds::ButtonSet>
+          {{#if (not (is-empty-value this.warningMessages))}}
+            <Hds::Alert @type="compact" @color="warning" class="has-left-margin-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>
+                You don't have permissions required to
+                {{if (eq @mode "create") "create" "update"}}
+                this role. See form for details.
+              </A.Description>
+            </Hds::Alert>
+          {{/if}}
         </div>
       </div>
     </form>

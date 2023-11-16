@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import AdapterError from '@ember-data/adapter/error';
@@ -15,6 +15,9 @@ export default Component.extend({
   layout,
   flashMessages: service(),
 
+  // internal validations
+  invalidFormAlert: '',
+  modelValidations: null,
   // public API
   model: null,
   successMessage: 'Saved!',
@@ -38,10 +41,25 @@ export default Component.extend({
   // is the case, set this value to true
   callOnSaveAfterRender: false,
 
+  checkModelValidity(model) {
+    if (model.validate) {
+      const { isValid, state, invalidFormMessage } = model.validate();
+      this.set('modelValidations', state);
+      this.set('invalidFormAlert', invalidFormMessage);
+      return isValid;
+    }
+    // no validations on model; return true
+    return true;
+  },
+
   save: task(
     waitFor(function* (model, options = { method: 'save' }) {
       const { method } = options;
       const messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
+      if (method === 'save' && !this.checkModelValidity(model)) {
+        // if saving and model invalid, don't continue
+        return;
+      }
       try {
         yield model[method]();
       } catch (err) {
@@ -66,11 +84,12 @@ export default Component.extend({
   ).drop(),
 
   willDestroy() {
-    this._super(...arguments);
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
     const { model } = this;
-    if (!model) return;
-    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
+    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 });

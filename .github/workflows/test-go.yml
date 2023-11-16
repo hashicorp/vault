@@ -10,9 +10,14 @@ on:
         required: true
         type: string
       total-runners:
-        description: Number of runners to use for executing the tests on.
+        description: Number of runners to use for executing non-binary tests.
         required: true
         type: string
+      binary-tests:
+        description: Whether to run the binary tests.
+        required: false
+        default: false
+        type: boolean
       env-vars:
         description: A map of environment variables as JSON.
         required: false
@@ -47,6 +52,26 @@ on:
         required: false
         default: 60
         type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
+      test-timing-cache-enabled:
+        description: Cache the gotestsum test timing data.
+        required: false
+        default: true
+        type: boolean
+      test-timing-cache-key:
+        description: The cache key to use for gotestsum test timing data.
+        required: false
+        default: go-test-reports
+        type: string
+      checkout-ref:
+        description: The ref to use for checkout.
+        required: false
+        default: ${{ github.ref }}
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -58,10 +83,11 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-          no-restore: true # We don't need the vault Go modules when generating indices
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -94,35 +120,55 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - run: go install gotest.tools/gotestsum@v1.9.0
-
+      - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
-
-      # We use a unique "read-" prefix to guarantee that we're not scribbling on
-      # the aggregated test data in the event of test failure. This key is
-      # unique for every test run and just used to restore the previous
-      # aggregated data. We persist all test data after a successful run and
-      # store that in the go-test-reports- cache.
-      - id: restore-from-cache
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
-          key: read-go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
-      - name: List cached results
-        id: list-cached-results
-        run: ls -lhR test-results/go-test
-      - name: Build matrix excluding binary tests
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
+      - name: Sanitize timing files
+        id: sanitize-timing-files
+        run: |
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+      - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
+        if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            go list ./... | grep -v "_binary" | gotestsum tool ci-matrix --debug \
-              --partitions 16 \
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          # enable glob expansion
+          shopt -s nullglob
+          # testonly tagged tests need an additional tag to be included
+          # also running some extra tests for sanity checking with the testonly build tag
+          (
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+          # disable glob expansion
+          shopt -u nullglob
       - name: Capture list of binary tests
+        if: inputs.binary-tests
         id: list-binary-tests
         run: |
           LIST="$(go list ./... | grep "_binary" | xargs)"
@@ -131,34 +177,52 @@ jobs:
         id: build
         run: |
             set -exo pipefail
-            export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
-            (
-              echo -n "matrix="
-              jq -c --arg BINARY "${BINARY_TESTS}" \
+            matrix_file="matrix.json"
+            if [ "${{ inputs.binary-tests}}" == "true" ] && [ -n "${{ steps.list-binary-tests.outputs.list }}" ]; then
+              export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+              jq --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
                 '.include += [{
-                  "id": 16,
+                  "id": $BINARY_INDEX,
                   "estimatedRuntime": "N/A",
                   "packages": $BINARY,
-                  "description": "partition 16 - binary test packages"
-              }]' matrix.json
+                  "description": "partition $BINARY_INDEX - binary test packages"
+              }]' matrix.json > new-matrix.json
+              matrix_file="new-matrix.json"
+            fi
+            # convert the json to a map keyed by id
+            (
+              echo -n "matrix="
+                jq -c \
+                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file"
+            ) >> "$GITHUB_OUTPUT"
+            # extract an array of ids from the json
+            (
+              echo -n "matrix_ids="
+              jq -c \
+                '[ .include[].id | tostring ]' "$matrix_file"
             ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }}
 
   test-go:
     needs: test-matrix
     permissions:
-      id-token: write  # Note: this permission is explicitly required for Vault auth
+      actions: read
       contents: read
+      id-token: write  # Note: this permission is explicitly required for Vault auth
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix) }}
+      matrix:
+        id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -195,10 +259,41 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: contains(matrix.packages, '_binary')
+        if: inputs.binary-tests && matrix.id == inputs.total-runners
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
+      - uses: ./.github/actions/set-up-gotestsum
+      - name: Install gVisor
+        # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
+        if: ${{ !inputs.enterprise }}
+        run: |
+          (
+            set -e
+            ARCH="$(uname -m)"
+            URL="https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}"
+            wget --quiet "${URL}/runsc" "${URL}/runsc.sha512" \
+              "${URL}/containerd-shim-runsc-v1" "${URL}/containerd-shim-runsc-v1.sha512"
+            sha512sum -c runsc.sha512 \
+              -c containerd-shim-runsc-v1.sha512
+            rm -f -- *.sha512
+            chmod a+rx runsc containerd-shim-runsc-v1
+            sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+          )
+          sudo tee /etc/docker/daemon.json <<EOF
+          {
+            "runtimes": {
+              "runsc": {
+                "path": "/usr/local/bin/runsc",
+                "runtimeArgs": [
+                  "--host-uds=all",
+                  "--host-fifo=open"
+                ]
+              }
+            }
+          }
+          EOF
+          sudo systemctl reload docker
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -210,6 +305,12 @@ jobs:
           # Build the dynamically generated source files.
           make prep
 
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+
+          if [ -z "$packages" ]; then
+            echo "no test packages to run"
+            exit 1
+          fi
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
@@ -238,18 +339,33 @@ jobs:
             export VAULT_BINARY
           fi
 
-          # shellcheck disable=SC2086 # can't quote package list
+          # On a release branch, add a flag to rerun failed tests
+          # shellcheck disable=SC2193 # can get false positive for this comparision
+          if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
+          then
+            # TODO remove this extra condition once 1.15 is about to released GA
+            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
+            then
+              RERUN_FAILS="--rerun-fails"
+            fi
+          fi
+
+          export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
+          mkdir -p $VAULT_TEST_LOG_DIR
+          
+          # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
-            go run gotest.tools/gotestsum --format=short-verbose \
+            gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
+              $RERUN_FAILS \
+              --packages "$packages" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-              ${{ matrix.packages }}
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && (success() || failure())
         continue-on-error: true
@@ -279,40 +395,53 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         with:
-          retries: 10
+          retries: 3
           script: |
-            const fs = require("fs");
-            const result = await github.rest.actions.listJobsForWorkflowRun({
+            // We surround the whole script with a try-catch block, to avoid each of the matrix jobs
+            // displaying an error in the GHA workflow run annotations, which gets very noisy.
+            // If an error occurs, it will be logged so that we don't lose any information about the reason for failure.
+            try {
+              const fs = require("fs");
+              const result = await github.rest.actions.listJobsForWorkflowRun({
                 owner: context.repo.owner,
+                per_page: 100,
                 repo: context.repo.repo,
                 run_id: context.runId,
-            });
+              });
 
-            const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
-            const jobData = result.data.jobs.filter(
+              // Determine what job name to use for the query. These values are hardcoded, because GHA doesn't
+              // expose them in any of the contexts available within a workflow run.
+              let prefixToSearchFor;
+              switch ("${{ inputs.name }}") {
+                case "race":
+                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }})'
+                  break
+                case "fips":
+                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }})'
+                  break
+                default:
+                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }})'
+              }
+
+              const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
-            );
-            if (
-                jobData === undefined ||
-                jobData.length == 0 ||
-                jobData[0].html_url === undefined
-            ) {
-                const msg = "Failed to fetch GHA job data.";
-                console.log(msg);
-                throw new Error(msg);
-            }
+              );
+              const url = jobData[0].html_url;
+              const envVarName = "GH_JOB_URL";
+              const envVar = envVarName + "=" + url;
+              const envFile = process.env.GITHUB_ENV;
 
-            const url = jobData[0].html_url;
-            const envVarName = "GH_JOB_URL";
-            const envVar = envVarName + "=" + url;
-            const envFile = process.env.GITHUB_ENV;
-
-            fs.appendFile(envFile, envVar, (err) => {
+              fs.appendFile(envFile, envVar, (err) => {
                 if (err) throw err;
                 console.log("Successfully set " + envVarName + " to: " + url);
-            });
+              });
+            } catch (error) {
+              console.log("Error: " + error);
+              return
+            }
       - name: Prepare failure summary
         if: success() || failure()
+        continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
           # Then, it formats the results into rows of a Markdown table.
@@ -331,19 +460,30 @@ jobs:
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
+    if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
           path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
       - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
           path: test-results/go-test
       - run: |
+          rm -rf test-results/go-test/logs
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
+
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+
           ls -lhR test-results/go-test

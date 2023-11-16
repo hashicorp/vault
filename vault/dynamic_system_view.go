@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -38,6 +38,8 @@ type extendedSystemView interface {
 	// instead of in sdk/logical to avoid exposing to plugins
 	SudoPrivilege(context.Context, string, string) bool
 }
+
+var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
 
 type extendedSystemViewImpl struct {
 	dynamicSystemView
@@ -134,6 +136,28 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	req.Path = path
 	authResults := acl.AllowOperation(namespace.RootContext(ctx), req, true)
 	return authResults.RootPrivs
+}
+
+func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
+	mountEntry := e.mountEntry
+	if mountEntry == nil {
+		return false, fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (e extendedSystemViewImpl) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
+	return e.core.WellKnownRedirects.TryRegister(ctx, e.core, e.mountEntry.UUID, src, dest)
+}
+
+func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context, src string) bool {
+	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {

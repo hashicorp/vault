@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -8,10 +8,12 @@ import (
 	"errors"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -59,6 +61,12 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "The region ID for the sts_endpoint, if set.",
+			},
+
+			"use_sts_region_from_client": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "Uses the STS region from client requests for making AWS STS API calls.",
 			},
 
 			"iam_server_id_header_value": {
@@ -168,6 +176,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"iam_endpoint":               clientConfig.IAMEndpoint,
 			"sts_endpoint":               clientConfig.STSEndpoint,
 			"sts_region":                 clientConfig.STSRegion,
+			"use_sts_region_from_client": clientConfig.UseSTSRegionFromClient,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
 			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
@@ -281,6 +290,14 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	}
 
+	useSTSRegionFromClientRaw, ok := data.GetOk("use_sts_region_from_client")
+	if ok {
+		if configEntry.UseSTSRegionFromClient != useSTSRegionFromClientRaw.(bool) {
+			changedCreds = true
+			configEntry.UseSTSRegionFromClient = useSTSRegionFromClientRaw.(bool)
+		}
+	}
+
 	headerValStr, ok := data.GetOk("iam_server_id_header_value")
 	if ok {
 		if configEntry.IAMServerIdHeaderValue != headerValStr.(string) {
@@ -363,6 +380,7 @@ type clientConfig struct {
 	IAMEndpoint            string   `json:"iam_endpoint"`
 	STSEndpoint            string   `json:"sts_endpoint"`
 	STSRegion              string   `json:"sts_region"`
+	UseSTSRegionFromClient bool     `json:"use_sts_region_from_client"`
 	IAMServerIdHeaderValue string   `json:"iam_server_id_header_value"`
 	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
 	MaxRetries             int      `json:"max_retries"`
@@ -371,10 +389,28 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
+		if h == "X-Amz-Signedheaders" {
+			h = amzSignedHeaders
+		}
 		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
+		}
+	}
+	return nil
+}
+
+func (c *clientConfig) validateAllowedSTSQueryValues(params url.Values) error {
+	for k := range params {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if h == "X-Amz-Signedheaders" {
+			h = amzSignedHeaders
+		}
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
+			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, k) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, k) {
+			return errors.New("invalid request query param: " + k)
 		}
 	}
 	return nil

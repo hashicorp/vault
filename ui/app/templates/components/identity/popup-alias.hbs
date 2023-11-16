@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PopupMenu @name="alias-menu">
   <Confirm as |c|>
-    {{#let this.params.firstObject as |item|}}
+    {{#let (get this.params "0") as |item|}}
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">
@@ -13,9 +18,7 @@
           </li>
           {{#if item.updatePath.isPending}}
             <li class="action">
-              <button disabled type="button" class="link button is-loading is-transparent">
-                loading
-              </button>
+              <LoadingDropdownOption />
             </li>
           {{else}}
             {{#if item.canEdit}}

@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .page-header {
-  padding-bottom: $size-10;
-  padding-top: $size-4;
+  padding-bottom: $spacing-4;
+  padding-top: $spacing-20;
 
   .level {
     align-items: flex-end;
@@ -26,7 +26,7 @@
   }
 
   .title {
-    margin-top: $size-2;
+    margin-top: $spacing-36;
   }
 
   .title-with-icon {
@@ -34,7 +34,7 @@
   }
 
   .breadcrumb + .level .title {
-    margin-top: $size-4;
+    margin-top: $spacing-20;
   }
   .title .icon {
     height: auto;

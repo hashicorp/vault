@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -11,11 +11,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeNonce(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNonce, "/new-nonce")
+func pathAcmeNonce(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNonce(b, baseUrl+"/new-nonce", opts)
 }
 
-func patternAcmeNonce(b *backend, pattern string) *framework.Path {
+func patternAcmeNonce(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 
@@ -24,12 +24,12 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.HeaderOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeNonceHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeNonceHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeNonceHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeNonceHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},

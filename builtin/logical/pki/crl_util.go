@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -205,6 +205,41 @@ func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error
 
 	configCopy := cb.config
 	return &configCopy, nil
+}
+
+func (cb *crlBuilder) getConfigWithForcedUpdate(sc *storageContext) (*crlConfig, error) {
+	cb.markConfigDirty()
+	return cb.getConfigWithUpdate(sc)
+}
+
+func (cb *crlBuilder) writeConfig(sc *storageContext, config *crlConfig) (*crlConfig, error) {
+	cb._config.Lock()
+	defer cb._config.Unlock()
+
+	if err := sc.setRevocationConfig(config); err != nil {
+		cb.markConfigDirty()
+		return nil, fmt.Errorf("failed writing CRL config: %w", err)
+	}
+
+	previousConfig := cb.config
+	if config != nil {
+		cb.config = *config
+	} else {
+		cb.config = defaultCrlConfig
+	}
+
+	triggerChangeNotification := true
+	if !cb.haveInitializedConfig {
+		cb.haveInitializedConfig = true
+		triggerChangeNotification = false // do not trigger on the initial loading of configuration.
+	}
+
+	// Certain things need to be triggered on all server types when crlConfig is loaded.
+	if triggerChangeNotification {
+		cb.notifyOnConfigChange(sc, previousConfig, cb.config)
+	}
+
+	return config, nil
 }
 
 func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {

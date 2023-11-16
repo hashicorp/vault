@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
@@ -18,6 +23,7 @@
       @id="entities"
       @label="Entities"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/entity"}}
       @inputValue={{@model.entityIds}}
       @shouldRenderName={{true}}
@@ -30,6 +36,7 @@
       @id="groups"
       @label="Groups"
       @placeholder="Search"
+      @renderInPlace={{true}}
       @models={{array "identity/group"}}
       @inputValue={{@model.groupIds}}
       @shouldRenderName={{true}}
@@ -40,23 +47,21 @@
     />
   </div>
   <div class="has-top-padding-s">
-    <button
+    <Hds::Button
+      @text={{if @model.isNew "Create" "Update"}}
+      @icon={{if this.save.isRunning "loading"}}
       type="submit"
-      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
       disabled={{this.save.isRunning}}
       data-test-oidc-assignment-save
-    >
-      {{if @model.isNew "Create" "Update"}}
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
       disabled={{this.save.isRunning}}
       {{on "click" this.cancel}}
       data-test-oidc-assignment-cancel
-    >
-      Cancel
-    </button>
+    />
     {{#if this.modelValidations.targets.errors}}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
     {{/if}}

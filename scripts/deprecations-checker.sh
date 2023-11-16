@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 # This script is sourced into the shell running in a Github Actions workflow.
 
@@ -34,5 +34,5 @@ if [ -z $1 ]
     else
         # GitHub Actions will use this to find only changes wrt PR's base ref branch
         # revgrep CLI tool will return an exit status of 1 if any issues match, else it will return 0
-        staticcheck  -checks="SA1019" -tags="$BUILD_TAGS" 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
+        staticcheck  -checks="SA1019" -tags="$BUILD_TAGS" 2>&1 | revgrep origin/"$1" 
 fi

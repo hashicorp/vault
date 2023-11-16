@@ -1,13 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import Ember from 'ember';
 
 let adapterException;
@@ -23,7 +22,6 @@ module('Acceptance | not-found', function (hooks) {
 
   hooks.afterEach(function () {
     Ember.Test.adapter.exception = adapterException;
-    return logout.visit();
   });
 
   test('top-level not-found', async function (assert) {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="content has-bottom-margin-l">
@@ -44,42 +49,27 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary" id="decrypt" data-test-button-decrypt>
-        Decrypt
-      </button>
+      <Hds::Button @text="Decrypt" type="submit" id="decrypt" data-test-button-decrypt />
     </div>
   </div>
 </form>
 {{#if @isModalActive}}
-  <Modal @title="Copy your unwrapped data" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-    <section class="modal-card-body">
-      <div class="box is-shadowless is-fullwidth is-sideless">
-        <h2 class="title is-6">Plaintext</h2>
-        <div class="copy-text level">
-          <code class="level-left" data-test-encrypted-value="plaintext">{{@plaintext}}</code>
-          <CopyButton
-            class="button is-compact is-transparent level-right"
-            data-test-button="modal-copy"
-            @clipboardText={{@plaintext}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Plaintext copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
-        </div>
-        <p class="help">Plaintext is base64 encoded</p>
-      </div>
-    </section>
-    <footer class="modal-card-foot">
-      <CopyButton
-        class="button is-primary copy-close"
-        data-test-button="modal-copy-close"
-        @clipboardText={{@plaintext}}
-        @buttonType="button"
-        @success={{action @toggleModal "Plaintext copied!"}}
-      >
-        Copy &amp; Close
-      </CopyButton>
-    </footer>
-  </Modal>
+  <Hds::Modal id="transit-decrypt-modal" @onClose={{fn (mut @isModalActive) false}} data-test-decrypt-modal as |M|>
+    <M.Header>
+      Copy your unwrapped data
+    </M.Header>
+    <M.Body>
+      <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+      <p class="sub-text">Plaintext is base64 encoded</p>
+      <Hds::Copy::Snippet
+        @textToCopy={{@plaintext}}
+        @color="secondary"
+        @container="#transit-decrypt-modal"
+        data-test-encrypted-value="plaintext"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
 {{/if}}

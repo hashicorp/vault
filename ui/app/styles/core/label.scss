@@ -1,15 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file defines the style for .is-label
 
 .is-label {
   color: $grey-darkest;
-  display: inline-block;
   font-size: 14px;
   font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  gap: $spacing-4;
+  width: min-content;
+  min-width: 100%;
 
   &:not(:last-child) {
     margin-bottom: 0.25rem;

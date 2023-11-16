@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package teststorage
 
@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/hashicorp/vault/internalshared/configutil"
 
 	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -242,6 +244,9 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 	}
 	localOpts := vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{},
+		},
 	}
 	if opts != nil {
 		localOpts = *opts

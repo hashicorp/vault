@@ -1,70 +1,70 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/vault";
+package vault;
 
 import "helper/forwarding/types.proto";
 
-package vault;
+option go_package = "github.com/hashicorp/vault/vault";
 
 message EchoRequest {
-	string message = 1;
-	// ClusterAddr is used to send up a standby node's address to the active
-	// node upon heartbeat
-	string cluster_addr = 2;
-	// ClusterAddrs is used to send up a list of cluster addresses to a dr
-	// primary from a dr secondary
-	repeated string cluster_addrs = 3;
-    
-	uint64 raft_applied_index = 4;
-	string raft_node_id = 5;
-	NodeInformation node_info = 6;
-	uint64 raft_term = 7;
-	string raft_desired_suffrage = 8;
-	string raft_upgrade_version = 9;
-	string raft_redundancy_zone = 10;
-	string sdk_version = 11;
+  string message = 1;
+  // ClusterAddr is used to send up a standby node's address to the active
+  // node upon heartbeat
+  string cluster_addr = 2;
+  // ClusterAddrs is used to send up a list of cluster addresses to a dr
+  // primary from a dr secondary
+  repeated string cluster_addrs = 3;
+
+  uint64 raft_applied_index = 4;
+  string raft_node_id = 5;
+  NodeInformation node_info = 6;
+  uint64 raft_term = 7;
+  string raft_desired_suffrage = 8;
+  string raft_upgrade_version = 9;
+  string raft_redundancy_zone = 10;
+  string sdk_version = 11;
 }
 
 message EchoReply {
-	string message = 1;
-	repeated string cluster_addrs = 2;
-	uint32 replication_state = 3;
-	uint64 raft_applied_index = 4;
-	string raft_node_id = 5;
-	NodeInformation node_info = 6;
+  string message = 1;
+  repeated string cluster_addrs = 2;
+  uint32 replication_state = 3;
+  uint64 raft_applied_index = 4;
+  string raft_node_id = 5;
+  NodeInformation node_info = 6;
 }
 
 message NodeInformation {
-	string cluster_addr = 1;
-	string api_addr = 2;
-	string mode = 3;
-	string node_id = 4;
-	uint32 replication_state = 5;
-	string hostname = 6;
+  string cluster_addr = 1;
+  string api_addr = 2;
+  string mode = 3;
+  string node_id = 4;
+  uint32 replication_state = 5;
+  string hostname = 6;
 }
 
 message ClientKey {
-    string type = 1;
-    bytes x = 2;
-    bytes y = 3;
-    bytes d = 4;
+  string type = 1;
+  bytes x = 2;
+  bytes y = 3;
+  bytes d = 4;
 }
 
 message PerfStandbyElectionInput {}
 message PerfStandbyElectionResponse {
-    string id = 1;
-    string cluster_id = 2;
-    string primary_cluster_addr = 3;
-    bytes ca_cert = 4;
-    bytes client_cert = 5;
-    ClientKey client_key = 6;
+  string id = 1;
+  string cluster_id = 2;
+  string primary_cluster_addr = 3;
+  bytes ca_cert = 4;
+  bytes client_cert = 5;
+  ClientKey client_key = 6;
 }
 
 service RequestForwarding {
-	rpc ForwardRequest(forwarding.Request) returns (forwarding.Response) {}
-	rpc Echo(EchoRequest) returns (EchoReply) {}
-	rpc PerformanceStandbyElectionRequest(PerfStandbyElectionInput) returns (stream PerfStandbyElectionResponse) {}
+  rpc ForwardRequest(forwarding.Request) returns (forwarding.Response) {}
+  rpc Echo(EchoRequest) returns (EchoReply) {}
+  rpc PerformanceStandbyElectionRequest(PerfStandbyElectionInput) returns (stream PerfStandbyElectionResponse) {}
 }

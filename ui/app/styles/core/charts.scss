@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
-  padding: $spacing-s $spacing-l;
-  margin-bottom: $spacing-m;
+  padding: $spacing-12 $spacing-24;
+  margin-bottom: $spacing-16;
 }
 
 // GRID LAYOUT //
@@ -97,8 +97,8 @@
   grid-column-end: 4;
   grid-row-start: 2;
   grid-row-end: 5;
-  padding-bottom: $spacing-xl;
-  margin-bottom: $spacing-s;
+  padding-bottom: $spacing-36;
+  margin-bottom: $spacing-12;
   box-shadow: inset 0 -1px 0 $ui-gray-200;
 
   > h2 {
@@ -114,8 +114,8 @@
   grid-column-end: 8;
   grid-row-start: 2;
   grid-row-end: 5;
-  padding-bottom: $spacing-xl;
-  margin-bottom: $spacing-s;
+  padding-bottom: $spacing-36;
+  margin-bottom: $spacing-12;
   box-shadow: inset 0 -1px 0 $ui-gray-200;
 
   > h2 {
@@ -196,29 +196,29 @@
 h2.chart-title {
   font-weight: $font-weight-bold;
   font-size: $size-5;
-  line-height: $spacing-l;
-  margin-bottom: $spacing-xxs;
+  line-height: $spacing-24;
+  margin-bottom: $spacing-4;
 }
 
 p.chart-description {
   color: $ui-gray-700;
   font-size: 14px;
   line-height: 18px;
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-8;
 }
 
 p.chart-subtext {
   color: $ui-gray-500;
   font-size: $size-8;
   line-height: 16px;
-  margin-top: $spacing-xs;
+  margin-top: $spacing-8;
 }
 
 h3.data-details {
   font-weight: $font-weight-bold;
   font-size: $size-8;
   line-height: 14px;
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-8;
 }
 
 p.data-details {
@@ -245,8 +245,8 @@ p.data-details {
 }
 
 .legend-label {
-  padding-left: $spacing-xs;
-  padding-right: $spacing-xl;
+  padding-left: $spacing-8;
+  padding-right: $spacing-36;
 }
 
 .chart-tooltip {
@@ -269,7 +269,7 @@ p.data-details {
     width: fit-content;
   }
   .horizontal-chart {
-    padding: $spacing-s;
+    padding: $spacing-12;
   }
 }
 
@@ -324,16 +324,16 @@ p.data-details {
     grid-column-end: 4;
     grid-row-start: 2;
     grid-row-end: 3;
-    margin-left: $spacing-xxl;
-    margin-right: $spacing-xxl;
+    margin-left: $spacing-48;
+    margin-right: $spacing-48;
   }
   .chart-container-right {
     grid-column-start: 1;
     grid-column-end: 4;
     grid-row-start: 3;
     grid-row-end: 4;
-    margin-left: $spacing-xxl;
-    margin-right: $spacing-xxl;
+    margin-left: $spacing-48;
+    margin-right: $spacing-48;
   }
 
   .legend-center {

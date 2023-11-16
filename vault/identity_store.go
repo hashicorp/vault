@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -576,14 +576,31 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 		return err
 	}
 
-	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
-		DisableLowerCasedNames: i.disableLowerCasedNames,
-	})
+	// if the storage entry for caseSensitivityKey exists, remove it
+	storageEntry, err := i.view.Get(ctx, caseSensitivityKey)
 	if err != nil {
-		return err
+		i.logger.Error("could not get storage entry for case sensitivity key", "error", err)
+		return nil
 	}
 
-	return i.view.Put(ctx, entry)
+	if storageEntry != nil {
+		var setting casesensitivity
+		err := storageEntry.DecodeJSON(&setting)
+		switch err {
+		case nil:
+			i.logger.Debug("removing storage entry for case sensitivity key", "value", setting.DisableLowerCasedNames)
+		default:
+			i.logger.Error("failed to decode case sensitivity key, removing its storage entry anyway", "error", err)
+		}
+
+		err = i.view.Delete(ctx, caseSensitivityKey)
+		if err != nil {
+			i.logger.Error("could not delete storage entry for case sensitivity key", "error", err)
+			return nil
+		}
+	}
+
+	return nil
 }
 
 // Invalidate is a callback wherein the backend is informed that the value at
@@ -597,45 +614,6 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 	defer i.lock.Unlock()
 
 	switch {
-	case key == caseSensitivityKey:
-		entry, err := i.view.Get(ctx, caseSensitivityKey)
-		if err != nil {
-			i.logger.Error("failed to read case sensitivity setting during invalidation", "error", err)
-			return
-		}
-		if entry == nil {
-			return
-		}
-
-		var setting casesensitivity
-		if err := entry.DecodeJSON(&setting); err != nil {
-			i.logger.Error("failed to decode case sensitivity setting during invalidation", "error", err)
-			return
-		}
-
-		// Fast return if the setting is the same
-		if i.disableLowerCasedNames == setting.DisableLowerCasedNames {
-			return
-		}
-
-		// If the setting is different, reset memdb and reload all the artifacts
-		i.disableLowerCasedNames = setting.DisableLowerCasedNames
-		if err := i.resetDB(ctx); err != nil {
-			i.logger.Error("failed to reset memdb during invalidation", "error", err)
-			return
-		}
-		if err := i.loadEntities(ctx); err != nil {
-			i.logger.Error("failed to load entities during invalidation", "error", err)
-			return
-		}
-		if err := i.loadGroups(ctx); err != nil {
-			i.logger.Error("failed to load groups during invalidation", "error", err)
-			return
-		}
-		if err := i.loadOIDCClients(ctx); err != nil {
-			i.logger.Error("failed to load OIDC clients during invalidation", "error", err)
-			return
-		}
 	// Check if the key is a storage entry key for an entity bucket
 	case strings.HasPrefix(key, storagepacker.StoragePackerBucketsPrefix):
 		// Create a MemDB transaction

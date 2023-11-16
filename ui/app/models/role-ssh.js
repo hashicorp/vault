@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -31,6 +31,7 @@ const CA_FIELDS = [
   'allowedUsers',
   'allowedUsersTemplate',
   'allowedDomains',
+  'allowedDomainsTemplate',
   'ttl',
   'maxTtl',
   'allowedCriticalOptions',
@@ -76,11 +77,15 @@ export default Model.extend({
   }),
   allowedUsersTemplate: attr('boolean', {
     helpText:
-      'Specifies that Allowed users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
+      'Specifies that Allowed Users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
   }),
   allowedDomains: attr('string', {
     helpText:
       'List of domains for which a client can request a certificate (e.g. `example.com`, or `*` to allow all)',
+  }),
+  allowedDomainsTemplate: attr('boolean', {
+    helpText:
+      'Specifies that Allowed Domains can be set using identity template policies. Non-templated domains are also permitted.',
   }),
   cidrList: attr('string', {
     helpText: 'List of CIDR blocks for which this role is applicable',

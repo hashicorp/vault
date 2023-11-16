@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package approle
 
@@ -13,7 +13,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/parseip"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -311,17 +311,6 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.pathRoleList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
-					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-list"][0]),
@@ -984,17 +973,6 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationSuffix: "secret-ids",
 					},
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Required: true,
-									Type:     framework.TypeStringSlice,
-								},
-							},
-						}},
-					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id"][0]),
@@ -1087,6 +1065,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1195,6 +1174,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{

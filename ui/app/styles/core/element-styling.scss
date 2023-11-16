@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* These come from bulma */
 html,
 body,
@@ -75,12 +80,10 @@ object {
 
 html {
   background-color: $white;
-  font-size: 14px;
+  font-size: $base-font-size; // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
-  overflow-x: hidden;
-  overflow-y: scroll;
   text-rendering: optimizeLegibility;
   text-size-adjust: 100%;
 }
@@ -119,6 +122,8 @@ pre code {
 body {
   font-size: $size-6;
   line-height: 1.5;
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 a {
@@ -164,4 +169,33 @@ form {
 
 label {
   cursor: pointer;
+}
+
+// HDS modifications and overrides
+// * ONLY for universal changes (i.e. to address component functionality)
+
+// <Hds::Modal>
+.hds-modal {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+.hds-modal__body {
+  &:has(.hds-dropdown) {
+    overflow: unset;
+  }
+}
+
+// <Hds::Dropdown>
+.hds-dropdown-list-item {
+  > button:disabled {
+    color: $black;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// TODO remove when HDS has released fix
+.hds-form-masked-input .hds-form-masked-input__toggle-button {
+  margin-right: $spacing-12;
 }

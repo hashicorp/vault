@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#unless @uploadOnly}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label for="input-{{this.elementId}}" class="is-label" data-test-text-file-label>
+      <label for="input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
           <InfoTooltip>
@@ -13,75 +18,41 @@
       </label>
     </div>
     <div class="level-right">
-      <div class="control is-flex">
-        <Input
-          data-test-text-toggle
-          id="use-text-{{this.elementId}}"
-          class="switch is-rounded is-success is-small"
-          @type="checkbox"
-          @checked={{this.showTextArea}}
-          {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
-        />
-        <label for="use-text-{{this.elementId}}">
-          Enter as text
-        </label>
-      </div>
+      <Input
+        data-test-text-toggle
+        id="use-text-{{this.elementId}}"
+        class="toggle is-success is-small"
+        @type="checkbox"
+        @checked={{this.showTextArea}}
+        {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
+      />
+      <label for="use-text-{{this.elementId}}" class="has-text-weight-bold is-size-8">
+        Enter as text
+      </label>
     </div>
   </div>
 {{/unless}}
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
   {{#if this.showTextArea}}
-    <div class="control has-icon-right">
-      <Textarea
-        id="input-{{this.elementId}}"
-        @value={{this.content}}
-        class="textarea {{if (and (not this.showValue) this.content) 'masked-font'}}"
-        {{on "input" this.handleTextInput}}
-        data-test-text-file-textarea
-      />
-      <button
-        type="button"
-        class="masked-input-toggle button is-compact"
-        data-test-button="toggle-masked"
-        {{on "click" (fn (mut this.showValue) (not this.showValue))}}
-      >
-        <Icon @name={{if this.showValue "eye" "eye-off"}} @stretched={{true}} />
-      </button>
-    </div>
-    <p class="help has-text-grey">Enter the value as text</p>
+    <Hds::Form::MaskedInput::Field
+      id="input-{{this.elementId}}"
+      @value={{this.content}}
+      @isMultiline={{true}}
+      {{on "input" this.handleTextInput}}
+      data-test-text-file-textarea
+      as |F|
+    >
+      <F.HelperText>Enter the value as text </F.HelperText>
+    </Hds::Form::MaskedInput::Field>
   {{else}}
-    <div class="control is-expanded">
-      <div class="file is-fullwidth">
-        <div class="file-label" aria-label="Choose a file">
-          <Input
-            id="file-input-{{this.elementId}}"
-            class="file-input"
-            @type="file"
-            {{on "change" this.handleFileUpload}}
-            data-test-text-file-input
-          />
-          <label for="file-input-{{this.elementId}}" class="file-cta button">
-            <Icon @name="upload" class="has-light-grey-text" />
-            Choose a file…
-          </label>
-          <span class="file-name has-text-grey-dark" data-test-text-file-input-label>
-            {{or this.filename "No file chosen"}}
-          </span>
-          {{#if this.filename}}
-            <button
-              type="button"
-              class="file-delete-button"
-              aria-label="Clear file selection"
-              {{on "click" this.clearFile}}
-              data-test-text-clear
-            >
-              <Icon @name="x-circle" />
-            </button>
-          {{/if}}
-        </div>
-      </div>
-    </div>
-    <p class="help has-text-grey">Select a file from your computer</p>
+    <Hds::Form::FileInput::Field
+      id="file-input-{{this.elementId}}"
+      {{on "change" this.handleFileUpload}}
+      data-test-text-file-input
+      as |F|
+    >
+      <F.HelperText>Select a file from your computer</F.HelperText>
+    </Hds::Form::FileInput::Field>
     {{#if (or @validationError this.uploadError)}}
       <AlertInline
         @type="danger"

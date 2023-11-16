@@ -1,0 +1,150 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
+  <:tabLinks>
+    <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
+
+  <:toolbarFilters>
+
+    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
+      <KvListFilter @secrets={{@secrets}} @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
+    {{/if}}
+  </:toolbarFilters>
+
+  <:toolbarActions>
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">
+      Create secret
+    </ToolbarLink>
+  </:toolbarActions>
+</KvPageHeader>
+{{#if (eq @secrets 403)}}
+  <div class="box is-fullwidth is-shadowless has-tall-padding">
+    <div class="selectable-card-container one-card">
+      <OverviewCard
+        @cardTitle="View secret"
+        @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
+      >
+        <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m is-flex">
+          <InputSearch
+            @id="search-input-kv-secret"
+            @initialValue={{@pathToSecret}}
+            @onChange={{this.handleSecretPathInput}}
+            @placeholder="secret/"
+            data-test-view-secret
+          />
+          <Hds::Button
+            @text={{this.buttonText}}
+            @color="secondary"
+            type="submit"
+            disabled={{not this.secretPath}}
+            data-test-get-secret-detail
+          />
+        </form>
+        {{#if @failedDirectoryQuery}}
+          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
+        {{/if}}
+      </OverviewCard>
+    </div>
+  </div>
+{{else}}
+  {{#if @secrets}}
+    {{#each @secrets as |metadata|}}
+      <LinkedBlock
+        data-test-list-item={{metadata.path}}
+        class="list-item-row"
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") metadata.fullSecretPath}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{metadata.path}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if metadata.pathIsDirectory}}
+                      <li>
+                        <LinkTo @route="list-directory" @model={{metadata.fullSecretPath}}>
+                          Content
+                        </LinkTo>
+                      </li>
+                    {{else}}
+                      <li>
+                        <LinkTo @route="secret.details" @model={{metadata.fullSecretPath}}>
+                          Details
+                        </LinkTo>
+                      </li>
+                      {{#if metadata.canReadMetadata}}
+                        <li>
+                          <LinkTo @route="secret.metadata.versions" @model={{metadata.fullSecretPath}}>
+                            View version history
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canCreateVersionData}}
+                        <li>
+                          <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
+                            Create new version
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canDeleteMetadata}}
+                        <li>
+                          <ConfirmAction
+                            @buttonClasses="link is-destroy"
+                            @onConfirmAction={{fn this.onDelete metadata}}
+                            @confirmMessage="This will permanently delete this secret and all its versions."
+                            @cancelButtonText="Cancel"
+                            data-test-delete-metadata={{metadata.path}}
+                          >
+                            Permanently delete
+                          </ConfirmAction>
+                        </li>
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
+          </div>
+        </div>
+      </LinkedBlock>
+    {{/each}}
+    {{! Pagination }}
+    <Hds::Pagination::Numbered
+      @currentPage={{@secrets.meta.currentPage}}
+      @currentPageSize={{@secrets.meta.pageSize}}
+      @route={{this.router.currentRoute.localName}}
+      @showSizeSelector={{false}}
+      @totalItems={{@secrets.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  {{else}}
+    {{#if @filterValue}}
+      <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
+    {{else}}
+      <EmptyState
+        data-test-secret-list-empty-state
+        @title="No secrets yet"
+        @message="When created, secrets will be listed here. Create a secret to get started."
+      >
+        <LinkTo class="has-top-margin-xs" @route="create">
+          Create secret
+        </LinkTo>
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+{{/if}}

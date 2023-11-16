@@ -1,11 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-env node */
 /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 'use strict';
 
 const EngineAddon = require('ember-engines/lib/engine-addon');

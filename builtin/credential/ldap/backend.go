@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ldap
 
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -76,82 +77,25 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return "", nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
-	ldapClient := ldaputil.Client{
-		Logger: b.Logger(),
-		LDAP:   ldaputil.NewLDAP(),
-	}
-
-	c, err := ldapClient.DialLDAP(cfg.ConfigEntry)
+	ldapClient, err := ldap.NewClient(ctx, ldaputil.ConvertConfig(cfg.ConfigEntry))
 	if err != nil {
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
-	}
-	if c == nil {
-		return "", nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
 	}
 
 	// Clean connection
-	defer c.Close()
+	defer ldapClient.Close(ctx)
 
-	userBindDN, err := ldapClient.GetUserBindDN(cfg.ConfigEntry, c, username)
+	c, err := ldapClient.Authenticate(ctx, username, password, ldap.WithGroups(), ldap.WithUserAttributes())
 	if err != nil {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("error getting user bind DN", "error", err)
+		if strings.Contains(err.Error(), "discovery of user bind DN failed") ||
+			strings.Contains(err.Error(), "unable to bind user") {
+			return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
 		}
-		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
-	}
 
-	if b.Logger().IsDebug() {
-		b.Logger().Debug("user binddn fetched", "username", username, "binddn", userBindDN)
-	}
-
-	// Try to bind as the login user. This is where the actual authentication takes place.
-	if len(password) > 0 {
-		err = c.Bind(userBindDN, password)
-	} else {
-		err = c.UnauthenticatedBind(userBindDN)
-	}
-	if err != nil {
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("ldap bind failed", "error", err)
-		}
-		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
-	}
-
-	// We re-bind to the BindDN if it's defined because we assume
-	// the BindDN should be the one to search, not the user logging in.
-	if cfg.BindDN != "" && cfg.BindPassword != "" {
-		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			if b.Logger().IsDebug() {
-				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
-			}
-			return "", nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, logical.ErrInvalidCredentials
-		}
-		if b.Logger().IsDebug() {
-			b.Logger().Debug("re-bound to original binddn")
-		}
-	}
-
-	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN, username)
-	if err != nil {
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
-	if cfg.AnonymousGroupSearch {
-		c, err = ldapClient.DialLDAP(cfg.ConfigEntry)
-		if err != nil {
-			return "", nil, logical.ErrorResponse("ldap operation failed: failed to connect to LDAP server"), nil, nil
-		}
-		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
-	}
-
-	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
-	if err != nil {
-		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
-	}
-	if b.Logger().IsDebug() {
-		b.Logger().Debug("groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
-	}
-
+	ldapGroups := c.Groups
 	ldapResponse := &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -160,6 +104,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			"no LDAP groups found in groupDN %q; only policies from locally-defined groups available",
 			cfg.GroupDN)
 		ldapResponse.AddWarning(errString)
+	}
+
+	for _, warning := range c.Warnings {
+		ldapResponse.AddWarning(string(warning))
 	}
 
 	var allGroups []string
@@ -206,13 +154,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return username, policies, ldapResponse, allGroups, nil
 	}
 
-	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
-	if err != nil {
-		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
-	}
-	if entityAliasAttribute == "" {
+	userAttrValues := c.UserAttributes[cfg.UserAttr]
+	if len(userAttrValues) == 0 {
 		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
 	}
+	entityAliasAttribute := userAttrValues[0]
 
 	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
 }

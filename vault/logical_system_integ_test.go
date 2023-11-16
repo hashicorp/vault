@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault_test
 
@@ -83,6 +83,11 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 			"sys/internal/ui/resultant-acl": map[string]interface{}{
+				"capabilities": []interface{}{
+					"read",
+				},
+			},
+			"sys/internal/ui/version": map[string]interface{}{
 				"capabilities": []interface{}{
 					"read",
 				},

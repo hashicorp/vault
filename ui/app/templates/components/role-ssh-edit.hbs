@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -60,18 +65,25 @@
       <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-role-ssh-create={{true}}>
-          {{#if (eq this.mode "create")}}
-            Create role
-          {{else if (eq this.mode "edit")}}
-            Save
-          {{/if}}
-        </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
-          Cancel
-        </SecretLink>
-      </div>
+      <Hds::ButtonSet>
+        <Hds::Button @text={{if (eq this.mode "create") "Create role" "Save"}} type="submit" data-test-role-ssh-create />
+        {{#if (eq this.mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+            @query={{hash tab="role"}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend this.model.id}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
     </div>
   </form>
 {{else}}

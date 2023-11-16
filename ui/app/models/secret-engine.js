@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr, belongsTo } from '@ember-data/model';
@@ -9,6 +9,7 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -107,15 +108,8 @@ export default class SecretEngineModel extends Model {
   deleteVersionAfter;
 
   /* GETTERS */
-  get modelTypeForKV() {
-    const engineType = this.engineType;
-    if ((engineType === 'kv' || engineType === 'generic') && this.version === 2) {
-      return 'secret-v2';
-    }
-    return 'secret';
-  }
   get isV2KV() {
-    return this.modelTypeForKV === 'secret-v2';
+    return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
   }
 
   get attrs() {
@@ -129,13 +123,14 @@ export default class SecretEngineModel extends Model {
   }
 
   get icon() {
-    if (!this.engineType || this.engineType === 'kmip') {
-      return 'secrets';
-    }
-    if (this.engineType === 'keymgmt') {
-      return 'key';
-    }
-    return this.engineType;
+    const defaultIcon = this.engineType || 'secrets';
+    return (
+      {
+        keymgmt: 'key',
+        kmip: 'secrets',
+        ldap: 'folder-users',
+      }[this.engineType] || defaultIcon
+    );
   }
 
   get engineType() {
@@ -151,20 +146,14 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    if (this.engineType === 'kmip') {
-      return 'vault.cluster.secrets.backend.kmip.scopes';
-    }
     if (this.engineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    return 'vault.cluster.secrets.backend.list-root';
-  }
-
-  get accessor() {
-    if (this.version === 2) {
-      return `v2 ${this.accessor}`;
+    if (isAddonEngine(this.engineType, this.version)) {
+      const { engineRoute } = allEngines().findBy('type', this.engineType);
+      return `vault.cluster.secrets.backend.${engineRoute}`;
     }
-    return this.accessor;
+    return `vault.cluster.secrets.backend.list-root`;
   }
 
   get localDisplay() {

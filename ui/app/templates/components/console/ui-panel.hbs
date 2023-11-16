@@ -1,7 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="console-close-button">
-  <button type="button" class="button is-ghost" {{action "closeConsole"}} data-test-console-panel-close>
-    <Icon @name="x" aria-label="Close console" />
-  </button>
+  <Hds::Button
+    class="hds-side-nav__icon-button"
+    {{on "click" (action "closeConsole")}}
+    data-test-console-panel-close
+    @text="Close console"
+    @icon="x"
+    @isIconOnly={{true}}
+  />
 </div>
 <div class="console-ui-panel-content">
   <div class="content has-bottom-margin-l">

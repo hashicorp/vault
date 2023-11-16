@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package healthcheck
 
@@ -74,8 +74,7 @@ func (h *EnableAcmeIssuance) FetchResources(e *Executor) error {
 	}
 
 	h.TotalIssuers, h.RootIssuers, err = doesMountContainOnlyRootIssuers(e)
-
-	return nil
+	return err
 }
 
 func doesMountContainOnlyRootIssuers(e *Executor) (int, int, error) {

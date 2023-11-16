@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .icon {
@@ -23,8 +23,8 @@
 .flight-icon {
   &.flight-icon-display-inline {
     vertical-align: middle;
-    margin-left: $spacing-xxs;
-    margin-right: $spacing-xxs;
+    margin-left: $spacing-4;
+    margin-right: $spacing-4;
   }
 }
 

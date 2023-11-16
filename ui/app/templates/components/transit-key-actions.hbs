@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (eq this.selectedAction "rotate")}}
   {{#if this.key.canRotate}}
     <ConfirmAction
@@ -8,8 +13,10 @@
       @confirmButtonText="Rotate"
       @color="warning"
       @onConfirmAction={{action "doSubmit"}}
-      data-test-transit-key-rotate="true"
-    />
+      data-test-transit-key-rotate
+    >
+      Rotate encryption key
+    </ConfirmAction>
   {{/if}}
 {{else}}
   <MessageError @errors={{this.errors}} />
@@ -43,7 +50,6 @@
         encodedBase64=this.encodedBase64
         valid=this.valid
         doSubmit=(action "doSubmit")
-        toggleModal=(action "toggleModal")
         clearParams=(action "clearParams")
       }}
     </div>

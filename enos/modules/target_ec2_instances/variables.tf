@@ -1,12 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "ami_id" {
   description = "The machine image identifier"
   type        = string
-}
-
-variable "awskms_unseal_key_arn" {
-  type        = string
-  description = "The AWSKMS key ARN if using the awskms unseal method. If specified the instances will be granted kms permissions to the key"
-  default     = null
 }
 
 variable "cluster_name" {
@@ -48,6 +45,12 @@ variable "instance_types" {
 variable "project_name" {
   description = "A unique project name"
   type        = string
+}
+
+variable "seal_key_names" {
+  type        = list(string)
+  description = "The key management seal key names"
+  default     = null
 }
 
 variable "ssh_allow_ips" {

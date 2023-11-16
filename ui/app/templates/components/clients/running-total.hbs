@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (gt @byMonthActivityData.length 1)}}
   <div class="chart-wrapper stacked-charts" data-test-running-total="monthly-charts">
     <div class="single-chart-grid">
@@ -78,8 +83,8 @@
 
       {{#if this.hasAverageNewClients}}
         <div class="legend-right" data-test-running-total-legend>
-          <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-          <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+          <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+          <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
         </div>
       {{/if}}
     </div>

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/nonceutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -76,11 +77,27 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
 
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		// It is assumed, that if the node does become the active node later
+		// the plugin is re-initialized, so this is safe. It also spares the node
+		// from loading the existing queue into memory for no reason.
+		b.Logger().Debug("Not on an active node, skipping starting ACME challenge validation engine")
+		return nil
+	}
 	// Kick off our ACME challenge validation engine.
 	go a.validator.Run(b, a, sc)
 
 	// All good.
 	return nil
+}
+
+func (a *acmeState) Shutdown(b *backend) {
+	// If we aren't the active node, nothing to shutdown
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		return
+	}
+
+	a.validator.Closing <- struct{}{}
 }
 
 func (a *acmeState) markConfigDirty() {
@@ -103,7 +120,7 @@ func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
 
 	config, err := sc.getAcmeConfig()
 	if err != nil {
-		return fmt.Errorf("failed reading config: %w", err)
+		return fmt.Errorf("failed reading ACME config: %w", err)
 	}
 
 	a.config = *config
@@ -122,6 +139,29 @@ func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, e
 
 	configCopy := a.config
 	return &configCopy, nil
+}
+
+func (a *acmeState) getConfigWithForcedUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	a.markConfigDirty()
+	return a.getConfigWithUpdate(sc)
+}
+
+func (a *acmeState) writeConfig(sc *storageContext, config *acmeConfigEntry) (*acmeConfigEntry, error) {
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if err := sc.setAcmeConfig(config); err != nil {
+		a.markConfigDirty()
+		return nil, fmt.Errorf("failed writing ACME config: %w", err)
+	}
+
+	if config != nil {
+		a.config = *config
+	} else {
+		a.config = defaultAcmeConfig
+	}
+
+	return config, nil
 }
 
 func generateRandomBase64(srcBytes int) (string, error) {
@@ -254,13 +294,13 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 	return acct, nil
 }
 
-func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
+func (a *acmeState) UpdateAccount(sc *storageContext, acct *acmeAccount) error {
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+acct.KeyId, acct)
 	if err != nil {
 		return fmt.Errorf("error creating account entry: %w", err)
 	}
 
-	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+	if err := sc.Storage.Put(sc.Context, json); err != nil {
 		return fmt.Errorf("error writing account entry: %w", err)
 	}
 
@@ -516,10 +556,10 @@ func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
 	return nil
 }
 
-func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, error) {
+func (a *acmeState) ListOrderIds(sc *storageContext, accountId string) ([]string, error) {
 	accountOrderPrefixPath := acmeAccountPrefix + accountId + "/orders/"
 
-	rawOrderIds, err := ac.sc.Storage.List(ac.sc.Context, accountOrderPrefixPath)
+	rawOrderIds, err := sc.Storage.List(sc.Context, accountOrderPrefixPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
 	}

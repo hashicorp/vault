@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .confirm-wrapper {
@@ -82,7 +82,7 @@
   }
 
   * {
-    margin-left: $size-8;
+    margin-left: $spacing-12;
   }
 
   .confirm-action-text:not(.is-block) {
@@ -90,7 +90,7 @@
 
     @include until($mobile) {
       display: block;
-      margin-bottom: $size-8;
+      margin-bottom: $spacing-12;
       text-align: left;
     }
   }
@@ -119,21 +119,21 @@
 
   p {
     font-weight: $font-weight-semibold;
-    margin-left: $spacing-l;
-    padding-left: $spacing-xxs;
+    margin-left: $spacing-24;
+    padding-left: $spacing-4;
     padding-top: 0;
   }
 
   .confirm-action-options {
     border-top: $light-border;
     display: flex;
-    padding: $spacing-xxs;
+    padding: $spacing-4;
 
     .link {
       flex: 1;
       text-align: center;
       width: auto;
-      padding: $spacing-xs;
+      padding: $spacing-8;
     }
   }
 }

@@ -1,10 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +15,13 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault/quotas"
+)
+
+var (
+	ErrExemptRateLimitsOnChildNs = errors.New("exempt paths can only be be configured in the root namespace")
+	ErrInvalidQuotaDeletion      = "cannot delete quota configured for a parent namespace"
+	ErrInvalidQuotaUpdate        = "quotas in parent namespaces cannot be updated"
+	ErrInvalidQuotaOnParentNs    = "quotas cannot be configured for parent namespaces"
 )
 
 // quotasPaths returns paths that enable quota management
@@ -38,6 +46,10 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 				"enable_rate_limit_response_headers": {
 					Type:        framework.TypeBool,
 					Description: "If set, additional rate limit quota HTTP headers will be added to responses.",
+				},
+				"absolute_rate_limit_exempt_paths": {
+					Type:        framework.TypeStringSlice,
+					Description: "Specifies the list of exempt global paths from all rate limit quotas. If empty no global paths will be exempt.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -73,6 +85,10 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 									Type:     framework.TypeStringSlice,
 									Required: true,
 								},
+								"absolute_rate_limit_exempt_paths": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
 							},
 						}},
 					},
@@ -92,17 +108,6 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handleRateLimitQuotasList(),
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
-					},
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(quotasHelp["rate-limit-list"][0]),
@@ -134,6 +139,10 @@ namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 					Type: framework.TypeString,
 					Description: `Login role to apply this quota to. Note that when set, path must be configured
 to a valid auth method with a concept of roles.`,
+				},
+				"inheritable": {
+					Type:        framework.TypeBool,
+					Description: `Whether all child namespaces can inherit this namespace quota.`,
 				},
 				"rate": {
 					Type: framework.TypeFloat,
@@ -199,6 +208,10 @@ from any further requests until after the 'block_interval' has elapsed.`,
 									Type:     framework.TypeInt,
 									Required: true,
 								},
+								"inheritable": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
 							},
 						}},
 					},
@@ -223,6 +236,11 @@ from any further requests until after the 'block_interval' has elapsed.`,
 
 func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		config, err := quotas.LoadConfig(ctx, b.Core.systemBarrierView)
 		if err != nil {
 			return nil, err
@@ -230,13 +248,30 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 
 		config.EnableRateLimitAuditLogging = d.Get("enable_rate_limit_audit_logging").(bool)
 		config.EnableRateLimitResponseHeaders = d.Get("enable_rate_limit_response_headers").(bool)
-		config.RateLimitExemptPaths = d.Get("rate_limit_exempt_paths").([]string)
+
+		_, ok := d.GetOk("absolute_rate_limit_exempt_paths")
+		// Global rate limit exempt paths can only be defined in the root namespace
+		if ns.ID != namespace.RootNamespaceID && ok {
+			return nil, ErrExemptRateLimitsOnChildNs
+		}
+
+		_, ok = d.GetOk("rate_limit_exempt_paths")
+		// Relative  rate limit exempt paths can only be defined in the root namespace
+		if ns.ID != namespace.RootNamespaceID && ok {
+			return nil, ErrExemptRateLimitsOnChildNs
+		}
+
+		// Set rate limit exempt paths to correct configuration fields only if in root namespace
+		if ns.ID == namespace.RootNamespaceID {
+			config.RateLimitExemptPaths = d.Get("rate_limit_exempt_paths").([]string)
+			config.AbsoluteRateLimitExemptPaths = d.Get("absolute_rate_limit_exempt_paths").([]string)
+		}
 
 		entry, err := logical.StorageEntryJSON(quotas.ConfigPath, config)
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
+		if err := b.Core.systemBarrierView.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 
@@ -244,12 +279,13 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
+		if err := b.Core.systemBarrierView.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 
 		b.Core.quotaManager.SetEnableRateLimitAuditLogging(config.EnableRateLimitAuditLogging)
 		b.Core.quotaManager.SetEnableRateLimitResponseHeaders(config.EnableRateLimitResponseHeaders)
+		b.Core.quotaManager.SetGlobalRateLimitExemptPaths(config.AbsoluteRateLimitExemptPaths)
 		b.Core.quotaManager.SetRateLimitExemptPaths(config.RateLimitExemptPaths)
 
 		return nil, nil
@@ -264,6 +300,7 @@ func (b *SystemBackend) handleQuotasConfigRead() framework.OperationFunc {
 				"enable_rate_limit_audit_logging":    config.EnableRateLimitAuditLogging,
 				"enable_rate_limit_response_headers": config.EnableRateLimitResponseHeaders,
 				"rate_limit_exempt_paths":            config.RateLimitExemptPaths,
+				"absolute_rate_limit_exempt_paths":   config.AbsoluteRateLimitExemptPaths,
 			},
 		}, nil
 	}
@@ -300,7 +337,29 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("'block' is invalid"), nil
 		}
 
-		mountPath := sanitizePath(d.Get("path").(string))
+		rawPath := sanitizePath(d.Get("path").(string))
+		mountPath := rawPath
+
+		// If the quota creation endpoint is being called from the privileged namespace, we want to prepend the namespace to the path
+		currentNamespace, err := namespace.FromContext(ctx)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if currentNamespace.ID != namespace.RootNamespaceID && !strings.HasPrefix(mountPath, currentNamespace.Path) {
+			return logical.ErrorResponse(ErrInvalidQuotaOnParentNs), nil
+		}
+
+		// If there is a quota by the same name that was configured on a parent namespace, prohibit updating this quota
+		if currentNamespace.ID != namespace.RootNamespaceID {
+			quota, err := b.Core.quotaManager.QuotaByName(qType, name)
+			if err != nil {
+				return nil, err
+			}
+			if quota != nil && !strings.HasPrefix(quota.GetNamespacePath(), currentNamespace.Path) {
+				return logical.ErrorResponse(ErrInvalidQuotaUpdate), nil
+			}
+		}
+
 		ns := b.Core.namespaceByPath(mountPath)
 		if ns.ID != namespace.RootNamespaceID {
 			mountPath = strings.TrimPrefix(mountPath, ns.Path)
@@ -338,6 +397,29 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 		}
 
+		var inheritable bool
+		// All global quotas should be inherited by default
+		if rawPath == "" {
+			inheritable = true
+		}
+
+		if inheritableRaw, ok := d.GetOk("inheritable"); ok {
+			inheritable = inheritableRaw.(bool)
+			if inheritable {
+				if pathSuffix != "" || role != "" || mountPath != "" {
+					return logical.ErrorResponse("only namespace quotas can be configured as inheritable"), nil
+				}
+			} else if rawPath == "" {
+				// User should not try to configure a global quota that cannot be inherited
+				return logical.ErrorResponse("all global quotas must be inheritable"), nil
+			}
+		}
+
+		// User should not try to configure a global quota to be uninheritable
+		if rawPath == "" && !inheritable {
+			return logical.ErrorResponse("all global quotas must be inheritable"), nil
+		}
+
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
 		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix, role)
@@ -356,7 +438,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, inheritable, interval, blockInterval, rate)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
@@ -366,17 +448,17 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			rlq.MountPath = mountPath
 			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
+			rlq.Inheritable = inheritable
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
 			quota = rlq
 		}
-
 		entry, err := logical.StorageEntryJSON(quotas.QuotaStoragePath(qType, name), quota)
 		if err != nil {
 			return nil, err
 		}
 
-		if err := req.Storage.Put(ctx, entry); err != nil {
+		if err := b.Core.systemBarrierView.storage.Put(ctx, entry); err != nil {
 			return nil, err
 		}
 
@@ -414,6 +496,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
 			"role":           rlq.Role,
 			"rate":           rlq.Rate,
+			"inheritable":    rlq.Inheritable,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),
 		}
@@ -429,7 +512,21 @@ func (b *SystemBackend) handleRateLimitQuotasDelete() framework.OperationFunc {
 		name := d.Get("name").(string)
 		qType := quotas.TypeRateLimit.String()
 
-		if err := req.Storage.Delete(ctx, quotas.QuotaStoragePath(qType, name)); err != nil {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ns.ID != namespace.RootNamespaceID {
+			quota, err := b.Core.quotaManager.QuotaByName(qType, name)
+			if err != nil {
+				return nil, err
+			}
+			if quota != nil && !strings.HasPrefix(quota.GetNamespacePath(), ns.Path) {
+				return logical.ErrorResponse(ErrInvalidQuotaDeletion), nil
+			}
+		}
+
+		if err := b.Core.systemBarrierView.Delete(ctx, quotas.QuotaStoragePath(qType, name)); err != nil {
 			return nil, err
 		}
 

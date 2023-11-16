@@ -18,7 +18,6 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
-PROTOC_VERSION_MIN=3.21.12
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -113,14 +112,14 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it
 # has deprecated function, variable, constant or field
-deprecations: bootstrap
+deprecations: bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
 
 # ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
 # which will only return an error if changes that is not on main has deprecated function, variable, constant or field
-ci-deprecations: ci-bootstrap
+ci-deprecations: ci-bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh main
 
 tools/codechecker/.bin/codechecker:
@@ -128,14 +127,14 @@ tools/codechecker/.bin/codechecker:
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code violates
-# the check 
-vet-codechecker: bootstrap tools/codechecker/.bin/codechecker
+# the check
+vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
-# piped to revgrep which will only return an error if new piece of code that is 
-# not on main violates the check 
-ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker
+# piped to revgrep which will only return an error if new piece of code that is
+# not on main violates the check
+ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
@@ -150,6 +149,10 @@ lint:
 ci-lint:
 	@golangci-lint run --deadline 10m --new-from-rev=HEAD~
 
+# Lint protobuf files
+protolint: ci-bootstrap
+	buf lint
+
 # prep runs `go generate` to build the dynamically generated
 # source files.
 #
@@ -159,7 +162,7 @@ ci-lint:
 # dependency.
 prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
+	@GOARCH= GOOS= $(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools needed to build
@@ -169,11 +172,14 @@ ci-bootstrap: .ci-bootstrap
 		echo "Installing/Updating $$tool" ; \
 		GO111MODULE=off $(GO_CMD) get -u $$tool; \
 	done
+	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
 	@touch .ci-bootstrap
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
+	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	go generate -tags tools tools/tools.go
+	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -215,22 +221,7 @@ static-dist: ember-dist
 static-dist-dev: ember-dist-dev
 
 proto: bootstrap
-	@sh -c "'$(CURDIR)/scripts/protocversioncheck.sh' '$(PROTOC_VERSION_MIN)'"
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/activity_log.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/generation/generate_data.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/storagepacker/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/forwarding/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/logical/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative physical/raft/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/mfa/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/v5/proto/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/tokens/token.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/hcp_link/proto/*/*.proto
+	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left
@@ -247,6 +238,9 @@ fmtcheck:
 
 fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
+
+protofmt: ci-bootstrap
+	buf format -w
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
@@ -286,7 +280,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker 
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
@@ -304,10 +298,6 @@ ci-build-ui:
 ci-bundle:
 	@$(CURDIR)/scripts/ci-helper.sh bundle
 
-.PHONY: ci-filter-matrix
-ci-filter-matrix:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
-
 .PHONY: ci-get-artifact-basename
 ci-get-artifact-basename:
 	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
@@ -316,46 +306,23 @@ ci-get-artifact-basename:
 ci-get-date:
 	@$(CURDIR)/scripts/ci-helper.sh date
 
-.PHONY: ci-get-matrix-group-id
-ci-get-matrix-group-id:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
-
 .PHONY: ci-get-revision
 ci-get-revision:
 	@$(CURDIR)/scripts/ci-helper.sh revision
-
-.PHONY: ci-get-version
-ci-get-version:
-	@$(CURDIR)/scripts/ci-helper.sh version
-
-.PHONY: ci-get-version-base
-ci-get-version-base:
-	@$(CURDIR)/scripts/ci-helper.sh version-base
-
-.PHONY: ci-get-version-major
-ci-get-version-major:
-	@$(CURDIR)/scripts/ci-helper.sh version-major
-
-.PHONY: ci-get-version-meta
-ci-get-version-meta:
-	@$(CURDIR)/scripts/ci-helper.sh version-meta
-
-.PHONY: ci-get-version-minor
-ci-get-version-minor:
-	@$(CURDIR)/scripts/ci-helper.sh version-minor
 
 .PHONY: ci-get-version-package
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
-.PHONY: ci-get-version-patch
-ci-get-version-patch:
-	@$(CURDIR)/scripts/ci-helper.sh version-patch
-
-.PHONY: ci-get-version-pre
-ci-get-version-pre:
-	@$(CURDIR)/scripts/ci-helper.sh version-pre
-
 .PHONY: ci-prepare-legal
 ci-prepare-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+
+.PHONY: ci-copywriteheaders
+ci-copywriteheaders:
+	copywrite headers --plan
+	# Special case for MPL headers in /api, /sdk, and /shamir
+	cd api && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
+

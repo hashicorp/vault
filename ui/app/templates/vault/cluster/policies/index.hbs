@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -92,14 +97,10 @@
                     <ul class="menu-list">
                       {{#if item.updatePath.isPending}}
                         <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
+                          <LoadingDropdownOption />
                         </li>
                         <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
+                          <LoadingDropdownOption />
                         </li>
                       {{else}}
                         {{#if item.canRead}}
@@ -146,13 +147,16 @@
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-    {{#if (gt this.model.meta.lastPage 1)}}
-      <ListPagination
-        @page={{this.model.meta.currentPage}}
-        @lastPage={{this.model.meta.lastPage}}
-        @link="vault.cluster.policies.index"
+    {{#unless this.pageFilter}}
+      <Hds::Pagination::Numbered
+        @currentPage={{this.model.meta.currentPage}}
+        @currentPageSize={{this.model.meta.pageSize}}
+        @route="vault.cluster.policies.index"
+        @showSizeSelector={{false}}
+        @totalItems={{this.model.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
       />
-    {{/if}}
+    {{/unless}}
   {{else}}
     <EmptyState
       @title="No {{uppercase this.policyType}} policies yet"

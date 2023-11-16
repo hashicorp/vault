@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .replication {
@@ -13,7 +13,7 @@
   }
 
   .float-right {
-    margin: $spacing-s 0 $spacing-l 0;
+    margin: $spacing-12 0 $spacing-24 0;
     float: right;
   }
 }

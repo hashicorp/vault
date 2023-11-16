@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -29,13 +34,11 @@
                   Download
                 </ExternalLink>
               {{else}}
-                <button
-                  type="button"
-                  class="link is-ghost"
-                  onclick={{queue (action "downloadSnapshot") (action D.actions.close)}}
-                >
-                  Download
-                </button>
+                <Hds::Button
+                  @text="Download"
+                  class="link"
+                  {{on "click" (queue (action "downloadSnapshot") (action D.actions.close))}}
+                />
               {{/if}}
             </li>
             <li class="action">

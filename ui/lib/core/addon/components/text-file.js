@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -30,7 +30,6 @@ export default class TextFileComponent extends Component {
   @tracked content = '';
   @tracked filename = '';
   @tracked uploadError = '';
-  @tracked showValue = false;
   @tracked showTextArea = false;
   elementId = guidFor(this);
 

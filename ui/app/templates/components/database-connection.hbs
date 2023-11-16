@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -20,14 +25,13 @@
     <Toolbar>
       <ToolbarActions>
         {{#if @model.canDelete}}
-          <button
-            type="button"
-            class="toolbar-link"
-            onclick={{action (mut this.isDeleteModalActive) true}}
+          <Hds::Button
+            @text="Delete connection"
+            @color="secondary"
+            class="toolbar-button"
+            {{on "click" (action (mut this.isDeleteModalActive) true)}}
             data-test-database-connection-delete
-          >
-            Delete connection
-          </button>
+          />
         {{/if}}
         {{#if @model.canReset}}
           <ConfirmAction
@@ -165,16 +169,15 @@
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
-        <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Create database
-          </button>
-        </div>
-        <div class="control">
-          <SecretLink @mode="list" class="button">
-            Cancel
-          </SecretLink>
-        </div>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Create database" type="submit" data-test-secret-save />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+          />
+        </Hds::ButtonSet>
       </div>
     </div>
   </form>
@@ -211,8 +214,6 @@
                       <div class="field">
                         <Toggle
                           @name="show-{{attr.name}}"
-                          @status="success"
-                          @size="small"
                           @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
                           @checked={{this.showPasswordField}}
                           data-test-toggle={{attr.name}}
@@ -287,16 +288,15 @@
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
-        <div class="control">
-          <button data-test-secret-save type="submit" disabled={{this.buttonDisabled}} class="button is-primary">
-            Save
-          </button>
-        </div>
-        <div class="control">
-          <SecretLink @mode="list" class="button">
-            Cancel
-          </SecretLink>
-        </div>
+        <Hds::ButtonSet>
+          <Hds::Button @text="Save" type="submit" data-test-secret-save />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{@model.backend}}
+          />
+        </Hds::ButtonSet>
       </div>
     </div>
   </form>
@@ -339,42 +339,39 @@
           @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
           @defaultShown={{defaultDisplay}}
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
+          @value={{if (eq attr.name "connection_url") (decode-uri (get @model attr.name)) (get @model attr.name)}}
         />
       {{/if}}
     {{/let}}
   {{/each}}
 {{/if}}
 
-<Modal
-  @title="Rotate your root credentials?"
-  @onClose={{this.continueWithoutRotate}}
-  @isActive={{this.showSaveModal}}
-  @type="info"
-  @showCloseButton={{false}}
->
-  <section class="modal-card-body">
-    <p class="has-bottom-margin-s">
-      It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once
-      rotated,
-      <strong>only Vault knows the new root password</strong>.
-    </p>
-    <p>Would you like to rotate your new credentials? You can also do this later.</p>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" this.continueWithRotate}}
-      data-test-enable-rotate-connection
-    >
-      Rotate and enable
-    </button>
-    <button type="button" class="button is-secondary" {{on "click" this.continueWithoutRotate}} data-test-enable-connection>
-      Enable without rotating
-    </button>
-  </footer>
-</Modal>
+{{#if this.showSaveModal}}
+  <Hds::Modal id="rotate-credentials-modal" @onClose={{this.continueWithoutRotate}} as |M|>
+    <M.Header @icon="info" data-test-db-connection-modal-title>
+      Rotate your root credentials?
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        It’s best practice to rotate the root credential immediately after the initial configuration of each database. Once
+        rotated,
+        <strong>only Vault knows the new root password</strong>.
+      </p>
+      <p>Would you like to rotate your new credentials? You can also do this later.</p>
+    </M.Body>
+    <M.Footer>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Rotate and enable" {{on "click" this.continueWithRotate}} data-test-enable-rotate-connection />
+        <Hds::Button
+          @text="Enable without rotating"
+          @color="secondary"
+          {{on "click" this.continueWithoutRotate}}
+          data-test-enable-connection
+        />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
 
 <ConfirmationModal
   @title="Delete connection?"

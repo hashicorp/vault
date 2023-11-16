@@ -1,4 +1,12 @@
-<div class="selectable-card is-rounded secondaries">
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  @hasBorder={{true}}
+  class="has-padding-m known-secondaries-card {{if this.hasErrorClass 'has-error-border'}}"
+>
   <div class="level">
     <h3 class="card-title title is-5">{{this.replicationAttrs.secondaries.length}} Known secondaries</h3>
     <ToolbarLink @route="mode.secondaries" @model={{this.cluster.replicationMode}} data-test-manage-link>
@@ -20,4 +28,4 @@
       Add secondary
     </LinkTo>
   {{/if}}
-</div>
+</Hds::Card::Container>

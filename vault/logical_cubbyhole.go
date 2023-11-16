@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -60,6 +60,8 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 					Description: "Specifies the path of the secret.",
 				},
 			},
+
+			TakesArbitraryInput: true,
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 FROM docker.mirror.hashicorp.services/node:14.17.0-alpine
 RUN apk add --update --no-cache git make g++ automake autoconf libtool nasm libpng-dev

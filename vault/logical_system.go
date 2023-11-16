@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -43,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -79,14 +81,20 @@ type PolicyMFABackend struct {
 	*MFABackend
 }
 
-func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
+func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConfig) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
+	syncBackend := NewSecretsSyncBackend(core, logger)
+	if err := syncBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
+
 	b := &SystemBackend{
-		Core:       core,
-		db:         db,
-		logger:     logger,
-		mfaBackend: NewPolicyMFABackend(core, logger),
+		Core:        core,
+		db:          db,
+		logger:      logger,
+		mfaBackend:  NewPolicyMFABackend(core, logger),
+		syncBackend: syncBackend,
 	}
 
 	b.Backend = &framework.Backend{
@@ -112,6 +120,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"config/auditing/*",
 				"config/ui/headers/*",
 				"plugins/catalog/*",
+				"plugins/runtimes/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
 				"leases/revoke-prefix/*",
@@ -120,6 +129,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
+				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
+				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
+				"seal",
+				"step-down",
 			},
 
 			Unauthenticated: []string{
@@ -180,6 +194,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
@@ -219,6 +235,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)
+	b.Backend.InitializeFunc = sysInitialize(b)
+	b.Backend.Clean = sysClean(b)
 	return b
 }
 
@@ -238,10 +256,11 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core       *Core
-	db         *memdb.MemDB
-	logger     log.Logger
-	mfaBackend *PolicyMFABackend
+	Core        *Core
+	db          *memdb.MemDB
+	logger      log.Logger
+	mfaBackend  *PolicyMFABackend
+	syncBackend *SecretsSyncBackend
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -454,6 +473,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
@@ -521,34 +546,63 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	}
 
 	command := d.Get("command").(string)
-	if command == "" {
-		return logical.ErrorResponse("missing command value"), nil
+	ociImage := d.Get("oci_image").(string)
+	if command == "" && ociImage == "" {
+		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
-	if err = b.Core.CheckPluginPerms(command); err != nil {
-		return nil, err
+	if ociImage == "" {
+		if err = b.Core.CheckPluginPerms(command); err != nil {
+			return nil, err
+		}
+	}
+
+	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
 	parts := strings.Split(command, " ")
-	if len(parts) <= 0 {
+	if len(parts) == 0 && ociImage == "" {
 		return logical.ErrorResponse("missing command value"), nil
 	} else if len(parts) > 1 && len(args) > 0 {
 		return logical.ErrorResponse("must not specify args in command and args field"), nil
-	} else if len(parts) > 1 {
-		args = parts[1:]
+	} else if len(parts) >= 1 {
+		command = parts[0]
+		if len(parts) > 1 {
+			args = parts[1:]
+		}
 	}
 
 	env := d.Get("env").([]string)
 
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
-		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+		return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, pluginVersion, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
+		Name:     pluginName,
+		Type:     pluginType,
+		Version:  pluginVersion,
+		OCIImage: ociImage,
+		Runtime:  pluginRuntime,
+		Command:  command,
+		Args:     args,
+		Env:      env,
+		Sha256:   sha256Bytes,
+	})
 	if err != nil {
 		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
 			return logical.ErrorResponse(err.Error()), nil
@@ -593,14 +647,16 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, nil
 	}
 
-	command := ""
-	if !plugin.Builtin {
-		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+	command := plugin.Command
+	if !plugin.Builtin && plugin.OCIImage == "" {
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, command)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	// plugin.Env has historically been omitted, and could conceivably have
+	// sensitive information in it.
 	data := map[string]interface{}{
 		"name":    plugin.Name,
 		"args":    plugin.Args,
@@ -613,6 +669,14 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	if plugin.Builtin {
 		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
 		data["deprecation_status"] = status.String()
+	}
+
+	if plugin.OCIImage != "" {
+		data["oci_image"] = plugin.OCIImage
+	}
+
+	if plugin.Runtime != "" {
+		data["runtime"] = plugin.Runtime
 	}
 
 	return &logical.Response{
@@ -715,6 +779,169 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
 	}
 	return &r, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	switch runtimeType {
+	case consts.PluginRuntimeTypeContainer:
+		ociRuntime := d.Get("oci_runtime").(string)
+		cgroupParent := d.Get("cgroup_parent").(string)
+		cpu := d.Get("cpu_nanos").(int64)
+		if cpu < 0 {
+			return logical.ErrorResponse("runtime cpu in nanos cannot be negative"), nil
+		}
+		memory := d.Get("memory_bytes").(int64)
+		if memory < 0 {
+			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
+		}
+		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
+			&pluginruntimeutil.PluginRuntimeConfig{
+				Name:         runtimeName,
+				Type:         runtimeType,
+				OCIRuntime:   ociRuntime,
+				CgroupParent: cgroupParent,
+				CPU:          cpu,
+				Memory:       memory,
+			}); err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	default:
+		logical.ErrorResponse(fmt.Sprintf("%s is not a supported plugin runtime type", runtimeTypeStr))
+	}
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	plugins, err := b.Core.pluginCatalog.ListPluginsWithRuntime(ctx, runtimeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(plugins) != 0 {
+		return logical.ErrorResponse("unable to delete %q runtime. Registered plugins=%v are referencing it.", runtimeName, plugins), nil
+	}
+
+	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
+	if err != nil && !errors.Is(err, ErrPluginRuntimeNotFound) {
+		return nil, err
+	}
+	if conf == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{Data: map[string]interface{}{
+		"name":          conf.Name,
+		"type":          conf.Type.String(),
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}}, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var data []map[string]any
+
+	var pluginRuntimeTypes []consts.PluginRuntimeType
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr != "" {
+		runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		pluginRuntimeTypes = []consts.PluginRuntimeType{runtimeType}
+	} else {
+		pluginRuntimeTypes = consts.PluginRuntimeTypes
+	}
+
+	for _, runtimeType := range pluginRuntimeTypes {
+		if runtimeType == consts.PluginRuntimeTypeUnsupported {
+			continue
+		}
+		configs, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(configs) > 0 {
+			sort.Slice(configs, func(i, j int) bool {
+				return strings.Compare(configs[i].Name, configs[j].Name) == -1
+			})
+			for _, conf := range configs {
+				data = append(data, map[string]any{
+					"name":          conf.Name,
+					"type":          conf.Type.String(),
+					"oci_runtime":   conf.OCIRuntime,
+					"cgroup_parent": conf.CgroupParent,
+					"cpu_nanos":     conf.CPU,
+					"memory_bytes":  conf.Memory,
+				})
+			}
+		}
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+
+	if len(data) > 0 {
+		resp.Data["runtimes"] = data
+	}
+
+	return resp, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -2032,7 +2259,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		if !strings.HasPrefix(path, "auth/") {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' can only be modified on auth mounts")), logical.ErrInvalidRequest
 		}
-		if mountEntry.Type == "token" || mountEntry.Type == "ns_token" {
+		if mountEntry.Type == mountTypeToken || mountEntry.Type == mountTypeNSToken {
 			return logical.ErrorResponse(fmt.Sprintf("'token_type' cannot be set for 'token' or 'ns_token' auth mounts")), logical.ErrInvalidRequest
 		}
 
@@ -3003,11 +3230,13 @@ const (
 
 // handlePoliciesPasswordList returns the list of password policies
 func (*SystemBackend) handlePoliciesPasswordList(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
-	keys, err := req.Storage.List(ctx, "password_policy/")
+	keys, err := logical.CollectKeysWithPrefix(ctx, req.Storage, "password_policy/")
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range keys {
+		keys[i] = strings.TrimPrefix(keys[i], "password_policy/")
+	}
 	return logical.ListResponse(keys), nil
 }
 
@@ -3474,7 +3703,7 @@ func (b *SystemBackend) handleKeyRotationConfigUpdate(ctx context.Context, req *
 	}
 
 	// Store the rotation config
-	b.Core.barrier.SetRotationConfig(ctx, rotConfig)
+	err = b.Core.barrier.SetRotationConfig(ctx, rotConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -4157,7 +4386,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
-			perms.CapabilitiesBitmap&PatchCapabilityInt > 0:
+			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -4326,7 +4556,12 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 
-	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, "")
+	var routerPrefix string
+	if strings.HasPrefix(me.APIPathNoNamespace(), credentialRoutePrefix) {
+		routerPrefix = credentialRoutePrefix
+	}
+
+	filtered, err := b.Core.checkReplicatedFiltering(ctx, me, routerPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -4477,6 +4712,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		if perms.CapabilitiesBitmap&PatchCapabilityInt > 0 {
 			capabilities = append(capabilities, PatchCapability)
 		}
+		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
+			capabilities = append(capabilities, SubscribeCapability)
+		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
 		// set the path capabilities to "deny"
@@ -4522,6 +4760,18 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 
 	resp.Data["exact_paths"] = exact
 	resp.Data["glob_paths"] = glob
+
+	return resp, nil
+}
+
+// pathInternalUIVersion is the framework.PathOperation callback function for
+// the sys/internal/ui/version path. It simply returns the Vault version.
+func (b *SystemBackend) pathInternalUIVersion(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{
+		Data: map[string]any{
+			"version": version.GetVersion().VersionNumber(),
+		},
+	}
 
 	return resp, nil
 }
@@ -4672,6 +4922,14 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	doc.CreateOperationIDs(context)
 
+	// Every backend that includes a ListOperation that uses the default response schema will have supplied its own
+	// version of that schema, on a last writer wins basis. To ensure an external plugin doesn't end up being the last
+	// writer, we now override with the version within the code of the hosting Vault instance, if the document now
+	// being generated contains any version of this:
+	if _, ok := doc.Components.Schemas["StandardListResponse"]; ok {
+		doc.Components.Schemas["StandardListResponse"] = framework.OASStdSchemaStandardListResponse
+	}
+
 	buf, err := json.Marshal(doc)
 	if err != nil {
 		return nil, err
@@ -4706,9 +4964,22 @@ type SealStatusResponse struct {
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings          []string `json:"warnings,omitempty"`
+	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
 }
 
-func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
+type SealBackendStatus struct {
+	Name           string `json:"name"`
+	Healthy        bool   `json:"healthy"`
+	UnhealthySince string `json:"unhealthy_since,omitempty"`
+}
+
+type SealBackendStatusResponse struct {
+	Healthy        bool                `json:"healthy"`
+	UnhealthySince string              `json:"unhealthy_since,omitempty"`
+	Backends       []SealBackendStatus `json:"backends"`
+}
+
+func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
 	initialized, err := core.Initialized(ctx)
@@ -4730,7 +5001,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType().String(),
+			Type:         core.SealAccess().BarrierSealConfigType().String(),
 			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
@@ -4747,6 +5018,9 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		return s, nil
 	}
 
+	var recoverySealType string
+	sealType := sealConfig.Type
+
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
 	if !sealed {
@@ -4759,25 +5033,30 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
+		if core.SealAccess().RecoveryKeySupported() {
+			recoverySealType = sealType
+		}
+		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
-	progress, nonce := core.SecretProgress()
+	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  initialized,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		BuildDate:    version.BuildDate,
-		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
+		Type:             sealType,
+		Initialized:      initialized,
+		Sealed:           sealed,
+		T:                sealConfig.SecretThreshold,
+		N:                sealConfig.SecretShares,
+		Progress:         progress,
+		Nonce:            nonce,
+		Version:          version.GetVersion().VersionNumber(),
+		BuildDate:        version.BuildDate,
+		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		ClusterName:      clusterName,
+		ClusterID:        clusterID,
+		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType: recoverySealType,
+		StorageType:      core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -4786,6 +5065,42 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 	}
 
 	return s, nil
+}
+
+func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResponse, error) {
+	var r SealBackendStatusResponse
+	if a, ok := c.seal.(*autoSeal); ok {
+		r.Healthy = c.seal.Healthy()
+		var uhMin time.Time
+		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
+			b := SealBackendStatus{
+				Name:    sealWrapper.Name,
+				Healthy: sealWrapper.IsHealthy(),
+			}
+			if !sealWrapper.IsHealthy() {
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
+				if !lastSeenHealthy.IsZero() {
+					b.UnhealthySince = lastSeenHealthy.String()
+				}
+				if uhMin.IsZero() || uhMin.After(lastSeenHealthy) {
+					uhMin = lastSeenHealthy
+				}
+			}
+			r.Backends = append(r.Backends, b)
+		}
+		if !uhMin.IsZero() {
+			r.UnhealthySince = uhMin.String()
+		}
+	} else {
+		r.Backends = []SealBackendStatus{
+			{
+				Name:    "shamir", // "default?"
+				Healthy: true,
+			},
+		}
+		r.Healthy = true
+	}
+	return &r, nil
 }
 
 type LeaderResponse struct {
@@ -4825,9 +5140,9 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.ActiveTime = core.ActiveTime()
 	}
 	if resp.PerfStandby {
-		resp.PerfStandbyLastRemoteWAL = LastRemoteWAL(core)
+		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
 	} else if isLeader || !haEnabled {
-		resp.LastWAL = LastWAL(core)
+		resp.LastWAL = core.EntLastWAL()
 	}
 
 	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
@@ -4835,7 +5150,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 }
 
 func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetSealStatus(ctx)
+	status, err := b.Core.GetSealStatus(ctx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -5858,8 +6173,8 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-catalog_sha-256": {
-		`The SHA256 sum of the executable used in the
-command field. This should be HEX encoded.`,
+		`The SHA256 sum of the executable or container to be run.
+This should be HEX encoded.`,
 		"",
 	},
 	"plugin-catalog_command": {
@@ -5878,7 +6193,61 @@ Each entry is of the form "key=value".`,
 		"",
 	},
 	"plugin-catalog_version": {
-		"The semantic version of the plugin to use.",
+		"The semantic version of the plugin to use, or image tag if oci_image is provided.",
+		"",
+	},
+	"plugin-catalog_oci_image": {
+		`The name of the OCI image to be run, without the tag or SHA256.
+Must already be present on the machine.`,
+		"",
+	},
+	"plugin-catalog_runtime": {
+		`The Vault plugin runtime to use when running the plugin.`,
+		"",
+	},
+	"plugin-runtime-catalog": {
+		"Configures plugin runtimes",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of names of configured plugin runtimes.
+
+		GET /<type>/<name>
+			Retrieve the metadata for the named plugin runtime.
+
+		PUT /<type>/<name>
+			Add or update plugin runtime.
+
+		DELETE /<type>/<name>
+			Delete the plugin runtime with the given name.
+		`,
+	},
+	"plugin-runtime-catalog-list-all": {
+		"List all plugin runtimes in the catalog as a map of type to names.",
+		"",
+	},
+	"plugin-runtime-catalog_name": {
+		"The name of the plugin runtime",
+		"",
+	},
+	"plugin-runtime-catalog_type": {
+		"The type of the plugin runtime",
+		"",
+	},
+	"plugin-runtime-catalog_oci-runtime": {
+		"The OCI-compatible runtime (default \"runsc\")",
+		"",
+	},
+	"plugin-runtime-catalog_cgroup-parent": {
+		"Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
+		"",
+	},
+	"plugin-runtime-catalog_cpu-nanos": {
+		"CPU limit to set per container in nanos. Defaults to no limit.",
+		"",
+	},
+	"plugin-runtime-catalog_memory-bytes": {
+		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {

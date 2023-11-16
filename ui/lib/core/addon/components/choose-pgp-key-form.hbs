@@ -1,0 +1,69 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.selectedPgp}}
+  <form
+    id="confirm-pgp-key"
+    {{on "submit" this.handleSubmit}}
+    aria-label="begin token generation with PGP key"
+    data-test-confirm-pgp-key
+  >
+    <div>
+      <p class="has-bottom-margin-m" data-test-pgp-key-confirm>
+        {{or
+          @confirmText
+          (concat
+            'Below is the base-64 encoded PGP Key that will be used. Click the "' this.buttonText '" button to proceed.'
+          )
+        }}
+      </p>
+      <h4 class="has-text-weight-bold is-size-7 has-bottom-padding-m is-fullwidth">
+        {{concat "PGP Key " this.pgpKeyFile.filename}}
+      </h4>
+      <Hds::Copy::Snippet
+        class="has-bottom-margin-s"
+        @textToCopy={{this.pgpKey}}
+        @color="secondary"
+        data-test-pgp-key-copy
+        @container="#shamir-flow-modal"
+      />
+    </div>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Back"
+        @color="tertiary"
+        @icon="chevron-left"
+        {{on "click" (fn (mut this.selectedPgp) "")}}
+        data-test-confirm-pgp-back-button
+      />
+
+      <Hds::Button @text={{this.buttonText}} type="submit" disabled={{not this.pgpKey}} data-test-confirm-pgp-key-submit />
+    </Hds::ButtonSet>
+  </form>
+{{else}}
+  <form
+    id="choose-pgp-key"
+    {{on "submit" this.usePgpKey}}
+    aria-label="provide PGP key"
+    data-test-choose-pgp-key-form="begin"
+  >
+    <div class="has-bottom-margin-m">
+      <p data-test-choose-pgp-key-description>
+        {{this.formText}}
+      </p>
+      <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{this.setKey}} />
+    </div>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Back"
+        @color="tertiary"
+        @icon="chevron-left"
+        {{on "click" @onCancel}}
+        data-test-use-pgp-key-cancel
+      />
+      <Hds::Button @text="Use PGP Key" type="submit" disabled={{not this.pgpKeyFile.value}} data-test-use-pgp-key-button />
+    </Hds::ButtonSet>
+  </form>
+{{/if}}

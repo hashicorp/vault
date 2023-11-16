@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="save" @noun="Auth Method" />
@@ -11,13 +16,12 @@
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.saveModel.isRunning "loading"}}
       type="submit"
       data-test-save-config="true"
-      class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
       disabled={{this.saveModel.isRunning}}
-    >
-      Save
-    </button>
+    />
   </div>
 </form>

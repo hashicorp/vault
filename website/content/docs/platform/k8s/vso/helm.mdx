@@ -5,16 +5,16 @@ description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
 
-# Vault secrets operator helm chart
+# Vault Secrets Operator helm chart
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
+                  the vault-secrets-operator repo's values.yaml: file commit=d2307002434ffd899f7982f9827f427dbb6295e6 -->
 <!-- codegen: start -->
 
-## Top-Level stanzas
+## Top-Level Stanzas
 
 Use these links to navigate to a particular top-level stanza.
 
@@ -25,7 +25,7 @@ Use these links to navigate to a particular top-level stanza.
 - [`telemetry`](#h-telemetry)
 - [`tests`](#h-tests)
 
-## All values
+## All Values
 
 ### controller ((#h-controller))
 
@@ -34,6 +34,46 @@ Use these links to navigate to a particular top-level stanza.
 
   - `replicas` ((#v-controller-replicas)) (`integer: 1`) - Set the number of replicas for the operator.
 
+  - `hostAliases` ((#v-controller-hostaliases)) (`array<map>`) - Host Aliases settings for vault-secrets-operator pod.
+    The value is an array of PodSpec HostAlias maps.
+    ref: https://kubernetes.io/docs/tasks/network/customize-hosts-file-for-pods/
+    Example:
+    hostAliases:
+      - ip: 192.168.1.100
+        hostnames:
+        - vault.example.com
+
+  - `nodeSelector` ((#v-controller-nodeselector)) (`map`) - nodeSelector labels for vault-secrets-operator pod assignment.
+    ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    Example:
+    nodeSelector:
+      beta.kubernetes.io/arch: amd64
+
+  - `tolerations` ((#v-controller-tolerations)) (`array<map>`) - Toleration Settings for vault-secrets-operator pod.
+    The value is an array of PodSpec Toleration maps.
+    ref: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    Example:
+    tolerations:
+     - key: "key1"
+       operator: "Equal"
+       value: "value1"
+       effect: "NoSchedule"
+
+  - `affinity` ((#v-controller-affinity)) - Affinity settings for vault-secrets-operator pod.
+    The value is a map of PodSpec Affinity maps.
+    ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+    Example:
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: topology.kubernetes.io/zone
+              operator: In
+              values:
+              - antarctica-east1
+              - antarctica-west1
+
   - `kubeRbacProxy` ((#v-controller-kuberbacproxy)) - Settings related to the kubeRbacProxy container. This container is an HTTP proxy for the
     controller manager which performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
 
@@ -41,7 +81,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.11.0`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.14.4`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -59,6 +99,18 @@ Use these links to navigate to a particular top-level stanza.
 
         - `memory` ((#v-controller-kuberbacproxy-resources-requests-memory)) (`string: 64Mi`)
 
+  - `imagePullSecrets` ((#v-controller-imagepullsecrets)) (`array<map>`) - Image pull secret to use for private container registry authentication which will be applied to the controllers
+    service account. Alternatively, the value may be specified as an array of strings.
+    Example:
+    ```yaml
+    imagePullSecrets:
+      - name: pull-secret-name-1
+      - name: pull-secret-name-2
+    ```
+    Refer to https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry.
+
+  - `extraLabels` ((#v-controller-extralabels)) - Extra labels to attach to the deployment. This should be formatted as a YAML object (map)
+
   - `annotations` ((#v-controller-annotations)) - This value defines additional annotations for the deployment. This should be formatted as a YAML object (map)
 
   - `manager` ((#v-controller-manager)) - Settings related to the vault-secrets-operator container.
@@ -67,7 +119,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.3.4`)
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -196,6 +248,17 @@ Use these links to navigate to a particular top-level stanza.
 
       default: 100
 
+    - `extraEnv` ((#v-controller-manager-extraenv)) (`array<map>`) - Defines additional environment variables to be added to the
+      vault-secrets-opearator manager container.
+      extraEnv:
+        - name: HTTP_PROXY
+          value: http://proxy.example.com
+
+    - `extraArgs` ((#v-controller-manager-extraargs)) (`array: []`) - Defines additional commandline arguments to be passed to the
+      vault-secrets-operator manager container.
+      extraArgs:
+      - -zap-log-level=5
+
     - `resources` ((#v-controller-manager-resources)) (`map`) - Configures the default resources for the vault-secrets-operator container.
       For more information on configuring resources, see the K8s documentation:
       https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -211,6 +274,16 @@ Use these links to navigate to a particular top-level stanza.
         - `cpu` ((#v-controller-manager-resources-requests-cpu)) (`string: 10m`)
 
         - `memory` ((#v-controller-manager-resources-requests-memory)) (`string: 64Mi`)
+
+  - `podSecurityContext` ((#v-controller-podsecuritycontext)) - Configures the Pod Security Context
+    https://kubernetes.io/docs/tasks/configure-pod-container/security-context
+
+    - `runAsNonRoot` ((#v-controller-podsecuritycontext-runasnonroot)) (`boolean: true`)
+
+  - `securityContext` ((#v-controller-securitycontext)) - Configures the Container Security Context
+    https://kubernetes.io/docs/tasks/configure-pod-container/security-context
+
+    - `allowPrivilegeEscalation` ((#v-controller-securitycontext-allowprivilegeescalation)) (`boolean: false`)
 
   - `controllerConfigMapYaml` ((#v-controller-controllerconfigmapyaml)) (`map`) - Sets the configuration settings used by the controller. Any custom changes will be reflected in the
     data field of the configmap.
@@ -236,6 +309,11 @@ Use these links to navigate to a particular top-level stanza.
       - `port` ((#v-controller-controllerconfigmapyaml-webhook-port)) (`integer: 9443`)
 
   - `kubernetesClusterDomain` ((#v-controller-kubernetesclusterdomain)) (`string: cluster.local`) - Configures the environment variable KUBERNETES_CLUSTER_DOMAIN used by KubeDNS.
+
+  - `terminationGracePeriodSeconds` ((#v-controller-terminationgraceperiodseconds)) (`integer: 120`) - Duration in seconds the pod needs to terminate gracefully.
+    See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+
+  - `preDeleteHookTimeoutSeconds` ((#v-controller-predeletehooktimeoutseconds)) (`integer: 120`) - Timeout in seconds for the pre-delete hook
 
 ### metricsService ((#h-metricsservice))
 

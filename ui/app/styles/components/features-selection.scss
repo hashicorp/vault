@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .feature-header {
@@ -11,15 +11,15 @@
 
 .access-information {
   display: flex;
-  padding: $size-8 0px;
+  padding: $spacing-12 0px;
   font-size: $size-8;
 }
 
 .feature-box {
   box-shadow: $box-shadow;
   border-radius: $radius;
-  padding: $size-8;
-  margin: $size-8 0;
+  padding: $spacing-12;
+  margin: $spacing-12 0;
 
   &.is-active {
     box-shadow: 0 0 0 1px $grey-light;
@@ -33,7 +33,7 @@
 
 .feature-box label {
   font-weight: $font-weight-semibold;
-  padding-left: $size-10;
+  padding-left: $spacing-8;
 
   &::before {
     top: 3px;
@@ -48,8 +48,8 @@
   font-size: $size-8;
   color: $grey;
   line-height: 1.5;
-  margin-left: $size-3;
-  margin-top: $size-10;
+  margin-left: $spacing-24;
+  margin-top: $spacing-8;
 
   li::before {
     // bullet

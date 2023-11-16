@@ -1,18 +1,18 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .radio-card-selector {
   display: flex;
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-8;
 }
 .radio-card {
   box-shadow: $box-shadow-low;
   flex: 1 1 25%;
   flex-direction: column;
   justify-content: space-between;
-  margin: $spacing-xs $spacing-m;
+  margin: $spacing-8 $spacing-16;
   border: $base-border;
   border-radius: $radius;
   transition: all ease-in-out $speed;
@@ -67,19 +67,19 @@
 .radio-card-row {
   display: flex;
   flex: 1;
-  padding: $spacing-m;
+  padding: $spacing-16;
 }
 .radio-card-icon {
   color: $ui-gray-300;
 }
 .radio-card-message {
-  margin: $spacing-xxs;
+  margin: $spacing-4;
 }
 
 .radio-card-message-title {
   font-weight: $font-weight-semibold;
   font-size: $size-7;
-  margin-bottom: $spacing-xxs;
+  margin-bottom: $spacing-4;
 }
 .radio-card-message-body {
   line-height: 1.2;
@@ -91,7 +91,7 @@
   display: flex;
   justify-content: center;
   background: $ui-gray-050;
-  padding: $spacing-xs;
+  padding: $spacing-8;
 }
 
 .is-selected {

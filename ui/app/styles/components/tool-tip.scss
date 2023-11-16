@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .tool-tip {
@@ -45,7 +45,7 @@
   &::before,
   &::after {
     right: auto;
-    left: $spacing-s;
+    left: $spacing-12;
   }
 }
 .ember-basic-dropdown-content--right.tool-tip {

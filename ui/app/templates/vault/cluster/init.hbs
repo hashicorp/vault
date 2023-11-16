@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <SplashPage as |Page|>
   {{#if (and this.model.usingRaft (not this.prefersInit))}}
     <Page.header>
@@ -90,15 +95,13 @@
             </div>
           {{/if}}
           <DownloadButton
-            class="button is-ghost"
+            @color="tertiary"
             @filename={{this.keyFilename}}
             @data={{this.keyData}}
             @extension="json"
             @stringify={{true}}
-          >
-            <Icon @name="download" />
-            Download keys
-          </DownloadButton>
+            @text="Download keys"
+          />
         </div>
       </div>
     </Page.content>
@@ -202,14 +205,13 @@
           {{/if}}
         </div>
         <div class="box is-marginless is-shadowless">
-          <button
+          <Hds::Button
+            @text="Initialize"
+            @icon={{if this.loading "loading"}}
             data-test-init-submit
             type="submit"
-            class="button is-primary {{if this.loading 'is-loading'}}"
             disabled={{this.loading}}
-          >
-            Initialize
-          </button>
+          />
           <div class="init-illustration">
             {{svg-jar "initialize"}}
           </div>

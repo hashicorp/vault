@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     # We need to specify the provider source in each module until we publish it
@@ -50,10 +53,6 @@ data "aws_subnets" "vpc" {
   }
 }
 
-data "aws_kms_key" "kms_key" {
-  key_id = var.awskms_unseal_key_arn
-}
-
 data "aws_iam_policy_document" "target" {
   statement {
     resources = ["*"]
@@ -64,16 +63,20 @@ data "aws_iam_policy_document" "target" {
     ]
   }
 
-  statement {
-    resources = [var.awskms_unseal_key_arn]
+  dynamic "statement" {
+    for_each = var.seal_key_names
 
-    actions = [
-      "kms:DescribeKey",
-      "kms:ListKeys",
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:GenerateDataKey"
-    ]
+    content {
+      resources = [statement.value]
+
+      actions = [
+        "kms:DescribeKey",
+        "kms:ListKeys",
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ]
+    }
   }
 }
 
@@ -144,7 +147,7 @@ resource "aws_security_group" "target" {
     to_port   = 22
     protocol  = "tcp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }
@@ -155,7 +158,7 @@ resource "aws_security_group" "target" {
     to_port   = 8201
     protocol  = "tcp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
       formatlist("%s/32", var.ssh_allow_ips)
     ])
@@ -167,7 +170,7 @@ resource "aws_security_group" "target" {
     to_port   = 8302
     protocol  = "tcp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }
@@ -177,7 +180,7 @@ resource "aws_security_group" "target" {
     to_port   = 8302
     protocol  = "udp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }
@@ -187,7 +190,7 @@ resource "aws_security_group" "target" {
     to_port   = 8503
     protocol  = "tcp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }
@@ -197,7 +200,7 @@ resource "aws_security_group" "target" {
     to_port   = 8600
     protocol  = "tcp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }
@@ -207,7 +210,7 @@ resource "aws_security_group" "target" {
     to_port   = 8600
     protocol  = "udp"
     cidr_blocks = flatten([
-      formatlist("%s/32", data.enos_environment.localhost.public_ip_addresses),
+      formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
       join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
     ])
   }

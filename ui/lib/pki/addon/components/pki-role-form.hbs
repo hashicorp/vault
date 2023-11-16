@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
@@ -18,8 +23,6 @@
                 />
                 <Toggle
                   @name={{concat attr.name "-toggle"}}
-                  @status="success"
-                  @size="small"
                   @checked={{this.showDefaultIssuer}}
                   @onChange={{this.toggleShowDefaultIssuer}}
                 >

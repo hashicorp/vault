@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 $console-close-height: 35px;
@@ -18,59 +18,38 @@ $console-close-height: 35px;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
   z-index: 199;
-
-  .button {
-    background: transparent;
-    border: none;
-    color: $white;
-    min-width: 0;
-    padding: 0 $size-8;
-
-    &.active,
-    &:hover {
-      background: $blue;
-      color: $white;
-    }
-  }
 }
 
 .console-ui-panel-content {
   color: $white;
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: $size-7;
   font-weight: $font-weight-semibold;
   justify-content: flex-end;
   min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
-  padding: $size-8 $size-8 $size-5;
+  padding: $spacing-12 $spacing-12 $spacing-18;
   transition: justify-content $speed ease-in;
 
   pre,
   p {
     background: none;
     color: inherit;
-    font-size: 14px;
+    font-size: $size-7;
     min-height: 2rem;
     padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
-      padding-left: $size-4;
+      padding-left: $spacing-20;
     }
   }
 
   .cm-s-hashi.CodeMirror {
     background-color: rgba($black, 0.5) !important;
     font-weight: $font-weight-normal;
-    margin-left: $size-4;
-    padding: $size-8 $size-4;
+    margin-left: $spacing-20;
+    padding: $spacing-12 $spacing-20;
   }
-}
-
-.console-ui-panel-content.hover-copy-button,
-.console-ui-panel-content.hover-copy-button-static {
-  top: auto;
-  bottom: 0;
-  right: 0;
 }
 
 .console-ui-input {
@@ -80,16 +59,16 @@ $console-close-height: 35px;
   input {
     background-color: rgba($black, 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
-    border-radius: 2px;
+    border-radius: var(--token-side-nav-body-list-item-border-radius);
     caret-color: $white;
     color: $white;
     flex: 1 1 auto;
     font-family: $family-monospace;
-    font-size: 16px;
+    font-size: $size-6;
     font-weight: $font-weight-bold;
     outline: none;
-    padding: $size-10;
-    margin-right: $spacing-xs;
+    padding: $spacing-8;
+    margin-right: $spacing-8;
     transition: background-color $speed;
   }
 }
@@ -101,7 +80,7 @@ $console-close-height: 35px;
 .console-ui-output {
   transition: background-color $speed ease-in-out;
   will-change: background-color;
-  padding-right: $size-2;
+  padding-right: $spacing-36;
   position: relative;
   background-color: rgba(#000, 0);
   &:hover {
@@ -110,7 +89,7 @@ $console-close-height: 35px;
 }
 
 .console-ui-alert {
-  margin-left: calc(#{$size-4} - 0.33rem);
+  margin-left: calc(#{$spacing-20} - 0.33rem);
   position: relative;
 
   svg {
@@ -153,13 +132,13 @@ $console-close-height: 35px;
 
 .console-close-button {
   position: sticky;
-  top: $spacing-xs;
+  top: $spacing-8;
   height: $console-close-height;
   display: flex;
   justify-content: flex-end;
   z-index: 210;
 
   button {
-    margin-right: $spacing-xs;
+    margin-right: $spacing-8;
   }
 }

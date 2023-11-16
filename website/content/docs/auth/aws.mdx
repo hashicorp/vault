@@ -214,9 +214,9 @@ whether or not it's appropriate to configure inferencing.
 ## Mixing authentication types
 
 Vault allows you to configure using either the ec2 auth method or the iam auth
-method, but not both auth methods. Further, Vault will prevent you from
-enforcing restrictions that it cannot enforce given the chosen auth type for a
-role. Some examples of how this works in practice:
+method, but not both auth methods. Further, **assumed roles are not supported**
+and Vault prevents you from enforcing restrictions that it cannot enforce given
+the chosen auth type for a role. Some examples of how this works in practice:
 
 1. You configure a role with the ec2 auth type, with a bound AMI ID. A
    client would not be able to login using the iam auth type.

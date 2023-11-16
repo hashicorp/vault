@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // This file defines the styles for .input, .textarea and .input-hint.
@@ -18,8 +18,8 @@
   line-height: 1.5;
   max-width: 100%;
   padding-bottom: calc(0.375em - 1px);
-  padding-left: $size-8;
-  padding-right: $size-8;
+  padding-left: $spacing-12;
+  padding-right: $spacing-12;
   padding-top: calc(0.375em - 1px);
   width: 100%;
 
@@ -60,7 +60,9 @@
 
 .input[readonly],
 .textarea[readonly] {
+  border: none;
   box-shadow: none;
+  cursor: not-allowed;
 }
 
 // textarea specific css
@@ -77,7 +79,7 @@
 
 // custom input
 .input-hint {
-  padding: 0 $size-9;
+  padding: 0 $spacing-10;
   font-size: $size-8;
   color: $grey;
 }

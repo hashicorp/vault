@@ -1,12 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <WizardContent @headerText="Vault Web UI Guide" @glyph="tour" @class="collapsed" @hidePopup={{true}}>
-  <button type="button" class="button is-transparent dismiss-collapsed" {{action @onDismiss}}>
-    <Icon @name="x" aria-label="Close" />
-  </button>
+  <Hds::Button @text="Close" @icon="x" @isIconOnly={{true}} @color="secondary" {{on "click" (action @onDismiss)}} />
   <p>Feel free to explore Vault. Click below to get back to the guide or close this window.</p>
   <div class="box wizard-divider-box">
-    <button type="button" class="button is-transparent has-icon-left has-text-white" {{action @onAdvance}}>
-      <Chevron @direction="up" />
-      Back to guide
-    </button>
+    <Hds::Button @text="Back to guide" @icon="chevron-up" {{on "click" (action @onAdvance)}} />
   </div>
 </WizardContent>

@@ -1,39 +1,44 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
-import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const M = Model.extend({
-  idPrefix: 'alphabet/',
-  idForNav: computed('id', 'idPrefix', function () {
+export default class Alphabet extends Model {
+  idPrefix = 'alphabet/';
+
+  get idForNav() {
     const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
-  }),
+  }
 
-  name: attr('string', {
+  @attr('string', {
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
-  }),
-  alphabet: attr('string', {
+  })
+  name;
+
+  @attr('string', {
     label: 'Alphabet',
     subText:
-      'Provide the set of valid UTF-8 characters contained within both the input and transformed value. Read more.',
-  }),
+      'Provide the set of valid UTF-8 characters contained within both the input and transformed value.',
+    docLink: '/vault/api-docs/secret/transform#create-update-alphabet',
+  })
+  alphabet;
 
-  attrs: computed(function () {
+  get attrs() {
     const keys = ['name', 'alphabet'];
     return expandAttributeMeta(this, keys);
-  }),
+  }
 
-  backend: attr('string', { readOnly: true }),
-});
+  @attr('string', {
+    readOnly: true,
+  })
+  backend;
 
-export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/alphabet/${'id'}`,
-});
+  @lazyCapabilities(apiPath`${'backend'}/alphabet/${'id'}`, 'backend', 'id')
+  updatePath;
+}

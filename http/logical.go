@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -45,7 +44,7 @@ func (b *bufferedReader) Close() error {
 
 const MergePatchContentTypeHeader = "application/merge-patch+json"
 
-func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
@@ -110,7 +109,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		// is der encoded) we don't want to parse it. Instead, we will simply
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
+
+		if ra != nil && ra.IsBinaryPath(r.Context(), path) {
+			passHTTPReq = true
+			origBody = r.Body
+		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -215,15 +218,6 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	return req, origBody, 0, nil
 }
 
-func isOcspRequest(contentType string) bool {
-	contentType, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return false
-	}
-
-	return contentType == "application/ocsp-request"
-}
-
 func buildLogicalPath(r *http.Request) (string, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
@@ -264,7 +258,7 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 }
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
-	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
@@ -316,7 +310,7 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		req, _, statusCode, err := buildLogicalRequestNoAuth(false, nil, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -353,21 +347,24 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		}
 
 		// Websockets need to be handled at HTTP layer instead of logical requests.
-		if core.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-			ns, err := namespace.FromContext(r.Context())
-			if err != nil {
-				respondError(w, http.StatusInternalServerError, err)
-				return
-			}
-			nsPath := ns.Path
-			if ns.ID == namespace.RootNamespaceID {
-				nsPath = ""
-			}
-			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-				handler := handleEventsSubscribe(core, req)
-				handler.ServeHTTP(w, r)
-				return
-			}
+		ns, err := namespace.FromContext(r.Context())
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		nsPath := ns.Path
+		if ns.ID == namespace.RootNamespaceID {
+			nsPath = ""
+		}
+		if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+			handler := handleEventsSubscribe(core, req)
+			handler.ServeHTTP(w, r)
+			return
+		}
+		handler := handleEntPaths(nsPath, core, r)
+		if handler != nil {
+			handler.ServeHTTP(w, r)
+			return
 		}
 
 		// Make the internal request. We attach the connection info
@@ -449,7 +446,7 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 		}
 	}
 
-	adjustResponse(core, w, req)
+	entAdjustResponse(core, w, req)
 
 	// Respond
 	respondOk(w, ret)

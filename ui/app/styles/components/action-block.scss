@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 @mixin stacked-grid {
@@ -8,16 +8,16 @@
   grid-row: 1/1;
 }
 @mixin stacked-content {
-  margin-bottom: $spacing-l;
+  margin-bottom: $spacing-24;
 }
 
 .action-block {
-  @extend .selectable-card;
+  box-shadow: 0 0 0 1px rgba($grey-dark, 0.3);
   grid-template-columns: 2fr 1fr;
   display: grid;
-  padding: $spacing-m $spacing-l;
+  padding: $spacing-16 $spacing-24;
   line-height: inherit;
-  grid-gap: $spacing-m;
+  grid-gap: $spacing-16;
 
   @include until($mobile) {
     @include stacked-grid();
@@ -52,7 +52,7 @@
 .replication-actions-grid-layout {
   display: flex;
   flex-wrap: wrap;
-  margin: $spacing-m 0;
+  margin: $spacing-16 0;
   @include until($mobile) {
     display: block;
   }
@@ -60,7 +60,7 @@
 
 .replication-actions-grid-item {
   flex-basis: 50%;
-  padding: $spacing-s;
+  padding: $spacing-12;
   display: flex;
   width: 100%;
 }

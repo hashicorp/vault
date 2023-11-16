@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes `max_versions` default for secret metadata unintentionally overriding kv engine defaults
+```

@@ -1,104 +1,15 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
 import (
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-// TestOptions_WithFormat exercises WithFormat option to ensure it performs as expected.
-func TestOptions_WithFormat(t *testing.T) {
-	tests := map[string]struct {
-		Value                string
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
-		ExpectedValue        string
-	}{
-		"empty": {
-			Value:                "",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "format cannot be empty",
-		},
-		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "format cannot be empty",
-		},
-		"valid": {
-			Value:           "test",
-			IsErrorExpected: false,
-			ExpectedValue:   "test",
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			options := &options{}
-			applyOption := WithFormat(tc.Value)
-			err := applyOption(options)
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-				require.EqualError(t, err, tc.ExpectedErrorMessage)
-			default:
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withFormat)
-			}
-		})
-	}
-}
-
-// TestOptions_WithSubtype exercises WithSubtype option to ensure it performs as expected.
-func TestOptions_WithSubtype(t *testing.T) {
-	tests := map[string]struct {
-		Value                string
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
-		ExpectedValue        string
-	}{
-		"empty": {
-			Value:                "",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "subtype cannot be empty",
-		},
-		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "subtype cannot be empty",
-		},
-		"valid": {
-			Value:           "test",
-			IsErrorExpected: false,
-			ExpectedValue:   "test",
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			options := &options{}
-			applyOption := WithSubtype(tc.Value)
-			err := applyOption(options)
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-				require.EqualError(t, err, tc.ExpectedErrorMessage)
-			default:
-				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withSubtype)
-			}
-		})
-	}
-}
 
 // TestOptions_WithNow exercises WithNow option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
@@ -126,16 +37,16 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &options{}
+			opts := &options{}
 			applyOption := WithNow(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withNow)
+				require.Equal(t, tc.ExpectedValue, opts.withNow)
 			}
 		})
 	}
@@ -171,16 +82,16 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithID(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withID)
+				require.Equal(t, tc.ExpectedValue, opts.withID)
 			}
 		})
 	}
@@ -192,6 +103,9 @@ func TestOptions_Default(t *testing.T) {
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
 	require.False(t, opts.withNow.IsZero())
+	require.Equal(t, "AUTH", opts.withFacility)
+	require.Equal(t, "vault", opts.withTag)
+	require.Equal(t, 2*time.Second, opts.withMaxDuration)
 }
 
 // TestOptions_Opts exercises getOpts with various Option values.
@@ -201,8 +115,6 @@ func TestOptions_Opts(t *testing.T) {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
-		ExpectedSubtype      string
-		ExpectedFormat       string
 		IsNowExpected        bool
 		ExpectedNow          time.Time
 	}{
@@ -225,24 +137,6 @@ func TestOptions_Opts(t *testing.T) {
 			ExpectedID:      "juan",
 			IsNowExpected:   true,
 		},
-		"with-multiple-valid-subtype": {
-			opts: []Option{
-				WithSubtype("qwerty"),
-				WithSubtype("juan"),
-			},
-			IsErrorExpected: false,
-			ExpectedSubtype: "juan",
-			IsNowExpected:   true,
-		},
-		"with-multiple-valid-format": {
-			opts: []Option{
-				WithFormat("qwerty"),
-				WithFormat("juan"),
-			},
-			IsErrorExpected: false,
-			ExpectedFormat:  "juan",
-			IsNowExpected:   true,
-		},
 		"with-multiple-valid-now": {
 			opts: []Option{
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
@@ -263,14 +157,10 @@ func TestOptions_Opts(t *testing.T) {
 		"with-multiple-valid-options": {
 			opts: []Option{
 				WithID("qwerty"),
-				WithSubtype("typey2"),
-				WithFormat("json"),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
-			ExpectedSubtype: "typey2",
-			ExpectedFormat:  "json",
 			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}
@@ -290,8 +180,6 @@ func TestOptions_Opts(t *testing.T) {
 				require.NotNil(t, opts)
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedID, opts.withID)
-				require.Equal(t, tc.ExpectedSubtype, opts.withSubtype)
-				require.Equal(t, tc.ExpectedFormat, opts.withFormat)
 				switch {
 				case tc.IsNowExpected:
 					require.True(t, time.Now().After(opts.withNow))
@@ -300,6 +188,237 @@ func TestOptions_Opts(t *testing.T) {
 					require.Equal(t, tc.ExpectedNow, opts.withNow)
 				}
 
+			}
+		})
+	}
+}
+
+// TestOptions_WithFacility exercises WithFacility Option to ensure it performs as expected.
+func TestOptions_WithFacility(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "    ",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "   juan   ",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithFacility(tc.Value)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withFacility)
+		})
+	}
+}
+
+// TestOptions_WithTag exercises WithTag Option to ensure it performs as expected.
+func TestOptions_WithTag(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "    ",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "   juan   ",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithTag(tc.Value)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withTag)
+		})
+	}
+}
+
+// TestOptions_WithSocketType exercises WithSocketType Option to ensure it performs as expected.
+func TestOptions_WithSocketType(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithSocketType(tc.Value)
+			err := applyOption(opts)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, opts.withSocketType)
+		})
+	}
+}
+
+// TestOptions_WithMaxDuration exercises WithMaxDuration Option to ensure it performs as expected.
+func TestOptions_WithMaxDuration(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        time.Duration
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"duration-2s": {
+			Value:         "2s",
+			ExpectedValue: 2 * time.Second,
+		},
+		"duration-2m": {
+			Value:         "2m",
+			ExpectedValue: 2 * time.Minute,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithMaxDuration(tc.Value)
+			err := applyOption(opts)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, opts.withMaxDuration)
+			}
+		})
+	}
+}
+
+// TestOptions_WithFileMode exercises WithFileMode Option to ensure it performs as expected.
+func TestOptions_WithFileMode(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		IsNilExpected        bool
+		ExpectedValue        os.FileMode
+	}{
+		"empty": {
+			Value:           "",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"whitespace": {
+			Value:           "     ",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"nonsense": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse file mode: strconv.ParseUint: parsing \"juan\": invalid syntax",
+		},
+		"zero": {
+			Value:           "0000",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o000),
+		},
+		"valid": {
+			Value:           "0007",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o007),
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithFileMode(tc.Value)
+			err := applyOption(opts)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				switch {
+				case tc.IsNilExpected:
+					// Optional Option 'not supplied' (i.e. was whitespace/empty string)
+					require.Nil(t, opts.withFileMode)
+				default:
+					// Dereference the pointer, so we can examine the file mode.
+					require.Equal(t, tc.ExpectedValue, *opts.withFileMode)
+				}
 			}
 		})
 	}

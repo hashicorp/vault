@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .auth-form {
@@ -25,14 +25,14 @@
 }
 
 .toolbar-namespace-picker {
-  padding: 0 $spacing-s;
+  padding: 0 $spacing-12;
 
   .field {
     width: 100%;
   }
 
   .field-label {
-    margin-right: $spacing-s;
+    margin-right: $spacing-12;
     align-self: center;
   }
 

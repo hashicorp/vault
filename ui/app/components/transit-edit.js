@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -11,7 +11,7 @@ import { task, waitForEvent } from 'ember-concurrency';
 import { set } from '@ember/object';
 
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -26,10 +26,10 @@ export default Component.extend(FocusOnInsertMixin, {
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.key && this.key.isError) {
+    if (this.key && this.key.isError && !this.key.isDestroyed && !this.key.isDestroying) {
       this.key.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   waitForKeyUp: task(function* () {

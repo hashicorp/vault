@@ -1,27 +1,28 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 scenario "smoke" {
   matrix {
     arch            = ["amd64", "arm64"]
-    backend         = ["consul", "raft"]
     artifact_source = ["local", "crt", "artifactory"]
     artifact_type   = ["bundle", "package"]
-    consul_version  = ["1.14.2", "1.13.4", "1.12.7"]
+    backend         = ["consul", "raft"]
+    consul_version  = ["1.12.9", "1.13.9", "1.14.9", "1.15.5", "1.16.1"]
     distro          = ["ubuntu", "rhel"]
-    edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
-
-    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
-    exclude {
-      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
-      artifact_type = ["package"]
-    }
+    seal_ha_beta    = ["true", "false"]
 
     # Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
+    }
+
+    # HSM and FIPS 140-2 are only supported on amd64
+    exclude {
+      arch    = ["arm64"]
+      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     }
   }
 
@@ -34,36 +35,13 @@ scenario "smoke" {
   ]
 
   locals {
-    backend_tag_key = "VaultStorage"
-    build_tags = {
-      "oss"              = ["ui"]
-      "ent"              = ["ui", "enterprise", "ent"]
-      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
-      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
-    }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
-    }
+    artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    packages = ["jq"]
-    tags = merge({
-      "Project Name" : var.project_name
-      "Project" : "Enos",
-      "Environment" : "ci"
-    }, var.tags)
-    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-    vault_install_dir_packages = {
-      rhel   = "/bin"
-      ubuntu = "/usr/bin"
-    }
-    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
-    vault_tag_key     = "Type" // enos_vault_start expects Type as the tag key
+    manage_service    = matrix.artifact_type == "bundle"
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
   }
 
   step "get_local_metadata" {
@@ -75,8 +53,8 @@ scenario "smoke" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path          = local.bundle_path
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      artifact_path        = local.artifact_path
       goarch               = matrix.arch
       goos                 = "linux"
       artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
@@ -100,16 +78,36 @@ scenario "smoke" {
     module = module.create_vpc
 
     variables {
-      common_tags = local.tags
+      common_tags = global.tags
     }
   }
 
-  step "read_license" {
-    skip_step = matrix.edition == "oss"
+  step "create_seal_key" {
+    module = "seal_key_${matrix.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
+  // This step reads the contents of the backend license if we're using a Consul backend and
+  // the edition is "ent".
+  step "read_backend_license" {
+    skip_step = matrix.backend == "raft" || var.backend_edition == "ce"
     module    = module.read_license
 
     variables {
-      file_name = local.vault_license_path
+      file_name = global.backend_license_path
+    }
+  }
+
+  step "read_vault_license" {
+    skip_step = matrix.edition == "ce"
+    module    = module.read_license
+
+    variables {
+      file_name = global.vault_license_path
     }
   }
 
@@ -122,11 +120,11 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.vault_tag_key
-      common_tags           = local.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -139,18 +137,18 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.backend_tag_key
-      common_tags           = local.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      cluster_tag_key = global.backend_tag_key
+      common_tags     = global.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
   step "create_backend_cluster" {
     module = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets,
+      step.create_vault_cluster_backend_targets
     ]
 
     providers = {
@@ -159,7 +157,8 @@ scenario "smoke" {
 
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
-      cluster_tag_key = local.backend_tag_key
+      cluster_tag_key = global.backend_tag_key
+      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -182,27 +181,31 @@ scenario "smoke" {
 
     variables {
       artifactory_release     = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
-      backend_cluster_tag_key = local.backend_tag_key
+      backend_cluster_tag_key = global.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
-      enable_file_audit_device = var.vault_enable_file_audit_device
-      install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path      = local.bundle_path
-      packages                 = local.packages
-      storage_backend          = matrix.backend
-      target_hosts             = step.create_vault_cluster_targets.hosts
-      unseal_method            = matrix.seal
+      enable_audit_devices = var.vault_enable_audit_devices
+      install_dir          = local.vault_install_dir
+      license              = matrix.edition != "ce" ? step.read_vault_license.license : null
+      local_artifact_path  = local.artifact_path
+      manage_service       = local.manage_service
+      packages             = concat(global.packages, global.distro_packages[matrix.distro])
+      seal_ha_beta         = matrix.seal_ha_beta
+      seal_key_name        = step.create_seal_key.resource_name
+      seal_type            = matrix.seal
+      storage_backend      = matrix.backend
+      target_hosts         = step.create_vault_cluster_targets.hosts
     }
   }
 
-  step "get_vault_cluster_ips" {
-    module     = module.vault_get_cluster_ips
+  // Wait for our cluster to elect a leader
+  step "wait_for_leader" {
+    module     = module.vault_wait_for_leader
     depends_on = [step.create_vault_cluster]
 
     providers = {
@@ -210,7 +213,23 @@ scenario "smoke" {
     }
 
     variables {
-      vault_instances   = step.create_vault_cluster_targets.hosts
+      timeout           = 120 # seconds
+      vault_hosts       = step.create_vault_cluster_targets.hosts
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  step "get_vault_cluster_ips" {
+    module     = module.vault_get_cluster_ips
+    depends_on = [step.wait_for_leader]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_hosts       = step.create_vault_cluster_targets.hosts
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -237,7 +256,7 @@ scenario "smoke" {
 
   step "verify_vault_unsealed" {
     module     = module.vault_verify_unsealed
-    depends_on = [step.create_vault_cluster]
+    depends_on = [step.wait_for_leader]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -270,9 +289,12 @@ scenario "smoke" {
   }
 
   step "verify_raft_auto_join_voter" {
-    skip_step  = matrix.backend != "raft"
-    module     = module.vault_verify_raft_auto_join_voter
-    depends_on = [step.create_vault_cluster]
+    skip_step = matrix.backend != "raft"
+    module    = module.vault_verify_raft_auto_join_voter
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -286,8 +308,11 @@ scenario "smoke" {
   }
 
   step "verify_replication" {
-    module     = module.vault_verify_replication
-    depends_on = [step.create_vault_cluster]
+    module = module.vault_verify_replication
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -318,27 +343,24 @@ scenario "smoke" {
   }
 
   step "verify_ui" {
-    module     = module.vault_verify_ui
-    depends_on = [step.create_vault_cluster]
+    module = module.vault_verify_ui
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances   = step.create_vault_cluster_targets.hosts
-      vault_install_dir = local.vault_install_dir
+      vault_instances = step.create_vault_cluster_targets.hosts
     }
   }
 
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
-  }
-
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
   }
 
   output "cluster_name" {
@@ -379,6 +401,11 @@ scenario "smoke" {
   output "recovery_keys_hex" {
     description = "The Vault cluster recovery keys hex"
     value       = step.create_vault_cluster.recovery_keys_hex
+  }
+
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.name
   }
 
   output "unseal_keys_b64" {

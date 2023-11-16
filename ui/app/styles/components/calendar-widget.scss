@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 $dark-gray: #535f73;
@@ -18,27 +18,16 @@ $dark-gray: #535f73;
   }
 }
 .calendar-title {
-  padding: $size-10 $size-8;
+  padding: $spacing-10 $spacing-12;
 }
 
 .select-year {
   grid-area: select-year;
-  margin-left: 24px;
-  margin-top: 10px;
+  margin: 10px 24px;
   font-weight: $font-weight-bold;
   display: flex;
   justify-content: space-between;
   align-items: first baseline;
-
-  // spacing of < year > icons when the tooltip is added or removed from DOM.
-  > .padding-right {
-    // if no tooltip
-    padding-right: 26px;
-  }
-  > .negative-margin {
-    // if tooltip
-    margin-right: -50px;
-  }
 }
 
 .calendar-widget {
@@ -99,7 +88,7 @@ $dark-gray: #535f73;
   background-color: $ui-gray-700;
   color: $white;
   font-size: $size-8;
-  padding: $size-9;
+  padding: $spacing-10;
   border-radius: $radius-large;
   width: 141px;
 }

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="console-ui-input" data-test-component="console/command-input">
   {{#if this.isRunning}}
     <div class="control console-spinner is-loading"></div>
@@ -7,17 +12,14 @@
   <input onkeyup={{action "handleKeyUp"}} value={{this.value}} autocomplete="off" spellcheck="false" />
   <ToolTip @horizontalPosition="auto-right" @verticalPosition="above" as |d|>
     <d.Trigger>
-      <button
-        type="button"
-        class={{concat "button is-compact" (if this.isFullscreen " active")}}
+      <Hds::Button
+        class="hds-side-nav__icon-button"
         {{on "click" (action "fullscreen")}}
         data-test-tool-tip-trigger
-      >
-        <Icon
-          @name={{if this.isFullscreen "minimize" "maximize"}}
-          aria-label={{if this.isFullscreen "Minimize" "Maximize"}}
-        />
-      </button>
+        @icon={{if this.isFullscreen "minimize" "maximize"}}
+        @text={{if this.isFullscreen "Minimize" "Maximize"}}
+        @isIconOnly={{true}}
+      />
     </d.Trigger>
     <d.Content @defaultClass="tool-tip">
       <div class="box">
