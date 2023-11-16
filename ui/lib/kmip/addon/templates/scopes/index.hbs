@@ -65,32 +65,30 @@
             View scope
           </LinkTo>
         </li>
-        {{#if list.item.updatePath.canDelete}}
-          {{#if list.item.updatePath.isPending}}
-            <li class="action">
-              <LoadingDropdownOption />
-            </li>
-          {{else}}
-            <ConfirmAction
-              class="hds-confirm-action-critical"
-              @buttonColor="critical"
-              @isInDropdown={{true}}
-              @buttonText="Delete scope"
-              @confirmTitle="Delete scope {{list.item.id}}?"
-              @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
-              @onConfirmAction={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted scope " list.item.id)
-                  (concat "There was an error deleting the scope " list.item.id)
-                  (action "refresh")
-                )
-              }}
-              data-test-scope-delete
-            />
-          {{/if}}
+        {{#if list.item.updatePath.isPending}}
+          <li class="action">
+            <LoadingDropdownOption />
+          </li>
+        {{else if list.item.updatePath.canDelete}}
+          <ConfirmAction
+            class="hds-confirm-action-critical"
+            @buttonColor="critical"
+            @isInDropdown={{true}}
+            @buttonText="Delete scope"
+            @confirmTitle="Delete scope {{list.item.id}}?"
+            @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
+            @onConfirmAction={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                list.item
+                (concat "Successfully deleted scope " list.item.id)
+                (concat "There was an error deleting the scope " list.item.id)
+                (action "refresh")
+              )
+            }}
+            data-test-scope-delete
+          />
         {{/if}}
       </Item.menu>
     </ListItem>

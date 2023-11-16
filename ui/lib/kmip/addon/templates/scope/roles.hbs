@@ -81,19 +81,17 @@
             View role
           </LinkTo>
         </li>
-        {{#if list.item.updatePath.canUpdate}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+        {{#if list.item.updatePath.isPending}}
+          <li class="action">
+            <LoadingDropdownOption />
+          </li>
+        {{else}}
+          {{#if list.item.updatePath.canUpdate}}
             <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
               Edit role
             </LinkTo>
-          </MenuLoader>
-        {{/if}}
-        {{#if list.item.updatePath.canDelete}}
-          {{#if list.item.updatePath.isPending}}
-            <li class="action">
-              <LoadingDropdownOption />
-            </li>
-          {{else}}
+          {{/if}}
+          {{#if list.item.updatePath.canDelete}}
             <ConfirmAction
               class="hds-confirm-action-critical"
               @buttonColor="critical"
