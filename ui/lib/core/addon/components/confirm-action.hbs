@@ -41,7 +41,7 @@
           disabled={{or @disabled @isRunning}}
           @icon={{if @isRunning "loading"}}
           @color={{if (or (not @modalColor) (eq @modalColor "critical")) "critical" "primary"}}
-          @text={{or @confirmButtonText "Confirm"}}
+          @text="Confirm"
           {{on "click" this.onConfirm}}
         />
         <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />

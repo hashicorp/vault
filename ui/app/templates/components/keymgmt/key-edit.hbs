@@ -81,7 +81,6 @@
             @onConfirmAction={{perform this.removeKey}}
             @confirmTitle="Remove this key?"
             @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
-            @confirmButtonText="Remove"
             @isRunning={{this.removeKey.isRunning}}
             data-test-keymgmt-key-remove
           />
@@ -97,7 +96,6 @@
           @onConfirmAction={{perform this.rotateKey}}
           @confirmTitle="Rotate this key?"
           @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
-          @confirmButtonText="Rotate"
           @color="warning"
           @isRunning={{this.rotateKey.isRunning}}
           data-test-keymgmt-key-rotate

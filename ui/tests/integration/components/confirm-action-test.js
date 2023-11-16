@@ -19,7 +19,6 @@ module('Integration | Component | confirm-action', function (hooks) {
       <ConfirmAction
         @buttonText="DELETE"
         @onConfirmAction={{this.onConfirm}}
-        @buttonClasses="toolbar-link"
       />
       `);
     await click('[data-test-confirm-action-trigger="true"]');
