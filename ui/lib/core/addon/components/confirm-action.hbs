@@ -32,7 +32,7 @@
     <M.Header data-test-confirm-action-title @icon="alert-diamond">
       {{or @confirmTitle "Are you sure?"}}
     </M.Header>
-    <M.Body>
+    <M.Body data-test-confirm-action-message>
       {{this.confirmMessage}}
     </M.Body>
     <M.Footer as |F|>
