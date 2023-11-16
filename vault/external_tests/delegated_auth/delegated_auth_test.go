@@ -478,6 +478,6 @@ func TestDelegatedAuth(t *testing.T) {
 			"handle_error": true,
 		})
 
-		require.ErrorContains(st, err, "delegated auth request requires MFA that is not supported")
+		require.ErrorContains(st, err, "delegated auth request requiring MFA is not supported")
 	})
 }
