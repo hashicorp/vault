@@ -1927,7 +1927,13 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	if authResp.Secret != nil {
 		return nil, nil, fmt.Errorf("%w: unexpected Secret response for login path for request_path: %s", ErrInternalError, authReq.Path)
 	}
-	if authResp.Auth == nil || authResp.Auth.ClientToken == "" {
+	if authResp.Auth == nil {
+		return nil, nil, fmt.Errorf("%w: unexpected Auth response was nil: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth.ClientToken == "" {
+		if authResp.Auth.MFARequirement != nil {
+			return nil, nil, fmt.Errorf("%w: delegated auth request requires MFA that is not supported: %s", logical.ErrPermissionDenied, authReq.Path)
+		}
 		return nil, nil, fmt.Errorf("%w: delegated auth request did not return a client token for login path: %s", ErrInternalError, authReq.Path)
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
@@ -135,6 +136,7 @@ func TestDelegatedAuth(t *testing.T) {
 		},
 		LogicalBackends: map[string]logical.Factory{
 			"delegateauthtest": delegatedAuthFactory,
+			"totp":             totp.Factory,
 		},
 	}
 
@@ -434,5 +436,48 @@ func TestDelegatedAuth(t *testing.T) {
 		})
 
 		require.ErrorContains(st, err, "my custom handler: invalid credentials")
+	})
+
+	// Test we can delegate a permission denied error back to the originating
+	// backend for processing/response to the client
+	t.Run("mfa-request-is-denied", func(st *testing.T) {
+		// Mount the totp secrets engine
+		testhelpers.SetupTOTPMount(st, client)
+
+		// Create a test entity and alias
+		totpUser := "test-totp"
+		testhelpers.CreateEntityAndAlias(st, client, upAccessor, "entity1", totpUser)
+
+		// Configure a default TOTP method
+		methodID := testhelpers.SetupTOTPMethod(st, client, map[string]interface{}{
+			"issuer":                  "yCorp",
+			"period":                  5,
+			"algorithm":               "SHA256",
+			"digits":                  6,
+			"skew":                    1,
+			"key_size":                20,
+			"qr_size":                 200,
+			"max_validation_attempts": 5,
+			"method_name":             "foo",
+		})
+
+		// Configure a default login enforcement
+		enforcementConfig := map[string]interface{}{
+			"auth_method_types": []string{"userpass"},
+			"name":              methodID[0:4],
+			"mfa_method_ids":    []string{methodID},
+		}
+
+		testhelpers.SetupMFALoginEnforcement(st, client, enforcementConfig)
+
+		_, err = clientNoToken.Logical().Write("dat/preauth-test", map[string]interface{}{
+			"accessor":     upAccessor,
+			"path":         "login",
+			"username":     totpUser,
+			"password":     "testpassword",
+			"handle_error": true,
+		})
+
+		require.ErrorContains(st, err, "delegated auth request requires MFA that is not supported")
 	})
 }
