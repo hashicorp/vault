@@ -9,10 +9,11 @@
       <li class="action">
         <ConfirmAction
           @buttonText="Remove"
-          @buttonClasses="link is-destroy"
           @confirmTitle="Remove metadata?"
+          class="hds-confirm-action-critical"
+          @buttonColor="critical"
+          @isInDropdown={{true}}
           @confirmMessage="This data may be used outside of Vault."
-          @confirmButtonText="Remove"
           @onConfirmAction={{action "performTransaction" this.model this.key}}
         />
       </li>

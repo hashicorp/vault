@@ -19,8 +19,10 @@
       <li class="action">
         <ConfirmAction
           @buttonText="Remove from {{this.model.identityType}}"
-          @buttonClasses="link is-destroy"
-          @confirmButtonText="Remove"
+          @confirmTitle="Remove this policy?"
+          class="hds-confirm-action-critical"
+          @buttonColor="critical"
+          @isInDropdown={{true}}
           @confirmMessage="This policy may affect permissions to access Vault data."
           @onConfirmAction={{action "performTransaction" this.model this.policyName}}
         />
