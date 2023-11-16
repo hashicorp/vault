@@ -140,15 +140,17 @@ export default class DashboardQuickActionsCard extends Component {
   @action
   navigateToPage() {
     let route = this.searchSelectParams.route;
-    let param = this.paramValue.id;
+    // If search-select falls back to stringInput, paramVlue is a string not object
+    let param = this.paramValue.id || this.paramValue;
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
     if (this.selectedEngine.type === 'kv') {
-      route = pathIsDirectory(this.paramValue?.path)
+      const path = this.paramValue.path || this.paramValue;
+      route = pathIsDirectory(path)
         ? 'vault.cluster.secrets.backend.kv.list-directory'
         : 'vault.cluster.secrets.backend.kv.secret.details';
-      param = this.paramValue?.path;
+      param = path;
     }
 
     this.router.transitionTo(route, this.selectedEngine.id, param);
