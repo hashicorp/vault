@@ -2,19 +2,19 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
+
 <Hds::Button
   data-test-confirm-action-trigger
   class={{@buttonClasses}}
   @text={{@buttonText}}
-  @color="secondary"
+  @color={{@buttonColor}}
   {{on "click" (fn (mut this.showConfirmModal) true)}}
 />
 
 {{#if this.showConfirmModal}}
   <Hds::Modal
-    id="basic-modal"
+    id="confirm-action-modal"
     @color={{or @color "critical"}}
-    @size="medium"
     @onClose={{fn (mut this.showConfirmModal) false}}
     as |M|
   >
@@ -30,18 +30,11 @@
           data-test-confirm-button
           disabled={{or @disabled @isRunning}}
           @icon={{if @isRunning "loading"}}
-          type="button"
           @color={{or @color "critical"}}
-          @text={{or @confirmButtonText "Delete"}}
+          @text="Confirm"
           {{on "click" this.onConfirm}}
         />
-        <Hds::Button
-          data-test-confirm-cancel-button
-          type="button"
-          @color="secondary"
-          @text={{or @cancelButtonText "Cancel"}}
-          {{on "click" F.close}}
-        />
+        <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
       </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
