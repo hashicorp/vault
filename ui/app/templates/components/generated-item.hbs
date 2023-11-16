@@ -39,11 +39,11 @@
     <ToolbarActions>
       <ConfirmAction
         @buttonText="Delete {{this.itemType}}"
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{action "deleteItem"}}
         @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
-        @cancelButtonText="Cancel"
-        data-test-secret-delete="true"
+        data-test-secret-delete
       />
       <div class="toolbar-separator"></div>
       <ToolbarLink

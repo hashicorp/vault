@@ -33,7 +33,8 @@
       {{#if this.capabilities.canDelete}}
         <ConfirmAction
           @buttonText="Delete role"
-          @buttonClasses="toolbar-link"
+          class="toolbar-button"
+          @buttonColor="secondary"
           @onConfirmAction={{action "delete"}}
           @confirmMessage="Deleting this role means that you’ll need to recreate it and reassign any existing transformations to use it again."
           @confirmButtonText="Delete"
