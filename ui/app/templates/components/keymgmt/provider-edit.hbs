@@ -51,7 +51,7 @@
               <T.Trigger data-test-tooltip-trigger>
                 <ConfirmAction
                   @buttonText="Delete provider"
-                  @buttonClasses="toolbar-link"
+                  class="toolbar-button"
                   @onConfirmAction={{this.onDelete}}
                   @disabled={{@model.keys.length}}
                   data-test-kms-provider-delete={{true}}
