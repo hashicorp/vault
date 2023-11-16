@@ -16,16 +16,14 @@
         <ToolbarActions>
           {{yield}}
           {{#if @example}}
-            <button
-              type="button"
-              class="toolbar-link"
+            <Hds::Button
+              class="toolbar-button"
+              @icon="reload"
+              @text="Restore example"
               disabled={{not @value}}
               {{on "click" this.restoreExample}}
               data-test-restore-example
-            >
-              Restore example
-              <Icon @name="reload" />
-            </button>
+            />
           {{/if}}
           <div class="toolbar-separator"></div>
           <Hds::Copy::Button
