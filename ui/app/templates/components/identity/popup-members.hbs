@@ -9,8 +9,10 @@
       <li class="action">
         <ConfirmAction
           @buttonText="Remove"
-          @buttonClasses="link is-destroy"
-          @confirmButtonText="Remove this group?"
+          class="hds-confirm-action-critical"
+          @confirmTitle="Remove this group?"
+          @buttonColor="critical"
+          @isInDropdown={{true}}
           @confirmMessage="This may affect permissions for this group."
           @onConfirmAction={{action "performTransaction" this.model this.groupArray this.memberId}}
         />
