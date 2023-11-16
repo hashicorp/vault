@@ -6,7 +6,7 @@
 {{#if @isInDropdown}}
   <Hds::Dropdown::ListItem::Interactive
     @text={{@buttonText}}
-    @color={{or @buttonColor "critical"}}
+    @color={{@buttonColor}}
     {{on "click" (fn (mut this.showConfirmModal) true)}}
     ...attributes
   />
@@ -14,7 +14,7 @@
   <Hds::Button
     data-test-confirm-action-trigger
     @text={{@buttonText}}
-    @color={{or @buttonColor "critical"}}
+    @color={{@buttonColor}}
     {{on "click" (fn (mut this.showConfirmModal) true)}}
     ...attributes
   />
@@ -23,7 +23,7 @@
 {{#if this.showConfirmModal}}
   <Hds::Modal
     id="confirm-action-modal"
-    @color={{or @color "critical"}}
+    @color={{or @modalColor "critical"}}
     @onClose={{fn (mut this.showConfirmModal) false}}
     as |M|
   >
@@ -39,8 +39,8 @@
           data-test-confirm-button
           disabled={{or @disabled @isRunning}}
           @icon={{if @isRunning "loading"}}
-          @color={{or @color "critical"}}
-          @text="Confirm"
+          @color={{or @modalColor "critical"}}
+          @text={{or @confirmButtonText "Confirm"}}
           {{on "click" this.onConfirm}}
         />
         <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
