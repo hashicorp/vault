@@ -7,6 +7,7 @@ import { alias, equal } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { getRelativePath } from 'core/utils/sanitize-path';
 
 const ROOT_NAMESPACE = '';
 export default Service.extend({
@@ -26,6 +27,13 @@ export default Service.extend({
 
     const parts = this.path?.split('/');
     return parts[parts.length - 1];
+  }),
+
+  relativeNamespace: computed('path', 'userRootNamespace', function () {
+    // relative namespace is the current namespace minus the user's root.
+    // so if we're in app/staging/group1 but the user's root is app, the
+    // relative namespace is staging/group
+    return getRelativePath(this.path, this.userRootNamespace);
   }),
 
   setNamespace(path) {

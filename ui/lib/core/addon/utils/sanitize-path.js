@@ -4,10 +4,40 @@
  */
 
 export function sanitizePath(path) {
+  if (!path) return '';
   //remove whitespace + remove trailing and leading slashes
   return path.trim().replace(/^\/+|\/+$/g, '');
 }
 
 export function ensureTrailingSlash(path) {
   return path.replace(/(\w+[^/]$)/g, '$1/');
+}
+
+/**
+ * getRelativePath is for removing matching segments of a subpath from the front of a full path
+ * @param {string} fullPath eg apps/prod/app_1/test
+ * @param {string} rootPath eg apps/prod
+ * @returns the leftover segment, eg app_1/test
+ */
+export function getRelativePath(fullPath = '', rootPath = '') {
+  const root = sanitizePath(rootPath);
+  const full = sanitizePath(fullPath);
+
+  if (!root) {
+    return full;
+  }
+
+  return root
+    .split('/')
+    .reduce(
+      (prev, curr) => {
+        if (prev[0] === curr) {
+          // if they match, shift from the front
+          prev.shift();
+        }
+        return prev;
+      },
+      [...full.split('/')]
+    )
+    .join('/');
 }
