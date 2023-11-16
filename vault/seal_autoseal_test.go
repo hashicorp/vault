@@ -7,10 +7,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
