@@ -10,8 +10,7 @@ import { task } from 'ember-concurrency';
 
 /**
  * @module Page::MessagesList
- * Page::MessagesList components are used to display breadcrumb links. This is component will be replaced when HDS system is incorporated
- *
+ * Page::MessagesList components are used to display list of messages.
  * @example
  * ```js
  * <Page::MessagesList @messages={{this.messages}}  />

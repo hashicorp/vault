@@ -79,7 +79,9 @@ module('Integration | Component | messages/page/list', function (hooks) {
     assert.dom('[data-test-empty-state-title]').hasText('No messages yet');
     assert
       .dom('[data-test-empty-state-message]')
-      .hasText('Add a custom message for all users after they log into Vault. Create message to get started');
+      .hasText(
+        'Add a custom message for all users after they log into Vault. Create message to get started.'
+      );
     assert.dom('[data-test-empty-state-actions] a').hasText('Create message');
   });
 
