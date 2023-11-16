@@ -5,10 +5,10 @@
 
 <Hds::Button
   data-test-confirm-action-trigger
-  class={{@buttonClasses}}
   @text={{@buttonText}}
   @color={{@buttonColor}}
   {{on "click" (fn (mut this.showConfirmModal) true)}}
+  ...attributes
 />
 
 {{#if this.showConfirmModal}}
