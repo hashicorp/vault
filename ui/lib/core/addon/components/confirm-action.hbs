@@ -24,6 +24,7 @@
   <Hds::Modal
     id="confirm-action-modal"
     @color={{or @modalColor "critical"}}
+    @size="small"
     @onClose={{fn (mut this.showConfirmModal) false}}
     as |M|
   >
