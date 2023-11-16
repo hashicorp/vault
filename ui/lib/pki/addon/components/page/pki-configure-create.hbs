@@ -91,13 +91,9 @@
     data-test-configuration-empty-state
   />
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button type="button" class="button is-primary" disabled={{true}} data-test-pki-config-save>
-        Done
-      </button>
-      <button type="button" class="button has-left-margin-s" {{on "click" @onCancel}} data-test-pki-config-cancel>
-        Cancel
-      </button>
-    </div>
+    <Hds::ButtonSet>
+      <Hds::Button @text="Done" disabled={{true}} data-test-pki-config-save />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-config-cancel />
+    </Hds::ButtonSet>
   </div>
 {{/if}}

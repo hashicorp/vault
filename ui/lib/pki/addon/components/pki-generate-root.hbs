@@ -44,11 +44,7 @@
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
-      <div class="control">
-        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
-          Done
-        </button>
-      </div>
+      <Hds::Button @text="Done hdfdx" {{on "click" @onComplete}} data-test-done />
     </div>
   </footer>
 {{else}}
@@ -101,12 +97,14 @@
 
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" class="button is-primary" data-test-pki-generate-root-save>
-          Done
-        </button>
-        <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-generate-root-cancel>
-          Cancel
-        </button>
+        <Hds::Button @text="Done" type="submit" data-test-pki-generate-root-save />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          class="has-left-margin-s"
+          {{on "click" @onCancel}}
+          data-test-pki-generate-root-cancel
+        />
       </div>
       {{#if this.invalidFormAlert}}
         <div class="control">

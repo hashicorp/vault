@@ -9,7 +9,7 @@
     <p class="has-bottom-margin-l">
       Use this form to import a single pem encoded rsa, ec, or ed25519 key.
       <DocLink @path="/vault/api-docs/secret/pki#import-key">
-        Learn more here.
+        Learn more.
       </DocLink>
     </p>
     {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
@@ -18,23 +18,22 @@
     <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-key-file />
   </div>
   <div class="has-top-padding-s">
-    <button
-      type="submit"
-      class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
-      disabled={{this.submitForm.isRunning}}
-      data-test-pki-key-import
-    >
-      Import key
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
-      disabled={{this.submitForm.isRunning}}
-      {{on "click" this.cancel}}
-      data-test-pki-key-cancel
-    >
-      Cancel
-    </button>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Import key"
+        @icon={{if this.submitForm.isRunning "loading"}}
+        type="submit"
+        disabled={{this.submitForm.isRunning}}
+        data-test-pki-key-import
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        disabled={{this.submitForm.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-pki-key-cancel
+      />
+    </Hds::ButtonSet>
     {{#if this.invalidFormAlert}}
       <div class="control">
         <AlertInline

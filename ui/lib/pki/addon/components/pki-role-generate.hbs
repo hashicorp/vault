@@ -25,25 +25,23 @@
       />
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text={{capitalize this.verb}}
+          @icon={{if this.save.isRunning "loading"}}
           type="submit"
-          class="button is-primary {{if this.save.isRunning 'is-loading'}}"
           disabled={{this.save.isRunning}}
           data-test-pki-generate-button
-        >
-          {{capitalize this.verb}}
-        </button>
-        <button
-          type="button"
-          class="button has-left-margin-s"
+        />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
           disabled={{this.save.isRunning}}
           {{on "click" this.cancel}}
           data-test-pki-generate-cancel
-        >
-          Cancel
-        </button>
-      </div>
+        />
+      </Hds::ButtonSet>
+
       {{#if this.invalidFormAlert}}
         <div class="control" data-test-alert>
           <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />

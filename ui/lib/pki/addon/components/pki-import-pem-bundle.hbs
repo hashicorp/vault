@@ -48,9 +48,7 @@
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
       <div class="control">
-        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
-          Done
-        </button>
+        <Hds::Button @text="Done pem" {{on "click" @onComplete}} data-test-done />
       </div>
     </div>
   </footer>
@@ -69,25 +67,23 @@
             editing the individual issuer once it is uploaded to Vault.
           </p>
         </div>
-        <div class="has-top-padding-s">
-          <button
+        <Hds::ButtonSet class="has-top-padding-s">
+          <Hds::Button
+            @text="Import issuer"
+            @icon={{if this.submitForm.isRunning "loading"}}
             type="submit"
-            class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
             disabled={{this.submitForm.isRunning}}
             data-test-pki-import-pem-bundle
-          >
-            Import issuer
-          </button>
-          <button
-            type="button"
-            class="button has-left-margin-s"
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            class="has-left-margin-s"
             disabled={{this.submitForm.isRunning}}
             {{on "click" this.cancel}}
             data-test-pki-ca-cert-cancel
-          >
-            Cancel
-          </button>
-        </div>
+          />
+        </Hds::ButtonSet>
       </form>
     </div>
   </div>

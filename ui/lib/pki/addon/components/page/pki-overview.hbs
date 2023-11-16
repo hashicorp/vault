@@ -29,7 +29,7 @@
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-grow-1"
+        class="is-marginless is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -39,22 +39,22 @@
         @fallbackComponent="input-search"
         data-test-issue-certificate-input
       />
-      <button
+      <Hds::Button
+        @text="Issue"
+        @color="secondary"
+        class="has-left-margin-s"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.rolesValue true}}
         {{on "click" this.transitionToIssueCertificates}}
         data-test-issue-certificate-button
-      >
-        Issue
-      </button>
+      />
     </div>
   </OverviewCard>
 
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
     <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
-        class="is-flex-grow-1"
+        class="is-marginless is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -64,22 +64,21 @@
         @fallbackComponent="input-search"
         data-test-view-certificate-input
       />
-      <button
-        type="button"
-        class="button is-secondary {{unless this.certificateValue 'has-left-margin-s'}}"
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class={{unless this.certificateValue "has-left-margin-s"}}
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 
   <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-grow-1"
+        class="is-marginless is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/issuer"}}
         @backend={{@engine.id}}
@@ -91,15 +90,15 @@
         @nameKey={{"issuerName"}}
         data-test-issue-issuer-input
       />
-      <button
+      <Hds::Button
+        @text="View"
+        @color="secondary"
+        class="has-left-margin-s"
         type="submit"
-        class="button is-secondary has-left-margin-s"
         disabled={{unless this.issuerValue true}}
         {{on "click" this.transitionToIssuerDetails}}
         data-test-view-issuer-button
-      >
-        View
-      </button>
+      />
     </div>
   </OverviewCard>
 </div>

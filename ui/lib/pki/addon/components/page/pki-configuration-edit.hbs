@@ -126,24 +126,22 @@
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         {{#if (or @urls.canSet @crl.canSet)}}
-          <button
+          <Hds::Button
+            @text="Save"
+            @icon={{if this.save.isRunning "loading"}}
             type="submit"
-            class="button is-primary {{if this.save.isRunning 'is-loading'}}"
             disabled={{this.save.isRunning}}
             data-test-configuration-edit-save
-          >
-            Save
-          </button>
+          />
         {{/if}}
-        <button
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          class="has-left-margin-s"
           {{on "click" this.cancel}}
-          type="button"
-          class="button has-left-margin-s"
           disabled={{this.save.isRunning}}
           data-test-configuration-edit-cancel
-        >
-          Cancel
-        </button>
+        />
       </div>
       {{#if this.invalidFormAlert}}
         <div class="control">

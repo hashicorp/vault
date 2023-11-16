@@ -44,11 +44,7 @@
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
-      <div class="control">
-        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
-          Done
-        </button>
-      </div>
+      <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
     </div>
   </footer>
 {{else}}
@@ -65,14 +61,10 @@
     <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
     <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
-      <div class="control">
-        <button type="submit" class="button is-primary" data-test-save>
-          Generate
-        </button>
-        <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-cancel>
-          Cancel
-        </button>
-      </div>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Generate" type="submit" data-test-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} data-test-cancel />
+      </Hds::ButtonSet>
       {{#if this.alert}}
         <div class="control">
           <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
