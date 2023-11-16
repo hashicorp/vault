@@ -44,15 +44,18 @@
 {{#if (eq this.tab "config")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.model.enforcements}}
-        <ConfirmAction
-          class="toolbar-button"
-          @buttonColor="secondary"
-          @onConfirmAction={{this.deleteMethod}}
-          @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
-          @buttonText="Delete"
-        />
-      {{/if}}
+      <ConfirmAction
+        data-test-delete-mfa-config
+        class="toolbar-button"
+        @disabledMessage={{unless
+          (is-empty this.model.enforcements)
+          "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
+        }}
+        @buttonColor="secondary"
+        @onConfirmAction={{this.deleteMethod}}
+        @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
+        @buttonText="Delete"
+      />
       <ToolbarLink
         @route="vault.cluster.access.mfa.methods.method.edit"
         @model={{this.model.method.id}}
