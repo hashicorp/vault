@@ -65,9 +65,8 @@ export default class ConfirmActionComponent extends Component {
     return this.args.confirmMessage || 'You will not be able to recover it later.';
   }
 
-  get confirmButtonColor() {
-    // only change from default of primary if modal is 'critical'
-    return this.args.modalColor === 'critical' ? 'critical' : 'primary';
+  get modalColor() {
+    return this.args.modalColor || 'critical';
   }
 
   @action

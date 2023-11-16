@@ -61,7 +61,7 @@
             class="toolbar-button"
             @buttonColor="secondary"
             @confirmTitle="Revoke this?"
-            @confirmMessage="All leases under this one will also be removed and disregard any errors encountered."
+            @confirmMessage="All leases under this one will also be removed and any errors encountered will be disregarded."
             @onConfirmAction={{action "revokePrefix" this.baseKey.id true}}
           />
         {{/if}}

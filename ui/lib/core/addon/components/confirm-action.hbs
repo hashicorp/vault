@@ -40,7 +40,7 @@
           data-test-confirm-button
           disabled={{or @disabled @isRunning}}
           @icon={{if @isRunning "loading"}}
-          @color={{this.confirmButtonColor}}
+          @color={{if (eq this.modalColor "critical") "critical" "primary"}}
           @text="Confirm"
           {{on "click" this.onConfirm}}
         />
