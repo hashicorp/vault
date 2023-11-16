@@ -24,13 +24,10 @@
   <div class="control">
     <ConfirmAction
       @buttonText="Revoke"
-      @buttonClasses="button is-primary"
       @confirmTitle="Revoke token?"
       @confirmMessage="This will revoke this secondary token."
-      @confirmButtonText="Revoke"
       @disabled={{not this.id}}
       @disabledMessage="A secondary ID is required perform revocation."
-      @horizontalPosition="auto-left"
       @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
     />
   </div>

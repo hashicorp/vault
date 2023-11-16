@@ -47,11 +47,11 @@
                       <li class="action">
                         <ConfirmAction
                           @buttonText="Revoke"
-                          @buttonClasses="button link is-destroy"
+                          class="hds-confirm-action-critical"
+                          @buttonColor="critical"
+                          @isInDropdown={{true}}
                           @confirmTitle="Revoke token?"
                           @confirmMessage="This will revoke this secondary token."
-                          @confirmButtonText="Revoke"
-                          @horizontalPosition="auto-left"
                           @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
                         />
                       </li>

@@ -7,16 +7,16 @@
   <:toolbarActions>
     {{#if @configModel}}
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Rotate root"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{perform this.rotateRoot}}
         @confirmTitle="Rotate root?"
         @confirmMessage="After rotation, Vault will generate a new root password in your directory server."
-        @confirmButtonText="Rotate"
+        @modalColor="warning"
         @disabled={{this.rotateRoot.isRunning}}
         data-test-toolbar-rotate-action
-      >
-        Rotate root
-      </ConfirmAction>
+      />
     {{/if}}
     <ToolbarLink @route="configure" data-test-toolbar-config-action>
       {{if @configModel "Edit configuration" "Configure LDAP"}}
