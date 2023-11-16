@@ -30,6 +30,7 @@ export function setupModels(hooks) {
       mount: 'kv',
       secret_name: 'my-secret',
       sync_status: 'SYNCED',
+      updated_at: '2023-09-20T10:51:53.961861096', // removed tz offset so time is consistently displayed
     });
     const associationModelName = 'sync/association';
     const associationId = `${association.mount}/${association.secret_name}`;

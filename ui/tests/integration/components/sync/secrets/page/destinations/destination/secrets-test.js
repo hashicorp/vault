@@ -57,7 +57,7 @@ module(
       assert.dom(list.status).hasText('SYNCED', 'Association status renders');
       assert
         .dom(list.updated)
-        .hasText('last synced on September 20th 2023, 8:51:53 AM', 'Last synced datetime renders');
+        .hasText('last synced on September 20th 2023, 10:51:53 AM', 'Last synced datetime renders');
     });
 
     test('it should render list item menu actions', async function (assert) {
