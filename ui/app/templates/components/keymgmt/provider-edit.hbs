@@ -52,6 +52,7 @@
                 <ConfirmAction
                   @buttonText="Delete provider"
                   class="toolbar-button"
+                  @buttonColor="secondary"
                   @confirmTitle="Delete this provider?"
                   @onConfirmAction={{this.onDelete}}
                   @disabled={{@model.keys.length}}
