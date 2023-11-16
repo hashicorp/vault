@@ -5,13 +5,11 @@
 
 {{#if this.hasMenu}}
   <PopupMenu>
-    <Confirm as |c|>
-      <nav class="menu">
-        <ul class="menu-list">
-          {{yield (hash Message=c.Message)}}
-        </ul>
-      </nav>
-    </Confirm>
+    <nav class="menu">
+      <ul class="menu-list">
+        {{yield}}
+      </ul>
+    </nav>
   </PopupMenu>
 {{else}}
   {{yield this.item}}
