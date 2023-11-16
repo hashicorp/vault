@@ -81,9 +81,10 @@
         </td>
         <td class="middle no-padding has-text-right">
           <PopupMenu>
-            <nav class="menu">
-              <ul class="menu-list">
+            <nav aria-label="remove peer">
+              <ul>
                 <ConfirmAction
+                  data-test-confirm-action-trigger
                   class="hds-confirm-action-critical"
                   @buttonColor="critical"
                   @isInDropdown={{true}}
