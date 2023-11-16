@@ -12,6 +12,18 @@ export const PAGE = {
     summary: '[data-test-cta-container] p',
     button: '[data-test-cta-button]',
   },
+  associations: {
+    list: {
+      name: '[data-test-association-name]',
+      status: '[data-test-association-status]',
+      updated: '[data-test-association-updated]',
+      menu: {
+        sync: '[data-test-association-action="sync"]',
+        edit: '[data-test-association-action="edit"]',
+        unsync: '[data-test-association-action="unsync"]',
+      },
+    },
+  },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
