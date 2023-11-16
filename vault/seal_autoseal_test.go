@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
@@ -211,4 +212,15 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	if !autoSeal.Healthy() {
 		t.Fatal("Expected seals to be healthy")
 	}
+}
+
+func TestAutoSeal_BarrierSealConfigType(t *testing.T) {
+	singleWrapperAccess, _ := seal.NewToggleableTestSeal(&seal.TestSealOpts{WrapperCount: 1})
+	multipleWrapperAccess, _ := seal.NewToggleableTestSeal(&seal.TestSealOpts{WrapperCount: 2})
+
+	require.Equalf(t, singleWrapperAccess.GetAllSealWrappersByPriority()[0].SealConfigType, NewAutoSeal(singleWrapperAccess).BarrierSealConfigType().String(),
+		"autoseals that have a single seal wrapper report that wrapper's as the barrier seal type")
+
+	require.Equalf(t, SealConfigTypeMultiseal, NewAutoSeal(multipleWrapperAccess).BarrierSealConfigType(),
+		"autoseals that have a multiple seal wrappers report the barrier seal type as Multiseal")
 }
