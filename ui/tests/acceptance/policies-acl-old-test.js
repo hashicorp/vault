@@ -55,7 +55,7 @@ module('Acceptance | policies (old)', function (hooks) {
 
     await click('[data-test-policy-edit-toggle]');
 
-    await click('[data-test-policy-delete]');
+    await click('[data-test-confirm-action-trigger]');
 
     await click('[data-test-confirm-button]');
     await waitUntil(() => currentURL() === `/vault/policies/acl`);
