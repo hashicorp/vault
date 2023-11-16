@@ -686,6 +686,130 @@ vault {
 	wg.Wait()
 }
 
+// TestProxy_Cache_DisableDynamicSecretCaching tests that the cache will not cache a dynamic secret
+// if disabled in the options.
+func TestProxy_Cache_DisableDynamicSecretCaching(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+	// We need auto-auth for static secret caching.
+	// For ease, we use the token file path with the root token.
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	cacheConfig := `
+cache {
+	disable_caching_dynamic_secrets = true
+	cache_static_secrets = true // We need to cache at least one kind of secret
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+`, serverClient.Address(), cacheConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	renewable := true
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:  []string{"default"},
+		TTL:       "30m",
+		Renewable: &renewable,
+	}
+
+	// This was the simplest test I could find to trigger the caching behaviour,
+	// i.e. the most concise I could make the test that I can tell
+	// creating an orphan token returns Auth, is renewable, and isn't a token
+	// that's managed elsewhere (since it's an orphan)
+	secret, err := proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token := secret.Auth.ClientToken
+
+	secret, err = proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token2 := secret.Auth.ClientToken
+
+	if token == token2 {
+		t.Fatalf("token create response was cached, as the tokens differ")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestProxy_Cache_StaticSecret Tests that the cache successfully caches a static secret
 // going through the Proxy,
 func TestProxy_Cache_StaticSecret(t *testing.T) {
@@ -920,8 +1044,10 @@ log_level = "trace"
 	}
 
 	// Wait for the event system to successfully connect.
-	// This is longer than it needs to be to account for unnatural slowness/avoiding
-	// flakiness.
+	// The test would pass without this time.Sleep, due to the call to updater.preEventStreamUpdate
+	// but this Sleep ensures we test both paths (both updating from an event, and from
+	// the pre event update).
+	// As a result, we shouldn't remove this sleep, since it ensures we have greater coverage.
 	time.Sleep(5 * time.Second)
 
 	// Mount the KVV2 engine
@@ -1147,6 +1273,156 @@ log_level = "trace"
 	if err != nil {
 		t.Fatal(err)
 	}
+	data2, ok := secret2.Data["data"]
+	require.True(t, ok)
+	// We expect that the cached value got updated by the event system.
+	require.Equal(t, secretData2, data2)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
+// TestProxy_Cache_EventSystemPreEventStreamUpdateWorks Tests that the pre-event stream update works
+// (i.e. the method preEventStreamUpdate). This test is similar to TestProxy_Cache_EventSystemUpdatesCacheKVV2,
+// but with the key difference of not waiting the five seconds for the event subsystem of Proxy to get running
+// before it updates the secret, meaning that the event system should update it from the pre-event stream
+// update as opposed to receiving the event.
+func TestProxy_Cache_EventSystemPreEventStreamUpdateWorks(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": logicalKv.VersionedKVFactory,
+		},
+	})
+
+	serverClient := cluster.Cores[0].Client
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+	// We need auto-auth so that the event system can run.
+	// For ease, we use the token file path with the root token.
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
+	cacheConfig := `
+cache {
+	cache_static_secrets = true
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+log_level = "trace"
+`, serverClient.Address(), cacheConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	ui, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+		t.Errorf("stdout: %s", ui.OutputWriter.String())
+		t.Errorf("stderr: %s", ui.ErrorWriter.String())
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	require.NoError(t, err)
+
+	secretData := map[string]interface{}{
+		"foo": "bar",
+	}
+
+	secretData2 := map[string]interface{}{
+		"bar": "baz",
+	}
+
+	// Mount the KVV2 engine
+	err = serverClient.Sys().Mount("secret-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	require.NoError(t, err)
+
+	// Create kvv2 secret
+	_, err = serverClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData)
+	require.NoError(t, err)
+
+	// We use raw requests so we can check the headers for cache hit/miss.
+	req := proxyClient.NewRequest(http.MethodGet, "/v1/secret-v2/data/my-secret")
+	resp1, err := proxyClient.RawRequest(req)
+	require.NoError(t, err)
+
+	cacheValue := resp1.Header.Get("X-Cache")
+	require.Equal(t, "MISS", cacheValue)
+
+	// Update the secret using the proxy client
+	_, err = proxyClient.KVv2("secret-v2").Put(context.Background(), "my-secret", secretData2)
+	require.NoError(t, err)
+
+	// Give some time for the event system to run and update the secret as part of the
+	// pre-event stream run. Likely, this will be the period in which the event subsystem
+	// of proxy actually starts up, so it will have missed the event, but this should still
+	// result in an updated cache.
+	time.Sleep(5 * time.Second)
+
+	// We expect this to be a cache hit, with the new value
+	resp2, err := proxyClient.RawRequest(req)
+	require.NoError(t, err)
+
+	cacheValue = resp2.Header.Get("X-Cache")
+	require.Equal(t, "HIT", cacheValue)
+
+	// Lastly, we check to make sure the actual data we received is
+	// as we expect. We must use ParseSecret due to the raw requests.
+	secret1, err := api.ParseSecret(resp1.Body)
+	require.NoError(t, err)
+	data, ok := secret1.Data["data"]
+	require.True(t, ok)
+	require.Equal(t, secretData, data)
+
+	secret2, err := api.ParseSecret(resp2.Body)
+	require.NoError(t, err)
 	data2, ok := secret2.Data["data"]
 	require.True(t, ok)
 	// We expect that the cached value got updated by the event system.

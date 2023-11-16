@@ -48,7 +48,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Dashboard',
-      'Secrets engines',
+      'Secrets Engines',
       'Secrets Sync',
       'Access',
       'Policies',

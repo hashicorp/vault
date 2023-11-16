@@ -6,6 +6,7 @@
 // add all handlers here
 // individual lookup done in mirage config
 import base from './base';
+import chrootNamespace from './chroot-namespace';
 import clients from './clients';
 import db from './db';
 import hcpLink from './hcp-link';
@@ -20,6 +21,7 @@ import sync from './sync';
 
 export {
   base,
+  chrootNamespace,
   clients,
   db,
   hcpLink,
