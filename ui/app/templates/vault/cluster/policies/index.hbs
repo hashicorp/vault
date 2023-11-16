@@ -92,53 +92,53 @@
             </div>
             <div class="column has-text-right">
               <PopupMenu name="policy-nav">
-                <Confirm as |c|>
-                  <nav class="menu">
-                    <ul class="menu-list">
-                      {{#if item.updatePath.isPending}}
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if item.updatePath.isPending}}
+                      <li class="action">
+                        <LoadingDropdownOption />
+                      </li>
+                      <li class="action">
+                        <LoadingDropdownOption />
+                      </li>
+                    {{else}}
+                      {{#if item.canRead}}
                         <li class="action">
-                          <LoadingDropdownOption />
+                          <LinkTo
+                            @route="vault.cluster.policy.show"
+                            @models={{array this.policyType item.id}}
+                            data-test-policy-link="show"
+                          >
+                            Details
+                          </LinkTo>
                         </li>
-                        <li class="action">
-                          <LoadingDropdownOption />
-                        </li>
-                      {{else}}
-                        {{#if item.canRead}}
-                          <li class="action">
-                            <LinkTo
-                              @route="vault.cluster.policy.show"
-                              @models={{array this.policyType item.id}}
-                              data-test-policy-link="show"
-                            >
-                              Details
-                            </LinkTo>
-                          </li>
-                        {{/if}}
-                        {{#if item.canEdit}}
-                          <li class="action">
-                            <LinkTo
-                              @route="vault.cluster.policy.edit"
-                              @models={{array this.policyType item.id}}
-                              data-test-policy-link="edit"
-                            >
-                              Edit
-                            </LinkTo>
-                          </li>
-                        {{/if}}
-                        {{#if item.canDelete}}
-                          <li class="action">
-                            <c.Message
-                              @id={{item.id}}
-                              @confirmMessage="This will permanently delete this policy and may affect access to some data"
-                              @onConfirm={{action "deletePolicy" item}}
-                              data-test-policy-delete={{item.id}}
-                            />
-                          </li>
-                        {{/if}}
                       {{/if}}
-                    </ul>
-                  </nav>
-                </Confirm>
+                      {{#if item.canEdit}}
+                        <li class="action">
+                          <LinkTo
+                            @route="vault.cluster.policy.edit"
+                            @models={{array this.policyType item.id}}
+                            data-test-policy-link="edit"
+                          >
+                            Edit
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if item.canDelete}}
+                        <ConfirmAction
+                          class="hds-confirm-action-critical"
+                          @buttonColor="critical"
+                          @isInDropdown={{true}}
+                          @buttonText="Delete"
+                          @confirmTitle="Delete this policy?"
+                          @confirmMessage="This will permanently delete this policy and may affect access to some data"
+                          @onConfirmAction={{action "deletePolicy" item}}
+                          data-test-policy-delete={{item.id}}
+                        />
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
               </PopupMenu>
             </div>
           </div>

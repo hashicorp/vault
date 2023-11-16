@@ -59,21 +59,26 @@
       <Item.content>
         <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
-      <Item.menu as |m|>
+      <Item.menu>
         <li class="action">
           <LinkTo @route="scope" @model={{list.item.id}} class="is-block">
             View scope
           </LinkTo>
         </li>
         {{#if list.item.updatePath.canDelete}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <m.Message
-              @id={{list.item.id}}
-              @triggerText="Delete scope"
-              @title={{concat "Delete scope " list.item.id "?"}}
-              @message="This will permanently delete this scope and all roles and credentials contained within"
-              @cancelButtonText="Cancel"
-              @onConfirm={{action
+          {{#if list.item.updatePath.isPending}}
+            <li class="action">
+              <LoadingDropdownOption />
+            </li>
+          {{else}}
+            <ConfirmAction
+              class="hds-confirm-action-critical"
+              @buttonColor="critical"
+              @isInDropdown={{true}}
+              @buttonText="Delete scope"
+              @confirmTitle="Delete scope {{list.item.id}}?"
+              @confirmMessage="This will permanently delete this scope and all roles and credentials contained within"
+              @onConfirmAction={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
@@ -83,9 +88,9 @@
                   (action "refresh")
                 )
               }}
-              data-test-scope-delete="true"
+              data-test-scope-delete
             />
-          </MenuLoader>
+          {{/if}}
         {{/if}}
       </Item.menu>
     </ListItem>

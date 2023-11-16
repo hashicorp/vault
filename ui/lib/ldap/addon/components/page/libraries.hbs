@@ -46,7 +46,7 @@
           <Icon @name="folder" />
           <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
-        <Item.menu as |Menu|>
+        <Item.menu>
           {{#if library.libraryPath.isLoading}}
             <li class="action">
               <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
@@ -75,16 +75,16 @@
               </LinkTo>
             </li>
             {{#if library.canDelete}}
-              <li class="action">
-                <Menu.Message
-                  data-test-delete
-                  @id={{library.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="This library and associated accounts will be permanently deleted. You will not be able to recover it."
-                  @onConfirm={{fn this.onDelete library}}
-                />
-              </li>
+              <ConfirmAction
+                data-test-delete
+                @id={{library.id}}
+                class="hds-confirm-action-critical"
+                @buttonColor="critical"
+                @isInDropdown={{true}}
+                @buttonText="Delete"
+                @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+                @onConfirmAction={{fn this.onDelete library}}
+              />
             {{/if}}
           {{/if}}
         </Item.menu>

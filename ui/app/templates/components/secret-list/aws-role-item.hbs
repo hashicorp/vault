@@ -24,55 +24,58 @@
     </div>
     <div class="column has-text-right">
       <PopupMenu @name="role-aws-nav" @contentClass="is-wide">
-        <Confirm as |c|>
-          <nav class="menu">
-            <ul class="menu-list">
-              {{#if @item.generatePath.isPending}}
+        <nav class="menu">
+          <ul class="menu-list">
+            {{#if @item.generatePath.isPending}}
+              <li class="action">
+                <LoadingDropdownOption />
+              </li>
+            {{else if @item.canGenerate}}
+              <li class="action">
+                <LinkTo
+                  @route="vault.cluster.secrets.backend.credentials"
+                  @model={{@item.id}}
+                  data-test-role-aws-link="generate"
+                >
+                  Generate credentials
+                </LinkTo>
+              </li>
+            {{/if}}
+            {{#if @item.updatePath.isPending}}
+              <li class="action">
+                <LoadingDropdownOption />
+              </li>
+              <li class="action">
+                <LoadingDropdownOption />
+              </li>
+            {{else}}
+              {{#if @item.canRead}}
                 <li class="action">
-                  <LoadingDropdownOption />
-                </li>
-              {{else if @item.canGenerate}}
-                <li class="action">
-                  <LinkTo
-                    @route="vault.cluster.secrets.backend.credentials"
-                    @model={{@item.id}}
-                    data-test-role-aws-link="generate"
-                  >
-                    Generate credentials
+                  <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.id}} data-test-role-ssh-link="show">
+                    Details
                   </LinkTo>
                 </li>
               {{/if}}
-              {{#if @item.updatePath.isPending}}
+              {{#if @item.canEdit}}
                 <li class="action">
-                  <LoadingDropdownOption />
+                  <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} data-test-role-ssh-link="edit">
+                    Edit
+                  </LinkTo>
                 </li>
-                <li class="action">
-                  <LoadingDropdownOption />
-                </li>
-              {{else}}
-                {{#if @item.canRead}}
-                  <li class="action">
-                    <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.id}} data-test-role-ssh-link="show">
-                      Details
-                    </LinkTo>
-                  </li>
-                {{/if}}
-                {{#if @item.canEdit}}
-                  <li class="action">
-                    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} data-test-role-ssh-link="edit">
-                      Edit
-                    </LinkTo>
-                  </li>
-                {{/if}}
-                {{#if @item.canDelete}}
-                  <li class="action">
-                    <c.Message @id={{@item.id}} @onConfirm={{@delete}} data-test-aws-role-delete={{@item.id}} />
-                  </li>
-                {{/if}}
               {{/if}}
-            </ul>
-          </nav>
-        </Confirm>
+              {{#if @item.canDelete}}
+                <ConfirmAction
+                  class="hds-confirm-action-critical"
+                  @buttonText="Delete"
+                  @buttonColor="critical"
+                  @isInDropdown={{true}}
+                  @onConfirmAction={{@delete}}
+                  data-test-aws-role-delete={{@item.id}}
+                />
+              {{/if}}
+            {{/if}}
+          </ul>
+        </nav>
       </PopupMenu>
     </div>
   </div>

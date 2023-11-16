@@ -40,7 +40,7 @@
           <Icon @name="user" />
           <span data-test-role={{role.name}}>{{role.name}}</span>
         </Item.content>
-        <Item.menu as |Menu|>
+        <Item.menu>
           {{#if role.rolesPath.isLoading}}
             <li class="action">
               <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
@@ -68,16 +68,15 @@
                 Edit
               </LinkTo>
             </li>
-            <li class="action">
-              <Menu.Message
-                data-test-delete
-                @id={{role.id}}
-                @triggerText="Delete"
-                @title="Are you sure?"
-                @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                @onConfirm={{fn this.onDelete role}}
-              />
-            </li>
+            <ConfirmAction
+              data-test-delete
+              class="hds-confirm-action-critical"
+              @buttonColor="critical"
+              @isInDropdown={{true}}
+              @buttonText="Delete"
+              @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+              @onConfirmAction={{fn this.onDelete role}}
+            />
           {{/if}}
         </Item.menu>
       </ListItem>

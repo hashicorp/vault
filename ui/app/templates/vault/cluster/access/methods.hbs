@@ -84,36 +84,34 @@
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu @name="auth-backend-nav">
-            <Confirm as |c|>
-              <nav class="menu">
-                <ul class="menu-list">
+            <nav class="menu">
+              <ul class="menu-list">
+                <li>
+                  <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
+                    View configuration
+                  </LinkTo>
+                </li>
+                {{#if method.canEdit}}
                   <li>
-                    <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
-                      View configuration
+                    <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
+                      Edit configuration
                     </LinkTo>
                   </li>
-                  {{#if method.canEdit}}
-                    <li>
-                      <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
-                        Edit configuration
-                      </LinkTo>
-                    </li>
-                  {{/if}}
+                {{/if}}
 
-                  {{#if (and (not-eq method.methodType "token") method.canDisable)}}
-                    <li class="action">
-                      <c.Message
-                        @id={{method.id}}
-                        @title="Disable method?"
-                        @message="This may affect access to Vault data."
-                        @triggerText="Disable"
-                        @onConfirm={{perform this.disableMethod method}}
-                      />
-                    </li>
-                  {{/if}}
-                </ul>
-              </nav>
-            </Confirm>
+                {{#if (and (not-eq method.methodType "token") method.canDisable)}}
+                  <ConfirmAction
+                    class="hds-confirm-action-critical"
+                    @buttonColor="critical"
+                    @isInDropdown={{true}}
+                    @confirmTitle="Disable method?"
+                    @confirmMessage="This may affect access to Vault data."
+                    @buttonText="Disable"
+                    @onConfirmAction={{perform this.disableMethod method}}
+                  />
+                {{/if}}
+              </ul>
+            </nav>
           </PopupMenu>
         </div>
       </div>

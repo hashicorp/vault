@@ -31,58 +31,56 @@
     </div>
     <div class="column has-text-right">
       <PopupMenu name="secret-menu">
-        <Confirm as |c|>
-          <nav class="menu">
-            <ul class="menu-list">
-              {{#if @item.isFolder}}
-                <SecretLink @mode="list" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
-                  Contents
-                </SecretLink>
+        <nav class="menu">
+          <ul class="menu-list">
+            {{#if @item.isFolder}}
+              <SecretLink @mode="list" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                Contents
+              </SecretLink>
+            {{else}}
+              {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
+                <li class="action">
+                  <LoadingDropdownOption />
+                </li>
               {{else}}
-                {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
+                {{#if @item.canRead}}
                   <li class="action">
-                    <LoadingDropdownOption />
+                    <SecretLink
+                      @mode="show"
+                      @secret={{@item.id}}
+                      @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                      class="has-text-black has-text-weight-semibold"
+                    >
+                      Details
+                    </SecretLink>
                   </li>
-                {{else}}
-                  {{#if @item.canRead}}
-                    <li class="action">
-                      <SecretLink
-                        @mode="show"
-                        @secret={{@item.id}}
-                        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-                        class="has-text-black has-text-weight-semibold"
-                      >
-                        Details
-                      </SecretLink>
-                    </li>
-                  {{/if}}
-                  {{#if @item.canEdit}}
-                    <li class="action">
-                      <SecretLink
-                        @mode="edit"
-                        @secret={{@item.id}}
-                        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
-                        class="has-text-black has-text-weight-semibold"
-                      >
-                        Edit
-                      </SecretLink>
-                    </li>
-                  {{/if}}
-                  {{#if @item.canDelete}}
-                    <li class="action">
-                      <c.Message
-                        @id={{@item.id}}
-                        @triggerText="Delete"
-                        @message="This will permanently delete this secret."
-                        @onConfirm={{@delete}}
-                      />
-                    </li>
-                  {{/if}}
+                {{/if}}
+                {{#if @item.canEdit}}
+                  <li class="action">
+                    <SecretLink
+                      @mode="edit"
+                      @secret={{@item.id}}
+                      @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                      class="has-text-black has-text-weight-semibold"
+                    >
+                      Edit
+                    </SecretLink>
+                  </li>
+                {{/if}}
+                {{#if @item.canDelete}}
+                  <ConfirmAction
+                    class="hds-confirm-action-critical"
+                    @buttonColor="critical"
+                    @isInDropdown={{true}}
+                    @buttonText="Delete"
+                    @confirmMessage="This will permanently delete this secret."
+                    @onConfirmAction={{@delete}}
+                  />
                 {{/if}}
               {{/if}}
-            </ul>
-          </nav>
-        </Confirm>
+            {{/if}}
+          </ul>
+        </nav>
       </PopupMenu>
     </div>
   </div>

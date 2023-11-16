@@ -33,63 +33,71 @@
         </div>
         <div class="column has-text-right">
           <PopupMenu @name="identity-item" @onOpen={{action "reloadRecord" item}}>
-            <Confirm as |c|>
-              <nav class="menu">
-                <ul class="menu-list">
+            <nav class="menu">
+              <ul class="menu-list">
+                <li class="action">
+                  <LinkTo @route="vault.cluster.access.identity.show" @models={{array item.id "details"}}>
+                    Details
+                  </LinkTo>
+                </li>
+                {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
                   <li class="action">
-                    <LinkTo @route="vault.cluster.access.identity.show" @models={{array item.id "details"}}>
-                      Details
-                    </LinkTo>
+                    <LoadingDropdownOption />
                   </li>
-                  {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
+                {{else}}
+                  {{#if item.canAddAlias}}
                     <li class="action">
-                      <LoadingDropdownOption />
+                      <LinkTo
+                        @route="vault.cluster.access.identity.aliases.add"
+                        @models={{array (pluralize this.identityType) item.id}}
+                      >
+                        Create alias
+                      </LinkTo>
                     </li>
-                  {{else}}
-                    {{#if item.canAddAlias}}
-                      <li class="action">
-                        <LinkTo
-                          @route="vault.cluster.access.identity.aliases.add"
-                          @models={{array (pluralize this.identityType) item.id}}
-                        >
-                          Create alias
-                        </LinkTo>
-                      </li>
-                    {{/if}}
-                    {{#if item.canEdit}}
-                      <li class="action">
-                        <LinkTo @route="vault.cluster.access.identity.edit" @model={{item.id}}>
-                          Edit
-                        </LinkTo>
-                      </li>
-                      <li class="action">
-                        {{#if item.disabled}}
-                          {{! TODO Hds::Button replacement skipped in favor of updating it when there is a Hds::Dropdown swapout }}
-                          <button type="button" {{action "toggleDisabled" item}} class="link">
-                            Enable
-                          </button>
-                        {{else if (eq this.identityType "entity")}}
-                          <c.Message
-                            @id="{{item.id}}-disable"
-                            @triggerText="Disable"
-                            @message="Associated tokens will not be revoked, but cannot be used"
-                            @title="Disable this?"
-                            @confirmButtonText="Disable"
-                            @onConfirm={{action "toggleDisabled" item}}
-                            data-test-engine-disable="true"
-                          />
-                        {{/if}}
-                      </li>
-                    {{/if}}
-                    {{#if item.canDelete}}
-                      <li class="action">
-                        <c.Message @id={{item.id}} @onConfirm={{action "delete" item}} data-test-item-delete="true" />
-                      </li>
-                    {{/if}}
                   {{/if}}
-                </ul>
-              </nav>
-            </Confirm>
+                  {{#if item.canEdit}}
+                    <li class="action">
+                      <LinkTo @route="vault.cluster.access.identity.edit" @model={{item.id}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                    <li class="action">
+                      {{#if item.disabled}}
+                        <Hds::Button
+                          @text="Enable"
+                          type="button"
+                          {{on "click" (action "toggleDisabled" item)}}
+                          class="link"
+                        />
+                      {{else if (eq this.identityType "entity")}}
+                        <ConfirmAction
+                          class="hds-confirm-action-critical"
+                          @buttonColor="critical"
+                          @isInDropdown={{true}}
+                          @buttonText="Disable"
+                          @confirmMessage="Associated tokens will not be revoked, but cannot be used"
+                          @confirmTitle="Disable this entity?"
+                          @onConfirmAction={{action "toggleDisabled" item}}
+                          @modalColor="warning"
+                          data-test-engine-disable
+                        />
+                      {{/if}}
+                    </li>
+                  {{/if}}
+                  {{#if item.canDelete}}
+                    <ConfirmAction
+                      class="hds-confirm-action-critical"
+                      @buttonColor="critical"
+                      @isInDropdown={{true}}
+                      @buttonText="Delete"
+                      @onConfirmAction={{action "delete" item}}
+                      @confirmTitle="Delete this {{this.identityType}}?"
+                      data-test-item-delete
+                    />
+                  {{/if}}
+                {{/if}}
+              </ul>
+            </nav>
           </PopupMenu>
         </div>
       </div>

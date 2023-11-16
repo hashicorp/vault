@@ -36,7 +36,7 @@
         <Item.content>
           {{list.item.id}}
         </Item.content>
-        <Item.menu as |m|>
+        <Item.menu>
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
@@ -46,23 +46,24 @@
               </li>
             {{/if}}
           {{/let}}
-          <li class="action">
-            <m.Message
-              @id={{list.item.id}}
-              @confirmButtonText="Remove"
-              @message="Any engines or mounts in this namespace will also be removed."
-              @onConfirm={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  list.item
-                  (concat "Successfully deleted namespace: " list.item.id)
-                  "There was an error deleting this namespace: "
-                  (action "refreshNamespaceList")
-                )
-              }}
-            />
-          </li>
+          <ConfirmAction
+            class="hds-confirm-action-critical"
+            @buttonColor="critical"
+            @isInDropdown={{true}}
+            @buttonText="Delete"
+            @confirmTitle="Delete this namespace?"
+            @confirmMessage="Any engines or mounts in this namespace will also be removed."
+            @onConfirmAction={{action
+              (perform
+                Item.callMethod
+                "destroyRecord"
+                list.item
+                (concat "Successfully deleted namespace: " list.item.id)
+                "There was an error deleting this namespace: "
+                (action "refreshNamespaceList")
+              )
+            }}
+          />
         </Item.menu>
       </ListItem>
     {{/if}}
