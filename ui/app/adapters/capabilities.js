@@ -14,13 +14,12 @@ export default ApplicationAdapter.extend({
   },
 
   formatPaths(path) {
-    const { path: ns, userRootNamespace, relativeNamespace } = this.namespaceService;
-    if (userRootNamespace === ns) {
-      // If they match, the user is in their root namespace and we can fetch normally
+    const { relativeNamespace } = this.namespaceService;
+    if (!relativeNamespace) {
       return [path];
     }
     // ensure original path doesn't have leading slash
-    return [`/${relativeNamespace}/${path.replace(/^\//, '')}`];
+    return [`${relativeNamespace}/${path.replace(/^\//, '')}`];
   },
 
   findRecord(store, type, id) {
