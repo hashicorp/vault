@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MPL-2.0
 
 // The replication scenario configures performance replication between two Vault clusters and verifies
 // known_primary_cluster_addrs are updated on secondary Vault cluster with the IP addresses of replaced
