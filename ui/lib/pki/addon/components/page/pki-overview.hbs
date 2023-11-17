@@ -67,7 +67,7 @@
       <Hds::Button
         @text="View"
         @color="secondary"
-        class="has-left-margin-s align-self-baseline"
+        class="align-self-baseline {{unless this.certificateValue 'has-left-margin-s'}}"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
