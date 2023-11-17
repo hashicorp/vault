@@ -34,9 +34,12 @@ func TestRotateRoot(t *testing.T) {
 		},
 	}
 
-	_, err := b.HandleRequest(ctx, req)
+	resp, err := b.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("failed to initialize ldap auth config: %s", err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to initialize ldap auth config: %s", resp.Data["error"])
 	}
 
 	req = &logical.Request{
