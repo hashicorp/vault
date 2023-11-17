@@ -95,28 +95,21 @@
       </fieldset>
     {{/if}}
 
-    <div class="field is-grouped box is-fullwidth is-bottomless">
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      <Hds::Button @text="Done" type="submit" data-test-pki-generate-root-save />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-generate-root-cancel />
+    </Hds::ButtonSet>
+    {{#if this.invalidFormAlert}}
       <div class="control">
-        <Hds::Button @text="Done" type="submit" data-test-pki-generate-root-save />
-        <Hds::Button
-          @text="Cancel"
-          @color="secondary"
-          class="has-left-margin-s"
-          {{on "click" @onCancel}}
-          data-test-pki-generate-root-cancel
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message={{this.invalidFormAlert}}
+          @mimicRefresh={{true}}
+          data-test-pki-generate-root-validation-error
         />
       </div>
-      {{#if this.invalidFormAlert}}
-        <div class="control">
-          <AlertInline
-            @type="danger"
-            @paddingTop={{true}}
-            @message={{this.invalidFormAlert}}
-            @mimicRefresh={{true}}
-            data-test-pki-generate-root-validation-error
-          />
-        </div>
-      {{/if}}
-    </div>
+    {{/if}}
   </form>
 {{/if}}

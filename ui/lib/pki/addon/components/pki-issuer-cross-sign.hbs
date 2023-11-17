@@ -76,11 +76,7 @@
       {{/each}}
     </div>
     <Hds::ButtonSet>
-      <Hds::Button
-        @text="Done"
-        @route="vault.cluster.secrets.backend.pki.issuers.issuer.details"
-        data-test-cross-sign-done
-      />
+      <Hds::Button @text="Done" @route="issuers.issuer.details" data-test-cross-sign-done />
       <Hds::Button @text="Sign more issuers" @color="secondary" data-test-cross-sign-more {{on "click" this.reset}} />
     </Hds::ButtonSet>
   {{else}}
@@ -90,24 +86,23 @@
         @onChange={{fn (mut this.formData)}}
         @validationErrors={{this.validationErrors}}
       />
-      <div class="control box is-fullwidth has-only-top-shadow">
-        <Hds::ButtonSet>
-          <Hds::Button
-            @text="Cross-sign"
-            @icon={{if this.submit.isRunning "loading"}}
-            type="submit"
-            disabled={{this.submit.isRunning}}
-            data-test-cross-sign-submit
-          />
-          <Hds::Button
-            @text="Cancel"
-            @color="secondary"
-            @route="vault.cluster.secrets.backend.pki.issuers.issuer.details"
-            disabled={{this.submit.isRunning}}
-            data-test-cross-sign-cancel
-          />
-        </Hds::ButtonSet>
-      </div>
+      <hr class="has-background-gray-100" />
+      <Hds::ButtonSet>
+        <Hds::Button
+          @text="Cross-sign"
+          @icon={{if this.submit.isRunning "loading"}}
+          type="submit"
+          disabled={{this.submit.isRunning}}
+          data-test-cross-sign-submit
+        />
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route="issuers.issuer.details"
+          disabled={{this.submit.isRunning}}
+          data-test-cross-sign-cancel
+        />
+      </Hds::ButtonSet>
     </form>
   {{/if}}
 </div>

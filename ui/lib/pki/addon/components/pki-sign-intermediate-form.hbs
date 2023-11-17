@@ -53,35 +53,35 @@
 
       <PkiGenerateToggleGroups @model={{@model}} @groups={{this.groups}} />
     </div>
-    <div class="has-top-padding-s">
-      <Hds::ButtonSet>
-        <Hds::Button
-          @text="Save"
-          @icon={{if this.save.isRunning "loading"}}
-          type="submit"
-          disabled={{this.save.isRunning}}
-          data-test-pki-sign-intermediate-save
+
+    <Hds::ButtonSet class="has-top-padding-s">
+      <Hds::Button
+        @text="Save"
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        disabled={{this.save.isRunning}}
+        data-test-pki-sign-intermediate-save
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        class="has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-pki-sign-intermediate-cancel
+      />
+    </Hds::ButtonSet>
+    {{#if this.inlineFormAlert}}
+      <div class="control">
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message={{this.inlineFormAlert}}
+          @mimicRefresh={{true}}
+          data-test-form-error
         />
-        <Hds::Button
-          @text="Cancel"
-          @color="secondary"
-          class="has-left-margin-s"
-          disabled={{this.save.isRunning}}
-          {{on "click" this.cancel}}
-          data-test-pki-sign-intermediate-cancel
-        />
-      </Hds::ButtonSet>
-      {{#if this.inlineFormAlert}}
-        <div class="control">
-          <AlertInline
-            @type="danger"
-            @paddingTop={{true}}
-            @message={{this.inlineFormAlert}}
-            @mimicRefresh={{true}}
-            data-test-form-error
-          />
-        </div>
-      {{/if}}
-    </div>
+      </div>
+    {{/if}}
+
   </form>
 {{/if}}

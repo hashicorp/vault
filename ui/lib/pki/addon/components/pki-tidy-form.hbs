@@ -57,28 +57,25 @@
   {{/each}}
 
   <hr class="is-marginless has-background-gray-200" />
-
-  <div class="has-top-margin-m">
-    <Hds::ButtonSet>
-      <Hds::Button
-        @text={{if (eq @tidyType "manual") "Perform tidy" "Save"}}
-        @icon={{if this.save.isRunning "loading"}}
-        type="submit"
-        disabled={{this.save.isRunning}}
-        data-test-pki-tidy-button
-      />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        disabled={{this.save.isRunning}}
-        {{on "click" @onCancel}}
-        data-test-pki-tidy-cancel
-      />
-    </Hds::ButtonSet>
-    {{#if this.invalidFormAlert}}
-      <div class="control">
-        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
-      </div>
-    {{/if}}
-  </div>
+  <Hds::ButtonSet class="has-top-margin-m">
+    <Hds::Button
+      @text={{if (eq @tidyType "manual") "Perform tidy" "Save"}}
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-pki-tidy-button
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      disabled={{this.save.isRunning}}
+      {{on "click" @onCancel}}
+      data-test-pki-tidy-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <div class="control">
+      <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+    </div>
+  {{/if}}
 </form>

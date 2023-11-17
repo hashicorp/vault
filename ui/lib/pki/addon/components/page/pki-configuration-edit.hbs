@@ -123,36 +123,35 @@
       {{/if}}
     </fieldset>
 
-    <div class="field is-grouped box is-fullwidth is-bottomless">
-      <Hds::ButtonSet>
-        {{#if (or @urls.canSet @crl.canSet)}}
-          <Hds::Button
-            @text="Save"
-            @icon={{if this.save.isRunning "loading"}}
-            type="submit"
-            disabled={{this.save.isRunning}}
-            data-test-configuration-edit-save
-          />
-        {{/if}}
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      {{#if (or @urls.canSet @crl.canSet)}}
         <Hds::Button
-          @text="Cancel"
-          @color="secondary"
-          {{on "click" this.cancel}}
+          @text="Save"
+          @icon={{if this.save.isRunning "loading"}}
+          type="submit"
           disabled={{this.save.isRunning}}
-          data-test-configuration-edit-cancel
+          data-test-configuration-edit-save
         />
-      </Hds::ButtonSet>
-      {{#if this.invalidFormAlert}}
-        <div class="control">
-          <AlertInline
-            @type="danger"
-            @paddingTop={{true}}
-            @message={{this.invalidFormAlert}}
-            @mimicRefresh={{true}}
-            data-test-configuration-edit-validation-alert
-          />
-        </div>
       {{/if}}
-    </div>
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        {{on "click" this.cancel}}
+        disabled={{this.save.isRunning}}
+        data-test-configuration-edit-cancel
+      />
+    </Hds::ButtonSet>
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message={{this.invalidFormAlert}}
+          @mimicRefresh={{true}}
+          data-test-configuration-edit-validation-alert
+        />
+      </div>
+    {{/if}}
   </form>
 </div>
