@@ -1,0 +1,101 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Messages::TabPageHeader @authenticated={{@authenticated}}>
+  <:toolbarActions>
+    <ToolbarLink data-test-toolbar-create-message @route="messages.create" @type="add">
+      Create message
+    </ToolbarLink>
+  </:toolbarActions>
+</Messages::TabPageHeader>
+
+{{#if @messages.length}}
+  {{#each this.getMessages as |message|}}
+    <LinkedBlock
+      data-test-list-item={{message.id}}
+      class="list-item-row"
+      @params={{array "messages.message.details" message.id}}
+      @linkPrefix="vault.cluster.config-ui"
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Hds::Text::Display @tag="h2" data-linked-block-title={{message.id}}>
+              <Icon @name="message-circle" class="auto-width" aria-label="message" />
+              {{message.title}}
+            </Hds::Text::Display>
+            <div class="has-top-margin-xs">
+              <Hds::Badge
+                @text={{message.badgeDisplayText}}
+                @color={{if message.active "highlight" "neutral"}}
+                data-test-badge={{concat "active:" message.active}}
+              />
+              <Hds::Badge
+                @text={{(capitalize message.type)}}
+                @color={{if message.active "highlight" "neutral"}}
+                data-test-badge={{message.type}}
+              />
+            </div>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu @name="engine-menu">
+              <Confirm as |c|>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if message.canEditCustomMessages}}
+                      <li class="action">
+                        <LinkTo @route="messages.message.edit" @model={{message.id}}>
+                          Edit
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if message.canDeleteCustomMessages}}
+                      <li class="action">
+                        <c.Message
+                          @id={{message.id}}
+                          @triggerText="Delete"
+                          @message="This will delete this message permanently. You cannot undo this action."
+                          @title="Are you sure?"
+                          @confirmButtonText="Delete"
+                          @onConfirm={{perform this.deleteMessage message}}
+                          data-test-delete-custom-message
+                        />
+                      </li>
+                    {{/if}}
+                  </ul>
+                </nav>
+              </Confirm>
+            </PopupMenu>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+  <Hds::Pagination::Numbered
+    class="has-top-margin-m has-bottom-margin-m"
+    @currentPage={{@messages.meta.currentPage}}
+    @currentPageSize={{@messages.meta.pageSize}}
+    @route="messages.index"
+    @showSizeSelector={{false}}
+    @totalItems={{@messages.meta.total}}
+    @queryFunction={{this.paginationQueryParams}}
+  />
+{{else}}
+  <EmptyState
+    @title="No messages yet"
+    @message="Add a custom message for all users after they log into Vault. Create message to get started."
+  >
+    <Hds::Link::Standalone
+      @icon="plus"
+      @iconPosition="leading"
+      @text="Create message"
+      @route="messages.create"
+      class="is-no-underline"
+      data-test-action-text="Create message"
+    />
+  </EmptyState>
+{{/if}}
