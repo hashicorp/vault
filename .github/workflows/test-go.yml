@@ -334,9 +334,15 @@ jobs:
             #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
+          # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
+          # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
+          package_parallelism=""
+          
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
+          
+            package_parallelism="-p 2"
           fi
 
           # On a release branch, add a flag to rerun failed tests
@@ -353,6 +359,7 @@ jobs:
           export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
           mkdir -p $VAULT_TEST_LOG_DIR
           
+          
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
@@ -362,6 +369,7 @@ jobs:
               $RERUN_FAILS \
               --packages "$packages" \
               -- \
+              $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \

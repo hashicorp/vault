@@ -194,3 +194,8 @@ label {
     cursor: not-allowed;
   }
 }
+
+// TODO remove when HDS has released fix
+.hds-form-masked-input .hds-form-masked-input__toggle-button {
+  margin-right: $spacing-12;
+}
