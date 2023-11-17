@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -19,18 +20,18 @@ func TestRotateRoot(t *testing.T) {
 	ctx := context.Background()
 
 	b, store := createBackendWithStorage(t)
-	defer b.Cleanup(ctx)
-
+	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
+	defer cleanup()
 	// set up auth config
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Storage:   store,
 		Data: map[string]interface{}{
-			"url":      "ldap://localhost:389",
-			"binddn":   "cn=admin,dc=planetexpress,dc=com",
-			"bindpass": "admin",
-			"userdn":   "dc=planetexpress,dc=com",
+			"url":      cfg.Url,
+			"binddn":   cfg.BindDN,
+			"bindpass": cfg.BindPassword,
+			"userdn":   cfg.UserDN,
 		},
 	}
 
@@ -53,11 +54,11 @@ func TestRotateRoot(t *testing.T) {
 		t.Fatalf("failed to rotate password: %s", err)
 	}
 
-	cfg, err := b.Config(ctx, req)
-	if cfg.BindDN != "cn=admin,dc=planetexpress,dc=com" {
+	newCFG, err := b.Config(ctx, req)
+	if newCFG.BindDN != cfg.BindDN {
 		t.Fatalf("a value in config that should have stayed the same changed: %s", cfg.BindDN)
 	}
-	if cfg.BindPassword == "admin" {
+	if cfg.BindPassword == cfg.BindPassword {
 		t.Fatalf("the password should have changed, but it didn't")
 	}
 }
