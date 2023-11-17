@@ -12,12 +12,12 @@
 </Messages::TabPageHeader>
 
 {{#if @messages.length}}
-  {{#each @messages as |message|}}
+  {{#each this.getMessages as |message|}}
     <LinkedBlock
       data-test-list-item={{message.id}}
       class="list-item-row"
       @params={{array "messages.message.details" message.id}}
-      @linkPrefix={{this.mountPoint}}
+      @linkPrefix="vault.cluster.config-ui"
     >
       <div class="level is-mobile">
         <div class="level-left">
@@ -28,19 +28,7 @@
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
               <Hds::Badge
-                @text={{if
-                  message.active
-                  (if
-                    message.endTime
-                    (concat "Active until " (date-format message.endTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
-                    "Active"
-                  )
-                  (if
-                    message.isStartTimeAfterToday
-                    (concat "Scheduled: " (date-format message.startTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
-                    (concat "Inactive: " (date-format message.endTime "MMM d, yyyy hh:mm aaa" withTimeZone=true))
-                  )
-                }}
+                @text={{message.badgeDisplayText}}
                 @color={{if message.active "highlight" "neutral"}}
                 data-test-badge={{concat "active:" message.active}}
               />

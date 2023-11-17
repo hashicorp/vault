@@ -19,6 +19,7 @@
 <div class="tabs-container box is-bottomless is-marginless is-paddingless">
   <nav class="tabs" aria-label="custom-messages">
     <ul>
+      {{! Explicitly setting page to 1 here since we want to reset the page param on transition}}
       <LinkTo
         class={{if @authenticated "active"}}
         @route="messages"

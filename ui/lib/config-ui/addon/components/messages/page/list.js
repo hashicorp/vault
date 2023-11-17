@@ -4,9 +4,9 @@
  */
 
 import Component from '@glimmer/component';
-import { getOwner } from '@ember/application';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { dateFormat } from 'core/helpers/date-format';
 
 /**
  * @module Page::MessagesList
@@ -21,9 +21,33 @@ import { task } from 'ember-concurrency';
 export default class MessagesList extends Component {
   @service store;
 
-  get mountPoint() {
-    // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.config-ui
-    return getOwner(this).mountPoint;
+  get getMessages() {
+    return this.args.messages.map((message) => {
+      let badgeDisplayText = '';
+
+      if (message.active) {
+        if (message.endTime) {
+          badgeDisplayText = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
+            withTimeZone: true,
+          })}`;
+        } else {
+          badgeDisplayText = 'Active';
+        }
+      } else {
+        if (message.isStartTimeAfterToday) {
+          badgeDisplayText = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+            withTimeZone: true,
+          })}`;
+        } else {
+          badgeDisplayText = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+            withTimeZone: true,
+          })}`;
+        }
+      }
+
+      message.badgeDisplayText = badgeDisplayText;
+      return message;
+    });
   }
 
   // callback from HDS pagination to set the queryParams page
