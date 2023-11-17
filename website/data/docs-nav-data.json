@@ -1976,7 +1976,21 @@
                   },
                   {
                     "title": "Vault",
-                    "path": "platform/k8s/vso/sources/vault"
+                    "routes": [
+                      {
+                        "title": "Overview",
+                        "path": "platform/k8s/vso/sources/vault"
+                      },
+                      {
+                        "title": "Auth Methods",
+                        "routes": [
+                          {
+                            "title": "GCP",
+                            "path": "platform/k8s/vso/sources/vault/gcp-auth"
+                          }
+                        ]
+                      }
+                    ]
                   },
                   {
                     "title": "HCP Vault Secrets",
