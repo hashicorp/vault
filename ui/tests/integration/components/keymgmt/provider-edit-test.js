@@ -105,9 +105,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
 
     await changeTab('details');
     await click(`[${ts}-delete]`);
-    assert.dom('[data-test-confirm-button]').isDisabled('Confirm button is disabled when keys exist');
     assert
-      .dom('[data-test-disabled-message]')
+      .dom('[data-test-confirm-action-message]')
       .hasText(
         'This provider cannot be deleted until all 2 key(s) distributed to it are revoked. This can be done from the Keys tab.',
         'Renders disabled message'

@@ -108,12 +108,9 @@ module('Acceptance | mfa-method', function (hooks) {
     await click('[data-test-mfa-method-list-item]');
     assert.dom('[data-test-tab="config"]').hasClass('active', 'Configuration tab is active by default');
     await click('[data-test-delete-mfa-config]');
-    assert
-      .dom('[data-test-confirm-button]')
-      .isDisabled('Confirm button disabled when method is attached to an enforcement');
 
     assert
-      .dom('[data-test-disabled-message]')
+      .dom('[data-test-confirm-action-message]')
       .hasText(
         "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
       );
