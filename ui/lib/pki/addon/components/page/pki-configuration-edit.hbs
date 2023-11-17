@@ -124,7 +124,7 @@
     </fieldset>
 
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <div class="control">
+      <Hds::ButtonSet>
         {{#if (or @urls.canSet @crl.canSet)}}
           <Hds::Button
             @text="Save"
@@ -137,12 +137,11 @@
         <Hds::Button
           @text="Cancel"
           @color="secondary"
-          class="has-left-margin-s"
           {{on "click" this.cancel}}
           disabled={{this.save.isRunning}}
           data-test-configuration-edit-cancel
         />
-      </div>
+      </Hds::ButtonSet>
       {{#if this.invalidFormAlert}}
         <div class="control">
           <AlertInline

@@ -50,32 +50,30 @@
       </FormField>
     {{/each}}
   </div>
-  <div class="has-top-margin-l has-bottom-margin-l">
-    <Hds::ButtonSet>
-      <Hds::Button
-        @text="Update"
-        @icon={{if this.save.isRunning "loading"}}
-        type="submit"
-        disabled={{this.save.isRunning}}
-        data-test-save
+  <Hds::ButtonSet class="has-top-margin-l has-bottom-margin-l">
+    <Hds::Button
+      @text="Update"
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.cancel}}
+      data-test-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.error}}
+    <div class="control">
+      <AlertInline
+        @type="danger"
+        @paddingTop={{true}}
+        @message="There was an error submitting this form."
+        @mimicRefresh={{true}}
       />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
-        data-test-cancel
-      />
-    </Hds::ButtonSet>
-    {{#if this.error}}
-      <div class="control">
-        <AlertInline
-          @type="danger"
-          @paddingTop={{true}}
-          @message="There was an error submitting this form."
-          @mimicRefresh={{true}}
-        />
-      </div>
-    {{/if}}
-  </div>
+    </div>
+  {{/if}}
 </form>

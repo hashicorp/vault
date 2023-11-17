@@ -35,33 +35,31 @@
       {{/let}}
     {{/if}}
   </div>
-  <div class="has-top-padding-s">
-    <Hds::ButtonSet>
-      <Hds::Button
-        @text={{if @model.isNew "Generate key" "Edit key"}}
-        @icon={{if this.save.isRunning "loading"}}
-        type="submit"
-        disabled={{this.save.isRunning}}
-        data-test-pki-key-save
+  <Hds::ButtonSet class="has-top-padding-s">
+    <Hds::Button
+      @text={{if @model.isNew "Generate key" "Edit key"}}
+      @icon={{if this.save.isRunning "loading"}}
+      type="submit"
+      disabled={{this.save.isRunning}}
+      data-test-pki-key-save
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      disabled={{this.save.isRunning}}
+      {{on "click" @onCancel}}
+      data-test-pki-key-cancel
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <div class="control">
+      <AlertInline
+        @type="danger"
+        @paddingTop={{true}}
+        @message={{this.invalidFormAlert}}
+        @mimicRefresh={{true}}
+        data-test-pki-key-validation-error
       />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        disabled={{this.save.isRunning}}
-        {{on "click" @onCancel}}
-        data-test-pki-key-cancel
-      />
-    </Hds::ButtonSet>
-    {{#if this.invalidFormAlert}}
-      <div class="control">
-        <AlertInline
-          @type="danger"
-          @paddingTop={{true}}
-          @message={{this.invalidFormAlert}}
-          @mimicRefresh={{true}}
-          data-test-pki-key-validation-error
-        />
-      </div>
-    {{/if}}
-  </div>
+    </div>
+  {{/if}}
 </form>

@@ -90,10 +90,9 @@
     @message="To see configuration options, choose your desired output above."
     data-test-configuration-empty-state
   />
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <Hds::ButtonSet>
-      <Hds::Button @text="Done" disabled={{true}} data-test-pki-config-save />
-      <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-config-cancel />
-    </Hds::ButtonSet>
-  </div>
+  <hr class="has-background-gray-100" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Done" disabled={{true}} data-test-pki-config-save />
+    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-config-cancel />
+  </Hds::ButtonSet>
 {{/if}}

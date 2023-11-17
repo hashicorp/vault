@@ -166,23 +166,22 @@
         {{/if}}
       </div>
 
-      <div class="field is-grouped box is-fullwidth is-bottomless">
-        <Hds::ButtonSet>
-          <Hds::Button @text="Done" type="submit" data-test-pki-rotate-root-save />
-          <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-rotate-root-cancel />
-        </Hds::ButtonSet>
-        {{#if this.invalidFormAlert}}
-          <div class="control">
-            <AlertInline
-              @type="danger"
-              @paddingTop={{true}}
-              @message={{this.invalidFormAlert}}
-              @mimicRefresh={{true}}
-              data-test-pki-rotate-root-validation-error
-            />
-          </div>
-        {{/if}}
-      </div>
+      <hr class="has-background-gray-100" />
+      <Hds::ButtonSet>
+        <Hds::Button @text="Done" type="submit" data-test-pki-rotate-root-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-rotate-root-cancel />
+      </Hds::ButtonSet>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.invalidFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-pki-rotate-root-validation-error
+          />
+        </div>
+      {{/if}}
     </form>
   {{/if}}
 {{else}}

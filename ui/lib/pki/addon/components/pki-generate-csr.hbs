@@ -60,16 +60,15 @@
 
     <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
-    <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
-      <Hds::ButtonSet>
-        <Hds::Button @text="Generate" type="submit" data-test-save />
-        <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} data-test-cancel />
-      </Hds::ButtonSet>
-      {{#if this.alert}}
-        <div class="control">
-          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
-        </div>
-      {{/if}}
-    </div>
+    <hr class="has-background-gray-100" />
+    <Hds::ButtonSet>
+      <Hds::Button @text="Generate" type="submit" data-test-save />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} data-test-cancel />
+    </Hds::ButtonSet>
+    {{#if this.alert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+      </div>
+    {{/if}}
   </form>
 {{/if}}

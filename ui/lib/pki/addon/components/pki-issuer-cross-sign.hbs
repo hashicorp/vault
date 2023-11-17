@@ -78,7 +78,7 @@
     <Hds::ButtonSet>
       <Hds::Button
         @text="Done"
-        {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
+        @route="vault.cluster.secrets.backend.pki.issuers.issuer.details"
         data-test-cross-sign-done
       />
       <Hds::Button @text="Sign more issuers" @color="secondary" data-test-cross-sign-more {{on "click" this.reset}} />
@@ -102,8 +102,8 @@
           <Hds::Button
             @text="Cancel"
             @color="secondary"
+            @route="vault.cluster.secrets.backend.pki.issuers.issuer.details"
             disabled={{this.submit.isRunning}}
-            {{on "click" (transition-to "vault.cluster.secrets.backend.pki.issuers.issuer.details")}}
             data-test-cross-sign-cancel
           />
         </Hds::ButtonSet>
