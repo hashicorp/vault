@@ -10,6 +10,8 @@
     @color={{@buttonColor}}
     {{on "click" (fn (mut this.showConfirmModal) true)}}
     ...attributes
+    {{! remove class when dropdown/popup menus are replaced with Hds::Dropdown }}
+    class="hds-confirm-action-critical"
   />
 {{else}}
   <Hds::Button

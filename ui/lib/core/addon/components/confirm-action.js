@@ -18,7 +18,6 @@ import { tracked } from '@glimmer/tracking';
  * @example
 //  in dropdown
   <ConfirmAction
-    class="hds-confirm-action-critical"
     @buttonColor="critical"
     @isInDropdown={{true}}
     @buttonText="Delete"
