@@ -19,7 +19,7 @@ export default class MessageAdapter extends ApplicationAdapter {
   query(store, type, query) {
     const { authenticated } = query;
 
-    return this.ajax(this.getCustomMessagesUrl(), 'GET', { data: { authenticated } });
+    return this.ajax(this.getCustomMessagesUrl(), 'GET', { data: { authenticated, list: true } });
   }
 
   deleteRecord(store, type, snapshot) {
