@@ -10,7 +10,7 @@
         <ConfirmAction
           @buttonText="Remove"
           @confirmTitle="Remove metadata?"
-          @buttonColor="critical"
+          @isInDropdown={{true}}
           @confirmMessage="This data may be used outside of Vault."
           @onConfirmAction={{action "performTransaction" this.model this.key}}
         />
