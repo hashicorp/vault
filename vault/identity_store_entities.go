@@ -883,6 +883,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return errors.New("fromEntity was not found in memdb as part of an automated entity merge; storage/memdb may be in a bad state"), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
@@ -995,6 +1004,15 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		if fromEntity == nil {
+			// If forceMergeAliases is true, and we didn't find a fromEntity, then something
+			// is wrong with storage. This function was called as part of an automated
+			// merge from CreateOrFetchEntity or Invalidate to repatriate an alias with its 'true'
+			// entity. As a result, the entity _should_ exist, but we can't find it.
+			// MemDb may be in a bad state, because fromEntity should be non-nil in the
+			// automated merge case.
+			if forceMergeAliases {
+				return errors.New("fromEntity was not found in memdb as part of an automated entity merge; storage/memdb may be in a bad state"), nil, nil
+			}
 			return errors.New("entity id to merge from is invalid"), nil, nil
 		}
 
