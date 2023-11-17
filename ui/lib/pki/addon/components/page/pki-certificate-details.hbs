@@ -5,10 +5,14 @@
 
 <Toolbar>
   <ToolbarActions>
-    <button type="button" class="toolbar-link" {{on "click" this.downloadCert}} data-test-pki-cert-download-button>
-      Download
-      <Chevron @direction="down" @isButton={{true}} />
-    </button>
+    <Hds::Button
+      @text="Download"
+      @color="secondary"
+      @icon="download"
+      class="toolbar-button"
+      {{on "click" this.downloadCert}}
+      data-test-pki-cert-download-button
+    />
     {{#if @model.canRevoke}}
       <ConfirmAction
         @buttonText="Revoke certificate"
@@ -59,16 +63,12 @@
 
 {{#if @onBack}}
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="button"
-        class="button"
-        disabled={{this.revoke.isRunning}}
-        {{on "click" @onBack}}
-        data-test-pki-cert-details-back
-      >
-        Back
-      </button>
-    </div>
+    <Hds::Button
+      @text="Back"
+      @color="secondary"
+      disabled={{this.revoke.isRunning}}
+      {{on "click" @onBack}}
+      data-test-pki-cert-details-back
+    />
   </div>
 {{/if}}
