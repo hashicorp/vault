@@ -29,7 +29,7 @@
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-marginless is-flex-grow-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -42,7 +42,7 @@
       <Hds::Button
         @text="Issue"
         @color="secondary"
-        class="has-left-margin-s"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
         disabled={{unless this.rolesValue true}}
         {{on "click" this.transitionToIssueCertificates}}
@@ -54,7 +54,7 @@
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
     <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
-        class="is-marginless is-flex-grow-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -67,7 +67,7 @@
       <Hds::Button
         @text="View"
         @color="secondary"
-        class={{unless this.certificateValue "has-left-margin-s"}}
+        class="has-left-margin-s align-self-baseline"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button
@@ -78,7 +78,7 @@
   <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-marginless is-flex-grow-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/issuer"}}
         @backend={{@engine.id}}
@@ -93,7 +93,7 @@
       <Hds::Button
         @text="View"
         @color="secondary"
-        class="has-left-margin-s"
+        class="has-left-margin-s align-self-baseline"
         type="submit"
         disabled={{unless this.issuerValue true}}
         {{on "click" this.transitionToIssuerDetails}}
