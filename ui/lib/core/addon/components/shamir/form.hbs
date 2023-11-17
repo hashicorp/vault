@@ -39,9 +39,7 @@
   </div>
   <div class="columns is-mobile">
     <div class="column is-narrow">
-      <button type="submit" class="button is-primary" disabled={{this.loading}} data-test-shamir-submit>
-        {{this.buttonText}}
-      </button>
+      <Hds::Button @text={{this.buttonText}} type="submit" disabled={{this.loading}} data-test-shamir-submit />
     </div>
     <div class="column is-flex-v-centered is-flex-end">
       {{#if this.showProgress}}

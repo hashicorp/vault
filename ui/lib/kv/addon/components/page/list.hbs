@@ -63,7 +63,7 @@
         <div class="level is-mobile">
           <div class="level-left">
             <div>
-              <Icon @name="file" class="has-text-grey-light" />
+              <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
                 {{metadata.path}}
               </span>

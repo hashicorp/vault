@@ -10,19 +10,19 @@ import { isArray, A } from '@ember/array';
 
   DS.attr('array')
 */
-export default Transform.extend({
+export default class ArrayTransform extends Transform {
   deserialize(value) {
     if (isArray(value)) {
       return A(value);
     } else {
       return A();
     }
-  },
+  }
   serialize(value) {
     if (isArray(value)) {
       return A(value);
     } else {
       return A();
     }
-  },
-});
+  }
+}
