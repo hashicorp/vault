@@ -53,12 +53,12 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
-	// See SealConfigType for the rules about computing the type.
-	if len(lowLevel.GetSealGenerationInfo().Seals) > 1 {
-		ret.barrierSealConfigType = SealConfigTypeMultiseal
+	// See SealConfigType for the rules about computing the type. Note that NewAccess guarantees
+	// that there is at least one wrapper
+	if wrappers := lowLevel.GetAllSealWrappersByPriority(); len(wrappers) == 1 {
+		ret.barrierSealConfigType = SealConfigType(wrappers[0].SealConfigType)
 	} else {
-		// Note that the Access constructors guarantee that there is at least one KMS config
-		ret.barrierSealConfigType = SealConfigType(lowLevel.GetSealGenerationInfo().Seals[0].Type)
+		ret.barrierSealConfigType = SealConfigTypeMultiseal
 	}
 
 	return ret

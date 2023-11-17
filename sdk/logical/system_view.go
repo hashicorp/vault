@@ -111,6 +111,12 @@ type ExtendedSystemView interface {
 	// APILockShouldBlockRequest returns whether a namespace for the requested
 	// mount is locked and should be blocked
 	APILockShouldBlockRequest() (bool, error)
+
+	// Register a redirect from .well-known/src to dest, where dest is a subpath of the mount.  An error
+	// is returned if that source path is already taken
+	RequestWellKnownRedirect(ctx context.Context, src, dest string) error
+	// Deregister a specific redirect.  Returns true if that redirect source was found
+	DeregisterWellKnownRedirect(ctx context.Context, src string) bool
 }
 
 type PasswordGenerator func() (password string, err error)

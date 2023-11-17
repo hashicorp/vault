@@ -30,12 +30,13 @@ during drift remediation.
 
 ### Supported Vault authentication methods
 
-| Backend                                   | Description                                                                                                 |
-|-------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| [Kubernetes](/vault/docs/auth/kubernetes) | Relies on short-lived Kubernetes ServiceAccount tokens for Vault authentication                             |
-| [JWT](/vault/docs/auth/jwt)               | Relies on either static JWT tokens or short-lived Kubernetes ServiceAccount tokens for Vault authentication |
-| [AppRole](/vault/docs/auth/approle)       | Relies on static AppRole credentials for Vault authentication                                               |
-| [AWS](/vault/docs/auth/aws)               | Relies on AWS credentials for Vault authentication                                                          |
+| Backend                                                                            | Description                                                                                                 |
+|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| [Kubernetes](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigkubernetes) | Relies on short-lived Kubernetes ServiceAccount tokens for Vault authentication                             |
+| [JWT](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt)               | Relies on either static JWT tokens or short-lived Kubernetes ServiceAccount tokens for Vault authentication |
+| [AppRole](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigapprole)       | Relies on static AppRole credentials for Vault authentication                                               |
+| [AWS](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigaws)               | Relies on AWS credentials for Vault authentication                                                          |
+| [GCP](/vault/docs/platform/k8s/vso/sources/vault/gcp-auth)                         | Relies on GCP credentials for Vault authentication                                                          |
 
 ## Vault access and custom resource definitions
 

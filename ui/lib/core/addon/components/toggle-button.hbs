@@ -3,6 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+{{! DEPRECATED use <Hds::Reveal /> instead https://helios.hashicorp.design/components/reveal }}
 <button type="button" class="button is-transparent has-text-info" {{on "click" (fn @onClick (not @isOpen))}} ...attributes>
   {{#if @isOpen}}
     <Icon @name="chevron-up" />{{this.openLabel}}

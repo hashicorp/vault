@@ -139,8 +139,6 @@
     {{! Togglable Text Input }}
     <Toggle
       @name="show-{{@attr.name}}"
-      @status="success"
-      @size="small"
       @onChange={{this.toggleShow}}
       @checked={{this.showInput}}
       data-test-toggle={{@attr.name}}
@@ -241,16 +239,14 @@
             @example={{@attr.options.example}}
           >
             {{#if @attr.options.allowReset}}
-              <button
-                type="button"
-                class="toolbar-link"
+              <Hds::Button
+                @text="Clear"
+                @icon="reload"
+                class="toolbar-button"
                 disabled={{not value}}
-                onClick={{this.setAndBroadcast}}
+                {{on "click" this.setAndBroadcast}}
                 data-test-json-clear-button
-              >
-                Clear
-                <Icon @name="reload" />
-              </button>
+              />
             {{/if}}
           </JsonEditor>
         {{/let}}
