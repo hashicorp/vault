@@ -20,22 +20,21 @@
     The secondary id to revoke; given initially to generate a secondary token.
   </p>
 </div>
-<div class="field is-grouped box is-fullwidth is-bottomless">
-  <Hds::ButtonSet>
-    <ConfirmAction
-      @buttonText="Revoke"
-      @confirmTitle="Revoke token?"
-      @confirmMessage="This will revoke this secondary token."
-      @disabled={{not this.id}}
-      @disabledMessage="A secondary ID is required perform revocation."
-      @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
-    />
-    <Hds::Button
-      @text="Cancel"
-      @color="secondary"
-      @route="mode.secondaries"
-      @model={{this.replicationMode}}
-      @disabled={{not this.isRevoking}}
-    />
-  </Hds::ButtonSet>
-</div>
+<hr class="has-background-gray-100" />
+<Hds::ButtonSet>
+  <ConfirmAction
+    @buttonText="Revoke"
+    @confirmTitle="Revoke token?"
+    @confirmMessage="This will revoke this secondary token."
+    @disabled={{not this.id}}
+    @disabledMessage="A secondary ID is required perform revocation."
+    @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
+  />
+  <Hds::Button
+    @text="Cancel"
+    @color="secondary"
+    @route="mode.secondaries"
+    @model={{this.replicationMode}}
+    @disabled={{not this.isRevoking}}
+  />
+</Hds::ButtonSet>

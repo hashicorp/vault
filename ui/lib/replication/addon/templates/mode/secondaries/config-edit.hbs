@@ -12,19 +12,9 @@
 </div>
 <form {{action "saveConfig" this.model.config on="submit"}}>
   <PathFilterConfigList @paths={{this.model.paths}} @config={{this.model.config}} />
-  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
-    <div class="field is-grouped">
-      <div class="control">
-        <Hds::Button @text="Update" type="submit" data-test-config-save />
-      </div>
-      <div class="control">
-        <Hds::Button
-          @text="Cancel"
-          @color="secondary"
-          @route="mode.secondaries.config-show"
-          @model={{this.model.config.id}}
-        />
-      </div>
-    </div>
-  </div>
+  <hr class="has-background-gray-100" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Update" type="submit" data-test-config-save />
+    <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries.config-show" @model={{this.model.config.id}} />
+  </Hds::ButtonSet>
 </form>

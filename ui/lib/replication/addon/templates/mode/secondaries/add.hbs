@@ -45,14 +45,11 @@
   {{#if (eq this.replicationMode "performance")}}
     <PathFilterConfigList @paths={{this.paths}} @config={{this.filterConfig}} @id={{this.id}} />
   {{/if}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <Hds::Button @text="Generate token" type="submit" data-test-secondary-add={{true}} />
-    </div>
-    <div class="control">
-      <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
-    </div>
-  </div>
+  <hr class="has-background-gray-100" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Generate token" type="submit" data-test-secondary-add={{true}} />
+    <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
+  </Hds::ButtonSet>
 </form>
 
 {{#if this.isModalActive}}

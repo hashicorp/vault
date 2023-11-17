@@ -278,14 +278,12 @@
       )
     }}
       <div class="field is-grouped box is-fullwidth is-bottomless">
-        <div class="control">
-          <Hds::Button
-            @text="Enable Replication"
-            type="submit"
-            disabled={{this.disallowEnable}}
-            data-test-replication-enable
-          />
-        </div>
+        <Hds::Button
+          @text="Enable Replication"
+          type="submit"
+          disabled={{this.disallowEnable}}
+          data-test-replication-enable
+        />
       </div>
     {{/if}}
   </form>
