@@ -38,14 +38,13 @@
     {{#if this.model.canDelete}}
       <ConfirmAction
         data-test-oidc-scope-delete
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete scope"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete scope?"
         @confirmMessage="This scope will be permanently deleted. You will not be able to recover it."
-        @confirmButtonText="Delete"
-      >
-        Delete scope
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}
