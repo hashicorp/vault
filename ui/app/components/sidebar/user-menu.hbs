@@ -71,7 +71,6 @@
                 </li>
               {{/if}}
               <ConfirmAction
-                @buttonColor="critical"
                 @isInDropdown={{true}}
                 @confirmTitle="Revoke {{get this.auth 'authData.displayName'}}?"
                 @onConfirmAction={{action "revokeToken"}}

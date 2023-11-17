@@ -71,7 +71,6 @@
                         />
                       {{else if (eq this.identityType "entity")}}
                         <ConfirmAction
-                          @buttonColor="critical"
                           @isInDropdown={{true}}
                           @buttonText="Disable"
                           @confirmMessage="Associated tokens will not be revoked, but cannot be used"
@@ -84,7 +83,6 @@
                   {{/if}}
                   {{#if item.canDelete}}
                     <ConfirmAction
-                      @buttonColor="critical"
                       @isInDropdown={{true}}
                       @buttonText="Delete"
                       @onConfirmAction={{action "delete" item}}

@@ -10,7 +10,6 @@
         <ConfirmAction
           @buttonText="Remove"
           @confirmTitle="Remove this group?"
-          @buttonColor="critical"
           @isInDropdown={{true}}
           @confirmMessage="This may affect permissions for this group."
           @onConfirmAction={{action "performTransaction" this.model this.groupArray this.memberId}}

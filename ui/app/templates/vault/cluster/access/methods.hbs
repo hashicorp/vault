@@ -101,7 +101,6 @@
 
                 {{#if (and (not-eq method.methodType "token") method.canDisable)}}
                   <ConfirmAction
-                    @buttonColor="critical"
                     @isInDropdown={{true}}
                     @confirmTitle="Disable method?"
                     @confirmMessage="This may affect access to Vault data."

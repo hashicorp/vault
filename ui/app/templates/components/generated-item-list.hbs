@@ -89,7 +89,6 @@
           </LinkTo>
         </li>
         <ConfirmAction
-          @buttonColor="critical"
           @isInDropdown={{true}}
           @onConfirmAction={{action
             (perform
@@ -104,7 +103,6 @@
           @confirmTitle="Delete {{singularize this.itemType}}?"
           @confirmMessage="Are you sure you want to delete {{singularize this.itemType}} {{list.item.id}}?"
           @buttonText="Delete {{singularize this.itemType}}"
-          data-test-secret-delete
         />
       </Item.menu>
     </ListItem>

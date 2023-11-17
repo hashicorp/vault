@@ -12,7 +12,6 @@ import { tracked } from '@glimmer/tracking';
  * @module ConfirmAction
  * ConfirmAction is a button that opens a modal containing a confirmation message with confirm or cancel action.
  * Splattributes are spread to the button element to apply styling directly without adding extra args.
- * The default button is the same as Hds::Button which is primary blue.
  * 
  *
  * @example
@@ -43,7 +42,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
  * @param {Boolean} isInDropdown - If true styles for dropdowns by rendering inside `<li>` elements via `<Hds::Dropdown::ListItem::Interactive`
  * @param {String} buttonText - Text for the button that toggles modal to open.
- * @param {String} [buttonColor] - Color of button that toggles modal. Default is primary, other options are secondary, tertiary, and critical (recommended for dropdowns)
+ * @param {String} [buttonColor=primary || critical] - Color of button that toggles modal. Default is 'critical' when @isInDropdown=true otherwise it's primary. Other options are secondary, tertiary
  * @param {String} [modalColor=critical] - Styles modal color, if 'critical' confirm button is also 'critical'. Possible values: critical, warning or neutral
  * @param {Boolean} [isRunning] - Disables the modal confirm button - usually a concurrency task that informs the modal if a process is still running
  * @param {String} [disabledMessage] - A message explaining why the confirm action is not allowed, usually combined with a conditional that returns a string if true 

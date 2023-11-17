@@ -7,7 +7,7 @@
   <Hds::Dropdown::ListItem::Interactive
     data-test-confirm-action-trigger
     @text={{@buttonText}}
-    @color={{@buttonColor}}
+    @color={{or @buttonColor "critical"}}
     {{on "click" (fn (mut this.showConfirmModal) true)}}
     ...attributes
     {{! remove class when dropdown/popup menus are replaced with Hds::Dropdown }}

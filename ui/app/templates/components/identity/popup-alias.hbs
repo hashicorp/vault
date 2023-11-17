@@ -33,7 +33,6 @@
           {{#if item.canDelete}}
             <ConfirmAction
               @buttonText="Delete"
-              @buttonColor="critical"
               @isInDropdown={{true}}
               @onConfirmAction={{action "performTransaction" item}}
               data-test-item-delete
