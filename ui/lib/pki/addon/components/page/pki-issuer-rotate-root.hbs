@@ -124,9 +124,7 @@
     <PkiInfoTableRows @model={{@newRootModel}} @displayFields={{this.displayFields}} />
     <ParsedCertificateInfoRows @model={{@newRootModel.parsedCertificate}} />
     <div class="field is-grouped is-fullwidth has-top-margin-l has-bottom-margin-s">
-      <div class="control">
-        <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
-      </div>
+      <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
     </div>
   {{else}}
     {{!  USE OLD SETTINGS FORM INPUTS  }}

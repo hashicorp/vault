@@ -63,13 +63,13 @@
 <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
 
 {{#if @onBack}}
-  <hr class="has-background-gray-100" />
-  <Hds::Button
-    @text="Back"
-    @color="secondary"
-    disabled={{this.revoke.isRunning}}
-    {{on "click" @onBack}}
-    data-test-pki-cert-details-back
-  />
-
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <Hds::Button
+      @text="Back"
+      @color="secondary"
+      disabled={{this.revoke.isRunning}}
+      {{on "click" @onBack}}
+      data-test-pki-cert-details-back
+    />
+  </div>
 {{/if}}
