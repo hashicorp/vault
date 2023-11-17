@@ -71,7 +71,6 @@
           </li>
         {{else if list.item.updatePath.canDelete}}
           <ConfirmAction
-            @buttonColor="critical"
             @isInDropdown={{true}}
             @buttonText="Delete scope"
             @confirmTitle="Delete scope {{list.item.id}}?"

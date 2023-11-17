@@ -103,7 +103,6 @@
                       {{#if metadata.canDeleteMetadata}}
                         <ConfirmAction
                           @buttonText="Permanently delete"
-                          @buttonColor="critical"
                           @isInDropdown={{true}}
                           @onConfirmAction={{fn this.onDelete metadata}}
                           @confirmMessage="This will permanently delete this secret and all its versions."
