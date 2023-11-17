@@ -66,6 +66,7 @@ export default class ConfirmActionComponent extends Component {
   }
 
   get modalColor() {
+    if (this.args.disabledMessage) return 'neutral';
     return this.args.modalColor || 'critical';
   }
 
