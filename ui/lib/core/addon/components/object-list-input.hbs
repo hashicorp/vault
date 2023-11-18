@@ -6,10 +6,10 @@
 {{yield}}
 {{#each this.inputList as |row index|}}
   {{#let (get @validationErrors index) as |rowValidations|}}
-    <div class="field is-grouped">
+    <div class="columns">
       {{#each-in row as |inputKey value|}}
         {{#let (find-by "key" inputKey @objectKeys) as |field|}}
-          <div class="control is-expanded">
+          <div class="column">
             {{#if (eq index 0)}}
               <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
             {{/if}}
@@ -26,37 +26,38 @@
                 {{on "input" (fn this.handleInput index)}}
               />
               {{#if (and (not inputError.isValid) inputError.errors)}}
-                <AlertInline @type="danger" @message={{inputError.errors}} @paddingTop={{true}} />
+                <Hds::Alert class="has-top-margin-xxs" @type="compact" @color="critical" as |A|>
+                  <A.Description>
+                    {{inputError.errors}}
+                  </A.Description>
+                </Hds::Alert>
               {{/if}}
             {{/let}}
           </div>
         {{/let}}
       {{/each-in}}
-      <div class="control {{if (includes false (map-by 'isValid' rowValidations)) '' 'is-align-end'}}">
+      <div class="column is-1">
         {{#if (eq index 0)}}
           <br />
         {{/if}}
         {{#if (eq (inc index) this.inputList.length)}}
-          <button
+          <Hds::Button
             data-test-object-list-add-button
-            type="button"
-            class="button is-outlined is-primary"
+            @text="Add"
             disabled={{this.disableAdd}}
-            aria-label="add"
             {{on "click" this.addRow}}
-          >
-            Add
-          </button>
+            @isFullWidth={{true}}
+          />
         {{else}}
-          <button
-            data-test-object-list-delete-button={{index}}
-            type="button"
-            class="button is-icon"
-            aria-label="remove"
+          <Hds::Button
+            @text="delete row"
+            @icon="trash"
+            @color="secondary"
+            @isIconOnly={{true}}
+            @isFullWidth={{true}}
             {{on "click" (fn this.removeRow index)}}
-          >
-            <Icon @name="trash" />
-          </button>
+            data-test-object-list-delete-button={{index}}
+          />
         {{/if}}
       </div>
     </div>

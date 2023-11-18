@@ -38,15 +38,12 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete {{this.itemType}}"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
-        @cancelButtonText="Cancel"
-        data-test-secret-delete="true"
-      >
-        Delete
-        {{this.itemType}}
-      </ConfirmAction>
+        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+      />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
@@ -74,7 +71,7 @@
       />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
+      <Hds::ButtonSet>
         <Hds::Button
           @text="Save"
           @icon={{if this.saveModel.isRunning "loading"}}
@@ -83,20 +80,22 @@
           disabled={{this.saveModel.isRunning}}
         />
         {{#if (eq this.mode "create")}}
-          <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
-            Cancel
-          </LinkTo>
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.access.method.item.list"
+            data-test-cancel-link={{true}}
+          />
         {{else}}
-          <LinkTo
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
             @route="vault.cluster.access.method.item.show"
             @model={{this.model.id}}
-            class="button"
             data-test-cancel-link={{true}}
-          >
-            Cancel
-          </LinkTo>
+          />
         {{/if}}
-      </div>
+      </Hds::ButtonSet>
     </div>
   </form>
 {{/if}}

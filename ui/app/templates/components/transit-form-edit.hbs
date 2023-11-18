@@ -100,15 +100,11 @@
         </div>
       {{/if}}
       <div class="control">
-        <SecretLink @mode="show" @secret={{@key.id}} class="button">
-          Cancel
-        </SecretLink>
+        <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backend.show" @model={{@key.id}} />
       </div>
     </div>
     {{#if (and @key.canDelete @capabilities.canDelete)}}
-      <ConfirmAction @buttonClasses="button" @onConfirmAction={{@deleteKey}}>
-        Delete transit key
-      </ConfirmAction>
+      <ConfirmAction @buttonText="Delete transit key" @onConfirmAction={{@deleteKey}} />
     {{/if}}
   </div>
 </form>

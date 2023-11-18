@@ -81,15 +81,20 @@ type PolicyMFABackend struct {
 	*MFABackend
 }
 
-func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
+func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConfig) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
+
+	syncBackend := NewSecretsSyncBackend(core, logger)
+	if err := syncBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
 
 	b := &SystemBackend{
 		Core:        core,
 		db:          db,
 		logger:      logger,
 		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: NewSecretsSyncBackend(core, logger),
+		syncBackend: syncBackend,
 	}
 
 	b.Backend = &framework.Backend{
@@ -5013,8 +5018,14 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		return s, nil
 	}
 
+	var sealType string
 	var recoverySealType string
-	sealType := sealConfig.Type
+	if core.SealAccess().RecoveryKeySupported() {
+		recoverySealType = sealConfig.Type
+		sealType = core.seal.BarrierSealConfigType().String()
+	} else {
+		sealType = sealConfig.Type
+	}
 
 	// Fetch the local cluster name and identifier
 	var clusterName, clusterID string
@@ -5028,10 +5039,6 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
-		if core.SealAccess().RecoveryKeySupported() {
-			recoverySealType = sealType
-		}
-		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
 	progress, nonce := core.SecretProgress(lock)

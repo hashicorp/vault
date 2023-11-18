@@ -106,6 +106,10 @@ type LeaseCache struct {
 	// cache static secrets, as well as dynamic secrets.
 	cacheStaticSecrets bool
 
+	// cacheDynamicSecrets is used to determine if the cache should
+	// cache dynamic secrets
+	cacheDynamicSecrets bool
+
 	// capabilityManager is used when static secrets are enabled to
 	// manage the capabilities of cached tokens.
 	capabilityManager *StaticSecretCapabilityManager
@@ -114,13 +118,14 @@ type LeaseCache struct {
 // LeaseCacheConfig is the configuration for initializing a new
 // LeaseCache.
 type LeaseCacheConfig struct {
-	Client             *api.Client
-	BaseContext        context.Context
-	Proxier            Proxier
-	Logger             hclog.Logger
-	UserAgentToUse     string
-	Storage            *cacheboltdb.BoltStorage
-	CacheStaticSecrets bool
+	Client              *api.Client
+	BaseContext         context.Context
+	Proxier             Proxier
+	Logger              hclog.Logger
+	UserAgentToUse      string
+	Storage             *cacheboltdb.BoltStorage
+	CacheStaticSecrets  bool
+	CacheDynamicSecrets bool
 }
 
 type inflightRequest struct {
@@ -167,17 +172,18 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	baseCtxInfo := cachememdb.NewContextInfo(conf.BaseContext)
 
 	return &LeaseCache{
-		client:             conf.Client,
-		proxier:            conf.Proxier,
-		logger:             conf.Logger,
-		userAgentToUse:     conf.UserAgentToUse,
-		db:                 db,
-		baseCtxInfo:        baseCtxInfo,
-		l:                  &sync.RWMutex{},
-		idLocks:            locksutil.CreateLocks(),
-		inflightCache:      gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-		ps:                 conf.Storage,
-		cacheStaticSecrets: conf.CacheStaticSecrets,
+		client:              conf.Client,
+		proxier:             conf.Proxier,
+		logger:              conf.Logger,
+		userAgentToUse:      conf.UserAgentToUse,
+		db:                  db,
+		baseCtxInfo:         baseCtxInfo,
+		l:                   &sync.RWMutex{},
+		idLocks:             locksutil.CreateLocks(),
+		inflightCache:       gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		ps:                  conf.Storage,
+		cacheStaticSecrets:  conf.CacheStaticSecrets,
+		cacheDynamicSecrets: conf.CacheDynamicSecrets,
 	}, nil
 }
 
@@ -469,6 +475,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
+		// We set the request path to be the canonical static secret path, so that
+		// two differently shaped (but equivalent) requests to the same path
+		// will be the same.
+		// This differs slightly from dynamic secrets, where the /v1/ will be
+		// included in the request path.
+		index.RequestPath = getStaticSecretPathFromRequest(req)
+
 		err := c.cacheStaticSecret(ctx, req, resp, index)
 		if err != nil {
 			return nil, err
@@ -477,6 +490,11 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	} else {
 		// Since it's not a static secret, set the ID to be the dynamic id
 		index.ID = dynamicSecretCacheId
+	}
+
+	// Short-circuit if we've been configured to not cache dynamic secrets
+	if !c.cacheDynamicSecrets {
+		return resp, nil
 	}
 
 	// Short-circuit if the secret is not renewable
