@@ -46,15 +46,12 @@
                     {{#if this.model.canRevokeSecondary}}
                       <li class="action">
                         <ConfirmAction
-                          @buttonClasses="button link is-destroy"
+                          @buttonText="Revoke"
+                          @isInDropdown={{true}}
                           @confirmTitle="Revoke token?"
                           @confirmMessage="This will revoke this secondary token."
-                          @confirmButtonText="Revoke"
-                          @horizontalPosition="auto-left"
                           @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=secondary)}}
-                        >
-                          Revoke
-                        </ConfirmAction>
+                        />
                       </li>
                     {{/if}}
                   </ul>

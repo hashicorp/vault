@@ -70,7 +70,7 @@
       <Item.content>
         <Icon @name="user" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
-      <Item.menu as |m|>
+      <Item.menu>
         <li class="action">
           <LinkTo @route="credentials" @models={{array this.scope list.item.id}} class="is-block">
             View credentials
@@ -81,20 +81,22 @@
             View role
           </LinkTo>
         </li>
-        {{#if list.item.updatePath.canUpdate}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+        {{#if list.item.updatePath.isPending}}
+          <li class="action">
+            <LoadingDropdownOption />
+          </li>
+        {{else}}
+          {{#if list.item.updatePath.canUpdate}}
             <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
               Edit role
             </LinkTo>
-          </MenuLoader>
-        {{/if}}
-        {{#if list.item.updatePath.canDelete}}
-          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            <m.Message
-              @id={{list.item.id}}
-              @triggerText="Delete role"
-              @message={{concat "Are you sure you want to delete " list.item.id "?"}}
-              @onConfirm={{action
+          {{/if}}
+          {{#if list.item.updatePath.canDelete}}
+            <ConfirmAction
+              @isInDropdown={{true}}
+              @buttonText="Delete role"
+              @confirmMessage="Are you sure you want to delete {{list.item.id}}?"
+              @onConfirmAction={{action
                 (perform
                   Item.callMethod
                   "destroyRecord"
@@ -104,9 +106,9 @@
                   (action "refresh")
                 )
               }}
-              data-test-scope-delete="true"
+              data-test-scope-delete
             />
-          </MenuLoader>
+          {{/if}}
         {{/if}}
       </Item.menu>
     </ListItem>

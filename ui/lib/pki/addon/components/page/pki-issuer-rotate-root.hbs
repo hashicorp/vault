@@ -124,11 +124,7 @@
     <PkiInfoTableRows @model={{@newRootModel}} @displayFields={{this.displayFields}} />
     <ParsedCertificateInfoRows @model={{@newRootModel.parsedCertificate}} />
     <div class="field is-grouped is-fullwidth has-top-margin-l has-bottom-margin-s">
-      <div class="control">
-        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
-          Done
-        </button>
-      </div>
+      <Hds::Button @text="Done" {{on "click" @onComplete}} data-test-done />
     </div>
   {{else}}
     {{!  USE OLD SETTINGS FORM INPUTS  }}
@@ -168,27 +164,22 @@
         {{/if}}
       </div>
 
-      <div class="field is-grouped box is-fullwidth is-bottomless">
+      <hr class="has-background-gray-100" />
+      <Hds::ButtonSet>
+        <Hds::Button @text="Done" type="submit" data-test-pki-rotate-root-save />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-pki-rotate-root-cancel />
+      </Hds::ButtonSet>
+      {{#if this.invalidFormAlert}}
         <div class="control">
-          <button type="submit" class="button is-primary" data-test-pki-rotate-root-save>
-            Done
-          </button>
-          <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-rotate-root-cancel>
-            Cancel
-          </button>
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.invalidFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-pki-rotate-root-validation-error
+          />
         </div>
-        {{#if this.invalidFormAlert}}
-          <div class="control">
-            <AlertInline
-              @type="danger"
-              @paddingTop={{true}}
-              @message={{this.invalidFormAlert}}
-              @mimicRefresh={{true}}
-              data-test-pki-rotate-root-validation-error
-            />
-          </div>
-        {{/if}}
-      </div>
+      {{/if}}
     </form>
   {{/if}}
 {{else}}
