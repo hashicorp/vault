@@ -8,14 +8,12 @@
     <ul class="menu-list">
       <li class="action">
         <ConfirmAction
-          @buttonClasses="link is-destroy"
+          @buttonText="Remove"
           @confirmTitle="Remove metadata?"
+          @isInDropdown={{true}}
           @confirmMessage="This data may be used outside of Vault."
-          @confirmButtonText="Remove"
           @onConfirmAction={{action "performTransaction" this.model this.key}}
-        >
-          Remove
-        </ConfirmAction>
+        />
       </li>
     </ul>
   </nav>

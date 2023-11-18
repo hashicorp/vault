@@ -63,7 +63,7 @@
         <div class="level is-mobile">
           <div class="level-left">
             <div>
-              <Icon @name="file" class="has-text-grey-light" />
+              <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
                 {{metadata.path}}
               </span>
@@ -101,17 +101,12 @@
                         </li>
                       {{/if}}
                       {{#if metadata.canDeleteMetadata}}
-                        <li>
-                          <ConfirmAction
-                            @buttonClasses="link is-destroy"
-                            @onConfirmAction={{fn this.onDelete metadata}}
-                            @confirmMessage="This will permanently delete this secret and all its versions."
-                            @cancelButtonText="Cancel"
-                            data-test-delete-metadata={{metadata.path}}
-                          >
-                            Permanently delete
-                          </ConfirmAction>
-                        </li>
+                        <ConfirmAction
+                          @buttonText="Permanently delete"
+                          @isInDropdown={{true}}
+                          @onConfirmAction={{fn this.onDelete metadata}}
+                          @confirmMessage="This will permanently delete this secret and all its versions."
+                        />
                       {{/if}}
                     {{/if}}
                   </ul>

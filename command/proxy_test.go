@@ -686,6 +686,130 @@ vault {
 	wg.Wait()
 }
 
+// TestProxy_Cache_DisableDynamicSecretCaching tests that the cache will not cache a dynamic secret
+// if disabled in the options.
+func TestProxy_Cache_DisableDynamicSecretCaching(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	serverClient := cluster.Cores[0].Client
+
+	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
+	defer os.Remove(tokenFileName)
+	// We need auto-auth for static secret caching.
+	// For ease, we use the token file path with the root token.
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method {
+		type = "token_file"
+        config = {
+            token_file_path = "%s"
+        }
+    }
+}`, tokenFileName)
+
+	// Unset the environment variable so that proxy picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	cacheConfig := `
+cache {
+	disable_caching_dynamic_secrets = true
+	cache_static_secrets = true // We need to cache at least one kind of secret
+}
+`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+%s
+%s
+%s
+`, serverClient.Address(), cacheConfig, listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+
+	// Start proxy
+	_, cmd := testProxyCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	proxyClient, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	proxyClient.SetToken(serverClient.Token())
+	proxyClient.SetMaxRetries(0)
+	err = proxyClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	renewable := true
+	tokenCreateRequest := &api.TokenCreateRequest{
+		Policies:  []string{"default"},
+		TTL:       "30m",
+		Renewable: &renewable,
+	}
+
+	// This was the simplest test I could find to trigger the caching behaviour,
+	// i.e. the most concise I could make the test that I can tell
+	// creating an orphan token returns Auth, is renewable, and isn't a token
+	// that's managed elsewhere (since it's an orphan)
+	secret, err := proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token := secret.Auth.ClientToken
+
+	secret, err = proxyClient.Auth().Token().CreateOrphan(tokenCreateRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret == nil || secret.Auth == nil {
+		t.Fatalf("secret not as expected: %v", secret)
+	}
+
+	token2 := secret.Auth.ClientToken
+
+	if token == token2 {
+		t.Fatalf("token create response was cached, as the tokens differ")
+	}
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestProxy_Cache_StaticSecret Tests that the cache successfully caches a static secret
 // going through the Proxy,
 func TestProxy_Cache_StaticSecret(t *testing.T) {

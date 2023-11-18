@@ -81,22 +81,17 @@
         </td>
         <td class="middle no-padding has-text-right">
           <PopupMenu>
-            <Confirm as |c|>
-              <nav aria-label="remove peer">
-                <ul>
-                  <li class="action">
-                    <c.Message
-                      @id={{server.nodeId}}
-                      @onConfirm={{action "removePeer" server}}
-                      @triggerText="Remove Peer"
-                      @confirmButtonText="Remove"
-                      @title={{concat "Remove " server.nodeId "?"}}
-                      @message="This will remove the server from the raft cluster."
-                    />
-                  </li>
-                </ul>
-              </nav>
-            </Confirm>
+            <nav aria-label="remove peer">
+              <ul>
+                <ConfirmAction
+                  @isInDropdown={{true}}
+                  @onConfirmAction={{action "removePeer" server}}
+                  @buttonText="Remove Peer"
+                  @confirmTitle="Remove {{server.nodeId}}?"
+                  @confirmMessage="This will remove the server from the raft cluster."
+                />
+              </ul>
+            </nav>
           </PopupMenu>
         </td>
       </tr>

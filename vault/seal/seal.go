@@ -36,8 +36,11 @@ const (
 )
 
 var (
-	ErrUnconfiguredWrapper = errors.New("unconfigured wrapper")
-	ErrNoHealthySeals      = errors.New("no healthy seals!")
+	ErrUnconfiguredWrapper  = errors.New("unconfigured wrapper")
+	ErrNoHealthySeals       = errors.New("no healthy seals!")
+	ErrNoConfiguredSeals    = errors.New("no configured seals")
+	ErrNoSealGenerationInfo = errors.New("no seal generation info")
+	ErrNoSeals              = errors.New("no seals provided in the configuration")
 )
 
 func (s StoredKeysSupport) String() string {
@@ -322,15 +325,17 @@ type access struct {
 
 var _ Access = (*access)(nil)
 
-func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) Access {
+func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) (Access, error) {
 	if logger == nil {
 		logger = hclog.NewNullLogger()
 	}
 	if sealGenerationInfo == nil {
-		panic("cannot create a seal.Access without a SealGenerationInfo")
+		logger.Error("cannot create a seal.Access without a SealGenerationInfo")
+		return nil, ErrNoSealGenerationInfo
 	}
 	if len(sealWrappers) == 0 {
-		panic("cannot create a seal.Access without any seal wrappers")
+		logger.Error("cannot create a seal.Access without any seal wrappers")
+		return nil, ErrNoSeals
 	}
 	a := &access{
 		sealGenerationInfo: sealGenerationInfo,
@@ -341,9 +346,15 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 		a.wrappersByPriority[i] = sw
 	}
 
+	configuredSealWrappers := a.GetConfiguredSealWrappersByPriority()
+	if len(configuredSealWrappers) == 0 {
+		a.logger.Error("cannot create a seal.Access without any configured seal wrappers")
+		return nil, ErrNoConfiguredSeals
+	}
+
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
 
-	return a
+	return a, nil
 }
 
 func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []*SealWrapper) (Access, error) {
@@ -363,7 +374,7 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 			Name:     sw.Name,
 		})
 	}
-	return NewAccess(logger, sealGenerationInfo, sealWrappers), nil
+	return NewAccess(logger, sealGenerationInfo, sealWrappers)
 }
 
 // NewAccessFromWrapper creates an enabled Access for a single wrapping.Wrapper.

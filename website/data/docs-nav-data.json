@@ -1995,6 +1995,10 @@
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/aws-auth"
+                          },
+                          {
+                            "title": "GCP",
+                            "path": "platform/k8s/vso/sources/vault/gcp-auth"
                           }
                         ]
                       }
