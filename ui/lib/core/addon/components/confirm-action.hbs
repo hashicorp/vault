@@ -3,56 +3,65 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="confirm-action" ...attributes>
-  <BasicDropdown
-    @horizontalPosition={{this.horizontalPosition}}
-    @verticalPosition={{this.verticalPosition}}
-    @onOpen={{this.toggleConfirm}}
-    @onClose={{this.toggleConfirm}}
-    as |d|
+{{#if @isInDropdown}}
+  {{! Hds component renders <li> and <button> elements }}
+  <Hds::Dropdown::ListItem::Interactive
+    data-test-confirm-action-trigger
+    @text={{@buttonText}}
+    @color="critical"
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+    {{! remove class when dropdown/popup menus are replaced with Hds::Dropdown }}
+    class="hds-confirm-action-critical"
+  />
+{{else}}
+  <Hds::Button
+    data-test-confirm-action-trigger
+    @text={{@buttonText}}
+    @color={{@buttonColor}}
+    {{on "click" (fn (mut this.showConfirmModal) true)}}
+    ...attributes
+  />
+{{/if}}
+
+{{#if this.showConfirmModal}}
+  <Hds::Modal
+    id="confirm-action-modal"
+    @color={{this.modalColor}}
+    @size="small"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    as |M|
   >
-    <d.Trigger
-      @htmlTag="button"
-      class={{concat @buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
-      type="button"
-      disabled={{this.disabled}}
-      data-test-confirm-action-trigger="true"
-    >
-      {{yield}}
-      {{#if (eq @buttonClasses "toolbar-link")}}
-        <Chevron @direction={{if this.showConfirm "up" "down"}} data-test-confirm-action-chevron />
-      {{/if}}
-    </d.Trigger>
-    <d.Content @defaultClass="popup-menu-content">
-      <div class="box confirm-action-message">
-        <div class="message is-highlight">
-          <div class="message-title" data-test-confirm-action-title>
-            <Icon @name="alert-triangle-fill" />
-            {{this.confirmTitle}}
-          </div>
-          <p>
-            {{this.confirmMessage}}
-          </p>
-        </div>
-        <div class="confirm-action-options">
-          <button
-            type="button"
-            disabled={{or this.disabled this.isRunning}}
-            class="link is-destroy"
-            data-test-confirm-button="true"
-            {{on "click" (fn this.onConfirm d.actions)}}
-          >
-            {{#if this.isRunning}}
-              <span class="loader is-inline-block"></span>
-            {{else}}
-              {{this.confirmButtonText}}
-            {{/if}}
-          </button>
-          <button type="button" class="link" data-test-confirm-cancel-button="true" {{on "click" d.actions.close}}>
-            {{this.cancelButtonText}}
-          </button>
-        </div>
-      </div>
-    </d.Content>
-  </BasicDropdown>
-</div>
+    {{#if @disabledMessage}}
+      <M.Header data-test-confirm-action-title @icon="x-circle">
+        Not allowed
+      </M.Header>
+      <M.Body data-test-confirm-action-message>
+        {{@disabledMessage}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::Button data-test-confirm-cancel-button @text="Close" {{on "click" F.close}} />
+      </M.Footer>
+    {{else}}
+      <M.Header data-test-confirm-action-title @icon="alert-circle">
+        {{or @confirmTitle "Are you sure?"}}
+      </M.Header>
+      <M.Body data-test-confirm-action-message>
+        {{this.confirmMessage}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::ButtonSet>
+          <Hds::Button
+            data-test-confirm-button
+            disabled={{@isRunning}}
+            @icon={{if @isRunning "loading"}}
+            @color={{if (eq this.modalColor "critical") "critical" "primary"}}
+            @text="Confirm"
+            {{on "click" this.onConfirm}}
+          />
+          <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
+        </Hds::ButtonSet>
+      </M.Footer>
+    {{/if}}
+  </Hds::Modal>
+{{/if}}

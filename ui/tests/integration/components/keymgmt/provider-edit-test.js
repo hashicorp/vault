@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, triggerEvent, settled, fillIn } from '@ember/test-helpers';
+import { click, settled, fillIn } from '@ember/test-helpers';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -48,7 +48,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(16);
+    assert.expect(10);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -63,17 +63,6 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           keys: ['testkey-1', 'testkey-2'],
         },
       };
-    });
-    this.server.delete('/keymgmt/kms/foo-bar', () => {
-      assert.ok(true, 'Request made to delete key');
-      return {};
-    });
-    this.owner.lookup('service:router').reopen({
-      transitionTo(path, model, { queryParams: { tab } }) {
-        assert.strictEqual(path, root.path, 'Root path sent in transitionTo on delete');
-        assert.strictEqual(model, root.model, 'Root model sent in transitionTo on delete');
-        assert.deepEqual(tab, 'provider', 'Correct query params sent in transitionTo on delete');
-      },
     });
 
     const changeTab = async (tab) => {
@@ -104,16 +93,58 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom('[data-test-secret-link]').exists({ count: 2 }, 'Keys list renders');
 
     await changeTab('details');
-    assert.dom(`[${ts}-delete] button`).isDisabled('Delete action disabled when keys exist');
-    await triggerEvent(`[data-test-tooltip-trigger]`, 'mouseenter');
-    assert.dom(`[${ts}-delete-tooltip]`).exists('Tooltip is show when delete action is disabled');
+    await click(`[${ts}-delete]`);
+    assert
+      .dom('[data-test-confirm-action-message]')
+      .hasText(
+        'This provider cannot be deleted until all 2 key(s) distributed to it are revoked. This can be done from the Keys tab.',
+        'Renders disabled message'
+      );
+    await click('[data-test-confirm-cancel-button]');
+  });
 
-    this.model.keys = [];
-    await settled();
+  test('it should delete a provider', async function (assert) {
+    assert.expect(5);
+
+    // override capability getters
+    Object.defineProperties(this.model, {
+      canDelete: { value: true },
+      canListKeys: { value: true },
+    });
+
+    this.server.post('/sys/capabilities-self', () => ({}));
+    this.server.get('/keymgmt/kms/foo-bar/key', () => {
+      return {
+        data: {
+          keys: [],
+        },
+      };
+    });
+    this.server.delete('/keymgmt/kms/foo-bar', () => {
+      assert.ok(true, 'Request made to delete key');
+      return {};
+    });
+    this.owner.lookup('service:router').reopen({
+      transitionTo(path, model, { queryParams: { tab } }) {
+        assert.strictEqual(path, root.path, 'Root path sent in transitionTo on delete');
+        assert.strictEqual(model, root.model, 'Root model sent in transitionTo on delete');
+        assert.deepEqual(tab, 'provider', 'Correct query params sent in transitionTo on delete');
+      },
+    });
+
+    await render(hbs`
+      <Keymgmt::ProviderEdit
+        @root={{this.root}}
+        @model={{this.model}}
+        @mode="show"
+        @tab={{this.tab}}
+      />`);
+
     assert
       .dom('[data-test-value-div="Keys"]')
       .hasText('None', 'None is displayed when no keys exist for provider');
-    await click(`[${ts}-delete] button`);
+
+    await click(`[${ts}-delete]`);
     await click('[data-test-confirm-button]');
   });
 

@@ -88,14 +88,14 @@
                 {{selected.addTooltip}}
               </InfoTooltip>
             {{/if}}
-            <button
-              type="button"
-              class="button is-ghost"
+            <Hds::Button
+              @icon="trash"
+              @text="delete selection"
+              @isIconOnly={{true}}
+              @color="tertiary"
               data-test-selected-list-button="delete"
               {{on "click" (fn this.discardSelection selected)}}
-            >
-              <Icon @name="trash" class="has-text-grey" />
-            </button>
+            />
           </div>
         </li>
       {{/each}}

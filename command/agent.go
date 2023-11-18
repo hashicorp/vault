@@ -489,11 +489,12 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:         proxyClient,
-			BaseContext:    ctx,
-			Proxier:        apiProxy,
-			Logger:         cacheLogger.Named("leasecache"),
-			UserAgentToUse: useragent.ProxyAPIProxyString(),
+			Client:              proxyClient,
+			BaseContext:         ctx,
+			Proxier:             apiProxy,
+			Logger:              cacheLogger.Named("leasecache"),
+			CacheDynamicSecrets: true,
+			UserAgentToUse:      useragent.ProxyAPIProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
