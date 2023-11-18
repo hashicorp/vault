@@ -26,8 +26,7 @@
     @buttonText="Revoke"
     @confirmTitle="Revoke token?"
     @confirmMessage="This will revoke this secondary token."
-    @disabled={{not this.id}}
-    @disabledMessage="A secondary ID is required perform revocation."
+    @disabledMessage={{unless this.id "A secondary ID is required perform revocation."}}
     @onConfirmAction={{action "onSubmit" "revoke-secondary" "primary" (hash id=this.id)}}
   />
   <Hds::Button
