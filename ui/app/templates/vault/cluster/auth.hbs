@@ -21,7 +21,7 @@
     {{/if}}
   </:altContent>
 
-  <:pageHeader>
+  <:header>
     {{#if this.oidcProvider}}
       <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
         <LogoEdition aria-label="Sign in with Hashicorp Vault" />
@@ -55,7 +55,7 @@
         </h1>
       </div>
     {{/if}}
-  </:pageHeader>
+  </:header>
 
   <:pageSubHeader>
     {{#if (has-feature "Namespaces")}}

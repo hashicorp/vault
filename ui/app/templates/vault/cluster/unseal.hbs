@@ -24,13 +24,13 @@
   </div>
 {{else}}
   <SplashPage>
-    <:pageHeader>
+    <:header>
       <h1 class="title is-3">
         Unseal Vault
       </h1>
-    </:pageHeader>
+    </:header>
 
-    <:pageContent>
+    <:content>
       <div class="box is-borderless is-shadowless is-marginless">
         <p class="title is-5">
           {{capitalize this.model.name}}
@@ -58,9 +58,9 @@
           />
         {{/if}}
       </div>
-    </:pageContent>
+    </:content>
 
-    <:pageFooter>
+    <:footer>
       <div class="box is-borderless is-shadowless">
         <p>
           <ExternalLink @href="https://developer.hashicorp.com/vault/docs/concepts/seal">
@@ -68,6 +68,6 @@
           </ExternalLink>
         </p>
       </div>
-    </:pageFooter>
+    </:footer>
   </SplashPage>
 {{/if}}

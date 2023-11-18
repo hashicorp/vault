@@ -4,7 +4,7 @@
 ~}}
 
 <SplashPage>
-  <:pageHeader>
+  <:header>
     {{#if (and this.model.usingRaft (not this.prefersInit))}}
       <h1 class="title is-4">
         Raft Storage
@@ -26,8 +26,8 @@
         Let's set up the initial set of root keys that you will need in case of an emergency.
       </h1>
     {{/if}}
-  </:pageHeader>
-  <:pageContent>
+  </:header>
+  <:content>
     {{#if (and this.model.usingRaft (not this.prefersInit))}}
       <RaftJoin @onDismiss={{action (mut this.prefersInit) true}} />
     {{else if this.keyData}}
@@ -214,5 +214,5 @@
         </div>
       </form>
     {{/if}}
-  </:pageContent>
+  </:content>
 </SplashPage>

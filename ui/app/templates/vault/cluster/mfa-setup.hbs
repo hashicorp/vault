@@ -4,10 +4,10 @@
 ~}}
 
 <SplashPage>
-  <:pageHeader>
+  <:header>
     <h1 class="title is-4">MFA setup</h1>
-  </:pageHeader>
-  <:pageContent>
+  </:header>
+  <:content>
     <div class="auth-form" data-test-mfa-form>
       <div class="box">
         {{#if (eq this.onStep 1)}}
@@ -31,5 +31,5 @@
         {{/if}}
       </div>
     </div>
-  </:pageContent>
+  </:content>
 </SplashPage>
