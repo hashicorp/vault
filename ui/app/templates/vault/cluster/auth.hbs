@@ -57,7 +57,7 @@
     {{/if}}
   </:header>
 
-  <:pageSubHeader>
+  <:subHeader>
     {{#if (has-feature "Namespaces")}}
       {{#unless this.mfaAuthData}}
         <Toolbar class="toolbar-namespace-picker">
@@ -93,9 +93,9 @@
         </Toolbar>
       {{/unless}}
     {{/if}}
-  </:pageSubHeader>
+  </:subHeader>
 
-  <:pageContent>
+  <:content>
     {{#if this.mfaAuthData}}
       <Mfa::MfaForm
         @clusterId={{this.model.id}}
@@ -117,9 +117,9 @@
         @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
       />
     {{/if}}
-  </:pageContent>
+  </:content>
 
-  <:pageFooter>
+  <:footer>
     <div class="has-short-padding">
       <p class="help has-text-grey-dark" data-test-auth-helptext>
         {{#if this.oidcProvider}}
@@ -130,5 +130,5 @@
         {{/if}}
       </p>
     </div>
-  </:pageFooter>
+  </:footer>
 </SplashPage>

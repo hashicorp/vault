@@ -2,23 +2,22 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-{{#if (has-block "altContent")}}
-  {{yield to="altContent"}}
-{{else}}
-  <div class="splash-page-container section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
-    <div class="columns is-centered is-gapless is-fullwidth">
-      <div class="column is-4-desktop is-6-tablet">
-        <div class="splash-page-header" data-test-splash-page-header>
-          {{yield to="header"}}
-        </div>
-        <div class="splash-page-sub-header" data-test-splash-page-sub-header>
-          {{yield to="subHeader"}}
-        </div>
-        <div class="login-form box is-paddingless is-relative" data-test-splash-page-content>
-          {{yield to="content"}}
-        </div>
-        {{yield to="footer"}}
+
+{{yield to="altContent"}}
+
+<div class="splash-page-container section is-flex-v-centered-tablet is-flex-grow-1 is-fullwidth">
+  <div class="columns is-centered is-gapless is-fullwidth">
+    <div class="column is-4-desktop is-6-tablet">
+      <div class="splash-page-header" data-test-splash-page-header>
+        {{yield to="header"}}
       </div>
+      <div class="splash-page-sub-header" data-test-splash-page-sub-header>
+        {{yield to="subHeader"}}
+      </div>
+      <div class="login-form box is-paddingless is-relative" data-test-splash-page-content>
+        {{yield to="content"}}
+      </div>
+      {{yield to="footer"}}
     </div>
   </div>
-{{/if}}
+</div>
