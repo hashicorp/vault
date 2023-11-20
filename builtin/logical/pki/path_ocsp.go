@@ -474,9 +474,12 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
-		NextUpdate:         curTime.Add(duration),
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
+	}
+
+	if duration > 0 {
+		template.NextUpdate = curTime.Add(duration)
 	}
 
 	if info.ocspStatus == ocsp.Revoked {

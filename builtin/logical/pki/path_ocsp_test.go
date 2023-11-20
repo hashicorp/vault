@@ -14,7 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	vaulthttp "github.com/hashicorp/vault/http"
+
 	"github.com/hashicorp/vault/vault"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -463,6 +465,18 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 }
 
+// TestOcsp_NextUpdate make sure that we are setting the appropriate values
+// for the NextUpdate field within our responses.
+func TestOcsp_NextUpdate(t *testing.T) {
+	// Within the runOcspRequestTest, with a ocspExpiry of 0,
+	// we will validate that NextUpdate was not set in the response
+	runOcspRequestTest(t, "POST", "ec", 0, 0, crypto.SHA256, 0)
+
+	// Within the runOcspRequestTest, with a ocspExpiry of 24 hours, we will validate
+	// that NextUpdate is set and has a time 24 hours larger than ThisUpdate
+	runOcspRequestTest(t, "POST", "ec", 0, 0, crypto.SHA256, 24*time.Hour)
+}
+
 func TestOcsp_ValidRequests(t *testing.T) {
 	type caKeyConf struct {
 		keyType string
@@ -502,13 +516,15 @@ func TestOcsp_ValidRequests(t *testing.T) {
 			localTT.reqHash)
 		t.Run(testName, func(t *testing.T) {
 			runOcspRequestTest(t, localTT.reqType, localTT.keyConf.keyType, localTT.keyConf.keyBits,
-				localTT.keyConf.sigBits, localTT.reqHash)
+				localTT.keyConf.sigBits, localTT.reqHash, 12*time.Hour)
 		})
 	}
 }
 
-func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKeyBits int, caKeySigBits int, requestHash crypto.Hash) {
-	b, s, testEnv := setupOcspEnvWithCaKeyConfig(t, caKeyType, caKeyBits, caKeySigBits)
+func runOcspRequestTest(t *testing.T, requestType string, caKeyType string,
+	caKeyBits int, caKeySigBits int, requestHash crypto.Hash, ocspExpiry time.Duration,
+) {
+	b, s, testEnv := setupOcspEnvWithCaKeyConfig(t, caKeyType, caKeyBits, caKeySigBits, ocspExpiry)
 
 	// Non-revoked cert
 	resp, err := SendOcspRequest(t, b, s, requestType, testEnv.leafCertIssuer1, testEnv.issuer1, requestHash)
@@ -570,17 +586,28 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
 
 	// Verify that our thisUpdate and nextUpdate fields are updated as expected
-	thisUpdate := ocspResp.ThisUpdate
-	nextUpdate := ocspResp.NextUpdate
-	require.True(t, thisUpdate.Before(nextUpdate),
-		fmt.Sprintf("thisUpdate %s, should have been before nextUpdate: %s", thisUpdate, nextUpdate))
-	nextUpdateDiff := nextUpdate.Sub(thisUpdate)
-	expectedDiff, err := time.ParseDuration(defaultCrlConfig.OcspExpiry)
+	resp, err = CBRead(b, s, "config/crl")
+	requireSuccessNonNilResponse(t, resp, err, "failed reading from config/crl")
+	requireFieldsSetInResp(t, resp, "ocsp_expiry")
+	ocspExpiryRaw := resp.Data["ocsp_expiry"].(string)
+	expectedDiff, err := parseutil.ParseDurationSecond(ocspExpiryRaw)
 	require.NoError(t, err, "failed to parse default ocsp expiry value")
-	require.Equal(t, expectedDiff, nextUpdateDiff,
-		fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
-			thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
 
+	thisUpdate := ocspResp.ThisUpdate
+	require.Less(t, time.Since(thisUpdate), 10*time.Second, "expected ThisUpdate field to be within the last 10 seconds")
+	if expectedDiff != 0 {
+		nextUpdate := ocspResp.NextUpdate
+		require.False(t, nextUpdate.IsZero(), "nextUpdate field value should have been a non-zero time")
+		require.True(t, thisUpdate.Before(nextUpdate),
+			fmt.Sprintf("thisUpdate %s, should have been before nextUpdate: %s", thisUpdate, nextUpdate))
+		nextUpdateDiff := nextUpdate.Sub(thisUpdate)
+		require.Equal(t, expectedDiff, nextUpdateDiff,
+			fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
+				thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
+	} else {
+		// With the config value set to 0, we shouldn't have a NextUpdate field set
+		require.True(t, ocspResp.NextUpdate.IsZero(), "nextUpdate value was not zero as expected was: %v", ocspResp.NextUpdate)
+	}
 	requireOcspSignatureAlgoForKey(t, testEnv.issuer2.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer2)
 }
@@ -606,15 +633,21 @@ type ocspTestEnv struct {
 }
 
 func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocspTestEnv) {
-	return setupOcspEnvWithCaKeyConfig(t, keyType, 0, 0)
+	return setupOcspEnvWithCaKeyConfig(t, keyType, 0, 0, 12*time.Hour)
 }
 
-func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, caKeySigBits int) (*backend, logical.Storage, *ocspTestEnv) {
+func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, caKeySigBits int, ocspExpiry time.Duration) (*backend, logical.Storage, *ocspTestEnv) {
 	b, s := CreateBackendWithStorage(t)
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
 	var issuerIds []issuerID
 	var keyIds []keyID
+
+	resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"ocsp_enable": true,
+		"ocsp_expiry": fmt.Sprintf("%ds", int(ocspExpiry.Seconds())),
+	})
+	requireSuccessNonNilResponse(t, resp, err, "config/crl failed")
 
 	for i := 0; i < 2; i++ {
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
