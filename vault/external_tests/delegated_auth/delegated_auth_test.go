@@ -480,4 +480,42 @@ func TestDelegatedAuth(t *testing.T) {
 
 		require.ErrorContains(st, err, "delegated auth request requiring MFA is not supported")
 	})
+
+	// Test the behavior around receiving a request asking for response wrapping and
+	// being delegated to the secondary query we do
+	t.Run("response-wrapping-test", func(st *testing.T) {
+		resWrapClient, err := client.Clone()
+		require.NoError(st, err, "failed cloning client for response wrapping")
+
+		resWrapClient.SetWrappingLookupFunc(func(operation, path string) string {
+			if path == "dat/preauth-test" {
+				return "15s"
+			}
+			return ""
+		})
+
+		resp, err = resWrapClient.Logical().Write("dat/preauth-test", map[string]interface{}{
+			"accessor": upAccessor,
+			"path":     "login",
+			"username": "allowed-est",
+			"password": "test",
+		})
+		require.NoError(st, err, "failed calling preauth-test api with response wrapping")
+		require.NotNil(st, resp, "Got nil, nil response from preauth-test api with response wrapping")
+		require.NotNil(st, resp.WrapInfo, "response object didn't contain wrapped info")
+
+		unwrapClient, err := client.Clone()
+		require.NoError(st, err, "failed cloning client for lookups")
+		wrapToken := resp.WrapInfo.Token
+		unwrapClient.SetToken(wrapToken)
+
+		unwrapResp, err := unwrapClient.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{})
+		require.NoError(st, err, "failed unwrap call")
+		require.NotNil(st, unwrapResp, "unwrap response was nil")
+		require.NotNil(st, unwrapResp.Data, "unwrap response did not contain Data")
+		require.Contains(st, unwrapResp.Data, "success", "unwrap response data did not contain success field")
+		require.Contains(st, unwrapResp.Data, "token", "unwrap response data did not contain token field")
+		require.Equal(st, true, unwrapResp.Data["success"], "Got an incorrect response in success field within unwrap call")
+		require.NotEmptyf(st, unwrapResp.Data["token"], "no token returned by handler within unwrap call")
+	})
 }

@@ -1890,6 +1890,11 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	authReq.MountAccessor = requestedAccessor
 	authReq.Path = path
 	authReq.Operation = logical.UpdateOperation
+
+	// filter out any response wrapping headers, for our embedded login request
+	delete(authReq.Headers, consts.WrapTTLHeaderName)
+	authReq.WrapInfo = nil
+
 	// Clear the data fields for the new request
 	authReq.Data = make(map[string]interface{})
 	if da.Data() != nil {
