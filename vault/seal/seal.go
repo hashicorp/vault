@@ -36,8 +36,11 @@ const (
 )
 
 var (
-	ErrUnconfiguredWrapper = errors.New("unconfigured wrapper")
-	ErrNoHealthySeals      = errors.New("no healthy seals!")
+	ErrUnconfiguredWrapper  = errors.New("unconfigured wrapper")
+	ErrNoHealthySeals       = errors.New("no healthy seals!")
+	ErrNoConfiguredSeals    = errors.New("no configured seals")
+	ErrNoSealGenerationInfo = errors.New("no seal generation info")
+	ErrNoSeals              = errors.New("no seals provided in the configuration")
 )
 
 func (s StoredKeysSupport) String() string {
@@ -298,13 +301,13 @@ type Access interface {
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 
-	// GetConfiguredSealWrappersByPriority returns all the SealWrappers including disabled and unconfigured wrappers.
+	// GetAllSealWrappersByPriority returns all the SealWrappers including disabled and unconfigured wrappers.
 	GetAllSealWrappersByPriority() []*SealWrapper
 
 	// GetConfiguredSealWrappersByPriority returns all the configured SealWrappers for all the seal wrappers, including disabled ones.
 	GetConfiguredSealWrappersByPriority() []*SealWrapper
 
-	// GetEnabledSealWrappersByPriority returns the SealWrapper for the enabled seal wrappers.
+	// GetEnabledSealWrappersByPriority returns the SealWrappers for the enabled seal wrappers.
 	GetEnabledSealWrappersByPriority() []*SealWrapper
 
 	// AllSealsWrappersHealthy returns whether all enabled SealWrappers are currently healthy.
@@ -322,15 +325,17 @@ type access struct {
 
 var _ Access = (*access)(nil)
 
-func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) Access {
+func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) (Access, error) {
 	if logger == nil {
 		logger = hclog.NewNullLogger()
 	}
 	if sealGenerationInfo == nil {
-		panic("cannot create a seal.Access without a SealGenerationInfo")
+		logger.Error("cannot create a seal.Access without a SealGenerationInfo")
+		return nil, ErrNoSealGenerationInfo
 	}
 	if len(sealWrappers) == 0 {
-		panic("cannot create a seal.Access without any seal wrappers")
+		logger.Error("cannot create a seal.Access without any seal wrappers")
+		return nil, ErrNoSeals
 	}
 	a := &access{
 		sealGenerationInfo: sealGenerationInfo,
@@ -341,9 +346,15 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 		a.wrappersByPriority[i] = sw
 	}
 
+	configuredSealWrappers := a.GetConfiguredSealWrappersByPriority()
+	if len(configuredSealWrappers) == 0 {
+		a.logger.Error("cannot create a seal.Access without any configured seal wrappers")
+		return nil, ErrNoConfiguredSeals
+	}
+
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
 
-	return a
+	return a, nil
 }
 
 func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []*SealWrapper) (Access, error) {
@@ -363,7 +374,7 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 			Name:     sw.Name,
 		})
 	}
-	return NewAccess(logger, sealGenerationInfo, sealWrappers), nil
+	return NewAccess(logger, sealGenerationInfo, sealWrappers)
 }
 
 // NewAccessFromWrapper creates an enabled Access for a single wrapping.Wrapper.
@@ -564,7 +575,7 @@ GATHER_RESULTS:
 				// Just being paranoid, encryptCtx.Err() should never be nil in this case
 				errs[sealWrapper.Name] = errors.New("context timeout exceeded")
 			}
-			// This failure did not happen on tryDecrypt, so we must log it here
+			// This failure did not happen on tryEncrypt, so we must log it here
 			a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", errs[sealWrapper.Name])
 		}
 	}
@@ -726,7 +737,6 @@ GATHER_RESULTS:
 	}
 
 	// No wrapper was able to decrypt the value, return an error
-
 	if len(errs) > 0 {
 		return nil, false, JoinSealWrapErrors("error decrypting seal wrapped value", errs)
 	}

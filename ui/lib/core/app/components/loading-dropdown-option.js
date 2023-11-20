@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/components/confirm';
+export { default } from 'core/components/loading-dropdown-option';

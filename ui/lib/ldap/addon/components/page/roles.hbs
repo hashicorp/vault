@@ -53,7 +53,7 @@
           <span data-test-role={{role.name}}>{{role.name}}</span>
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
-        <Item.menu as |Menu|>
+        <Item.menu>
           {{#if role.rolePath.isLoading}}
             <li class="action">
               <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
@@ -82,17 +82,15 @@
               </LinkTo>
             </li>
             {{#if role.canRotateStaticCreds}}
-              <li class="action">
-                <Menu.Message
-                  data-test-rotate-creds
-                  @id={{concat "rotate-" role.id}}
-                  @triggerText="Rotate credentials"
-                  @title="Are you sure?"
-                  @message="When manually rotating credentials, the rotation period will start over."
-                  @confirmButtonText="Rotate"
-                  @onConfirm={{fn this.onRotate role}}
-                />
-              </li>
+              <ConfirmAction
+                data-test-rotate-creds
+                @isInDropdown={{true}}
+                @id={{concat "rotate-" role.id}}
+                @buttonText="Rotate credentials"
+                @confirmMessage="When manually rotating credentials, the rotation period will start over."
+                @modalColor="warning"
+                @onConfirmAction={{fn this.onRotate role}}
+              />
             {{/if}}
             <li class="action">
               <LinkTo
@@ -107,16 +105,13 @@
               </LinkTo>
             </li>
             {{#if role.canDelete}}
-              <li class="action">
-                <Menu.Message
-                  data-test-delete
-                  @id={{concat "delete-" role.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
-                  @onConfirm={{fn this.onDelete role}}
-                />
-              </li>
+              <ConfirmAction
+                data-test-delete
+                @isInDropdown={{true}}
+                @buttonText="Delete"
+                @confirmMessage="Deleting this role means that you’ll need to recreate it in order to generate credentials again."
+                @onConfirmAction={{fn this.onDelete role}}
+              />
             {{/if}}
           {{/if}}
         </Item.menu>

@@ -9,7 +9,7 @@
   background: $ui-gray-010;
   display: flex;
   justify-content: center;
-  padding: $spacing-xxl $spacing-s;
+  padding: $spacing-48 $spacing-12;
   box-shadow: 0 -2px 0 -1px $ui-gray-300;
 }
 
@@ -19,7 +19,7 @@
   background: transparent;
   display: flex;
   justify-content: center;
-  padding: $spacing-xxl 0;
+  padding: $spacing-48 0;
   box-shadow: none;
 }
 
@@ -32,21 +32,21 @@
   font-size: $size-4;
   font-weight: $font-weight-semibold;
   line-height: 1.2;
-  margin-bottom: $spacing-xs;
+  margin-bottom: $spacing-8;
 }
 
 .empty-state-subTitle {
   font-size: $size-7;
   margin-top: -10px;
-  padding-bottom: $spacing-s;
+  padding-bottom: $spacing-12;
 }
 
 .empty-state-message.has-border-bottom-light {
-  padding-bottom: $spacing-s;
+  padding-bottom: $spacing-12;
 }
 
 .empty-state-actions {
-  margin-top: $spacing-xs;
+  margin-top: $spacing-8;
   display: flex;
   justify-content: space-between;
 
@@ -60,13 +60,13 @@
   }
 
   > * + * {
-    margin-left: $spacing-s;
-    margin-right: $spacing-s;
+    margin-left: $spacing-12;
+    margin-right: $spacing-12;
   }
 }
 
 .empty-state-icon > .hs-icon,
 .empty-state-icon > .flight-icon {
   float: left;
-  margin-right: $spacing-xs;
+  margin-right: $spacing-8;
 }
