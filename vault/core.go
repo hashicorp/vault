@@ -1261,7 +1261,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	eventsLogger := conf.Logger.Named("events")
 	c.allLoggers = append(c.allLoggers, eventsLogger)
 	// start the event system
-	events, err := eventbus.NewEventBus(eventsLogger)
+	nodeID, err := c.LoadNodeID()
+	if err != nil {
+		return nil, err
+	}
+	events, err := eventbus.NewEventBus(c.clusterID.Load, nodeID, eventsLogger)
 	if err != nil {
 		return nil, err
 	}

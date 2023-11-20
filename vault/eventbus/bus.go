@@ -44,7 +44,18 @@ var (
 		"path",
 		logical.EventMetadataDataPath,
 	}
+	initCloudEventsFormatterFilterOnce sync.Once
 )
+
+func init() {
+	// Initialize with a blank source URL until an event bus is created.
+	cloudEventsFormatterFilter = &cloudevents.FormatterFilter{
+		Source: &url.URL{},
+		Predicate: func(_ context.Context, e interface{}) (bool, error) {
+			return true, nil
+		},
+	}
+}
 
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
@@ -54,6 +65,7 @@ type EventBus struct {
 	started         atomic.Bool
 	formatterNodeID eventlogger.NodeID
 	timeout         time.Duration
+	filters         *Filters
 }
 
 type pluginEventBus struct {
@@ -72,6 +84,7 @@ type asyncChanNode struct {
 	closeOnce      sync.Once
 	cancelFunc     context.CancelFunc
 	pipelineID     eventlogger.PipelineID
+	removeFilter   func()
 	removePipeline func(ctx context.Context, t eventlogger.EventType, id eventlogger.PipelineID) (bool, error)
 }
 
@@ -162,21 +175,36 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
-func init() {
-	// TODO: maybe this should relate to the Vault core somehow?
-	sourceUrl, err := url.Parse("https://vaultproject.io/")
-	if err != nil {
-		panic(err)
+func setClusterID(clusterIDFunc func() string, localNodeID string) {
+	// Use the local node ID, in case we aren't running in a cluster.
+	if cloudEventsFormatterFilter.Source.Scheme == "" {
+		cloudEventsFormatterFilter.Source, _ = url.Parse("vault://" + localNodeID)
 	}
-	cloudEventsFormatterFilter = &cloudevents.FormatterFilter{
-		Source: sourceUrl,
-		Predicate: func(_ context.Context, e interface{}) (bool, error) {
-			return true, nil
-		},
-	}
+	// The cluster ID is not available until after the cluster is unsealed.
+	// Poll for the cluster ID with exponential backoff
+	// TODO: refactor the core.clusterID to support condition variable maybe?
+	go func() {
+		clusterID := clusterIDFunc()
+		backoff := 1 * time.Millisecond
+		for clusterID == "" {
+			backoff = backoff * 2
+			if backoff > time.Hour {
+				backoff = time.Hour
+			}
+			time.Sleep(backoff)
+		}
+		initCloudEventsFormatterFilterOnce.Do(func() {
+			sourceUrl, err := url.Parse("vault://" + clusterID)
+			if err != nil {
+				panic(err)
+			}
+			cloudEventsFormatterFilter.Source = sourceUrl
+		})
+	}()
 }
 
-func NewEventBus(logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(clusterIDFunc func() string, localNodeID string, logger hclog.Logger) (*EventBus, error) {
+	setClusterID(clusterIDFunc, localNodeID)
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -197,6 +225,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
 		timeout:         defaultTimeout,
+		filters:         NewFilters(localNodeID),
 	}, nil
 }
 
@@ -240,7 +269,12 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker)
+
+	bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
+
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
+		bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
+	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -301,7 +335,7 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 				}
 			}
 
-			// Filter for correct event type, including wildcards.
+			// NodeFilter for correct event type, including wildcards.
 			if !glob.Glob(pattern, eventRecv.EventType) {
 				return false, nil
 			}
@@ -315,11 +349,12 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, removeFilter func()) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:            ctx,
 		ch:             make(chan *eventlogger.Event),
 		logger:         logger,
+		removeFilter:   removeFilter,
 		removePipeline: broker.RemovePipelineAndNodes,
 	}
 }
@@ -328,6 +363,7 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.
 func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
+		node.removeFilter()
 		removed, err := node.removePipeline(ctx, eventTypeAll, node.pipelineID)
 
 		switch {

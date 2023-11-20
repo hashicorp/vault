@@ -23,7 +23,7 @@ import (
 
 // TestBusBasics tests that basic event sending and subscribing function.
 func TestBusBasics(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestBusBasics(t *testing.T) {
 // TestBusIgnoresSendContext tests that the context is ignored when sending to an event,
 // so that we do not give up too quickly.
 func TestBusIgnoresSendContext(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestBusIgnoresSendContext(t *testing.T) {
 // TestSubscribeNonRootNamespace verifies that events for non-root namespaces
 // aren't filtered out by the bus.
 func TestSubscribeNonRootNamespace(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestNamespaceFiltering(t *testing.T) {
 
 // TestBus2Subscriptions verifies that events of different types are successfully routed to the correct subscribers.
 func TestBus2Subscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +293,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("cancel=%v", tc.cancel), func(t *testing.T) {
 			subscriptions.Store(0)
-			bus, err := NewEventBus(nil)
+			bus, err := NewEventBus("", "", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -396,7 +396,7 @@ func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
 // TestBusWildcardSubscriptions tests that a single subscription can receive
 // multiple event types using * for glob patterns.
 func TestBusWildcardSubscriptions(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +471,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 // TestDataPathIsPrependedWithMount tests that "data_path", if present in the
 // metadata, is prepended with the plugin's mount.
 func TestDataPathIsPrependedWithMount(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +591,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 
 // TestBexpr tests go-bexpr filters are evaluated on an event.
 func TestBexpr(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -671,7 +671,7 @@ func TestBexpr(t *testing.T) {
 // TestPipelineCleanedUp ensures pipelines are properly cleaned up after
 // subscriptions are closed.
 func TestPipelineCleanedUp(t *testing.T) {
-	bus, err := NewEventBus(nil)
+	bus, err := NewEventBus("", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -683,6 +683,10 @@ func TestPipelineCleanedUp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// check that the filters are set
+	if !bus.filters.anyMatch(namespace.RootNamespace.Path, eventType) {
+		t.Fatal()
+	}
 	if !bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
 		cancel()
 		t.Fatal()
@@ -691,6 +695,11 @@ func TestPipelineCleanedUp(t *testing.T) {
 	cancel()
 
 	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
+		t.Fatal()
+	}
+
+	// and that the filters are cleaned up
+	if bus.filters.anyMatch(namespace.RootNamespace.Path, eventType) {
 		t.Fatal()
 	}
 }
