@@ -127,7 +127,7 @@ module('Acceptance | auth backend list', function (hooks) {
 
   test('enterprise: token config within namespace', async function (assert) {
     const ns = 'ns-wxyz';
-    await runCmd(`write sys/namespaces/${ns} -f`);
+    await consoleComponent.runCommands(`write sys/namespaces/${ns} -f`);
     await authPage.loginNs(ns);
     // go directly to token configure route
     await visit('/vault/settings/auth/configure/token/options');
@@ -138,6 +138,6 @@ module('Acceptance | auth backend list', function (hooks) {
     assert
       .dom('[data-test-row-value="Description"]')
       .hasText('My custom description', 'description was saved');
-    await runCmd(`delete sys/namespaces/${ns}`);
+    await consoleComponent.runCommands(`delete sys/namespaces/${ns}`);
   });
 });
