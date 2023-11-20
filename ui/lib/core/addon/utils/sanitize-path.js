@@ -14,7 +14,8 @@ export function ensureTrailingSlash(path) {
 }
 
 /**
- * getRelativePath is for removing matching segments of a subpath from the front of a full path
+ * getRelativePath is for removing matching segments of a subpath from the front of a full path.
+ * This method assumes that the full path starts with all of the root path.
  * @param {string} fullPath eg apps/prod/app_1/test
  * @param {string} rootPath eg apps/prod
  * @returns the leftover segment, eg app_1/test
@@ -25,19 +26,8 @@ export function getRelativePath(fullPath = '', rootPath = '') {
 
   if (!root) {
     return full;
+  } else if (root === full) {
+    return '';
   }
-
-  return root
-    .split('/')
-    .reduce(
-      (prev, curr) => {
-        if (prev[0] === curr) {
-          // if they match, shift from the front
-          prev.shift();
-        }
-        return prev;
-      },
-      [...full.split('/')]
-    )
-    .join('/');
+  return sanitizePath(full.substring(root.length));
 }

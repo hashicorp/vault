@@ -27,5 +27,6 @@ module('Unit | Utility | sanitize-path', function () {
     assert.strictEqual(getRelativePath('/baz/bar/', undefined), 'baz/bar', 'sanitizes the output');
     assert.strictEqual(getRelativePath('recipes/cookies/choc-chip/', 'recipes/'), 'cookies/choc-chip');
     assert.strictEqual(getRelativePath('/recipes/cookies/choc-chip/', 'recipes/cookies'), 'choc-chip');
+    assert.strictEqual(getRelativePath('/beep/bop/boop/beep/bop/baz/', 'beep/bop'), 'boop/beep/bop/baz');
   });
 });
