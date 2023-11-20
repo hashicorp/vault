@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<SplashPage>
+<SplashPage @mfaErrors={{this.mfaErrors}}>
   <:altContent>
     {{#if this.mfaErrors}}
       <div class="has-top-margin-xxl" data-test-mfa-error>
