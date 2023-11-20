@@ -155,10 +155,10 @@
     <Hds::ButtonSet>
       <Hds::Button
         @text={{if (or (not @key) this.isNewKey) "Add key" "Distribute key"}}
-        @icon={{if this.saveModel.isRunning "loading"}}
+        @icon={{if this.createDistribution.isRunning "loading"}}
         type="submit"
-        data-test-secret-save={{true}}
-        disabled={{or this.validationErrorCount this.createDistribution.isRunning}}
+        data-test-secret-save
+        disabled={{this.createDistribution.isRunning}}
       />
       <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onClose}} />
     </Hds::ButtonSet>

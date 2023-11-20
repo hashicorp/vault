@@ -25,7 +25,7 @@
         name="activation-token-id"
         id="activation-token-id"
         @value={{this.id}}
-        data-test-replication-secondary-id={{true}}
+        data-test-replication-secondary-id
       />
     </div>
     <p class="help has-text-grey">
@@ -47,7 +47,7 @@
   {{/if}}
   <hr class="has-background-gray-100" />
   <Hds::ButtonSet>
-    <Hds::Button @text="Generate token" type="submit" data-test-secondary-add={{true}} />
+    <Hds::Button @text="Generate token" type="submit" data-test-secondary-add />
     <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
   </Hds::ButtonSet>
 </form>
