@@ -73,7 +73,7 @@ module(
 
       const { menu } = PAGE.associations.list;
       assert.dom(menu.sync).hasText('Sync now', 'Sync menu action renders');
-      assert.dom(menu.edit).hasText('Edit secret', 'Edit secret menu action renders');
+      assert.dom(menu.view).hasText('View secret', 'View secret menu action renders');
       assert.dom(menu.unsync).hasText('Unsync', 'Unsync menu action renders');
 
       await click(menu.sync);

@@ -19,7 +19,7 @@ export const PAGE = {
       updated: '[data-test-association-updated]',
       menu: {
         sync: '[data-test-association-action="sync"]',
-        edit: '[data-test-association-action="edit"]',
+        view: '[data-test-association-action="view"]',
         unsync: '[data-test-association-action="unsync"]',
       },
     },
