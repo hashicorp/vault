@@ -4,32 +4,23 @@
 ~}}
 
 {{outlet}}
-<footer class="footer has-text-grey has-text-centered">
-  <span class="is-inline-block">
-    <Icon @name="hashicorp" aria-hidden="true" class="has-text-grey-light" />
-    &copy;
-    {{date-format (now) "yyyy"}}
-    HashiCorp
-  </span>
-  <span>
-    <ExternalLink @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}} class="link has-text-grey">
-      Vault
-      {{this.auth.activeCluster.leaderNode.version}}
-    </ExternalLink>
-  </span>
+
+<Hds::AppFooter as |AF|>
+  <AF.Link @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}}>
+    Vault
+    {{this.auth.activeCluster.leaderNode.version}}
+  </AF.Link>
   {{#if (is-version "OSS")}}
-    <span>
-      <ExternalLink @href="https://hashicorp.com/products/vault/trial?source=vaultui" class="link has-text-grey">
-        Upgrade to Vault Enterprise
-      </ExternalLink>
-    </span>
+    <AF.Link @href="https://hashicorp.com/products/vault/trial?source=vaultui">
+      Upgrade to Vault Enterprise
+    </AF.Link>
   {{/if}}
-  <span>
-    <DocLink @path="/vault" class="has-text-grey">
-      Documentation
-    </DocLink>
-  </span>
-</footer>
+  <AF.Link @href={{doc-link "/vault"}}>
+    Documentation
+  </AF.Link>
+  <AF.LegalLinks />
+</Hds::AppFooter>
+
 {{#if (eq this.env "development")}}
   <div class="env-banner level development">
     <div class="level-item notification">

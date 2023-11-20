@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: capabilities-self is always called in the user's root namespace
+```
