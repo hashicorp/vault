@@ -2567,10 +2567,16 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			Priority: 1,
 			Name:     "shamir",
 		})
-	case 1:
-		// If there's only one seal and it's disabled assume they want to
+	default:
+		allSealsDisabled := true
+		for _, c := range config.Seals {
+			if !c.Disabled {
+				allSealsDisabled = false
+			}
+		}
+		// If all seals are disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
-		if config.Seals[0].Disabled {
+		if allSealsDisabled {
 			config.Seals = append(config.Seals, &configutil.KMS{
 				Type:     vault.SealConfigTypeShamir.String(),
 				Priority: 1,
