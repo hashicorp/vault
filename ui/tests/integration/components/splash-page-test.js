@@ -34,24 +34,4 @@ module('Integration | Component | splash-page', function (hooks) {
     assert.dom('[data-test-splash-page-content]').includesText('content', 'Content renders');
     assert.dom('[data-test-footer]').includesText('footer', 'Footer renders');
   });
-
-  test('it should not render a header if alt content is passed in', async function (assert) {
-    assert.expect(2);
-    await render(hbs`<SplashPage>
-    <:altContent>
-    {{#if true}}
-    <div data-test-error-message>
-      error message
-      </div>
-    {{/if}}
-    </:altContent>
-    <:header>
-      Header
-    </:header>
-    </SplashPage>
-      `);
-
-    assert.dom('[data-test-splash-page-header]').doesNotExist('Does not show header');
-    assert.dom('[data-test-error-message]').includesText('error message', 'altContent renders');
-  });
 });

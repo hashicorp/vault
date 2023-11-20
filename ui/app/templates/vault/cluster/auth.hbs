@@ -3,132 +3,130 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<SplashPage @mfaErrors={{this.mfaErrors}}>
-  <:altContent>
-    {{#if this.mfaErrors}}
-      <div class="has-top-margin-xxl" data-test-mfa-error>
-        <EmptyState
-          @title="Unauthorized"
-          @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
-          @icon="alert-circle"
-          @bottomBorder={{true}}
-          @subTitle={{join ". " this.mfaErrors}}
-          class="is-shadowless"
-        >
-          <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" (action "onMfaErrorDismiss")}} />
-        </EmptyState>
-      </div>
-    {{/if}}
-  </:altContent>
-
-  <:header>
-    {{#if this.oidcProvider}}
-      <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
-        <LogoEdition aria-label="Sign in with Hashicorp Vault" />
-      </div>
-    {{else}}
-      <div class="is-flex-v-centered has-bottom-margin-xxl">
-        <div class="brand-icon-large">
-          <Icon @name="vault" @size="24" @stretched={{true}} />
+{{#if this.mfaErrors}}
+  <div class="has-top-margin-xxl" data-test-mfa-error>
+    <EmptyState
+      @title="Unauthorized"
+      @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+      @icon="alert-circle"
+      @bottomBorder={{true}}
+      @subTitle={{join ". " this.mfaErrors}}
+      class="is-shadowless"
+    >
+      <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" (action "onMfaErrorDismiss")}} />
+    </EmptyState>
+  </div>
+{{else}}
+  <SplashPage>
+    <:header>
+      {{#if this.oidcProvider}}
+        <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
+          <LogoEdition aria-label="Sign in with Hashicorp Vault" />
         </div>
-      </div>
-      <div class="is-flex-row">
-        {{#if this.mfaAuthData}}
-          <Hds::Button
-            @text="Back to login"
-            @icon="arrow-left"
-            @isIconOnly={{true}}
-            @color="tertiary"
-            {{on "click" (fn (mut this.mfaAuthData) null)}}
-          />
-        {{else if this.waitingForOktaNumberChallenge}}
-          <Hds::Button
-            @text="Back to login"
-            @icon="arrow-left"
-            @isIconOnly={{true}}
-            @color="tertiary"
-            {{on "click" (action "cancelAuthentication")}}
-          />
-        {{/if}}
-        <h1 class="title is-3">
-          {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
-        </h1>
-      </div>
-    {{/if}}
-  </:header>
+      {{else}}
+        <div class="is-flex-v-centered has-bottom-margin-xxl">
+          <div class="brand-icon-large">
+            <Icon @name="vault" @size="24" @stretched={{true}} />
+          </div>
+        </div>
+        <div class="is-flex-row">
+          {{#if this.mfaAuthData}}
+            <Hds::Button
+              @text="Back to login"
+              @icon="arrow-left"
+              @isIconOnly={{true}}
+              @color="tertiary"
+              {{on "click" (fn (mut this.mfaAuthData) null)}}
+            />
+          {{else if this.waitingForOktaNumberChallenge}}
+            <Hds::Button
+              @text="Back to login"
+              @icon="arrow-left"
+              @isIconOnly={{true}}
+              @color="tertiary"
+              {{on "click" (action "cancelAuthentication")}}
+            />
+          {{/if}}
+          <h1 class="title is-3">
+            {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
+          </h1>
+        </div>
+      {{/if}}
+    </:header>
 
-  <:subHeader>
-    {{#if (has-feature "Namespaces")}}
-      {{#unless this.mfaAuthData}}
-        <Toolbar class="toolbar-namespace-picker">
-          <div class="field is-horizontal" data-test-namespace-toolbar>
-            <div class="field-label is-normal">
-              <label class="is-label" for="namespace">Namespace</label>
-            </div>
-            {{#if this.managedNamespaceRoot}}
-              <div class="field-label">
-                <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
+    <:subHeader>
+      {{#if (has-feature "Namespaces")}}
+        {{#unless this.mfaAuthData}}
+          <Toolbar class="toolbar-namespace-picker">
+            <div class="field is-horizontal" data-test-namespace-toolbar>
+              <div class="field-label is-normal">
+                <label class="is-label" for="namespace">Namespace</label>
               </div>
-            {{/if}}
-            <div class="field-body">
-              <div class="field">
-                <div class="control">
-                  <input
-                    data-test-auth-form-ns-input
-                    value={{this.namespaceInput}}
-                    placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
-                    {{on "input" (perform this.updateNamespace value="target.value")}}
-                    autocomplete="off"
-                    spellcheck="false"
-                    name="namespace"
-                    id="namespace"
-                    class="input"
-                    type="text"
-                    disabled={{this.oidcProvider}}
-                  />
+              {{#if this.managedNamespaceRoot}}
+                <div class="field-label">
+                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.managedNamespaceRoot}}</span>
+                </div>
+              {{/if}}
+              <div class="field-body">
+                <div class="field">
+                  <div class="control">
+                    <input
+                      data-test-auth-form-ns-input
+                      value={{this.namespaceInput}}
+                      placeholder={{if this.managedNamespaceRoot "/ (Default)" "/ (Root)"}}
+                      {{on "input" (perform this.updateNamespace value="target.value")}}
+                      autocomplete="off"
+                      spellcheck="false"
+                      name="namespace"
+                      id="namespace"
+                      class="input"
+                      type="text"
+                      disabled={{this.oidcProvider}}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </Toolbar>
-      {{/unless}}
-    {{/if}}
-  </:subHeader>
+          </Toolbar>
+        {{/unless}}
+      {{/if}}
+    </:subHeader>
 
-  <:content>
-    {{#if this.mfaAuthData}}
-      <Mfa::MfaForm
-        @clusterId={{this.model.id}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{action "onMfaSuccess"}}
-        @onError={{fn (mut this.mfaErrors)}}
-      />
-    {{else}}
-      <AuthForm
-        @wrappedToken={{this.wrappedToken}}
-        @cluster={{this.model}}
-        @namespace={{this.namespaceQueryParam}}
-        @redirectTo={{this.redirectTo}}
-        @selectedAuth={{this.authMethod}}
-        @onSuccess={{action "onAuthResponse"}}
-        @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
-        @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
-        @setCancellingAuth={{fn (mut this.cancelAuth)}}
-        @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
-      />
-    {{/if}}
-  </:content>
+    <:content>
+      {{#if this.mfaAuthData}}
+        <Mfa::MfaForm
+          @clusterId={{this.model.id}}
+          @authData={{this.mfaAuthData}}
+          @onSuccess={{action "onMfaSuccess"}}
+          @onError={{fn (mut this.mfaErrors)}}
+        />
+      {{else}}
+        <AuthForm
+          @wrappedToken={{this.wrappedToken}}
+          @cluster={{this.model}}
+          @namespace={{this.namespaceQueryParam}}
+          @redirectTo={{this.redirectTo}}
+          @selectedAuth={{this.authMethod}}
+          @onSuccess={{action "onAuthResponse"}}
+          @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
+          @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
+          @setCancellingAuth={{fn (mut this.cancelAuth)}}
+          @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
+        />
+      {{/if}}
+    </:content>
 
-  <:footer>
-    <div class="has-short-padding">
-      <p class="help has-text-grey-dark" data-test-auth-helptext>
-        {{#if this.oidcProvider}}
-          Once you log in, you will be redirected back to your application. If you require login credentials, contact your
-          administrator.
-        {{else}}
-          Contact your administrator for login credentials.
-        {{/if}}
-      </p>
-    </div>
-  </:footer>
-</SplashPage>
+    <:footer>
+      <div class="has-short-padding">
+        <p class="help has-text-grey-dark" data-test-auth-helptext>
+          {{#if this.oidcProvider}}
+            Once you log in, you will be redirected back to your application. If you require login credentials, contact your
+            administrator.
+          {{else}}
+            Contact your administrator for login credentials.
+          {{/if}}
+        </p>
+      </div>
+    </:footer>
+  </SplashPage>
+{{/if}}
