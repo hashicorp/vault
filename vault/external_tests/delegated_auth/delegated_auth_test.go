@@ -131,8 +131,9 @@ func TestDelegatedAuth(t *testing.T) {
 	delegatedAuthFactory := buildDelegatedAuthFactory(delegatedReqDefaults)
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
-			"userpass":  userpass.Factory,
-			"userpass2": userpass.Factory,
+			"userpass":     userpass.Factory,
+			"userpass2":    userpass.Factory,
+			"userpass-mfa": userpass.Factory,
 		},
 		LogicalBackends: map[string]logical.Factory{
 			"delegateauthtest": delegatedAuthFactory,
@@ -194,6 +195,12 @@ func TestDelegatedAuth(t *testing.T) {
 	})
 	require.NoError(t, err, "failed to create allowed-est-2 user")
 
+	// Setup a dedicated mount for MFA purposes
+	err = client.Sys().EnableAuthWithOptions("userpass-mfa", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	require.NoError(t, err, "failed mounting userpass-mfa")
+
 	// Fetch the userpass auth accessors
 	resp, err := client.Logical().Read("/sys/mounts/auth/userpass")
 	require.NoError(t, err, "failed to query for mount accessor")
@@ -209,6 +216,13 @@ func TestDelegatedAuth(t *testing.T) {
 	require.NotEmpty(t, resp.Data["accessor"], "Accessor field was empty: %v", resp)
 	upAccessor2 := resp.Data["accessor"].(string)
 
+	resp, err = client.Logical().Read("/sys/mounts/auth/userpass-mfa")
+	require.NoError(t, err, "failed to query for MFA mount accessor")
+	require.NotNil(t, resp, "received nil response from MFA mount accessor query")
+	require.NotNil(t, resp.Data, "received response with nil Data for MFA mount accessor query")
+	require.NotEmpty(t, resp.Data["accessor"], "MFA mount Accessor field was empty: %v", resp)
+	upAccessorMFA := resp.Data["accessor"].(string)
+
 	resp, err = client.Logical().Read("/sys/mounts/cubbyhole")
 	require.NoError(t, err, "failed to query for mount accessor for cubbyhole")
 	require.NotNil(t, resp, "received nil response from mount accessor query for cubbyhole")
@@ -220,7 +234,10 @@ func TestDelegatedAuth(t *testing.T) {
 	err = client.Sys().Mount("dat", &api.MountInput{
 		Type: "delegateauthtest",
 		Config: api.MountConfigInput{
-			DelegatedAuthAccessors: []string{upAccessor, "an-accessor-that-does-not-exist", cubbyAccessor},
+			DelegatedAuthAccessors: []string{
+				upAccessor, upAccessorMFA, "an-accessor-that-does-not-exist",
+				cubbyAccessor,
+			},
 		},
 	})
 	require.NoError(t, err, "failed mounting delegated auth endpoint")
@@ -407,7 +424,7 @@ func TestDelegatedAuth(t *testing.T) {
 	// Make sure we can add an accessor to the mount that previously failed above,
 	// and the request handling code does use both accessor values.
 	t.Run("multiple-accessors", func(st *testing.T) {
-		err = client.Sys().TuneMount("dat", api.MountConfigInput{DelegatedAuthAccessors: []string{upAccessor, upAccessor2}})
+		err = client.Sys().TuneMount("dat", api.MountConfigInput{DelegatedAuthAccessors: []string{upAccessor, upAccessor2, upAccessorMFA}})
 		require.NoError(t, err, "Failed to tune mount to update delegated auth accessors")
 
 		resp, err = clientNoToken.Logical().Write("dat/preauth-test", map[string]interface{}{
@@ -446,7 +463,7 @@ func TestDelegatedAuth(t *testing.T) {
 
 		// Create a test entity and alias
 		totpUser := "test-totp"
-		testhelpers.CreateEntityAndAlias(st, client, upAccessor, "entity1", totpUser)
+		testhelpers.CreateEntityAndAliasWithinMount(st, client, upAccessorMFA, "userpass-mfa", "entity1", totpUser)
 
 		// Configure a default TOTP method
 		methodID := testhelpers.SetupTOTPMethod(st, client, map[string]interface{}{
@@ -461,21 +478,21 @@ func TestDelegatedAuth(t *testing.T) {
 			"method_name":             "foo",
 		})
 
-		// Configure a default login enforcement
+		// Configure a login enforcement specific to the MFA userpass mount to avoid conflicts on others.
 		enforcementConfig := map[string]interface{}{
-			"auth_method_types": []string{"userpass"},
-			"name":              methodID[0:4],
-			"mfa_method_ids":    []string{methodID},
+			"auth_method_accessors": []string{upAccessorMFA},
+			"name":                  methodID[0:4],
+			"mfa_method_ids":        []string{methodID},
 		}
 
 		testhelpers.SetupMFALoginEnforcement(st, client, enforcementConfig)
 
 		_, err = clientNoToken.Logical().Write("dat/preauth-test", map[string]interface{}{
-			"accessor":     upAccessor,
+			"accessor":     upAccessorMFA,
 			"path":         "login",
 			"username":     totpUser,
 			"password":     "testpassword",
-			"handle_error": true,
+			"handle_error": false,
 		})
 
 		require.ErrorContains(st, err, "delegated auth request requiring MFA is not supported")
