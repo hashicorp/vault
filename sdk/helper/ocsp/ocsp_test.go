@@ -6,14 +6,20 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -21,6 +27,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -199,6 +206,88 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	if err == nil && isValidOCSPStatus(ost.code) {
 		t.Fatalf("should have failed.")
 	}
+}
+
+func TestUnitExpiredOCSPResponse(t *testing.T) {
+	rootCaKey, rootCa, leafCert := createCaLeafCerts(t)
+
+	expiredOcspResponse := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		ocspRes := ocsp.Response{
+			SerialNumber: big.NewInt(2),
+			ThisUpdate:   now.Add(-1 * time.Hour),
+			NextUpdate:   now.Add(-30 * time.Minute),
+			Status:       ocsp.Good,
+		}
+		response, err := ocsp.CreateResponse(rootCa, rootCa, ocspRes, rootCaKey)
+		if err != nil {
+			_, _ = w.Write(ocsp.InternalErrorErrorResponse)
+			t.Fatalf("failed generating OCSP response: %v", err)
+		}
+		_, _ = w.Write(response)
+	})
+	ts := httptest.NewServer(expiredOcspResponse)
+	defer ts.Close()
+
+	logFactory := func() hclog.Logger {
+		return hclog.NewNullLogger()
+	}
+	client := New(logFactory, 100)
+
+	ctx := context.Background()
+
+	config := &VerifyConfig{
+		OcspEnabled:         true,
+		OcspServersOverride: []string{ts.URL},
+		OcspFailureMode:     FailOpenFalse,
+		QueryAllServers:     false,
+	}
+
+	status, err := client.GetRevocationStatus(ctx, leafCert, rootCa, config)
+	require.ErrorContains(t, err, "invalid validity",
+		"Expected error got response: %v, %v", status, err)
+}
+
+func createCaLeafCerts(t *testing.T) (*ecdsa.PrivateKey, *x509.Certificate, *x509.Certificate) {
+	rootCaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated root key for CA")
+
+	// Validate we reject CSRs that contain CN that aren't in the original order
+	cr := &x509.Certificate{
+		Subject:               pkix.Name{CommonName: "Root Cert"},
+		SerialNumber:          big.NewInt(1),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		SignatureAlgorithm:    x509.ECDSAWithSHA256,
+		NotBefore:             time.Now().Add(-1 * time.Second),
+		NotAfter:              time.Now().AddDate(1, 0, 0),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning},
+	}
+	rootCaBytes, err := x509.CreateCertificate(rand.Reader, cr, cr, &rootCaKey.PublicKey, rootCaKey)
+	require.NoError(t, err, "failed generating root ca")
+
+	rootCa, err := x509.ParseCertificate(rootCaBytes)
+	require.NoError(t, err, "failed parsing root ca")
+
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated leaf key")
+
+	cr = &x509.Certificate{
+		Subject:            pkix.Name{CommonName: "Leaf Cert"},
+		SerialNumber:       big.NewInt(2),
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
+		NotBefore:          time.Now().Add(-1 * time.Second),
+		NotAfter:           time.Now().AddDate(1, 0, 0),
+		KeyUsage:           x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:        []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	leafCertBytes, err := x509.CreateCertificate(rand.Reader, cr, rootCa, &leafKey.PublicKey, rootCaKey)
+	require.NoError(t, err, "failed generating root ca")
+
+	leafCert, err := x509.ParseCertificate(leafCertBytes)
+	require.NoError(t, err, "failed parsing root ca")
+	return rootCaKey, rootCa, leafCert
 }
 
 func TestUnitValidateOCSP(t *testing.T) {

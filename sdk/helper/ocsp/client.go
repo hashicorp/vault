@@ -517,6 +517,11 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 			}
 			if isValidOCSPStatus(ret.code) {
 				ocspStatuses[i] = ret
+			} else if ret.err != nil {
+				// This check needs to occur after the isValidOCSPStatus as the unknown
+				// status also sets an err value within ret.
+				errors[i] = ret.err
+				return ret.err
 			}
 			return nil
 		}
@@ -568,8 +573,12 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	if (ret == nil || ret.code == ocspStatusUnknown) && firstError != nil {
 		return nil, firstError
 	}
-	// otherwise ret should contain a response for the overall request
+	// An extra safety in case ret and firstError are both nil
+	if ret == nil {
+		return nil, fmt.Errorf("failed to extract a known response code or error from the OCSP server")
+	}
 
+	// otherwise ret should contain a response for the overall request
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
 	}
