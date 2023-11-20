@@ -1265,7 +1265,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(c.clusterID.Load, nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
 	if err != nil {
 		return nil, err
 	}

@@ -35,9 +35,8 @@ const (
 )
 
 var (
-	ErrNotStarted              = errors.New("event broker has not been started")
-	cloudEventsFormatterFilter *cloudevents.FormatterFilter
-	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+	ErrNotStarted = errors.New("event broker has not been started")
+	subscriptions atomic.Int64 // keeps track of event subscription count in all event buses
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
@@ -47,25 +46,16 @@ var (
 	initCloudEventsFormatterFilterOnce sync.Once
 )
 
-func init() {
-	// Initialize with a blank source URL until an event bus is created.
-	cloudEventsFormatterFilter = &cloudevents.FormatterFilter{
-		Source: &url.URL{},
-		Predicate: func(_ context.Context, e interface{}) (bool, error) {
-			return true, nil
-		},
-	}
-}
-
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger          hclog.Logger
-	broker          *eventlogger.Broker
-	started         atomic.Bool
-	formatterNodeID eventlogger.NodeID
-	timeout         time.Duration
-	filters         *Filters
+	logger                     hclog.Logger
+	broker                     *eventlogger.Broker
+	started                    atomic.Bool
+	formatterNodeID            eventlogger.NodeID
+	timeout                    time.Duration
+	filters                    *Filters
+	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 }
 
 type pluginEventBus struct {
@@ -175,36 +165,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
-func setClusterID(clusterIDFunc func() string, localNodeID string) {
-	// Use the local node ID, in case we aren't running in a cluster.
-	if cloudEventsFormatterFilter.Source.Scheme == "" {
-		cloudEventsFormatterFilter.Source, _ = url.Parse("vault://" + localNodeID)
-	}
-	// The cluster ID is not available until after the cluster is unsealed.
-	// Poll for the cluster ID with exponential backoff
-	// TODO: refactor the core.clusterID to support condition variable maybe?
-	go func() {
-		clusterID := clusterIDFunc()
-		backoff := 1 * time.Millisecond
-		for clusterID == "" {
-			backoff = backoff * 2
-			if backoff > time.Hour {
-				backoff = time.Hour
-			}
-			time.Sleep(backoff)
-		}
-		initCloudEventsFormatterFilterOnce.Do(func() {
-			sourceUrl, err := url.Parse("vault://" + clusterID)
-			if err != nil {
-				panic(err)
-			}
-			cloudEventsFormatterFilter.Source = sourceUrl
-		})
-	}()
-}
-
-func NewEventBus(clusterIDFunc func() string, localNodeID string, logger hclog.Logger) (*EventBus, error) {
-	setClusterID(clusterIDFunc, localNodeID)
+func NewEventBus(localNodeID string, logger hclog.Logger) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -220,12 +181,25 @@ func NewEventBus(clusterIDFunc func() string, localNodeID string, logger hclog.L
 		logger = hclog.Default().Named("events")
 	}
 
+	sourceUrl, err := url.Parse("vault://" + localNodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	cloudEventsFormatterFilter := &cloudevents.FormatterFilter{
+		Source: sourceUrl,
+		Predicate: func(_ context.Context, e interface{}) (bool, error) {
+			return true, nil
+		},
+	}
+
 	return &EventBus{
-		logger:          logger,
-		broker:          broker,
-		formatterNodeID: formatterNodeID,
-		timeout:         defaultTimeout,
-		filters:         NewFilters(localNodeID),
+		logger:                     logger,
+		broker:                     broker,
+		formatterNodeID:            formatterNodeID,
+		timeout:                    defaultTimeout,
+		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
+		filters:                    NewFilters(localNodeID),
 	}, nil
 }
 
@@ -244,7 +218,7 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 		return nil, nil, err
 	}
 
-	err = bus.broker.RegisterNode(bus.formatterNodeID, cloudEventsFormatterFilter)
+	err = bus.broker.RegisterNode(bus.formatterNodeID, bus.cloudEventsFormatterFilter)
 	if err != nil {
 		return nil, nil, err
 	}
