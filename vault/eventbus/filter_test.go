@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestFilters_AddRemoveMatchLocal checks that basic matching, adding, and removing of patterns all work.
 func TestFilters_AddRemoveMatchLocal(t *testing.T) {
 	f := NewFilters("self")
 
@@ -24,6 +25,7 @@ func TestFilters_AddRemoveMatchLocal(t *testing.T) {
 	assert.False(t, f.anyMatch("ns1", "abc"))
 }
 
+// TestFilters_ParallelAnyMatch checks that anyMatch works with parallel set to true.
 func TestFilters_ParallelAnyMatch(t *testing.T) {
 	f := NewFilters("self")
 	f.parallel = true
