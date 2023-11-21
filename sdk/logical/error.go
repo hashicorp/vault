@@ -66,16 +66,18 @@ var (
 
 type DelegatedAuthErrorHandler func(ctx context.Context, initiatingRequest, authRequest *Request, authResponse *Response, err error) (*Response, error)
 
-// Special error indicating the backend wants to delegate authentication elsewhere
-type RequestDelegatedAuth struct {
+var _ error = &RequestDelegatedAuthError{}
+
+// RequestDelegatedAuthError Special error indicating the backend wants to delegate authentication elsewhere
+type RequestDelegatedAuthError struct {
 	mountAccessor string
 	path          string
 	data          map[string]interface{}
 	errHandler    DelegatedAuthErrorHandler
 }
 
-func NewDelegatedAuthenticationRequest(mountAccessor, path string, data map[string]interface{}, errHandler DelegatedAuthErrorHandler) *RequestDelegatedAuth {
-	return &RequestDelegatedAuth{
+func NewDelegatedAuthenticationRequest(mountAccessor, path string, data map[string]interface{}, errHandler DelegatedAuthErrorHandler) *RequestDelegatedAuthError {
+	return &RequestDelegatedAuthError{
 		mountAccessor: mountAccessor,
 		path:          path,
 		data:          data,
@@ -83,23 +85,23 @@ func NewDelegatedAuthenticationRequest(mountAccessor, path string, data map[stri
 	}
 }
 
-func (d *RequestDelegatedAuth) Error() string {
+func (d *RequestDelegatedAuthError) Error() string {
 	return "authentication delegation requested"
 }
 
-func (d *RequestDelegatedAuth) MountAccessor() string {
+func (d *RequestDelegatedAuthError) MountAccessor() string {
 	return d.mountAccessor
 }
 
-func (d *RequestDelegatedAuth) Path() string {
+func (d *RequestDelegatedAuthError) Path() string {
 	return d.path
 }
 
-func (d *RequestDelegatedAuth) Data() map[string]interface{} {
+func (d *RequestDelegatedAuthError) Data() map[string]interface{} {
 	return d.data
 }
 
-func (d *RequestDelegatedAuth) AuthErrorHandler() DelegatedAuthErrorHandler {
+func (d *RequestDelegatedAuthError) AuthErrorHandler() DelegatedAuthErrorHandler {
 	return d.errHandler
 }
 

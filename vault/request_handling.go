@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
 	"net/textproto"
 	"os"
 	paths "path"
@@ -1382,7 +1383,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Return the response and error
 	if routeErr != nil {
-		if _, ok := routeErr.(*logical.RequestDelegatedAuth); ok {
+		if _, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
 			routeErr = fmt.Errorf("delegated authentication requested but authentication token present")
 		}
 
@@ -1517,7 +1518,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// if routeErr has invalid credentials error, update the userFailedLoginMap
 		if routeErr == logical.ErrInvalidCredentials {
 			return handleInvalidCreds(routeErr)
-		} else if da, ok := routeErr.(*logical.RequestDelegatedAuth); ok {
+		} else if da, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
 			return c.handleDelegatedAuth(ctx, req, da, entry, handleInvalidCreds)
 		}
 	}
@@ -1854,10 +1855,10 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 type invalidCredentialHandler func(err error) (*logical.Response, *logical.Auth, error)
 
-// handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuth, it is requesting that
+// handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuthError, it is requesting that
 // an authentication workflow of its choosing be implemented prior to it being able to accept it. Normally
 // this is used for standard protocols that communicate the credential information in a non-standard Vault way
-func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuth, entry *MountEntry, invalidCredHandler invalidCredentialHandler) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuthError, entry *MountEntry, invalidCredHandler invalidCredentialHandler) (*logical.Response, *logical.Auth, error) {
 	// Make sure we didn't get into a routing loop.
 	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
 		return nil, nil, fmt.Errorf("%w: original request had delegated auth token, "+
@@ -1904,14 +1905,8 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	delete(authReq.Headers, textproto.CanonicalMIMEHeaderKey(consts.WrapTTLHeaderName))
 	authReq.WrapInfo = nil
 
-	// Clear the data fields for the new request
-	authReq.Data = make(map[string]interface{})
-	if da.Data() != nil {
-		// Add any other data fields the auth method might need, provided dynamically by the source mount
-		for k, v := range da.Data() {
-			authReq.Data[k] = v
-		}
-	}
+	// Insert the data fields from the delegated auth error in our auth request
+	authReq.Data = maps.Clone(da.Data())
 
 	// Make sure we are going to perform a login request and not expose other backend types to this request
 	if !c.isLoginRequest(ctx, authReq) {

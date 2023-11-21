@@ -13,15 +13,14 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
-func buildDaError(defaults map[string]string, d *framework.FieldData) *logical.RequestDelegatedAuth {
+func buildDaError(defaults map[string]string, d *framework.FieldData) *logical.RequestDelegatedAuthError {
 	fieldDataOrDefault := func(field string, d *framework.FieldData) string {
 		if val, ok := d.GetOk(field); ok {
 			return val.(string)
@@ -131,9 +130,7 @@ func TestDelegatedAuth(t *testing.T) {
 	delegatedAuthFactory := buildDelegatedAuthFactory(delegatedReqDefaults)
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
-			"userpass":     userpass.Factory,
-			"userpass2":    userpass.Factory,
-			"userpass-mfa": userpass.Factory,
+			"userpass": userpass.Factory,
 		},
 		LogicalBackends: map[string]logical.Factory{
 			"delegateauthtest": delegatedAuthFactory,
@@ -141,12 +138,7 @@ func TestDelegatedAuth(t *testing.T) {
 		},
 	}
 
-	conf, opts := teststorage.ClusterSetup(coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: http.Handler,
-		NumCores:    1,
-	}, teststorage.InmemBackendSetup)
-
-	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster := minimal.NewTestSoloCluster(t, coreConfig)
 	cluster.Start()
 	defer cluster.Cleanup()
 
