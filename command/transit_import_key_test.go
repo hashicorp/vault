@@ -5,11 +5,13 @@ package command
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 
@@ -27,6 +29,15 @@ func TestTransitImport(t *testing.T) {
 		Type: "transit",
 	}); err != nil {
 		t.Fatalf("transit mount error: %#v", err)
+	}
+
+	// Force the generation of the Transit wrapping key now with a longer context
+	// to help the 32bit nightly tests. This creates a 4096-bit RSA key which can take
+	// a while on an overloaded system
+	genWrappingKeyCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	if _, err := client.Logical().ReadWithContext(genWrappingKeyCtx, "transit/wrapping_key"); err != nil {
+		t.Fatalf("transit failed generating wrapping key: %#v", err)
 	}
 
 	rsa1, rsa2, aes128, aes256 := generateKeys(t)
