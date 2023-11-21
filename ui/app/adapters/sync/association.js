@@ -7,21 +7,32 @@ import ApplicationAdapter from 'vault/adapters/application';
 import { assert } from '@ember/debug';
 
 export default class SyncAssociationAdapter extends ApplicationAdapter {
-  namespace = 'v1/sys/sync/destinations';
+  namespace = 'v1/sys/sync';
 
   buildURL(modelName, id, snapshot, requestType, query) {
     const { destinationType, destinationName } = snapshot ? snapshot.attributes() : query;
     const { action } = snapshot?.adapterOptions || {};
-    // use sync_status to determine whether saving a record should use set or remove endpoint
-    // new records will not have a status so the only scenario where remove should be used if status is synced
     const uri = action ? `/${action}` : '';
-    return `${super.buildURL()}/${destinationType}/${destinationName}/associations${uri}`;
+    return `${super.buildURL()}/destinations/${destinationType}/${destinationName}/associations${uri}`;
   }
 
   query(store, { modelName }, query) {
     // endpoint doesn't accept the typical list query param and we don't want to pass options from lazyPaginatedQuery
     const url = this.buildURL(modelName, null, null, 'query', query);
     return this.ajax(url, 'GET');
+  }
+
+  // fetch sync status by destination for kv v2 secret details view
+  fetchDestinations({ mount, secretName }) {
+    const url = `${super.buildURL()}/associations/${mount}/${secretName}`;
+    return this.ajax(url, 'GET').then((resp) => {
+      const destinations = [];
+      const { associated_destinations } = resp.data;
+      for (const key in associated_destinations) {
+        destinations.push(associated_destinations[key]);
+      }
+      return destinations;
+    });
   }
 
   // snapshot is needed for mount and secret_name values which are used to parse response since all associations are returned
