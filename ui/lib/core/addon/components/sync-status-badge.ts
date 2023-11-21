@@ -24,7 +24,7 @@ export default class DestinationsTabsToolbar extends Component<Args> {
         };
       case 'UNSYNCING':
         return {
-          icon: 'loading',
+          icon: 'loading-static',
           color: 'neutral',
         };
       case 'UNSYNCED':
