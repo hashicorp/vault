@@ -88,8 +88,12 @@ reasons:
    of say, a Root CA involves a concerted, non-Vault effort to accomplish
    and must be done thoughtfully.
 
-Combined, we suggest leaving the existing cluster in place, and carefully
-consider migration of specific workloads to the FIPS-backed cluster.
+As such Hashicorp cannot provide support for workloads that are affected
+either technically or via non-compliance that results from converting
+existing cluster workloads to the FIPS 140-2 Inside binary.
+
+Instead, we suggest leaving the existing cluster in place, and carefully
+consider migration of specific workloads to the FIPS-backed cluster.  
 
 #### Entropy augmentation restrictions
 
