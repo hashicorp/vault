@@ -15,7 +15,7 @@
 {{#if @showJson}}
   <JsonEditor
     @title="{{if @isEdit 'Version' 'Secret'}} data"
-    @value={{or (stringify @secret.secretData) this.emptyJson}}
+    @value={{this.codeMirrorString}}
     @valueUpdated={{this.handleJson}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
