@@ -1,4 +1,4 @@
 ```release-note:feature
-hcp: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
+cli: introduce new command group hcp which groups subcommands for authentication of users or machines to HCP using
 either provided arguments or retrieved HCP token through browser login.
 ```
