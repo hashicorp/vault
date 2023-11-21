@@ -75,24 +75,25 @@
         {{/each}}
       </div>
       <div class="box is-marginless is-shadowless">
-        <div class="field is-grouped-split">
+        <Hds::ButtonSet>
           {{#if (and this.model.sealed (not this.keyData.recovery_keys))}}
-            <div data-test-advance-button class="control">
-              <LinkTo @route="vault.cluster.unseal" @model={{this.model.name}} class="button is-primary">
-                Continue to Unseal
-              </LinkTo>
-            </div>
+            <Hds::Button
+              @text="Continue to Unseal"
+              @color="primary"
+              @route="vault.cluster.unseal"
+              @model={{this.model.name}}
+              data-test-advance-button
+            />
           {{else}}
-            <div data-test-advance-button class="control">
-              <LinkTo
-                @route="vault.cluster.auth"
-                @model={{this.model.name}}
-                @disabled={{this.model.sealed}}
-                class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}}
-              >
-                Continue to Authenticate
-              </LinkTo>
-            </div>
+            <Hds::Button
+              @text="Continue to Authenticate"
+              @color="primary"
+              @route="vault.cluster.auth"
+              @model={{this.model.name}}
+              @icon={{if this.model.sealed "loading"}}
+              disabled={{this.model.sealed}}
+              data-test-advance-button
+            />
           {{/if}}
           <DownloadButton
             @color="tertiary"
@@ -102,7 +103,7 @@
             @stringify={{true}}
             @text="Download keys"
           />
-        </div>
+        </Hds::ButtonSet>
       </div>
     </Page.content>
   {{else}}
