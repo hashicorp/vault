@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Upgrade to bbolt 1.3.8, along with an extra patch to reduce time scanning large freelist maps.
+```
