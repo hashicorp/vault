@@ -12,10 +12,36 @@ import (
 )
 
 const (
-	UICustomMessageKey string = "/ui-custom-messages"
+	UICustomMessageKey string = "/custom-messages"
 
 	MaximumCustomMessageCount int = 100
 )
+
+// customMessageBarrierView determines the appropriate logical.Storage to return
+// depending on whether the logical.Storage is being used to access entries for
+// the root namespace or any other namespace based on the provided
+// context.Context.
+func (c *UIConfig) customMessageBarrierView(ctx context.Context) logical.Storage {
+	// If nsBarrierView is nil, which occurs in the non-enterprise edition, then
+	// simply use the barrierStorage.
+	if c.nsBarrierView == nil {
+		return c.barrierStorage
+	}
+
+	// Retrieve the namespace from the context.Context
+	// namespace.FromContext returns an error when:
+	// 1. ctx is nil
+	// 2. there's no Namespace value in ctx
+	// 3. the Namespace value in ctx is nil
+	// In each of those cases, returning the barrierStorage is an appropriate
+	// course of action.
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return c.barrierStorage
+	}
+
+	return NewBarrierView(c.nsBarrierView, ns.ID)
+}
 
 type ListUICustomMessagesFilters struct {
 	authenticated *bool
@@ -88,7 +114,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	keys, err := c.barrierStorage.List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
+	keys, err := c.customMessageBarrierView(ctx).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +122,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 	results := make([]*UICustomMessagesEntry, len(keys))
 
 	for idx, key := range keys {
-		storageEntry, err := c.barrierStorage.Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
+		storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
 		if err != nil {
 			return nil, err
 		}
@@ -124,15 +150,10 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 }
 
 func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) (*UICustomMessagesEntry, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	storageEntry, err := c.barrierStorage.Get(ctx, fmt.Sprintf("%s%s%s", ns.Path, UICustomMessageKey, messageId))
+	storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 	if err != nil {
 		return nil, err
 	}
@@ -146,15 +167,10 @@ func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) 
 }
 
 func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) error {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
-
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
 
-	return c.barrierStorage.Delete(ctx, fmt.Sprintf("%s%s/%s", ns.Path, UICustomMessageKey, messageId))
+	return c.customMessageBarrierView(ctx).Delete(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 }
 
 func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessagesEntry) (*UICustomMessagesEntry, error) {
@@ -185,15 +201,10 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 }
 
 func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return 0, err
-	}
-
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	keys, err := c.barrierStorage.List(ctx, fmt.Sprintf("%s%s/", ns.Path, UICustomMessageKey))
+	keys, err := c.customMessageBarrierView(ctx).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
 	if err != nil {
 		return 0, err
 	}
@@ -213,11 +224,6 @@ func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessag
 }
 
 func (c *UIConfig) saveCustomMessage(ctx context.Context, entry UICustomMessagesEntry) error {
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
-
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
 
@@ -227,9 +233,9 @@ func (c *UIConfig) saveCustomMessage(ctx context.Context, entry UICustomMessages
 	}
 
 	storageEntry := &logical.StorageEntry{
-		Key:   fmt.Sprintf("%s%s/%s", ns.Path, UICustomMessageKey, entry.Id),
+		Key:   fmt.Sprintf("%s/%s", UICustomMessageKey, entry.Id),
 		Value: customMessageRaw,
 	}
 
-	return c.barrierStorage.Put(ctx, storageEntry)
+	return c.customMessageBarrierView(ctx).Put(ctx, storageEntry)
 }
