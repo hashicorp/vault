@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -226,6 +227,7 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 	m.months[month.GetMonthsAgo()].generationParameters = month
 	add := func(c []*generation.Client, segmentIndex *int) error {
 		for _, clients := range c {
+			mountAccessor := defaultMountAccessorRootNS
 
 			if clients.Namespace == "" {
 				clients.Namespace = namespace.RootNamespaceID
@@ -234,34 +236,41 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 				clients.ClientType = entityActivityType
 			}
 
-			// verify that the namespace exists
-			ns, err := core.NamespaceByID(ctx, clients.Namespace)
-			if err != nil {
-				return err
+			if clients.Namespace != namespace.RootNamespaceID && !strings.HasSuffix(clients.Namespace, "/") {
+				clients.Namespace += "/"
 			}
+			// verify that the namespace exists
+			ns := core.namespaceByPath(clients.Namespace)
+			if ns.ID == namespace.RootNamespaceID && clients.Namespace != namespace.RootNamespaceID {
+				return fmt.Errorf("unable to find namespace %s", clients.Namespace)
+			}
+			clients.Namespace = ns.ID
 
 			// verify that the mount exists
 			if clients.Mount != "" {
+				if !strings.HasSuffix(clients.Mount, "/") {
+					clients.Mount += "/"
+				}
 				nctx := namespace.ContextWithNamespace(ctx, ns)
 				mountEntry := core.router.MatchingMountEntry(nctx, clients.Mount)
 				if mountEntry == nil {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
+				mountAccessor = mountEntry.Accessor
 			}
 
-			mountAccessor := defaultMountAccessorRootNS
 			if clients.Namespace != namespace.RootNamespaceID && clients.Mount == "" {
 				// if we're not using the root namespace, find a mount on the namespace that we are using
 				found := false
 				for _, mount := range mounts {
-					if mount.NamespaceID == clients.Namespace {
+					if mount.NamespaceID == ns.ID {
 						mountAccessor = mount.Accessor
 						found = true
 						break
 					}
 				}
 				if !found {
-					return fmt.Errorf("unable to find matching mount in namespace %s", clients.Namespace)
+					return fmt.Errorf("unable to find matching mount in namespace %s", ns.Path)
 				}
 			}
 
