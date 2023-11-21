@@ -22,16 +22,23 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
     return this.ajax(url, 'GET');
   }
 
-  // fetch sync status by destination for kv v2 secret details view
-  fetchDestinations({ mount, secretName }) {
+  // array of association data for each destination a secret is synced to
+  fetchSyncStatus({ mount, secretName }) {
     const url = `${super.buildURL()}/associations/${mount}/${secretName}`;
     return this.ajax(url, 'GET').then((resp) => {
-      const destinations = [];
       const { associated_destinations } = resp.data;
+      const syncData = [];
       for (const key in associated_destinations) {
-        destinations.push(associated_destinations[key]);
+        const data = associated_destinations[key];
+        // renaming keys to match query() response
+        syncData.push({
+          destinationType: data.type,
+          destinationName: data.name,
+          syncStatus: data.sync_status,
+          updatedAt: data.updated_at,
+        });
       }
-      return destinations;
+      return syncData;
     });
   }
 

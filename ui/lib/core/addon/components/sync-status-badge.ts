@@ -6,10 +6,10 @@
 import Component from '@glimmer/component';
 
 interface Args {
-  status: string; //https://developer.hashicorp.com/vault/docs/sync#sync-statuses
+  status: string; // https://developer.hashicorp.com/vault/docs/sync#sync-statuses
 }
 
-export default class DestinationsTabsToolbar extends Component<Args> {
+export default class SyncStatusBadge extends Component<Args> {
   get state() {
     switch (this.args.status) {
       case 'SYNCING':

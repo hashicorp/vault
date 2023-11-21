@@ -35,6 +35,12 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
+  @tracked syncStatus;
+
+  constructor() {
+    super(...arguments);
+    this.fetchSyncStatus();
+  }
 
   @action
   closeVersionMenu(dropdown) {
@@ -61,6 +67,14 @@ export default class KvSecretDetails extends Component {
     } catch (error) {
       this.flashMessages.danger('Could not wrap secret.');
     }
+  }
+
+  // fetch sync status by destination for kv v2 secret details view
+  @action
+  async fetchSyncStatus() {
+    const { backend, path } = this.args.secret;
+    const syncAdapter = this.store.adapterFor('sync/association');
+    this.syncStatus = await syncAdapter.fetchSyncStatus({ mount: backend, secretName: path });
   }
 
   @action
