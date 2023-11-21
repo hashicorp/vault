@@ -1259,7 +1259,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
-	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+	c.uiConfig = newUIConfig(conf.EnableUI, uiStoragePrefix, c.physical, c.barrier)
 
 	// Listeners
 	err = c.configureListeners(conf)
