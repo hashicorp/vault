@@ -63,12 +63,7 @@
                     </li>
                     <li class="action">
                       {{#if item.disabled}}
-                        <Hds::Button
-                          @text="Enable"
-                          type="button"
-                          {{on "click" (action "toggleDisabled" item)}}
-                          class="link"
-                        />
+                        <Hds::Button @text="Enable" {{on "click" (action "toggleDisabled" item)}} class="link" />
                       {{else if (eq this.identityType "entity")}}
                         <ConfirmAction
                           @isInDropdown={{true}}
