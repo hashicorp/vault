@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/textproto"
 	"os"
 	paths "path"
 	"slices"
@@ -1900,7 +1901,7 @@ func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request
 	authReq.Operation = logical.UpdateOperation
 
 	// filter out any response wrapping headers, for our embedded login request
-	delete(authReq.Headers, consts.WrapTTLHeaderName)
+	delete(authReq.Headers, textproto.CanonicalMIMEHeaderKey(consts.WrapTTLHeaderName))
 	authReq.WrapInfo = nil
 
 	// Clear the data fields for the new request
