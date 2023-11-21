@@ -21,13 +21,13 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	bolt "go.etcd.io/bbolt"
 )
 
 func connectPeers(nodes ...*RaftBackend) {
