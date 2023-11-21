@@ -58,9 +58,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "entity$",
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
+
+			Fields: entityPathFields(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -69,10 +72,16 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "entity/name/(?P<name>.+)",
 			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityNameRead(),
-				logical.DeleteOperation: i.pathEntityNameDelete(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameRead(),
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name"][0]),
@@ -81,10 +90,16 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		{
 			Pattern: "entity/id/" + framework.GenericNameRegex("id"),
 			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityIDRead(),
-				logical.DeleteOperation: i.pathEntityIDDelete(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDRead(),
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id"][0]),
@@ -98,8 +113,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Entity IDs to delete",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityBatchDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityBatchDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["batch-delete"][0]),
@@ -107,8 +125,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/name/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityNameList(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name-list"][0]),
@@ -116,8 +137,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/id/?$",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityIDList(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id-list"][0]),
@@ -143,8 +167,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Setting this will follow the 'mine' strategy for merging MFA secrets. If there are secrets of the same type both in entities that are merged from and in entity into which all others are getting merged, secrets in the destination will be unaltered. If not set, this API will throw an error containing all the conflicts.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityMergeID(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathEntityMergeID(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-merge-id"][0]),
