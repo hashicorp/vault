@@ -24,6 +24,7 @@ import {
 } from 'vault/tests/helpers/policy-generator/kv';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -268,6 +269,20 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(FORM.saveBtn);
     await click(PAGE.breadcrumbAtIdx(2));
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
+  });
+
+  test('complex values default to JSON display', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex');
+
+    await click(FORM.toggleJson);
+    assert.strictEqual(codemirror().getValue(), '{ "": "" }');
+    codemirror().setValue('{ "foo3": { "name": "bar3" } }');
+    await click(FORM.saveBtn);
+    // Future: test that json is automatic on details too
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
   });
 });
 
