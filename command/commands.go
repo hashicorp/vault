@@ -256,7 +256,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			tokenHelper:    runOpts.TokenHelper,
 			flagAddress:    runOpts.Address,
 			client:         runOpts.Client,
-			hcpTokenHelper: &hcpvlib.InternalHCPTokenHelper{},
+			hcpTokenHelper: runOpts.HCPTokenHelper,
 		}
 	}
 

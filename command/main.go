@@ -14,6 +14,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
+
 	"github.com/fatih/color"
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
@@ -134,11 +136,12 @@ func getGlobalFlagValue(arg string) string {
 }
 
 type RunOptions struct {
-	TokenHelper token.TokenHelper
-	Stdout      io.Writer
-	Stderr      io.Writer
-	Address     string
-	Client      *api.Client
+	TokenHelper    token.TokenHelper
+	HCPTokenHelper hcpvlib.HCPTokenHelper
+	Stdout         io.Writer
+	Stderr         io.Writer
+	Address        string
+	Client         *api.Client
 }
 
 func Run(args []string) int {

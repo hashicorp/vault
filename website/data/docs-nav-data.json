@@ -993,6 +993,10 @@
       {
         "title": "Token Helpers",
         "path": "commands/token-helper"
+      },
+      {
+        "title": "<code>hcp</code>",
+        "path": "commands/hcp"
       }
     ]
   },
