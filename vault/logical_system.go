@@ -809,6 +809,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		if memory < 0 {
 			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
 		}
+		rootless := d.Get("rootless").(bool)
 		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
 			&pluginruntimeutil.PluginRuntimeConfig{
 				Name:         runtimeName,
@@ -817,6 +818,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 				CgroupParent: cgroupParent,
 				CPU:          cpu,
 				Memory:       memory,
+				Rootless:     rootless,
 			}); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -889,6 +891,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}}, nil
 }
 
@@ -6279,6 +6282,10 @@ This path responds to the following HTTP methods.
 	},
 	"plugin-runtime-catalog_memory-bytes": {
 		"Memory limit to set per container in bytes. Defaults to no limit.",
+		"",
+	},
+	"plugin-runtime-catalog_rootless": {
+		"Whether the container runtime is run as a non-privileged (non-root) user.",
 		"",
 	},
 	"leases": {
