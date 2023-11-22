@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretDetailsIndexRoute extends Route {
-  async setupController(controller, resolvedModel) {
+  setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
     const breadcrumbsArray = [
