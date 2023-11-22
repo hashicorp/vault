@@ -2,7 +2,6 @@ package ldap
 
 import (
 	"context"
-	"errors"
 
 	"github.com/go-ldap/ldap/v3"
 
@@ -46,7 +45,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if cfg == nil {
-		return nil, errors.New("attempted to rotate root on a nil config")
+		return logical.ErrorResponse("attempted to rotate root on an undefined config"), nil
 	}
 
 	u, p := cfg.BindDN, cfg.BindPassword
