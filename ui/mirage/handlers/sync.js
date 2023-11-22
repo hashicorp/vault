@@ -27,6 +27,27 @@ export const associationsResponse = (schema, req) => {
   };
 };
 
+export const syncStatusResponse = (schema, req) => {
+  const { mount, name: secret_name } = req.params;
+  const records = schema.db.syncAssociations.where({ mount, secret_name });
+  if (!records.length) {
+    return new Response(404, {}, { errors: [] });
+  }
+  const STATUSES = ['SYNCING', 'SYNCED', 'UNSYNCED', 'INTERNAL_VAULT_ERROR', 'UKNOWN'];
+  return {
+    data: {
+      associated_destinations: records.reduce((records, record, index) => {
+        const destinationType = record.type;
+        const destinationName = record.name;
+        record.sync_status = STATUSES[index];
+        const key = `${destinationType}/${destinationName}`;
+        records[key] = record;
+        return records;
+      }, {}),
+    },
+  };
+};
+
 export default function (server) {
   const base = '/sys/sync/destinations';
   const uri = `${base}/:type/:name`;
@@ -99,5 +120,8 @@ export default function (server) {
     const { type, name } = req.params;
     schema.db.syncAssociations.update({ type, name }, { sync_status: 'UNSYNCED' });
     return associationsResponse(schema, req);
+  });
+  server.get(`sys/sync/associations/:mount/*name`, (schema, req) => {
+    return syncStatusResponse(schema, req);
   });
 }
