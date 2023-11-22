@@ -32,7 +32,7 @@ module('Integration | Component | SyncStatusBadge', function (hooks) {
     };
   });
 
-  test('it should when status does not exist', async function (assert) {
+  test('it should render when status does not exist', async function (assert) {
     assert.expect(2);
     await this.renderComponent();
     assert.dom(PAGE.syncBadge.icon('help')).exists('renders help icon');
