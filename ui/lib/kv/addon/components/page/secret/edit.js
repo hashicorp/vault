@@ -38,10 +38,15 @@ export default class KvSecretEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   originalSecret;
+  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    if (this.originalSecret.lastIndexOf('{') > 0) {
+      // Dumb way to check if there's a nested object in the secret
+      this.secretDataIsAdvanced = true;
+    }
   }
 
   get showOldVersionAlert() {
