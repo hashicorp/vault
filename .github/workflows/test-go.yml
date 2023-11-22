@@ -379,8 +379,9 @@ jobs:
             fi
           fi
 
-          export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
-          mkdir -p $VAULT_TEST_LOG_DIR
+          VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs-${{ matrix.id }}"
+          export VAULT_TEST_LOG_DIR
+          mkdir -p "$VAULT_TEST_LOG_DIR"
           
           
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
