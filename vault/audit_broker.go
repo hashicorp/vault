@@ -297,7 +297,13 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 			e.Data = in
 
-			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			// In cases where we are trying to audit the response, we will detach
+			// ourselves from the original context so that we get a fair run at
+			// committing audit entries (pipeline nodes may check for a cancelled
+			// context and refuse to process the nodes further).
+			auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer auditCancel()
+			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
 				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
