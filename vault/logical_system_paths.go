@@ -4427,6 +4427,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"delegated_auth_accessors": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_delegated_auth_accessors"][0]),
+				},
 				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
@@ -4475,6 +4479,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"allowed_managed_keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+									Required:    false,
+								},
+								"delegated_auth_accessors": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: strings.TrimSpace(sysHelp["delegated_auth_accessors"][0]),
 									Required:    false,
 								},
 								"allowed_response_headers": {
