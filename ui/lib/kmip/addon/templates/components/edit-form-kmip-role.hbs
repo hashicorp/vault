@@ -84,23 +84,24 @@
     {{/each}}
   </div>
 
-  <hr class="has-background-gray-100" />
-  <Hds::ButtonSet>
-    <Hds::Button
-      @text={{this.saveButtonText}}
-      @icon={{if this.save.isRunning "loading"}}
-      type="submit"
-      data-test-edit-form-submit
-      disabled={{this.save.isRunning}}
-    />
-    {{#if this.cancelLink}}
+  <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
+    <Hds::ButtonSet>
       <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        @route={{this.cancelLink.route}}
-        @models={{this.cancelLink.models}}
-        data-test-edit-form-cancel
+        @text={{this.saveButtonText}}
+        @icon={{if this.save.isRunning "loading"}}
+        type="submit"
+        data-test-edit-form-submit
+        disabled={{this.save.isRunning}}
       />
-    {{/if}}
-  </Hds::ButtonSet>
+      {{#if this.cancelLink}}
+        <Hds::Button
+          @text="Cancel"
+          @color="secondary"
+          @route={{this.cancelLink.route}}
+          @models={{this.cancelLink.models}}
+          data-test-edit-form-cancel
+        />
+      {{/if}}
+    </Hds::ButtonSet>
+  </div>
 </form>
