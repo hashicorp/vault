@@ -1028,8 +1028,8 @@ func (c *Client) SetToken(v string) {
 	c.token = v
 }
 
-// HCPCookie returns the cookie being used by this client. It will
-// return an empty cookie no cookie set.
+// HCPCookie returns the HCP cookie being used by this client. It will
+// return an empty cookie when no cookie is set.
 func (c *Client) HCPCookie() string {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
