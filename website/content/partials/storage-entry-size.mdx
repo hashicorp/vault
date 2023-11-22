@@ -1,0 +1,19 @@
+The maximum size of an object written to a storage backend is determined
+by that backend.
+
+For the integrated storage backend, the default limit (introduced in
+Vault 1.5.0) is 1 MiB. This may be configured via `max_entry_size` in
+the [storage stanza](/vault/docs/configuration/storage/raft#max_entry_size).
+When storage entries larger than 512 KiB but lower than `max_entry_size` are
+written, Vault will chunk these entries into smaller pieces when writing the
+entry to Raft.
+
+For the Consul storage backend, the default limit imposed by Consul is
+512 KiB. This may be configured via Consul’s
+[`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size)
+parameter, introduced in version 1.5.3. However, Consul's internal storage
+implementation will not chunk the storage entry into smaller pieces, and will
+instead write the entry as a single, large write. Using large writes can
+negatively affect performance, as even a small change may become a large
+read-modify-write cycle on the entire entry. Larger writes may also destabilize
+the Consul cluster by delaying heartbeats, leading to leadership instability.

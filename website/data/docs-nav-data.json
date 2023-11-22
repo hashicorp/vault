@@ -2561,6 +2561,10 @@
           {
             "title": "Create an administrative namespace",
             "path": "enterprise/namespaces/create-admin-namespace"
+          },
+          {
+            "title": "Using many namespaces",
+            "path": "enterprise/namespaces/namespace-limits"
           }
         ]
       },
