@@ -13,9 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// This test relies on an external ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
-// with bindpassword "admin". - see the backend_test for more details.
-// This test will not run unless VAULT_ACC is set to something
+// This test relies on a docker ldap server with a suitable person object (cn=admin,dc=planetexpress,dc=com)
+// with bindpassword "admin". `PrepareTestContainer` does this for us. - see the backend_test for more details
 func TestRotateRoot(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip("skipping rotate root tests because VAULT_ACC is unset")
