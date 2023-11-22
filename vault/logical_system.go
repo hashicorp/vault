@@ -931,6 +931,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 					"cgroup_parent": conf.CgroupParent,
 					"cpu_nanos":     conf.CPU,
 					"memory_bytes":  conf.Memory,
+					"rootless":      conf.Rootless,
 				})
 			}
 		}
