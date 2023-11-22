@@ -46,6 +46,7 @@ export const syncStatusResponse = (schema, req) => {
     ...generatedRecords['aws-sm/destination-aws'],
     sync_status: 'UNKNOWN',
     name: 'my-aws-destination',
+    updated_at: new Date().toISOString(),
   };
   return {
     data: {

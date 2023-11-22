@@ -35,11 +35,11 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
-  @tracked syncStatus;
+  @tracked syncStatus; // array of association sync status info by destination
 
   constructor() {
     super(...arguments);
-    this.fetchSyncStatus();
+    this.fetchSyncStatus.perform();
   }
 
   @action
@@ -69,12 +69,16 @@ export default class KvSecretDetails extends Component {
     }
   }
 
-  // fetch sync status by destination for kv v2 secret details view
-  @action
-  async fetchSyncStatus() {
+  @task
+  @waitFor
+  *fetchSyncStatus() {
     const { backend, path } = this.args.secret;
     const syncAdapter = this.store.adapterFor('sync/association');
-    this.syncStatus = await syncAdapter.fetchSyncStatus({ mount: backend, secretName: path });
+    try {
+      this.syncStatus = yield syncAdapter.fetchSyncStatus({ mount: backend, secretName: path });
+    } catch (e) {
+      // silently error
+    }
   }
 
   @action
