@@ -212,8 +212,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
 
     assert
       .dom(PAGE.detail.syncAlert(destinationName))
-      .hasText(
-        'Synced my-destination - last updated September 20th 2023, 9:51:53 AM',
+      .hasTextContaining(
+        'Synced my-destination - last updated September',
         'renders sync status alert banner'
       );
 

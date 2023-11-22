@@ -54,7 +54,7 @@ module(
     test('it should render list item details', async function (assert) {
       const { list } = PAGE.associations;
       assert.dom(list.name).hasText('my-secret', 'Association mount/secret renders as name');
-      assert.dom(list.status).hasText('SYNCED', 'Association status renders');
+      assert.dom(list.status).hasText('Synced', 'Association status renders');
       assert
         .dom(list.updated)
         .hasText('last synced on September 20th 2023, 10:51:53 AM', 'Last synced datetime renders');
