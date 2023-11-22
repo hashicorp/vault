@@ -33,7 +33,7 @@ export const syncStatusResponse = (schema, req) => {
   if (!records.length) {
     return new Response(404, {}, { errors: [] });
   }
-  const STATUSES = ['SYNCING', 'SYNCED', 'UNSYNCED', 'UNSYNCING', 'INTERNAL_VAULT_ERROR'];
+  const STATUSES = ['SYNCED', 'SYNCING', 'UNSYNCED', 'UNSYNCING', 'INTERNAL_VAULT_ERROR', 'UNKNOWN'];
   const generatedRecords = records.reduce((records, record, index) => {
     const destinationType = record.type;
     const destinationName = record.name;
@@ -42,12 +42,15 @@ export const syncStatusResponse = (schema, req) => {
     records[key] = record;
     return records;
   }, {});
-  generatedRecords['aws-sm/my-aws-destination'] = {
-    ...generatedRecords['aws-sm/destination-aws'],
-    sync_status: 'UNKNOWN',
-    name: 'my-aws-destination',
-    updated_at: new Date().toISOString(),
-  };
+  if (records.length === 5) {
+    // create one more record with sync_status = 'UNKNOWN' to mock each status option
+    generatedRecords['aws-sm/my-aws-destination'] = {
+      ...generatedRecords['aws-sm/destination-aws'],
+      sync_status: 'UNKNOWN',
+      name: 'my-aws-destination',
+      updated_at: new Date().toISOString(),
+    };
+  }
   return {
     data: {
       associated_destinations: generatedRecords,
@@ -128,7 +131,7 @@ export default function (server) {
     schema.db.syncAssociations.update({ type, name }, { sync_status: 'UNSYNCED' });
     return associationsResponse(schema, req);
   });
-  server.get(`sys/sync/associations/:mount/*name`, (schema, req) => {
+  server.get('sys/sync/associations/:mount/*name', (schema, req) => {
     return syncStatusResponse(schema, req);
   });
 }
