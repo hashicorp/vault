@@ -931,6 +931,7 @@ func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
 			commands[cmd] = cmdFactory
 		} else {
 			ui.Error("Failed to initialize HCP commands.")
+			break
 		}
 	}
 }
