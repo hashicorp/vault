@@ -24,6 +24,10 @@ export const PAGE = {
       },
     },
   },
+  syncBadge: {
+    icon: (name) => `[data-test-icon="${name}"]`,
+    text: '.hds-badge__text',
+  },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
