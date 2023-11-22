@@ -61,7 +61,7 @@ func TestRotateRoot(t *testing.T) {
 	if newCFG.BindDN != cfg.BindDN {
 		t.Fatalf("a value in config that should have stayed the same changed: %s", cfg.BindDN)
 	}
-	if cfg.BindPassword == cfg.BindPassword {
+	if newCFG.BindPassword == cfg.BindPassword {
 		t.Fatalf("the password should have changed, but it didn't")
 	}
 }
