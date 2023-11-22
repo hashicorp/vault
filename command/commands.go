@@ -925,7 +925,13 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 
 func initHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
 	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
-		commands[cmd] = cmdFactory
+		// check for conflicts and only put command in the map in case it doesn't conflict with existing one
+		_, ok := commands[cmd]
+		if !ok {
+			commands[cmd] = cmdFactory
+		} else {
+			ui.Error("Failed to initialize HCP commands.")
+		}
 	}
 }
 
