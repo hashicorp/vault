@@ -14,7 +14,7 @@ export default class SyncStatusBadge extends Component<Args> {
     switch (this.args.status) {
       case 'SYNCING':
         return {
-          icon: 'loading',
+          icon: 'loading-static',
           color: 'neutral',
         };
       case 'SYNCED':
