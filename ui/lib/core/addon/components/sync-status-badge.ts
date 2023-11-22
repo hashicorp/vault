@@ -14,7 +14,7 @@ export default class SyncStatusBadge extends Component<Args> {
     switch (this.args.status) {
       case 'SYNCING':
         return {
-          icon: 'loading-static',
+          icon: 'sync',
           color: 'neutral',
         };
       case 'SYNCED':
@@ -24,12 +24,12 @@ export default class SyncStatusBadge extends Component<Args> {
         };
       case 'UNSYNCING':
         return {
-          icon: 'loading-static',
+          icon: 'sync-reverse',
           color: 'neutral',
         };
       case 'UNSYNCED':
         return {
-          icon: 'alert-circle',
+          icon: 'sync-alert',
           color: 'warning',
         };
       case 'INTERNAL_VAULT_ERROR':

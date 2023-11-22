@@ -33,17 +33,22 @@ export const syncStatusResponse = (schema, req) => {
   if (!records.length) {
     return new Response(404, {}, { errors: [] });
   }
-  const STATUSES = ['SYNCING', 'SYNCED', 'UNSYNCED', 'INTERNAL_VAULT_ERROR', 'UKNOWN'];
+  const STATUSES = ['SYNCING', 'SYNCED', 'UNSYNCED', 'UNSYNCING', 'INTERNAL_VAULT_ERROR'];
+  const generatedRecords = records.reduce((records, record, index) => {
+    const destinationType = record.type;
+    const destinationName = record.name;
+    record.sync_status = STATUSES[index];
+    const key = `${destinationType}/${destinationName}`;
+    records[key] = record;
+    return records;
+  }, {});
+  generatedRecords['aws-sm/my-aws-destination'] = {
+    ...generatedRecords['aws-sm/destination-aws'],
+    sync_status: 'UNKNOWN',
+  };
   return {
     data: {
-      associated_destinations: records.reduce((records, record, index) => {
-        const destinationType = record.type;
-        const destinationName = record.name;
-        record.sync_status = STATUSES[index];
-        const key = `${destinationType}/${destinationName}`;
-        records[key] = record;
-        return records;
-      }, {}),
+      associated_destinations: generatedRecords,
     },
   };
 };
