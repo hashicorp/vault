@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +62,7 @@ func (f *ListUICustomMessagesFilters) MessageType(value string) {
 	f.messageType = &value
 }
 
-type UICustomMessagesEntry struct {
+type UICustomMessageEntry struct {
 	Id            string         `json:"id"`
 	Title         string         `json:"title"`
 	Message       string         `json:"message"`
@@ -80,13 +81,13 @@ func isTimeNowBetween(startTime, endTime time.Time) bool {
 	return !(startTime.After(now) || endTime.Before(now))
 }
 
-func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomMessagesFilters) ([]*UICustomMessagesEntry, error) {
+func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomMessagesFilters) ([]*UICustomMessageEntry, error) {
 	entries, err := c.retrieveCustomMessages(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]*UICustomMessagesEntry, 0)
+	results := make([]*UICustomMessageEntry, 0)
 
 	// Calculate Active property and apply filters
 	for _, entry := range entries {
@@ -110,7 +111,7 @@ func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomM
 	return results, nil
 }
 
-func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessagesEntry, error) {
+func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
@@ -119,7 +120,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 		return nil, err
 	}
 
-	results := make([]*UICustomMessagesEntry, len(keys))
+	results := make([]*UICustomMessageEntry, len(keys))
 
 	for idx, key := range keys {
 		storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
@@ -127,7 +128,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 			return nil, err
 		}
 
-		customMessageEntry := &UICustomMessagesEntry{}
+		customMessageEntry := &UICustomMessageEntry{}
 		if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
 			return nil, err
 		}
@@ -138,7 +139,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 	return results, nil
 }
 
-func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UICustomMessagesEntry, error) {
+func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
 	customMessageEntry, err := c.retrieveCustomMessage(ctx, messageId)
 	if err != nil {
 		return nil, err
@@ -149,7 +150,7 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 	return customMessageEntry, nil
 }
 
-func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) (*UICustomMessagesEntry, error) {
+func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
@@ -158,7 +159,7 @@ func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) 
 		return nil, err
 	}
 
-	customMessageEntry := &UICustomMessagesEntry{}
+	customMessageEntry := &UICustomMessageEntry{}
 	if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
 		return nil, err
 	}
@@ -173,14 +174,14 @@ func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) er
 	return c.customMessageBarrierView(ctx).Delete(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 }
 
-func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessagesEntry) (*UICustomMessagesEntry, error) {
+func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
 	count, err := c.countCustomMessages(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if count >= MaximumCustomMessageCount {
-		return nil, logical.ErrUnrecoverable
+		return nil, errors.New("maximum number of Custom Message already exists")
 	}
 
 	messageId, err := uuid.GenerateUUID()
@@ -212,7 +213,7 @@ func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
 	return len(keys), nil
 }
 
-func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessagesEntry) (*UICustomMessagesEntry, error) {
+func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
 	err := c.saveCustomMessage(ctx, entry)
 	if err != nil {
 		return nil, err
@@ -223,7 +224,7 @@ func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessag
 	return &entry, nil
 }
 
-func (c *UIConfig) saveCustomMessage(ctx context.Context, entry UICustomMessagesEntry) error {
+func (c *UIConfig) saveCustomMessage(ctx context.Context, entry UICustomMessageEntry) error {
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
 

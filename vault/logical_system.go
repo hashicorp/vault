@@ -5665,7 +5665,7 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		}
 	}
 
-	entry := &UICustomMessagesEntry{
+	entry := &UICustomMessageEntry{
 		Title:         title,
 		Authenticated: authenticated,
 		MessageType:   messageType,
@@ -5843,7 +5843,7 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse("invalid end_time parameter value"), nil
 	}
 
-	entry := &UICustomMessagesEntry{
+	entry := &UICustomMessageEntry{
 		Id:            messageId,
 		Title:         title,
 		Authenticated: authenticated,
