@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import KVObject from 'vault/lib/kv-object';
+import { stringify } from 'core/helpers/stringify';
 
 /**
  * @module KvDataFields is used for rendering the fields associated with kv secret data, it hides/shows a json editor and renders validation errors for the json editor
@@ -28,10 +28,13 @@ import KVObject from 'vault/lib/kv-object';
 
 export default class KvDataFields extends Component {
   @tracked lintingErrors;
+  @tracked codeMirrorString;
 
-  get emptyJson() {
-    // if secretData is null, this specially formats a blank object and renders a nice initial state for the json editor
-    return KVObject.create({ content: [{ name: '', value: '' }] }).toJSONString(true);
+  constructor() {
+    super(...arguments);
+    this.codeMirrorString = this.args.secret?.secretData
+      ? stringify([this.args.secret.secretData], {})
+      : '{ "": "" }';
   }
 
   @action
@@ -41,5 +44,6 @@ export default class KvDataFields extends Component {
     if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
     }
+    this.codeMirrorString = value;
   }
 }
