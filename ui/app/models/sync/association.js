@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default class SyncAssociationModel extends Model {
-  @attr mount; // TODO: currently accessor is returned -- confirm this will be updated on the API
+  @attr mount;
   @attr secretName;
   @attr syncStatus;
   @attr updatedAt;

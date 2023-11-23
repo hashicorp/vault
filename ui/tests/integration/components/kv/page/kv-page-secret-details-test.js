@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
+import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -37,6 +38,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       deletion_time: '',
       destroyed: false,
       version: this.version,
+      backend: this.backend,
+      path: this.path,
     });
 
     const metadata = this.server.create('kv-metadatum');
@@ -64,7 +67,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
-    assert.expect(6);
+    assert.expect(8);
+    this.server.get(`sys/sync/associations/:mount/*name`, (schema, req) => {
+      assert.ok(true, 'request made to fetch sync status');
+      // no records so response returns 404
+      return syncStatusResponse(schema, req);
+    });
 
     await render(
       hbs`
@@ -78,6 +86,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
 
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .doesNotExist('sync page alert banner does not render when sync status errors');
     assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(PAGE.infoRowValue('foo')).exists('renders row for secret data');
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -170,5 +181,43 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert
       .dom(`${PAGE.detail.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
+  });
+
+  test('it renders sync status page alert', async function (assert) {
+    assert.expect(3); // assert count important because confirms request made to fetch sync status twice
+    const destinationName = 'my-destination';
+    this.server.create('sync-association', {
+      type: 'aws-sm',
+      name: destinationName,
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.get('sys/sync/associations/:mount/*name', (schema, req) => {
+      // this assertion should be hit twice, once on init and again when the 'Refresh' button is clicked
+      assert.ok(true, 'request made to fetch sync status');
+      return syncStatusResponse(schema, req);
+    });
+
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    assert
+      .dom(PAGE.detail.syncAlert(destinationName))
+      .hasTextContaining(
+        'Synced my-destination - last updated September',
+        'renders sync status alert banner'
+      );
+
+    // sync status refresh button
+    await click(`${PAGE.detail.syncAlert()} button`);
   });
 });
