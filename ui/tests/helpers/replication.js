@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { click, fillIn, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
 
 export const disableReplication = async (type, assert) => {
