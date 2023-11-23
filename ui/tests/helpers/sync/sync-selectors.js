@@ -24,6 +24,15 @@ export const PAGE = {
       },
     },
   },
+  destinations: {
+    sync: {
+      mountSelect: '[data-test-sync-mount-select]',
+      secretInput: '[data-test-sync-secret-input]',
+      secretSelect: '[data-test-sync-secret-select]',
+      submit: '[data-test-sync-submit]',
+      cancel: '[data-test-sync-cancel]',
+    },
+  },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',

@@ -99,6 +99,11 @@ export interface SyncDestination {
   maskedParams: Array<string>;
 }
 
+export interface SearchSelectOption {
+  name: string;
+  id: string;
+}
+
 // Generic interfaces
 export interface StringMap {
   [key: string]: string;

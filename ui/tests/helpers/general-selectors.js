@@ -22,4 +22,9 @@ export const SELECTORS = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
+  searchSelect: {
+    option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,
+    selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
+    noMatch: '.ember-power-select-option--no-matches-message',
+  },
 };

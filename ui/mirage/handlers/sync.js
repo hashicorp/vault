@@ -90,6 +90,13 @@ export default function (server) {
   server.post(`${uri}/associations/set`, (schema, req) => {
     const { type, name } = req.params;
     const { secret_name, mount } = JSON.parse(req.requestBody);
+    if (secret_name.slice(-1) === '/') {
+      return new Response(
+        400,
+        {},
+        { errors: ['Secret not found. Please provide full path to existing secret'] }
+      );
+    }
     const data = { type, name, mount, secret_name };
     schema.db.syncAssociations.firstOrCreate({ type, name }, data);
     schema.db.syncAssociations.update({ type, name }, { ...data, sync_status: 'SYNCED' });
