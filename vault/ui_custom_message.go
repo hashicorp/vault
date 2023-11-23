@@ -65,8 +65,8 @@ type UICustomMessagesEntry struct {
 	Id            string         `json:"id"`
 	Title         string         `json:"title"`
 	Message       string         `json:"message"`
-	StartTime     time.Time      `json:"start-time"`
-	EndTime       time.Time      `json:"end-time"`
+	StartTime     time.Time      `json:"start_time"`
+	EndTime       time.Time      `json:"end_time"`
 	Options       map[string]any `json:"options"`
 	Link          map[string]any `json:"link"`
 	Authenticated bool           `json:"authenticated"`
@@ -158,7 +158,7 @@ func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) 
 		return nil, err
 	}
 
-	var customMessageEntry *UICustomMessagesEntry
+	customMessageEntry := &UICustomMessagesEntry{}
 	if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
 		return nil, err
 	}
