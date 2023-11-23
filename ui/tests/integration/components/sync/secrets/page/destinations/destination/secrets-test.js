@@ -53,11 +53,11 @@ module(
 
     test('it should render list item details', async function (assert) {
       const { list } = PAGE.associations;
-      assert.dom(list.name).hasText('kv/my-secret', 'Association mount/secret renders as name');
-      assert.dom(list.status).hasText('SYNCED', 'Association status renders');
+      assert.dom(list.name).hasText('my-secret', 'Association mount/secret renders as name');
+      assert.dom(list.status).hasText('Synced', 'Association status renders');
       assert
         .dom(list.updated)
-        .hasText('last synced on September 20th 2023, 10:51:53 AM', 'Last synced datetime renders');
+        .hasText('last updated on September 20th 2023, 10:51:53 AM', 'Last synced datetime renders');
     });
 
     test('it should render list item menu actions', async function (assert) {
@@ -73,7 +73,7 @@ module(
 
       const { menu } = PAGE.associations.list;
       assert.dom(menu.sync).hasText('Sync now', 'Sync menu action renders');
-      assert.dom(menu.edit).hasText('Edit secret', 'Edit secret menu action renders');
+      assert.dom(menu.view).hasText('View secret', 'View secret menu action renders');
       assert.dom(menu.unsync).hasText('Unsync', 'Unsync menu action renders');
 
       await click(menu.sync);

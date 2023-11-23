@@ -11,7 +11,7 @@ export default create({
   breadcrumbs: collection('[data-test-secret-breadcrumb]', {
     text: text(),
   }),
-  deleteBtnV1: clickable('[data-test-secret-v1-delete="true"] button'),
+  deleteBtnV1: clickable('[data-test-secret-v1-delete]'),
   confirmBtn: clickable('[data-test-confirm-button]'),
   rows: collection('data-test-row-label'),
   edit: clickable('[data-test-secret-edit]'),

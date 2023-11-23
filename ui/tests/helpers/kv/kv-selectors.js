@@ -49,6 +49,7 @@ export const PAGE = {
     deleteOption: 'input#delete-version',
     deleteOptionLatest: 'input#delete-latest-version',
     deleteConfirm: '[data-test-delete-modal-confirm]',
+    syncAlert: (name) => (name ? `[data-test-sync-alert="${name}"]` : '[data-test-sync-alert]'),
   },
   edit: {
     toggleDiff: '[data-test-toggle-input="Show diff"',

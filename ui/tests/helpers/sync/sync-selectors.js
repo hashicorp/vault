@@ -19,7 +19,7 @@ export const PAGE = {
       updated: '[data-test-association-updated]',
       menu: {
         sync: '[data-test-association-action="sync"]',
-        edit: '[data-test-association-action="edit"]',
+        view: '[data-test-association-action="view"]',
         unsync: '[data-test-association-action="unsync"]',
       },
     },
@@ -32,6 +32,10 @@ export const PAGE = {
       submit: '[data-test-sync-submit]',
       cancel: '[data-test-sync-cancel]',
     },
+  },
+  syncBadge: {
+    icon: (name) => `[data-test-icon="${name}"]`,
+    text: '.hds-badge__text',
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   cancelButton: '[data-test-cancel]',

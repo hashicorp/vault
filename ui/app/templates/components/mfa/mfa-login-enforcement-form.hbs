@@ -78,6 +78,7 @@
     {{/each}}
     <div class="is-flex-row {{if this.targets 'has-top-padding-s has-border-top-light'}}">
       <Select
+        class="is-marginless"
         @options={{this.targetTypes}}
         @labelAttribute="label"
         @valueAttribute="type"
@@ -128,7 +129,7 @@
       />
     </div>
     {{#if this.errors.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.errors.targets.errors}} />
+      <AlertInline class="has-top-padding-s" @type="danger" @message={{join ", " this.errors.targets.errors}} />
     {{/if}}
   </div>
   {{#unless @isInline}}

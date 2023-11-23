@@ -21,14 +21,10 @@
 
 <div class="field is-grouped box is-fullwidth is-bottomless">
   <ConfirmAction
-    @buttonClasses="button is-primary"
+    @buttonText="Seal"
     @confirmTitle="Seal this cluster?"
     @confirmMessage="You will not be able to read or write any data until the cluster is unsealed again."
-    @confirmButtonText="Seal"
-    @horizontalPosition="auto-left"
     @onConfirmAction={{this.handleSeal}}
     data-test-seal
-  >
-    Seal
-  </ConfirmAction>
+  />
 </div>

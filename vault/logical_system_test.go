@@ -6327,7 +6327,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 		})
 	}
 
-	shamirSeal := NewDefaultSeal(seal.NewAccess(nil,
+	a, err := seal.NewAccess(nil,
 		&seal.SealGenerationInfo{
 			Generation: 1,
 			Seals:      []*configutil.KMS{{Type: wrapping.WrapperTypeShamir.String()}},
@@ -6340,7 +6340,9 @@ func TestGetSealBackendStatus(t *testing.T) {
 				Configured:     true,
 			},
 		},
-	))
+	)
+	require.NoError(t, err)
+	shamirSeal := NewDefaultSeal(a)
 
 	c := TestCoreWithSeal(t, shamirSeal, false)
 	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c, nil)

@@ -8,13 +8,12 @@
     <ul class="menu-list">
       <li class="action">
         <ConfirmAction
-          @buttonClasses="link is-destroy"
-          @confirmButtonText="Remove this group?"
+          @buttonText="Remove"
+          @confirmTitle="Remove this group?"
+          @isInDropdown={{true}}
           @confirmMessage="This may affect permissions for this group."
           @onConfirmAction={{action "performTransaction" this.model this.groupArray this.memberId}}
-        >
-          Remove
-        </ConfirmAction>
+        />
       </li>
     </ul>
   </nav>
