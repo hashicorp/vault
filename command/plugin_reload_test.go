@@ -46,13 +46,13 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		{
 			"not_enough_args",
 			nil,
-			"Not enough arguments",
+			"No plugins specified, must specify exactly one of -plugin or -mounts",
 			1,
 		},
 		{
 			"too_many_args",
 			[]string{"-plugin", "foo", "-mounts", "bar"},
-			"Too many arguments",
+			"Must specify exactly one of -plugin or -mounts",
 			1,
 		},
 	}
@@ -147,7 +147,7 @@ func TestPluginReloadStatusCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			ui, cmd := testPluginReloadCommand(t)
+			ui, cmd := testPluginReloadStatusCommand(t)
 			cmd.client = client
 
 			args := append([]string{}, tc.args...)
