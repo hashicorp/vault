@@ -70,7 +70,12 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
 	ctx := context.Background()
 	for i := 0; i < opts.WrapperCount; i++ {
+		wrapperName := fmt.Sprintf("%s-%d", opts.Name, i+1)
 		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secrets[i])}
+		_, err := wrappers[i].Wrapper.SetConfig(context.Background(), wrapping.WithKeyId(wrapperName))
+		if err != nil {
+			panic(err)
+		}
 		wrapperType, err := wrappers[i].Type(ctx)
 		if err != nil {
 			panic(err)
@@ -78,7 +83,7 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 		sealWrappers[i] = NewSealWrapper(
 			wrappers[i],
 			i+1,
-			fmt.Sprintf("%s-%d", opts.Name, i+1),
+			wrapperName,
 			wrapperType.String(),
 			false,
 			true,
