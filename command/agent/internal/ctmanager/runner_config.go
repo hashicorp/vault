@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/command/agent/config"
@@ -119,12 +118,6 @@ func NewConfig(mc ManagerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.
 	// setup log level from TemplateServer config
 	conf.LogLevel = logLevelToStringPtr(mc.LogLevel)
 
-	if err := ctlogging.Setup(&ctlogging.Config{
-		Level:  *conf.LogLevel,
-		Writer: mc.LogWriter,
-	}); err != nil {
-		return nil, err
-	}
 	return conf, nil
 }
 
