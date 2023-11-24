@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -211,13 +210,13 @@ func (c *AgentCommand) Run(args []string) int {
 		c.outputErrors(err)
 		return 1
 	}
+
+	// Update the logger and then base the log writer on that logger.
+	// Log writer is supplied to consul-template runners for templates and execs.
+	// We want to ensure that consul-template will honor the settings, for example
+	// if the -log-format is JSON we want JSON, not a mix of JSON and non-JSON messages.
 	c.logger = l
-	// Once we've assigned the logger, we set output so that libraries like
-	// consul-template will honor our settings (i.e. if the -log-format is JSON
-	// we want JSON, not a mix of JSON and non-JSON messages).
-	log.SetOutput(l.StandardWriter(&hclog.StandardLoggerOptions{
-		InferLevelsWithTimestamp: true,
-	}))
+	c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
