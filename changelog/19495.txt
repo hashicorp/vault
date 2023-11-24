@@ -1,0 +1,3 @@
+```release-note:bug
+shamir: change mul and div implementations to be constant-time
+```
