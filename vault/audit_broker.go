@@ -10,15 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
-
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
