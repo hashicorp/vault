@@ -22,6 +22,7 @@ const ENDPOINTS = [
   'init',
   'capabilities-self',
   'license',
+  'internal/ui/version',
 ];
 
 const REPLICATION_ENDPOINTS = {
@@ -92,6 +93,10 @@ export default ApplicationAdapter.extend({
     return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
+  },
+
+  fetchVersion() {
+    return this.ajax(`${this.urlFor('internal/ui/version')}`, 'GET');
   },
 
   sealStatus() {

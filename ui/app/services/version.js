@@ -11,7 +11,17 @@ export default class VersionService extends Service {
   @service store;
   @tracked features = [];
   @tracked version = null;
+  @tracked type = null;
 
+  get isEnterprise() {
+    return this.type === 'enterprise';
+  }
+
+  get isOSS() {
+    return !this.isEnterprise;
+  }
+
+  /* Features */
   get hasPerfReplication() {
     return this.features.includes('Performance Replication');
   }
@@ -32,20 +42,29 @@ export default class VersionService extends Service {
     return this.features.includes('Control Groups');
   }
 
-  get isEnterprise() {
-    if (!this.version) return false;
-    return this.version.includes('+');
+  get versionDisplay() {
+    if (!this.version) {
+      return '';
+    }
+    return this.isEnterprise ? `v${this.version.slice(0, this.version.indexOf('+'))}` : `v${this.version}`;
   }
 
-  get isOSS() {
-    return !this.isEnterprise;
-  }
-
-  @task
+  @task({ drop: true })
   *getVersion() {
     if (this.version) return;
-    const response = yield this.store.adapterFor('cluster').sealStatus();
-    this.version = response.version;
+    const response = yield this.store.adapterFor('cluster').fetchVersion();
+    this.version = response.data.version;
+  }
+
+  @task({ drop: true })
+  *getType() {
+    if (this.type !== null) return;
+    const response = yield this.store.adapterFor('cluster').health();
+    if (typeof response.enterprise === 'boolean') {
+      this.type = response.enterprise ? 'enterprise' : 'community';
+    } else {
+      this.type = response.license ? 'enterprise' : 'community';
+    }
     return;
   }
 
@@ -65,6 +84,10 @@ export default class VersionService extends Service {
 
   fetchVersion() {
     return this.getVersion.perform();
+  }
+
+  fetchType() {
+    return this.getType.perform();
   }
 
   fetchFeatures() {

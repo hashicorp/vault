@@ -21,8 +21,6 @@ export default class DashboardVaultVersionTitle extends Component {
   @service namespace;
 
   get versionHeader() {
-    return this.version.isEnterprise
-      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
-      : `Vault v${this.version.version}`;
+    return `Vault ${this.version.versionDisplay}`;
   }
 }

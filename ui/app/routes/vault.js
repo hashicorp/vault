@@ -17,7 +17,8 @@ export default class VaultRoute extends Route {
   @service version;
 
   beforeModel() {
-    return this.version.fetchVersion();
+    // So we can know what type (Enterprise/Community) we're running
+    return this.version.fetchType();
   }
 
   model() {
