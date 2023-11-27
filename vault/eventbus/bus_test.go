@@ -684,7 +684,7 @@ func TestPipelineCleanedUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	// check that the filters are set
-	if !bus.filters.anyMatch(namespace.RootNamespace.Path, eventType) {
+	if !bus.filters.anyMatch(namespace.RootNamespace, eventType) {
 		t.Fatal()
 	}
 	if !bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
@@ -699,7 +699,7 @@ func TestPipelineCleanedUp(t *testing.T) {
 	}
 
 	// and that the filters are cleaned up
-	if bus.filters.anyMatch(namespace.RootNamespace.Path, eventType) {
+	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
 		t.Fatal()
 	}
 }
