@@ -77,12 +77,13 @@ func (c *PluginInfoCommand) Run(args []string) int {
 
 	var pluginNameRaw, pluginTypeRaw string
 	args = f.Args()
+	positionalArgsCount := len(args)
 	switch {
-	case len(args) < 2:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", len(args)))
+	case positionalArgsCount < 2:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
-	case len(args) > 2:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", len(args)))
+	case positionalArgsCount > 2:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
 	}
 

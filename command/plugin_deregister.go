@@ -85,15 +85,16 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 
 	var pluginNameRaw, pluginTypeRaw string
 	args = f.Args()
-	switch len(args) {
+	positionalArgsCount := len(args)
+	switch positionalArgsCount {
 	case 0, 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
 	case 2:
 		pluginTypeRaw = args[0]
 		pluginNameRaw = args[1]
 	default:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
 	}
 
@@ -119,11 +120,11 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 
 	// The deregister endpoint returns 200 if the plugin doesn't exist, so first
 	// try fetching the plugin to help improve info printed to the user.
-	// 404 => Return early with a descriptive message
-	// Other error => Continue attempting to deregister the plugin anyway
-	// Plugin exists but is builtin => Error early
+	// 404 => Return early with a descriptive message.
+	// Other error => Continue attempting to deregister the plugin anyway.
+	// Plugin exists but is builtin => Error early.
 	// Otherwise => If deregister succeeds, we can report that the plugin really
-	// 				was deregistered (and not just already absent)
+	//              was deregistered (and not just already absent).
 	var pluginExists bool
 	if info, err := client.Sys().GetPluginWithContext(context.Background(), &api.GetPluginInput{
 		Name:    pluginName,
@@ -137,7 +138,7 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		// Best-effort check, continue trying to deregister.
 	} else if info != nil {
 		if info.Builtin {
-			c.UI.Error(fmt.Sprintf("Plugin %q (type: %q) is a builtin plugin", pluginName, pluginType))
+			c.UI.Error(fmt.Sprintf("Plugin %q (type: %q) is a builtin plugin and cannot be deregistered", pluginName, pluginType))
 			return 2
 		}
 		pluginExists = true
