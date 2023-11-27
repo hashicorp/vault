@@ -150,30 +150,41 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	if c.Sealed() {
 		return false, "", "", consts.ErrSealed
 	}
-
 	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+
+	return c.LeaderLocked()
+}
+
+func (c *Core) LeaderLocked() (isLeader bool, leaderAddr, clusterAddr string, err error) {
+	// Check if HA enabled. We don't need the lock for this check as it's set
+	// on startup and never modified
+	if c.ha == nil {
+		return false, "", "", ErrHANotEnabled
+	}
+
+	// Check if sealed
+	if c.Sealed() {
+		return false, "", "", consts.ErrSealed
+	}
 
 	// Check if we are the leader
 	if !c.standby {
-		c.stateLock.RUnlock()
 		return true, c.redirectAddr, c.ClusterAddr(), nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(CoreLockPath, "read")
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
-		c.stateLock.RUnlock()
 		return false, "", "", err
 	}
 	if !held {
-		c.stateLock.RUnlock()
 		return false, "", "", nil
 	}
 
@@ -188,13 +199,11 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirectAddr != "" {
-		c.stateLock.RUnlock()
 		return false, localRedirectAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("found new active node information, refreshing")
 
-	defer c.stateLock.RUnlock()
 	c.leaderParamsLock.Lock()
 	defer c.leaderParamsLock.Unlock()
 
