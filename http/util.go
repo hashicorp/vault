@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -40,14 +40,6 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		}
 		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
 
-		// Clone body, so we do not close the request body reader
-		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
-			return
-		}
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-
 		quotaReq := &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
@@ -67,6 +59,14 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		// If any role-based quotas are enabled for this namespace/mount, just
 		// do the role resolution once here.
 		if requiresResolveRole {
+			// Clone body, so we do not close the request body reader
+			bodyBytes, err := io.ReadAll(r.Body)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 			role := core.DetermineRoleFromLoginRequestFromBytes(r.Context(), mountPath, bodyBytes)
 			// add an entry to the context to prevent recalculating request role unnecessarily
 			r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
