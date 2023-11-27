@@ -68,10 +68,10 @@
               class="link"
               data-test-upgrade-link-performance
             >
-              Learn more about Performance Replication here.
+              Learn more about Performance Replication.
             </ExternalLink>
           </p>
-        {{else if (and (eq this.mode "dr") (not (has-feature "Disaster Recovery")))}}
+        {{else if (and (eq this.mode "dr") (not (has-feature "DR Replication")))}}
           <p>
             Disaster Recovery is a feature of Vault Enterprise Premium.
             <ExternalLink
@@ -79,7 +79,7 @@
               class="link"
               data-test-upgrade-link-dr
             >
-              Learn more about Disaster Recovery here.
+              Learn more about Disaster Recovery.
             </ExternalLink>
           </p>
         {{else if this.replicationEnabled}}
