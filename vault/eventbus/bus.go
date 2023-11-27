@@ -43,7 +43,6 @@ var (
 		"path",
 		logical.EventMetadataDataPath,
 	}
-	initCloudEventsFormatterFilterOnce sync.Once
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
