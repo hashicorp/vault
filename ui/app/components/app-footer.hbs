@@ -1,39 +1,26 @@
-<footer class="footer has-text-grey has-text-centered">
-  <span class="is-inline-block" data-test-footer-copyright>
-    <Icon @name="hashicorp" aria-hidden="true" class="has-text-grey-light" />
-    &copy;
-    {{date-format (now) "yyyy"}}
-    HashiCorp
-  </span>
-  <span>
-    <ExternalLink @href={{changelog-url-for this.version.version}} class="link has-text-grey" data-test-footer-version>
-      Vault
-      {{this.version.version}}
-    </ExternalLink>
-  </span>
+<Hds::AppFooter as |AF|>
+  <AF.ExtraBefore>
+    {{#if this.isDevelopment}}
+      <div class="env-banner">
+        <div class="level-item notification">
+          <Icon @name="git-branch" /><Icon @name="pencil-tool" />
+          Local development
+          <Icon @name="pencil-tool" /><Icon @name="git-branch" />
+        </div>
+      </div>
+    {{/if}}
+  </AF.ExtraBefore>
+  <AF.Link @href={{changelog-url-for this.version.version}} data-test-footer-version>
+    Vault
+    {{this.version.version}}
+  </AF.Link>
   {{#if (is-version "OSS")}}
-    <span>
-      <ExternalLink
-        @href="https://hashicorp.com/products/vault/trial?source=vaultui"
-        class="link has-text-grey"
-        data-test-footer-upgrade-link
-      >
-        Upgrade to Vault Enterprise
-      </ExternalLink>
-    </span>
+    <AF.Link @href="https://hashicorp.com/products/vault/trial?source=vaultui" data-test-footer-upgrade-link>
+      Upgrade to Vault Enterprise
+    </AF.Link>
   {{/if}}
-  <span>
-    <DocLink @path="/vault" class="has-text-grey" data-test-footer-documentation-link>
-      Documentation
-    </DocLink>
-  </span>
-</footer>
-{{#if this.isDevelopment}}
-  <div class="env-banner level development">
-    <div class="level-item notification">
-      <Icon @name="git-branch" /><Icon @name="pencil-tool" />
-      Local development
-      <Icon @name="pencil-tool" /><Icon @name="git-branch" />
-    </div>
-  </div>
-{{/if}}
+  <AF.Link @href={{doc-link "/vault"}}>
+    Documentation
+  </AF.Link>
+  <AF.LegalLinks />
+</Hds::AppFooter>
