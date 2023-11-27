@@ -6926,6 +6926,8 @@ func TestHandleReadCustomMessage(t *testing.T) {
 		getFails: true,
 	}
 
+	fieldData.Raw["id"] = "abc"
+
 	resp, err = backend.handleReadCustomMessage(context.Background(), &logical.Request{}, fieldData)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
