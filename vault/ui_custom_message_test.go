@@ -15,7 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestIsTimeNowBetween verifies the proper functioning of the isTimeNowBetween
+// function. The test calculates times that are either 1 or 2 hours away from
+// time.Now, so there shouldn't be any timing concerns.
 func TestIsTimeNowBetween(t *testing.T) {
+	var (
+		distantPast   time.Time = time.Now().Add(-2 * time.Hour)
+		past          time.Time = time.Now().Add(-1 * time.Hour)
+		future        time.Time = time.Now().Add(time.Hour)
+		distantFuture time.Time = time.Now().Add(2 * time.Hour)
+	)
+
 	testcases := []struct {
 		name        string
 		startTime   time.Time
@@ -24,38 +34,40 @@ func TestIsTimeNowBetween(t *testing.T) {
 	}{
 		{
 			name:        "is between start and end times",
-			startTime:   time.Now().Add(-1 * time.Hour),
-			endTime:     time.Now().Add(time.Hour),
+			startTime:   past,
+			endTime:     future,
 			expectation: true,
 		},
 		{
 			name:        "both start and end times before",
-			startTime:   time.Now().Add(-2 * time.Hour),
-			endTime:     time.Now().Add(-1 * time.Hour),
+			startTime:   distantPast,
+			endTime:     past,
 			expectation: false,
 		},
 		{
 			name:        "both start and end times after",
-			startTime:   time.Now().Add(time.Hour),
-			endTime:     time.Now().Add(2 * time.Hour),
+			startTime:   future,
+			endTime:     distantFuture,
 			expectation: false,
 		},
+		// These test cases have the startTime occurring after the endTime
+		// the algorithm will always return false in these cases.
 		{
 			name:        "is between start and end times, reversed",
-			startTime:   time.Now().Add(time.Hour),
-			endTime:     time.Now().Add(-1 * time.Hour),
+			startTime:   future,
+			endTime:     past,
 			expectation: false,
 		},
 		{
 			name:        "both start and end times before, reversed",
-			startTime:   time.Now().Add(-1 * time.Hour),
-			endTime:     time.Now().Add(-2 * time.Hour),
+			startTime:   past,
+			endTime:     distantPast,
 			expectation: false,
 		},
 		{
 			name:        "both start and end times after, reversed",
-			startTime:   time.Now().Add(2 * time.Hour),
-			endTime:     time.Now().Add(time.Hour),
+			startTime:   distantFuture,
+			endTime:     future,
 			expectation: false,
 		},
 	}
@@ -66,6 +78,10 @@ func TestIsTimeNowBetween(t *testing.T) {
 	}
 }
 
+// TestCustomMessageBarrierView verifies that the
+// (*UIConfig).customMessageBarrierView returns the correct logical.Storage
+// based on the (*UIConfig).nsBarrierView field and whether a
+// namespace.Namespace is exists in the provided context.Context.
 func TestCustomMessageBarrierView(t *testing.T) {
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
@@ -84,30 +100,32 @@ func TestCustomMessageBarrierView(t *testing.T) {
 	view = testUIConfig.customMessageBarrierView(namespaceCtx)
 	assert.Same(t, testUIConfig.barrierStorage, view)
 
-	// Make sure that barrierStorage is returned when no namespace in context.
+	// Setup the nsBarrierView to test with and without a namespace in the
+	// context.
 	testUIConfig.nsBarrierView = NewBarrierView(&logical.InmemStorage{}, "namespaces/")
+
+	view = testUIConfig.customMessageBarrierView(namespaceCtx)
+	assert.NotSame(t, testUIConfig.barrierStorage, view)
 
 	view = testUIConfig.customMessageBarrierView(context.Background())
 	assert.Same(t, testUIConfig.barrierStorage, view)
-
-	// Make sure that a sub view is returned when Namespace is in the context
-	// and nsBarrierView is set.
-	view = testUIConfig.customMessageBarrierView(namespaceCtx)
-	assert.NotSame(t, testUIConfig.barrierStorage, view)
-	assert.NotSame(t, testUIConfig.nsBarrierView, view)
 }
 
+// TestListCustomMessages verifies the filtering logic in the
+// (*UIConfig).ListCustomMessages method.
 func TestListCustomMessages(t *testing.T) {
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
 	}
 
-	// Happy path testing first
+	// Check that with no filtering and no messages in the storage, no error is
+	// returned and an empty slice of UICustomMessageEntry.
 	results, err := testUIConfig.ListCustomMessages(context.Background(), ListUICustomMessagesFilters{})
 	assert.NoError(t, err)
 	assert.NotNil(t, results)
 	assert.Equal(t, 0, len(results))
 
+	// Load some custom messages in storage.
 	commonMessage := "the message"
 	commonTitle := "the title"
 	distantPastTime := time.Now().Add(-24 * time.Hour)
@@ -190,6 +208,7 @@ func TestListCustomMessages(t *testing.T) {
 		storeTestUICustomMessage(t, testUIConfig.barrierStorage, elem)
 	}
 
+	// Test all of the different combinations of filters (including omissions)
 	trueBool := true
 	falseBool := false
 
@@ -234,7 +253,7 @@ func TestListCustomMessages(t *testing.T) {
 		}
 	}
 
-	// Non-happy path testing
+	// Error testing
 	//  There's 2 ways that the ListCustomMessages function can return an error:
 	//  1. If the List function for the logical.Storage returns an error, or
 	//  2. If the get function for the logical.Storage returns an error
@@ -257,12 +276,14 @@ func TestListCustomMessages(t *testing.T) {
 	assert.Nil(t, results)
 }
 
+// TestReadCustomMessage verifies that the (*UIConfig).ReadCustomMessage method
+// behaves appropriatly based on different circumstances.
 func TestReadCustomMessage(t *testing.T) {
+	// Setup a UIConfig for testing with 2 sample custom messages stored in it.
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
 	}
 
-	// Happy path testing
 	entry := UICustomMessageEntry{
 		Title:         "title",
 		MessageType:   "banner",
@@ -275,18 +296,22 @@ func TestReadCustomMessage(t *testing.T) {
 		entry.Id = fmt.Sprintf("00%d", i)
 		entry.Message = fmt.Sprintf("message %d", i)
 
-		require.NoError(t, testUIConfig.saveCustomMessage(context.Background(), entry))
+		storeTestUICustomMessage(t, testUIConfig.barrierStorage, entry)
 	}
 
+	// Check that one of those messages can be read successfully
 	result, err := testUIConfig.ReadCustomMessage(context.Background(), "001")
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, "message 1", result.Message)
 	assert.True(t, result.active)
 
-	// Check the error paths
+	// Check that reading a non-existant message produces the correct errors.
+	result, err = testUIConfig.ReadCustomMessage(context.Background(), "555")
+	assert.NoError(t, err)
+	assert.Nil(t, result)
 
-	// Setup a JSON decode failure
+	// Check that error due to JSON decode failure is returned
 	require.NoError(t, testUIConfig.barrierStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   fmt.Sprintf("%s/bad", UICustomMessageKey),
 		Value: []byte("_Not}JSO\"N"),
@@ -296,7 +321,8 @@ func TestReadCustomMessage(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, result)
 
-	// Setup a failure when Get is called on the logical.Storage.
+	// Check that when an error is return from the (logical.Storage).Get, it is
+	// returned.
 	testUIConfig.barrierStorage = &testingStorage{
 		getFails: true,
 	}
@@ -306,10 +332,15 @@ func TestReadCustomMessage(t *testing.T) {
 	assert.Nil(t, result)
 }
 
+// TestCreateCustomMessage verifies that the (*UIConfig).CreateCustomMessage
+// works as expected in all circumstances. This includes errors in the
+// underlying logical.Storage, reaching the maximum count of custom messages.
 func TestCreateCustomMessage(t *testing.T) {
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
 	}
+
+	testUIConfig.nsBarrierView = NewBarrierView(testUIConfig.barrierStorage, "namespaces/")
 
 	entry := UICustomMessageEntry{
 		Title:         "title",
@@ -320,15 +351,14 @@ func TestCreateCustomMessage(t *testing.T) {
 		EndTime:       time.Now().Add(time.Hour),
 	}
 
-	// Happy path first!
+	// Create a custom message
 	result, err := testUIConfig.CreateCustomMessage(context.Background(), entry)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.NotEmpty(t, result.Id)
 	assert.True(t, result.active)
 
-	// Non-happy path test cases
-	// Exceeding maximum custom message count
+	// Create more custom message to have the maximum number of custom messages.
 	for i := 0; i < MaximumCustomMessageCount-1; i++ {
 		result, err = testUIConfig.CreateCustomMessage(context.Background(), entry)
 		assert.NoError(t, err)
@@ -341,6 +371,19 @@ func TestCreateCustomMessage(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, result)
 
+	// Make sure that a custom message can be still be created in a different
+	// namespace.
+	ns := &namespace.Namespace{
+		ID:   "abc",
+		Path: "def/",
+	}
+	result, err = testUIConfig.CreateCustomMessage(namespace.ContextWithNamespace(context.Background(), ns), entry)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.NotEmpty(t, result.Id)
+
+	// Check that error is returned when an error occurs in the underlying
+	// logical.Storage.
 	testUIConfig.barrierStorage = &testingStorage{
 		listFails: true,
 	}
@@ -358,7 +401,9 @@ func TestCreateCustomMessage(t *testing.T) {
 	assert.Nil(t, result)
 }
 
+// TestDeleteCustomMessage verifies
 func TestDeleteCustomMessage(t *testing.T) {
+	// Setup UIConfig with a custom message
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
 	}
@@ -372,14 +417,22 @@ func TestDeleteCustomMessage(t *testing.T) {
 		EndTime:     time.Now().Add(time.Hour),
 	}
 
-	require.NoError(t, testUIConfig.saveCustomMessage(context.Background(), entry))
+	storeTestUICustomMessage(t, testUIConfig.barrierStorage, entry)
 
+	// Check that the custom message can be deleted and no error is returned.
+	// Then count the remaining custom messages.
 	assert.NoError(t, testUIConfig.DeleteCustomMessage(context.Background(), "id"))
 
 	count, err := testUIConfig.countCustomMessages(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 
+	// Check that deleting a non-existing custom message, doesn't return an
+	// error.
+	assert.NoError(t, testUIConfig.DeleteCustomMessage(context.Background(), "id"))
+
+	// Check that an error is returned when there's an error in the underlying
+	// logical.Storage.
 	testUIConfig.barrierStorage = &testingStorage{
 		deleteFails: true,
 	}
@@ -387,12 +440,14 @@ func TestDeleteCustomMessage(t *testing.T) {
 	assert.Error(t, testUIConfig.DeleteCustomMessage(context.Background(), "id"))
 }
 
+// TestUpdateCustomMessage verifies that the (*UIConfig).UpdateCustomMessage
+// method
 func TestUpdateCustomMessage(t *testing.T) {
+	// Setup a UIConfig with a sample custom message
 	testUIConfig := &UIConfig{
 		barrierStorage: &logical.InmemStorage{},
 	}
 
-	// Store a custom message entry in storage
 	entry := UICustomMessageEntry{
 		Id:          "id",
 		Title:       "title",
@@ -402,7 +457,7 @@ func TestUpdateCustomMessage(t *testing.T) {
 		EndTime:     time.Now().Add(time.Hour),
 	}
 
-	testUIConfig.saveCustomMessage(context.Background(), entry)
+	storeTestUICustomMessage(t, testUIConfig.barrierStorage, entry)
 
 	// Update the custom message entry and pass it to the UpdateCustomMessage
 	// function.
@@ -430,12 +485,16 @@ func TestUpdateCustomMessage(t *testing.T) {
 		putFails: true,
 	}
 
-	// Error path
+	// Check that an error is returned if an error occurred in the underlying
+	// logical.Storage.
 	result, err = testUIConfig.UpdateCustomMessage(context.Background(), entry)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 }
 
+// testingStorage is a struct with methods that satisfy the logical.Storage
+// interface. It can be programmed to unconditionally return errors for any
+// of its methods.
 type testingStorage struct {
 	listFails   bool
 	getFails    bool
@@ -443,6 +502,8 @@ type testingStorage struct {
 	putFails    bool
 }
 
+// List returns a single key, dummy, unless the receiver has been configured to
+// return an error, in which case it returns nil and a made up error.
 func (s *testingStorage) List(_ context.Context, _ string) ([]string, error) {
 	if s.listFails {
 		return nil, errors.New("failure")
@@ -451,6 +512,9 @@ func (s *testingStorage) List(_ context.Context, _ string) ([]string, error) {
 	return []string{"dummy"}, nil
 }
 
+// Get returns a dummy logical.StorageEntry unless the receiver has been
+// configured to return an error, in which case it returns nil and a made up
+// error.
 func (s *testingStorage) Get(_ context.Context, _ string) (*logical.StorageEntry, error) {
 	if s.getFails {
 		return nil, errors.New("failure")
@@ -462,6 +526,8 @@ func (s *testingStorage) Get(_ context.Context, _ string) (*logical.StorageEntry
 	}, nil
 }
 
+// Delete returns nothing, unless the receiver has been configured to return an
+// error, in which case it returns a made up error.
 func (s *testingStorage) Delete(_ context.Context, _ string) error {
 	if s.deleteFails {
 		return errors.New("failure")
@@ -470,6 +536,8 @@ func (s *testingStorage) Delete(_ context.Context, _ string) error {
 	return nil
 }
 
+// Put returns nothing, unless the receiver has been configured to return an
+// error, in which case it returns a made up error.
 func (s *testingStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
 	if s.putFails {
 		return errors.New("failure")
@@ -478,6 +546,8 @@ func (s *testingStorage) Put(_ context.Context, _ *logical.StorageEntry) error {
 	return nil
 }
 
+// storeTestUICustomMessage takes care storing a UICustomMessageEntry into
+// the provided logical.Storage without any errors.
 func storeTestUICustomMessage(t *testing.T, storage logical.Storage, customMessage UICustomMessageEntry) {
 	storageEntryValue, err := jsonutil.EncodeJSON(&customMessage)
 	require.NoError(t, err)
@@ -493,6 +563,8 @@ func storeTestUICustomMessage(t *testing.T, storage logical.Storage, customMessa
 	require.NoError(t, err)
 }
 
+// mustGenerateUUID calls the uuid.GenerateUUID method and fails the current
+// test if an error occurs.
 func mustGenerateUUID(t *testing.T) string {
 	result, err := uuid.GenerateUUID()
 	require.NoError(t, err)

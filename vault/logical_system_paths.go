@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -777,7 +776,7 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 		{
 			Pattern: "config/ui/custom-messages$",
 
-			ExistenceCheck: func(context.Context, *logical.Request, *framework.FieldData) (bool, error) { return false, nil },
+			ExistenceCheck: b.handleCustomMessageExistenceCheck,
 
 			Fields: map[string]*framework.FieldSchema{
 				"title": {

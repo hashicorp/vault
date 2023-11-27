@@ -145,7 +145,9 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 		return nil, err
 	}
 
-	customMessageEntry.active = isTimeNowBetween(customMessageEntry.StartTime, customMessageEntry.EndTime)
+	if customMessageEntry != nil {
+		customMessageEntry.active = isTimeNowBetween(customMessageEntry.StartTime, customMessageEntry.EndTime)
+	}
 
 	return customMessageEntry, nil
 }
@@ -159,9 +161,13 @@ func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) 
 		return nil, err
 	}
 
-	customMessageEntry := &UICustomMessageEntry{}
-	if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
-		return nil, err
+	var customMessageEntry *UICustomMessageEntry
+
+	if storageEntry != nil {
+		customMessageEntry = &UICustomMessageEntry{}
+		if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
+			return nil, err
+		}
 	}
 
 	return customMessageEntry, nil
@@ -191,7 +197,7 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 
 	entry.Id = messageId
 
-	err = c.saveCustomMessage(ctx, entry)
+	err = c.saveCustomMessageInternal(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +220,7 @@ func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
 }
 
 func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
-	err := c.saveCustomMessage(ctx, entry)
+	err := c.saveCustomMessageInternal(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -224,19 +230,19 @@ func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessag
 	return &entry, nil
 }
 
-func (c *UIConfig) saveCustomMessage(ctx context.Context, entry UICustomMessageEntry) error {
-	c.customMessageLock.Lock()
-	defer c.customMessageLock.Unlock()
-
-	customMessageRaw, err := json.Marshal(&entry)
+func (c *UIConfig) saveCustomMessageInternal(ctx context.Context, customMessage UICustomMessageEntry) error {
+	updatedValue, err := json.Marshal(&customMessage)
 	if err != nil {
 		return err
 	}
 
 	storageEntry := &logical.StorageEntry{
-		Key:   fmt.Sprintf("%s/%s", UICustomMessageKey, entry.Id),
-		Value: customMessageRaw,
+		Key:   fmt.Sprintf("%s/%s", UICustomMessageKey, customMessage.Id),
+		Value: updatedValue,
 	}
+
+	c.customMessageLock.Lock()
+	defer c.customMessageLock.Unlock()
 
 	return c.customMessageBarrierView(ctx).Put(ctx, storageEntry)
 }
