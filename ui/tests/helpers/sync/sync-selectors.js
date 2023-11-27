@@ -24,6 +24,16 @@ export const PAGE = {
       },
     },
   },
+  destinations: {
+    sync: {
+      mountSelect: '[data-test-sync-mount-select]',
+      mountInput: '[data-test-sync-mount-input]',
+      secretInput: '[data-test-sync-secret-input]',
+      secretSelect: '[data-test-sync-secret-select]',
+      submit: '[data-test-sync-submit]',
+      cancel: '[data-test-sync-cancel]',
+    },
+  },
   syncBadge: {
     icon: (name) => `[data-test-icon="${name}"]`,
     text: '.hds-badge__text',
