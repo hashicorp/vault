@@ -1071,7 +1071,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		}
 		if i == 0 {
 			if err := dc.setupNode0(ctx); err != nil {
-				return nil
+				return err
 			}
 		} else {
 			if err := dc.joinNode(ctx, i, 0); err != nil {

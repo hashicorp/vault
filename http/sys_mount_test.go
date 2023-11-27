@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -994,7 +995,12 @@ func TestSysTuneMount_Options(t *testing.T) {
 }
 
 func TestSysTuneMount(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": vault.LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, coreConfig)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)

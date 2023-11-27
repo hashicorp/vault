@@ -41,8 +41,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     await visit('/vault/auth');
     assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
     assert.ok(currentURL().includes('?namespace=admin'), 'with base namespace');
-    assert.dom('[data-test-namespace-toolbar]').doesNotExist('Normal namespace toolbar does not exist');
-    assert.dom('[data-test-managed-namespace-toolbar]').exists('Managed namespace toolbar exists');
+    assert.dom('[data-test-namespace-toolbar]').exists('Namespace toolbar exists');
     assert.dom('[data-test-managed-namespace-root]').hasText('/admin', 'Shows /admin namespace prefix');
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Default)');
     await fillIn('input#namespace', '/foo');
@@ -50,7 +49,13 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,
-      'Correctly prepends root to namespace'
+      'Correctly prepends root to namespace when input starts with /'
+    );
+    await fillIn('input#namespace', 'foo');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/auth?namespace=${encodedNamespace}&with=token`,
+      'Correctly prepends root to namespace when input does not start with /'
     );
   });
 

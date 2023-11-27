@@ -70,8 +70,8 @@ calculations.
 For example:
 
 - Authentication requests from two ACME clients living on different servers that
-  request the same set of certificate identifiers are assigned to the same
-  certificate entity.
+  request the same set of certificate identifiers (the combination of CN, DNS SANs,
+  and IP SANs) are assigned to the same certificate entity.
 - Multiple requests for the same certificate identifier from a single ACME
   client are assigned to the same certificate entity.
 - Two authentication requests from a single ACME client for different

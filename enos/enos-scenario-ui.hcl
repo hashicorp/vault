@@ -3,8 +3,9 @@
 
 scenario "ui" {
   matrix {
-    edition = ["ce", "ent"]
-    backend = ["consul", "raft"]
+    edition      = ["ce", "ent"]
+    backend      = ["consul", "raft"]
+    seal_ha_beta = ["true", "false"]
   }
 
   terraform_cli = terraform_cli.default
@@ -68,6 +69,15 @@ scenario "ui" {
     }
   }
 
+  step "create_seal_key" {
+    module = "seal_key_${local.seal}"
+
+    variables {
+      cluster_id  = step.create_vpc.cluster_id
+      common_tags = global.tags
+    }
+  }
+
   // This step reads the contents of the backend license if we're using a Consul backend and
   // the edition is "ent".
   step "read_backend_license" {
@@ -97,11 +107,11 @@ scenario "ui" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[local.arch][local.distro][var.ubuntu_distro_version]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.vault_tag_key
-      common_tags           = local.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids[local.arch][local.distro][var.ubuntu_distro_version]
+      cluster_tag_key = local.vault_tag_key
+      common_tags     = local.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -114,11 +124,11 @@ scenario "ui" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.backend_tag_key
-      common_tags           = local.tags
-      vpc_id                = step.create_vpc.vpc_id
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["22.04"]
+      cluster_tag_key = local.backend_tag_key
+      common_tags     = local.tags
+      seal_key_names  = step.create_seal_key.resource_names
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -157,7 +167,6 @@ scenario "ui" {
     }
 
     variables {
-      awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
@@ -171,9 +180,11 @@ scenario "ui" {
       license              = matrix.edition != "ce" ? step.read_vault_license.license : null
       local_artifact_path  = local.bundle_path
       packages             = global.distro_packages["ubuntu"]
+      seal_ha_beta         = matrix.seal_ha_beta
+      seal_key_name        = step.create_seal_key.resource_name
+      seal_type            = local.seal
       storage_backend      = matrix.backend
       target_hosts         = step.create_vault_cluster_targets.hosts
-      unseal_method        = local.seal
     }
   }
 
@@ -210,11 +221,6 @@ scenario "ui" {
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
-  }
-
-  output "awskms_unseal_key_arn" {
-    description = "The Vault cluster KMS key arn"
-    value       = step.create_vpc.kms_key_arn
   }
 
   output "cluster_name" {
@@ -255,6 +261,11 @@ scenario "ui" {
   output "root_token" {
     description = "The Vault cluster root token"
     value       = step.create_vault_cluster.root_token
+  }
+
+  output "seal_key_name" {
+    description = "The Vault cluster seal key name"
+    value       = step.create_seal_key.resource_name
   }
 
   output "ui_test_environment" {

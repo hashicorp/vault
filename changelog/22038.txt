@@ -1,3 +1,0 @@
-```release-note:bug
-core: All subloggers now reflect configured log level on reload.
-```

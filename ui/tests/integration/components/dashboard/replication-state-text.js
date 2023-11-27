@@ -24,13 +24,12 @@ module('Integration | Component | dashboard/replication-state-text', function (h
 
   test('it displays replication states', async function (assert) {
     await render(
-      hbs`
-        <Dashboard::ReplicationStateText 
-          @name={{this.name}} 
-          @version={{this.version}} 
-          @subText={{this.subText}} 
-          @clusterStates={{this.clusterStates}} />
-          `
+      hbs`<Dashboard::ReplicationStateText
+  @name={{this.name}}
+  @version={{this.version}}
+  @subText={{this.subText}}
+  @clusterStates={{this.clusterStates}}
+/>`
     );
     assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
     assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
@@ -42,13 +41,12 @@ module('Integration | Component | dashboard/replication-state-text', function (h
       isOk: false,
     };
     await render(
-      hbs`
-        <Dashboard::ReplicationStateText 
-          @name={{this.name}} 
-          @version={{this.version}} 
-          @subText={{this.subText}} 
-          @clusterStates={{this.clusterStates}} />
-          `
+      hbs`<Dashboard::ReplicationStateText
+  @name={{this.name}}
+  @version={{this.version}}
+  @subText={{this.subText}}
+  @clusterStates={{this.clusterStates}}
+/>`
     );
     assert
       .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))

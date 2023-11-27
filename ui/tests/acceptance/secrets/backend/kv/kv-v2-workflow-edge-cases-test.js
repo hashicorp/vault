@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
@@ -19,6 +24,7 @@ import {
 } from 'vault/tests/helpers/policy-generator/kv';
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -84,7 +90,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // URL correct
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'visits list-directory of root'
       );
 
@@ -125,7 +131,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F${subdirectory}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/${subdirectory}/`,
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
@@ -136,7 +142,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(previousCrumb));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${root}%2F/directory`,
+        `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
       assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
@@ -253,7 +259,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('no ghost item after editing metadata', async function (assert) {
-    await visit(`/vault/secrets/${this.backend}/kv/edge/directory`);
+    await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
     await click(PAGE.list.item('two'));
     await click(PAGE.secretTab('Metadata'));
@@ -264,6 +270,20 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await click(PAGE.breadcrumbAtIdx(2));
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
   });
+
+  test('complex values default to JSON display', async function (assert) {
+    await visit(`/vault/secrets/${this.backend}/kv/create`);
+    await fillIn(FORM.inputByAttr('path'), 'complex');
+
+    await click(FORM.toggleJson);
+    assert.strictEqual(codemirror().getValue(), '{ "": "" }');
+    codemirror().setValue('{ "foo3": { "name": "bar3" } }');
+    await click(FORM.saveBtn);
+    // Future: test that json is automatic on details too
+    await click(PAGE.detail.createNewVersion);
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+  });
 });
 
 // NAMESPACE TESTS
@@ -271,7 +291,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
   setupApplicationTest(hooks);
 
   const navToEngine = async (backend) => {
-    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    await click('[data-test-sidebar-nav-link="Secrets Engines"]');
     return await click(PAGE.backends.link(backend));
   };
 

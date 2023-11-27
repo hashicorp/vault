@@ -45,14 +45,13 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <button
-      class="toolbar-link"
-      onclick={{action (mut this.showDeleteConfirmation) true}}
-      type="button"
+    <Hds::Button
+      @text="Delete"
+      @color="secondary"
+      class="toolbar-button"
+      {{on "click" (action (mut this.showDeleteConfirmation) true)}}
       data-test-enforcement-delete
-    >
-      Delete
-    </button>
+    />
     <div class="toolbar-separator"></div>
     <ToolbarLink
       @route="vault.cluster.access.mfa.enforcements.enforcement.edit"

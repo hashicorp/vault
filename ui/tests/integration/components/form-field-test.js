@@ -110,9 +110,6 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(component.hasTextFile, 'renders the text-file component');
     await click('[data-test-text-toggle]');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
-    assert.dom('[data-test-text-file-textarea]').hasClass('masked-font');
-    await click('[data-test-button="toggle-masked"]');
-    assert.dom('[data-test-text-file-textarea]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function (assert) {

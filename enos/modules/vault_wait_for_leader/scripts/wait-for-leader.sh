@@ -23,14 +23,14 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 findLeaderInPrivateIPs() {
   # Find the leader private IP address
   local leader_private_ip
-  if ! leader_private_ip=$($binpath read sys/leader -format=json | jq -r '.data.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")') ; then
+  if ! leader_private_ip=$($binpath read sys/leader -format=json | jq -er '.data.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")') ; then
     # Some older versions of vault don't support reading sys/leader. Fallback to the cli status.
-    if leader_private_ip=$($binpath status -format json | jq '.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")'); then
+    if ! leader_private_ip=$($binpath status -format json | jq -er '.leader_address | scan("[0-9]+.[0-9]+.[0-9]+.[0-9]+")'); then
       return 1
     fi
   fi
 
-  if isIn=$(jq -r --arg ip "$leader_private_ip" 'map(select(. == $ip)) | length == 1' <<< "$VAULT_INSTANCE_PRIVATE_IPS"); then
+  if isIn=$(jq -er --arg ip "$leader_private_ip" 'map(select(. == $ip)) | length == 1' <<< "$VAULT_INSTANCE_PRIVATE_IPS"); then
     if [[ "$isIn" == "true" ]]; then
       echo "$leader_private_ip"
       return 0

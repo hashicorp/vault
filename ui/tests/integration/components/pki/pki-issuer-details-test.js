@@ -26,8 +26,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     await render(
       hbs`
       <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-      <div id="modal-wormhole"></div>
-      `,
+            `,
       this.context
     );
 
@@ -56,8 +55,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
         @canSignIntermediate={{this.canSignIntermediate}}
         @canConfigure={{this.canConfigure}}
       />
-      <div id="modal-wormhole"></div>
-      `,
+            `,
       this.context
     );
 
@@ -85,8 +83,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     await render(
       hbs`
         <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-        <div id="modal-wormhole"></div>
-        `,
+                `,
       this.context
     );
 
@@ -127,8 +124,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     await render(
       hbs`
       <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-      <div id="modal-wormhole"></div>
-      `,
+            `,
       this.context
     );
 
@@ -156,8 +152,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     await render(
       hbs`
       <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-      <div id="modal-wormhole"></div>
-      `,
+            `,
       this.context
     );
 
@@ -185,8 +180,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     await render(
       hbs`
       <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-      <div id="modal-wormhole"></div>
-      `,
+            `,
       this.context
     );
 

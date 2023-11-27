@@ -23,7 +23,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     this.setType = sinon.spy();
   });
 
-  test('it calls secrets setMountType only on next click', async function (assert) {
+  test('it calls secrets setMountType when type is selected', async function (assert) {
     const spy = sinon.spy();
     this.set('setType', spy);
     await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
@@ -31,17 +31,11 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     assert
       .dom('[data-test-mount-type]')
       .exists({ count: secretTypes.length }, 'Renders all mountable engines');
-    await click(`[data-test-mount-type="nomad"]`);
-    assert.dom(`[data-test-mount-type="nomad"] input`).isChecked(`ssh is checked`);
-    assert.ok(spy.notCalled, 'callback not called');
     await click(`[data-test-mount-type="ssh"]`);
-    assert.dom(`[data-test-mount-type="ssh"] input`).isChecked(`ssh is checked`);
-    assert.ok(spy.notCalled, 'callback not called');
-    await click('[data-test-mount-next]');
     assert.ok(spy.calledOnceWith('ssh'));
   });
 
-  test('it calls auth setMountType only on next click', async function (assert) {
+  test('it calls auth setMountType when type is selected', async function (assert) {
     const spy = sinon.spy();
     this.set('setType', spy);
     await render(hbs`<MountBackend::TypeForm @setMountType={{this.setType}} />`);
@@ -50,13 +44,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       .dom('[data-test-mount-type]')
       .exists({ count: authTypes.length }, 'Renders all mountable auth methods');
     await click(`[data-test-mount-type="okta"]`);
-    assert.dom(`[data-test-mount-type="okta"] input`).isChecked(`ssh is checked`);
-    assert.ok(spy.notCalled, 'callback not called');
-    await click(`[data-test-mount-type="github"]`);
-    assert.dom(`[data-test-mount-type="github"] input`).isChecked(`ssh is checked`);
-    assert.ok(spy.notCalled, 'callback not called');
-    await click('[data-test-mount-next]');
-    assert.ok(spy.calledOnceWith('github'));
+    assert.ok(spy.calledOnceWith('okta'));
   });
 
   module('Enterprise', function (hooks) {

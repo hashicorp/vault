@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
@@ -213,7 +218,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
@@ -232,7 +237,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Redirects to detail after save'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
     test('create new version of secret from older version (a)', async function (assert) {
@@ -390,7 +395,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -535,7 +540,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -704,7 +709,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
@@ -941,7 +946,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('creates a secret at a sub-directory (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      await visit(`/vault/secrets/${backend}/kv/list/app/`);
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -959,7 +964,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Redirects to detail after save'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`, 'sub-dir page');
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
     });
     test('create new version of secret from older version (sc)', async function (assert) {

@@ -51,8 +51,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click('[data-test-mount-type="kv"]');
 
-      await click('[data-test-mount-next]');
-
       await fillIn('[data-test-input="path"]', enginePath);
       await fillIn('[data-test-input="maxVersions"]', maxVersion);
       await click('[data-test-input="casRequired"]');
@@ -141,7 +139,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // mount version 1 engine
       await mountSecrets.visit();
       await mountSecrets.selectType('kv');
-      await mountSecrets.next().path(this.backend).toggleOptions().version(1).submit();
+      await mountSecrets.path(this.backend).toggleOptions().version(1).submit();
     });
     hooks.afterEach(async function () {
       await consoleComponent.runCommands([`delete sys/mounts/${this.backend}`]);

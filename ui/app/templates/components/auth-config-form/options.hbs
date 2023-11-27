@@ -12,13 +12,12 @@
     {{/each}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
-    <button
+    <Hds::Button
+      @text="Update options"
+      @icon={{if this.saveModel.isRunning "loading"}}
       type="submit"
       data-test-save-config="true"
-      class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
       disabled={{this.saveModel.isRunning}}
-    >
-      Update Options
-    </button>
+    />
   </div>
 </form>

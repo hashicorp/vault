@@ -39,6 +39,8 @@ type extendedSystemView interface {
 	SudoPrivilege(context.Context, string, string) bool
 }
 
+var _ logical.ExtendedSystemView = (*extendedSystemViewImpl)(nil)
+
 type extendedSystemViewImpl struct {
 	dynamicSystemView
 }
@@ -143,11 +145,19 @@ func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
 	}
 	ns := mountEntry.Namespace()
 
-	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+	if err := e.core.entBlockRequestIfError(ns.Path, mountEntry.Path); err != nil {
 		return true, nil
 	}
 
 	return false, nil
+}
+
+func (e extendedSystemViewImpl) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
+	return e.core.WellKnownRedirects.TryRegister(ctx, e.core, e.mountEntry.UUID, src, dest)
+}
+
+func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context, src string) bool {
+	return e.core.WellKnownRedirects.DeregisterSource(e.mountEntry.UUID, src)
 }
 
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {

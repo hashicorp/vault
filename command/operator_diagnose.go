@@ -436,7 +436,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var setSealResponse *SetSealResponse
 	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
 	if err != nil {
-		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
+		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal generation information from storage: %s.", err.Error()))
 		goto SEALFAIL
 	}
 

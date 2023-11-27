@@ -21,6 +21,9 @@ export default class SidebarUserMenuComponent extends Component {
     // in order to use the MFA end user setup they need an entity_id
     return !!this.auth.authData?.entity_id;
   }
+  get isUserpass() {
+    return this.auth.authData?.backend?.type === 'userpass';
+  }
 
   get isRenewing() {
     return this.fakeRenew || this.auth.isRenewing;

@@ -59,21 +59,23 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" class="button is-primary">
-        Export key
-      </button>
+      <Hds::Button @text="Export key" type="submit" />
     </div>
   </div>
 </form>
-<Modal @title="Copy your wrapped key" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <div class="box is-shadowless is-fullwidth is-sideless">
-      <h2 class="title is-6">Wrapped Key</h2>
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-export-modal" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Copy your wrapped key
+    </M.Header>
+    <M.Body>
+      <h2 class="title is-6">Wrapped key</h2>
       {{#if this.wrapTTL}}
         <Hds::Copy::Snippet
           class="has-bottom-margin-m"
           @textToCopy={{@wrappedToken}}
           @color="secondary"
+          @container="#transit-export-modal"
           data-test-encrypted-value="export"
         />
       {{else}}
@@ -85,13 +87,14 @@
             @text="Copy"
             @isIconOnly={{true}}
             @textToCopy={{stringify @keys}}
+            @container="#transit-export-modal"
             class="transparent top-right-absolute"
           />
         </div>
       {{/if}}
-    </div>
-  </section>
-  <footer class="modal-card-foot">
-    <button type="button" class="button is-primary" {{on "click" (fn (mut @isModalActive) false)}}>Close</button>
-  </footer>
-</Modal>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

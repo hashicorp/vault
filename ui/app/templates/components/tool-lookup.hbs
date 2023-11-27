@@ -23,9 +23,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button {{on "click" this.onClear}} type="button" class="button">
-        Back
-      </button>
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.onClear}} />
     </div>
   </div>
 {{else}}
@@ -44,9 +42,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" data-test-tools-submit="true" class="button is-primary">
-        Lookup token
-      </button>
+      <Hds::Button @text="Lookup token" type="submit" data-test-tools-submit="true" />
     </div>
   </div>
 {{/if}}

@@ -84,8 +84,8 @@ module('Acceptance | mfa-login', function (hooks) {
         .hasText('Check device for push notification', 'Push notification instruction renders');
       assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled while validating');
       assert
-        .dom('[data-test-mfa-validate]')
-        .hasClass('is-loading', 'Loading class applied to button while validating');
+        .dom('[data-test-mfa-validate] [data-test-icon="loading"]')
+        .exists('Loading icon shows while validating');
       return validationHandler(schema, req);
     });
 

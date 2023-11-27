@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
   <D.Trigger data-test-version-dropdown class="toolbar-link {{if D.isOpen ' is-active'}}">
     Version
@@ -10,6 +15,7 @@
         {{#each @metadata.sortedVersions as |versionData|}}
           <li data-test-version={{versionData.version}} class="action">
             {{#if @onSelect}}
+              {{! TODO Hds::Button manual update }}
               <button
                 disabled={{or versionData.destroyed versionData.isSecretDeleted}}
                 {{on "click" (fn @onSelect versionData.version D.actions)}}

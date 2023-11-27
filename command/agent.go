@@ -25,14 +25,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-	"google.golang.org/grpc/test/bufconn"
-
 	"github.com/hashicorp/vault/api"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/exec"
@@ -52,6 +44,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
+	"github.com/kr/pretty"
+	"github.com/mitchellh/cli"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -490,10 +489,12 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:      proxyClient,
-			BaseContext: ctx,
-			Proxier:     apiProxy,
-			Logger:      cacheLogger.Named("leasecache"),
+			Client:              proxyClient,
+			BaseContext:         ctx,
+			Proxier:             apiProxy,
+			Logger:              cacheLogger.Named("leasecache"),
+			CacheDynamicSecrets: true,
+			UserAgentToUse:      useragent.ProxyAPIProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))

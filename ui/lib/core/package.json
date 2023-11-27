@@ -24,7 +24,6 @@
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
-    "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
     "@hashicorp/flight-icons": "*",

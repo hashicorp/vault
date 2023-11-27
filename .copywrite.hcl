@@ -12,10 +12,5 @@ project {
     "ui/node_modules/**",
     "enos/modules/k8s_deploy_vault/raft-config.hcl",
     "plugins/database/postgresql/scram/**",
-    # licensed under MPL - ignoring for now until the copywrite tool can support
-    # multiple licenses per repo.
-    "sdk/**",
-    "api/**",
-    "shamir/**'"
   ]
 }

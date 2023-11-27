@@ -111,7 +111,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
-  test('it should show client count and replication card on enterprise w/ license + namespace enabled', async function (assert) {
+  test('it should show client count on enterprise w/ license', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.license = {
@@ -131,13 +131,11 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       @license={{this.license}}
       @refreshModel={{this.refreshModel}} />`
     );
-
     assert.dom(SELECTORS.cardHeader('Vault version')).exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
     assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).exists();
     assert.dom(SELECTORS.cardName('client-count')).exists();
   });
 
@@ -164,7 +162,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
     assert.dom(SELECTORS.cardName('configuration-details')).exists();
-    assert.dom(SELECTORS.cardName('replication')).exists();
     assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 

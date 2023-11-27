@@ -15,11 +15,11 @@
         data-test-input="operationNone"
         id="operationNone"
         type="checkbox"
-        class="switch is-rounded is-success is-small"
+        class="toggle is-success is-small"
         checked={{not this.model.operationNone}}
         onchange={{action "toggleOperationSpecial" value="target.checked"}}
       />
-      <label for="operationNone">
+      <label for="operationNone" class="has-text-weight-bold is-size-8">
         Allow this role to perform KMIP operations
       </label>
     </div>
@@ -86,14 +86,13 @@
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
     <div class="field is-grouped">
       <div class="control">
-        <button
+        <Hds::Button
+          @text={{this.saveButtonText}}
+          @icon={{if this.save.isRunning "loading"}}
           type="submit"
           data-test-edit-form-submit
-          class="button is-primary {{if this.save.isRunning 'loading'}}"
           disabled={{this.save.isRunning}}
-        >
-          {{this.saveButtonText}}
-        </button>
+        />
       </div>
       {{#if this.cancelLink}}
         <div class="control">

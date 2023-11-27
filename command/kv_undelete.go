@@ -5,6 +5,7 @@ package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -35,12 +36,12 @@ Usage: vault kv undelete [options] KEY
   This restores the data, allowing it to be returned on get requests.
 
   To undelete version 3 of key "foo":
-  
+
       $ vault kv undelete -mount=secret -versions=3 foo
 
-  The deprecated path-like syntax can also be used, but this should be avoided, 
-  as the fact that it is not actually the full API path to 
-  the secret (secret/data/foo) can cause confusion: 
+  The deprecated path-like syntax can also be used, but this should be avoided,
+  as the fact that it is not actually the full API path to
+  the secret (secret/data/foo) can cause confusion:
 
       $ vault kv undelete -versions=3 secret/foo
 
@@ -67,10 +68,10 @@ func (c *KVUndeleteCommand) Flags() *FlagSets {
 		Name:    "mount",
 		Target:  &c.flagMount,
 		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
-		Usage: `Specifies the path where the KV backend is mounted. If specified, 
-		the next argument will be interpreted as the secret path. If this flag is 
-		not specified, the next argument will be interpreted as the combined mount 
-		path and secret path, with /data/ automatically appended between KV 
+		Usage: `Specifies the path where the KV backend is mounted. If specified,
+		the next argument will be interpreted as the secret path. If this flag is
+		not specified, the next argument will be interpreted as the combined mount
+		path and secret path, with /data/ automatically appended between KV
 		v2 secrets.`,
 	})
 
@@ -133,6 +134,14 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+		if v2 {
+			// Without this join, mountPaths that are deeper
+			// than the root path E.G. secrets/myapp will get
+			// pruned down to myapp/undelete/<secret> which
+			// is incorrect.
+			// This technique was lifted from kv_delete.go.
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.

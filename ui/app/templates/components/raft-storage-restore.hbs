@@ -34,9 +34,7 @@
       </Hds::Alert>
     </div>
     <div class="box is-fullwidth is-shadowless">
-      <button type="button" class="button" onclick={{action "cancelUpload"}}>
-        Cancel upload
-      </button>
+      <Hds::Button @text="Cancel upload" @color="secondary" {{on "click" (action "cancelUpload")}} />
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">

@@ -63,6 +63,7 @@ type BaseCommand struct {
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
+	addrWarning          string
 
 	flagMFA []string
 
@@ -79,6 +80,14 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	// Read the test client if present
 	if c.client != nil {
 		return c.client, nil
+	}
+
+	if c.addrWarning != "" && c.UI != nil {
+		if os.Getenv("VAULT_ADDR") == "" {
+			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
+				c.UI.Warn(wrapAtLength(c.addrWarning))
+			}
+		}
 	}
 
 	config := api.DefaultConfig()
@@ -321,10 +330,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Vault server.",
 			}
+
 			if c.flagAddress != "" {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
+				c.addrWarning = fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)
 			}
 			f.StringVar(addrStringVar)
 

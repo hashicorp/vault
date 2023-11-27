@@ -10,8 +10,5 @@
       do need to wrap data or handle the wrapped token, now you know how.
     </p>
   </WizardSection>
-  <button type="button" class="button next-feature-step" {{action @onAdvance}}>
-    {{@nextFeature}}
-    <Chevron @isButton={{true}} />
-  </button>
+  <Hds::Button @text={{@nextFeature}} @icon="chevron-right" @iconPosition="trailing" {{on "click" (action @onAdvance)}} />
 </WizardContent>

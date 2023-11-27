@@ -22,7 +22,7 @@ export const PAGE = {
     message: '[data-test-page-error] p',
   },
   toolbar: 'nav.toolbar',
-  toolbarAction: 'nav.toolbar-actions .toolbar-link',
+  toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
   backends: {

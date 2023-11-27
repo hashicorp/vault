@@ -396,7 +396,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			Data: map[string]interface{}{
 				"peers":              peers,
 				"tls_keyring":        &keyring,
-				"autoloaded_license": LicenseAutoloaded(b.Core),
+				"autoloaded_license": b.Core.entIsLicenseAutoloaded(),
 			},
 		}, nil
 	}

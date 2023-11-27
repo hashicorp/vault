@@ -181,15 +181,14 @@
               @selectedAuthIsPath={{this.selectedAuthIsPath}}
             />
           {{/if}}
-          <button
+          <Hds::Button
+            @text="Sign in"
+            @icon={{if this.authenticate.isRunning "loading"}}
             data-test-auth-submit={{true}}
             type="submit"
             disabled={{this.authenticate.isRunning}}
-            class="button is-primary {{if this.authenticate.isRunning 'is-loading'}}"
             id="auth-submit"
-          >
-            Sign In
-          </button>
+          />
           {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
             <AlertInline
               @paddingTop={{true}}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
@@ -60,7 +65,7 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    assert.dom(SELECTORS.wrapButton).hasClass('is-loading');
+    assert.dom(`${SELECTORS.wrapButton} [data-test-icon="loading"]`).exists('renders loading icon');
     assert.dom(SELECTORS.wrapButton).isDisabled();
   });
 

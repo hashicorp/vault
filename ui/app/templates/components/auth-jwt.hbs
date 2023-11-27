@@ -3,20 +3,20 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form id="auth-form" onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=this.roleName jwt=this.jwt)}}>
+<form id="auth-form" {{on "submit" (action "signIn")}}>
   <div class="field">
     <label for="role" class="is-label">Role</label>
     <div class="control">
       <input
-        value={{@roleName}}
+        value={{this.roleName}}
         placeholder="Default"
-        oninput={{perform this.fetchRole value="target.value"}}
         autocomplete="off"
         spellcheck="false"
         name="role"
         id="role"
         class="input"
         type="text"
+        {{on "input" (action "onRoleChange")}}
         data-test-role
       />
     </div>
@@ -46,22 +46,24 @@
   <div data-test-yield-content>
     {{yield}}
   </div>
-  <button
-    data-test-auth-submit={{true}}
-    type="submit"
-    disabled={{@disabled}}
-    class="button is-primary {{if @disabled 'is-loading'}}"
-    id="auth-submit"
-  >
-    {{#if this.isOIDC}}
-      {{#if this.role.providerButtonComponent}}
-        {{component this.role.providerButtonComponent}}
-      {{else}}
-        Sign in with
-        {{or this.role.providerName "OIDC Provider"}}
-      {{/if}}
-    {{else}}
-      Sign In
-    {{/if}}
-  </button>
+
+  {{#if this.isOIDC}}
+    <Hds::Button
+      @text={{concat "Sign in with " (or this.role.providerName "OIDC Provider")}}
+      @icon={{if @disabled "loading" this.role.providerIcon}}
+      data-test-auth-submit
+      type="submit"
+      disabled={{@disabled}}
+      id="auth-submit"
+    />
+  {{else}}
+    <Hds::Button
+      @text="Sign in"
+      @icon={{if @disabled "loading"}}
+      data-test-auth-submit
+      type="submit"
+      disabled={{@disabled}}
+      id="auth-submit"
+    />
+  {{/if}}
 </form>

@@ -15,14 +15,12 @@
     </div>
     <div class="header-right">
       {{#if this.hasCsvData}}
-        <button
+        <Hds::Button
           data-test-attribution-export-button
-          type="button"
-          class="button is-secondary"
+          @text="Export attribution data"
+          @color="secondary"
           {{on "click" (fn (mut this.showCSVDownloadModal) true)}}
-        >
-          Export attribution data
-        </button>
+        />
       {{/if}}
     </div>
   </div>
@@ -91,41 +89,41 @@
 </div>
 
 {{! MODAL FOR CSV DOWNLOAD }}
-<Modal
-  @title="Export attribution data"
-  @type="info"
-  @isActive={{this.showCSVDownloadModal}}
-  @showCloseButton={{true}}
-  @onClose={{action (mut this.showCSVDownloadModal) false}}
->
-  <section class="modal-card-body">
-    <p class="has-bottom-margin-s">
-      This export will include the namespace path, authentication method path, and the associated total, entity, and
-      non-entity clients for the below
-      {{if this.formattedEndDate "date range" "month"}}.
-    </p>
-    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
-    <p class="has-bottom-margin-s">{{this.formattedStartDate}} {{if this.formattedEndDate "-"}} {{this.formattedEndDate}}</p>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}>
-      Export
-    </button>
-    <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>
-      Cancel
-    </button>
-    {{#if @upgradeExplanation}}
-      <div class="has-text-grey is-size-8">
-        <AlertInline @type="warning" @isMarginless={{true}}>
-          Your data contains an upgrade.
-          <DocLink
-            @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
-          >
-            Learn more here.
-          </DocLink>
-        </AlertInline>
-        <p class="has-left-padding-l">{{@upgradeExplanation}}</p>
-      </div>
-    {{/if}}
-  </footer>
-</Modal>
+{{#if this.showCSVDownloadModal}}
+  <Hds::Modal id="attribution-csv-download-modal" @onClose={{fn (mut this.showCSVDownloadModal) false}} as |M|>
+    <M.Header @icon="info" data-test-export-modal-title>
+      Export attribution data
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s">
+        This export will include the namespace path, authentication method path, and the associated total, entity, and
+        non-entity clients for the below
+        {{if this.formattedEndDate "date range" "month"}}.
+      </p>
+      <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+      <p class="has-bottom-margin-s" data-test-export-date-range>
+        {{this.formattedStartDate}}
+        {{if this.formattedEndDate "-"}}
+        {{this.formattedEndDate}}</p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Export" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}} />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
+      </Hds::ButtonSet>
+      {{#if @upgradeExplanation}}
+        <div class="has-text-grey is-size-8 has-top-padding-m">
+          <AlertInline @type="warning">
+            Your data contains an upgrade.
+            <DocLink
+              @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+            >
+              Learn more here.
+            </DocLink>
+          </AlertInline>
+          <p class="has-left-padding-l">{{@upgradeExplanation}}</p>
+        </div>
+      {{/if}}
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

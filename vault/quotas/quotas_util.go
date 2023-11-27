@@ -43,6 +43,10 @@ func (*entManager) Reset() error {
 
 type LeaseCountQuota struct{}
 
+func (l LeaseCountQuota) GetNamespacePath() string {
+	panic("implement me")
+}
+
 func (l LeaseCountQuota) IsInheritable() bool {
 	panic("implement me")
 }

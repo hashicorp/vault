@@ -907,6 +907,10 @@ $ curl \
 
 Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
 
+| Method | Path                            |
+| :----- | :------------------------------ |
+| `GET` | `/sys/internal/counters/config` |
+
 - `enabled` `(string)` - returns `default-enabled` or `default-disabled` if the configuration is `default`.
 - `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
   false until the end of the first calendar month after the feature is enabled.

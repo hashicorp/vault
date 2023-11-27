@@ -29,6 +29,15 @@
       Scope
     </h1>
   </p.levelLeft>
+  <p.levelRight>
+    <Hds::Button
+      @text="How to write JSON template for scopes"
+      @icon="bulb"
+      @color="tertiary"
+      {{on "click" (fn (mut this.showTemplateModal))}}
+      data-test-oidc-scope-example
+    />
+  </p.levelRight>
 </PageHeader>
 
 <form {{on "submit" (perform this.save)}}>
@@ -41,35 +50,26 @@
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
     <p class="is-size-9 has-text-grey has-bottom-margin-l">
-      You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. See
-      <button
-        type="button"
-        class="text-button has-text-info"
-        {{on "click" (fn (mut this.showTemplateModal))}}
-        data-test-oidc-scope-example
-      >
-        example template
-      </button>.
+      You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. Click 'How to write JSON
+      template for scopes' to view an example.
     </p>
   </div>
   <div class="has-top-margin-l has-bottom-margin-l">
-    <button
+    <Hds::Button
+      @text={{if @model.isNew "Create" "Update"}}
+      @icon={{if this.save.isRunning "loading"}}
       type="submit"
-      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
       disabled={{this.save.isRunning}}
       data-test-oidc-scope-save
-    >
-      {{if @model.isNew "Create" "Update"}}
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
       disabled={{this.save.isRunning}}
       {{on "click" this.cancel}}
       data-test-oidc-scope-cancel
-    >
-      Cancel
-    </button>
+    />
   </div>
   {{#if this.invalidFormAlert}}
     <div class="control">
@@ -78,40 +78,25 @@
   {{/if}}
 </form>
 
-<Modal
-  @title="Scope template"
-  @onClose={{fn (mut this.showTemplateModal) false}}
-  @isActive={{this.showTemplateModal}}
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <div class="is-flex-between is-flex-center has-bottom-margin-s">
-      <p data-test-modal-text>
+{{#if this.showTemplateModal}}
+  <Hds::Modal id="scope-template-modal" @size="large" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
+    <M.Header data-test-scope-modal="title">
+      Scope template
+    </M.Header>
+    <M.Body>
+      <p data-test-scope-modal="text">
         Example of a JSON template for scopes:
       </p>
-      <Hds::Copy::Button
-        @text="Copy"
-        @isIconOnly={{true}}
-        @textToCopy={{this.exampleTemplate}}
-        class="transparent"
-        data-test-copy-button
-      />
-    </div>
-    {{! code-mirror modifier does not render value initially in wormhole until focus event fires }}
-    {{! wait until the Modal is rendered and then show the JsonEditor }}
-    {{#if this.showTemplateModal}}
-      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @showToolbar={{false}} />
-    {{/if}}
-    <p class="has-top-margin-m">
-      The full list of template parameters can be found
-      <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
-        here.
-      </DocLink>
-    </p>
-  </section>
-  <div class="modal-card-head has-border-top-light">
-    <button type="button" class="button" {{on "click" (fn (mut this.showTemplateModal) false)}} data-test-close-modal>
-      Close
-    </button>
-  </div>
-</Modal>
+      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @container=".hds-modal" />
+      <p class="has-top-margin-m">
+        The full list of template parameters can be found
+        <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
+          here.
+        </DocLink>
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-close-modal />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

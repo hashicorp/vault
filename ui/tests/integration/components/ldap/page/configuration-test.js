@@ -13,7 +13,7 @@ import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 
 const selectors = {
-  rotateAction: '[data-test-toolbar-rotate-action] button',
+  rotateAction: '[data-test-toolbar-rotate-action]',
   confirmRotate: '[data-test-confirm-button]',
   configAction: '[data-test-toolbar-config-action]',
   configCta: '[data-test-config-cta]',

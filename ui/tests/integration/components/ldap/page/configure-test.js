@@ -50,12 +50,9 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
     this.model = this.newModel; // most of the tests use newModel but set this to editModel when needed
     this.renderComponent = () => {
-      return render(
-        hbs`<div id="modal-wormhole"></div><Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-        {
-          owner: this.engine,
-        }
-      );
+      return render(hbs`<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+        owner: this.engine,
+      });
     };
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });

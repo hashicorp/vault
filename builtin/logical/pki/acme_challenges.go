@@ -138,6 +138,7 @@ func ValidateHTTP01Challenge(domain string, token string, thumbprint string, con
 		MaxIdleConnsPerHost: 1,
 		MaxConnsPerHost:     1,
 		IdleConnTimeout:     1 * time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 
 		// We'd rather timeout and re-attempt validation later than hang
 		// too many validators waiting for slow hosts.

@@ -43,6 +43,6 @@ export default class Icon extends Component {
   }
 
   get hsIconClass() {
-    return this.size === '24' ? 'hs-icon-xl' : 'hs-icon-l';
+    return this.size === '24' ? 'hs-icon-xlm' : 'hs-icon-l';
   }
 }

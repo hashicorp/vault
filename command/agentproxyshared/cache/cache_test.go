@@ -33,7 +33,7 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 	t.Helper()
 	for val, valType := range sampleSpace {
 		index, err := leaseCache.db.Get(valType, val)
-		if err != nil {
+		if err != nil && err != cachememdb.ErrCacheItemNotFound {
 			t.Fatal(err)
 		}
 		if expected[val] == "" && index != nil {
@@ -1098,12 +1098,8 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 
 	// Verify the entry is cleared
 	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if idx != nil {
-		t.Fatalf("expected entry to be nil, got: %v", idx)
+	if err != cachememdb.ErrCacheItemNotFound {
+		t.Fatal("expected entry to be nil, got", err)
 	}
 }
 

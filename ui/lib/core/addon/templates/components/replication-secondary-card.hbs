@@ -3,8 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div
-  class="selectable-card is-rounded card-container {{if this.hasErrorClass 'has-error-border'}}"
+<Hds::Card::Container
+  @hasBorder={{true}}
+  class="has-padding-m card-container {{if this.hasErrorClass 'has-error-border'}}"
   data-test-replication-secondary-card
 >
   {{! Check if Status or Primary Cluster Card }}
@@ -119,4 +120,4 @@
       {{/if}}
     </div>
   {{/if}}
-</div>
+</Hds::Card::Container>
