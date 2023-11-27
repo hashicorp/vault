@@ -75,43 +75,6 @@ type TestSealWrapperOpts struct {
 	WrapperCount int
 }
 
-func CreateTestSealWrapperOpts(opts *TestSealWrapperOpts) *TestSealWrapperOpts {
-	if opts == nil {
-		opts = new(TestSealWrapperOpts)
-	}
-	if opts.WrapperCount == 0 {
-		opts.WrapperCount = 1
-	}
-	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(hclog.Debug)
-	}
-	return opts
-}
-
-func CreateTestSealWrappers(opts *TestSealWrapperOpts) []*SealWrapper {
-	opts = CreateTestSealWrapperOpts(opts)
-	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
-	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
-	ctx := context.Background()
-	for i := 0; i < opts.WrapperCount; i++ {
-		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-		wrapperType, err := wrappers[i].Type(ctx)
-		if err != nil {
-			panic(err)
-		}
-		sealWrappers[i] = NewSealWrapper(
-			wrappers[i],
-			i+1,
-			fmt.Sprintf("%s-%d", opts.Name, i+1),
-			wrapperType.String(),
-			false,
-			true,
-		)
-	}
-
-	return sealWrappers
-}
-
 type ToggleableWrapper struct {
 	wrapping.Wrapper
 	wrapperType  *wrapping.WrapperType
