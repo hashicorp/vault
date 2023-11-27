@@ -55,7 +55,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     try {
       const secretEngines = await this.store.query('secret-engine', {});
       this.mounts = secretEngines.reduce((filtered, model) => {
-        if (model.type === 'kv') {
+        if (model.type === 'kv' && model.version === 2) {
           filtered.push({ name: model.path, id: model.path });
         }
         return filtered;

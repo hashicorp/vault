@@ -29,7 +29,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     this.server.get('/sys/internal/ui/mounts', () => ({
-      data: { secret: { 'my-kv/': { type: 'kv' } } },
+      data: { secret: { 'my-kv/': { type: 'kv', options: { version: '2' } } } },
     }));
     this.server.get('/my-kv/metadata', () => ({
       data: { keys: ['my-path/', 'my-secret'] },
