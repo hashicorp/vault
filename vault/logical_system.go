@@ -5548,31 +5548,31 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var filters ListUICustomMessagesFilters
 
-	if authenticatedValue, ok := d.GetOk("authenticated"); ok {
-		v, err := parseutil.ParseBool(authenticatedValue)
-		if err != nil {
-			return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
-		}
-
-		filters.Authenticated(v)
+	authenticatedValue, ok, err := d.GetOkErr("authenticated")
+	if err != nil {
+		return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
 	}
 
-	if typeValue, ok := d.GetOk("type"); ok {
-		v, err := parseutil.ParseString(typeValue)
-		if err != nil {
-			return logical.ErrorResponse("invalid type parameter value: %s", err), nil
-		}
-
-		filters.MessageType(v)
+	if ok {
+		filters.Authenticated(authenticatedValue.(bool))
 	}
 
-	if activeValue, ok := d.GetOk("active"); ok {
-		v, err := parseutil.ParseBool(activeValue)
-		if err != nil {
-			return logical.ErrorResponse("invalid active parameter value: %s", err), nil
-		}
+	typeValue, ok, err := d.GetOkErr("type")
+	if err != nil {
+		return logical.ErrorResponse("invalid type parameter value: %s", err), nil
+	}
 
-		filters.Active(v)
+	if ok {
+		filters.MessageType(typeValue.(string))
+	}
+
+	activeValue, ok, err := d.GetOkErr("active")
+	if err != nil {
+		return logical.ErrorResponse("invalid active parameter value: %s", err), nil
+	}
+
+	if ok {
+		filters.Active(activeValue.(bool))
 	}
 
 	entries, err := b.Core.uiConfig.ListCustomMessages(ctx, filters)
@@ -5603,81 +5603,95 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 	var err error
 
 	var title string
-	titleValue, ok := d.GetOk("title")
+	titleValue, ok, err := d.GetOkErr("title")
+	if err != nil {
+		return logical.ErrorResponse("invalid title parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing title parameter value"), nil
 	}
 
-	if title, err = parseutil.ParseString(titleValue); err != nil {
-		return logical.ErrorResponse("invalid title parameter value: %s", err), nil
-	}
+	title = titleValue.(string)
 
 	var authenticated bool
-	authenticatedValue, ok := d.GetOk("authenticated")
+	authenticatedValue, ok, err := d.GetOkErr("authenticated")
+	if err != nil {
+		return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing authenticated parameter value"), nil
 	}
 
-	if authenticated, err = parseutil.ParseBool(authenticatedValue); err != nil {
-		return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
-	}
+	authenticated = authenticatedValue.(bool)
 
 	var messageType string
-	messageTypeValue, ok := d.GetOk("type")
+	messageTypeValue, ok, err := d.GetOkErr("type")
+	if err != nil {
+		return logical.ErrorResponse("invalid type parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing type parameter value"), nil
 	}
 
-	if messageType, err = parseutil.ParseString(messageTypeValue); err != nil {
-		return logical.ErrorResponse("invalid type parameter value: %s", err), nil
-	}
+	messageType = messageTypeValue.(string)
 
 	var message string
-	messageValue, ok := d.GetOk("message")
+	messageValue, ok, err := d.GetOkErr("message")
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing message parameter value"), nil
 	}
 
-	if message, err = parseutil.ParseString(messageValue); err != nil {
-		return logical.ErrorResponse("invalid message parameter value: %s", err), nil
-	}
+	message = messageValue.(string)
 
 	var startTime time.Time
-	startTimeValue, ok := d.GetOk("start_time")
+	startTimeValue, ok, err := d.GetOkErr("start_time")
+	if err != nil {
+		return logical.ErrorResponse("invalid start_time parameter value"), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing start_time parameter value"), nil
 	}
 
-	if startTime, ok = startTimeValue.(time.Time); !ok {
-		return logical.ErrorResponse("invalid start_time parameter value"), nil
-	}
+	startTime = startTimeValue.(time.Time)
 
 	var endTime time.Time
-	endTimeValue, ok := d.GetOk("end_time")
+	endTimeValue, ok, err := d.GetOkErr("end_time")
+	if err != nil {
+		return logical.ErrorResponse("invalid end_time parameter value"), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing end_time parameter value"), nil
 	}
 
-	if endTime, ok = endTimeValue.(time.Time); !ok {
-		return logical.ErrorResponse("invalid end_time parameter value"), nil
-	}
+	endTime = endTimeValue.(time.Time)
 
 	linkMap := make(map[string]any)
-	if linkMapValue, ok := d.GetOk("link"); ok {
-		if m, ok := linkMapValue.(map[string]any); ok {
-			for k, v := range m {
-				linkMap[k] = v
-			}
-		}
+	linkMapValue, ok, err := d.GetOkErr("link")
+	if err != nil {
+		return logical.ErrorResponse("invalid link parameter value"), nil
+	}
+
+	if ok {
+		linkMap = linkMapValue.(map[string]any)
 	}
 
 	optionsMap := make(map[string]any)
-	if optionsMapValue, ok := d.GetOk("options"); ok {
-		if m, ok := optionsMapValue.(map[string]any); ok {
-			for k, v := range m {
-				optionsMap[k] = v
-			}
-		}
+	optionsMapValue, ok, err := d.GetOkErr("options")
+	if err != nil {
+		return logical.ErrorResponse("invalid options parameter value"), nil
+	}
+
+	if ok {
+		optionsMap = optionsMapValue.(map[string]any)
 	}
 
 	entry := &UICustomMessageEntry{
@@ -5731,6 +5745,10 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 		return logical.ErrorResponse("failed to retrieve custom message: %s", err), nil
 	}
 
+	if entry == nil {
+		return nil, logical.ErrUnsupportedPath
+	}
+
 	return &logical.Response{
 		Data: map[string]any{
 			"id": id,
@@ -5752,17 +5770,19 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	var messageId string
-	messageIdValue, ok := d.GetOk("id")
+	var id string
+	idValue, ok, err := d.GetOkErr("id")
+	if err != nil {
+		return logical.ErrorResponse("invalid id parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing id parameter value"), nil
 	}
 
-	if messageId, err = parseutil.ParseString(messageIdValue); err != nil {
-		return logical.ErrorResponse("invalid id parameter value: %s", err), nil
-	}
+	id = idValue.(string)
 
-	if err = b.Core.uiConfig.DeleteCustomMessage(ctx, messageId); err != nil {
+	if err = b.Core.uiConfig.DeleteCustomMessage(ctx, id); err != nil {
 		return logical.ErrorResponse("failed to delete custom message: %s", err), nil
 	}
 
@@ -5773,90 +5793,108 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	var err error
 
 	var messageId string
-	messageIdValue, ok := d.GetOk("id")
+	messageIdValue, ok, err := d.GetOkErr("id")
+	if err != nil {
+		return logical.ErrorResponse("invalid id parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing id parameter value"), nil
 	}
 
-	if messageId, err = parseutil.ParseString(messageIdValue); err != nil {
-		return logical.ErrorResponse("invalid id parameter value: %s", err), nil
-	}
+	messageId = messageIdValue.(string)
 
 	var title string
-	titleValue, ok := d.GetOk("title")
+	titleValue, ok, err := d.GetOkErr("title")
+	if err != nil {
+		return logical.ErrorResponse("invalid title parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing title parameter value"), nil
 	}
 
-	if title, err = parseutil.ParseString(titleValue); err != nil {
-		return logical.ErrorResponse("invalid title parameter value: %s", err), nil
-	}
+	title = titleValue.(string)
 
 	var authenticated bool
-	authenticatedValue, ok := d.GetOk("authenticated")
+	authenticatedValue, ok, err := d.GetOkErr("authenticated")
+	if err != nil {
+		return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing authenticated parameter value"), nil
 	}
 
-	if authenticated, err = parseutil.ParseBool(authenticatedValue); err != nil {
-		return logical.ErrorResponse("invalid authenticated parameter value: %s", err), nil
-	}
+	authenticated = authenticatedValue.(bool)
 
 	var messageType string
-	messageTypeValue, ok := d.GetOk("type")
+	messageTypeValue, ok, err := d.GetOkErr("type")
+	if err != nil {
+		return logical.ErrorResponse("invalid type parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing type parameter value"), nil
 	}
 
-	if messageType, err = parseutil.ParseString(messageTypeValue); err != nil {
-		return logical.ErrorResponse("invalid type parameter value: %s", err), nil
-	}
+	messageType = messageTypeValue.(string)
 
 	var message string
-	messageValue, ok := d.GetOk("message")
+	messageValue, ok, err := d.GetOkErr("message")
+	if err != nil {
+		return logical.ErrorResponse("invalid message parameter value: %s", err), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing message parameter value"), nil
 	}
 
-	if message, err = parseutil.ParseString(messageValue); err != nil {
-		return logical.ErrorResponse("invalid message parameter value: %s", err), nil
-	}
+	message = messageValue.(string)
 
 	var link map[string]any
-	linkValue, ok := d.GetOk("link")
+	linkValue, ok, err := d.GetOkErr("link")
+	if err != nil {
+		return logical.ErrorResponse("invalid link parameter value"), nil
+	}
+
 	if ok {
-		if link, ok = linkValue.(map[string]any); !ok {
-			return logical.ErrorResponse("invalid link parameter value"), nil
-		}
+		link = linkValue.(map[string]any)
 	}
 
 	var options map[string]any
-	optionsValue, ok := d.GetOk("options")
+	optionsValue, ok, err := d.GetOkErr("options")
+	if err != nil {
+		return logical.ErrorResponse("invalid options parameter value"), nil
+	}
+
 	if ok {
-		if options, ok = optionsValue.(map[string]any); !ok {
-			return logical.ErrorResponse("invalid options parameter value"), nil
-		}
+		options = optionsValue.(map[string]any)
 	}
 
 	var startTime time.Time
-	startTimeValue, ok := d.GetOk("start_time")
+	startTimeValue, ok, err := d.GetOkErr("start_time")
+	if err != nil {
+		return logical.ErrorResponse("invalid start_time parameter value"), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing start_time parameter value"), nil
 	}
 
-	if startTime, ok = startTimeValue.(time.Time); !ok {
-		return logical.ErrorResponse("invalid start_time parameter value"), nil
-	}
+	startTime = startTimeValue.(time.Time)
 
 	var endTime time.Time
-	endTimeValue, ok := d.GetOk("end_time")
+	endTimeValue, ok, err := d.GetOkErr("end_time")
+	if err != nil {
+		return logical.ErrorResponse("invalid end_time parameter value"), nil
+	}
+
 	if !ok {
 		return logical.ErrorResponse("missing end_time parameter value"), nil
 	}
 
-	if endTime, ok = endTimeValue.(time.Time); !ok {
-		return logical.ErrorResponse("invalid end_time parameter value"), nil
-	}
+	endTime = endTimeValue.(time.Time)
 
 	entry := &UICustomMessageEntry{
 		Id:            messageId,
@@ -5887,6 +5925,15 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 			},
 		},
 	}, nil
+}
+
+func (b *SystemBackend) handleCustomMessageExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	_, ok, err := d.GetOkErr("id")
+	if err != nil {
+		return false, err
+	}
+
+	return ok, nil
 }
 
 const sysHelpRoot = `
