@@ -6,6 +6,7 @@ package seal
 import (
 	"context"
 	"fmt"
+	UUID "github.com/hashicorp/go-uuid"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -17,7 +18,7 @@ import (
 type TestSealOpts struct {
 	Logger       hclog.Logger
 	StoredKeys   StoredKeysSupport
-	Secret       []byte
+	Secrets      [][]byte
 	Name         wrapping.WrapperType
 	WrapperCount int
 	Generation   uint64
@@ -37,6 +38,29 @@ func NewTestSealOpts(opts *TestSealOpts) *TestSealOpts {
 		// we might at some point need to allow Generation == 0
 		opts.Generation = 1
 	}
+	switch len(opts.Secrets) {
+	case opts.WrapperCount:
+		// all good, each wrapper has its own secret
+
+	case 0:
+		if opts.WrapperCount == 1 {
+			// If there is only one wrapper, the default TestWrapper behaviour of reversing
+			// the bytes slice is fine.
+			opts.Secrets = [][]byte{nil}
+		} else {
+			// If there is more than one wrapper, each one needs a different secret
+			for i := 0; i < opts.WrapperCount; i++ {
+				uuid, err := UUID.GenerateUUID()
+				if err != nil {
+					panic(fmt.Sprintf("error generating secret: %v", err))
+				}
+				opts.Secrets = append(opts.Secrets, []byte(uuid))
+			}
+		}
+
+	default:
+		panic(fmt.Sprintf("wrong number of secrets %d vs %d wrappers", len(opts.Secrets), opts.WrapperCount))
+	}
 	return opts
 }
 
@@ -46,7 +70,7 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
 	ctx := context.Background()
 	for i := 0; i < opts.WrapperCount; i++ {
-		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secrets[i])}
 		wrapperType, err := wrappers[i].Type(ctx)
 		if err != nil {
 			panic(err)

@@ -748,7 +748,7 @@ GATHER_RESULTS:
 	return nil, false, errors.New("context timeout exceeded")
 }
 
-// tryDecrypt returns the plaintext and a flad indicating whether the decryption was done by the "unwrapSeal" (see
+// tryDecrypt returns the plaintext and a flag indicating whether the decryption was done by the "unwrapSeal" (see
 // sealWrapMigration.Decrypt).
 func (a *access) tryDecrypt(ctx context.Context, sealWrapper *SealWrapper, ciphertextByKeyId map[string]*wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
 	now := time.Now()
