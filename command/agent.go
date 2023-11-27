@@ -216,7 +216,10 @@ func (c *AgentCommand) Run(args []string) int {
 	// We want to ensure that consul-template will honor the settings, for example
 	// if the -log-format is JSON we want JSON, not a mix of JSON and non-JSON messages.
 	c.logger = l
-	c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{InferLevelsWithTimestamp: true})
+	c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{
+		InferLevels:              true,
+		InferLevelsWithTimestamp: true,
+	})
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
