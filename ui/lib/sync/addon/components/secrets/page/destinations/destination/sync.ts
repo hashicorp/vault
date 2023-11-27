@@ -43,8 +43,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @tracked secretPath = '';
   @tracked error = '';
   powerSelectAPI: PowerSelectAPI | undefined;
-  isShowingSuggestions = false;
-  _lastSecretFetch: KvSecretMetadataModel[] | undefined; // cache the response for filtering purposes
+  _lastFetch: KvSecretMetadataModel[] | undefined; // cache the response for filtering purposes
 
   // strip trailing slash from mount path
   get mountName() {
@@ -76,8 +75,8 @@ export default class DestinationSyncPageComponent extends Component<Args> {
         pathToSecret,
       })) as unknown;
       // this will be used to filter the existing result set when the search term changes within the same path
-      this._lastSecretFetch = kvModels as KvSecretMetadataModel[];
-      return this._lastSecretFetch;
+      this._lastFetch = kvModels as KvSecretMetadataModel[];
+      return this._lastFetch;
     } catch (error) {
       return [];
     }
@@ -103,7 +102,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
       this.secrets = [];
     } else if (this.secretPath && !isDirectory && this.secrets) {
       // if we don't need to fetch from a new path, filter the previous result set with the updated search term
-      this.secrets = this.filterSecrets(this._lastSecretFetch, isDirectory);
+      this.secrets = this.filterSecrets(this._lastFetch, isDirectory);
     } else {
       const kvModels = await this.fetchSecrets(isDirectory);
       this.secrets = this.filterSecrets(kvModels, isDirectory);
