@@ -5150,8 +5150,15 @@ type LeaderResponse struct {
 }
 
 func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+	core.stateLock.RLock()
+	defer core.stateLock.RUnlock()
+
+	return core.GetLeaderStatusLocked()
+}
+
+func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 	haEnabled := true
-	isLeader, address, clusterAddr, err := core.Leader()
+	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
@@ -5165,10 +5172,10 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		IsSelf:               isLeader,
 		LeaderAddress:        address,
 		LeaderClusterAddress: clusterAddr,
-		PerfStandby:          core.PerfStandby(),
+		PerfStandby:          core.perfStandby,
 	}
 	if isLeader {
-		resp.ActiveTime = core.ActiveTime()
+		resp.ActiveTime = core.activeTime
 	}
 	if resp.PerfStandby {
 		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
@@ -5176,7 +5183,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.LastWAL = core.EntLastWAL()
 	}
 
-	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
 	return resp, nil
 }
 
@@ -5200,7 +5207,7 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatus()
+	status, err := b.Core.GetLeaderStatusLocked()
 	if err != nil {
 		return nil, err
 	}
