@@ -36,7 +36,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     // hasClass assertion wasn't working so this is the workaround
     assert.strictEqual(
       find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-critical',
+      'hds-modal hds-modal--size-small hds-modal--color-critical has-text-left',
       'renders critical modal color by default'
     );
     assert.strictEqual(
@@ -110,7 +110,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     await click(SELECTORS.modalToggle);
     assert.strictEqual(
       find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-neutral',
+      'hds-modal hds-modal--size-small hds-modal--color-neutral has-text-left',
       'renders critical modal color by default'
     );
     assert.dom(SELECTORS.title).hasText('Not allowed', 'renders disabled title');
@@ -144,7 +144,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     await click(SELECTORS.modalToggle);
     assert.strictEqual(
       find('#confirm-action-modal').className,
-      'hds-modal hds-modal--size-small hds-modal--color-warning',
+      'hds-modal hds-modal--size-small hds-modal--color-warning has-text-left',
       'renders warning modal'
     );
     assert.strictEqual(

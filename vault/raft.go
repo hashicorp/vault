@@ -70,7 +70,10 @@ func (c *Core) GetRaftNodeID() string {
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+	return c.GetRaftIndexesLocked()
+}
 
+func (c *Core) GetRaftIndexesLocked() (committed uint64, applied uint64) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return 0, 0
