@@ -66,9 +66,20 @@
             <ExternalLink
               @href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
               class="link"
-              data-test-upgrade-link-replication
+              data-test-upgrade-link-performance
             >
               Learn more about Performance Replication here.
+            </ExternalLink>
+          </p>
+        {{else if (and (eq this.mode "dr") (not (has-feature "Disaster Recovery")))}}
+          <p>
+            Disaster Recovery is a feature of Vault Enterprise Premium.
+            <ExternalLink
+              @href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
+              class="link"
+              data-test-upgrade-link-dr
+            >
+              Learn more about Disaster Recovery here.
             </ExternalLink>
           </p>
         {{else if this.replicationEnabled}}
