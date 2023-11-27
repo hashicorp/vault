@@ -12,15 +12,10 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <Dashboard::VaultVersionTitle />
+ * <Dashboard::VaultVersionTitle @version={{this.versionSvc}} />
  * ```
  */
 
 export default class DashboardVaultVersionTitle extends Component {
-  @service version;
   @service namespace;
-
-  get versionHeader() {
-    return `Vault ${this.version.versionDisplay}`;
-  }
 }
