@@ -9,7 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupModels } from 'vault/tests/helpers/sync/setup-models';
 import hbs from 'htmlbars-inline-precompile';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
@@ -17,7 +17,7 @@ import sinon from 'sinon';
 import { Response } from 'miragejs';
 
 const { destinations, searchSelect, messageError } = PAGE;
-const { mountSelect, secretInput, submit, cancel } = destinations.sync;
+const { mountSelect, mountInput, secretInput, submit, cancel } = destinations.sync;
 
 module('Integration | Component | sync | Secrets::Page::Destinations::Destination::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -85,6 +85,31 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
     assert.dom(submit).isDisabled('Submit button is disabled when secret is not selected');
+    await click(secretInput);
+    await click(searchSelect.option(1));
+    await click(submit);
+  });
+
+  test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      data: { secret: { 'cubbyhole/': { type: 'cubbyhole' } } },
+    }));
+
+    const { type, name } = this.destination;
+    this.server.post(`/sys/sync/destinations/${type}/${name}/associations/set`, (schema, req) => {
+      const data = JSON.parse(req.requestBody);
+      const expected = { mount: 'my-kv', secret_name: 'my-secret' };
+      assert.deepEqual(data, expected, 'Sync request made with mount and secret name');
+      return {};
+    });
+
+    await render(hbs`<Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} />`, {
+      owner: this.engine,
+    });
+
+    await fillIn(mountInput, 'my-kv');
     await click(secretInput);
     await click(searchSelect.option(1));
     await click(submit);

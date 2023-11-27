@@ -27,6 +27,7 @@ export const PAGE = {
   destinations: {
     sync: {
       mountSelect: '[data-test-sync-mount-select]',
+      mountInput: '[data-test-sync-mount-input]',
       secretInput: '[data-test-sync-secret-input]',
       secretSelect: '[data-test-sync-secret-select]',
       submit: '[data-test-sync-submit]',

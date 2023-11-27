@@ -47,7 +47,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
 
   // strip trailing slash from mount path
   get mountName() {
-    return this.mountPath ? this.mountPath.slice(0, -1) : null;
+    return keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath;
   }
 
   // unable to use built-in fetch functionality of SearchSelect since we need to filter by kv type
@@ -117,6 +117,12 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @action
   setMount(selected: Array<string>) {
     this.mountPath = selected[0] || '';
+    this.updateSecretSuggestions();
+  }
+
+  @action
+  onMountInput(value: string) {
+    this.mountPath = value;
     this.updateSecretSuggestions();
   }
 
