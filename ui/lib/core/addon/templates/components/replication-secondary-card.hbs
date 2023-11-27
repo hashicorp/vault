@@ -107,7 +107,7 @@
     </div>
     <div class="grid-item-third-row">
       {{#if (is-empty this.knownPrimaryClusterAddrs)}}
-        <Hds::ApplicationState as |A|>
+        <Hds::ApplicationState data-test-empty-state as |A|>
           <A.Header @title="No known_primary_cluster_addrs" />
           <A.Body
             @text="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
@@ -115,13 +115,13 @@
           <A.Footer @hasDivider={{true}} as |F|>
             <F.Link::Standalone
               @icon="help"
-              @text="Learn more"
+              @text="Learn more about replication"
               @href={{doc-link "/vault/tutorials/monitoring/monitor-replication"}}
             />
           </A.Footer>
         </Hds::ApplicationState>
       {{else}}
-        <Hds::Table @caption="Known Primary Cluster Addrs">
+        <Hds::Table @caption="Known Primary Cluster Addrs" data-test-info-table>
           <:head as |H|>
             <H.Tr>
               <H.Th>cluster_addr</H.Th>
