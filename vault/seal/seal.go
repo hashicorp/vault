@@ -468,7 +468,10 @@ func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 				a.logger.Warn("cannot determine key ID for seal", "seal", sealWrapper.Name, "err", err)
 				return fmt.Errorf("cannod determine key ID for seal %s: %w", sealWrapper.Name, err)
 			}
-			keyIds = append(keyIds, keyId)
+			if keyId != "" {
+				// Some wrappers may not yet know their key id. For emample, see gcpkms.Wrapper.
+				keyIds = append(keyIds, keyId)
+			}
 		}
 	}
 	a.keyIdSet.setIds(keyIds)
@@ -477,7 +480,7 @@ func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 
 func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error) {
 	// Note that we don't compare generations when the value is transitory, since all single-blobInfo
-	// values are unmarshalled as transitory values.
+	// values (i.e. not yet upgraded to MultiWrapValues) are unmarshalled as transitory values.
 	if value.Generation != 0 && value.Generation != a.Generation() {
 		return false, nil
 	}
@@ -558,6 +561,34 @@ GATHER_RESULTS:
 		}
 	}
 
+	{
+		// Check for duplicate Key IDs.
+		// If any wrappers produce duplicated IDs, their BlobInfo will be replaced by an error.
+
+		keyIdToSealWrapperNameMap := make(map[string]string)
+		for _, sealWrapper := range enabledWrappersByPriority {
+			wrapperName := sealWrapper.Name
+			if result, ok := results[wrapperName]; ok {
+				if result.err != nil {
+					continue
+				}
+				if result.ciphertext.KeyInfo == nil {
+					// Can this really happen? Probably not?
+					continue
+				}
+				keyId := result.ciphertext.KeyInfo.KeyId
+				duplicateWrapperName, isDuplicate := keyIdToSealWrapperNameMap[keyId]
+				if isDuplicate {
+					for _, name := range []string{wrapperName, duplicateWrapperName} {
+						results[name].err = fmt.Errorf("seal %s has returned duplicate key ID %s, key IDs must be unique", name, keyId)
+						results[name].ciphertext = nil
+					}
+				}
+				keyIdToSealWrapperNameMap[keyId] = wrapperName
+			}
+		}
+	}
+
 	// Sort out the successful results from the errors
 	var slots []*wrapping.BlobInfo
 	errs := make(map[string]error)
@@ -587,6 +618,7 @@ GATHER_RESULTS:
 
 	a.logger.Trace("successfully encrypted value", "encryption seal wrappers", len(slots), "total enabled seal wrappers",
 		len(a.GetEnabledSealWrappersByPriority()))
+
 	ret := &MultiWrapValue{
 		Generation: a.Generation(),
 		Slots:      slots,
