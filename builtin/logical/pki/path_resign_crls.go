@@ -252,7 +252,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	if deltaCrlBaseNumber > -1 {
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlBaseNumber))
 		if err != nil {
-			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		template.ExtraExtensions = []pkix.Extension{ext}
 	}
@@ -325,7 +325,7 @@ func (b *backend) pathUpdateSignRevocationListHandler(ctx context.Context, reque
 	if deltaCrlBaseNumber > -1 {
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlBaseNumber))
 		if err != nil {
-			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		crlExtensions = append(crlExtensions, ext)
 	}
