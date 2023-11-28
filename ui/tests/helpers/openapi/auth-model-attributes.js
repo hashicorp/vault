@@ -822,6 +822,12 @@ const ldap = {
       fieldGroup: 'default',
       type: 'number',
     },
+    passwordPolicy: {
+      editType: 'string',
+      fieldGroup: 'default',
+      helpText: 'Password policy to use to rotate the root password',
+      type: 'string',
+    },
     requestTimeout: {
       editType: 'ttl',
       helpText:
