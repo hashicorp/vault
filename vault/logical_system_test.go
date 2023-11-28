@@ -6104,6 +6104,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		CgroupParent: "/cpulimit/",
 		CPU:          1,
 		Memory:       10000,
+		Rootless:     true,
 	}
 
 	// Register the plugin runtime
@@ -6113,6 +6114,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -6153,6 +6155,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}
 	if !reflect.DeepEqual(resp.Data, readExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)

@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Containerized plugins can be run fully rootless with the runsc runtime.
+```

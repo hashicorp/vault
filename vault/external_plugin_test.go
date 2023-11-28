@@ -70,9 +70,11 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 			}
 
 			cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{
-				Plugins: &TestPluginConfig{
-					Typ:      tc.pluginType,
-					Versions: []string{""},
+				Plugins: []*TestPluginConfig{
+					{
+						Typ:      tc.pluginType,
+						Versions: []string{""},
+					},
 				},
 			})
 
