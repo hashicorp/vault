@@ -1,0 +1,3 @@
+```release-note:change
+vault: Replaces the direct package dependency on github.com/armon/go-metrics with github.com/hashicorp/go-metrics.
+```
