@@ -203,13 +203,13 @@ func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS)
 }
 
 func findRenamedDisabledSeals(configs []*configutil.KMS) []*configutil.KMS {
-	diabledSeals := []*configutil.KMS{}
+	disabledSeals := []*configutil.KMS{}
 	for _, seal := range configs {
 		if seal.Disabled && strings.HasSuffix(seal.Name, configutil.KmsRenameDisabledSuffix) {
-			diabledSeals = append(diabledSeals, seal)
+			disabledSeals = append(disabledSeals, seal)
 		}
 	}
-	return diabledSeals
+	return disabledSeals
 }
 
 func compareKMSConfigByNameAndType() cmp.Option {
