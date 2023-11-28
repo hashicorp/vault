@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { get } from '@ember/object';
 import Component from '@glimmer/component';
 
 /**
@@ -21,24 +22,16 @@ import Component from '@glimmer/component';
  */
 
 export default class ReplicationSummaryCard extends Component {
-  get lastDrWAL() {
-    return this.args.replicationDetails.dr?.lastWAL || 0;
+  get key() {
+    return this.args.title === 'Performance' ? 'performance' : 'dr';
   }
-  get lastPerformanceWAL() {
-    return this.args.replicationDetails.performance?.lastWAL || 0;
+  get lastWAL() {
+    return get(this.args.replicationDetails, `${this.key}.lastWAL`) ?? 0;
   }
-  get merkleRootDr() {
-    return this.args.replicationDetails.dr?.merkleRoot || '';
+  get merkleRoot() {
+    return get(this.args.replicationDetails, `${this.key}.merkleRoot`) ?? '';
   }
-  get merkleRootPerformance() {
-    return this.args.replicationDetails.performance?.merkleRoot || '';
-  }
-  get knownSecondariesDr() {
-    const knownSecondaries = this.args.replicationDetails.dr.knownSecondaries;
-    return knownSecondaries?.length ?? 0;
-  }
-  get knownSecondariesPerformance() {
-    const knownSecondaries = this.args.replicationDetails.performance.knownSecondaries;
-    return knownSecondaries?.length ?? 0;
+  get knownSecondariesCount() {
+    return get(this.args.replicationDetails, `${this.key}.knownSecondaries.length`) ?? 0;
   }
 }
