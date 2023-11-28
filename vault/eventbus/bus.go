@@ -14,11 +14,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/physical"

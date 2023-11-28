@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/fairshare"

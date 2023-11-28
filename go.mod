@@ -41,7 +41,6 @@ require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.62.521
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
 	github.com/apple/foundationdb/bindings/go v0.0.0-20190411004307-cd5c9d91fad2
-	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
 	github.com/aws/aws-sdk-go v1.44.331
@@ -97,6 +96,7 @@ require (
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.8
 	github.com/hashicorp/go-memdb v1.3.4
+	github.com/hashicorp/go-metrics v0.5.3
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.5.2
@@ -279,6 +279,7 @@ require (
 	github.com/apache/arrow/go/v12 v12.0.1 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.17.7 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.10 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.18 // indirect
@@ -386,7 +387,6 @@ require (
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-metrics v0.5.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.0.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.2 // indirect

@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 

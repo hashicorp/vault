@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"google.golang.org/grpc/status"
 )
 

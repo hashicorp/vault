@@ -12,10 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	uuid "github.com/hashicorp/go-uuid"
-
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )

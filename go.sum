@@ -2193,8 +2193,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.8 h1:uvdmC28xaqklq
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.8/go.mod h1:zHX8LhkrU/M8sJkIQ85Dsrg7aqNEonY1+l6MlUC+6O4=
 github.com/hashicorp/go-memdb v1.3.4 h1:XSL3NR682X/cVk2IeV0d70N4DZ9ljI885xAEU8IoK3c=
 github.com/hashicorp/go-memdb v1.3.4/go.mod h1:uBTr1oQbtuMgd1SSGoR8YV27eT3sBHbYiNm53bMpgSg=
-github.com/hashicorp/go-metrics v0.5.1 h1:rfPwUqFU6uZXNvGl4hzjY8LEBsqFVU4si1H9/Hqck/U=
-github.com/hashicorp/go-metrics v0.5.1/go.mod h1:KEjodfebIOuBYSAe/bHTm+HChmKSxAOXPBieMLYozDE=
+github.com/hashicorp/go-metrics v0.5.3 h1:M5uADWMOGCTUNU1YuC4hfknOeHNaX54LDm4oYSucoNE=
+github.com/hashicorp/go-metrics v0.5.3/go.mod h1:KEjodfebIOuBYSAe/bHTm+HChmKSxAOXPBieMLYozDE=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v0.5.5/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v1.1.5 h1:9byZdVjKTe5mce63pRVNP1L7UAmdHOTEMGehn6KvJWs=

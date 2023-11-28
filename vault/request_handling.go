@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"

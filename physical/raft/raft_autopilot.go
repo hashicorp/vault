@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-metrics"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"

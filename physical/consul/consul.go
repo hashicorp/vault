@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"

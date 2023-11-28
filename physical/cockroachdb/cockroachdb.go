@@ -13,9 +13,9 @@ import (
 	"time"
 	"unicode"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"

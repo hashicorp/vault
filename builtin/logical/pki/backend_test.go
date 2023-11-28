@@ -42,9 +42,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
 	auth "github.com/hashicorp/vault/api/auth/userpass"

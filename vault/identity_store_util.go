@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
 	memdb "github.com/hashicorp/go-memdb"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"

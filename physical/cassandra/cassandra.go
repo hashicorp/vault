@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )

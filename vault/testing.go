@@ -31,9 +31,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"

@@ -6,9 +6,8 @@ package audit
 import (
 	"context"
 
-	metrics "github.com/armon/go-metrics"
-
 	"github.com/hashicorp/eventlogger"
+	metrics "github.com/hashicorp/go-metrics"
 )
 
 // SinkWrapper is a wrapper for any kind of Sink Node that processes events

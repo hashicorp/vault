@@ -14,7 +14,7 @@ import (
 
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"

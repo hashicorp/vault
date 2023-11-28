@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/spanner"
-	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/physical"

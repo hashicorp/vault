@@ -23,7 +23,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
-	metrics "github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 

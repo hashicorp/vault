@@ -15,14 +15,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-
 	"github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/internalshared/configutil"
-
-	metrics "github.com/armon/go-metrics"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
+	metrics "github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 type StoredKeysSupport int
