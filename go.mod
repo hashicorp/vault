@@ -72,7 +72,7 @@ require (
 	github.com/golangci/revgrep v0.0.0-20220804021717-745bb2f7c2e6
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-github v17.0.0+incompatible
-	github.com/google/go-metrics-stackdriver v0.2.0
+	github.com/google/go-metrics-stackdriver v0.6.0
 	github.com/google/tink/go v1.7.0
 	github.com/hashicorp-forge/bbolt v1.3.8-hc3
 	github.com/hashicorp/cap v0.3.4
