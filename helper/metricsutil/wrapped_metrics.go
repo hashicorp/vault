@@ -54,7 +54,7 @@ type Metrics interface {
 var _ Metrics = &ClusterMetricSink{}
 
 // SinkWrapper implements `metricsutil.Metrics` using an instance of
-// armon/go-metrics `MetricSink` as the underlying implementation.
+// hashicorp/go-metrics `MetricSink` as the underlying implementation.
 type SinkWrapper struct {
 	metrics.MetricSink
 }
