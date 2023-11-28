@@ -24,7 +24,7 @@
 </KvPageHeader>
 {{#if (eq @secrets 403)}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
-    <div class="selectable-card-container one-card">
+    <div class="selectable-card-container one-card wide">
       <OverviewCard
         @cardTitle="View secret"
         @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
@@ -42,6 +42,7 @@
             @color="secondary"
             type="submit"
             disabled={{not this.secretPath}}
+            class="align-self-baseline has-left-margin-s"
             data-test-get-secret-detail
           />
         </form>
