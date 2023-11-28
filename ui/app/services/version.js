@@ -53,21 +53,19 @@ export default class VersionService extends Service {
   *getVersion() {
     if (this.version) return;
     const response = yield this.store.adapterFor('cluster').fetchVersion();
-    this.version = response.data.version;
+    this.version = response.data?.version;
   }
 
   @task({ drop: true })
   *getType() {
     if (this.type !== null) return;
     const response = yield this.store.adapterFor('cluster').health();
-    if (typeof response.enterprise === 'boolean') {
-      this.type = response.enterprise ? 'enterprise' : 'community';
-    } else if (response.has_chroot_namespace) {
+    if (response.has_chroot_namespace) {
       // chroot_namespace feature is only available in enterprise
       this.type = 'enterprise';
-    } else {
-      this.type = response.license ? 'enterprise' : 'community';
+      return;
     }
+    this.type = response.enterprise ? 'enterprise' : 'community';
   }
 
   @keepLatestTask
@@ -78,6 +76,7 @@ export default class VersionService extends Service {
     try {
       const response = yield this.store.adapterFor('cluster').features();
       this.features = response.features;
+      return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
     }

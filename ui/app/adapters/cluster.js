@@ -5,7 +5,6 @@
 
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
-import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
 import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
@@ -56,12 +55,12 @@ export default ApplicationAdapter.extend({
         id,
         name: snapshot.attr('name'),
       };
-      ret = assign(ret, health);
+      ret = Object.assign(ret, health);
       if (sealStatus instanceof AdapterError === false) {
-        ret = assign(ret, { nodes: [sealStatus] });
+        ret = Object.assign(ret, { nodes: [sealStatus] });
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
-        ret = assign(ret, replicationStatus.data);
+        ret = Object.assign(ret, replicationStatus.data);
       }
       return resolve(ret);
     });
@@ -96,7 +95,7 @@ export default ApplicationAdapter.extend({
   },
 
   fetchVersion() {
-    return this.ajax(`${this.urlFor('internal/ui/version')}`, 'GET');
+    return this.ajax(`${this.urlFor('internal/ui/version')}`, 'GET').catch(() => ({}));
   },
 
   sealStatus() {
