@@ -28,7 +28,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
     });
   });
 
-  test('it should SyncHeader component', async function (assert) {
+  test('it should render SyncHeader component', async function (assert) {
     assert.dom(PAGE.title).includesText('us-west-1', 'SyncHeader component renders');
   });
 
