@@ -146,6 +146,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			Group:   strconv.Itoa(containerCfg.GroupAdd),
 			TempDir: os.Getenv("VAULT_PLUGIN_TMPDIR"),
 		}
+		clientConfig.GRPCBrokerMultiplex = true
 	}
 	return clientConfig, nil
 }
@@ -161,7 +162,7 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		SHA256: fmt.Sprintf("%x", rc.sha256),
 
 		Env:        env,
-		GroupAdd:   os.Getgid(),
+		GroupAdd:   os.Getegid(),
 		Runtime:    consts.DefaultContainerPluginOCIRuntime,
 		CapIPCLock: rc.mlockEnabled(),
 		Labels: map[string]string{
@@ -187,6 +188,9 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		cfg.Memory = rc.runtimeConfig.Memory
 		if rc.runtimeConfig.OCIRuntime != "" {
 			cfg.Runtime = rc.runtimeConfig.OCIRuntime
+		}
+		if rc.runtimeConfig.Rootless {
+			cfg.Rootless = true
 		}
 	}
 

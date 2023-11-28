@@ -2567,10 +2567,18 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			Priority: 1,
 			Name:     "shamir",
 		})
-	case 1:
-		// If there's only one seal and it's disabled assume they want to
+	default:
+		allSealsDisabled := true
+		for _, c := range config.Seals {
+			if !c.Disabled {
+				allSealsDisabled = false
+			} else if c.Type == vault.SealConfigTypeShamir.String() {
+				return nil, errors.New("shamir seals cannot be set disabled (they should simply not be set)")
+			}
+		}
+		// If all seals are disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
-		if config.Seals[0].Disabled {
+		if allSealsDisabled {
 			config.Seals = append(config.Seals, &configutil.KMS{
 				Type:     vault.SealConfigTypeShamir.String(),
 				Priority: 1,
@@ -2716,9 +2724,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		return nil, errors.Join(sealConfigWarning, errors.New("no enabled Seals in configuration"))
 	case configuredSeals == 0:
 		return nil, errors.Join(sealConfigWarning, errors.New("no seals were successfully initialized"))
-	case containsShamir(enabledSealWrappers) && containsShamir(disabledSealWrappers):
-		return nil, errors.Join(sealConfigWarning, errors.New("shamir seals cannot be set disabled (they should simply not be set)"))
-
 	case len(enabledSealWrappers) == 1 && containsShamir(enabledSealWrappers):
 		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
 		// autoSeal.
