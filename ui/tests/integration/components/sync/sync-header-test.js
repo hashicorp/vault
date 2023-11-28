@@ -46,4 +46,19 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
     await this.renderComponent();
     assert.dom('[data-test-page-title]').hasText('Secrets sync Enterprise feature');
   });
+
+  test('it should yield actions block', async function (assert) {
+    await render(
+      hbs`
+      <SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}}>
+        <:actions>
+          <span data-test-action-block>Test</span>
+        </:actions>
+      </SyncHeader>
+    `,
+      { owner: this.engine }
+    );
+
+    assert.dom('[data-test-action-block]').exists('Component yields block for actions');
+  });
 });
