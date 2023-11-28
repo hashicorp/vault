@@ -18,6 +18,7 @@ export default function (server) {
 
   server.get('/sys/health', function () {
     return {
+      enterprise: true,
       initialized: true,
       sealed: false,
       standby: false,
