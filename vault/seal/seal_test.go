@@ -6,8 +6,9 @@ package seal
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
