@@ -74,12 +74,12 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 	})
 
 	t.Run("rootless runsc", func(t *testing.T) {
-		t.Setenv("DOCKER_HOST", fmt.Sprintf("unix:///run/user/%d/docker.sock", os.Getuid()))
-		c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{consts.PluginTypeCredential})
-
 		if _, err := exec.LookPath("runsc"); err != nil {
 			t.Skip("Skipping test as runsc not found on path")
 		}
+
+		t.Setenv("DOCKER_HOST", fmt.Sprintf("unix:///run/user/%d/docker.sock", os.Getuid()))
+		c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{consts.PluginTypeCredential})
 		mountAndUnmountContainerPlugin_WithRuntime(t, c, plugins[0], "runsc", true)
 	})
 }
