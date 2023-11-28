@@ -62,10 +62,12 @@ export default class VersionService extends Service {
     const response = yield this.store.adapterFor('cluster').health();
     if (typeof response.enterprise === 'boolean') {
       this.type = response.enterprise ? 'enterprise' : 'community';
+    } else if (response.has_chroot_namespace) {
+      // chroot_namespace feature is only available in enterprise
+      this.type = 'enterprise';
     } else {
       this.type = response.license ? 'enterprise' : 'community';
     }
-    return;
   }
 
   @keepLatestTask
@@ -76,7 +78,6 @@ export default class VersionService extends Service {
     try {
       const response = yield this.store.adapterFor('cluster').features();
       this.features = response.features;
-      return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
     }
