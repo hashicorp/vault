@@ -1,0 +1,3 @@
+```release-note:improvement
+command/server: release log gate if disable-gated-logs flag is set
+```
