@@ -6,8 +6,9 @@ package seal
 import (
 	"context"
 	"fmt"
-	UUID "github.com/hashicorp/go-uuid"
 	"sync"
+
+	UUID "github.com/hashicorp/go-uuid"
 
 	"github.com/hashicorp/vault/sdk/helper/logging"
 
