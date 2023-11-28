@@ -15,15 +15,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
+	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
