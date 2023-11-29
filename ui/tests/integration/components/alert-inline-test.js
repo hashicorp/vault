@@ -19,7 +19,7 @@ module('Integration | Component | alert-inline', function (hooks) {
   test('it renders alert message with correct class args', async function (assert) {
     await render(hbs`
     <AlertInline
-      @paddingTop={{true}}
+      class="has-top-padding-s"
       @isMarginless={{true}}
       @sizeSmall={{true}}
       @message={{this.message}}

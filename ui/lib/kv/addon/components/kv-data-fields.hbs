@@ -19,7 +19,7 @@
     @valueUpdated={{this.handleJson}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
-    <AlertInline @type={{if this.lintingErrors "warning" "danger"}} @paddingTop={{true}}>
+    <AlertInline @type={{if this.lintingErrors "warning" "danger"}} class="has-top-padding-s">
       {{#if @modelValidations.secretData.errors}}
         {{@modelValidations.secretData.errors}}
       {{else}}

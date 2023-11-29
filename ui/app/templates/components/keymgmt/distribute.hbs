@@ -28,7 +28,7 @@
           @disallowNewItems={{false}}
         >
           {{#if (and this.validMatchError.key (not this.isNewKey))}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
+            <AlertInline class="has-top-padding-s" @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
               {{this.validMatchError.key}}
               To check compatibility,
               <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
@@ -62,7 +62,7 @@
             </select>
           </div>
           {{#if this.validMatchError.key}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
+            <AlertInline class="has-top-padding-s" @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
               {{this.validMatchError.key}}
               To check compatibility,
               <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
@@ -89,7 +89,7 @@
           data-test-keymgmt-dist-provider
         >
           {{#if this.validMatchError.provider}}
-            <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
+            <AlertInline class="has-top-padding-s" @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
               {{this.validMatchError.provider}}
               To check compatibility,
               <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.

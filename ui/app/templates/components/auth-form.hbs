@@ -191,7 +191,7 @@
           />
           {{#if (and this.delayAuthMessageReminder.isIdle this.showLoading)}}
             <AlertInline
-              @paddingTop={{true}}
+              class="has-top-padding-s"
               @sizeSmall={{true}}
               @type="info"
               @message="If login takes longer than usual, you may need to check your device for an MFA notification, or contact your administrator if login times out."
