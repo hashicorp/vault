@@ -167,7 +167,7 @@ func (c *UIConfig) retrieveCustomMessagesInternal(ctx context.Context) ([]UICust
 // ReadCustomMessage reads a specific custom message from the underlying storage
 // based on the provided messageId value.
 func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
-	customMessageEntry, err := c.retrieveCustomMessage(ctx, messageId)
+	customMessageEntry, err := c.retrieveCustomMessageInternal(ctx, messageId)
 	if err != nil {
 		return nil, err
 	}
@@ -179,10 +179,10 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 	return customMessageEntry, nil
 }
 
-// retrieveCustomMessage handles the internal logic to retrieve a specific
+// retrieveCustomMessageInternal handles the internal logic to retrieve a specific
 // custom message. If no custom message exists with the provided messageId,
 // nil, nil is returned
-func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
+func (c *UIConfig) retrieveCustomMessageInternal(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
@@ -216,7 +216,7 @@ func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) er
 // CreateCustomMessage stores the provided UICustomMessageEntry into the
 // underlying storage.
 func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
-	count, err := c.countCustomMessages(ctx)
+	count, err := c.countCustomMessagesInternal(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -242,9 +242,9 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 	return &entry, nil
 }
 
-// countCustomMessages returns a count of existing custom messages. It's used to
+// countCustomMessagesInternal returns a count of existing custom messages. It's used to
 // detect if the maximum number of custom messages has been met.
-func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
+func (c *UIConfig) countCustomMessagesInternal(ctx context.Context) (int, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
