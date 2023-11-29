@@ -426,7 +426,7 @@ func TestDeleteCustomMessage(t *testing.T) {
 	// Then count the remaining custom messages.
 	assert.NoError(t, testUIConfig.DeleteCustomMessage(context.Background(), "id"))
 
-	count, err := testUIConfig.countCustomMessages(context.Background())
+	count, err := testUIConfig.countCustomMessagesInternal(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 
@@ -471,7 +471,7 @@ func TestUpdateCustomMessage(t *testing.T) {
 	assert.NotNil(t, result)
 
 	// Verify that the change made it into the storage
-	underlyingEntry, err := testUIConfig.retrieveCustomMessage(context.Background(), "id")
+	underlyingEntry, err := testUIConfig.retrieveCustomMessageInternal(context.Background(), "id")
 	require.NoError(t, err)
 	require.NotNil(t, underlyingEntry)
 	assert.Equal(t, "Updated message", underlyingEntry.Message)
@@ -479,7 +479,7 @@ func TestUpdateCustomMessage(t *testing.T) {
 	// Make sure that modifying the returned *UICustomMessageEntry does nothing
 	// to what's stored in the logical.Storage.
 	result.MessageType = "modal"
-	underlyingEntry, err = testUIConfig.retrieveCustomMessage(context.Background(), "id")
+	underlyingEntry, err = testUIConfig.retrieveCustomMessageInternal(context.Background(), "id")
 	require.NoError(t, err)
 	require.NotNil(t, underlyingEntry)
 	assert.Equal(t, "banner", underlyingEntry.MessageType)
