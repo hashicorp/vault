@@ -3,22 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div
+{{! DEPRECATED use Hds::Alert directly }}
+<Hds::Alert
+  @type="compact"
+  @color={{this.color}}
+  @icon={{if this.isRefreshing "loading"}}
   {{did-update this.refresh @message}}
-  class={{concat "is-flex-center" this.paddingTop this.isMarginless this.sizeSmall}}
   data-test-inline-alert
   ...attributes
+  as |A|
 >
-  {{#if this.isRefreshing}}
-    <Icon @name="loading" class="loading" />
-  {{else}}
-    <Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
-    <p class={{this.textClass}} data-test-inline-error-message>
-      {{#if (has-block)}}
-        {{yield}}
-      {{else}}
-        {{@message}}
-      {{/if}}
-    </p>
-  {{/if}}
-</div>
+  {{#unless this.isRefreshing}}
+    <A.Description>{{@message}}</A.Description>
+  {{/unless}}
+</Hds::Alert>
