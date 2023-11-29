@@ -21,11 +21,11 @@
 }
 
 .has-gap-m {
-  gap: $spacing-m;
+  gap: $spacing-16;
 }
 
 .has-gap-l {
-  gap: $spacing-l;
+  gap: $spacing-24;
 }
 
 // Alignment of the items
@@ -66,7 +66,7 @@
   justify-content: flex-start;
 
   &.has-gap {
-    gap: $spacing-m;
+    gap: $spacing-16;
   }
 }
 
@@ -118,11 +118,11 @@
   }
 
   &.row-gap-8 {
-    row-gap: $spacing-xs;
+    row-gap: $spacing-8;
   }
 
   &.column-gap-16 {
-    column-gap: $spacing-m;
+    column-gap: $spacing-16;
   }
 }
 

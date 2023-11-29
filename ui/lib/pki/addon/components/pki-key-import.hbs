@@ -9,7 +9,7 @@
     <p class="has-bottom-margin-l">
       Use this form to import a single pem encoded rsa, ec, or ed25519 key.
       <DocLink @path="/vault/api-docs/secret/pki#import-key">
-        Learn more here.
+        Importing a PKI key
       </DocLink>
     </p>
     {{#let (find-by "name" "keyName" @model.formFields) as |attr|}}
@@ -17,34 +17,31 @@
     {{/let}}
     <TextFile @onChange={{this.onFileUploaded}} @label="PEM Bundle" data-test-pki-key-file />
   </div>
-  <div class="has-top-padding-s">
-    <button
+  <Hds::ButtonSet class="has-top-padding-s">
+    <Hds::Button
+      @text="Import key"
+      @icon={{if this.submitForm.isRunning "loading"}}
       type="submit"
-      class="button is-primary {{if this.submitForm.isRunning 'is-loading'}}"
       disabled={{this.submitForm.isRunning}}
       data-test-pki-key-import
-    >
-      Import key
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
       disabled={{this.submitForm.isRunning}}
       {{on "click" this.cancel}}
       data-test-pki-key-cancel
-    >
-      Cancel
-    </button>
-    {{#if this.invalidFormAlert}}
-      <div class="control">
-        <AlertInline
-          @type="danger"
-          @paddingTop={{true}}
-          @message={{this.invalidFormAlert}}
-          @mimicRefresh={{true}}
-          data-test-pki-key-validation-error
-        />
-      </div>
-    {{/if}}
-  </div>
+    />
+  </Hds::ButtonSet>
+  {{#if this.invalidFormAlert}}
+    <div class="control">
+      <AlertInline
+        @type="danger"
+        @paddingTop={{true}}
+        @message={{this.invalidFormAlert}}
+        @mimicRefresh={{true}}
+        data-test-pki-key-validation-error
+      />
+    </div>
+  {{/if}}
 </form>

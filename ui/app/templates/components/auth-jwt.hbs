@@ -3,20 +3,20 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<form id="auth-form" onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=this.roleName jwt=this.jwt)}}>
+<form id="auth-form" {{on "submit" (action "signIn")}}>
   <div class="field">
     <label for="role" class="is-label">Role</label>
     <div class="control">
       <input
-        value={{@roleName}}
+        value={{this.roleName}}
         placeholder="Default"
-        oninput={{perform this.fetchRole value="target.value"}}
         autocomplete="off"
         spellcheck="false"
         name="role"
         id="role"
         class="input"
         type="text"
+        {{on "input" (action "onRoleChange")}}
         data-test-role
       />
     </div>

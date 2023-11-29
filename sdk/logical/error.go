@@ -3,7 +3,10 @@
 
 package logical
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 var (
 	// ErrUnsupportedOperation is returned if the operation is not supported
@@ -60,6 +63,47 @@ var (
 	// versions, but the functionality has now been removed
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
 )
+
+type DelegatedAuthErrorHandler func(ctx context.Context, initiatingRequest, authRequest *Request, authResponse *Response, err error) (*Response, error)
+
+var _ error = &RequestDelegatedAuthError{}
+
+// RequestDelegatedAuthError Special error indicating the backend wants to delegate authentication elsewhere
+type RequestDelegatedAuthError struct {
+	mountAccessor string
+	path          string
+	data          map[string]interface{}
+	errHandler    DelegatedAuthErrorHandler
+}
+
+func NewDelegatedAuthenticationRequest(mountAccessor, path string, data map[string]interface{}, errHandler DelegatedAuthErrorHandler) *RequestDelegatedAuthError {
+	return &RequestDelegatedAuthError{
+		mountAccessor: mountAccessor,
+		path:          path,
+		data:          data,
+		errHandler:    errHandler,
+	}
+}
+
+func (d *RequestDelegatedAuthError) Error() string {
+	return "authentication delegation requested"
+}
+
+func (d *RequestDelegatedAuthError) MountAccessor() string {
+	return d.mountAccessor
+}
+
+func (d *RequestDelegatedAuthError) Path() string {
+	return d.path
+}
+
+func (d *RequestDelegatedAuthError) Data() map[string]interface{} {
+	return d.data
+}
+
+func (d *RequestDelegatedAuthError) AuthErrorHandler() DelegatedAuthErrorHandler {
+	return d.errHandler
+}
 
 type HTTPCodedError interface {
 	Error() string

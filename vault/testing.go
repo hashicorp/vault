@@ -220,8 +220,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
 
-	corehelpers.RegisterSubloggerAdder(logger, conf)
-
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
 	conf.EnableRaw = opts.EnableRaw
@@ -240,7 +238,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
-	conf.AllLoggers = logger.AllLoggers
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
@@ -276,8 +273,6 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Switch the SubloggerHook over to core
-	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -1261,7 +1256,7 @@ type TestClusterOptions struct {
 
 	NoDefaultQuotas bool
 
-	Plugins *TestPluginConfig
+	Plugins []*TestPluginConfig
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
@@ -1561,8 +1556,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
-	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
-
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1706,27 +1699,29 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		opts.ClusterLayers = inmemCluster
 	}
 
-	if opts != nil && opts.Plugins != nil {
-		if opts.Plugins.Container && runtime.GOOS != "linux" {
-			t.Skip("Running plugins in containers is only supported on linux")
-		}
-
-		var pluginDir string
-		var cleanup func(t testing.T)
-
-		if coreConfig.PluginDirectory == "" {
-			pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
-			coreConfig.PluginDirectory = pluginDir
-			t.Cleanup(func() { cleanup(t) })
-		}
-
+	if opts != nil && len(opts.Plugins) != 0 {
 		var plugins []pluginhelpers.TestPlugin
-		for _, version := range opts.Plugins.Versions {
-			plugin := pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory)
-			if opts.Plugins.Container {
-				plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+		for _, pluginType := range opts.Plugins {
+			if pluginType.Container && runtime.GOOS != "linux" {
+				t.Skip("Running plugins in containers is only supported on linux")
 			}
-			plugins = append(plugins, plugin)
+
+			var pluginDir string
+			var cleanup func(t testing.T)
+
+			if coreConfig.PluginDirectory == "" {
+				pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+				coreConfig.PluginDirectory = pluginDir
+				t.Cleanup(func() { cleanup(t) })
+			}
+
+			for _, version := range pluginType.Versions {
+				plugin := pluginhelpers.CompilePlugin(t, pluginType.Typ, version, coreConfig.PluginDirectory)
+				if pluginType.Container {
+					plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+				}
+				plugins = append(plugins, plugin)
+			}
 		}
 		testCluster.Plugins = plugins
 	}
@@ -1738,8 +1733,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
-
-		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -1850,7 +1843,6 @@ func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.I
 
 	if opts != nil && opts.BaseListenAddress != "" {
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
-
 		if err != nil {
 			t.Fatal("could not parse given base IP")
 		}

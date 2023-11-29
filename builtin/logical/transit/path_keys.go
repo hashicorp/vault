@@ -5,9 +5,7 @@ package transit
 
 import (
 	"context"
-	"crypto"
 	"crypto/elliptic"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -429,27 +427,11 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					key.Name = "rsa-4096"
 				}
 
-				var publicKey crypto.PublicKey
-				publicKey = v.RSAPublicKey
-				if !v.IsPrivateKeyMissing() {
-					publicKey = v.RSAKey.Public()
-				}
-
-				// Encode the RSA public key in PEM format to return over the
-				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+				pubKey, err := encodeRSAPublicKey(&v)
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
+					return nil, err
 				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
-				}
-				key.PublicKey = string(pemBytes)
+				key.PublicKey = pubKey
 			}
 
 			retKeys[k] = structs.New(key).Map()

@@ -65,7 +65,7 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    assert.dom(SELECTORS.wrapButton).hasClass('is-loading');
+    assert.dom(`${SELECTORS.wrapButton} [data-test-icon="loading"]`).exists('renders loading icon');
     assert.dom(SELECTORS.wrapButton).isDisabled();
   });
 

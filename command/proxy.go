@@ -447,11 +447,16 @@ func (c *ProxyCommand) Run(args []string) int {
 			Proxier:            apiProxy,
 			Logger:             cacheLogger.Named("leasecache"),
 			CacheStaticSecrets: config.Cache.CacheStaticSecrets,
+			// dynamic secrets are configured as default-on to preserve backwards compatibility
+			CacheDynamicSecrets: !config.Cache.DisableCachingDynamicSecrets,
+			UserAgentToUse:      useragent.AgentProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
 		}
+
+		cacheLogger.Info("cache configured", "cache_static_secrets", config.Cache.CacheStaticSecrets, "disable_caching_dynamic_secrets", config.Cache.DisableCachingDynamicSecrets)
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {

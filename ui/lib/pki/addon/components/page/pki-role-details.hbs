@@ -7,14 +7,13 @@
   <ToolbarActions>
     {{#if @role.canDelete}}
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.deleteRole}}
         @confirmTitle="Delete role?"
-        @confirmButtonText="Delete"
+        @buttonText="Delete"
         data-test-pki-role-delete
-      >
-        Delete
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @role.canGenerateCert}}

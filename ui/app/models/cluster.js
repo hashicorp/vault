@@ -16,6 +16,8 @@ export default class ClusterModel extends Model {
   @attr('boolean') standby;
   @attr('string') type;
   @attr('object') license;
+  // manually set on response when sys/health failure
+  @attr('boolean') hasChrootNamespace;
 
   /* Licensing concerns */
   get licenseExpiry() {

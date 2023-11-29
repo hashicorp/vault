@@ -413,7 +413,36 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			r = newR
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
-		default:
+			// RFC 5785
+		case strings.HasPrefix(r.URL.Path, "/.well-known/"):
+			standby, err := core.Standby()
+			if err != nil {
+				core.Logger().Warn("error resolving standby status handling .well-known path", "error", err)
+			} else if standby {
+				respondStandby(core, w, r.URL)
+				cancelFunc()
+				return
+			} else {
+				redir, err := core.GetWellKnownRedirect(r.Context(), r.URL.Path)
+				if err != nil {
+					core.Logger().Warn("error resolving potential API redirect", "error", err)
+				} else {
+					if redir != "" {
+						dest := url.URL{
+							Path:     redir,
+							RawQuery: r.URL.RawQuery,
+						}
+						w.Header().Set("Location", dest.String())
+						if r.Method == http.MethodGet || r.Proto == "HTTP/1.0" {
+							w.WriteHeader(http.StatusFound)
+						} else {
+							w.WriteHeader(http.StatusTemporaryRedirect)
+						}
+						cancelFunc()
+						return
+					}
+				}
+			}
 			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return

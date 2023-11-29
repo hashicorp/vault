@@ -30,7 +30,6 @@ export default class TextFileComponent extends Component {
   @tracked content = '';
   @tracked filename = '';
   @tracked uploadError = '';
-  @tracked showValue = false;
   @tracked showTextArea = false;
   elementId = guidFor(this);
 

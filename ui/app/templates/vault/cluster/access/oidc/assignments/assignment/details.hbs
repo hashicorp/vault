@@ -41,15 +41,14 @@
   <ToolbarActions>
     {{#if @model.canDelete}}
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete assignment"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete assignment?"
         @confirmMessage="This assignment will be permanently deleted. You will not be able to recover it."
-        @confirmButtonText="Delete"
         data-test-oidc-assignment-delete
-      >
-        Delete assignment
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @model.canEdit}}
