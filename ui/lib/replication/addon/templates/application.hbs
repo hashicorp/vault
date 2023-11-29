@@ -19,13 +19,14 @@
     @current-when="replication"
     @isRouteExternal={{true}}
     @text="Overview"
-    data-test-sidebar-nav-link="Replication overview"
+    data-test-sidebar-nav-link="Overview"
   />
   {{#if (has-feature "DR Replication")}}
-    <Nav.Link @route="mode" @model="dr" @text="Disaster Recovery" data-test-sidebar-nav-link="Disaster recovery" />
+    <Nav.Link @route="mode" @model="dr" @text="Disaster Recovery" data-test-sidebar-nav-link="Disaster Recovery" />
   {{/if}}
   {{#if (has-feature "Performance Replication")}}
     <Nav.Link @route="mode" @model="performance" @text="Performance" data-test-sidebar-nav-link="Performance" />
   {{/if}}
 </Hds::SideNav::Portal>
+
 {{outlet}}
