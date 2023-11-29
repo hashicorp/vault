@@ -109,11 +109,21 @@ type Backend struct {
 	// RunningVersion is the optional version that will be self-reported
 	RunningVersion string
 
+	// Functions for rotating the root password of a backend if it exists
+	RotatePassword            func(context.Context, *logical.Request) error           // specific backend developer responsible for handling basically everything
+	RotatePasswordGetSchedule func(context.Context, *logical.Request) (string, error) // schedule string in cron format
+
 	logger  log.Logger
 	system  logical.SystemView
 	events  logical.EventSender
 	once    sync.Once
 	pathsRe []*regexp.Regexp
+}
+
+type RotationItem struct {
+	Key      string // arbitrary reference the specific backend will understand
+	Schedule string
+	Window   string
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.

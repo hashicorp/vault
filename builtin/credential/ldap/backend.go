@@ -5,14 +5,18 @@ package ldap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
+
+	goldap "github.com/go-ldap/ldap/v3"
 
 	"github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -58,6 +62,78 @@ func Backend() *backend {
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
+		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (string, error) {
+			cfg := b.Config(ctx, req)
+			return cfg.RootSchedule, nil
+			return "", nil
+		},
+		RotatePassword: func(ctx context.Context, req *logical.Request) error {
+			// lock the backend's state - really just the config state - for mutating
+			b.mu.Lock()
+			defer b.mu.Unlock()
+
+			cfg, err := b.Config(ctx, req)
+			if err != nil {
+				return err
+			}
+			if cfg == nil {
+				return errors.New("attempted to rotate root on an undefined config")
+			}
+
+			u, p := cfg.BindDN, cfg.BindPassword
+			if u == "" || p == "" {
+				return errors.New("auth is not using authenticated search, no root to rotate")
+			}
+
+			// grab our ldap client
+			client := ldaputil.Client{
+				Logger: b.Logger(),
+				LDAP:   ldaputil.NewLDAP(),
+			}
+
+			conn, err := client.DialLDAP(cfg.ConfigEntry)
+			if err != nil {
+				return err
+			}
+
+			err = conn.Bind(u, p)
+			if err != nil {
+				return err
+			}
+
+			lreq := &goldap.ModifyRequest{
+				DN: cfg.BindDN,
+			}
+
+			var newPassword string
+			if cfg.PasswordPolicy != "" {
+				newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
+			} else {
+				newPassword, err = base62.Random(defaultPasswordLength)
+			}
+			if err != nil {
+				return err
+			}
+
+			lreq.Replace("userPassword", []string{newPassword})
+
+			err = conn.Modify(lreq)
+			if err != nil {
+				return err
+			}
+			// update config with new password
+			cfg.BindPassword = newPassword
+			entry, err := logical.StorageEntryJSON("config", cfg)
+			if err != nil {
+				return err
+			}
+			if err := req.Storage.Put(ctx, entry); err != nil {
+				// we might have to roll-back the password here?
+				return err
+			}
+
+			return nil
+		},
 	}
 
 	return &b
