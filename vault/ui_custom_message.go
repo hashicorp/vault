@@ -47,24 +47,36 @@ func (c *UIConfig) customMessageBarrierView(ctx context.Context) logical.Storage
 	return NewBarrierView(c.nsBarrierView, ns.ID)
 }
 
+// ListUICustomMessagesFilters is a struct that captures the different filtering
+// criteria that can be provided to the (*UIConfig).ListCustomMessages method.
 type ListUICustomMessagesFilters struct {
 	authenticated *bool
 	active        *bool
 	messageType   *string
 }
 
+// Authenticated adds the authenticated filter criterion to the receiver
+// ListUICustomMessagesFilters.
 func (f *ListUICustomMessagesFilters) Authenticated(value bool) {
 	f.authenticated = &value
 }
 
+// Active adds the active filter criterion to the receiver
+// ListUICustomMessagesFilters.
 func (f *ListUICustomMessagesFilters) Active(value bool) {
 	f.active = &value
 }
 
+// MessageType adds the messageType filter criterion to the receiver
+// ListUICustomMessagesFilters.
 func (f *ListUICustomMessagesFilters) MessageType(value string) {
 	f.messageType = &value
 }
 
+// UICustomMessageEntry is a struct that contains all of the details of a
+// custom message. This type is used to encode the information into a
+// logical.StorageEntry as well as to transmit custom messages between
+// the logical layer and the request handling layer.
 type UICustomMessageEntry struct {
 	Id            string         `json:"id"`
 	Title         string         `json:"title"`
@@ -78,19 +90,26 @@ type UICustomMessageEntry struct {
 	active        bool
 }
 
+// isTimeNowBetween is a function that determines if the current time, returned
+// by time.Now() is after the provided startTime and before the provided
+// endTime.
 func isTimeNowBetween(startTime, endTime time.Time) bool {
 	now := time.Now()
 
 	return !(startTime.After(now) || endTime.Before(now))
 }
 
-func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomMessagesFilters) ([]*UICustomMessageEntry, error) {
-	entries, err := c.retrieveCustomMessages(ctx)
+// ListCustomMessages retrieves all of the custom messages for the appropriate
+// namespace.Namespace based on the provided context.Context and the receiver's
+// configuration. The provided ListUICustomMessagesFilters is then used to
+// determine which custom messages satisfy the filter criteria.
+func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomMessagesFilters) ([]UICustomMessageEntry, error) {
+	entries, err := c.retrieveCustomMessagesInternal(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]*UICustomMessageEntry, 0)
+	results := make([]UICustomMessageEntry, 0)
 
 	// Calculate Active property and apply filters
 	for _, entry := range entries {
@@ -114,7 +133,10 @@ func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomM
 	return results, nil
 }
 
-func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessageEntry, error) {
+// retrieveCustomMessagesInternal handles the internal logic of retrieving all
+// of the custom messages stored in the current namespace. If there are no
+// custom messages, an empty slice of UICustomMessageEntry is returned.
+func (c *UIConfig) retrieveCustomMessagesInternal(ctx context.Context) ([]UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
@@ -123,7 +145,7 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 		return nil, err
 	}
 
-	results := make([]*UICustomMessageEntry, len(keys))
+	results := make([]UICustomMessageEntry, len(keys))
 
 	for idx, key := range keys {
 		storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
@@ -131,8 +153,8 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 			return nil, err
 		}
 
-		customMessageEntry := &UICustomMessageEntry{}
-		if err = storageEntry.DecodeJSON(customMessageEntry); err != nil {
+		customMessageEntry := UICustomMessageEntry{}
+		if err = storageEntry.DecodeJSON(&customMessageEntry); err != nil {
 			return nil, err
 		}
 
@@ -142,6 +164,8 @@ func (c *UIConfig) retrieveCustomMessages(ctx context.Context) ([]*UICustomMessa
 	return results, nil
 }
 
+// ReadCustomMessage reads a specific custom message from the underlying storage
+// based on the provided messageId value.
 func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
 	customMessageEntry, err := c.retrieveCustomMessage(ctx, messageId)
 	if err != nil {
@@ -155,6 +179,9 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 	return customMessageEntry, nil
 }
 
+// retrieveCustomMessage handles the internal logic to retrieve a specific
+// custom message. If no custom message exists with the provided messageId,
+// nil, nil is returned
 func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
@@ -176,6 +203,9 @@ func (c *UIConfig) retrieveCustomMessage(ctx context.Context, messageId string) 
 	return customMessageEntry, nil
 }
 
+// DeleteCustomMessage removes a specific custom message from the underlying
+// storage. The custom message is specified by the messageId argument. If no
+// custom message exists with the provided messageId, no error is returned.
 func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) error {
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
@@ -183,6 +213,8 @@ func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) er
 	return c.customMessageBarrierView(ctx).Delete(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 }
 
+// CreateCustomMessage stores the provided UICustomMessageEntry into the
+// underlying storage.
 func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
 	count, err := c.countCustomMessages(ctx)
 	if err != nil {
@@ -210,6 +242,8 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 	return &entry, nil
 }
 
+// countCustomMessages returns a count of existing custom messages. It's used to
+// detect if the maximum number of custom messages has been met.
 func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
@@ -222,6 +256,7 @@ func (c *UIConfig) countCustomMessages(ctx context.Context) (int, error) {
 	return len(keys), nil
 }
 
+// UpdateCustomMessage modifies the properties of an existing custom message.
 func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
 	err := c.saveCustomMessageInternal(ctx, entry)
 	if err != nil {
@@ -233,6 +268,8 @@ func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessag
 	return &entry, nil
 }
 
+// saveCustomMessageInternal handles the internal logic of storing a new or
+// updated custom message in the underlying storage.
 func (c *UIConfig) saveCustomMessageInternal(ctx context.Context, customMessage UICustomMessageEntry) error {
 	updatedValue, err := json.Marshal(&customMessage)
 	if err != nil {
