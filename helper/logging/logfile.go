@@ -34,6 +34,9 @@ type LogFile struct {
 	// fileInfo is the pointer to the current file being written to
 	fileInfo *os.File
 
+	// rotateEnabled is used to enable vault's log rotation behavior
+	rotateEnabled bool
+
 	// maxBytes is the maximum number of desired bytes for a log file
 	maxBytes int
 
@@ -54,7 +57,7 @@ func (l *LogFile) Write(b []byte) (n int, err error) {
 
 	// Create a new file if we have no file to write to
 	if l.fileInfo == nil {
-		if err := l.openNew(); err != nil {
+		if err := l.open(); err != nil {
 			return 0, err
 		}
 	} else if err := l.rotate(); err != nil { // Check for the last contact and rotate if necessary
@@ -81,6 +84,28 @@ func (l *LogFile) fileNamePattern() string {
 	return strings.TrimSuffix(l.fileName, fileExt) + "-%s" + fileExt
 }
 
+func (l *LogFile) open() error {
+	if l.rotateEnabled {
+		return l.openNew()
+	} else {
+		return l.openAppend()
+	}
+}
+
+func (l *LogFile) openAppend() error {
+	filePointer, err := os.OpenFile(filepath.Join(l.logPath, l.fileName), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o640)
+	if err != nil {
+		return err
+	}
+
+	// we won't use these properties, but ensure they're properly initialized anyway
+	l.lastCreated = now()
+	l.bytesWritten = 0
+
+	l.fileInfo = filePointer
+	return nil
+}
+
 func (l *LogFile) openNew() error {
 	fileNamePattern := l.fileNamePattern()
 
@@ -102,6 +127,11 @@ func (l *LogFile) openNew() error {
 }
 
 func (l *LogFile) rotate() error {
+	// if log rotation is disabled, do nothing
+	if !l.rotateEnabled {
+		return nil
+	}
+
 	// Get the time from the last point of contact
 	timeElapsed := time.Since(l.lastCreated)
 	// Rotate if we hit the byte file limit or the time limit

@@ -21,7 +21,7 @@ func TestLogFile_openNew(t *testing.T) {
 		duration: defaultRotateDuration,
 	}
 
-	err := logFile.openNew()
+	err := logFile.open()
 	require.NoError(t, err)
 
 	msg := "[INFO] Something"

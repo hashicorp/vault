@@ -1045,6 +1045,7 @@ func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       c.config.LogFile,
+		LogRotateEnabled:  c.config.LogRotateEnabled,
 		LogRotateDuration: logRotateDuration,
 		LogRotateBytes:    c.config.LogRotateBytes,
 		LogRotateMaxFiles: c.config.LogRotateMaxFiles,

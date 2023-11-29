@@ -40,6 +40,9 @@ type LogConfig struct {
 	// LogFilePath is the path to write the logs to the user specified file.
 	LogFilePath string
 
+	// LogRotateEnabled is used to enable vault's log rotation behavior
+	LogRotateEnabled bool
+
 	// LogRotateDuration is the user specified time to rotate logs
 	LogRotateDuration time.Duration
 
@@ -129,6 +132,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		logFile := &LogFile{
 			fileName:         fileName,
 			logPath:          dir,
+			rotateEnabled:    config.LogRotateEnabled,
 			duration:         config.LogRotateDuration,
 			maxBytes:         config.LogRotateBytes,
 			maxArchivedFiles: config.LogRotateMaxFiles,
@@ -136,7 +140,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		if err := logFile.pruneFiles(); err != nil {
 			return nil, fmt.Errorf("failed to prune log files: %w", err)
 		}
-		if err := logFile.openNew(); err != nil {
+		if err := logFile.open(); err != nil {
 			return nil, fmt.Errorf("failed to setup logging: %w", err)
 		}
 		writers = append(writers, logFile)

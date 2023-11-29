@@ -1859,6 +1859,7 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		LogLevel:          logLevel,
 		LogFormat:         logFormat,
 		LogFilePath:       config.LogFile,
+		LogRotateEnabled:  config.LogRotateEnabled,
 		LogRotateDuration: logRotateDuration,
 		LogRotateBytes:    config.LogRotateBytes,
 		LogRotateMaxFiles: config.LogRotateMaxFiles,

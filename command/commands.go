@@ -150,6 +150,8 @@ const (
 	flagNameCombineLogs = "combine-logs"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
+	// flagNameLogRotateEnabled is used to enable vault's log rotation behavior
+	flagNameLogRotateEnabled = "log-rotate-enabled"
 	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
 	flagNameLogRotateBytes = "log-rotate-bytes"
 	// flagNameLogRotateDuration is the flag used to specify the duration after which a log file should be rotated.

@@ -18,6 +18,7 @@ type logFlags struct {
 	flagLogLevel          string
 	flagLogFormat         string
 	flagLogFile           string
+	flagLogRotateEnabled  bool
 	flagLogRotateBytes    int
 	flagLogRotateDuration string
 	flagLogRotateMaxFiles int
@@ -64,6 +65,13 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 		Name:   flagNameLogFile,
 		Target: &l.flagLogFile,
 		Usage:  "Path to the log file that Vault should use for logging",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    flagNameLogRotateEnabled,
+		Target:  &l.flagLogRotateEnabled,
+		Default: true,
+		Usage:   "Enable automatic log rotation. Defaults to true",
 	})
 
 	f.IntVar(&IntVar{
@@ -159,6 +167,11 @@ func (f *FlagSets) applyLogConfigOverrides(config *configutil.SharedConfig) {
 	// Update log file name
 	if val, found := p.overrideValue(flagNameLogFile, ""); found {
 		config.LogFile = val
+	}
+
+	// Update log rotate enabled flag
+	if val, found := p.overrideValue(flagNameLogRotateEnabled, ""); found {
+		config.LogRotateEnabled, _ = strconv.ParseBool(val)
 	}
 
 	// Update log rotation duration
