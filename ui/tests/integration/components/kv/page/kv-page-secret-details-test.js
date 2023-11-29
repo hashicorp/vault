@@ -129,10 +129,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     );
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
     assert.dom(FORM.toggleJson).isDisabled();
-    /* eslint-disable no-useless-escape */
-    assert
-      .dom('[data-test-component="code-mirror-modifier"]')
-      .includesText(`{ \"foo\": { \"bar\": \"baz\" }}`);
+    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 
   test('it renders deleted empty state', async function (assert) {
