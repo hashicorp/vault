@@ -223,6 +223,10 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
+	if runOpts.HCPTokenHelper == nil {
+		runOpts.HCPTokenHelper = &hcpvlib.InternalHCPTokenHelper{}
+	}
+
 	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}

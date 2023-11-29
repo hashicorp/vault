@@ -90,14 +90,6 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		return c.client, nil
 	}
 
-	if c.addrWarning != "" && c.UI != nil {
-		if os.Getenv("VAULT_ADDR") == "" {
-			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
-				c.UI.Warn(wrapAtLength(c.addrWarning))
-			}
-		}
-	}
-
 	config := api.DefaultConfig()
 
 	if err := config.ReadEnvironment(); err != nil {
@@ -207,6 +199,14 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 		return nil, err
 	}
 
+	if c.addrWarning != "" && c.UI != nil {
+		if os.Getenv("VAULT_ADDR") == "" {
+			if !c.flagNonInteractive && isatty.IsTerminal(os.Stdin.Fd()) {
+				c.UI.Warn(wrapAtLength(c.addrWarning))
+			}
+		}
+	}
+
 	return client, nil
 }
 
@@ -234,6 +234,9 @@ func (c *BaseCommand) applyHCPConfig() error {
 		if err := c.client.SetAddress(hcpToken.ProxyAddr); err != nil {
 			return fmt.Errorf("unable to correctly set the HCP address: %w", err)
 		}
+
+		// remove address warning since address was set to HCP's address
+		c.addrWarning = ""
 	}
 
 	return nil
