@@ -7,9 +7,10 @@ package vault
 
 import (
 	"context"
+	"io"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/vault/seal"
-	"io"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
