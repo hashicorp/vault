@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
@@ -26,6 +27,7 @@ func TestSysHealth_get(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  false,
@@ -60,6 +62,7 @@ func TestSysHealth_get(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  true,
@@ -98,6 +101,7 @@ func TestSysHealth_get(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationPerformanceDisabled.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
 		"initialized":                  true,
@@ -141,6 +145,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  false,
@@ -176,6 +181,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  true,
@@ -215,6 +221,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"enterprise":                   constants.IsEnterprise,
 		"replication_performance_mode": consts.ReplicationPerformanceDisabled.GetPerformanceString(),
 		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
 		"initialized":                  true,
