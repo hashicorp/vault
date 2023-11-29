@@ -21,11 +21,13 @@
     @text="Overview"
     data-test-sidebar-nav-link="Overview"
   />
-  {{#if (has-feature "DR Replication")}}
-    <Nav.Link @route="mode" @model="dr" @text="Disaster Recovery" data-test-sidebar-nav-link="Disaster Recovery" />
-  {{/if}}
-  {{#if (has-feature "Performance Replication")}}
-    <Nav.Link @route="mode" @model="performance" @text="Performance" data-test-sidebar-nav-link="Performance" />
+  {{#if (not-eq this.model.mode "unsupported")}}
+    {{#if (has-feature "DR Replication")}}
+      <Nav.Link @route="mode" @model="dr" @text="Disaster Recovery" data-test-sidebar-nav-link="Disaster Recovery" />
+    {{/if}}
+    {{#if (has-feature "Performance Replication")}}
+      <Nav.Link @route="mode" @model="performance" @text="Performance" data-test-sidebar-nav-link="Performance" />
+    {{/if}}
   {{/if}}
 </Hds::SideNav::Portal>
 
