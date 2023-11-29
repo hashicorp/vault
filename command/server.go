@@ -1642,11 +1642,11 @@ func (c *ServerCommand) Run(args []string) int {
 				if err != nil {
 					c.UI.Error(fmt.Errorf("error reloading seal config: %s", err).Error())
 					config.Seals = core.GetCoreConfigInternal().Seals
+				} else {
+					// finalize the old seals and set the new seals as the current ones
+					c.finalizeSeals(ctx, &currentSeals)
+					currentSeals = setSealResponse.getCreatedSeals()
 				}
-
-				// finalize the old seals and set the new seals as the current ones
-				c.finalizeSeals(ctx, &currentSeals)
-				currentSeals = setSealResponse.getCreatedSeals()
 			}
 
 			core.SetConfig(config)
