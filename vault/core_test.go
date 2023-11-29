@@ -3401,7 +3401,7 @@ func TestSetSeals(t *testing.T) {
 
 	if wrappers[0].Name != "new-seal-1" {
 		t.Fatalf("unexpected seal name: got %s, expected new-seal-1", wrappers[0].Name)
-  }
+	}
 }
 
 func TestExpiration_DeadlockDetection(t *testing.T) {
