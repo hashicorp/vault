@@ -27,6 +27,7 @@
 {{#if this.showConfirmModal}}
   <Hds::Modal
     id="confirm-action-modal"
+    class="has-text-left"
     @color={{this.modalColor}}
     @size="small"
     @onClose={{fn (mut this.showConfirmModal) false}}

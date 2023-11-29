@@ -1256,7 +1256,7 @@ type TestClusterOptions struct {
 
 	NoDefaultQuotas bool
 
-	Plugins *TestPluginConfig
+	Plugins []*TestPluginConfig
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
@@ -1699,27 +1699,29 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		opts.ClusterLayers = inmemCluster
 	}
 
-	if opts != nil && opts.Plugins != nil {
-		if opts.Plugins.Container && runtime.GOOS != "linux" {
-			t.Skip("Running plugins in containers is only supported on linux")
-		}
-
-		var pluginDir string
-		var cleanup func(t testing.T)
-
-		if coreConfig.PluginDirectory == "" {
-			pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
-			coreConfig.PluginDirectory = pluginDir
-			t.Cleanup(func() { cleanup(t) })
-		}
-
+	if opts != nil && len(opts.Plugins) != 0 {
 		var plugins []pluginhelpers.TestPlugin
-		for _, version := range opts.Plugins.Versions {
-			plugin := pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory)
-			if opts.Plugins.Container {
-				plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+		for _, pluginType := range opts.Plugins {
+			if pluginType.Container && runtime.GOOS != "linux" {
+				t.Skip("Running plugins in containers is only supported on linux")
 			}
-			plugins = append(plugins, plugin)
+
+			var pluginDir string
+			var cleanup func(t testing.T)
+
+			if coreConfig.PluginDirectory == "" {
+				pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+				coreConfig.PluginDirectory = pluginDir
+				t.Cleanup(func() { cleanup(t) })
+			}
+
+			for _, version := range pluginType.Versions {
+				plugin := pluginhelpers.CompilePlugin(t, pluginType.Typ, version, coreConfig.PluginDirectory)
+				if pluginType.Container {
+					plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+				}
+				plugins = append(plugins, plugin)
+			}
 		}
 		testCluster.Plugins = plugins
 	}

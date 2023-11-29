@@ -3,54 +3,36 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="replication vlt-table sticky-header" data-test-known-secondaries-table>
-  <table class="is-fullwidth">
-    <caption class="is-collapsed">
-      Known Secondaries
-    </caption>
-    <thead class="has-text-weight-semibold">
-      <tr>
-        <th scope="col">
-          Secondary ID
-        </th>
-        <th scope="col">
-          URL
-        </th>
-        <th scope="col">
-          Connected?
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each this.secondaries as |secondary|}}
-        <tr>
-          <th scope="row">
-            <code data-test-secondaries={{concat "row-for-" secondary.node_id}}>
-              {{secondary.node_id}}
-            </code>
-          </th>
-          <td>
-            {{#if secondary.api_address}}
-              <a
-                class="link"
-                href={{concat secondary.api_address "/ui/"}}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-test-secondaries={{concat "api-address-for-" secondary.node_id}}
-              >
-                <p class="is-word-break">{{secondary.api_address}}</p>
-              </a>
-            {{else}}
-              <p class="is-word-break">{{secondary.api_address}}</p>
-            {{/if}}
-          </td>
-          <td>
-            <code data-test-secondaries={{concat "connection-status-for-" (or secondary.node_id secondary)}}>
-              {{secondary.connection_status}}
-            </code>
-          </td>
-        </tr>
-      {{/each}}
-    </tbody>
-  </table>
-</div>
+<Hds::Table @caption="Known Secondaries" data-test-known-secondaries-table>
+  <:head as |H|>
+    <H.Tr>
+      <H.Th>Secondary ID</H.Th>
+      <H.Th>URL</H.Th>
+      <H.Th>Connected?</H.Th>
+    </H.Tr>
+  </:head>
+  <:body as |B|>
+    {{#each this.secondaries as |secondary|}}
+      <B.Tr>
+        <B.Th data-test-secondaries-node={{or secondary.node_id secondary}}>{{secondary.node_id}}</B.Th>
+        <B.Td data-test-secondaries-api-address={{or secondary.node_id secondary}}>
+          {{#if secondary.api_address}}
+            <Hds::Link::Standalone
+              @icon="external-link"
+              @text={{secondary.api_address}}
+              @href={{concat secondary.api_address "/ui/"}}
+              @iconPosition="trailing"
+            />
+          {{else}}
+            <p class="has-text-grey">URL unavailable</p>
+          {{/if}}
+        </B.Td>
+        <B.Td>
+          <code data-test-secondaries-connection-status={{or secondary.node_id secondary}}>
+            {{secondary.connection_status}}
+          </code>
+        </B.Td>
+      </B.Tr>
+    {{/each}}
+  </:body>
+</Hds::Table>

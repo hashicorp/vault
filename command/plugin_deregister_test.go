@@ -35,7 +35,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	}{
 		{
 			"not_enough_args",
-			nil,
+			[]string{"foo"},
 			"Not enough arguments",
 			1,
 		},
@@ -109,7 +109,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "Success! Deregistered auth plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -159,7 +159,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "Success! Deregistered auth plugin: "
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -206,7 +206,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Success! Deregistered plugin (if it was registered): "
+		expected := "does not exist in the catalog"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
@@ -227,6 +227,29 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("expected %q to be in %#v", pluginName, resp.Details)
+		}
+	})
+
+	t.Run("deregister builtin", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+		defer cleanup(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		expected := "is a builtin plugin"
+		if code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
+			"github",
+		}); code != 2 {
+			t.Errorf("expected %d to be %d", code, 2)
+		} else if !strings.Contains(ui.ErrorWriter.String(), expected) {
+			t.Errorf("expected %q to contain %q", ui.ErrorWriter.String(), expected)
 		}
 	})
 
