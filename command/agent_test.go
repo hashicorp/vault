@@ -3112,7 +3112,15 @@ func TestAgent_Logging_ConsulTemplate(t *testing.T) {
 	)
 
 	// Configure a Vault server so Agent can successfully communicate and render its templates
-	cluster := minimal.NewTestSoloCluster(t, nil)
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{"approle": credAppRole.Factory},
+		LogicalBackends:    map[string]logical.Factory{"kv": logicalKv.Factory},
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, opts)
+	defer cluster.Cleanup()
 	apiClient := cluster.Cores[0].Client
 	t.Setenv(api.EnvVaultAddress, apiClient.Address())
 	tempDir := t.TempDir()
@@ -3127,7 +3135,7 @@ func TestAgent_Logging_ConsulTemplate(t *testing.T) {
 	config := `
 vault {
   address = "%s"
-	tls_skip_verify = true
+    tls_skip_verify = true
 }
 
 auto_auth {
@@ -3198,7 +3206,7 @@ auto_auth {
 		}
 	}
 
-	require.Truef(t, found, "unable to find consul-template partial message in logs", runnerLogMessage)
+	require.Truef(t, found, "unable to find consul-template partial message in logs: %s", runnerLogMessage)
 }
 
 // Get a randomly assigned port and then free it again before returning it.
