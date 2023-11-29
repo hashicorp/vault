@@ -83,14 +83,15 @@ export default function (server) {
     return {
       data: {
         key_info: records.reduce((keyInfo, record) => {
-          if (!keyInfo[record.type]) {
-            keyInfo[record.type] = [record.name];
+          const key = `${record.type}/`;
+          if (!keyInfo[key]) {
+            keyInfo[key] = [record.name];
           } else {
-            keyInfo[record.type].push(record.name);
+            keyInfo[key].push(record.name);
           }
           return keyInfo;
         }, {}),
-        keys: records.map((r) => r.type),
+        keys: records.map((r) => `${r.type}/`),
       },
     };
   });

@@ -66,10 +66,10 @@ module('Unit | Adapter | sync | destination', function (hooks) {
       return {
         data: {
           key_info: {
-            'aws-sm': ['my-dest-1'],
-            gh: ['my-dest-1'],
+            'aws-sm/': ['my-dest-1'],
+            'gh/': ['my-dest-1'],
           },
-          keys: ['aws-sm', 'gh'],
+          keys: ['aws-sm/', 'gh/'],
         },
       };
     });

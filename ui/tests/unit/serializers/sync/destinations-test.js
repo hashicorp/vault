@@ -44,10 +44,10 @@ module('Unit | Serializer | sync | destination', function (hooks) {
     const serverData = {
       data: {
         key_info: {
-          'aws-sm': ['my-dest-1'],
-          gh: ['my-dest-1'],
+          'aws-sm/': ['my-dest-1'],
+          'gh/': ['my-dest-1'],
         },
-        keys: ['aws-sm', 'gh'],
+        keys: ['aws-sm/', 'gh/'],
       },
     };
 
