@@ -83,14 +83,17 @@ See the [caching](/vault/docs/agent-and-proxy/agent/caching#api) page for detail
   are `standard` and `json`. This can also be specified via the
   `VAULT_LOG_FORMAT` environment variable.
 
-- `-log-file` ((#\_log_file)) - writes all the Vault agent log messages
-  to a file. This value is used as a prefix for the log file name. The current timestamp
-  is appended to the file name. If the value ends in a path separator, `vault-agent`
-  will be appended to the value. If the file name is missing an extension, `.log`
-  is appended. For example, setting `log-file` to `/var/log/` would result in a log
-  file path of `/var/log/vault-agent-{timestamp}.log`. `log-file` can be combined with
-  [`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
-  for a fine-grained log rotation experience.
+- `-log-file` ((#\_log_file)) - writes all the Vault Agent log messages to a file
+  at the path indicated by this flag. The filename defaults to `agent.log`.
+  If the log file rotates, this value (minus the extension) is used as a
+  prefix for the path to the log and the current timestamp is appended to the file name.
+  If the value ends in a path separator, `agent-` will be appended to the value.
+  If the file name is missing an extension, `.log` is appended.
+  For example, setting `-log-file` to `/var/log/` would result in a log file path
+  of `/var/log/agent.log`.
+  `-log-file` can be combined with [`-log-rotate-bytes`](#_log_rotate_bytes) and
+  [`-log-rotate-duration`](#_log_rotate_duration) for a fine-grained log rotation experience.
+  After rotation, the path and filename take the following form: `/var/log/agent-{timestamp}.log`
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
   bytes that should be written to a log before it needs to be rotated. Unless specified,

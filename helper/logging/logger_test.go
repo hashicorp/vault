@@ -10,13 +10,14 @@ import (
 	"os"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLogger_SetupBasic(t *testing.T) {
-	cfg := &LogConfig{Name: "test-system", LogLevel: log.Info}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
 
 	logger, err := Setup(cfg, nil)
 	require.NoError(t, err)
@@ -26,16 +27,15 @@ func TestLogger_SetupBasic(t *testing.T) {
 }
 
 func TestLogger_SetupInvalidLogLevel(t *testing.T) {
-	cfg := &LogConfig{}
+	cfg := newTestLogConfig(t)
 
 	_, err := Setup(cfg, nil)
 	assert.Containsf(t, err.Error(), "invalid log level", "expected error %s", err)
 }
 
 func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
-	cfg := &LogConfig{
-		LogLevel: log.Error,
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Error
 
 	var buf bytes.Buffer
 
@@ -48,15 +48,16 @@ func TestLogger_SetupLoggerErrorLevel(t *testing.T) {
 
 	output := buf.String()
 
-	require.Contains(t, output, "[ERROR] test error msg")
-	require.NotContains(t, output, "[INFO]  test info msg")
+	require.Contains(t, output, "[ERROR] test-system: test error msg")
+	require.NotContains(t, output, "[INFO] test-system: test info msg")
 }
 
 func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
-	cfg := LogConfig{LogLevel: log.Debug}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Debug
 	var buf bytes.Buffer
 
-	logger, err := Setup(&cfg, &buf)
+	logger, err := Setup(cfg, &buf)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
@@ -65,15 +66,13 @@ func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
 
 	output := buf.String()
 
-	require.Contains(t, output, "[INFO]  test info msg")
-	require.Contains(t, output, "[DEBUG] test debug msg")
+	require.Contains(t, output, "[INFO]  test-system: test info msg")
+	require.Contains(t, output, "[DEBUG] test-system: test debug msg")
 }
 
 func TestLogger_SetupLoggerWithName(t *testing.T) {
-	cfg := &LogConfig{
-		LogLevel: log.Debug,
-		Name:     "test-system",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -86,11 +85,9 @@ func TestLogger_SetupLoggerWithName(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithJSON(t *testing.T) {
-	cfg := &LogConfig{
-		LogLevel:  log.Debug,
-		LogFormat: JSONFormat,
-		Name:      "test-system",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Debug
+	cfg.LogFormat = JSONFormat
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -110,11 +107,9 @@ func TestLogger_SetupLoggerWithJSON(t *testing.T) {
 
 func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
 	tmpDir := t.TempDir()
-
-	cfg := &LogConfig{
-		LogLevel:    log.Info,
-		LogFilePath: tmpDir, //+ "/",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = tmpDir + "/" // add the trailing slash to the temp dir
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -123,10 +118,10 @@ func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
 }
 
 func TestLogger_SetupLoggerWithInValidLogPath(t *testing.T) {
-	cfg := &LogConfig{
-		LogLevel:    log.Info,
-		LogFilePath: "nonexistentdir/",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = "nonexistentdir/"
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -142,10 +137,9 @@ func TestLogger_SetupLoggerWithInValidLogPathPermission(t *testing.T) {
 	assert.NoError(t, err, "unexpected error testing with invalid log path permission")
 	defer os.RemoveAll(tmpDir)
 
-	cfg := &LogConfig{
-		LogLevel:    log.Info,
-		LogFilePath: tmpDir + "/",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = tmpDir + "/"
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
@@ -188,10 +182,10 @@ func TestLogger_SetupLoggerWithInvalidLogFilePath(t *testing.T) {
 	for name, tc := range cases {
 		name := name
 		tc := tc
-		cfg := &LogConfig{
-			LogLevel:    log.Info,
-			LogFilePath: tc.path,
-		}
+		cfg := newTestLogConfig(t)
+		cfg.LogLevel = hclog.Info
+		cfg.LogFilePath = tc.path
+
 		_, err := Setup(cfg, &bytes.Buffer{})
 		assert.Error(t, err, "%s: expected error due to *", name)
 		assert.Contains(t, err.Error(), tc.message, "%s: error message does not match: %s", name, err.Error())
@@ -199,26 +193,34 @@ func TestLogger_SetupLoggerWithInvalidLogFilePath(t *testing.T) {
 }
 
 func TestLogger_ChangeLogLevels(t *testing.T) {
-	cfg := &LogConfig{
-		LogLevel: log.Debug,
-		Name:     "test-system",
-	}
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Debug
 	var buf bytes.Buffer
 
 	logger, err := Setup(cfg, &buf)
 	require.NoError(t, err)
 	require.NotNil(t, logger)
 
-	assert.Equal(t, log.Debug, logger.GetLevel())
+	assert.Equal(t, hclog.Debug, logger.GetLevel())
 
 	// Create new named loggers from the base logger and change the levels
 	logger2 := logger.Named("test2")
 	logger3 := logger.Named("test3")
 
-	logger2.SetLevel(log.Info)
-	logger3.SetLevel(log.Error)
+	logger2.SetLevel(hclog.Info)
+	logger3.SetLevel(hclog.Error)
 
-	assert.Equal(t, log.Debug, logger.GetLevel())
-	assert.Equal(t, log.Info, logger2.GetLevel())
-	assert.Equal(t, log.Error, logger3.GetLevel())
+	assert.Equal(t, hclog.Debug, logger.GetLevel())
+	assert.Equal(t, hclog.Info, logger2.GetLevel())
+	assert.Equal(t, hclog.Error, logger3.GetLevel())
+}
+
+func newTestLogConfig(t *testing.T) *LogConfig {
+	t.Helper()
+
+	cfg, err := NewLogConfig("test")
+	require.NoError(t, err)
+	cfg.Name = "test-system"
+
+	return cfg
 }
