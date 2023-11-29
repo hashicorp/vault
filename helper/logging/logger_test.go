@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -70,8 +71,9 @@ func TestLogger_SetupLoggerDebugLevel(t *testing.T) {
 	require.Contains(t, output, "[DEBUG] test-system: test debug msg")
 }
 
-func TestLogger_SetupLoggerWithName(t *testing.T) {
+func TestLogger_SetupLoggerWithoutName(t *testing.T) {
 	cfg := newTestLogConfig(t)
+	cfg.Name = ""
 	cfg.LogLevel = hclog.Info
 	var buf bytes.Buffer
 
@@ -81,7 +83,7 @@ func TestLogger_SetupLoggerWithName(t *testing.T) {
 
 	logger.Warn("test warn msg")
 
-	require.Contains(t, buf.String(), "[WARN]  test-system: test warn msg")
+	require.Contains(t, buf.String(), "[WARN]  test warn msg")
 }
 
 func TestLogger_SetupLoggerWithJSON(t *testing.T) {
@@ -103,6 +105,63 @@ func TestLogger_SetupLoggerWithJSON(t *testing.T) {
 	require.Equal(t, jsonOutput["@level"], "warn")
 	require.Contains(t, jsonOutput, "@message")
 	require.Equal(t, jsonOutput["@message"], "test warn msg")
+}
+
+func TestLogger_SetupLoggerWithValidLogPathMissingFileName(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = tmpDir + "/" // add the trailing slash to the temp dir
+	var buf bytes.Buffer
+
+	logger, err := Setup(cfg, &buf)
+	require.NoError(t, err)
+	require.NotNil(t, logger)
+
+	logger.Info("juan?")
+
+	m, err := filepath.Glob(cfg.LogFilePath + "*")
+	require.NoError(t, err)
+	require.Truef(t, len(m) == 1, "no files were found")
+}
+
+func TestLogger_SetupLoggerWithValidLogPathFileName(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = filepath.Join(tmpDir, "juan.log")
+	var buf bytes.Buffer
+
+	logger, err := Setup(cfg, &buf)
+	require.NoError(t, err)
+	require.NotNil(t, logger)
+
+	logger.Info("juan?")
+	f, err := os.Stat(cfg.LogFilePath)
+	require.NoError(t, err)
+	require.NotNil(t, f)
+}
+
+func TestLogger_SetupLoggerWithValidLogPathFileNameRotate(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := newTestLogConfig(t)
+	cfg.LogLevel = hclog.Info
+	cfg.LogFilePath = filepath.Join(tmpDir, "juan.log")
+	cfg.LogRotateBytes = 1 // set a tiny number of bytes to force rotation
+	var buf bytes.Buffer
+
+	logger, err := Setup(cfg, &buf)
+	require.NoError(t, err)
+	require.NotNil(t, logger)
+
+	logger.Info("juan?")
+	logger.Info("john?")
+	f, err := os.Stat(cfg.LogFilePath)
+	require.NoError(t, err)
+	require.NotNil(t, f)
+	m, err := filepath.Glob(tmpDir + "/juan-*") // look for juan-{timestamp}.log
+	require.NoError(t, err)
+	require.Truef(t, len(m) == 1, "no files were found")
 }
 
 func TestLogger_SetupLoggerWithValidLogPath(t *testing.T) {
