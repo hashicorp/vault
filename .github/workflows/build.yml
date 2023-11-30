@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - release/**
+      - miagilepner/ci-green-checkmark-success # TODO remove
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-build
@@ -354,7 +355,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05Q4D5V89W" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          channel-id: "C05Q4D5V89W" #TODO revert sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
             {
               "text": "CE build failures on ${{ github.ref_name }}",
