@@ -58,6 +58,10 @@
     </div>
   {{/each}}
   {{#if this.indicesWithComma}}
-    <AlertInline @type="warning" @message="Input contains a comma. Please separate values into individual rows." />
+    <Hds::Alert @type="inline" @color="warning" as |A|>
+      <A.Description>
+        Input contains a comma. Please separate values into individual rows.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 </div>
