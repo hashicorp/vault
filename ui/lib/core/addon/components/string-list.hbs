@@ -58,10 +58,6 @@
     </div>
   {{/each}}
   {{#if this.indicesWithComma}}
-    <AlertInline
-      @type="warning"
-      @message="Input contains a comma. Please separate values into individual rows."
-      @isMarginless={{true}}
-    />
+    <AlertInline @type="warning" @message="Input contains a comma. Please separate values into individual rows." />
   {{/if}}
 </div>
