@@ -47,27 +47,22 @@
       <Toolbar data-test-kms-provider-details-actions>
         <ToolbarActions>
           {{#if @model.canDelete}}
-            <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
-              <T.Trigger data-test-tooltip-trigger>
-                <ConfirmAction
-                  @buttonClasses="toolbar-link"
-                  @onConfirmAction={{this.onDelete}}
-                  @disabled={{@model.keys.length}}
-                  data-test-kms-provider-delete={{true}}
-                >
-                  Delete provider
-                </ConfirmAction>
-              </T.Trigger>
-              {{#if @model.keys.length}}
-                <T.Content class="tool-tip">
-                  <div class="box" data-test-kms-provider-delete-tooltip>
-                    This provider cannot be deleted until all
-                    {{@model.keys.length}}
-                    key(s) distributed to it are revoked. This can be done from the Keys tab.
-                  </div>
-                </T.Content>
-              {{/if}}
-            </ToolTip>
+            <ConfirmAction
+              @buttonText="Delete provider"
+              class="toolbar-button"
+              @buttonColor="secondary"
+              @confirmTitle="Delete this provider?"
+              @onConfirmAction={{this.onDelete}}
+              @disabledMessage={{if
+                @model.keys.length
+                (concat
+                  "This provider cannot be deleted until all "
+                  @model.keys.length
+                  " key(s) distributed to it are revoked. This can be done from the Keys tab."
+                )
+              }}
+              data-test-kms-provider-delete
+            />
           {{/if}}
           {{#if (and @model.canDelete (or @model.canListKeys @model.canEdit))}}
             <div class="toolbar-separator"></div>

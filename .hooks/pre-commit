@@ -35,7 +35,7 @@ block() {
 
 # Add all check functions to this space separated list.
 # They are executed in this order (see end of file).
-CHECKS="ui_lint backend_lint"
+CHECKS="ui_lint ui_copywrite backend_lint"
 
 # Run ui linter if changes in that dir detected.
 ui_lint() {
@@ -70,6 +70,79 @@ backend_lint() {
 
   # Only run fmtcheck on staged files
   ./scripts/gofmtcheck.sh "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
+}
+
+ui_copywrite() {
+  DIR=ui
+  BINARY_DIR=$DIR/.copywrite
+  DOWNLOAD_ERR="==> Copywrite tool not found and failed to downloaded. Please download manually and extract to ui/.copywrite directory to utilize in pre-commit hook."
+
+  # silently succeed if no changes staged for $DIR
+  if git diff --name-only --cached --exit-code -- $DIR/; then
+    return 0
+  fi
+
+  echo "==> Changes detected in $DIR/: Checking copyright headers..."
+
+  # download latest version of hashicorp/copywrite if necessary 
+  if [ ! -x $BINARY_DIR/copywrite ]; then
+    local REPO_URL=https://github.com/hashicorp/copywrite
+    # get the latest version tag
+    local LATEST_RELEASE_JSON=$(curl -L -s -H 'Accept: application/json' $REPO_URL/releases/latest);
+    local LATEST_TAG=$(echo $LATEST_RELEASE_JSON | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+
+    if [ ! $LATEST_TAG ]; then
+      echo $DOWNLOAD_ERR
+      return 0;
+    fi
+
+    # get the OS/Architecture specifics to build the filename
+    # eg. copywrite_0.16.6_darwin_x86_64.tar.gz
+    case "$OSTYPE" in
+      linux*) OS='linux' ;;
+      darwin*) OS='darwin' ;;
+      msys*) OS='windows';;
+    esac
+    local ARCH=$([ $(uname -m) == arm* ] && echo 'arm64' || echo 'x86_64')
+    local EXT=$([ $OSTYPE == "msys" ] && echo '.zip' || echo '.tar.gz')
+    local FILENAME=copywrite_"${LATEST_TAG:1}"_"$OS"_"$ARCH""$EXT"
+
+    mkdir -p $BINARY_DIR
+    echo "==> Copywrite tool not found, downloading version $LATEST_TAG from $REPO_URL..."
+    curl -L -s $REPO_URL/releases/download/$LATEST_TAG/$FILENAME | tar -xz - -C $BINARY_DIR || { echo $DOWNLOAD_ERR;  return 0; };
+  fi
+  
+  # run the copywrite tool
+  # if a --path option is added we could apply the headers to only the staged files much easier
+  # as of the latest version 0.16.6 there is only support for --dirPath
+  STAGED_FILES=($(git diff --name-only --cached))
+
+  rm -rf $BINARY_DIR/.staged
+  mkdir $BINARY_DIR/.staged
+  
+  # copy staged files to .staged directory
+  echo $STAGED_FILES;
+  for FILE_PATH in "${STAGED_FILES[@]}"; do
+    cp $FILE_PATH $BINARY_DIR/.staged
+  done
+
+  COPYWRITE_LOG_LEVEL=info
+  COPY_CMD="$BINARY_DIR/copywrite headers -d $BINARY_DIR/.staged --config $DIR/.copywrite.hcl"
+
+  # if staged files are missing header run the tool on .staged directory
+  VALIDATE=$(eval $COPY_CMD --plan) # assigning to var so output is suppressed since it is repeated during second run
+  if [ $(echo $?) == 1 ]; then
+    eval $COPY_CMD || { echo "==> Copyright check failed. Please review and add headers manually."; return 0; };
+
+    # copy files back to original locations and stage changes
+    local TMP_FILES=$(ls $BINARY_DIR/.staged)
+    i=0
+    for FILE in $TMP_FILES; do
+      cp $BINARY_DIR/.staged/$FILE "${STAGED_FILES[$i]}"
+      git add "${STAGED_FILES[$i]}"
+      i=$(( i + 1 ))
+    done
+  fi
 }
 
 for CHECK in $CHECKS; do

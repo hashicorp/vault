@@ -16,10 +16,6 @@ export default create({
   findPolicyByName(name) {
     return this.policies.filterBy('name', name)[0];
   },
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
-    testContainer: '#ember-testing',
-  }),
+  delete: clickable('[data-test-confirm-action-trigger]'),
+  confirmDelete: clickable('[data-test-confirm-button]'),
 });

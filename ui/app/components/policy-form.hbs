@@ -46,12 +46,12 @@
                 id="fileUploadToggle"
                 @type="checkbox"
                 name="fileUploadToggle"
-                class="switch is-rounded is-success is-small"
+                class="toggle is-success is-small"
                 @checked={{this.showFileUpload}}
                 {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
                 data-test-policy-edit-toggle
               />
-              <label for="fileUploadToggle">Upload file</label>
+              <label for="fileUploadToggle" class="has-text-weight-bold is-size-8">Upload file</label>
             </div>
           {{else}}
             {{! EDITING - no file upload toggle}}

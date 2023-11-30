@@ -42,7 +42,7 @@
 }
 
 .top-xxs {
-  top: $spacing-xxs;
+  top: $spacing-4;
 }
 
 // visibility
@@ -85,6 +85,10 @@
 }
 
 // alignment
+.align-self-baseline {
+  align-self: baseline;
+}
+
 .is-v-centered {
   vertical-align: middle;
 }

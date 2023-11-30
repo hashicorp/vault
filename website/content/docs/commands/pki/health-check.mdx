@@ -282,11 +282,13 @@ other (potentially dangerous) quirks.
 
 Checks each role to see whether `no_store` is set to `false`.
 
-<Important>
+<Warning>
+
 Vault will provide warnings and performance will suffer if you have a large
 number of certificates without temporal CRL auto-rebuilding and set `no_store`
 to `true`.
-</Important>
+
+</Warning>
 
 
 **Remediation steps**:

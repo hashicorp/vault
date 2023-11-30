@@ -4,7 +4,11 @@
 package seal
 
 import (
+	"context"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
@@ -94,4 +98,48 @@ func Test_keyIdSet(t *testing.T) {
 		runTest(tt.name+".set()", useSet)
 		runTest(tt.name+".setIDs", useSetIds)
 	}
+}
+
+// Test_Encrypt_duplicate_keyIds verifies that if two seal wrappers produce the same Key ID, an error
+// will be returned for both.
+func Test_Encrypt_duplicate_keyIds(t *testing.T) {
+	ctx := context.Background()
+
+	setId := func(w *SealWrapper, keyId string) {
+		testWrapper := w.Wrapper.(*ToggleableWrapper).Wrapper.(*wrapping.TestWrapper)
+		testWrapper.SetKeyId(keyId)
+	}
+
+	getId := func(w *SealWrapper) string {
+		id, err := w.Wrapper.KeyId(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+
+	access, _ := NewTestSeal(&TestSealOpts{WrapperCount: 3})
+
+	// Set up - make the key IDs the same for the last two wrappers
+	wrappers := access.GetAllSealWrappersByPriority()
+	setId(wrappers[1], "this-key-is-duplicated")
+	setId(wrappers[2], "this-key-is-duplicated")
+
+	// Some sanity checks
+	require.NotEqual(t, wrappers[0].Name, wrappers[1].Name)
+	require.NotEqual(t, wrappers[1].Name, wrappers[2].Name)
+	require.NotEqual(t, getId(wrappers[0]), getId(wrappers[1]))
+	require.Equal(t, getId(wrappers[1]), getId(wrappers[2]))
+
+	// Encrypt a value
+	mwv, errorMap := access.Encrypt(ctx, []byte("Rinconete y Cortadillo"))
+
+	// Assertions
+	require.NotNilf(t, mwv, "seal 0 should have succeeded")
+
+	requireDuplicateErr := func(w *SealWrapper) {
+		require.ErrorContains(t, errorMap[w.Name], fmt.Sprintf("seal %v has returned duplicate key ID", w.Name))
+	}
+	requireDuplicateErr(wrappers[1])
+	requireDuplicateErr(wrappers[2])
 }

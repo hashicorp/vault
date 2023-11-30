@@ -123,7 +123,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-link="details"]');
 
     assert
-      .dom(`[data-test-secondaries=row-for-${secondaryName}]`)
+      .dom(`[data-test-secondaries-node=${secondaryName}]`)
       .exists('shows a table row the recently added secondary');
 
     // nav to DR

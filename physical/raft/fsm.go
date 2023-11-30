@@ -21,6 +21,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
@@ -30,7 +31,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (

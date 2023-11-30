@@ -25,7 +25,7 @@ module('Acceptance | unseal', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal] button');
+    await click('[data-test-seal]');
 
     await click('[data-test-confirm-button]');
 

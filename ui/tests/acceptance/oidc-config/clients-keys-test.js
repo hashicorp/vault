@@ -81,7 +81,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // navigate to default key details from pop-up menu
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-key-menu-link="details"]');
-    assert.dom(SELECTORS.keyDeleteButton).isDisabled('delete button is disabled for default key');
+    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete button is hidden for default key');
     await click(SELECTORS.keyEditButton);
     assert.strictEqual(
       currentRouteName(),

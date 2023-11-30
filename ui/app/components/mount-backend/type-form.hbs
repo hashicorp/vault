@@ -11,7 +11,7 @@
     {{#each (filter-by "category" category this.mountTypes) as |type|}}
       <SelectableCard
         id={{type.type}}
-        class="has-top-padding-m has-text-centered small-card"
+        class="has-top-padding-l has-text-centered small-card"
         @onClick={{fn @setMountType type.type}}
         @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
         data-test-mount-type={{type.type}}
