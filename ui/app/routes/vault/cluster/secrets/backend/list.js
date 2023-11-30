@@ -78,11 +78,8 @@ export default Route.extend({
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
     if (isAddonEngine(type, secretEngine.version)) {
-      if (engineRoute === 'kv.list') {
-        const route = pathIsDirectory(secret)
-          ? 'vault.cluster.secrets.backend.kv.list-directory'
-          : 'vault.cluster.secrets.backend.kv.secret.details';
-        return this.router.transitionTo(route, backend, secret);
+      if (engineRoute === 'kv.list' && pathIsDirectory(secret)) {
+        return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
       }
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
