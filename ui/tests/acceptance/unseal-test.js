@@ -20,8 +20,10 @@ module('Acceptance | unseal', function (hooks) {
   });
 
   test('seal then unseal', async function (assert) {
+    const versionSvc = this.owner.lookup('service:version');
+    const version = versionSvc.version;
     await visit('/vault/settings/seal');
-
+    assert.dom('[data-test-footer-version]').hasText(`Vault ${version}`);
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
@@ -32,6 +34,7 @@ module('Acceptance | unseal', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
+    assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Clears version on unseal');
 
     // unseal
     for (const key of unsealKeys) {
