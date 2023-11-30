@@ -100,7 +100,7 @@ func (l *LogFile) openNew() error {
 		return err
 	}
 	// New file, new bytes tracker, new creation time :)
-	l.lastCreated = l.createTime(stat)
+	l.lastCreated = now()
 	l.bytesWritten = 0
 	return nil
 }
