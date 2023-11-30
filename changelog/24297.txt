@@ -1,3 +1,2 @@
-```release-note:bug
-logging: Vault server, Agent and Proxy not honor log file value and only timestamp on rotation.
-```
+```release-note:change
+logging: Vault server, Agent and Proxy now honor log file value and only add a timestamp on rotation.
