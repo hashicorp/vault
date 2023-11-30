@@ -7,26 +7,43 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { later } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
+import { assert } from '@ember/debug';
 
 /**
- * DEPRECATED - use Hds::Alert @type="compact" instead https://helios.hashicorp.design/components/alert?tab=code#type
  * @module AlertInline
- * `AlertInline` components are used to inform users of important messages.
+ * * Use Hds::Alert @type="compact" for displaying alert messages.
+ * This component is specifically for rendering messages that may update while a user is viewing the page
+ * because it displays a loading icon when the @message arg changes before rendering the updated @message text.
+ * (Example: submitting a form and displaying the number of errors because on re-submit the number may change)
  *
  * @example
- * ```js
- * <AlertInline @type="danger" @message="{{model.keyId}} is not a valid lease ID"/>
+ * ```
+ * <AlertInline @type="danger" @message="There are 2 errors with this form."/>
  * ```
  *
- * @param {string} type - The alert type maps to the alert @color
- * @param {string} [message=null] - The message to display within the alert.
- * @param {boolean} [mimicRefresh=false] - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
+ * @deprecated {string} type - color getter maps type to the Hds::Alert @color
+ * @param {string} color - Styles alert color and icon, can be one of: critical, warning, success, highlight, neutral
+ * @param {string} message - The message to display within the alert.
  */
 
 export default class AlertInlineComponent extends Component {
   @tracked isRefreshing = false;
 
+  constructor() {
+    super(...arguments);
+    assert('@type arg is deprecated, pass @color="critical" instead', this.args.type !== 'critical');
+    if (this.args.color) {
+      const possibleColors = ['critical', 'warning', 'success', 'highlight', 'neutral'];
+      assert(
+        `${this.args.color} is not a valid color. @color arg must be one of: ${possibleColors.join(', ')}`,
+        possibleColors.includes(this.args.color)
+      );
+    }
+  }
+
   get color() {
+    if (this.args.color) return this.args.color;
+    // @type arg is deprecated, this is for backward compatibility of old implementation
     switch (this.args.type) {
       case 'danger':
         return 'critical';
@@ -43,11 +60,9 @@ export default class AlertInlineComponent extends Component {
 
   @action
   refresh() {
-    if (this.args.mimicRefresh) {
-      this.isRefreshing = true;
-      later(() => {
-        this.isRefreshing = false;
-      }, 200);
-    }
+    this.isRefreshing = true;
+    later(() => {
+      this.isRefreshing = false;
+    }, 200);
   }
 }
