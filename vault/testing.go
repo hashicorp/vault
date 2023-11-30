@@ -37,6 +37,12 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -59,10 +65,6 @@ import (
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -873,7 +875,7 @@ func (c *TestCluster) start(t testing.T) {
 
 	activeCore := -1
 WAITACTIVE:
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 600; i++ {
 		for i, core := range c.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				activeCore = i
@@ -881,7 +883,7 @@ WAITACTIVE:
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if activeCore == -1 {
 		t.Fatalf("no core became active")
@@ -1109,8 +1111,6 @@ func (c *TestCluster) Cleanup() {
 		os.RemoveAll(c.TempDir)
 	}
 
-	// Give time to actually shut down/clean up before the next test
-	time.Sleep(time.Second)
 	if c.CleanupFunc != nil {
 		c.CleanupFunc()
 	}
@@ -2177,19 +2177,20 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 
 		// Let them come fully up to standby
-		time.Sleep(2 * time.Second)
-
-		// Ensure cluster connection info is populated.
-		// Other cores should not come up as leaders.
-		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := tc.Cores[i].Core.Leader()
-			if err != nil {
-				t.Fatal(err)
+		assert.Eventually(t, func() bool {
+			// Ensure cluster connection info is populated.
+			// Other cores should not come up as leaders.
+			for i := 1; i < numCores; i++ {
+				isLeader, _, _, err := tc.Cores[i].Core.Leader()
+				if err != nil {
+					return false
+				}
+				if isLeader {
+					t.Fatalf("core[%d] should not be leader", i)
+				}
 			}
-			if isLeader {
-				t.Fatalf("core[%d] should not be leader", i)
-			}
-		}
+			return true
+		}, 2*time.Second, 100*time.Millisecond)
 	}
 
 	//
