@@ -23,7 +23,7 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		t.Skip("only running docker test with $VAULT_BINARY present")
 	}
 
-	cleanup, firstTransitKeyConfig, secondTransitKeyConfig, err := createTransitTestContainer("hasicorp/vault", "latest")
+	cleanup, firstTransitKeyConfig, secondTransitKeyConfig, err := createTransitTestContainer("hashicorp/vault", "latest")
 	if err != nil {
 		t.Fatalf("error creating vault container: %s", err)
 	}
