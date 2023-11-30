@@ -94,8 +94,8 @@ func (l *LogFile) openNew() error {
 		return err
 	}
 
-	l.fileInfo = filePointer
 	// New file, new bytes tracker, new creation time :)
+	l.fileInfo = filePointer
 	l.lastCreated = now()
 	l.bytesWritten = 0
 	return nil
