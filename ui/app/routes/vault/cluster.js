@@ -80,7 +80,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (id) {
       this.auth.setCluster(id);
       if (this.auth.currentToken) {
-        await this.version.fetchVersion();
+        this.version.fetchVersion();
         await this.permissions.getPaths.perform();
       }
       return this.version.fetchFeatures();
