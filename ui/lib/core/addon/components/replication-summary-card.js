@@ -26,12 +26,12 @@ export default class ReplicationSummaryCard extends Component {
     return this.args.title === 'Performance' ? 'performance' : 'dr';
   }
   get lastWAL() {
-    return get(this.args.replicationDetails, `${this.key}.lastWAL`) ?? 0;
+    return get(this.args.replicationDetails, `${this.key}.lastWAL`) || 0;
   }
   get merkleRoot() {
-    return get(this.args.replicationDetails, `${this.key}.merkleRoot`) ?? '';
+    return get(this.args.replicationDetails, `${this.key}.merkleRoot`) || 'no hash found';
   }
   get knownSecondariesCount() {
-    return get(this.args.replicationDetails, `${this.key}.knownSecondaries.length`) ?? 0;
+    return get(this.args.replicationDetails, `${this.key}.knownSecondaries.length`) || 0;
   }
 }

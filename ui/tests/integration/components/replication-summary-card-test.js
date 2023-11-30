@@ -93,6 +93,8 @@ module('Integration | Component | replication-summary-card', function (hooks) {
     assert
       .dom('[data-test-known-secondaries]')
       .includesText('0', `shows the correct default value of the known secondaries count`);
-    assert.dom('[data-test-merkle-root]').includesText('', `shows the correct merkle root value`);
+    assert
+      .dom('[data-test-merkle-root]')
+      .includesText('no hash found', `shows the correct merkle root value`);
   });
 });
