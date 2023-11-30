@@ -31,8 +31,8 @@
   @isActive={{this.isModalActive}}
   @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="disabling {{this.model.replicationModeForDisplay}} Replication on this cluster"
-  @onConfirm={{action
-    "onSubmit"
+  @onConfirm={{fn
+    (action "onSubmit")
     "disable"
     (if (eq this.model.replicationAttrs.modeForUrl "bootstrapping") this.mode this.model.replicationAttrs.modeForUrl)
   }}
