@@ -14,7 +14,6 @@ import (
 // TestVersionStore_StoreMultipleVaultVersions writes multiple versions of 1.9.0 and verifies that only
 // the original timestamp is stored.
 func TestVersionStore_StoreMultipleVaultVersions(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now().UTC()
 	vaultVersion := &VaultVersion{
@@ -37,7 +36,6 @@ func TestVersionStore_StoreMultipleVaultVersions(t *testing.T) {
 // TestVersionStore_GetOldestVersion verifies that FindOldestVersionTimestamp finds the oldest
 // (in time) vault version stored.
 func TestVersionStore_GetOldestVersion(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now().UTC()
 
@@ -77,7 +75,6 @@ func TestVersionStore_GetOldestVersion(t *testing.T) {
 // TestVersionStore_GetNewestVersion verifies that FindNewestVersionTimestamp finds the newest
 // (in time) vault version stored.
 func TestVersionStore_GetNewestVersion(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	upgradeTimePlusEpsilon := time.Now().UTC()
 
@@ -115,7 +112,6 @@ func TestVersionStore_GetNewestVersion(t *testing.T) {
 }
 
 func TestVersionStore_SelfHealUTC(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	estLoc, err := time.LoadLocation("EST")
 	if err != nil {

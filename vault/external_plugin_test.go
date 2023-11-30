@@ -65,7 +65,6 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			coreConfig := &CoreConfig{
 				CredentialBackends: map[string]logical.Factory{},
 			}
@@ -158,7 +157,6 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
 			for _, version := range tc.registerVersions {
 				registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), version, plugins[0].Sha256, plugins[0].FileName)
@@ -188,7 +186,6 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -261,7 +258,6 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 // version store is cleared.  Vault sees the next unseal as a major upgrade and
 // should immediately shut down.
 func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -341,7 +337,6 @@ func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T
 }
 
 func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -377,7 +372,6 @@ func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -457,7 +451,6 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 }
 
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -511,7 +504,6 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
-	t.Parallel()
 	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
 	t.Cleanup(func() { cleanup(t) })
 
@@ -565,7 +557,6 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_NoVersionsOkay(t *testing.T) {
-	t.Parallel()
 	for name, tc := range map[string]struct {
 		pluginType    consts.PluginType
 		routerPath    string
@@ -624,7 +615,6 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
 			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), "", plugins[0].Sha256, plugins[0].FileName)
 
@@ -644,7 +634,6 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
-	t.Parallel()
 	for name, tc := range map[string]struct {
 		pluginType consts.PluginType
 	}{
@@ -656,7 +645,6 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
@@ -676,7 +664,6 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 }
 
 func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
-	t.Parallel()
 	for name, tc := range map[string]struct {
 		pluginType        consts.PluginType
 		setRunningVersion string
@@ -695,7 +682,6 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion)
 			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].Sha256, plugins[0].FileName)
 
@@ -727,7 +713,6 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 }
 
 func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
-	t.Parallel()
 	// Turn on the check.
 	if err := os.Setenv(consts.VaultEnableFilePermissionsCheckEnv, "true"); err != nil {
 		t.Fatal(err)
@@ -762,7 +747,6 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.pluginVersion)
 			registeredPluginName := fmt.Sprintf(tc.pluginNameFmt, plugins[0].Name)
 
@@ -803,7 +787,6 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 }
 
 func TestExternalPlugin_DifferentVersionsAndArgs_AreNotMultiplexed(t *testing.T) {
-	t.Parallel()
 	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
 	core, _, _ := TestCoreUnsealed(t)
 
@@ -825,7 +808,6 @@ func TestExternalPlugin_DifferentVersionsAndArgs_AreNotMultiplexed(t *testing.T)
 }
 
 func TestExternalPlugin_DifferentTypes_AreNotMultiplexed(t *testing.T) {
-	t.Parallel()
 	const version = "v1.2.3"
 	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
 	core, _, _ := TestCoreUnsealed(t)
@@ -843,7 +825,6 @@ func TestExternalPlugin_DifferentTypes_AreNotMultiplexed(t *testing.T) {
 }
 
 func TestExternalPlugin_DifferentEnv_AreNotMultiplexed(t *testing.T) {
-	t.Parallel()
 	const version = "v1.2.3"
 	baseEnv := []string{
 		fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv),
@@ -868,7 +849,6 @@ func TestExternalPlugin_DifferentEnv_AreNotMultiplexed(t *testing.T) {
 
 // Used to run a mock multiplexed secrets plugin
 func TestBackend_PluginMain_Multiplexed_Logical_v123(t *testing.T) {
-	t.Parallel()
 	if os.Getenv(vaultTestingMockPluginEnv) == "" {
 		return
 	}
@@ -885,7 +865,6 @@ func TestBackend_PluginMain_Multiplexed_Logical_v123(t *testing.T) {
 
 // Used to run a mock multiplexed secrets plugin
 func TestBackend_PluginMain_Multiplexed_Logical_v124(t *testing.T) {
-	t.Parallel()
 	if os.Getenv(vaultTestingMockPluginEnv) == "" {
 		return
 	}
@@ -902,7 +881,6 @@ func TestBackend_PluginMain_Multiplexed_Logical_v124(t *testing.T) {
 
 // Used to run a mock multiplexed auth plugin
 func TestBackend_PluginMain_Multiplexed_Credential_v123(t *testing.T) {
-	t.Parallel()
 	if os.Getenv(vaultTestingMockPluginEnv) == "" {
 		return
 	}

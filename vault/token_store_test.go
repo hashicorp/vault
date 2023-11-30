@@ -25,9 +25,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	"github.com/mitchellh/mapstructure"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -36,10 +33,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	resp, err := c.HandleRequest(namespace.RootContext(nil), &logical.Request{
 		Operation:   logical.UpdateOperation,
@@ -60,7 +57,6 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 // TestTokenStore_CubbyholeDeletion tests that a token's cubbyhole
 // can be used and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	testTokenStore_CubbyholeDeletion(t, c, root)
 }
@@ -68,7 +64,6 @@ func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 // TestTokenStore_CubbyholeDeletionSSCTokensDisabled tests that a legacy token's
 // cubbyhole can be used, and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletionSSCTokensDisabled(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	c.disableSSCTokens = true
 	testTokenStore_CubbyholeDeletion(t, c, root)
@@ -134,7 +129,6 @@ func testTokenStore_CubbyholeDeletion(t *testing.T, c *Core, root string) {
 }
 
 func TestTokenStore_CubbyholeTidy(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	testTokenStore_CubbyholeTidy(t, c, root, namespace.RootContext(nil))
 }
@@ -240,7 +234,6 @@ func testTokenStore_CubbyholeTidy(t *testing.T, c *Core, root string, nsCtx cont
 }
 
 func TestTokenStore_Salting(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -295,7 +288,6 @@ type TokenEntryOld struct {
 }
 
 func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
-	t.Parallel()
 	var err error
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
@@ -691,7 +683,6 @@ func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period strin
 }
 
 func TestTokenStore_AccessorIndex(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -739,7 +730,6 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -776,7 +766,6 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -863,7 +852,6 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -1020,7 +1008,6 @@ func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
 }
 
 func TestTokenStore_RootToken(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1040,7 +1027,6 @@ func TestTokenStore_RootToken(t *testing.T) {
 }
 
 func TestTokenStore_NoRootBatch(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
@@ -1062,7 +1048,6 @@ func TestTokenStore_NoRootBatch(t *testing.T) {
 }
 
 func TestTokenStore_CreateLookup(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1099,7 +1084,6 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 }
 
 func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1140,7 +1124,6 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 }
 
 func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1211,7 +1194,6 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 }
 
 func TestTokenStore_UseToken(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1296,7 +1278,6 @@ func TestTokenStore_UseToken(t *testing.T) {
 }
 
 func TestTokenStore_Revoke(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1324,7 +1305,6 @@ func TestTokenStore_Revoke(t *testing.T) {
 }
 
 func TestTokenStore_Revoke_Leases(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1384,7 +1364,6 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 }
 
 func TestTokenStore_Revoke_Orphan(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1422,7 +1401,6 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 // This was the original function name, and now it just calls
 // the non recursive version for a variety of depths.
 func TestTokenStore_RevokeTree(t *testing.T) {
-	t.Parallel()
 	testTokenStore_RevokeTree_NonRecursive(t, 1, false)
 	testTokenStore_RevokeTree_NonRecursive(t, 2, false)
 	testTokenStore_RevokeTree_NonRecursive(t, 10, false)
@@ -1561,7 +1539,6 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *logical.T
 }
 
 func TestTokenStore_RevokeSelf(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -1622,7 +1599,6 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_NonAssignable(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1663,7 +1639,6 @@ func TestTokenStore_HandleRequest_NonAssignable(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1705,7 +1680,6 @@ func deepEqualTokenEntries(t *testing.T, a *logical.TokenEntry, b *logical.Token
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1753,7 +1727,6 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1768,7 +1741,6 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Invalid(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1790,7 +1762,6 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses_Restricted(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1836,7 +1807,6 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1853,7 +1823,6 @@ func TestTokenStore_HandleRequest_CreateToken_BadParent(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1871,7 +1840,6 @@ func TestTokenStore_HandleRequest_CreateToken(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -1901,7 +1869,6 @@ func TestTokenStore_HandleRequest_CreateToken_RootID(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
@@ -1931,7 +1898,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonRootID(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
@@ -1966,7 +1932,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_Subset(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo", "bar"})
@@ -1985,7 +1950,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	ts := core.tokenStore
 	ps := core.policyStore
@@ -2016,7 +1980,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2050,7 +2013,6 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild_NoExpiry_Expiry(t *
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2070,7 +2032,6 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "client", "", []string{"foo"})
@@ -2090,7 +2051,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2111,7 +2071,6 @@ func TestTokenStore_HandleRequest_CreateToken_Root_NoParent(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2132,7 +2091,6 @@ func TestTokenStore_HandleRequest_CreateToken_PathBased_NoParent(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2169,7 +2127,6 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2191,7 +2148,6 @@ func TestTokenStore_HandleRequest_CreateToken_Lease(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -2226,7 +2182,6 @@ func TestTokenStore_HandleRequest_CreateToken_TTL(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
-	t.Parallel()
 	c, _, root, sink := TestCoreUnsealedWithMetrics(t)
 	ts := c.tokenStore
 
@@ -2245,7 +2200,6 @@ func TestTokenStore_HandleRequest_CreateToken_Metric(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -2367,7 +2321,6 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
@@ -2420,7 +2373,6 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"foo"})
@@ -2456,7 +2408,6 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
-	t.Parallel()
 	t.Run("service_token", func(t *testing.T) {
 		testTokenStoreHandleRequestLookup(t, false, false)
 	})
@@ -2618,7 +2569,6 @@ func testTokenStoreHandleRequestLookup(t *testing.T, batch, periodic bool) {
 }
 
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	testMakeServiceTokenViaCore(t, c, root, "client", "3600s", []string{"foo"})
@@ -2674,7 +2624,6 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_Renew(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -2724,7 +2673,6 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
@@ -2817,7 +2765,6 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 }
 
 func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
@@ -2917,7 +2864,6 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
@@ -2982,7 +2928,6 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 }
 
 func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
@@ -3072,7 +3017,6 @@ func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	i := core.identityStore
 	ctx := namespace.RootContext(nil)
@@ -3149,7 +3093,6 @@ func TestTokenStore_HandleRequest_CreateToken_NotAllowedEntityAlias(t *testing.T
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NoRoleEntityAlias(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	entityAliasName := "testentityalias"
@@ -3171,7 +3114,6 @@ func TestTokenStore_HandleRequest_CreateToken_NoRoleEntityAlias(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -3217,7 +3159,6 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 }
 
 func TestTokenStore_RoleCRUD(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 
 	req := logical.TestRequest(t, logical.ReadOperation, "auth/token/roles/test")
@@ -3504,7 +3445,6 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 }
 
 func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -3538,7 +3478,6 @@ func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
 }
 
 func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
-	t.Parallel()
 	var req *logical.Request
 	var resp *logical.Response
 	var err error
@@ -3685,7 +3624,6 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 }
 
 func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -3808,7 +3746,6 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 }
 
 func TestTokenStore_RoleDisallowedPoliciesGlob(t *testing.T) {
-	t.Parallel()
 	var req *logical.Request
 	var resp *logical.Response
 	var err error
@@ -3941,7 +3878,6 @@ func TestTokenStore_RoleDisallowedPoliciesGlob(t *testing.T) {
 }
 
 func TestTokenStore_RoleAllowedPoliciesGlob(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -4005,7 +3941,6 @@ func TestTokenStore_RoleAllowedPoliciesGlob(t *testing.T) {
 }
 
 func TestTokenStore_RoleOrphan(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -4047,7 +3982,6 @@ func TestTokenStore_RoleOrphan(t *testing.T) {
 }
 
 func TestTokenStore_RolePathSuffix(t *testing.T) {
-	t.Parallel()
 	c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
 
@@ -4086,7 +4020,6 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 }
 
 func TestTokenStore_RolePeriod(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 
 	core.defaultLeaseTTL = 10 * time.Second
@@ -4242,7 +4175,6 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 }
 
 func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 
 	core.defaultLeaseTTL = 5 * time.Second
@@ -4454,7 +4386,6 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 }
 
 func TestTokenStore_RoleTokenFields(t *testing.T) {
-	t.Parallel()
 	c, _, _ := TestCoreUnsealed(t)
 	// c, _, root := TestCoreUnsealed(t)
 	ts := c.tokenStore
@@ -4713,7 +4644,6 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 }
 
 func TestTokenStore_Periodic(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 
 	core.defaultLeaseTTL = 10 * time.Second
@@ -4886,7 +4816,6 @@ func testTokenStore_NumUses_SelfLookupHelper(t *testing.T, core *Core, clientTok
 }
 
 func TestTokenStore_NumUses(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 	roleNumUses := 10
 	lesserNumUses := 5
@@ -4971,7 +4900,6 @@ func TestTokenStore_NumUses(t *testing.T) {
 }
 
 func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
-	t.Parallel()
 	core, _, root := TestCoreUnsealed(t)
 
 	core.defaultLeaseTTL = 10 * time.Second
@@ -5130,7 +5058,6 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 }
 
 func TestTokenStore_NoDefaultPolicy(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -5309,7 +5236,6 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 }
 
 func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -5397,7 +5323,6 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 
 // Issue 2189
 func TestTokenStore_RevokeUseCountToken(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 	cubbyFuncLock := &sync.RWMutex{}
@@ -5559,7 +5484,6 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 // Create a token, delete the token entry while leaking accessors, invoke tidy
 // and check if the dangling accessor entry is getting removed
 func TestTokenStore_HandleTidyCase1(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -5665,14 +5589,13 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	}
 
 	// Tidy runs async so give it time
-	assert.Eventually(t, func() bool {
-		// Tidy should have removed all the dangling accessor entries
-		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
-		if err != nil || (resp != nil && resp.IsError()) {
-			return false
-		}
-		return true
-	}, 10*time.Second, 100*time.Millisecond)
+	time.Sleep(10 * time.Second)
+
+	// Tidy should have removed all the dangling accessor entries
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
 
 	numberOfAccessors = len(resp.Data["keys"].([]string))
 	if numberOfAccessors != 1 {
@@ -5685,7 +5608,6 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 // accessor entry is getting removed and check if child tokens are still present
 // and turned into orphan tokens.
 func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -5801,14 +5723,13 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 	}
 
 	// Tidy runs async so give it time
-	assert.Eventually(t, func() bool {
-		// Tidy should have removed all the dangling accessor entries
-		resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
-		if err != nil || (resp != nil && resp.IsError()) {
-			return false
-		}
-		return true
-	}, 10*time.Second, 100*time.Millisecond)
+	time.Sleep(10 * time.Second)
+
+	// Tidy should have removed all the dangling accessor entries
+	resp, err = ts.HandleRequest(namespace.RootContext(nil), accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
 
 	// The number of accessors should be equal to number of valid child tokens
 	// (100) + the root token (1)
@@ -5840,7 +5761,6 @@ func TestTokenStore_HandleTidy_parentCleanup(t *testing.T) {
 }
 
 func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
-	t.Parallel()
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
 
@@ -5995,7 +5915,6 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 }
 
 func TestTokenStore_Batch_CannotCreateChildren(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 
 	core, _, root := TestCoreUnsealed(t)
@@ -6023,7 +5942,6 @@ func TestTokenStore_Batch_CannotCreateChildren(t *testing.T) {
 }
 
 func TestTokenStore_Batch_CannotRevoke(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -6056,7 +5974,6 @@ func TestTokenStore_Batch_CannotRevoke(t *testing.T) {
 }
 
 func TestTokenStore_Batch_NoCubbyhole(t *testing.T) {
-	t.Parallel()
 	var resp *logical.Response
 	var err error
 
@@ -6096,9 +6013,7 @@ func TestTokenStore_Batch_NoCubbyhole(t *testing.T) {
 }
 
 func TestTokenStore_TokenID(t *testing.T) {
-	t.Parallel()
 	t.Run("no custom ID provided", func(t *testing.T) {
-		t.Parallel()
 		c, _, initToken := TestCoreUnsealed(t)
 		ts := c.tokenStore
 
@@ -6117,7 +6032,6 @@ func TestTokenStore_TokenID(t *testing.T) {
 	})
 
 	t.Run("plain custom ID", func(t *testing.T) {
-		t.Parallel()
 		core, _, root := TestCoreUnsealed(t)
 		ts := core.tokenStore
 
@@ -6141,7 +6055,6 @@ func TestTokenStore_TokenID(t *testing.T) {
 	})
 
 	t.Run("service token prefix in custom ID", func(t *testing.T) {
-		t.Parallel()
 		c, _, initToken := TestCoreUnsealed(t)
 		ts := c.tokenStore
 
@@ -6163,7 +6076,6 @@ func TestTokenStore_TokenID(t *testing.T) {
 	})
 
 	t.Run("period in custom ID", func(t *testing.T) {
-		t.Parallel()
 		core, _, root := TestCoreUnsealed(t)
 		ts := core.tokenStore
 
@@ -6203,7 +6115,6 @@ func expectInGaugeCollection(t *testing.T, expectedLabels map[string]string, exp
 }
 
 func TestTokenStore_Collectors(t *testing.T) {
-	t.Parallel()
 	ctx := namespace.RootContext(nil)
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
