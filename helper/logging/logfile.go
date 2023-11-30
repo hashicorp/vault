@@ -95,10 +95,6 @@ func (l *LogFile) openNew() error {
 	}
 
 	l.fileInfo = filePointer
-	stat, err := filePointer.Stat()
-	if err != nil {
-		return err
-	}
 	// New file, new bytes tracker, new creation time :)
 	l.lastCreated = now()
 	l.bytesWritten = 0
