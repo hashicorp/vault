@@ -15,6 +15,9 @@ const s = {
   title: '[data-test-replication-title]',
   detailLink: (mode) => `[data-test-replication-details-link="${mode}"]`,
   summaryCard: '[data-test-replication-summary-card]',
+  dashboard: '[data-test-replication-dashboard]',
+  enableForm: '[data-test-replication-enable-form]',
+  knownSecondary: (name) => `[data-test-secondaries-node="${name}"]`,
 };
 
 module('Acceptance | Enterprise | replication modes', function (hooks) {
@@ -77,10 +80,12 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
       assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
       await click(s.navLink('Performance'));
-      assert.dom(s.title).hasText(`Performance ${mode}`, `it shows the performance mode details`);
+      assert.dom(s.title).hasText(`Performance ${mode}`, `it shows the performance title`);
+      assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
 
       await click(s.navLink('Disaster Recovery'));
-      assert.dom(s.title).hasText('Enable Disaster Recovery Replication', 'it shows the enable view for dr');
+      assert.dom(s.title).hasText('Enable Disaster Recovery Replication', 'it shows the dr title');
+      assert.dom(s.enableForm).exists('it shows the enable view for dr');
     });
   });
   // DR secondary mode is a whole other thing, test primary only here
@@ -99,10 +104,12 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.navLink('Disaster Recovery')).exists('shows dr link');
 
     await click(s.navLink('Performance'));
-    assert.dom(s.title).hasText(`Enable Performance Replication`, `it shows the enable view for performance`);
+    assert.dom(s.title).hasText(`Enable Performance Replication`, `it shows the performance title`);
+    assert.dom(s.enableForm).exists('it shows the enable view for dr');
 
     await click(s.navLink('Disaster Recovery'));
-    assert.dom(s.title).hasText(`Disaster Recovery primary`, 'it shows the dr mode details');
+    assert.dom(s.title).hasText(`Disaster Recovery primary`, 'it shows the dr title');
+    assert.dom(s.dashboard).exists(`it shows the replication dashboard`);
   });
 
   test(`replication page both primary`, async function (assert) {
