@@ -3,17 +3,16 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{! DEPRECATED use Hds::Alert directly }}
 <Hds::Alert
+  {{did-update this.refresh @message}}
   @type="compact"
   @color={{this.color}}
   @icon={{if this.isRefreshing "loading"}}
-  {{did-update this.refresh @message}}
   data-test-inline-alert
   ...attributes
   as |A|
 >
   {{#unless this.isRefreshing}}
-    <A.Description>{{@message}}</A.Description>
+    <A.Description data-test-inline-error-message>{{@message}}</A.Description>
   {{/unless}}
 </Hds::Alert>
