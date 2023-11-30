@@ -53,7 +53,7 @@
         {{/if}}
       </div>
       {{#if (includes index this.indicesWithComma)}}
-        <Icon class="is-flex-v-centered has-text-highlight" @name="alert-triangle-fill" />
+        <Hds::Alert class="is-flex-v-centered" @type="compact" @color="warning" />
       {{/if}}
     </div>
   {{/each}}

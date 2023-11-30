@@ -12,8 +12,8 @@ import { assert } from '@ember/debug';
 /**
  * @module AlertInline
  * * Use Hds::Alert @type="compact" for displaying alert messages.
- * This component is specifically for rendering messages that may update while a user is viewing the page
- * because it displays a loading icon when the @message arg changes before rendering the updated @message text.
+ * This component renders a compact Hds::Alert that displays a loading icon if the
+ * @message arg changes and then re-renders the updated @message text.
  * (Example: submitting a form and displaying the number of errors because on re-submit the number may change)
  *
  * @example
