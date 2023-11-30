@@ -19,13 +19,15 @@
     @valueUpdated={{this.handleJson}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
-    <AlertInline @type={{if this.lintingErrors "warning" "danger"}} class="has-top-padding-s">
-      {{#if @modelValidations.secretData.errors}}
-        {{@modelValidations.secretData.errors}}
-      {{else}}
-        JSON is unparsable. Fix linting errors to avoid data discrepancies.
-      {{/if}}
-    </AlertInline>
+    <AlertInline
+      @color={{if this.lintingErrors "warning" "critical"}}
+      class="has-top-padding-s"
+      @message={{if
+        @modelValidations.secretData.errors
+        @modelValidations.secretData.errors
+        "JSON is unparsable. Fix linting errors to avoid data discrepancies."
+      }}
+    />
   {{/if}}
 {{else}}
   <KvObjectEditor
