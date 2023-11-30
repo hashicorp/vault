@@ -24,17 +24,19 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
-	"github.com/mitchellh/mapstructure"
-	"github.com/stretchr/testify/require"
 )
 
 // TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
 func TestActivityLog_Creation(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 
 	a := core.activityLog
@@ -107,6 +109,7 @@ func TestActivityLog_Creation(t *testing.T) {
 // TestActivityLog_Creation_WrappingTokens calls HandleTokenUsage for two wrapping tokens, and verifies that this
 // doesn't create a fragment.
 func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 
 	a := core.activityLog
@@ -183,6 +186,7 @@ func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string
 // TestActivityLog_UniqueEntities calls AddEntityToFragment 4 times with 2 different clients, then verifies that there
 // are only 2 clients in the fragment and that they have the earlier timestamps.
 func TestActivityLog_UniqueEntities(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	a.SetEnable(true)
@@ -290,6 +294,7 @@ func expectedEntityIDs(t *testing.T, out *activity.EntityActivityLog, ids []stri
 // storage. The test then reads and unmarshals the segment, and verifies that the results have the correct counts by
 // namespace.
 func TestActivityLog_SaveTokensToStorage(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := context.Background()
 
@@ -374,6 +379,7 @@ func TestActivityLog_SaveTokensToStorage(t *testing.T) {
 // a new fragment with nonEntityTokens will not update the currentSegment's
 // tokenCount, as this field will not be used going forward.
 func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := context.Background()
 
@@ -450,6 +456,7 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 // TestActivityLog_SaveEntitiesToStorage calls AddEntityToFragment with clients with different namespaces and then
 // writes the segment to storage. Read back from storage, and verify that client IDs exist in storage.
 func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := context.Background()
 
@@ -503,6 +510,7 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 // TestActivityLog_StoreAndReadHyperloglog inserts into a hyperloglog, stores it and then reads it back. The test
 // verifies the estimate count is correct.
 func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := context.Background()
 
@@ -532,6 +540,7 @@ func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
 // TestModifyResponseMonthsNilAppend calls modifyResponseMonths for a range of 5 months ago to now. It verifies that the
 // 5 months in the range are correct.
 func TestModifyResponseMonthsNilAppend(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	end := time.Now().UTC()
@@ -567,6 +576,7 @@ func TestModifyResponseMonthsNilAppend(t *testing.T) {
 // standbyFragmentsReceived. Send the same fragment again and then verify that it doesn't change the entity map but does
 // get added to standbyFragmentsReceived.
 func TestActivityLog_ReceivedFragment(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	a.SetEnable(true)
@@ -620,6 +630,7 @@ func TestActivityLog_ReceivedFragment(t *testing.T) {
 // TestActivityLog_availableLogsEmptyDirectory verifies that availableLogs returns an empty slice when the log directory
 // is empty.
 func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
+	t.Parallel()
 	// verify that directory is empty, and nothing goes wrong
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -635,6 +646,7 @@ func TestActivityLog_availableLogsEmptyDirectory(t *testing.T) {
 // TestActivityLog_availableLogs writes to the direct token paths and entity paths and verifies that the correct start
 // times are returned.
 func TestActivityLog_availableLogs(t *testing.T) {
+	t.Parallel()
 	// set up a few files in storage
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
@@ -667,6 +679,7 @@ func TestActivityLog_availableLogs(t *testing.T) {
 // storage and read back. The test verifies that there are ActivitySegmentClientCapacity clients in the
 // first and second segment index, then the rest in the third index.
 func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		ActivityLogConfig: ActivityLogCoreConfig{
 			DisableFragmentWorker: true,
@@ -848,6 +861,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 // TestActivityLog_API_ConfigCRUD performs various CRUD operations on internal/counters/config.
 func TestActivityLog_API_ConfigCRUD(t *testing.T) {
+	t.Parallel()
 	core, b, _ := testCoreSystemBackend(t)
 	view := core.systemBarrierView
 
@@ -1000,6 +1014,7 @@ func TestActivityLog_API_ConfigCRUD(t *testing.T) {
 
 // TestActivityLog_parseSegmentNumberFromPath verifies that the segment number is extracted correctly from a path.
 func TestActivityLog_parseSegmentNumberFromPath(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		input        string
 		expected     int
@@ -1050,6 +1065,7 @@ func TestActivityLog_parseSegmentNumberFromPath(t *testing.T) {
 
 // TestActivityLog_getLastEntitySegmentNumber verifies that the last segment number is correctly returned.
 func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	paths := [...]string{"entity/992/0", "entity/1000/-1", "entity/1001/foo", "entity/1111/0", "entity/1111/1"}
@@ -1107,6 +1123,7 @@ func TestActivityLog_getLastEntitySegmentNumber(t *testing.T) {
 // TestActivityLog_tokenCountExists writes to the direct tokens segment path and verifies that segment count exists
 // returns true for the segments at these paths.
 func TestActivityLog_tokenCountExists(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	paths := [...]string{"directtokens/992/0", "directtokens/1001/foo", "directtokens/1111/0", "directtokens/2222/1"}
@@ -1233,6 +1250,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 // TestActivityLog_loadCurrentClientSegment writes entity segments and calls loadCurrentClientSegment, then verifies
 // that the correct values are returned when querying the current segment.
 func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	// we must verify that loadCurrentClientSegment doesn't overwrite the in-memory token count
@@ -1351,6 +1369,7 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 // TestActivityLog_loadPriorEntitySegment writes entities to two months and calls loadPriorEntitySegment for each month,
 // verifying that the active clients are correct.
 func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 	a.SetEnable(true)
@@ -1444,6 +1463,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 // TestActivityLog_loadTokenCount ensures that previous segments with tokenCounts
 // can still be read from storage, even when TWE's have distinct, tracked clientIDs.
 func TestActivityLog_loadTokenCount(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 
@@ -1498,6 +1518,7 @@ func TestActivityLog_loadTokenCount(t *testing.T) {
 // activity log. The activity log is then stopped and started again, to simulate a seal and unseal. The test then
 // verifies that there's no error adding an entity, direct token, and when writing a segment to storage.
 func TestActivityLog_StopAndRestart(t *testing.T) {
+	t.Parallel()
 	core, b, _ := testCoreSystemBackend(t)
 	sysView := core.systemBarrierView
 
@@ -1631,6 +1652,7 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 // TestActivityLog_refreshFromStoredLog writes records for 3 months ago and this month, then calls refreshFromStoredLog.
 // The test verifies that current entities and current tokens are correct.
 func TestActivityLog_refreshFromStoredLog(t *testing.T) {
+	t.Parallel()
 	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 	a.SetEnable(true)
 
@@ -1671,6 +1693,7 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 // test closes a.doneCh and calls refreshFromStoredLog, which will not do any processing because the doneCh is closed.
 // The test verifies that the current data is not loaded.
 func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testing.T) {
+	t.Parallel()
 	a, expectedClientRecords, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 	a.SetEnable(true)
 
@@ -1714,6 +1737,7 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 // TestActivityLog_refreshFromStoredLogContextCancelled writes data from 3 months ago to this month and calls
 // refreshFromStoredLog with a canceled context, verifying that the function errors because of the canceled context.
 func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
+	t.Parallel()
 	a, _, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, true)
 
 	var wg sync.WaitGroup
@@ -1729,6 +1753,7 @@ func TestActivityLog_refreshFromStoredLogContextCancelled(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogNoTokens writes only entities from 3 months ago to today, then calls
 // refreshFromStoredLog. It verifies that there are no tokens loaded.
 func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
+	t.Parallel()
 	a, expectedClientRecords, _ := setupActivityRecordsInStorage(t, time.Now().UTC(), true, false)
 	a.SetEnable(true)
 
@@ -1766,6 +1791,7 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogNoEntities writes only direct tokens from 3 months ago to today, and runs
 // refreshFromStoredLog. It verifies that there are no entities or clients loaded.
 func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
+	t.Parallel()
 	a, _, expectedTokenCounts := setupActivityRecordsInStorage(t, time.Now().UTC(), false, true)
 	a.SetEnable(true)
 
@@ -1795,6 +1821,7 @@ func TestActivityLog_refreshFromStoredLogNoEntities(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogNoData writes nothing and calls refreshFromStoredLog, and verifies that the
 // current segment counts are zero.
 func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	a, _, _ := setupActivityRecordsInStorage(t, now, false, false)
 	a.SetEnable(true)
@@ -1812,6 +1839,7 @@ func TestActivityLog_refreshFromStoredLogNoData(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogTwoMonthsPrevious creates segment data from 5 months ago to 2 months ago and
 // calls refreshFromStoredLog, then verifies that the current segment counts are zero.
 func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
+	t.Parallel()
 	// test what happens when the most recent data is from month M-2 (or earlier - same effect)
 	now := time.Now().UTC()
 	twoMonthsAgoStart := timeutil.StartOfPreviousMonth(timeutil.StartOfPreviousMonth(now))
@@ -1831,6 +1859,7 @@ func TestActivityLog_refreshFromStoredLogTwoMonthsPrevious(t *testing.T) {
 // TestActivityLog_refreshFromStoredLogPreviousMonth creates segment data from 4 months ago to 1 month ago, then calls
 // refreshFromStoredLog, then verifies that these clients are included in the current segment.
 func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
+	t.Parallel()
 	// test what happens when most recent data is from month M-1
 	// we expect to load the data from the previous month so that the activeFragmentWorker
 	// can handle end of month rotations
@@ -1875,6 +1904,7 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 // TestActivityLog_Export writes overlapping client for 5 months with various mounts and namespaces. It performs an
 // export for various month ranges in the range, and verifies that the outputs are correct.
 func TestActivityLog_Export(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	january := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -2068,6 +2098,7 @@ func (f *fakeResponseWriter) WriteHeader(statusCode int) {
 // TestActivityLog_IncludeNamespace verifies that includeInResponse returns true for namespaces that are children of
 // their parents.
 func TestActivityLog_IncludeNamespace(t *testing.T) {
+	t.Parallel()
 	root := namespace.RootNamespace
 	a := &ActivityLog{}
 
@@ -2117,6 +2148,7 @@ func TestActivityLog_IncludeNamespace(t *testing.T) {
 // TestActivityLog_DeleteWorker writes segments for entities and direct tokens for 2 different timestamps, then runs the
 // deleteLogWorker for one of the timestamps. The test verifies that the correct segment is deleted, and the other remains.
 func TestActivityLog_DeleteWorker(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 
@@ -2175,6 +2207,7 @@ func checkAPIWarnings(t *testing.T, originalEnabled, newEnabled bool, resp *logi
 // log. The test verifies that the segment doesn't exist. The activity log is enabled, then verified that an empty
 // segment is written and new clients can be added and written to segments.
 func TestActivityLog_EnableDisable(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, b, _ := testCoreSystemBackend(t)
@@ -2264,6 +2297,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 }
 
 func TestActivityLog_EndOfMonth(t *testing.T) {
+	t.Parallel()
 	// We only want *fake* end of months, *real* ones are too scary.
 	timeutil.SkipAtEndOfMonth(t)
 
@@ -2368,6 +2402,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 // queries work when new months have tokens without entities saved in the TokenCount,
 // as clients, or both.
 func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	// root namespace will have TWEs with clientIDs and untracked TWEs
@@ -2771,6 +2806,7 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 }
 
 func TestActivityLog_SaveAfterDisable(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	a := core.activityLog
@@ -2815,6 +2851,7 @@ func TestActivityLog_SaveAfterDisable(t *testing.T) {
 // Create intent logs and run precomputedQueryWorker for various month ranges. Verify that the precomputed queries have
 // the correct counts, including per namespace.
 func TestActivityLog_Precompute(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	january := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -3156,6 +3193,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 // will perform a query get over the skip month and expect a query for the entire
 // time segment (non-contiguous)
 func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	august := time.Date(2020, 8, 15, 12, 0, 0, 0, time.UTC)
@@ -3342,6 +3380,7 @@ func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
 // entities. This ensures the deduplication logic and separation logic between
 // entities and TWE clients is correct.
 func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	january := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -3704,6 +3743,7 @@ func (b *BlockingInmemStorage) Delete(ctx context.Context, key string) error {
 // TestActivityLog_PrecomputeCancel stops the activity log before running the precomputedQueryWorker, and verifies that
 // the context used to query storage has been canceled.
 func TestActivityLog_PrecomputeCancel(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
 
@@ -3734,6 +3774,7 @@ func TestActivityLog_PrecomputeCancel(t *testing.T) {
 // TestActivityLog_NextMonthStart sets the activity log start timestamp, then verifies that StartOfNextMonth returns the
 // correct value.
 func TestActivityLog_NextMonthStart(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	now := time.Now().UTC()
@@ -3788,6 +3829,7 @@ func waitForRetentionWorkerToFinish(t *testing.T, a *ActivityLog) {
 // TestActivityLog_Deletion writes entity, direct tokens, and queries for dates ranging over 20 months. Then the test
 // calls the retentionWorker with decreasing retention values, and verifies that the correct paths are being deleted.
 func TestActivityLog_Deletion(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
@@ -3905,6 +3947,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 // TestActivityLog_partialMonthClientCount writes segment data for the curren month and runs refreshFromStoredLog and
 // then partialMonthClientCount. The test verifies that the values returned by partialMonthClientCount are correct.
 func TestActivityLog_partialMonthClientCount(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	ctx := namespace.RootContext(nil)
@@ -3976,6 +4019,7 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 // TestActivityLog_partialMonthClientCountUsingHandleQuery writes segments for the current month and calls
 // refreshFromStoredLog, then handleQuery. The test verifies that the results from handleQuery are correct.
 func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	ctx := namespace.RootContext(nil)
@@ -4104,6 +4148,7 @@ func TestActivityLog_partialMonthClientCountUsingHandleQuery(t *testing.T) {
 // TestActivityLog_handleQuery_normalizedMountPaths ensures that the mount paths returned by the activity log always have a trailing slash and client accounting is done correctly when there's no trailing slash.
 // Two clients that have the same mount path, but one has a trailing slash, should be considered part of the same mount path.
 func TestActivityLog_handleQuery_normalizedMountPaths(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
@@ -4155,6 +4200,7 @@ func TestActivityLog_handleQuery_normalizedMountPaths(t *testing.T) {
 // valid, one can't be found (so it's assumed the mount is deleted). These records are written to storage, then this data is
 // refreshed in refreshFromStoredLog, and finally we verify the results returned with partialMonthClientCount.
 func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T) {
+	t.Parallel()
 	timeutil.SkipAtEndOfMonth(t)
 
 	core, _, _ := TestCoreUnsealed(t)
@@ -4271,6 +4317,7 @@ func TestActivityLog_partialMonthClientCountWithMultipleMountPaths(t *testing.T)
 
 // TestActivityLog_processNewClients_delete ensures that the correct clients are deleted from a processNewClients struct
 func TestActivityLog_processNewClients_delete(t *testing.T) {
+	t.Parallel()
 	mount := "mount"
 	namespace := "namespace"
 	clientID := "client-id"
@@ -4316,6 +4363,7 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 // TestActivityLog_processClientRecord calls processClientRecord for an entity and a non-entity record and verifies that
 // the record is present in the namespace and month maps
 func TestActivityLog_processClientRecord(t *testing.T) {
+	t.Parallel()
 	startTime := time.Now()
 	mount := "mount"
 	namespace := "namespace"
@@ -4402,6 +4450,7 @@ func (s summaryByMonth) firstSeen(t *testing.T, client *activity.EntityRecord) t
 // TestActivityLog_handleEntitySegment verifies that the by namespace and by month summaries are correctly filled in a
 // variety of scenarios
 func TestActivityLog_handleEntitySegment(t *testing.T) {
+	t.Parallel()
 	finalTime := timeutil.StartOfMonth(time.Date(2022, 12, 1, 0, 0, 0, 0, time.UTC))
 	addMonths := func(i int) time.Time {
 		return timeutil.StartOfMonth(finalTime.AddDate(0, i, 0))
@@ -4562,6 +4611,7 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 
 // TestActivityLog_breakdownTokenSegment verifies that tokens are correctly added to a map that tracks counts per namespace
 func TestActivityLog_breakdownTokenSegment(t *testing.T) {
+	t.Parallel()
 	toAdd := map[string]uint64{
 		"a": 1,
 		"b": 2,
@@ -4628,6 +4678,7 @@ func TestActivityLog_breakdownTokenSegment(t *testing.T) {
 // which have different namespaces and mounts. The precomputed query is then retrieved from storage and we verify that
 // the data structure is filled correctly
 func TestActivityLog_writePrecomputedQuery(t *testing.T) {
+	t.Parallel()
 	core, _, _ := TestCoreUnsealed(t)
 
 	a := core.activityLog
@@ -4742,6 +4793,7 @@ func (m mockTimeNowClock) Now() time.Time {
 // verifies that the precomputedQueryWorker runs and writes precomputed queries
 // with the proper start and end times when the end of the month is triggered
 func TestActivityLog_HandleEndOfMonth(t *testing.T) {
+	t.Parallel()
 	// 3 seconds until a new month
 	now := time.Date(2021, 1, 31, 23, 59, 57, 0, time.UTC)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{ActivityLogConfig: ActivityLogCoreConfig{Clock: newMockTimeNowClock(now)}})
