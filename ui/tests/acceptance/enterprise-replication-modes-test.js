@@ -105,7 +105,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
 
     await click(s.navLink('Performance'));
     assert.dom(s.title).hasText(`Enable Performance Replication`, `it shows the performance title`);
-    assert.dom(s.enableForm).exists('it shows the enable view for dr');
+    assert.dom(s.enableForm).exists('it shows the enable view for performance');
 
     await click(s.navLink('Disaster Recovery'));
     assert.dom(s.title).hasText(`Disaster Recovery primary`, 'it shows the dr title');
