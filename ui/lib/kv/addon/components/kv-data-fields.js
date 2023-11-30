@@ -1,49 +1,108 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
+{{!
+  Copyright (c) HashiCorp, Inc.
+}}
 
-import Component from '@glimmer/component';
-import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
-import { stringify } from 'core/helpers/stringify';
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @pageTitle={{@path}}>
+  <:tabLinks>
+    <LinkTo @route="secret.details" data-test-secrets-tab="Secret">Secret</LinkTo>
+    <LinkTo @route="secret.metadata.index" data-test-secrets-tab="Metadata">Metadata</LinkTo>
+    <LinkTo @route="secret.paths" data-test-secrets-tab="Paths">Paths</LinkTo>
+    {{#if @secret.canReadMetadata}}
+      <LinkTo @route="secret.metadata.versions" data-test-secrets-tab="Version History">Version History</LinkTo>
+    {{/if}}
+  </:tabLinks>
 
-/**
- * @module KvDataFields is used for rendering the fields associated with kv secret data, it hides/shows a json editor and renders validation errors for the json editor
- *
- * <KvDataFields
- *  @showJson={{true}}
- *  @secret={{@secret}}
- *  @isEdit={{true}}
- *  @modelValidations={{this.modelValidations}}
- *  @pathValidations={{this.pathValidations}}
- * />
- *
- * @param {model} secret - Ember data model: 'kv/data', the new record saved by the form
- * @param {boolean} showJson - boolean passed from parent to hide/show json editor
- * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
- * @param {callback} [pathValidations] - callback function fired for the path input on key up
- * @param {boolean} [isEdit=false] - if true, this is a new secret version rather than a new secret. Used to change text for some form labels
- */
+  <:toolbarFilters>
+    {{#unless this.emptyState}}
+      <Toggle
+        @name="json"
+        @status="success"
+        @size="small"
+        @checked={{or this.showJsonView this.secretDataIsAdvanced}}
+        @onChange={{fn (mut this.showJsonView)}}
+        @disabled={{this.secretDataIsAdvanced}}
+      >
+        <span class="has-text-grey">JSON</span>
+      </Toggle>
+    {{/unless}}
+  </:toolbarFilters>
+  <:toolbarActions>
+    {{#if this.showUndelete}}
+      <button data-test-kv-delete="undelete" type="button" class="toolbar-link" {{on "click" this.undelete}}>
+        Undelete
+      </button>
+    {{/if}}
+    {{#if this.showDelete}}
+      <KvDeleteModal
+        @mode="delete"
+        @secret={{@secret}}
+        @metadata={{@metadata}}
+        @onDelete={{this.handleDestruction}}
+        @version={{this.version}}
+      >
+        Delete
+      </KvDeleteModal>
+    {{/if}}
+    {{#if this.showDestroy}}
+      <KvDeleteModal @mode="destroy" @secret={{@secret}} @onDelete={{this.handleDestruction}} @version={{this.version}}>
+        Destroy
+      </KvDeleteModal>
+    {{/if}}
+    {{#if (or @secret.canReadData @secret.canReadMetadata @secret.canEditData)}}
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if (and @secret.canReadData (eq @secret.state "created"))}}
+      <CopySecretDropdown
+        @clipboardText={{stringify @secret.secretData}}
+        @onWrap={{perform this.wrapSecret}}
+        @isWrapping={{this.wrapSecret.isRunning}}
+        @wrappedData={{this.wrappedData}}
+        @onClose={{this.clearWrappedData}}
+      />
+    {{/if}}
+    {{#if @secret.canReadMetadata}}
+      <KvVersionDropdown @displayVersion={{this.version}} @metadata={{@metadata}} @onClose={{this.closeVersionMenu}} />
+    {{/if}}
+    {{#if @secret.canEditData}}
+      <ToolbarLink data-test-create-new-version @route="secret.details.edit" @type="add">Create new version</ToolbarLink>
+    {{/if}}
+  </:toolbarActions>
+</KvPageHeader>
 
-export default class KvDataFields extends Component {
-  @tracked lintingErrors;
-  @tracked codeMirrorString;
+{{#if (or @secret.isSecretDeleted (not this.emptyState))}}
+  <div class="info-table-row-header">
+    <div class="info-table-row thead {{if this.showJsonView 'is-shadowless'}} ">
+      {{#unless this.hideHeaders}}
+        <div class="th column is-one-quarter">
+          Key
+        </div>
+        <div class="th column">
+          Value
+        </div>
+      {{/unless}}
+      <div class="th column justify-right">
+        {{#if (or @secret.isSecretDeleted @secret.createdTime)}}
+          <KvTooltipTimestamp
+            @text="Version {{if @secret.version @secret.version}} {{@secret.state}}"
+            @timestamp={{(if @secret.isSecretDeleted @secret.deletionTime @secret.createdTime)}}
+          />
+        {{/if}}
+      </div>
+    </div>
+  </div>
+{{/if}}
 
-  constructor() {
-    super(...arguments);
-    this.codeMirrorString = this.args.secret?.secretData
-      ? stringify([this.args.secret.secretData], {})
-      : '{ "": "" }';
-  }
-
-  @action
-  handleJson(value, codemirror) {
-    codemirror.performLint();
-    this.lintingErrors = codemirror.state.lint.marked.length > 0;
-    if (!this.lintingErrors) {
-      this.args.secret.secretData = JSON.parse(value);
-    }
-    this.codeMirrorString = value;
-  }
-}
+{{#if this.emptyState}}
+  <EmptyState @title={{this.emptyState.title}} @message={{this.emptyState.message}}>
+    {{#if this.emptyState.link}}
+      <DocLink @path={{this.emptyState.link}}>Learn more</DocLink>
+    {{/if}}
+  </EmptyState>
+{{else}}
+  <KvDataFields
+    @showJson={{or this.showJsonView this.secretDataIsAdvanced}}
+    @secret={{@secret}}
+    @modelValidations={{this.modelValidations}}
+    @type="details"
+  />
+{{/if}}

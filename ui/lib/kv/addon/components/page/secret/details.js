@@ -1,201 +1,106 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
+{{!
+  Copyright (c) HashiCorp, Inc.
+}}
 
-import Component from '@glimmer/component';
-import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
-import { next } from '@ember/runloop';
-import { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
-import { isDeleted } from 'kv/utils/kv-deleted';
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @pageTitle="Create New Version">
+  <:toolbarFilters>
+    <Toggle
+      @name="json"
+      @status="success"
+      @size="small"
+      @checked={{or this.showJsonView this.secretDataIsAdvanced}}
+      @onChange={{fn (mut this.showJsonView)}}
+      @disabled={{this.secretDataIsAdvanced}}
+    >
+      <span class="has-text-grey">JSON</span>
+    </Toggle>
+  </:toolbarFilters>
+</KvPageHeader>
 
-/**
- * @module KvSecretDetails renders the key/value data of a KV secret.
- * It also renders a dropdown to display different versions of the secret.
- * <Page::Secret::Details
- *  @path={{this.model.path}}
- *  @secret={{this.model.secret}}
- *  @metadata={{this.model.metadata}}
- *  @breadcrumbs={{this.breadcrumbs}}
-  />
- *
- * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
- * @param {model} secret - Ember data model: 'kv/data'
- * @param {model} metadata - Ember data model: 'kv/metadata'
- * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
- */
+{{#if this.showOldVersionAlert}}
+  <Hds::Alert data-test-secret-version-alert @type="inline" @color="warning" class="has-top-bottom-margin" as |A|>
+    <A.Title>Warning</A.Title>
+    <A.Description>
+      You are creating a new version based on data from Version
+      {{@previousVersion}}. The current version for
+      <code>{{@secret.path}}</code>
+      is Version
+      {{@currentVersion}}.
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
+{{#if @noReadAccess}}
+  <Hds::Alert data-test-secret-no-read-alert @type="inline" @color="warning" class="has-top-bottom-margin" as |A|>
+    <A.Title>Warning</A.Title>
+    <A.Description>
+      You do not have read permissions for this secret data. Saving will overwrite the existing secret.
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
 
-export default class KvSecretDetails extends Component {
-  @service flashMessages;
-  @service router;
-  @service store;
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-bottomless">
+    <NamespaceReminder @mode="create" @noun="secret" />
+    <MessageError @model={{@secret}} @errorMessage={{this.errorMessage}} />
 
-  @tracked showJsonView = false;
-  @tracked wrappedData = null;
+    <KvDataFields
+      @showJson={{or this.showJsonView this.secretDataIsAdvanced}}
+      @secret={{@secret}}
+      @modelValidations={{this.modelValidations}}
+      @type="edit"
+    />
 
-  @action
-  closeVersionMenu(dropdown) {
-    // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
-    // closing dropdown in next tick of run loop fixes it
-    next(() => dropdown.actions.close());
-  }
-
-  @action
-  clearWrappedData() {
-    this.wrappedData = null;
-  }
-
-  @task
-  @waitFor
-  *wrapSecret() {
-    const { backend, path } = this.args.secret;
-    const adapter = this.store.adapterFor('kv/data');
-    try {
-      const { token } = yield adapter.fetchWrapInfo({ backend, path, wrapTTL: 1800 });
-      if (!token) throw 'No token';
-      this.wrappedData = token;
-      this.flashMessages.success('Secret successfully wrapped!');
-    } catch (error) {
-      this.flashMessages.danger('Could not wrap secret.');
-    }
-  }
-
-  @action
-  async undelete() {
-    const { secret } = this.args;
-    try {
-      await secret.destroyRecord({
-        adapterOptions: { deleteType: 'undelete', deleteVersions: this.version },
-      });
-      this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
-      this.refreshRoute();
-    } catch (err) {
-      this.flashMessages.danger(
-        `There was a problem undeleting ${secret.path}. Error: ${err.errors?.join(' ')}.`
-      );
-    }
-  }
-
-  @action
-  async handleDestruction(type) {
-    const { secret } = this.args;
-    try {
-      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
-      this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
-      this.refreshRoute();
-    } catch (err) {
-      const verb = type.includes('delete') ? 'deleting' : 'destroying';
-      this.flashMessages.danger(
-        `There was a problem ${verb} Version ${this.version} of ${secret.path}. Error: ${err.errors.join(
-          ' '
-        )}.`
-      );
-    }
-  }
-
-  refreshRoute() {
-    // transition to the parent secret route to refresh both metadata and data models
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-      queryParams: { version: this.version },
-    });
-  }
-
-  get version() {
-    return (
-      this.args.secret?.version ||
-      this.router.currentRoute.queryParams?.version ||
-      this.args.metadata?.sortedVersions[0].version
-    );
-  }
-
-  get hideHeaders() {
-    return this.showJsonView || this.emptyState;
-  }
-
-  get versionState() {
-    const { secret, metadata } = this.args;
-    if (secret.failReadErrorCode !== 403) {
-      return secret.state;
-    }
-    // If the user can't read secret data, get the current version
-    // state from metadata versions
-    if (metadata?.sortedVersions) {
-      const version = this.version;
-      const meta = version
-        ? metadata.sortedVersions.find((v) => v.version == version)
-        : metadata.sortedVersions[0];
-      if (meta?.destroyed) {
-        return 'destroyed';
-      }
-      if (isDeleted(meta?.deletion_time)) {
-        return 'deleted';
-      }
-      if (meta?.created_time) {
-        return 'created';
-      }
-    }
-    return '';
-  }
-
-  get showUndelete() {
-    const { secret } = this.args;
-    if (secret.canUndelete) {
-      return this.versionState === 'deleted';
-    }
-    return false;
-  }
-
-  get showDelete() {
-    const { secret } = this.args;
-    if (secret.canDeleteVersion || secret.canDeleteLatestVersion) {
-      return this.versionState === 'created' || this.versionState === '';
-    }
-    return false;
-  }
-
-  get showDestroy() {
-    const { secret } = this.args;
-    if (secret.canDestroyVersion) {
-      return this.versionState !== 'destroyed' && this.version;
-    }
-    return false;
-  }
-
-  get emptyState() {
-    if (!this.args.secret.canReadData) {
-      return {
-        title: 'You do not have permission to read this secret',
-        message:
-          'Your policies may permit you to write a new version of this secret, but do not allow you to read its current contents.',
-      };
-    }
-    // only destructure if we can read secret data
-    const { version, destroyed, isSecretDeleted } = this.args.secret;
-    if (destroyed) {
-      return {
-        title: `Version ${version} of this secret has been permanently destroyed`,
-        message: `A version that has been permanently deleted cannot be restored. ${
-          this.args.secret.canReadMetadata
-            ? ' You can view other versions of this secret in the Version History tab above.'
-            : ''
-        }`,
-        link: '/vault/docs/secrets/kv/kv-v2',
-      };
-    }
-    if (isSecretDeleted) {
-      return {
-        title: `Version ${version} of this secret has been deleted`,
-        message: `This version has been deleted but can be undeleted. ${
-          this.args.secret.canReadMetadata
-            ? 'View other versions of this secret by clicking the Version History tab above.'
-            : ''
-        }`,
-        link: '/vault/docs/secrets/kv/kv-v2',
-      };
-    }
-    return false;
-  }
-}
+    <div class="has-top-margin-m">
+      <Toggle
+        @name="Show diff"
+        @status="success"
+        @size="small"
+        @onChange={{fn (mut this.showDiff)}}
+        @checked={{this.showDiff}}
+        @disabled={{not this.diffDelta}}
+      >
+        <span class="ttl-picker-label is-large">Show diff</span><br />
+        <div class="description has-text-grey" data-test-diff-description>{{if
+            this.diffDelta
+            "Showing the diff will reveal secret values"
+            "No changes to show. Update secret to view diff"
+          }}</div>
+        {{#if this.showDiff}}
+          <div class="form-section visual-diff text-grey-lightest background-color-black has-top-margin-s">
+            <pre data-test-visual-diff>{{sanitized-html this.visualDiff}}</pre>
+          </div>
+        {{/if}}
+      </Toggle>
+    </div>
+  </div>
+  <div class="box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="submit"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        data-test-kv-save
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.onCancel}}
+        data-test-kv-cancel
+      >
+        Cancel
+      </button>
+    </div>
+    {{#if this.invalidFormAlert}}
+      <AlertInline
+        data-test-invalid-form-alert
+        class="has-top-padding-s"
+        @type="danger"
+        @message={{this.invalidFormAlert}}
+        @mimicRefresh={{true}}
+      />
+    {{/if}}
+  </div>
+</form>
