@@ -6,12 +6,12 @@ package seal_binary
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"io"
 	"net/url"
 	"os"
 	"path"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
