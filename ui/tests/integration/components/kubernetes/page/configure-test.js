@@ -222,9 +222,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom('[data-test-field-validation="kubernetesHost"] [data-test-inline-error-message]')
       .hasText('Kubernetes host is required', 'Error renders for required field');
-    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+    assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });
 
   test('it should save inferred config', async function (assert) {

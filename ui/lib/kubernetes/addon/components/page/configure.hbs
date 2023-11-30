@@ -78,7 +78,8 @@
 
 <hr class="has-background-gray-200 has-top-margin-l" />
 
-<div class="has-top-margin-s has-bottom-margin-s is-flex">
+<Hds::ButtonSet class="has-top-margin-s has-bottom-margin-s">
+
   <Hds::Button @text="Save" data-test-config-save disabled={{this.isDisabled}} {{on "click" (perform this.save)}} />
   <Hds::Button
     @text="Back"
@@ -91,7 +92,7 @@
   {{#if this.alert}}
     <AlertInline @type="danger" class="has-top-padding-s" @message={{this.alert}} data-test-alert />
   {{/if}}
-</div>
+</Hds::ButtonSet>
 
 {{#if this.showConfirm}}
   <Hds::Modal id="kubernetes-edit-config-modal" @onClose={{fn (mut this.showConfirm) false}} @color="warning" as |M|>
