@@ -31,4 +31,12 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
   query(store, { modelName }) {
     return this.ajax(this.buildURL(modelName), 'GET', { data: { list: true } });
   }
+
+  // return normalized query response
+  // useful for fetching data directly without loading models into store
+  async normalizedQuery() {
+    const queryResponse = await this.query(this.store, { modelName: 'sync/destination' });
+    const serializer = this.store.serializerFor('sync/destination');
+    return serializer.extractLazyPaginatedData(queryResponse);
+  }
 }

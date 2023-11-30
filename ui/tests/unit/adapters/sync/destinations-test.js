@@ -7,6 +7,7 @@ import { setupTest } from 'ember-qunit';
 import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { destinationTypes } from 'vault/helpers/sync-destinations';
+import sinon from 'sinon';
 
 module('Unit | Adapter | sync | destination', function (hooks) {
   setupTest(hooks);
@@ -74,6 +75,27 @@ module('Unit | Adapter | sync | destination', function (hooks) {
       };
     });
     this.store.query('sync/destination', {});
+  });
+
+  test('it should make request to correct endpoint and serialize response for normalizedQuery', async function (assert) {
+    assert.expect(2);
+
+    this.server.get('sys/sync/destinations', () => {
+      assert.ok(true, `request is made to LIST sys/sync/destinations endpoint on normalizedQuery`);
+      return {
+        data: {
+          key_info: {
+            'aws-sm': ['my-dest-1'],
+            gh: ['my-dest-1'],
+          },
+          keys: ['aws-sm', 'gh'],
+        },
+      };
+    });
+
+    const spy = sinon.spy(this.store.serializerFor('sync/destination'), 'extractLazyPaginatedData');
+    await this.store.adapterFor('sync/destination').normalizedQuery();
+    assert.true(spy.calledOnce, 'Serializer method used on response');
   });
 
   test('it should make request to correct endpoint for deleteRecord with base model', async function (assert) {

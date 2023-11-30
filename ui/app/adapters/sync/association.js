@@ -5,12 +5,16 @@
 
 import ApplicationAdapter from 'vault/adapters/application';
 import { assert } from '@ember/debug';
+import { all } from 'rsvp';
 
 export default class SyncAssociationAdapter extends ApplicationAdapter {
   namespace = 'v1/sys/sync';
 
-  buildURL(modelName, id, snapshot, requestType, query) {
+  buildURL(modelName, id, snapshot, requestType, query = {}) {
     const { destinationType, destinationName } = snapshot ? snapshot.attributes() : query;
+    if (!destinationType || !destinationName) {
+      return `${super.buildURL()}/associations`;
+    }
     const { action } = snapshot?.adapterOptions || {};
     const uri = action ? `/${action}` : '';
     return `${super.buildURL()}/destinations/${destinationType}/${destinationName}/associations${uri}`;
@@ -22,9 +26,30 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
     return this.ajax(url, 'GET');
   }
 
+  // typically associations are queried for a specific destination which is what the standard query method does
+  // in specific cases we can query all associations to access total_associations and total_secrets values
+  queryAll() {
+    return this.query(this.store, { modelName: 'sync/association' }).then((response) => {
+      const { total_associations, total_secrets } = response.data;
+      return { total_associations, total_secrets };
+    });
+  }
+
+  // fetch associations for many destinations
+  // returns aggregated association information for each destination
+  // information includes total associations, total unsynced and most recent updated datetime
+  async fetchByDestinations(destinations) {
+    const promises = destinations.map(({ name: destinationName, type: destinationType }) => {
+      return this.query(this.store, { modelName: 'sync/association' }, { destinationName, destinationType });
+    });
+    const queryResponses = await all(promises);
+    const serializer = this.store.serializerFor('sync/association');
+    return queryResponses.map((response) => serializer.normalizeFetchByDestinations(response));
+  }
+
   // array of association data for each destination a secret is synced to
   fetchSyncStatus({ mount, secretName }) {
-    const url = `${super.buildURL()}/associations/${mount}/${secretName}`;
+    const url = `${super.buildURL()}/${mount}/${secretName}`;
     return this.ajax(url, 'GET').then((resp) => {
       const { associated_destinations } = resp.data;
       const syncData = [];

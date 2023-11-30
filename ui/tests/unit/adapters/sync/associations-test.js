@@ -7,6 +7,7 @@ import { setupTest } from 'ember-qunit';
 import { module, test } from 'qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { associationsResponse } from 'vault/mirage/handlers/sync';
+import sinon from 'sinon';
 
 module('Unit | Adapter | sync | association', function (hooks) {
   setupTest(hooks);
@@ -14,13 +15,23 @@ module('Unit | Adapter | sync | association', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.params = { type: 'aws-sm', name: 'us-west-1' };
-    this.destination = this.server.create('sync-destination', this.params.type, { name: this.params.name });
-    this.association = this.server.create('sync-association', {
-      ...this.params,
-      mount: 'foo',
-      secret_name: 'bar',
+
+    this.params = [
+      { type: 'aws-sm', name: 'us-west-1' },
+      { type: 'gh', name: 'baz' },
+    ];
+    this.params.forEach((params) => {
+      this.server.create('sync-destination', params.type, { name: params.name });
+      const association = this.server.create('sync-association', {
+        ...params,
+        mount: 'foo',
+        secret_name: 'bar',
+      });
+      if (!this.association) {
+        this.association = association;
+      }
     });
+
     this.newModel = this.store.createRecord('sync/association', {
       destinationType: 'aws-sm',
       destinationName: 'us-west-1',
@@ -35,7 +46,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
     this.server.get('/sys/sync/destinations/:type/:name/associations', (schema, req) => {
       // list query param not required for this endpoint
       assert.deepEqual(req.queryParams, {}, 'query params stripped from request');
-      assert.deepEqual(req.params, this.params, 'request is made to correct endpoint when querying');
+      assert.deepEqual(req.params, this.params[0], 'request is made to correct endpoint when querying');
       return associationsResponse(schema, req);
     });
 
@@ -47,11 +58,31 @@ module('Unit | Adapter | sync | association', function (hooks) {
     });
   });
 
+  test('it should make request to correct endpoint for queryAll associations', async function (assert) {
+    assert.expect(2);
+
+    this.server.get('/sys/sync/associations', () => {
+      assert.ok(true, 'request is made to correct endpoint for queryAll');
+      return {
+        data: {
+          key_info: {},
+          keys: [],
+          total_associations: 5,
+          total_secrets: 7,
+        },
+      };
+    });
+
+    const response = await this.store.adapterFor('sync/association').queryAll();
+    const expected = { total_associations: 5, total_secrets: 7 };
+    assert.deepEqual(response, expected, 'It returns correct values for queryAll');
+  });
+
   test('it should make request to correct endpoint when creating record', async function (assert) {
     assert.expect(2);
 
     this.server.post('/sys/sync/destinations/:type/:name/associations/set', (schema, req) => {
-      assert.deepEqual(req.params, this.params, 'request is made to correct endpoint when querying');
+      assert.deepEqual(req.params, this.params[0], 'request is made to correct endpoint when querying');
       assert.deepEqual(
         JSON.parse(req.requestBody),
         { mount: 'foo', secret_name: 'bar' },
@@ -67,7 +98,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
     assert.expect(2);
 
     this.server.post('/sys/sync/destinations/:type/:name/associations/remove', (schema, req) => {
-      assert.deepEqual(req.params, this.params, 'request is made to correct endpoint when querying');
+      assert.deepEqual(req.params, this.params[0], 'request is made to correct endpoint when querying');
       assert.deepEqual(
         JSON.parse(req.requestBody),
         { mount: 'foo', secret_name: 'bar' },
@@ -135,5 +166,23 @@ module('Unit | Adapter | sync | association', function (hooks) {
         "Assertion Failed: action type of set or remove required when saving association => association.save({ adapterOptions: { action: 'set' }})"
       );
     }
+  });
+
+  test('it should fetch and normalize many associations for fetchByDestinations', async function (assert) {
+    assert.expect(3);
+
+    const handler = this.server.get('/sys/sync/destinations/:type/:name/associations', (schema, req) => {
+      // list query param not required for this endpoint
+      assert.deepEqual(
+        req.params,
+        this.params[handler.numberOfCalls - 1],
+        'request is made to correct endpoint when querying'
+      );
+      return associationsResponse(schema, req);
+    });
+
+    const spy = sinon.spy(this.store.serializerFor('sync/association'), 'normalizeFetchByDestinations');
+    await this.store.adapterFor('sync/association').fetchByDestinations(this.params);
+    assert.true(spy.calledTwice, 'Serializer method used on each response');
   });
 });
