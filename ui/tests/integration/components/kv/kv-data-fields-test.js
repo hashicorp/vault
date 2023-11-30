@@ -87,4 +87,21 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     await click(PAGE.infoRowToggleMasked('foo'));
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
   });
+
+  test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
+    assert.expect(3);
+    this.secret.secretData = {
+      foo: {
+        bar: 'baz',
+      },
+    };
+    this.secret.path = this.path;
+
+    await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} @type="details" />`, {
+      owner: this.engine,
+    });
+    assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
+    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
+  });
 });

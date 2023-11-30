@@ -17,7 +17,7 @@
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{this.codeMirrorString}}
     @valueUpdated={{this.handleJson}}
-    @readOnly={{if (eq @type "details") true false}}
+    @readOnly={{eq @type "details"}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline @type={{if this.lintingErrors "warning" "danger"}} @paddingTop={{true}}>
