@@ -84,6 +84,15 @@ func FromContext(ctx context.Context) (*Namespace, error) {
 	return ns, nil
 }
 
+func FromContextOrNil(ctx context.Context) *Namespace {
+	ns, err := FromContext(ctx)
+	if err != nil {
+		return nil
+	}
+
+	return ns
+}
+
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the
 // provided string
 func Canonicalize(nsPath string) string {

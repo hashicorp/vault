@@ -20,6 +20,10 @@ const (
 	uiConfigPlaintextKey = "config_plaintext"
 )
 
+// activeMessagesFunc is a function that can be used by the UIConfig type to
+// retrieve custom messages that are currently active.
+type activeMessagesFunc func(context.Context, bool) ([]UICustomMessageEntry, error)
+
 // UIConfig contains UI configuration. This takes both a physical view and a barrier view
 // because it is stored in both plaintext and encrypted to allow for getting the header
 // values before the barrier is unsealed
@@ -31,6 +35,7 @@ type UIConfig struct {
 
 	nsBarrierView     *BarrierView
 	customMessageLock sync.RWMutex
+	activeMessagesFn  activeMessagesFunc
 
 	enabled        bool
 	defaultHeaders http.Header
@@ -43,7 +48,7 @@ func newUIConfig(enabled bool, storagePrefix string, physicalStorage physical.Ba
 	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
 	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 
-	return &UIConfig{
+	uiConfig := &UIConfig{
 		physicalStorage: physical.NewView(physicalStorage, storagePrefix),
 		barrierStorage:  NewBarrierView(barrierStorage, storagePrefix),
 		nsBarrierView:   nil,
@@ -51,6 +56,10 @@ func newUIConfig(enabled bool, storagePrefix string, physicalStorage physical.Ba
 		enabled:         enabled,
 		defaultHeaders:  defaultHeaders,
 	}
+
+	uiConfig.activeMessagesFn = uiConfig.findActiveMessages
+
+	return uiConfig
 }
 
 // Enabled returns if the UI is enabled

@@ -92,25 +92,25 @@ func TestCustomMessageBarrierView(t *testing.T) {
 
 	// Make sure that barrierStorage is returned regardless of Namespace in the
 	// context when there's no nsBarrierView set.
-	view := testUIConfig.customMessageBarrierView(context.Background())
+	view := testUIConfig.customMessageBarrierView(nil)
 	assert.Same(t, testUIConfig.barrierStorage, view)
 
-	namespaceCtx := namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{
+	ns := &namespace.Namespace{
 		ID:   "abc12",
 		Path: "dev/",
-	})
+	}
 
-	view = testUIConfig.customMessageBarrierView(namespaceCtx)
+	view = testUIConfig.customMessageBarrierView(ns)
 	assert.Same(t, testUIConfig.barrierStorage, view)
 
 	// Setup the nsBarrierView to test with and without a namespace in the
 	// context.
 	testUIConfig.nsBarrierView = NewBarrierView(&logical.InmemStorage{}, "namespaces/")
 
-	view = testUIConfig.customMessageBarrierView(namespaceCtx)
+	view = testUIConfig.customMessageBarrierView(nil)
 	assert.NotSame(t, testUIConfig.barrierStorage, view)
 
-	view = testUIConfig.customMessageBarrierView(context.Background())
+	view = testUIConfig.customMessageBarrierView(ns)
 	assert.Same(t, testUIConfig.barrierStorage, view)
 }
 
@@ -471,7 +471,7 @@ func TestUpdateCustomMessage(t *testing.T) {
 	assert.NotNil(t, result)
 
 	// Verify that the change made it into the storage
-	underlyingEntry, err := testUIConfig.retrieveCustomMessageInternal(context.Background(), "id")
+	underlyingEntry, err := testUIConfig.retrieveCustomMessageInternal(context.Background(), nil, "id")
 	require.NoError(t, err)
 	require.NotNil(t, underlyingEntry)
 	assert.Equal(t, "Updated message", underlyingEntry.Message)
@@ -479,7 +479,7 @@ func TestUpdateCustomMessage(t *testing.T) {
 	// Make sure that modifying the returned *UICustomMessageEntry does nothing
 	// to what's stored in the logical.Storage.
 	result.MessageType = "modal"
-	underlyingEntry, err = testUIConfig.retrieveCustomMessageInternal(context.Background(), "id")
+	underlyingEntry, err = testUIConfig.retrieveCustomMessageInternal(context.Background(), nil, "id")
 	require.NoError(t, err)
 	require.NotNil(t, underlyingEntry)
 	assert.Equal(t, "banner", underlyingEntry.MessageType)

@@ -21,26 +21,13 @@ const (
 	MaximumCustomMessageCount int = 100
 )
 
-// customMessageBarrierView determines the appropriate logical.Storage to return
-// depending on whether the logical.Storage is being used to access entries for
-// the root namespace or any other namespace based on the provided
-// context.Context.
-func (c *UIConfig) customMessageBarrierView(ctx context.Context) logical.Storage {
+// customMessageBarrierView determines the appropriate logical.Storage to use
+// for retrieving and storing custom message entries based on the provided
+// namespace.Namespace
+func (c *UIConfig) customMessageBarrierView(ns *namespace.Namespace) logical.Storage {
 	// If nsBarrierView is nil, which occurs in the non-enterprise edition, then
 	// simply use the barrierStorage.
-	if c.nsBarrierView == nil {
-		return c.barrierStorage
-	}
-
-	// Retrieve the namespace from the context.Context
-	// namespace.FromContext returns an error when:
-	// 1. ctx is nil
-	// 2. there's no Namespace value in ctx
-	// 3. the Namespace value in ctx is nil
-	// In each of those cases, returning the barrierStorage is an appropriate
-	// course of action.
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
+	if c.nsBarrierView == nil || ns == nil {
 		return c.barrierStorage
 	}
 
@@ -137,10 +124,12 @@ func (c *UIConfig) ListCustomMessages(ctx context.Context, filters ListUICustomM
 // of the custom messages stored in the current namespace. If there are no
 // custom messages, an empty slice of UICustomMessageEntry is returned.
 func (c *UIConfig) retrieveCustomMessagesInternal(ctx context.Context) ([]UICustomMessageEntry, error) {
+	ns := namespace.FromContextOrNil(ctx)
+
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	keys, err := c.customMessageBarrierView(ctx).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
+	keys, err := c.customMessageBarrierView(ns).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +137,7 @@ func (c *UIConfig) retrieveCustomMessagesInternal(ctx context.Context) ([]UICust
 	results := make([]UICustomMessageEntry, len(keys))
 
 	for idx, key := range keys {
-		storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
+		storageEntry, err := c.customMessageBarrierView(ns).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, key))
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +156,9 @@ func (c *UIConfig) retrieveCustomMessagesInternal(ctx context.Context) ([]UICust
 // ReadCustomMessage reads a specific custom message from the underlying storage
 // based on the provided messageId value.
 func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
-	customMessageEntry, err := c.retrieveCustomMessageInternal(ctx, messageId)
+	ns := namespace.FromContextOrNil(ctx)
+
+	customMessageEntry, err := c.retrieveCustomMessageInternal(ctx, ns, messageId)
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +173,11 @@ func (c *UIConfig) ReadCustomMessage(ctx context.Context, messageId string) (*UI
 // retrieveCustomMessageInternal handles the internal logic to retrieve a specific
 // custom message. If no custom message exists with the provided messageId,
 // nil, nil is returned
-func (c *UIConfig) retrieveCustomMessageInternal(ctx context.Context, messageId string) (*UICustomMessageEntry, error) {
+func (c *UIConfig) retrieveCustomMessageInternal(ctx context.Context, ns *namespace.Namespace, messageId string) (*UICustomMessageEntry, error) {
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	storageEntry, err := c.customMessageBarrierView(ctx).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
+	storageEntry, err := c.customMessageBarrierView(ns).Get(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 	if err != nil {
 		return nil, err
 	}
@@ -207,15 +198,19 @@ func (c *UIConfig) retrieveCustomMessageInternal(ctx context.Context, messageId 
 // storage. The custom message is specified by the messageId argument. If no
 // custom message exists with the provided messageId, no error is returned.
 func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) error {
+	ns := namespace.FromContextOrNil(ctx)
+
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
 
-	return c.customMessageBarrierView(ctx).Delete(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
+	return c.customMessageBarrierView(ns).Delete(ctx, fmt.Sprintf("%s/%s", UICustomMessageKey, messageId))
 }
 
 // CreateCustomMessage stores the provided UICustomMessageEntry into the
 // underlying storage.
 func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
+	ns := namespace.FromContextOrNil(ctx)
+
 	count, err := c.countCustomMessagesInternal(ctx)
 	if err != nil {
 		return nil, err
@@ -232,7 +227,7 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 
 	entry.Id = messageId
 
-	err = c.saveCustomMessageInternal(ctx, entry)
+	err = c.saveCustomMessageInternal(ctx, ns, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -245,10 +240,12 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 // countCustomMessagesInternal returns a count of existing custom messages. It's used to
 // detect if the maximum number of custom messages has been met.
 func (c *UIConfig) countCustomMessagesInternal(ctx context.Context) (int, error) {
+	ns := namespace.FromContextOrNil(ctx)
+
 	c.customMessageLock.RLock()
 	defer c.customMessageLock.RUnlock()
 
-	keys, err := c.customMessageBarrierView(ctx).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
+	keys, err := c.customMessageBarrierView(ns).List(ctx, fmt.Sprintf("%s/", UICustomMessageKey))
 	if err != nil {
 		return 0, err
 	}
@@ -258,7 +255,9 @@ func (c *UIConfig) countCustomMessagesInternal(ctx context.Context) (int, error)
 
 // UpdateCustomMessage modifies the properties of an existing custom message.
 func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
-	err := c.saveCustomMessageInternal(ctx, entry)
+	ns := namespace.FromContextOrNil(ctx)
+
+	err := c.saveCustomMessageInternal(ctx, ns, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +269,7 @@ func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessag
 
 // saveCustomMessageInternal handles the internal logic of storing a new or
 // updated custom message in the underlying storage.
-func (c *UIConfig) saveCustomMessageInternal(ctx context.Context, customMessage UICustomMessageEntry) error {
+func (c *UIConfig) saveCustomMessageInternal(ctx context.Context, ns *namespace.Namespace, customMessage UICustomMessageEntry) error {
 	updatedValue, err := json.Marshal(&customMessage)
 	if err != nil {
 		return err
@@ -284,5 +283,23 @@ func (c *UIConfig) saveCustomMessageInternal(ctx context.Context, customMessage 
 	c.customMessageLock.Lock()
 	defer c.customMessageLock.Unlock()
 
-	return c.customMessageBarrierView(ctx).Put(ctx, storageEntry)
+	return c.customMessageBarrierView(ns).Put(ctx, storageEntry)
+}
+
+// ActiveMessages finds all active custom messages where the authenticated
+// property matches the value specified by the authenticated parameter using the
+// activeMessagesFn function.
+func (c *UIConfig) ActiveMessages(ctx context.Context, authenticated bool) ([]UICustomMessageEntry, error) {
+	return c.activeMessagesFn(ctx, authenticated)
+}
+
+// findActiveMessages handles retrieving all active custom messages matching the
+// authenticated property using the ListCustomMessages method. This method is
+// set as the activeMessagesFn function in the receiver UIConfig struct.
+func (c *UIConfig) findActiveMessages(ctx context.Context, authenticated bool) ([]UICustomMessageEntry, error) {
+	filters := ListUICustomMessagesFilters{}
+	filters.Authenticated(authenticated)
+	filters.Active(true)
+
+	return c.ListCustomMessages(ctx, filters)
 }
