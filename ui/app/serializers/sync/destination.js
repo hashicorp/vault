@@ -20,9 +20,11 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
   extractLazyPaginatedData(payload) {
     const transformedPayload = [];
     // loop through each destination type (keys in key_info)
-    for (const type in payload.data.key_info) {
+    for (const key in payload.data.key_info) {
       // iterate through each type's destination names
-      payload.data.key_info[type].forEach((name) => {
+      payload.data.key_info[key].forEach((name) => {
+        // remove trailing slash from key
+        const type = key.replace(/\/$/, '');
         const id = `${type}/${name}`;
         // create object with destination's id and attributes, add to payload
         transformedPayload.pushObject({ id, name, type });
