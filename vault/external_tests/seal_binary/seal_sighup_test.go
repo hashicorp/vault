@@ -66,10 +66,21 @@ func TestSealReloadSIGHUP(t *testing.T) {
 				"transit",
 			},
 		},
-		"changing seal fails": {
+		"replacing seal fails": {
 			sealStanzas: []string{
 				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
 				fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 1, "false"),
+			},
+			expectedSealTypes: []string{
+				"transit",
+				"transit",
+			},
+		},
+		"more than one seal fails": {
+			sealStanzas: []string{
+				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false") + "," +
+					fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 2, "false"),
 			},
 			expectedSealTypes: []string{
 				"transit",
