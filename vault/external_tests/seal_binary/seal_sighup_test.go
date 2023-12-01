@@ -8,11 +8,11 @@ package seal_binary
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
@@ -23,11 +23,27 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		t.Skip("only running docker test with $VAULT_BINARY present")
 	}
 
-	cleanup, firstTransitKeyConfig, secondTransitKeyConfig, err := createTransitTestContainer("hashicorp/vault", "latest")
+	svc, transitConfig, err := createTransitTestContainer("hashicorp/vault", "latest", 2)
 	if err != nil {
 		t.Fatalf("error creating vault container: %s", err)
 	}
-	defer cleanup()
+	defer svc.Cleanup()
+
+	firstTransitKeyConfig := fmt.Sprintf(transitParameters,
+		transitConfig.Address,
+		transitConfig.Token,
+		transitConfig.MountPaths[0],
+		transitConfig.KeyNames[0],
+		"transit-seal-1",
+	)
+
+	secondTransitKeyConfig := fmt.Sprintf(transitParameters,
+		transitConfig.Address,
+		transitConfig.Token,
+		transitConfig.MountPaths[1],
+		transitConfig.KeyNames[1],
+		"transit-seal-2",
+	)
 
 	testCases := map[string]struct {
 		sealStanzas       []string
@@ -35,10 +51,10 @@ func TestSealReloadSIGHUP(t *testing.T) {
 	}{
 		"migrate transit to transit": {
 			sealStanzas: []string{
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 2, "true") + "," +
-					fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 1, "false"),
-				fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 2, "true") + "," +
+					fmt.Sprintf(transitStanza, secondTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, secondTransitKeyConfig, 1, "false"),
 			},
 			expectedSealTypes: []string{
 				"transit",
@@ -49,7 +65,7 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		"migrate shamir to transit fails": {
 			sealStanzas: []string{
 				"",
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false"),
 			},
 			expectedSealTypes: []string{
 				"shamir",
@@ -58,7 +74,7 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		},
 		"migrate transit to shamir fails": {
 			sealStanzas: []string{
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false"),
 				"",
 			},
 			expectedSealTypes: []string{
@@ -68,8 +84,8 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		},
 		"replacing seal fails": {
 			sealStanzas: []string{
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
-				fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, secondTransitKeyConfig, 1, "false"),
 			},
 			expectedSealTypes: []string{
 				"transit",
@@ -78,9 +94,9 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		},
 		"more than one seal fails": {
 			sealStanzas: []string{
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false"),
-				fmt.Sprintf(transitSealStanza, firstTransitKeyConfig, 1, "false") + "," +
-					fmt.Sprintf(transitSealStanza, secondTransitKeyConfig, 2, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false"),
+				fmt.Sprintf(transitStanza, firstTransitKeyConfig, 1, "false") + "," +
+					fmt.Sprintf(transitStanza, secondTransitKeyConfig, 2, "false"),
 			},
 			expectedSealTypes: []string{
 				"transit",
@@ -96,12 +112,12 @@ func TestSealReloadSIGHUP(t *testing.T) {
 
 	for name, test := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var sealConfig string
+			var sealList string
 			if test.sealStanzas[0] != "" {
-				sealConfig = fmt.Sprintf(sealList, test.sealStanzas[0])
+				sealList = fmt.Sprintf(sealConfig, test.sealStanzas[0])
 			}
 
-			vaultConfig := fmt.Sprintf(testContainerConfig, sealConfig)
+			vaultConfig := fmt.Sprintf(containerConfig, sealList)
 
 			svc, runner, err := createContainerWithConfig(vaultConfig, "hashicorp/vault", "test-image", func(s string) { t.Log(s) })
 			defer svc.Cleanup()
@@ -143,10 +159,10 @@ func TestSealReloadSIGHUP(t *testing.T) {
 
 			for i := range test.sealStanzas {
 				if test.sealStanzas[i] != "" {
-					sealConfig = fmt.Sprintf(sealList, test.sealStanzas[i])
+					sealList = fmt.Sprintf(sealList, test.sealStanzas[i])
 				}
 
-				vaultConfig = fmt.Sprintf(testContainerConfig, sealConfig)
+				vaultConfig = fmt.Sprintf(containerConfig, sealList)
 
 				bCtx := dockhelper.NewBuildContext()
 				bCtx["local.json"] = &dockhelper.FileContents{
@@ -169,7 +185,7 @@ func TestSealReloadSIGHUP(t *testing.T) {
 					t.Fatalf("error sending SIGHUP: %s", err)
 				}
 
-				err = checkVaultSealType(testClient, test.expectedSealTypes[i])
+				err = validateVaultStatusAndSealType(testClient, test.expectedSealTypes[i])
 				if err != nil {
 					t.Fatalf("seal type check failed: %s", err)
 				}

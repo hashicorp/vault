@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	testContainerConfig = `
+	containerConfig = `
 {
 	"storage": {
 		"file": {
@@ -39,13 +39,13 @@ const (
 	%s
 }`
 
-	sealList = `
+	sealConfig = `
 "seal": [
 	%s
 ]
 `
 
-	transitSealParameters = `
+	transitParameters = `
   "address": "%s",
   "token": "%s",
   "mount_path": "%s",
@@ -53,7 +53,7 @@ const (
   "name": "%s"
 `
 
-	transitSealStanza = `
+	transitStanza = `
 {
 	"transit": {
 	  %s,
@@ -63,6 +63,13 @@ const (
 }
 `
 )
+
+type transitContainerConfig struct {
+	Address    string
+	Token      string
+	MountPaths []string
+	KeyNames   []string
+}
 
 func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
@@ -121,13 +128,7 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
-		c := &DockerVaultConfig{
-			ServiceURL: *dockhelper.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}),
-			tlsConfig: &api.TLSConfig{
-				Insecure: true,
-			},
-		}
-		return c, nil
+		return *dockhelper.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}), nil
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not start docker vault: %s", err)
@@ -136,22 +137,25 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 	return svc, runner, nil
 }
 
-func createTransitTestContainer(imageRepo, imageTag string) (func(), string, string, error) {
+func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockhelper.Service, *transitContainerConfig, error) {
 	rootToken, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("err: %s", err)
+		return nil, nil, fmt.Errorf("err: %s", err)
 	}
-	testMountPath, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, "", "", fmt.Errorf("err: %s", err)
-	}
-	firstTestKeyName, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, "", "", fmt.Errorf("err: %s", err)
-	}
-	secondTransitKeyName, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, "", "", fmt.Errorf("err: %s", err)
+
+	mountPaths := make([]string, numKeys)
+	keyNames := make([]string, numKeys)
+
+	for i := range mountPaths {
+		mountPaths[i], err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating UUID: %s", err)
+		}
+
+		keyNames[i], err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating UUID: %s", err)
+		}
 	}
 
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
@@ -166,55 +170,48 @@ func createTransitTestContainer(imageRepo, imageTag string) (func(), string, str
 		Ports: []string{"8200/tcp"},
 	})
 	if err != nil {
-		return nil, "", "", fmt.Errorf("could not create runner: %s", err)
+		return nil, nil, fmt.Errorf("could not create runner: %s", err)
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
-		c := &DockerVaultConfig{
-			ServiceURL: *dockhelper.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}),
-			tlsConfig: &api.TLSConfig{
-				Insecure: true,
-			},
-		}
+		c := *dockhelper.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)})
+
 		clientConfig := api.DefaultConfig()
-		clientConfig.Address = c.ServiceURL.URL().String()
+		clientConfig.Address = c.URL().String()
 		vault, err := api.NewClient(clientConfig)
 		if err != nil {
 			return nil, err
 		}
 		vault.SetToken(rootToken)
 
-		// Set up transit
-		if err := vault.Sys().Mount(testMountPath, &api.MountInput{
-			Type: "transit",
-		}); err != nil {
-			return nil, err
-		}
+		// Set up transit mounts and keys
+		for i := range mountPaths {
+			if err := vault.Sys().Mount(mountPaths[i], &api.MountInput{
+				Type: "transit",
+			}); err != nil {
+				return nil, err
+			}
 
-		// Create two transit keys
-		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", firstTestKeyName), map[string]interface{}{}); err != nil {
-			return nil, err
-		}
-
-		if _, err := vault.Logical().Write(path.Join(testMountPath, "keys", secondTransitKeyName), map[string]interface{}{}); err != nil {
-			return nil, fmt.Errorf("error creating transit key: %s", err)
+			if _, err := vault.Logical().Write(path.Join(mountPaths[i], "keys", keyNames[i]), map[string]interface{}{}); err != nil {
+				return nil, err
+			}
 		}
 
 		return c, nil
 	})
 	if err != nil {
-		return nil, "", "", fmt.Errorf("could not start docker vault: %s", err)
+		return nil, nil, fmt.Errorf("could not start docker vault: %s", err)
 	}
 
 	mapping, err := runner.GetNetworkAndAddresses(svc.Container.Name)
 	if err != nil {
 		svc.Cleanup()
-		return nil, "", "", fmt.Errorf("failed to get container network information: %s", err)
+		return nil, nil, fmt.Errorf("failed to get container network information: %s", err)
 	}
 
 	if len(mapping) != 1 {
 		svc.Cleanup()
-		return nil, "", "", fmt.Errorf("expected 1 network mapping, got %d", len(mapping))
+		return nil, nil, fmt.Errorf("expected 1 network mapping, got %d", len(mapping))
 	}
 
 	var ip string
@@ -222,24 +219,16 @@ func createTransitTestContainer(imageRepo, imageTag string) (func(), string, str
 		// capture the container IP address from the map
 	}
 
-	return svc.Cleanup,
-		fmt.Sprintf(transitSealParameters,
-			fmt.Sprintf("http://%s:8200", ip),
-			rootToken,
-			testMountPath,
-			firstTestKeyName,
-			"transit-seal-1",
-		),
-		fmt.Sprintf(transitSealParameters,
-			fmt.Sprintf("http://%s:8200", ip),
-			rootToken,
-			testMountPath,
-			firstTestKeyName,
-			"transit-seal-2",
-		), nil
+	return svc,
+		&transitContainerConfig{
+			Address:    fmt.Sprintf("http://%s:8200", ip),
+			Token:      rootToken,
+			MountPaths: mountPaths,
+			KeyNames:   keyNames,
+		}, nil
 }
 
-func checkVaultSealType(client *api.Client, expectedSealType string) error {
+func validateVaultStatusAndSealType(client *api.Client, expectedSealType string) error {
 	statusResp, err := client.Sys().SealStatus()
 	if err != nil {
 		return fmt.Errorf("error getting vault status: %s", err)
@@ -254,22 +243,4 @@ func checkVaultSealType(client *api.Client, expectedSealType string) error {
 	}
 
 	return nil
-}
-
-type DockerVaultConfig struct {
-	dockhelper.ServiceURL
-	token     string
-	mountPath string
-	keyName   string
-	tlsConfig *api.TLSConfig
-}
-
-func (c *DockerVaultConfig) apiConfig() *api.Config {
-	vaultConfig := api.DefaultConfig()
-	vaultConfig.Address = c.URL().String()
-	if err := vaultConfig.ConfigureTLS(c.tlsConfig); err != nil {
-		panic("unable to configure TLS")
-	}
-
-	return vaultConfig
 }
