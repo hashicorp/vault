@@ -22,8 +22,10 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
@@ -1776,14 +1778,16 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		return nil, err
 	}
 
-	logCfg := &loghelper.LogConfig{
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    config.LogRotateBytes,
-		LogRotateMaxFiles: config.LogRotateMaxFiles,
+	logCfg, err := loghelper.NewLogConfig("vault")
+	if err != nil {
+		return nil, err
 	}
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = config.LogRotateMaxFiles
 
 	return loghelper.Setup(logCfg, c.logWriter)
 }
