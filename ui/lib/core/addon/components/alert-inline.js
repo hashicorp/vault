@@ -35,7 +35,7 @@ export default class AlertInlineComponent extends Component {
     if (this.args.color) {
       const possibleColors = ['critical', 'warning', 'success', 'highlight', 'neutral'];
       assert(
-        `${this.args.color} is not a valid color. @color arg must be one of: ${possibleColors.join(', ')}`,
+        `${this.args.color} is not a valid color. @color must be one of: ${possibleColors.join(', ')}`,
         possibleColors.includes(this.args.color)
       );
     }
