@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
@@ -289,4 +290,24 @@ func initializeVault(client *api.Client, sealType string) ([]string, string, err
 	}
 
 	return keys, token, nil
+}
+
+func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner) error {
+	bCtx := dockhelper.NewBuildContext()
+	bCtx["local.json"] = &dockhelper.FileContents{
+		Data: []byte(config),
+		Mode: 0o644,
+	}
+
+	tar, err := bCtx.ToTarball()
+	if err != nil {
+		return fmt.Errorf("error creating config tarball: %s", err)
+	}
+
+	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, "/vault/config", tar, types.CopyToContainerOptions{})
+	if err != nil {
+		return fmt.Errorf("error copying config to container: %s", err)
+	}
+
+	return nil
 }

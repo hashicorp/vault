@@ -11,9 +11,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/docker/docker/api/types"
-	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 func TestSealReloadSIGHUP(t *testing.T) {
@@ -144,20 +141,9 @@ func TestSealReloadSIGHUP(t *testing.T) {
 
 				vaultConfig = fmt.Sprintf(containerConfig, sealList)
 
-				bCtx := dockhelper.NewBuildContext()
-				bCtx["local.json"] = &dockhelper.FileContents{
-					Data: []byte(vaultConfig),
-					Mode: 0o644,
-				}
-
-				tar, err := bCtx.ToTarball()
+				err = copyConfigToContainer(vaultConfig, svc.Container.ID, runner)
 				if err != nil {
-					t.Fatalf("error creating config tarball: %s", err)
-				}
-
-				err = runner.DockerAPI.CopyToContainer(context.Background(), svc.Container.ID, "/vault/config", tar, types.CopyToContainerOptions{})
-				if err != nil {
-					t.Fatalf("error copying config to container: %s", err)
+					t.Fatalf("error copying over config file: %s", err)
 				}
 
 				err = runner.DockerAPI.ContainerKill(context.Background(), svc.Container.ID, "SIGHUP")
