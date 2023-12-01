@@ -10,6 +10,7 @@ import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
+import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 
 export default Route.extend({
   store: service(),
@@ -75,6 +76,7 @@ export default Route.extend({
 
   beforeModel({ to: { queryParams } }) {
     const secret = this.secretParam();
+    const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     return this.buildModel(secret, queryParams).then(() => {
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
@@ -84,6 +86,14 @@ export default Route.extend({
         } else {
           return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
         }
+      }
+      // for kv v2 redirect user navigates to the old url and we need to redirect to the new engine url (1.15.0 +)
+      if (isAddonEngine(secretEngine.type, secretEngine.version) && mode === 'show') {
+        const route = keyIsFolder(secret)
+          ? 'vault.cluster.secrets.backend.kv.list-directory'
+          : 'vault.cluster.secrets.backend.kv.secret.details';
+
+        return this.router.transitionTo(route, secretEngine.id, secret);
       }
     });
   },
