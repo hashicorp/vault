@@ -3528,8 +3528,7 @@ func (c *Core) autoRotateBarrierLoop(ctx context.Context) {
 	t := time.NewTicker(autoRotateCheckInterval)
 	for {
 		select {
-		case <-t.C: // persistKeyring is used to write out the keyring using the
-
+		case <-t.C:
 			c.checkBarrierAutoRotate(ctx)
 		case <-ctx.Done():
 			t.Stop()
