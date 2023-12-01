@@ -23,7 +23,7 @@ import { stringify } from 'core/helpers/stringify';
  * @param {boolean} showJson - boolean passed from parent to hide/show json editor
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
- * @param {boolean} [type=null] - can be edit, create, or details. Used to change text for some form labels
+ * @param {string} [type] - can be edit, create, or details. Used to change text for some form labels
  */
 
 export default class KvDataFields extends Component {
