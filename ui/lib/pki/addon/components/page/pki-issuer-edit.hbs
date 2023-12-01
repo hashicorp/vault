@@ -68,12 +68,7 @@
   </Hds::ButtonSet>
   {{#if this.error}}
     <div class="control">
-      <AlertInline
-        @type="danger"
-        @paddingTop={{true}}
-        @message="There was an error submitting this form."
-        @mimicRefresh={{true}}
-      />
+      <AlertInline @type="danger" class="has-top-padding-s" @message="There was an error submitting this form." />
     </div>
   {{/if}}
 </form>

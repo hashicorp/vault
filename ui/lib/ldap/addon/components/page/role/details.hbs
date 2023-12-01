@@ -17,9 +17,13 @@
 <Toolbar>
   <ToolbarActions>
     {{#if @model.canDelete}}
-      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
-        Delete role
-      </ConfirmAction>
+      <ConfirmAction
+        @buttonText="Delete role"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        data-test-delete
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if @model.canReadCreds}}
@@ -29,16 +33,16 @@
     {{/if}}
     {{#if @model.canRotateStaticCreds}}
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Rotate credentials"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @confirmTitle="Rotate credentials?"
         @confirmMessage="When manually rotating credentials, the rotation period will start over."
-        @confirmButtonText="Rotate"
-        @disabled={{this.rotateCredentials.isRunning}}
+        @modalColor="warning"
+        @isRunning={{this.rotateCredentials.isRunning}}
         @onConfirmAction={{perform this.rotateCredentials}}
         data-test-rotate-credentials
-      >
-        Rotate credentials
-      </ConfirmAction>
+      />
     {{/if}}
     {{#if @model.canEdit}}
       <ToolbarLink @route="roles.role.edit" data-test-edit>

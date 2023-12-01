@@ -376,7 +376,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-provider-linked-block="default"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-provider-menu-link="details"]');
-    assert.dom(SELECTORS.providerDeleteButton).isDisabled('delete button is disabled for default provider');
+    assert.dom(SELECTORS.providerDeleteButton).doesNotExist('delete button hidden for default provider');
   });
 
   // PROVIDER DELETE + EDIT PERMISSIONS

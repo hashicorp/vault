@@ -809,6 +809,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		if memory < 0 {
 			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
 		}
+		rootless := d.Get("rootless").(bool)
 		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
 			&pluginruntimeutil.PluginRuntimeConfig{
 				Name:         runtimeName,
@@ -817,6 +818,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 				CgroupParent: cgroupParent,
 				CPU:          cpu,
 				Memory:       memory,
+				Rootless:     rootless,
 			}); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -889,6 +891,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}}, nil
 }
 
@@ -928,6 +931,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 					"cgroup_parent": conf.CgroupParent,
 					"cpu_nanos":     conf.CPU,
 					"memory_bytes":  conf.Memory,
+					"rootless":      conf.Rootless,
 				})
 			}
 		}
@@ -1425,6 +1429,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
+	}
+	if len(apiConfig.DelegatedAuthAccessors) > 0 {
+		config.DelegatedAuthAccessors = apiConfig.DelegatedAuthAccessors
 	}
 
 	// Create the mount entry
@@ -2367,6 +2374,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of allowed_managed_keys successful", "path", path)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("delegated_auth_accessors"); ok {
+		delegatedAuthAccessors := rawVal.([]string)
+
+		oldVal := mountEntry.Config.DelegatedAuthAccessors
+		mountEntry.Config.DelegatedAuthAccessors = delegatedAuthAccessors
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.DelegatedAuthAccessors = oldVal
+			return handleError(err)
+		}
+
+		mountEntry.SyncCache()
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of delegated_auth_accessors successful", "path", path)
 		}
 	}
 
@@ -5121,8 +5154,15 @@ type LeaderResponse struct {
 }
 
 func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
+	core.stateLock.RLock()
+	defer core.stateLock.RUnlock()
+
+	return core.GetLeaderStatusLocked()
+}
+
+func (core *Core) GetLeaderStatusLocked() (*LeaderResponse, error) {
 	haEnabled := true
-	isLeader, address, clusterAddr, err := core.Leader()
+	isLeader, address, clusterAddr, err := core.LeaderLocked()
 	if errwrap.Contains(err, ErrHANotEnabled.Error()) {
 		haEnabled = false
 		err = nil
@@ -5136,10 +5176,10 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		IsSelf:               isLeader,
 		LeaderAddress:        address,
 		LeaderClusterAddress: clusterAddr,
-		PerfStandby:          core.PerfStandby(),
+		PerfStandby:          core.perfStandby,
 	}
 	if isLeader {
-		resp.ActiveTime = core.ActiveTime()
+		resp.ActiveTime = core.activeTime
 	}
 	if resp.PerfStandby {
 		resp.PerfStandbyLastRemoteWAL = core.EntLastRemoteWAL()
@@ -5147,7 +5187,7 @@ func (core *Core) GetLeaderStatus() (*LeaderResponse, error) {
 		resp.LastWAL = core.EntLastWAL()
 	}
 
-	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexes()
+	resp.RaftCommittedIndex, resp.RaftAppliedIndex = core.GetRaftIndexesLocked()
 	return resp, nil
 }
 
@@ -5171,7 +5211,7 @@ func (b *SystemBackend) handleSealStatus(ctx context.Context, req *logical.Reque
 }
 
 func (b *SystemBackend) handleLeaderStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	status, err := b.Core.GetLeaderStatus()
+	status, err := b.Core.GetLeaderStatusLocked()
 	if err != nil {
 		return nil, err
 	}
@@ -6252,6 +6292,10 @@ This path responds to the following HTTP methods.
 		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
+	"plugin-runtime-catalog_rootless": {
+		"Whether the container runtime is run as a non-privileged (non-root) user.",
+		"",
+	},
 	"leases": {
 		`View or list lease metadata.`,
 		`
@@ -6408,5 +6452,9 @@ This path responds to the following HTTP methods.
 		GET /
 			Returns the available and enabled experiments.
 		`,
+	},
+	"delegated_auth_accessors": {
+		"A list of auth accessors that the mount is allowed to delegate authentication too",
+		"",
 	},
 }

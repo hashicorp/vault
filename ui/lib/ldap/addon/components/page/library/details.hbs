@@ -26,9 +26,13 @@
 <Toolbar>
   <ToolbarActions>
     {{#if @model.canDelete}}
-      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{this.delete}} data-test-delete>
-        Delete library
-      </ConfirmAction>
+      <ConfirmAction
+        @buttonText="Delete library"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.delete}}
+        data-test-delete
+      />
       {{#if @model.canEdit}}
         <div class="toolbar-separator"></div>
       {{/if}}

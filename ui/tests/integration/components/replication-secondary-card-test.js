@@ -48,10 +48,10 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
 
     assert.dom('[data-test-info-table]').exists('it shows the known primary cluster details');
 
-    const url = this.element.querySelector('[data-test-primary-link]').href;
     const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;
-
-    assert.strictEqual(url, expectedUrl, 'it renders a link to the primary cluster UI');
+    assert
+      .dom('[data-test-primary-link]')
+      .hasAttribute('href', expectedUrl, 'it renders a link to the primary cluster UI');
   });
 
   test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function (assert) {
@@ -68,7 +68,7 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
-    assert.dom('[data-test-component="empty-state"]').exists();
+    assert.dom('[data-test-empty-state]').exists('shows empty state');
   });
 
   test('it renders tooltip with check-circle-outline when state is stream-wals', async function (assert) {
