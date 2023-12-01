@@ -372,6 +372,18 @@ func TestCreateCustomMessage(t *testing.T) {
 	// try to create one more to get an error.
 	result, err = testUIConfig.CreateCustomMessage(context.Background(), entry)
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "maximum")
+	assert.Nil(t, result)
+
+	// Make sure that the time validation check occurs before the maximum
+	// custom messages check (by not only looking for an error, but checking
+	// that it's the failure error for the validateStartAndEndTimes function).
+	entryWithInvalidTimes := entry
+	entryWithInvalidTimes.StartTime = entry.EndTime
+	entryWithInvalidTimes.EndTime = entry.StartTime
+	result, err = testUIConfig.CreateCustomMessage(context.Background(), entryWithInvalidTimes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "occur before")
 	assert.Nil(t, result)
 
 	// Make sure that a custom message can be still be created in a different
@@ -484,6 +496,16 @@ func TestUpdateCustomMessage(t *testing.T) {
 	require.NotNil(t, underlyingEntry)
 	assert.Equal(t, "banner", underlyingEntry.MessageType)
 
+	// Check that updating an entry to a state that consists of invalid times
+	// results in an error.
+	entryWithInvalidTimes := entry
+	entryWithInvalidTimes.StartTime = entry.EndTime
+	entryWithInvalidTimes.EndTime = entry.StartTime
+	result, err = testUIConfig.UpdateCustomMessage(context.Background(), entryWithInvalidTimes)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "occur before")
+	assert.Nil(t, result)
+
 	testUIConfig.barrierStorage = &testingStorage{
 		putFails: true,
 	}
@@ -573,4 +595,17 @@ func mustGenerateUUID(t *testing.T) string {
 	require.NoError(t, err)
 
 	return result
+}
+
+// TestValidateStartAndEndTimes verifies that the logic in the
+// validateStartAndEndTimes function is correct.
+func TestValidateStartAndEndTimes(t *testing.T) {
+	var (
+		timeNow        = time.Now()
+		timeNowPlusOne = timeNow.Add(time.Second)
+	)
+
+	assert.NoError(t, validateStartAndEndTimes(timeNow, timeNowPlusOne))
+	assert.Error(t, validateStartAndEndTimes(timeNow, timeNow))
+	assert.Error(t, validateStartAndEndTimes(timeNowPlusOne, timeNow))
 }

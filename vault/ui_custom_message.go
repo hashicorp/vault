@@ -216,13 +216,17 @@ func (c *UIConfig) DeleteCustomMessage(ctx context.Context, messageId string) er
 // CreateCustomMessage stores the provided UICustomMessageEntry into the
 // underlying storage.
 func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
+	if err := validateStartAndEndTimes(entry.StartTime, entry.EndTime); err != nil {
+		return nil, err
+	}
+
 	count, err := c.countCustomMessagesInternal(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if count >= MaximumCustomMessageCount {
-		return nil, errors.New("maximum number of Custom Message already exists")
+		return nil, errors.New("maximum number of Custom Messages already exists")
 	}
 
 	messageId, err := uuid.GenerateUUID()
@@ -256,8 +260,22 @@ func (c *UIConfig) countCustomMessagesInternal(ctx context.Context) (int, error)
 	return len(keys), nil
 }
 
+// validateStartAndEndTimes tests the provided startTime and endTime to ensure
+// that startTime occurs BEFORE endTime, otherwise an error is returned.
+func validateStartAndEndTimes(startTime, endTime time.Time) error {
+	if !startTime.Before(endTime) {
+		return errors.New("start_time must occur before end_time")
+	}
+
+	return nil
+}
+
 // UpdateCustomMessage modifies the properties of an existing custom message.
 func (c *UIConfig) UpdateCustomMessage(ctx context.Context, entry UICustomMessageEntry) (*UICustomMessageEntry, error) {
+	if err := validateStartAndEndTimes(entry.StartTime, entry.EndTime); err != nil {
+		return nil, err
+	}
+
 	err := c.saveCustomMessageInternal(ctx, entry)
 	if err != nil {
 		return nil, err
