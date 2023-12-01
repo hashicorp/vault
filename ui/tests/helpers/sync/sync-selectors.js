@@ -34,6 +34,19 @@ export const PAGE = {
       cancel: '[data-test-sync-cancel]',
     },
   },
+  overview: {
+    createDestination: '[data-test-create-destination]',
+    table: {
+      row: '[data-test-overview-table-row]',
+      icon: (index) => `[data-test-overview-table-icon="${index}"]`,
+      name: (index) => `[data-test-overview-table-name="${index}"]`,
+      badge: (index) => `[data-test-overview-table-badge="${index}"]`,
+      total: (index) => `[data-test-overview-table-total="${index}"]`,
+      updated: (index) => `[data-test-overview-table-updated="${index}"]`,
+      actionToggle: (index) => `[data-test-overview-table-action-toggle="${index}"]`,
+      action: (name) => `[data-test-overview-table-action="${name}"]`,
+    },
+  },
   syncBadge: {
     icon: (name) => `[data-test-icon="${name}"]`,
     text: '.hds-badge__text',

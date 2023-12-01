@@ -27,4 +27,14 @@ export const SELECTORS = {
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
   },
+  overviewCard: {
+    title: (title) => `[data-test-overview-card="${title}"] h3`,
+    description: (title) => `[data-test-overview-card-container="${title}"] p`,
+    content: (title) => `[data-test-overview-card-content="${title}"]`,
+    action: (title) => `[data-test-overview-card="${title}"] a`,
+  },
+  pagination: {
+    next: '.hds-pagination-nav__arrow--direction-next',
+    prev: '.hds-pagination-nav__arrow--direction-prev',
+  },
 };

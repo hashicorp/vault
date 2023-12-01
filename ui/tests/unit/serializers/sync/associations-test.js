@@ -66,6 +66,7 @@ module('Unit | Serializer | sync | association', function (hooks) {
     const expected = {
       icon: 'aws-color',
       name: 'us-west-1',
+      type: 'aws-sm',
       associationCount: 2,
       status: '1 Unsynced',
       lastSync: new Date(payload.data.associated_secrets['bar/baz'].updated_at),
