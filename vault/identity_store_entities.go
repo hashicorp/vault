@@ -231,7 +231,8 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.pathEntityMergeID(),
+					Callback:                  i.pathEntityMergeID(),
+					ForwardPerformanceStandby: true,
 				},
 			},
 
