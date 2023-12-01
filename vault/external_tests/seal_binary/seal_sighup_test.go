@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
 
@@ -23,11 +22,11 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		t.Skip("only running docker test with $VAULT_BINARY present")
 	}
 
-	svc, transitConfig, err := createTransitTestContainer("hashicorp/vault", "latest", 2)
+	transitContainer, transitConfig, err := createTransitTestContainer("hashicorp/vault", "latest", 2)
 	if err != nil {
 		t.Fatalf("error creating vault container: %s", err)
 	}
-	defer svc.Cleanup()
+	defer transitContainer.Cleanup()
 
 	firstTransitKeyConfig := fmt.Sprintf(transitParameters,
 		transitConfig.Address,
@@ -127,35 +126,16 @@ func TestSealReloadSIGHUP(t *testing.T) {
 
 			time.Sleep(5 * time.Second)
 
-			clientConfig := api.DefaultConfig()
-			clientConfig.Address = svc.Config.URL().String()
-			testClient, err := api.NewClient(clientConfig)
+			client, err := testClient(svc.Config.URL().String())
 			if err != nil {
 				t.Fatalf("err: %s", err)
 			}
 
-			if test.expectedSealTypes[0] == "shamir" {
-				initResp, err := testClient.Sys().Init(&api.InitRequest{
-					SecretThreshold: 1,
-					SecretShares:    1,
-				})
-				if err != nil {
-					t.Fatalf("error initializing vault: %s", err)
-				}
-
-				_, err = testClient.Sys().Unseal(initResp.Keys[0])
-				if err != nil {
-					t.Fatalf("error unsealing vault: %s", err)
-				}
-			} else {
-				_, err = testClient.Sys().Init(&api.InitRequest{
-					RecoveryShares:    1,
-					RecoveryThreshold: 1,
-				})
-				if err != nil {
-					t.Fatalf("error initializing vault: %s", err)
-				}
+			_, token, err := initializeVault(client, test.expectedSealTypes[0])
+			if err != nil {
+				t.Fatalf("error initializing vault: %s", err)
 			}
+			client.SetToken(token)
 
 			for i := range test.sealStanzas {
 				if test.sealStanzas[i] != "" {
@@ -185,7 +165,7 @@ func TestSealReloadSIGHUP(t *testing.T) {
 					t.Fatalf("error sending SIGHUP: %s", err)
 				}
 
-				err = validateVaultStatusAndSealType(testClient, test.expectedSealTypes[i])
+				err = validateVaultStatusAndSealType(client, test.expectedSealTypes[i])
 				if err != nil {
 					t.Fatalf("seal type check failed: %s", err)
 				}

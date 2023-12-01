@@ -244,3 +244,49 @@ func validateVaultStatusAndSealType(client *api.Client, expectedSealType string)
 
 	return nil
 }
+
+func testClient(address string) (*api.Client, error) {
+	clientConfig := api.DefaultConfig()
+	clientConfig.Address = address
+	testClient, err := api.NewClient(clientConfig)
+	if err != nil {
+		return nil, err
+	}
+	return testClient, nil
+}
+
+func initializeVault(client *api.Client, sealType string) ([]string, string, error) {
+	var keys []string
+	var token string
+
+	if sealType == "shamir" {
+		initResp, err := client.Sys().Init(&api.InitRequest{
+			SecretThreshold: 1,
+			SecretShares:    1,
+		})
+		if err != nil {
+			return nil, "", err
+		}
+
+		keys = initResp.Keys
+		token = initResp.RootToken
+
+		_, err = client.Sys().Unseal(initResp.Keys[0])
+		if err != nil {
+			return nil, "", err
+		}
+	} else {
+		initResp, err := client.Sys().Init(&api.InitRequest{
+			RecoveryShares:    1,
+			RecoveryThreshold: 1,
+		})
+		if err != nil {
+			return nil, "", err
+		}
+
+		keys = initResp.RecoveryKeys
+		token = initResp.RootToken
+	}
+
+	return keys, token, nil
+}
