@@ -54,6 +54,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
     return {
       icon: findDestination(store_type).icon,
       name: store_name,
+      type: store_type,
       associationCount: Object.entries(associated_secrets).length,
       status: unsynced.length ? `${unsynced.length} Unsynced` : 'All synced',
       lastSync,
