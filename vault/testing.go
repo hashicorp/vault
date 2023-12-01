@@ -39,7 +39,6 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/go-testing-interface"
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
 
@@ -919,12 +918,12 @@ WAITACTIVE:
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
 	t.Helper()
-	if err := c.UnsealCoresWithError(false); err != nil {
+	if err := c.UnsealCoresWithError(t, false); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
+func (c *TestCluster) UnsealCoresWithError(t testing.T, useStoredKeys bool) error {
 	unseal := func(core *Core) error {
 		for _, key := range c.BarrierKeys {
 			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
@@ -961,19 +960,21 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 	}
 
 	// Let them come fully up to standby
-	time.Sleep(2 * time.Second)
+	corehelpers.RetryUntil(t, 2*time.Second, func() error {
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < len(c.Cores); i++ {
+			isLeader, _, _, err := c.Cores[i].Leader()
+			if err != nil {
+				return err
+			}
+			if isLeader {
+				return fmt.Errorf("core[%d] should not be leader", i)
+			}
+		}
 
-	// Ensure cluster connection info is populated.
-	// Other cores should not come up as leaders.
-	for i := 1; i < len(c.Cores); i++ {
-		isLeader, _, _, err := c.Cores[i].Leader()
-		if err != nil {
-			return err
-		}
-		if isLeader {
-			return fmt.Errorf("core[%d] should not be leader", i)
-		}
-	}
+		return nil
+	})
 
 	return nil
 }
@@ -2177,20 +2178,21 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 
 		// Let them come fully up to standby
-		assert.Eventually(t, func() bool {
+		corehelpers.RetryUntil(t, 2*time.Second, func() error {
 			// Ensure cluster connection info is populated.
 			// Other cores should not come up as leaders.
 			for i := 1; i < numCores; i++ {
 				isLeader, _, _, err := tc.Cores[i].Core.Leader()
 				if err != nil {
-					return false
+					return err
 				}
 				if isLeader {
-					t.Fatalf("core[%d] should not be leader", i)
+					return fmt.Errorf("core[%d] should not be leader", i)
 				}
 			}
-			return true
-		}, 2*time.Second, 100*time.Millisecond)
+
+			return nil
+		})
 	}
 
 	//
