@@ -362,7 +362,7 @@ func TestCreateCustomMessage(t *testing.T) {
 	assert.True(t, result.active)
 
 	// Create more custom message to have the maximum number of custom messages.
-	for i := 0; i < MaximumCustomMessageCount-1; i++ {
+	for i := 0; i < MaximumCustomMessageCountPerNamespace-1; i++ {
 		result, err = testUIConfig.CreateCustomMessage(context.Background(), entry)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -416,7 +416,8 @@ func TestCreateCustomMessage(t *testing.T) {
 	assert.Nil(t, result)
 }
 
-// TestDeleteCustomMessage verifies
+// TestDeleteCustomMessage verifies that the (*UIConfig).DeleteCustomMessage
+// method behaves correctly in all expected circumstances.
 func TestDeleteCustomMessage(t *testing.T) {
 	// Setup UIConfig with a custom message
 	testUIConfig := &UIConfig{
@@ -456,7 +457,7 @@ func TestDeleteCustomMessage(t *testing.T) {
 }
 
 // TestUpdateCustomMessage verifies that the (*UIConfig).UpdateCustomMessage
-// method
+// method behaves correctly in all expected circumstances.
 func TestUpdateCustomMessage(t *testing.T) {
 	// Setup a UIConfig with a sample custom message
 	testUIConfig := &UIConfig{

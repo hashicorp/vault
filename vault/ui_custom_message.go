@@ -18,7 +18,7 @@ import (
 const (
 	UICustomMessageKey string = "/custom-messages"
 
-	MaximumCustomMessageCount int = 100
+	MaximumCustomMessageCountPerNamespace int = 100
 )
 
 // customMessageBarrierView determines the appropriate logical.Storage to return
@@ -38,7 +38,9 @@ func (c *UIConfig) customMessageBarrierView(ctx context.Context) logical.Storage
 	// 2. there's no Namespace value in ctx
 	// 3. the Namespace value in ctx is nil
 	// In each of those cases, returning the barrierStorage is an appropriate
-	// course of action.
+	// course of action, since we're not running in enterprise within a
+	// namespace. So use the barrierStorage where root namespace things are
+	// located.
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return c.barrierStorage
@@ -225,7 +227,7 @@ func (c *UIConfig) CreateCustomMessage(ctx context.Context, entry UICustomMessag
 		return nil, err
 	}
 
-	if count >= MaximumCustomMessageCount {
+	if count >= MaximumCustomMessageCountPerNamespace {
 		return nil, errors.New("maximum number of Custom Messages already exists")
 	}
 
