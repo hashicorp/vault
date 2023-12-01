@@ -1056,9 +1056,9 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setNextSigningKey: true,
 			testCases: []testCase{
 				{1, 2, 2},
-				{2, 2, 4},
-				{3, 2, 4},
-				{4, 2, 4},
+				{2, 2, 3},
+				{3, 2, 2},
+				{4, 2, 3},
 			},
 		},
 		{
@@ -1067,8 +1067,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+				{2, 2, 2},
 			},
 		},
 		{
@@ -1077,8 +1077,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+				{2, 2, 2},
 			},
 		},
 		{
@@ -1087,8 +1087,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 2},
-				{2, 2, 4},
+				{1, 0, 0},
+				{2, 2, 2},
 			},
 		},
 	}

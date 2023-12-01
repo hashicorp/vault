@@ -1129,6 +1129,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 		return logical.ErrorResponse("key %q does not exist", client.Key), nil
 	}
 
+	if client.Key == defaultKeyName {
+		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	if idTokenTTLRaw, ok := d.GetOk("id_token_ttl"); ok {
 		client.IDTokenTTL = time.Duration(idTokenTTLRaw.(int)) * time.Second
 	} else if req.Operation == logical.CreateOperation {
@@ -2545,34 +2551,8 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 		i.Logger().Debug("wrote OIDC default provider")
 	}
 
-	// Store the default key
-	storageKey = namedKeyConfigPath + defaultKeyName
-	entry, err = view.Get(ctx, storageKey)
-	if err != nil {
-		return err
-	}
-	if entry == nil {
-		defaultKey := defaultOIDCKey()
-
-		// Generate initial key material for current and next keys
-		err = defaultKey.generateAndSetKey(ctx, i.Logger(), view)
-		if err != nil {
-			return err
-		}
-		err = defaultKey.generateAndSetNextKey(ctx, i.Logger(), view)
-		if err != nil {
-			return err
-		}
-
-		// Store the entry
-		entry, err := logical.StorageEntryJSON(storageKey, defaultKey)
-		if err != nil {
-			return err
-		}
-		if err := view.Put(ctx, entry); err != nil {
-			return err
-		}
-		i.Logger().Debug("wrote OIDC default key")
+	if _, err := i.ensureDefaultKey(ctx, view); err != nil {
+		return fmt.Errorf("error writing default key to storage: %w", err)
 	}
 
 	// Store the allow all assignment
@@ -2590,6 +2570,55 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 			return err
 		}
 		i.Logger().Debug("wrote OIDC allow_all assignment")
+	}
+
+	return nil
+}
+
+func (i *IdentityStore) ensureDefaultKey(ctx context.Context, view logical.Storage) (*namedKey, error) {
+	storageKey := namedKeyConfigPath + defaultKeyName
+	entry, err := view.Get(ctx, storageKey)
+	if err != nil {
+		return nil, err
+	}
+	if entry != nil {
+		var defaultKey namedKey
+		if err := entry.DecodeJSON(&defaultKey); err != nil {
+			return nil, err
+		}
+		return &defaultKey, nil
+	}
+
+	// The default key doesn't exist, so write it to storage
+	defaultKey := defaultOIDCKey()
+	entry, err = logical.StorageEntryJSON(storageKey, defaultKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := view.Put(ctx, entry); err != nil {
+		return nil, err
+	}
+
+	i.Logger().Debug("wrote OIDC default key")
+	return &defaultKey, nil
+}
+
+func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logical.Storage) error {
+	defaultKey, err := i.ensureDefaultKey(ctx, storage)
+	if err != nil {
+		return err
+	}
+
+	if defaultKey.SigningKey == nil {
+		if err := defaultKey.generateAndSetKey(ctx, i.Logger(), storage); err != nil {
+			return err
+		}
+	}
+
+	if defaultKey.NextSigningKey == nil {
+		if err := defaultKey.generateAndSetNextKey(ctx, i.Logger(), storage); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -1176,6 +1176,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 		return logical.ErrorResponse("the key parameter is required"), nil
 	}
 
+	if role.Key == defaultKeyName {
+		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	if template, ok := d.GetOk("template"); ok {
 		role.Template = template.(string)
 	} else if req.Operation == logical.CreateOperation {
