@@ -240,7 +240,7 @@ func validateVaultStatusAndSealType(client *api.Client, expectedSealType string)
 	}
 
 	if statusResp.Type != expectedSealType {
-		return fmt.Errorf("unexpected seal type: expected transit, got %s", statusResp.Type)
+		return fmt.Errorf("unexpected seal type: expected %s, got %s", expectedSealType, statusResp.Type)
 	}
 
 	return nil
