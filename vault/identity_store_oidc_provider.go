@@ -1131,7 +1131,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 
 	if client.Key == defaultKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
-			return nil, fmt.Errorf("failed to generate default key: %s", err)
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
 	}
 

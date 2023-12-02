@@ -1179,7 +1179,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	if role.Key == defaultKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
 		}
 	}
 
