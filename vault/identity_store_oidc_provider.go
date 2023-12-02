@@ -1131,7 +1131,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 
 	if client.Key == defaultKeyName {
 		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to generate default key: %s", err)
 		}
 	}
 
@@ -2575,27 +2575,22 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 	return nil
 }
 
-func (i *IdentityStore) ensureDefaultKey(ctx context.Context, view logical.Storage) (*namedKey, error) {
-	storageKey := namedKeyConfigPath + defaultKeyName
-	entry, err := view.Get(ctx, storageKey)
+func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.Storage) (*namedKey, error) {
+	key, err := i.getNamedKey(ctx, storage, defaultKeyName)
 	if err != nil {
 		return nil, err
 	}
-	if entry != nil {
-		var defaultKey namedKey
-		if err := entry.DecodeJSON(&defaultKey); err != nil {
-			return nil, err
-		}
-		return &defaultKey, nil
+	if key != nil {
+		return key, nil
 	}
 
-	// The default key doesn't exist, so write it to storage
+	// The default key doesn't exist. Write it to storage.
 	defaultKey := defaultOIDCKey()
-	entry, err = logical.StorageEntryJSON(storageKey, defaultKey)
+	entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
 	if err != nil {
 		return nil, err
 	}
-	if err := view.Put(ctx, entry); err != nil {
+	if err := storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
 
@@ -2604,6 +2599,11 @@ func (i *IdentityStore) ensureDefaultKey(ctx context.Context, view logical.Stora
 }
 
 func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logical.Storage) error {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	defaultKey, err := i.ensureDefaultKey(ctx, storage)
 	if err != nil {
 		return err
@@ -2613,10 +2613,19 @@ func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logi
 		if err := defaultKey.generateAndSetKey(ctx, i.Logger(), storage); err != nil {
 			return err
 		}
-	}
-
-	if defaultKey.NextSigningKey == nil {
 		if err := defaultKey.generateAndSetNextKey(ctx, i.Logger(), storage); err != nil {
+			return err
+		}
+
+		if err := i.oidcCache.Delete(ns, namedKeyCachePrefix+defaultKeyName); err != nil {
+			return err
+		}
+
+		entry, err := logical.StorageEntryJSON(namedKeyConfigPath+defaultKeyName, defaultKey)
+		if err != nil {
+			return err
+		}
+		if err := storage.Put(ctx, entry); err != nil {
 			return err
 		}
 	}

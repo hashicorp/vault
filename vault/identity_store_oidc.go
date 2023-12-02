@@ -108,6 +108,7 @@ var errNilNamespace = errors.New("nil namespace in oidc cache request")
 const (
 	issuerPath           = "identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
+	namedKeyCachePrefix  = "namedKeys/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
 	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
@@ -983,7 +984,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Attempt to get the key from the cache
-	keyRaw, found, err := i.oidcCache.Get(ns, "namedKeys/"+name)
+	keyRaw, found, err := i.oidcCache.Get(ns, namedKeyCachePrefix+name)
 	if err != nil {
 		return nil, err
 	}
@@ -1005,7 +1006,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Cache the key
-	if err := i.oidcCache.SetDefault(ns, "namedKeys/"+name, &key); err != nil {
+	if err := i.oidcCache.SetDefault(ns, namedKeyCachePrefix+name, &key); err != nil {
 		i.logger.Warn("failed to cache key", "error", err)
 	}
 
