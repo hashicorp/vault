@@ -13,6 +13,7 @@ import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
+import { dateFormat } from 'core/helpers/date-format';
 
 const {
   title,
@@ -67,6 +68,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
   test('it should render secrets by destination table', async function (assert) {
     const { icon, name, badge, total, updated, actionToggle, action } = overview.table;
+    const updatedDate = dateFormat(
+      [new Date('2023-09-20T10:51:53.961861096-04:00'), 'MMMM do yyyy, h:mm:ss a'],
+      {}
+    );
     assert
       .dom(overviewCard.title('Secrets by destination'))
       .hasText('Secrets by destination', 'Overview card title renders for table');
@@ -77,7 +82,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     assert.dom(badge(1)).hasText('1 Unsynced', 'Unsynced badge renders');
     assert.dom(badge(1)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
     assert.dom(total(0)).hasText('1', '# of secrets renders');
-    assert.dom(updated(0)).hasText('September 20th 2023, 8:51:53 AM', 'Last update datetime renders');
+    assert.dom(updated(0)).hasText(updatedDate, 'Last updated datetime renders');
     await click(actionToggle(0));
     assert.dom(action('sync')).hasText('Sync new secrets', 'Sync action renders');
     assert.dom(action('details')).hasText('Details', 'Details action renders');

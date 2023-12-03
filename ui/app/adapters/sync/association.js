@@ -49,7 +49,7 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
 
   // array of association data for each destination a secret is synced to
   fetchSyncStatus({ mount, secretName }) {
-    const url = `${super.buildURL()}/${mount}/${secretName}`;
+    const url = `${this.buildURL()}/${mount}/${secretName}`;
     return this.ajax(url, 'GET').then((resp) => {
       const { associated_destinations } = resp.data;
       const syncData = [];
