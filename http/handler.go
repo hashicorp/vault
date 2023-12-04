@@ -246,6 +246,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = wrapCORSHandler(wrappedHandler, core)
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
+	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
 	// setting isn't true that checks for non-printable characters in the
@@ -336,18 +337,12 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 // are performed.
 func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerProperties) http.Handler {
 	var maxRequestDuration time.Duration
-	var maxRequestSize int64
 	if props.ListenerConfig != nil {
 		maxRequestDuration = props.ListenerConfig.MaxRequestDuration
-		maxRequestSize = props.ListenerConfig.MaxRequestSize
 	}
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
 	}
-	if maxRequestSize == 0 {
-		maxRequestSize = DefaultMaxRequestSize
-	}
-
 	// Swallow this error since we don't want to pollute the logs and we also don't want to
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
@@ -382,11 +377,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
 
-		// if maxRequestSize < 0, no need to set context value
-		// Add a size limiter if desired
-		if maxRequestSize > 0 {
-			ctx = logical.CreateContextMaxRequestSize(ctx, maxRequestSize)
-		}
 		ctx = logical.CreateContextOriginalRequestPath(ctx, r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
@@ -742,24 +732,6 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
-	ctx := r.Context()
-	if logical.ContextContainsMaxRequestSize(ctx) {
-		max, ok := logical.ContextMaxRequestSizeValue(ctx)
-		if !ok {
-			return nil, errors.New("could not parse max request size from request context")
-		}
-		if max > 0 {
-			// MaxBytesReader won't do all the internal stuff it must unless it's
-			// given a ResponseWriter that implements the internal http interface
-			// requestTooLarger.  So we let it have access to the underlying
-			// ResponseWriter.
-			inw := w
-			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
-				inw = myw.Wrapped()
-			}
-			reader = http.MaxBytesReader(inw, r.Body, max)
-		}
-	}
 
 	var origBody io.ReadWriter
 
@@ -783,16 +755,6 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 //
 // A nil map will be returned if the format is empty or invalid.
 func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
-	if logical.ContextContainsMaxRequestSize(r.Context()) {
-		max, ok := logical.ContextMaxRequestSizeValue(r.Context())
-		if !ok {
-			return nil, errors.New("could not parse max request size from request context")
-		}
-		if max > 0 {
-			r.Body = io.NopCloser(io.LimitReader(r.Body, max))
-		}
-	}
-
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
