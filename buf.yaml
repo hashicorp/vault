@@ -40,6 +40,7 @@ lint:
       - physical/raft/types.proto
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/eventplugin/eventplugin.proto
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/event.proto
       - sdk/logical/identity.proto
@@ -96,6 +97,7 @@ lint:
     RPC_REQUEST_STANDARD_NAME:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/eventplugin/eventplugin.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - vault/replication/replication_resolver_ent.proto
