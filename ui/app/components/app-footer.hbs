@@ -19,7 +19,7 @@
     Vault
     {{this.version.version}}
   </AF.Link>
-  {{#if (is-version "OSS")}}
+  {{#if this.version.isCommunity}}
     <AF.Link @href="https://hashicorp.com/products/vault/trial?source=vaultui" data-test-footer-upgrade-link>
       Upgrade to Vault Enterprise
     </AF.Link>

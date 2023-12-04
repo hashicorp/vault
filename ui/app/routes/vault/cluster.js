@@ -58,7 +58,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     const managedRoot = this.featureFlagService.managedNamespaceRoot;
     assert(
       'Cannot use VAULT_CLOUD_ADMIN_NAMESPACE flag with non-enterprise Vault version',
-      !(managedRoot && this.version.isOSS)
+      !(managedRoot && this.version.isCommunity)
     );
     if (!namespace && currentTokenName && !Ember.testing) {
       // if no namespace queryParam and user authenticated,

@@ -17,7 +17,7 @@ export default class VersionService extends Service {
     return this.type === 'enterprise';
   }
 
-  get isOSS() {
+  get isCommunity() {
     return !this.isEnterprise;
   }
 
@@ -70,7 +70,7 @@ export default class VersionService extends Service {
 
   @keepLatestTask
   *getFeatures() {
-    if (this.features?.length || this.isOSS) {
+    if (this.features?.length || this.isCommunity) {
       return;
     }
     try {
