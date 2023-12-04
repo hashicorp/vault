@@ -21,7 +21,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Replication', 'Monitoring'];
+    const headings = ['Vault', 'Monitoring'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 
@@ -52,8 +52,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Access',
       'Policies',
       'Tools',
-      'Disaster Recovery',
-      'Performance',
       'Replication',
       'Raft Storage',
       'Client Count',

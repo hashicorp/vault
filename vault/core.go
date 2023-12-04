@@ -698,6 +698,17 @@ type Core struct {
 	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
+
+	echoDuration              *uberAtomic.Duration
+	activeNodeClockSkewMillis *uberAtomic.Int64
+}
+
+func (c *Core) ActiveNodeClockSkewMillis() int64 {
+	return c.activeNodeClockSkewMillis.Load()
+}
+
+func (c *Core) EchoDuration() time.Duration {
+	return c.echoDuration.Load()
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -1045,6 +1056,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 		WellKnownRedirects:             NewWellKnownRedirects(),
 		detectDeadlocks:                detectDeadlocks,
+		echoDuration:                   uberAtomic.NewDuration(0),
+		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1261,7 +1274,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	eventsLogger := conf.Logger.Named("events")
 	c.allLoggers = append(c.allLoggers, eventsLogger)
 	// start the event system
-	events, err := eventbus.NewEventBus(eventsLogger)
+	nodeID, err := c.LoadNodeID()
+	if err != nil {
+		return nil, err
+	}
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -3915,13 +3932,15 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 }
 
 type PeerNode struct {
-	Hostname       string    `json:"hostname"`
-	APIAddress     string    `json:"api_address"`
-	ClusterAddress string    `json:"cluster_address"`
-	Version        string    `json:"version"`
-	LastEcho       time.Time `json:"last_echo"`
-	UpgradeVersion string    `json:"upgrade_version,omitempty"`
-	RedundancyZone string    `json:"redundancy_zone,omitempty"`
+	Hostname        string        `json:"hostname"`
+	APIAddress      string        `json:"api_address"`
+	ClusterAddress  string        `json:"cluster_address"`
+	Version         string        `json:"version"`
+	LastEcho        time.Time     `json:"last_echo"`
+	UpgradeVersion  string        `json:"upgrade_version,omitempty"`
+	RedundancyZone  string        `json:"redundancy_zone,omitempty"`
+	EchoDuration    time.Duration `json:"echo_duration"`
+	ClockSkewMillis int64         `json:"clock_skew_millis"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3930,13 +3949,15 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
 		info := item.Object.(nodeHAConnectionInfo)
 		nodes = append(nodes, PeerNode{
-			Hostname:       info.nodeInfo.Hostname,
-			APIAddress:     info.nodeInfo.ApiAddr,
-			ClusterAddress: itemClusterAddr,
-			LastEcho:       info.lastHeartbeat,
-			Version:        info.version,
-			UpgradeVersion: info.upgradeVersion,
-			RedundancyZone: info.redundancyZone,
+			Hostname:        info.nodeInfo.Hostname,
+			APIAddress:      info.nodeInfo.ApiAddr,
+			ClusterAddress:  itemClusterAddr,
+			LastEcho:        info.lastHeartbeat,
+			Version:         info.version,
+			UpgradeVersion:  info.upgradeVersion,
+			RedundancyZone:  info.redundancyZone,
+			EchoDuration:    info.echoDuration,
+			ClockSkewMillis: info.clockSkewMillis,
 		})
 	}
 	return nodes
@@ -4229,6 +4250,49 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
+	ctx, _ := c.GetContext()
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("error retrieving barrier config: %s", err)
+	}
+
+	barrierConfigCopy := currentSealBarrierConfig.Clone()
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+
+	barrierSeal.SetCore(c)
+
+	rootKey, err := c.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(rootKey) < 1 {
+		return errors.New("root key not found")
+	}
+
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+	if err != nil {
+		return fmt.Errorf("error setting barrier config for new seal: %s", err)
+	}
+
+	err = barrierSeal.SetStoredKeys(ctx, rootKey)
+	if err != nil {
+		return fmt.Errorf("error setting root key in new seal: %s", err)
+	}
+
+	c.seal = barrierSeal
+
+	c.reloadSealsEnt(secureRandomReader, barrierSeal.GetAccess(), c.logger)
+
+	return nil
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {

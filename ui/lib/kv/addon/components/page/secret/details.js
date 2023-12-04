@@ -35,6 +35,16 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
+  secretDataIsAdvanced;
+
+  constructor() {
+    super(...arguments);
+    this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    if (this.originalSecret.lastIndexOf('{') > 0) {
+      // Dumb way to check if there's a nested object in the secret
+      this.secretDataIsAdvanced = true;
+    }
+  }
 
   @action
   closeVersionMenu(dropdown) {

@@ -75,14 +75,17 @@ also be specified via the `VAULT_LOG_LEVEL` environment variable.
 are `standard` and `json`. This can also be specified via the
 `VAULT_LOG_FORMAT` environment variable.
 
-- `-log-file` ((#\_log_file)) - writes all the Vault proxy log messages
-to a file. This value is used as a prefix for the log file name. The current timestamp
-is appended to the file name. If the value ends in a path separator, `vault-proxy`
-will be appended to the value. If the file name is missing an extension, `.log`
-is appended. For example, setting `log-file` to `/var/log/` would result in a log
-file path of `/var/log/vault-proxy-{timestamp}.log`. `log-file` can be combined with
-[`-log-rotate-bytes`](#_log_rotate_bytes) and [`-log-rotate-duration`](#_log_rotate_duration)
-for a fine-grained log rotation experience.
+- `-log-file` ((#\_log_file)) - the absolute path where Vault Proxy should save
+  log messages. Paths that end with a path separator use the default file name,
+  `proxy.log`. Paths that do not end with a file extension use the default
+  `.log` extension. If the log file rotates, Vault Proxy appends the current
+  timestamp to the file name at the time of rotation. For example:
+
+  `log-file` | Full log file | Rotated log file
+  ---------- | ------------- | ----------------
+  `/var/log` | `/var/log/proxy.log` | `/var/log/proxy-{timestamp}.log`
+  `/var/log/my-diary` | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log`
+  `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt`
 
 - `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
 bytes that should be written to a log before it needs to be rotated. Unless specified,

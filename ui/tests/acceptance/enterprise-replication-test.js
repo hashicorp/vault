@@ -306,7 +306,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    await click('[data-test-replication-promote-secondary]');
+    await click('[data-test-replication-details-link="dr"]');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);
