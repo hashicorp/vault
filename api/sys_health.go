@@ -50,4 +50,6 @@ type HealthResponse struct {
 	ClusterID                  string `json:"cluster_id,omitempty"`
 	LastWAL                    uint64 `json:"last_wal,omitempty"`
 	Enterprise                 bool   `json:"enterprise"`
+	EchoDurationMillis         int64  `json:"echo_duration_ms"`
+	ClockSkewMillis            int64  `json:"clock_skew_ms"`
 }

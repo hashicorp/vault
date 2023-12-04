@@ -698,6 +698,17 @@ type Core struct {
 	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
+
+	echoDuration              *uberAtomic.Duration
+	activeNodeClockSkewMillis *uberAtomic.Int64
+}
+
+func (c *Core) ActiveNodeClockSkewMillis() int64 {
+	return c.activeNodeClockSkewMillis.Load()
+}
+
+func (c *Core) EchoDuration() time.Duration {
+	return c.echoDuration.Load()
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -1045,6 +1056,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 		WellKnownRedirects:             NewWellKnownRedirects(),
 		detectDeadlocks:                detectDeadlocks,
+		echoDuration:                   uberAtomic.NewDuration(0),
+		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -3919,13 +3932,15 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 }
 
 type PeerNode struct {
-	Hostname       string    `json:"hostname"`
-	APIAddress     string    `json:"api_address"`
-	ClusterAddress string    `json:"cluster_address"`
-	Version        string    `json:"version"`
-	LastEcho       time.Time `json:"last_echo"`
-	UpgradeVersion string    `json:"upgrade_version,omitempty"`
-	RedundancyZone string    `json:"redundancy_zone,omitempty"`
+	Hostname        string        `json:"hostname"`
+	APIAddress      string        `json:"api_address"`
+	ClusterAddress  string        `json:"cluster_address"`
+	Version         string        `json:"version"`
+	LastEcho        time.Time     `json:"last_echo"`
+	UpgradeVersion  string        `json:"upgrade_version,omitempty"`
+	RedundancyZone  string        `json:"redundancy_zone,omitempty"`
+	EchoDuration    time.Duration `json:"echo_duration"`
+	ClockSkewMillis int64         `json:"clock_skew_millis"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3934,13 +3949,15 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
 		info := item.Object.(nodeHAConnectionInfo)
 		nodes = append(nodes, PeerNode{
-			Hostname:       info.nodeInfo.Hostname,
-			APIAddress:     info.nodeInfo.ApiAddr,
-			ClusterAddress: itemClusterAddr,
-			LastEcho:       info.lastHeartbeat,
-			Version:        info.version,
-			UpgradeVersion: info.upgradeVersion,
-			RedundancyZone: info.redundancyZone,
+			Hostname:        info.nodeInfo.Hostname,
+			APIAddress:      info.nodeInfo.ApiAddr,
+			ClusterAddress:  itemClusterAddr,
+			LastEcho:        info.lastHeartbeat,
+			Version:         info.version,
+			UpgradeVersion:  info.upgradeVersion,
+			RedundancyZone:  info.redundancyZone,
+			EchoDuration:    info.echoDuration,
+			ClockSkewMillis: info.clockSkewMillis,
 		})
 	}
 	return nodes
