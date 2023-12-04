@@ -20,9 +20,19 @@ export default class App extends Application {
     },
     replication: {
       dependencies: {
-        services: ['auth', 'flash-messages', 'namespace', 'replication-mode', 'router', 'store', 'version'],
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'replication-mode',
+          'router',
+          'store',
+          'version',
+          '-portal',
+        ],
         externalRoutes: {
           replication: 'vault.cluster.replication.index',
+          vault: 'vault.cluster',
         },
       },
     },
