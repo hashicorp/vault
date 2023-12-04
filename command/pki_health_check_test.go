@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/healthcheck"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/stretchr/testify/require"
 )
 
