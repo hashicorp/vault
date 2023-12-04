@@ -6,11 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { visit } from '@ember/test-helpers';
+import { settled, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import ENV from 'vault/config/environment';
 
+const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
   footerVersion: `[data-test-footer-version]`,
   dashboardTitle: `[data-test-dashboard-card-header="Vault version"]`,
@@ -91,5 +94,44 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
         'shows Vault version for default policy in child namespace'
       );
     assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
+  });
+
+  test('shows correct version on unseal flow', async function (assert) {
+    await authPage.login();
+
+    const versionSvc = this.owner.lookup('service:version');
+    await visit('/vault/settings/seal');
+    assert
+      .dom('[data-test-footer-version]')
+      .hasText(`Vault ${versionSvc.version}`, 'shows version on seal page');
+    assert.strictEqual(currentURL(), '/vault/settings/seal');
+
+    // seal
+    await click('[data-test-seal]');
+
+    await click('[data-test-confirm-button]');
+
+    await pollCluster(this.owner);
+    await settled();
+    assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
+    assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Clears version on unseal');
+
+    // unseal
+    for (const key of unsealKeys) {
+      await fillIn('[data-test-shamir-key-input]', key);
+
+      await click('button[type="submit"]');
+
+      await pollCluster(this.owner);
+      await settled();
+    }
+
+    assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
+    assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Version is still not shown before auth');
+    await authPage.login();
+    assert
+      .dom('[data-test-footer-version]')
+      .hasText(`Vault ${versionSvc.version}`, 'Version is shown after login');
   });
 });

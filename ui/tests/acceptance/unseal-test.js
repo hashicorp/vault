@@ -20,11 +20,8 @@ module('Acceptance | unseal', function (hooks) {
   });
 
   test('seal then unseal', async function (assert) {
-    const versionSvc = this.owner.lookup('service:version');
     await visit('/vault/settings/seal');
-    assert
-      .dom('[data-test-footer-version]')
-      .hasText(`Vault ${versionSvc.version}`, 'shows version on seal page');
+
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
@@ -35,7 +32,6 @@ module('Acceptance | unseal', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
-    assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Clears version on unseal');
 
     // unseal
     for (const key of unsealKeys) {
@@ -49,10 +45,5 @@ module('Acceptance | unseal', function (hooks) {
 
     assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
     assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
-    assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Version is still not shown before auth');
-    await authPage.login();
-    assert
-      .dom('[data-test-footer-version]')
-      .hasText(`Vault ${versionSvc.version}`, 'Version is shown after login');
   });
 });
