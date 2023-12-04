@@ -3901,19 +3901,6 @@ func (c *Core) LoadNodeID() (string, error) {
 	return hostname, nil
 }
 
-// DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
-// login request, accepting a byte payload
-func (c *Core) DetermineRoleFromLoginRequestFromBytes(ctx context.Context, mountPoint string, payload []byte) string {
-	data := make(map[string]interface{})
-	err := jsonutil.DecodeJSON(payload, &data)
-	if err != nil {
-		// Cannot discern a role from a request we cannot parse
-		return ""
-	}
-
-	return c.DetermineRoleFromLoginRequest(ctx, mountPoint, data)
-}
-
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
 func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}) string {
@@ -3924,7 +3911,33 @@ func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint str
 		// Role based quotas do not apply to this request
 		return ""
 	}
+	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+}
 
+// DetermineRoleFromLoginRequestFromReader will determine the role that should
+// be applied to a quota for a given login request. The reader will only be
+// consumed if the matching backend for the mount point exists and is a secret
+// backend
+func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader) string {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// Role based quotas do not apply to this request
+		return ""
+	}
+
+	data := make(map[string]interface{})
+	err := jsonutil.DecodeJSONFromReader(reader, &data)
+	if err != nil {
+		return ""
+	}
+	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+}
+
+// doResolveRoleLocked does a login and resolve role request on the matching
+// backend. Callers should have a read lock on c.authLock
+func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, matchingBackend logical.Backend, data map[string]interface{}) string {
 	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
 		MountPoint: mountPoint,
 		Path:       "login",
