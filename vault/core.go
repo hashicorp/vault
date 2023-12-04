@@ -2472,8 +2472,9 @@ func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
 		// This first setupFunction must be inserted at the beginning of the
 		// slice. The remainder should be appended at the end.
 
-		temp := make([]func(context.Context) error, len(setupFunctions)+1)
-		temp[0] = c.ensureWrappingKey
+		temp := []func(context.Context) error{
+			c.ensureWrappingKey,
+		}
 
 		setupFunctions = append(temp, setupFunctions...)
 
