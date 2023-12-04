@@ -2642,6 +2642,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 									Type:     framework.TypeMap,
 									Required: false,
 								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
 							},
 						}},
 					},

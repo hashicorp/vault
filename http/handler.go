@@ -151,6 +151,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
+	var chrootNamespace string
+	if props.ListenerConfig != nil {
+		chrootNamespace = props.ListenerConfig.ChrootNamespace
+	}
 
 	switch {
 	case props.RecoveryMode:
@@ -161,8 +165,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
 		// Handle non-forwarded paths
-		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core))
-		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core, chrootNamespace))
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
@@ -177,7 +181,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/health", handleSysHealth(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core))
+		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
 		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
 			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
 		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
@@ -193,10 +197,10 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 
 		for _, path := range injectDataIntoTopRoutes {
-			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
+			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core, chrootNamespace)))
 		}
-		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
-		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
+		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
+		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		if core.UIEnabled() {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
@@ -213,7 +217,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		if props.ListenerConfig != nil && props.ListenerConfig.Telemetry.UnauthenticatedMetricsAccess {
 			mux.Handle("/v1/sys/metrics", handleMetricsUnauthenticated(core))
 		} else {
-			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/metrics", handleLogicalNoForward(core, chrootNamespace))
 		}
 
 		if props.ListenerConfig != nil && props.ListenerConfig.Profiling.UnauthenticatedPProfAccess {
@@ -226,13 +230,13 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 			mux.Handle("/v1/sys/pprof/trace", http.HandlerFunc(pprof.Trace))
 		} else {
-			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core, chrootNamespace))
 		}
 
 		if props.ListenerConfig != nil && props.ListenerConfig.InFlightRequestLogging.UnauthenticatedInFlightAccess {
 			mux.Handle("/v1/sys/in-flight-req", handleUnAuthenticatedInFlightRequest(core))
 		} else {
-			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
+			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core, chrootNamespace))
 		}
 		entAdditionalRoutes(mux, core)
 	}

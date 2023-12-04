@@ -247,6 +247,9 @@ type Request struct {
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
 	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure
