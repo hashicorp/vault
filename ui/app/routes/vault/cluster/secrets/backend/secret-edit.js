@@ -83,15 +83,13 @@ export default Route.extend({
       // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
       if (isAddonEngine(secretEngine.type, secretEngine.version)) {
         // if no secret param redirect to the create route
-        const routeUrl = !secret
-          ? 'vault.cluster.secrets.backend.kv.create'
-          : // if a secret param check if it's a directory and send to either the list view or details
-          keyIsFolder(secret)
-          ? 'vault.cluster.secrets.backend.kv.list-directory'
-          : 'vault.cluster.secrets.backend.kv.secret.details';
         return !secret
-          ? this.router.transitionTo(routeUrl, secretEngine.id)
-          : this.router.transitionTo(routeUrl, secretEngine.id, secret);
+          ? this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id)
+          : this.router.transitionTo(
+              'vault.cluster.secrets.backend.kv.secret.details',
+              secretEngine.id,
+              secret
+            );
       }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
