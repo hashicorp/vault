@@ -2361,7 +2361,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.entPostUnseal(false); err != nil {
 		return err
 	}
-	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
+	if isNotSecondaryCluster(c) {
 		// Only perf primarys should write feature flags, but we do it by
 		// excluding other states so that we don't have to change it when
 		// a non-replicated cluster becomes a primary.
@@ -2376,83 +2376,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		go c.autoRotateBarrierLoop(autoRotateCtx)
 	}
 
+	// Run setup-like functions
+	if err := runSetupFunctionsForUnseal(ctx, c); err != nil {
+		return err
+	}
+
 	if !c.IsDRSecondary() {
-		if err := c.ensureWrappingKey(ctx); err != nil {
-			return err
-		}
-	}
-	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
-		return err
-	}
-	if err := c.setupPluginCatalog(ctx); err != nil {
-		return err
-	}
-	if err := c.loadMounts(ctx); err != nil {
-		return err
-	}
-	if err := c.entSetupFilteredPaths(); err != nil {
-		return err
-	}
-	if err := c.setupMounts(ctx); err != nil {
-		return err
-	}
-	if err := c.entSetupAPILock(ctx); err != nil {
-		return err
-	}
-	if err := c.setupPolicyStore(ctx); err != nil {
-		return err
-	}
-	if err := c.setupManagedKeyRegistry(); err != nil {
-		return err
-	}
-	if err := c.loadCORSConfig(ctx); err != nil {
-		return err
-	}
-	if err := c.loadCredentials(ctx); err != nil {
-		return err
-	}
-	if err := c.entSetupFilteredPaths(); err != nil {
-		return err
-	}
-	if err := c.setupCredentials(ctx); err != nil {
-		return err
-	}
-	if err := c.setupQuotas(ctx, false); err != nil {
-		return err
-	}
-	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
-		return err
-	}
-	if !c.IsDRSecondary() {
-		c.updateLockedUserEntries()
-
-		if err := c.startRollback(); err != nil {
-			return err
-		}
-		if err := c.setupExpiration(expireLeaseStrategyFairsharing); err != nil {
-			return err
-		}
-		if err := c.loadAudits(ctx); err != nil {
-			return err
-		}
-		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
-			return err
-		}
-
-		if err := c.setupAudits(ctx); err != nil {
-			return err
-		}
-		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
-			return err
-		}
-		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
-			return err
-		}
-		c.setupCachedMFAResponseAuth()
-		if err := c.loadLoginMFAConfigs(ctx); err != nil {
-			return err
-		}
-
 		if err := c.setupCensusAgent(); err != nil {
 			c.logger.Error("skipping reporting for nil agent", "error", err)
 		}
@@ -2474,53 +2403,8 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	}
 
-	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
-		// Cannot do this above, as we need other resources like mounts to be setup
-		if err := c.setupPluginReload(); err != nil {
-			return err
-		}
-
-		// Retrieve the seal generation information from storage
-		existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
-		if err != nil {
-			c.logger.Error("cannot read existing seal generation info from storage", "error", err)
-			return err
-		}
-
-		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
-
-		switch {
-		case existingGenerationInfo == nil:
-			// This is the first time we store seal generation information
-			fallthrough
-		case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
-			// We have incremented the seal generation
-			if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
-				c.logger.Error("failed to store seal generation info", "error", err)
-				return err
-			}
-
-		case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
-			// Same generation, update the rewrapped flag in case the previous active node
-			// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
-			// started but not completed.
-			c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
-
-		case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
-			// Our seal information is out of date. The previous active node used a newer generation.
-			c.logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
-			return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
-		}
-
-		if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
-			// Set the migration done flag so that a seal-rewrap gets triggered later.
-			// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
-			// triggering the rewrap when necessary.
-			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
-			atomic.StoreUint32(c.sealMigrationDone, 1)
-		}
-
-		startPartialSealRewrapping(c)
+	if isNotSecondaryCluster(c) {
+		runUnsealSetupForNonSecondaryClusters(ctx, c)
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2547,6 +2431,136 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.handleVersionTimeStamps(ctx); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
+	// setupFunctions is a slice of functions that need to be called in order,
+	// that if any return an error, processing should immediately cease.
+	setupFunctions := []func(context.Context) error{
+		c.setupPluginRuntimeCatalog,
+		c.setupPluginCatalog,
+		c.loadMounts,
+		func(_ context.Context) error {
+			return c.entSetupFilteredPaths()
+		},
+		c.setupMounts,
+		c.entSetupAPILock,
+		c.setupPolicyStore,
+		func(_ context.Context) error {
+			return c.setupManagedKeyRegistry()
+		},
+		c.loadCORSConfig,
+		c.loadCredentials,
+		func(_ context.Context) error {
+			return c.entSetupFilteredPaths()
+		},
+		c.setupCredentials,
+		func(ctx context.Context) error {
+			return c.setupQuotas(ctx, false)
+		},
+		func(ctx context.Context) error {
+			return c.setupHeaderHMACKey(ctx, false)
+		},
+	}
+
+	// If this server is not part of a Disaster Recovery secondary cluster,
+	// the following additional setupFunctions also apply.
+
+	if !c.IsDRSecondary() {
+		// This first setupFunction must be inserted at the beginning of the
+		// slice. The remainder should be appended at the end.
+
+		temp := make([]func(context.Context) error, len(setupFunctions)+1)
+		temp[0] = c.ensureWrappingKey
+
+		setupFunctions = append(temp, setupFunctions...)
+
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.updateLockedUserEntries()
+			return nil
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			return c.startRollback()
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			return c.setupExpiration(expireLeaseStrategyFairsharing)
+		})
+		setupFunctions = append(setupFunctions, c.loadAudits)
+		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
+		setupFunctions = append(setupFunctions, c.setupAudits)
+		setupFunctions = append(setupFunctions, c.loadIdentityStoreArtifacts)
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			return loadPolicyMFAConfigs(ctx, c)
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.setupCachedMFAResponseAuth()
+			return nil
+		})
+		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
+	}
+
+	// call the setupFunctions sequentially
+	for _, fn := range setupFunctions {
+		if err := fn(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func isNotSecondaryCluster(c *Core) bool {
+	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
+}
+
+func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
+	if err := c.setupPluginReload(); err != nil {
+		return err
+	}
+
+	// Retrieve the seal generation information from storage
+	existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		c.logger.Error("cannot read existing seal generation info from storage", "error", err)
+		return err
+	}
+
+	sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
+
+	switch {
+	case existingGenerationInfo == nil:
+		// This is the first time we store seal generation information
+		fallthrough
+	case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
+		// We have incremented the seal generation
+		if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
+			c.logger.Error("failed to store seal generation info", "error", err)
+			return err
+		}
+
+	case existingGenerationInfo.Generation == sealGenerationInfo.Generation:
+		// Same generation, update the rewrapped flag in case the previous active node
+		// changed its value. In other words, a rewrap may have happened, or a rewrap may have been
+		// started but not completed.
+		c.seal.GetAccess().GetSealGenerationInfo().SetRewrapped(existingGenerationInfo.IsRewrapped())
+
+	case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
+		// Our seal information is out of date. The previous active node used a newer generation.
+		c.logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+		return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
+	}
+
+	if server.IsMultisealSupported() && !sealGenerationInfo.IsRewrapped() {
+		// Set the migration done flag so that a seal-rewrap gets triggered later.
+		// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
+		// triggering the rewrap when necessary.
+		c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
+		atomic.StoreUint32(c.sealMigrationDone, 1)
+	}
+
+	startPartialSealRewrapping(c)
 
 	return nil
 }
