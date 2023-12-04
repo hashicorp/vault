@@ -85,7 +85,7 @@ export default Route.extend({
         // if no secret param redirect to the create route
         const routeUrl = !secret
           ? 'vault.cluster.secrets.backend.kv.create'
-          : // if a secret param check if it's a directory (ex: beep/ vs my-secret) and send to either the list view or details
+          : // if a secret param check if it's a directory and send to either the list view or details
           keyIsFolder(secret)
           ? 'vault.cluster.secrets.backend.kv.list-directory'
           : 'vault.cluster.secrets.backend.kv.secret.details';
