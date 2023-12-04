@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#let (find-by "name" "path" @secret.allFields) as |attr|}}
-  {{#if @isEdit}}
+  {{#if (eq @type "edit")}}
     <ReadonlyFormField @attr={{attr}} @value={{get @secret attr.name}} />
-  {{else}}
+  {{else if (eq @type "create")}}
     <FormField @attr={{attr}} @model={{@secret}} @modelValidations={{@modelValidations}} @onKeyUp={{@pathValidations}} />
   {{/if}}
 {{/let}}
@@ -9,9 +14,10 @@
 <hr class="is-marginless has-background-gray-200" />
 {{#if @showJson}}
   <JsonEditor
-    @title="{{if @isEdit 'Version' 'Secret'}} data"
+    @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{this.codeMirrorString}}
     @valueUpdated={{this.handleJson}}
+    @readOnly={{eq @type "details"}}
   />
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline @type={{if this.lintingErrors "warning" "danger"}} @paddingTop={{true}}>
@@ -22,10 +28,18 @@
       {{/if}}
     </AlertInline>
   {{/if}}
+{{else if (eq @type "details")}}
+  {{#each-in @secret.secretData as |key value|}}
+    <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
+      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} @allowDownload={{true}} />
+    </InfoTableRow>
+  {{else}}
+    <InfoTableRow @label="" @value="" @alwaysRender={{true}} />
+  {{/each-in}}
 {{else}}
   <KvObjectEditor
     class="has-top-margin-m"
-    @label="{{if @isEdit 'Version' 'Secret'}} data"
+    @label="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{@secret.secretData}}
     @onChange={{fn (mut @secret.secretData)}}
     @isMasked={{true}}
