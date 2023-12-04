@@ -2575,6 +2575,10 @@ func (i *IdentityStore) storeOIDCDefaultResources(ctx context.Context, view logi
 	return nil
 }
 
+// ensureDefaultKey ensures that the OIDC default key is written to storage. If no
+// error is returned, callers can be sure that it exists in storage. Note that it
+// only writes the key's configuration to storage and does not generate key material
+// for its current and next keys.
 func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.Storage) (*namedKey, error) {
 	key, err := i.getNamedKey(ctx, storage, defaultKeyName)
 	if err != nil {
@@ -2598,6 +2602,8 @@ func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.St
 	return &defaultKey, nil
 }
 
+// lazyGenerateDefaultKey generates key material for the OIDC default key's current and
+// next key if it hasn't already been generated.
 func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logical.Storage) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
