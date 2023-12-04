@@ -3,4 +3,32 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<Hds::SideNav::Portal @ariaLabel="Replication Navigation Links" data-test-sidebar-nav-panel="Replication" as |Nav|>
+  <Nav.BackLink
+    @route="vault"
+    @current-when={{false}}
+    @isRouteExternal={{true}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
+  <Nav.Link
+    @route="replication"
+    @current-when="replication"
+    @isRouteExternal={{true}}
+    @text="Overview"
+    data-test-sidebar-nav-link="Overview"
+  />
+  {{#if (not-eq this.model.mode "unsupported")}}
+    {{#if (has-feature "DR Replication")}}
+      <Nav.Link @route="mode" @model="dr" @text="Disaster Recovery" data-test-sidebar-nav-link="Disaster Recovery" />
+    {{/if}}
+    {{#if (has-feature "Performance Replication")}}
+      <Nav.Link @route="mode" @model="performance" @text="Performance" data-test-sidebar-nav-link="Performance" />
+    {{/if}}
+  {{/if}}
+</Hds::SideNav::Portal>
+
 {{outlet}}
