@@ -200,6 +200,7 @@ scenario "smoke" {
         edition = matrix.consul_edition
         version = matrix.consul_version
       } : null
+      # TO DO: can we get rid of this?
       distro_version_sles  = var.distro_version_sles
       enable_audit_devices = var.vault_enable_audit_devices
       install_dir          = global.vault_install_dir[matrix.artifact_type]

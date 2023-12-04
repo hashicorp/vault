@@ -48,6 +48,13 @@ variable "config_env_vars" {
   default     = null
 }
 
+variable "consul_bind_addr" {
+  type        = string
+  # TO DO: Fill in
+  # description = ""
+  default     = null
+}
+
 variable "consul_data_dir" {
   type        = string
   description = "The directory where the consul will store data"
