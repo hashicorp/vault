@@ -89,8 +89,9 @@ export default Route.extend({
           keyIsFolder(secret)
           ? 'vault.cluster.secrets.backend.kv.list-directory'
           : 'vault.cluster.secrets.backend.kv.secret.details';
-
-        return this.router.transitionTo(routeUrl, secretEngine.id, secret);
+        return !secret
+          ? this.router.transitionTo(routeUrl, secretEngine.id)
+          : this.router.transitionTo(routeUrl, secretEngine.id, secret);
       }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
