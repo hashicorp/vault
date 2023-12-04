@@ -80,12 +80,12 @@ export default Route.extend({
     return this.buildModel(secret, queryParams).then(() => {
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
-      // for kv v2 redirect user navigates to the old url and we need to redirect to the new engine url (1.15.0 +)
+      // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
       if (isAddonEngine(secretEngine.type, secretEngine.version)) {
         // if no secret param redirect to the create route
         const routeUrl = !secret
           ? 'vault.cluster.secrets.backend.kv.create'
-          : // if a secret param check if it's a directory (ex: beep/ vs my-secret) and send to either  the list view or details
+          : // if a secret param check if it's a directory (ex: beep/ vs my-secret) and send to either the list view or details
           keyIsFolder(secret)
           ? 'vault.cluster.secrets.backend.kv.list-directory'
           : 'vault.cluster.secrets.backend.kv.secret.details';
