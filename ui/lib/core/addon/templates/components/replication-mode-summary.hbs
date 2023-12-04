@@ -63,15 +63,23 @@
         {{#if (and (eq this.mode "performance") (not (has-feature "Performance Replication")))}}
           <p>
             Performance Replication is a feature of Vault Enterprise Premium.
-          </p>
-          <p class="has-text-centered">
             <ExternalLink
               @href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
-              class="button is-ghost has-icon-right"
-              data-test-upgrade-link
+              class="link"
+              data-test-upgrade-link-performance
             >
-              Learn more
-              <Chevron />
+              Upgrade
+            </ExternalLink>
+          </p>
+        {{else if (and (eq this.mode "dr") (not (has-feature "DR Replication")))}}
+          <p>
+            Disaster Recovery is a feature of Vault Enterprise Premium.
+            <ExternalLink
+              @href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
+              class="link"
+              data-test-upgrade-link-dr
+            >
+              Upgrade
             </ExternalLink>
           </p>
         {{else if this.replicationEnabled}}
@@ -103,18 +111,14 @@
     </div>
     <div class="level-right">
       {{#if this.replicationDisabled}}
-        <LinkTo
+        <Hds::Button
+          @text="Enable"
           @route="mode.index"
           @models={{array this.cluster.name this.mode}}
-          class="button is-primary"
           data-test-replication-promote-secondary
-        >
-          Enable
-        </LinkTo>
+        />
       {{else}}
-        <LinkTo @route="mode.index" @models={{array this.cluster.name this.mode}} class="button is-secondary">
-          Details
-        </LinkTo>
+        <Hds::Button @text="Details" @color="secondary" @route="mode.index" @models={{array this.cluster.name this.mode}} />
       {{/if}}
     </div>
   </div>

@@ -81,7 +81,7 @@ require (
 	github.com/hashicorp/consul-template v0.33.0
 	github.com/hashicorp/consul/api v1.23.0
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/eventlogger v0.2.5
+	github.com/hashicorp/eventlogger v0.2.7
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
@@ -99,7 +99,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.4
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.5.2
+	github.com/hashicorp/go-plugin v1.6.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -389,7 +389,7 @@ require (
 	github.com/hashicorp/go-metrics v0.5.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.0.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.2 // indirect
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0 // indirect
 	github.com/hashicorp/go-slug v0.12.1 // indirect
 	github.com/hashicorp/go-tfe v1.33.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
@@ -419,6 +419,7 @@ require (
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/joshlf/go-acl v0.0.0-20200411065538-eae00ae38531 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect

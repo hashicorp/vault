@@ -35,6 +35,12 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		code int
 	}{
 		{
+			"not_enough_args",
+			[]string{"foo"},
+			"Not enough arguments",
+			1,
+		},
+		{
 			"too_many_args",
 			[]string{"foo", "bar", "fizz"},
 			"Too many arguments",

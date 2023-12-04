@@ -1261,7 +1261,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	eventsLogger := conf.Logger.Named("events")
 	c.allLoggers = append(c.allLoggers, eventsLogger)
 	// start the event system
-	events, err := eventbus.NewEventBus(eventsLogger)
+	nodeID, err := c.LoadNodeID()
+	if err != nil {
+		return nil, err
+	}
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -4229,6 +4233,49 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribint to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+func (c *Core) SetSeals(barrierSeal Seal, secureRandomReader io.Reader) error {
+	ctx, _ := c.GetContext()
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	currentSealBarrierConfig, err := c.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("error retrieving barrier config: %s", err)
+	}
+
+	barrierConfigCopy := currentSealBarrierConfig.Clone()
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+
+	barrierSeal.SetCore(c)
+
+	rootKey, err := c.seal.GetStoredKeys(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(rootKey) < 1 {
+		return errors.New("root key not found")
+	}
+
+	barrierConfigCopy.Type = barrierSeal.BarrierSealConfigType().String()
+	err = barrierSeal.SetBarrierConfig(ctx, barrierConfigCopy)
+	if err != nil {
+		return fmt.Errorf("error setting barrier config for new seal: %s", err)
+	}
+
+	err = barrierSeal.SetStoredKeys(ctx, rootKey)
+	if err != nil {
+		return fmt.Errorf("error setting root key in new seal: %s", err)
+	}
+
+	c.seal = barrierSeal
+
+	c.reloadSealsEnt(secureRandomReader, barrierSeal.GetAccess(), c.logger)
+
+	return nil
 }
 
 func (c *Core) GetWellKnownRedirect(ctx context.Context, path string) (string, error) {

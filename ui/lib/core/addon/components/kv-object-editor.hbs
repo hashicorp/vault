@@ -13,7 +13,7 @@
   />
   {{#if @validationError}}
     <div>
-      <AlertInline @type="danger" @message={{@validationError}} @paddingTop={{true}} />
+      <AlertInline @type="danger" @message={{@validationError}} class="has-top-padding-s" />
     </div>
   {{/if}}
   {{#if this.kvData}}
