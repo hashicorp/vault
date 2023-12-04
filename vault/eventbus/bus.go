@@ -35,9 +35,8 @@ const (
 )
 
 var (
-	ErrNotStarted              = errors.New("event broker has not been started")
-	cloudEventsFormatterFilter *cloudevents.FormatterFilter
-	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+	ErrNotStarted = errors.New("event broker has not been started")
+	subscriptions atomic.Int64 // keeps track of event subscription count in all event buses
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
@@ -49,11 +48,13 @@ var (
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger          hclog.Logger
-	broker          *eventlogger.Broker
-	started         atomic.Bool
-	formatterNodeID eventlogger.NodeID
-	timeout         time.Duration
+	logger                     hclog.Logger
+	broker                     *eventlogger.Broker
+	started                    atomic.Bool
+	formatterNodeID            eventlogger.NodeID
+	timeout                    time.Duration
+	filters                    *Filters
+	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 }
 
 type pluginEventBus struct {
@@ -72,6 +73,7 @@ type asyncChanNode struct {
 	closeOnce      sync.Once
 	cancelFunc     context.CancelFunc
 	pipelineID     eventlogger.PipelineID
+	removeFilter   func()
 	removePipeline func(ctx context.Context, t eventlogger.EventType, id eventlogger.PipelineID) (bool, error)
 }
 
@@ -162,21 +164,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
-func init() {
-	// TODO: maybe this should relate to the Vault core somehow?
-	sourceUrl, err := url.Parse("https://vaultproject.io/")
-	if err != nil {
-		panic(err)
-	}
-	cloudEventsFormatterFilter = &cloudevents.FormatterFilter{
-		Source: sourceUrl,
-		Predicate: func(_ context.Context, e interface{}) (bool, error) {
-			return true, nil
-		},
-	}
-}
-
-func NewEventBus(logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -192,11 +180,25 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		logger = hclog.Default().Named("events")
 	}
 
+	sourceUrl, err := url.Parse("vault://" + localNodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	cloudEventsFormatterFilter := &cloudevents.FormatterFilter{
+		Source: sourceUrl,
+		Predicate: func(_ context.Context, e interface{}) (bool, error) {
+			return true, nil
+		},
+	}
+
 	return &EventBus{
-		logger:          logger,
-		broker:          broker,
-		formatterNodeID: formatterNodeID,
-		timeout:         defaultTimeout,
+		logger:                     logger,
+		broker:                     broker,
+		formatterNodeID:            formatterNodeID,
+		timeout:                    defaultTimeout,
+		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
+		filters:                    NewFilters(localNodeID),
 	}, nil
 }
 
@@ -215,7 +217,7 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 		return nil, nil, err
 	}
 
-	err = bus.broker.RegisterNode(bus.formatterNodeID, cloudEventsFormatterFilter)
+	err = bus.broker.RegisterNode(bus.formatterNodeID, bus.cloudEventsFormatterFilter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -240,7 +242,12 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker)
+
+	bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
+
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
+		bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
+	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
 	if err != nil {
 		defer cancel()
@@ -301,7 +308,7 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 				}
 			}
 
-			// Filter for correct event type, including wildcards.
+			// NodeFilter for correct event type, including wildcards.
 			if !glob.Glob(pattern, eventRecv.EventType) {
 				return false, nil
 			}
@@ -315,11 +322,12 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker) *asyncChanNode {
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, removeFilter func()) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:            ctx,
 		ch:             make(chan *eventlogger.Event),
 		logger:         logger,
+		removeFilter:   removeFilter,
 		removePipeline: broker.RemovePipelineAndNodes,
 	}
 }
@@ -328,6 +336,7 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.
 func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
+		node.removeFilter()
 		removed, err := node.removePipeline(ctx, eventTypeAll, node.pipelineID)
 
 		switch {

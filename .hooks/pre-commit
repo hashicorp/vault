@@ -115,7 +115,7 @@ ui_copywrite() {
   # run the copywrite tool
   # if a --path option is added we could apply the headers to only the staged files much easier
   # as of the latest version 0.16.6 there is only support for --dirPath
-  STAGED_FILES=($(git diff --name-only --cached))
+  STAGED_FILES=($(git diff --name-only --cached -- $DIR/))
 
   rm -rf $BINARY_DIR/.staged
   mkdir $BINARY_DIR/.staged
