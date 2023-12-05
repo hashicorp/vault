@@ -36,7 +36,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
   normalizeFetchByDestinations(payload) {
     const { store_name, store_type, associated_secrets } = payload.data;
     const unsynced = [];
-    let lastSync;
+    let lastUpdated;
 
     for (const key in associated_secrets) {
       const association = associated_secrets[key];
@@ -46,8 +46,8 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
       }
       // use the most recent updated_at value as the last synced date
       const updated = new Date(association.updated_at);
-      if (!lastSync || updated > lastSync) {
-        lastSync = updated;
+      if (!lastUpdated || updated > lastUpdated) {
+        lastUpdated = updated;
       }
     }
 
@@ -57,7 +57,7 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
       type: store_type,
       associationCount: Object.entries(associated_secrets).length,
       status: unsynced.length ? `${unsynced.length} Unsynced` : 'All synced',
-      lastSync,
+      lastUpdated,
     };
   }
 }

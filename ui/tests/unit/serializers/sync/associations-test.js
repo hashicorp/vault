@@ -69,7 +69,7 @@ module('Unit | Serializer | sync | association', function (hooks) {
       type: 'aws-sm',
       associationCount: 2,
       status: '1 Unsynced',
-      lastSync: new Date(payload.data.associated_secrets['bar/baz'].updated_at),
+      lastUpdated: new Date(payload.data.associated_secrets['bar/baz'].updated_at),
     };
     let normalized = this.serializer.normalizeFetchByDestinations(payload);
 

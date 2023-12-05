@@ -20,7 +20,7 @@ export interface SyncDestinationAssociationMetrics {
   name: string;
   associationCount: number;
   status: string;
-  lastSync: Date;
+  lastUpdated: Date;
 }
 
 export interface SyncAssociationMetrics {
