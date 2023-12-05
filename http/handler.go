@@ -361,7 +361,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
-
+		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
 		r = r.WithContext(namespace.ContextWithNamespace(r.Context(), namespace.RootNamespace))
 
