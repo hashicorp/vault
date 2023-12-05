@@ -8,21 +8,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
-
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/internalshared/configutil"
-
 	metrics "github.com/armon/go-metrics"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
+	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
 type StoredKeysSupport int
@@ -102,7 +100,7 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 		}
 	}
 
-	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) && os.Getenv("VAULT_SEAL_REWRAP_SAFETY") != "disable" {
 		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 

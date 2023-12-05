@@ -18,6 +18,7 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -27,7 +28,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -42,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -59,6 +59,7 @@ const (
 	// flagNameProxyExitAfterAuth is used as a Proxy specific flag to indicate
 	// that proxy should exit after a single successful auth
 	flagNameProxyExitAfterAuth = "exit-after-auth"
+	nameProxy                  = "proxy"
 )
 
 type ProxyCommand struct {
@@ -1040,15 +1041,17 @@ func (c *ProxyCommand) newLogger() (log.InterceptLogger, error) {
 		return nil, errors
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "proxy",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameProxy)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameProxy
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
