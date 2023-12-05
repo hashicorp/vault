@@ -17,6 +17,10 @@
             <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}
             </LinkTo>
+          {{else if breadcrumb.query}}
+            <LinkTo @route={{breadcrumb.route}} @query={{breadcrumb.query}} data-test-breadcrumb={{breadcrumb.label}}>
+              {{breadcrumb.label}}
+            </LinkTo>
           {{else}}
             <LinkTo @route={{breadcrumb.route}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}

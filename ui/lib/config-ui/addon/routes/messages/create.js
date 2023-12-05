@@ -12,4 +12,12 @@ export default class MessagesCreateRoute extends Route {
   model() {
     return this.store.createRecord('config-ui/message');
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs = [
+      { label: 'messages', route: 'messages.index', query: { authenticated: false } },
+      { label: 'create' },
+    ];
+  }
 }

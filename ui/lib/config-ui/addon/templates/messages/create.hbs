@@ -3,9 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-xl">
-  Create message
-</Hds::Text::Display>
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-m">
+      Create message
+    </Hds::Text::Display>
+  </p.levelLeft>
+</PageHeader>
+
 <form>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{#each this.model.formFields as |attr|}}
@@ -14,7 +22,6 @@
           <G.Legend>Where should we display this message?</G.Legend>
           <G.Radio::Field
             @id="authenticated"
-            checked
             @value={{this.authenticated}}
             {{on "change" (fn (mut this.authenticated))}}
             as |F|
@@ -35,7 +42,7 @@
       {{else if (eq attr.name "type")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="message-display-location" class="has-bottom-margin-s" as |G|>
           <G.Legend>Type</G.Legend>
-          <G.Radio::Field @id="modal-display-type" checked @value={{this.type}} {{on "change" (fn (mut this.type))}} as |F|>
+          <G.Radio::Field @id="modal-display-type" @value={{this.type}} {{on "change" (fn (mut this.type))}} as |F|>
             <F.Label>Alert message</F.Label>
             <F.HelperText>A banner that appears on the top of every page to display brief but high-signal messages like an
               update or system alert.</F.HelperText>
