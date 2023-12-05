@@ -41,8 +41,9 @@ flags](/vault/docs/commands) included on all commands.
 - `-client-id` `(string: "")` - Client ID belonging to the service principal credential generated in the HCP Portal.
 If provided along with a Secret ID, a non-interactive authentication method will take place.
 
-- `-secret-id` `(string: "")` - Secret ID belonging to the service principal credential generated in the HCP Portal.
-If provided along with a Client ID, a non-interactive authentication method will take place.
+- `-secret-id` `(string: "")` - Secret ID belonging to a service principal
+  credential previously generated in the HCP Portal. **Required for
+  non-interactive authentication**.
 
 - `-organization-id` `(string: "")` - Optional ID of the desired HCP
   organization. If `organization-id` is empty and the user is associated with
