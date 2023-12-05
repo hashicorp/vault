@@ -596,6 +596,10 @@
         "path": "commands/events"
       },
       {
+        "title": "<code>hcp</code>",
+        "path": "commands/hcp"
+      },
+      {
         "title": "<code>kv</code>",
         "routes": [
           {
@@ -993,10 +997,6 @@
       {
         "title": "Token Helpers",
         "path": "commands/token-helper"
-      },
-      {
-        "title": "<code>hcp</code>",
-        "path": "commands/hcp"
       }
     ]
   },
