@@ -137,6 +137,8 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
 
   test('does not allow access to replication pages', async function (assert) {
     await authPage.login();
+    assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
+
     await visit(`/vault/replication/dr`);
 
     assert.strictEqual(
