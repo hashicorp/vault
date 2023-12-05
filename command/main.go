@@ -15,10 +15,10 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	colorable "github.com/mattn/go-colorable"
-	"github.com/mitchellh/cli"
 )
 
 type VaultUI struct {

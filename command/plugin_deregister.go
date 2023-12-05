@@ -4,12 +4,14 @@
 package command
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -83,18 +85,16 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 
 	var pluginNameRaw, pluginTypeRaw string
 	args = f.Args()
-	switch len(args) {
-	case 0:
-		c.UI.Error("Not enough arguments (expected 1, or 2, got 0)")
+	positionalArgsCount := len(args)
+	switch positionalArgsCount {
+	case 0, 1:
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
-	case 1:
-		pluginTypeRaw = "unknown"
-		pluginNameRaw = args[0]
 	case 2:
 		pluginTypeRaw = args[0]
 		pluginNameRaw = args[1]
 	default:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, or 2, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 2, got %d)", positionalArgsCount))
 		return 1
 	}
 
@@ -118,7 +118,33 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		}
 	}
 
-	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
+	// The deregister endpoint returns 200 if the plugin doesn't exist, so first
+	// try fetching the plugin to help improve info printed to the user.
+	// 404 => Return early with a descriptive message.
+	// Other error => Continue attempting to deregister the plugin anyway.
+	// Plugin exists but is builtin => Error early.
+	// Otherwise => If deregister succeeds, we can report that the plugin really
+	//              was deregistered (and not just already absent).
+	var pluginExists bool
+	if info, err := client.Sys().GetPluginWithContext(context.Background(), &api.GetPluginInput{
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: c.flagPluginVersion,
+	}); err != nil {
+		if respErr, ok := err.(*api.ResponseError); ok && respErr.StatusCode == http.StatusNotFound {
+			c.UI.Output(fmt.Sprintf("Plugin %q (type: %q, version %q) does not exist in the catalog", pluginName, pluginType, c.flagPluginVersion))
+			return 0
+		}
+		// Best-effort check, continue trying to deregister.
+	} else if info != nil {
+		if info.Builtin {
+			c.UI.Error(fmt.Sprintf("Plugin %q (type: %q) is a builtin plugin and cannot be deregistered", pluginName, pluginType))
+			return 2
+		}
+		pluginExists = true
+	}
+
+	if err := client.Sys().DeregisterPluginWithContext(context.Background(), &api.DeregisterPluginInput{
 		Name:    pluginName,
 		Type:    pluginType,
 		Version: c.flagPluginVersion,
@@ -127,6 +153,10 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Deregistered plugin (if it was registered): %s", pluginName))
+	if pluginExists {
+		c.UI.Output(fmt.Sprintf("Success! Deregistered %s plugin: %s", pluginType, pluginName))
+	} else {
+		c.UI.Output(fmt.Sprintf("Success! Deregistered %s plugin (if it was registered): %s", pluginType, pluginName))
+	}
 	return 0
 }

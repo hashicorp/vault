@@ -2143,6 +2143,10 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeInt64,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
 			},
+			"rootless": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -2210,6 +2214,11 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 							"memory_bytes": {
 								Type:        framework.TypeInt64,
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+								Required:    true,
+							},
+							"rootless": {
+								Type:        framework.TypeBool,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
 								Required:    true,
 							},
 						},
@@ -2632,6 +2641,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 								"glob_paths": {
 									Type:     framework.TypeMap,
 									Required: false,
+								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
 								},
 							},
 						}},
