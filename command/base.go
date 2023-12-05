@@ -17,14 +17,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
-
-	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 const (

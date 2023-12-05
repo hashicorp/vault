@@ -68,11 +68,10 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	csr "github.com/hashicorp/vault/serviceregistration/consul"
 	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
-
-	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 )
 
 const (
