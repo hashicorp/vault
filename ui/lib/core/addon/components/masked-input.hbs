@@ -40,7 +40,7 @@
       @isIconOnly={{true}}
       @textToCopy={{@value}}
       class="transparent has-padding-xxs"
-      data-test-copy-button
+      data-test-copy-button={{or @value true}}
     />
   {{/if}}
   {{#if @allowDownload}}
