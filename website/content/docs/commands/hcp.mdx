@@ -11,13 +11,15 @@ description: >-
 The `hcp` command groups subcommands for authentication of users or machines to HCP using
 either provided arguments or retrieved HCP token through browser login.
 
-A successful authentication results in an HCP token and an HCP Vault address being
-locally cached.
+By default, the `hcp` command uses interactive authentication that requires
+users to log into the HashiCorp Cloud Platform with a browser.
 
-The default authentication method is an interactive one, redirecting users to the HCP login browser.
-If a non-interactive option is supplied, it can be used if provided with a service principal credential
-generated through the HCP portal with the necessary capabilities to access the organization, project, and
-HCP Vault cluster chosen.
+Non-interactive login requires a service principal credential that was
+previously generated through the HCP portal. The service principal must have
+access to the requested organization, project, and HCP Vault cluster.
+
+If authentication succeeds, the Vault CLI saves the returned HCP token and HCP
+Vault address in the local cache.
 
 ## Examples
 
