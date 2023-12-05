@@ -7,7 +7,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "app.terraform.io/hashicorp-qti/enos"
-      version = ">= 0.4.0"
+      version = ">= 0.4.8"
     }
   }
 }
