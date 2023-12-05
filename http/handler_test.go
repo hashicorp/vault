@@ -4,6 +4,7 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"net/textproto"
 	"net/url"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -21,9 +23,11 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHandler_parseMFAHandler(t *testing.T) {
@@ -886,4 +890,60 @@ func TestHandler_Parse_Form(t *testing.T) {
 	if diff := deep.Equal(expected, apiResp.Data); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+// TestHandler_MaxRequestSize verifies that a request larger than the
+// MaxRequestSize fails
+func TestHandler_MaxRequestSize(t *testing.T) {
+	t.Parallel()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{
+				MaxRequestSize: 1024,
+			},
+		},
+		HandlerFunc: Handler,
+		NumCores:    1,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	_, err := client.KVv2("secret").Put(context.Background(), "foo", map[string]interface{}{
+		"bar": strings.Repeat("a", 1025),
+	})
+
+	require.ErrorContains(t, err, "error parsing JSON")
+}
+
+// TestHandler_MaxRequestSize_Memory sets the max request size to 1024 bytes,
+// and creates a 1MB request. The test verifies that less than 1MB of memory is
+// allocated when the request is sent. This test shouldn't be run in parallel,
+// because it modifies GOMAXPROCS
+func TestHandler_MaxRequestSize_Memory(t *testing.T) {
+	ln, addr := TestListener(t)
+	core, _, token := vault.TestCoreUnsealed(t)
+	TestServerWithListenerAndProperties(t, ln, addr, core, &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			Address:        addr,
+			MaxRequestSize: 1024,
+		},
+	})
+	defer ln.Close()
+
+	data := bytes.Repeat([]byte{0x1}, 1024*1024)
+
+	req, err := http.NewRequest("POST", addr+"/v1/sys/unseal", bytes.NewReader(data))
+	require.NoError(t, err)
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
+	var start, end runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&start)
+	client.Do(req)
+	runtime.ReadMemStats(&end)
+	require.Less(t, end.TotalAlloc-start.TotalAlloc, uint64(1024*1024))
 }

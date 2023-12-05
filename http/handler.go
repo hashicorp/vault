@@ -229,12 +229,13 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
 	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
+	wrappedHandler := wrapMaxRequestSizeHandler(genericWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
-	printablePathCheckHandler := genericWrappedHandler
+	printablePathCheckHandler := wrappedHandler
 	if !props.DisablePrintableCheck {
-		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(genericWrappedHandler, nil)
+		printablePathCheckHandler = cleanhttp.PrintablePathCheckHandler(wrappedHandler, nil)
 	}
 
 	return printablePathCheckHandler
@@ -313,18 +314,12 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 // are performed.
 func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerProperties) http.Handler {
 	var maxRequestDuration time.Duration
-	var maxRequestSize int64
 	if props.ListenerConfig != nil {
 		maxRequestDuration = props.ListenerConfig.MaxRequestDuration
-		maxRequestSize = props.ListenerConfig.MaxRequestSize
 	}
 	if maxRequestDuration == 0 {
 		maxRequestDuration = vault.DefaultMaxRequestDuration
 	}
-	if maxRequestSize == 0 {
-		maxRequestSize = DefaultMaxRequestSize
-	}
-
 	// Swallow this error since we don't want to pollute the logs and we also don't want to
 	// return an HTTP error here. This information is best effort.
 	hostname, _ := os.Hostname()
@@ -357,11 +352,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			ctx, cancelFunc = context.WithCancel(ctx)
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
-		}
-		// if maxRequestSize < 0, no need to set context value
-		// Add a size limiter if desired
-		if maxRequestSize > 0 {
-			ctx = context.WithValue(ctx, "max_request_size", maxRequestSize)
 		}
 		ctx = context.WithValue(ctx, "original_request_path", r.URL.Path)
 		r = r.WithContext(ctx)
@@ -706,25 +696,6 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
 	reader := r.Body
-	ctx := r.Context()
-	maxRequestSize := ctx.Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			// MaxBytesReader won't do all the internal stuff it must unless it's
-			// given a ResponseWriter that implements the internal http interface
-			// requestTooLarger.  So we let it have access to the underlying
-			// ResponseWriter.
-			inw := w
-			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
-				inw = myw.Wrapped()
-			}
-			reader = http.MaxBytesReader(inw, r.Body, max)
-		}
-	}
 	var origBody io.ReadWriter
 	if perfStandby {
 		// Since we're checking PerfStandby here we key on origBody being nil
@@ -746,16 +717,6 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 //
 // A nil map will be returned if the format is empty or invalid.
 func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
-	maxRequestSize := r.Context().Value("max_request_size")
-	if maxRequestSize != nil {
-		max, ok := maxRequestSize.(int64)
-		if !ok {
-			return nil, errors.New("could not parse max_request_size from request context")
-		}
-		if max > 0 {
-			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
-		}
-	}
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
