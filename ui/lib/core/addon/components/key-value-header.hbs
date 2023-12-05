@@ -5,7 +5,6 @@
 
 <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
   <ul>
-    {{yield}}
     {{#each this.secretPath as |path index|}}
       <li class={{if (is-active-route path.path path.model isExact=true) "is-active"}}>
         <span class="sep">&#x0002f;</span>
