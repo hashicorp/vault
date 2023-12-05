@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { settled, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
@@ -24,7 +24,7 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
   setupMirage(hooks);
 
   hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'mfaConfig';
+    ENV['ember-cli-mirage'].handler = 'reducedDisclosure';
   });
   hooks.beforeEach(function () {
     this.versionSvc = this.owner.lookup('service:version');
