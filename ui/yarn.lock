@@ -535,24 +535,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/helper-create-class-features-plugin@npm:^7.19.0":
-  version: 7.19.0
-  resolution: "@babel/helper-create-class-features-plugin@npm:7.19.0"
-  dependencies:
-    "@babel/helper-annotate-as-pure": ^7.18.6
-    "@babel/helper-environment-visitor": ^7.18.9
-    "@babel/helper-function-name": ^7.19.0
-    "@babel/helper-member-expression-to-functions": ^7.18.9
-    "@babel/helper-optimise-call-expression": ^7.18.6
-    "@babel/helper-replace-supers": ^7.18.9
-    "@babel/helper-split-export-declaration": ^7.18.6
-  peerDependencies:
-    "@babel/core": ^7.0.0
-  checksum: f0c6fb77b6f113d70f308e7093f60dd465b697818badf5df0519d8dd12b6bfb1f4ad300b923207ce9f9c1c940ef58bff12ac4270c0863eadf9e303b7dd6d01b6
-  languageName: node
-  linkType: hard
-
-"@babel/helper-create-class-features-plugin@npm:^7.21.0, @babel/helper-create-class-features-plugin@npm:^7.22.15, @babel/helper-create-class-features-plugin@npm:^7.23.5":
+"@babel/helper-create-class-features-plugin@npm:^7.18.6, @babel/helper-create-class-features-plugin@npm:^7.21.0, @babel/helper-create-class-features-plugin@npm:^7.22.15, @babel/helper-create-class-features-plugin@npm:^7.23.5":
   version: 7.23.5
   resolution: "@babel/helper-create-class-features-plugin@npm:7.23.5"
   dependencies:
@@ -568,6 +551,23 @@ __metadata:
   peerDependencies:
     "@babel/core": ^7.0.0
   checksum: fe7c6c0baca1838bba76ac1330df47b661d932354115ea9e2ea65b179f80b717987d3c3da7e1525fd648e5f2d86c620efc959cabda4d7562b125a27c3ac780d0
+  languageName: node
+  linkType: hard
+
+"@babel/helper-create-class-features-plugin@npm:^7.19.0":
+  version: 7.19.0
+  resolution: "@babel/helper-create-class-features-plugin@npm:7.19.0"
+  dependencies:
+    "@babel/helper-annotate-as-pure": ^7.18.6
+    "@babel/helper-environment-visitor": ^7.18.9
+    "@babel/helper-function-name": ^7.19.0
+    "@babel/helper-member-expression-to-functions": ^7.18.9
+    "@babel/helper-optimise-call-expression": ^7.18.6
+    "@babel/helper-replace-supers": ^7.18.9
+    "@babel/helper-split-export-declaration": ^7.18.6
+  peerDependencies:
+    "@babel/core": ^7.0.0
+  checksum: f0c6fb77b6f113d70f308e7093f60dd465b697818badf5df0519d8dd12b6bfb1f4ad300b923207ce9f9c1c940ef58bff12ac4270c0863eadf9e303b7dd6d01b6
   languageName: node
   linkType: hard
 
@@ -2313,6 +2313,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@babel/plugin-proposal-private-methods@npm:^7.16.7":
+  version: 7.18.6
+  resolution: "@babel/plugin-proposal-private-methods@npm:7.18.6"
+  dependencies:
+    "@babel/helper-create-class-features-plugin": ^7.18.6
+    "@babel/helper-plugin-utils": ^7.18.6
+  peerDependencies:
+    "@babel/core": ^7.0.0-0
+  checksum: 22d8502ee96bca99ad2c8393e8493e2b8d4507576dd054490fd8201a36824373440106f5b098b6d821b026c7e72b0424ff4aeca69ed5f42e48f029d3a156d5ad
+  languageName: node
+  linkType: hard
+
 "@babel/plugin-proposal-private-methods@npm:^7.17.12":
   version: 7.17.12
   resolution: "@babel/plugin-proposal-private-methods@npm:7.17.12"
@@ -2956,7 +2968,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-class-static-block@npm:^7.22.11, @babel/plugin-transform-class-static-block@npm:^7.23.4":
+"@babel/plugin-transform-class-static-block@npm:^7.16.7, @babel/plugin-transform-class-static-block@npm:^7.22.11, @babel/plugin-transform-class-static-block@npm:^7.23.4":
   version: 7.23.4
   resolution: "@babel/plugin-transform-class-static-block@npm:7.23.4"
   dependencies:
@@ -13590,7 +13602,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:2.6.3, ember-auto-import@npm:^2.4.2, ember-auto-import@npm:^2.4.3, ember-auto-import@npm:^2.5.0, ember-auto-import@npm:^2.6.3":
+"ember-auto-import@npm:2.6.3, ember-auto-import@npm:^2.4.3, ember-auto-import@npm:^2.5.0, ember-auto-import@npm:^2.6.3":
   version: 2.6.3
   resolution: "ember-auto-import@npm:2.6.3"
   dependencies:
@@ -13738,6 +13750,48 @@ __metadata:
     typescript-memoize: ^1.0.0-alpha.3
     walk-sync: ^3.0.0
   checksum: f7c4e4bab62b124c03955b8b382d6bf9c170c1ad5605bb019cbb1baf63065b482b8767a2e4922682fbc54c701f0296601e7ed50965bd4c741dab6cfff43c6de5
+  languageName: node
+  linkType: hard
+
+"ember-auto-import@npm:^2.6.0":
+  version: 2.7.0
+  resolution: "ember-auto-import@npm:2.7.0"
+  dependencies:
+    "@babel/core": ^7.16.7
+    "@babel/plugin-proposal-class-properties": ^7.16.7
+    "@babel/plugin-proposal-decorators": ^7.16.7
+    "@babel/plugin-proposal-private-methods": ^7.16.7
+    "@babel/plugin-transform-class-static-block": ^7.16.7
+    "@babel/preset-env": ^7.16.7
+    "@embroider/macros": ^1.0.0
+    "@embroider/shared-internals": ^2.0.0
+    babel-loader: ^8.0.6
+    babel-plugin-ember-modules-api-polyfill: ^3.5.0
+    babel-plugin-ember-template-compilation: ^2.0.1
+    babel-plugin-htmlbars-inline-precompile: ^5.2.1
+    babel-plugin-syntax-dynamic-import: ^6.18.0
+    broccoli-debug: ^0.6.4
+    broccoli-funnel: ^3.0.8
+    broccoli-merge-trees: ^4.2.0
+    broccoli-plugin: ^4.0.0
+    broccoli-source: ^3.0.0
+    css-loader: ^5.2.0
+    debug: ^4.3.1
+    fs-extra: ^10.0.0
+    fs-tree-diff: ^2.0.0
+    handlebars: ^4.3.1
+    js-string-escape: ^1.0.1
+    lodash: ^4.17.19
+    mini-css-extract-plugin: ^2.5.2
+    minimatch: ^3.0.0
+    parse5: ^6.0.1
+    resolve: ^1.20.0
+    resolve-package-path: ^4.0.3
+    semver: ^7.3.4
+    style-loader: ^2.0.0
+    typescript-memoize: ^1.0.0-alpha.3
+    walk-sync: ^3.0.0
+  checksum: abf483c7c2cd61d35fd26f779dd6b818bb83775bbab1834ab80cfbe396d9b753dfab5fdc0882b91467321dd23575419522e9e8b53e37e7149d4561dd753fd2d6
   languageName: node
   linkType: hard
 
@@ -15025,23 +15079,24 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-qunit@npm:6.0.0":
-  version: 6.0.0
-  resolution: "ember-qunit@npm:6.0.0"
+"ember-qunit@npm:^6.0.2":
+  version: 6.2.0
+  resolution: "ember-qunit@npm:6.2.0"
   dependencies:
     broccoli-funnel: ^3.0.8
     broccoli-merge-trees: ^3.0.2
     common-tags: ^1.8.0
-    ember-auto-import: ^2.4.2
-    ember-cli-babel: ^7.26.6
+    ember-auto-import: ^2.6.0
+    ember-cli-babel: ^7.26.11
     ember-cli-test-loader: ^3.0.0
     resolve-package-path: ^4.0.3
     silent-error: ^1.1.1
-    validate-peer-dependencies: ^2.1.0
+    validate-peer-dependencies: ^2.2.0
   peerDependencies:
-    "@ember/test-helpers": ^2.4.0
+    "@ember/test-helpers": ^2.9.3
+    ember-source: ">=3.28"
     qunit: ^2.13.0
-  checksum: 74c4c9316ff509a195e7961bae9aa1da6e6260d1a5e0ce153dff76302d23f974fa652dfc9d484fbe78d64623ba0d837b68d437d56745531118b88b950c6a5608
+  checksum: c9058d02d78efe06887ee6993908d8f45592c4369e0f72a57045f5ae27df94ea7497866bdf484f12eaddfac23ae4051a259bae0280a70c0dd50a8260eae3126c
   languageName: node
   linkType: hard
 
@@ -27167,7 +27222,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"validate-peer-dependencies@npm:^2.1.0":
+"validate-peer-dependencies@npm:^2.2.0":
   version: 2.2.0
   resolution: "validate-peer-dependencies@npm:2.2.0"
   dependencies:
@@ -27289,7 +27344,7 @@ __metadata:
     ember-page-title: ^7.0.0
     ember-power-select: 6.0.1
     ember-qrcode-shim: ^0.4.0
-    ember-qunit: 6.0.0
+    ember-qunit: ^6.0.2
     ember-resolver: ^10.0.0
     ember-responsive: 5.0.0
     ember-router-helpers: ^0.4.0
