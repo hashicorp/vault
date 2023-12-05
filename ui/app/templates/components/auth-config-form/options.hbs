@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (perform this.saveModel) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{this.model}} @errorMessage={{this.model.errorMessage}} />

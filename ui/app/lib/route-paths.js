@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const INIT = 'vault.cluster.init';
 export const UNSEAL = 'vault.cluster.unseal';
 export const AUTH = 'vault.cluster.auth';

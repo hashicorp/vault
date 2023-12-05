@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   caChain: '[data-test-value-div="CA chain"] [data-test-masked-input]',
   certificate: '[data-test-value-div="Certificate"] [data-test-masked-input]',

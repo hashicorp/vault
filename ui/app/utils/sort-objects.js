@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export default function sortObjects(array, key) {
   if (Array.isArray(array) && array?.every((e) => e[key] && typeof e[key] === 'string')) {
     return array.sort((a, b) => {

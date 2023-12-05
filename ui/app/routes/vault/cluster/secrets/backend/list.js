@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { set } from '@ember/object';
 import { hash, all } from 'rsvp';
 import Route from '@ember/routing/route';

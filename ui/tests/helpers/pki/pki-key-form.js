@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   keyCreateButton: '[data-test-pki-key-save]',
   keyCancelButton: '[data-test-pki-key-cancel]',

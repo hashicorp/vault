@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 //* lookup OIDs: http://oid-info.com/basic-search.htm
 
 export const SUBJECT_OIDs = {

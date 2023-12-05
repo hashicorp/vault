@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create, visitable, collection, clickable, text } from 'ember-cli-page-object';
 import uiPanel from 'vault/tests/pages/components/console/ui-panel';
 

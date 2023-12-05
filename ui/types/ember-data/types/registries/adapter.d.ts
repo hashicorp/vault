@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
 

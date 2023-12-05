@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EditBase from './secret-edit';
 import utils from 'vault/lib/key-utils';
 

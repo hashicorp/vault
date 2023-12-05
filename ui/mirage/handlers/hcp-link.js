@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const statuses = [
   'connected',
   'disconnected since 2022-09-21T11:25:02.196835-07:00; error: unable to establish a connection with HCP',

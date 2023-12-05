@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
 import { filterBy } from '@ember/object/computed';

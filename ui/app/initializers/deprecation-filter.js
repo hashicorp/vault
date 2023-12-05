@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { registerDeprecationHandler } from '@ember/debug';
 
 // https://guides.emberjs.com/release/configuring-ember/handling-deprecations/#toc_filtering-deprecations

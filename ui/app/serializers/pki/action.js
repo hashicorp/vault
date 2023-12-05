@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { underscore } from '@ember/string';
 import { keyParamsByType } from 'pki/utils/action-params';
 import ApplicationSerializer from '../application';
