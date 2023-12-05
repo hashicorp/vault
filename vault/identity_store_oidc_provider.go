@@ -2603,7 +2603,8 @@ func (i *IdentityStore) ensureDefaultKey(ctx context.Context, storage logical.St
 }
 
 // lazyGenerateDefaultKey generates key material for the OIDC default key's current and
-// next key if it hasn't already been generated.
+// next key if it hasn't already been generated. Must be called with the oidcLock write
+// lock held.
 func (i *IdentityStore) lazyGenerateDefaultKey(ctx context.Context, storage logical.Storage) error {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
