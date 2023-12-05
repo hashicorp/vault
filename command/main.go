@@ -19,7 +19,7 @@ import (
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
+	"github.com/mattn/go-colorable"
 )
 
 type VaultUI struct {
