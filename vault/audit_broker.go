@@ -216,7 +216,22 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			e.Data = in
 
-			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			// In cases where we are trying to audit the request, we detach
+			// ourselves from the original context (keeping only the namespace).
+			// This is so that we get a fair run at writing audit entries if Vault
+			// Took up a lot of time handling the request before audit (request)
+			// is triggered. Pipeline nodes may check for a cancelled context and
+			// refuse to process the nodes further.
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
+				return retErr.ErrorOrNil()
+			}
+
+			auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer auditCancel()
+			auditContext = namespace.ContextWithNamespace(auditContext, ns)
+			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
 				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
