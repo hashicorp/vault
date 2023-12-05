@@ -6,8 +6,8 @@ package command
 import (
 	"testing"
 
+	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
-	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/require"
 )
 

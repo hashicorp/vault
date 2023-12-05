@@ -597,7 +597,20 @@
       },
       {
         "title": "<code>hcp</code>",
-        "path": "commands/hcp"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "commands/hcp"
+          },
+          {
+            "title": "<code>connect</code>",
+            "path": "commands/hcp/connect"
+          },
+          {
+            "title": "<code>disconnect</code>",
+            "path": "commands/hcp/disconnect"
+          }
+        ]
       },
       {
         "title": "<code>kv</code>",
