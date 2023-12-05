@@ -1640,6 +1640,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RollbackPeriod = base.RollbackPeriod
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
+		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1653,6 +1654,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	if coreConfig.ClusterHeartbeatInterval == 0 {
 		// Set this lower so that state populates quickly to standby nodes
 		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
+	}
+
+	if coreConfig.PeriodicLeaderRefreshInterval == 0 {
+		// Set this lower so that perf standby nodes become stable more quickly
+		coreConfig.PeriodicLeaderRefreshInterval = 250 * time.Millisecond
 	}
 
 	if coreConfig.RawConfig == nil {

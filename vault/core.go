@@ -699,8 +699,9 @@ type Core struct {
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 
-	echoDuration              *uberAtomic.Duration
-	activeNodeClockSkewMillis *uberAtomic.Int64
+	echoDuration                  *uberAtomic.Duration
+	activeNodeClockSkewMillis     *uberAtomic.Int64
+	periodicLeaderRefreshInterval time.Duration
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -875,6 +876,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
+
+	PeriodicLeaderRefreshInterval time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -958,6 +961,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
+
+	if conf.PeriodicLeaderRefreshInterval == 0 {
+		conf.PeriodicLeaderRefreshInterval = leaderCheckInterval
 	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
@@ -1058,6 +1065,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		detectDeadlocks:                detectDeadlocks,
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
