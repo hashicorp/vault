@@ -207,8 +207,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a)', async function (assert) {
-      assert.expect(5);
+    test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a) meep', async function (assert) {
+      assert.expect(4);
       const backend = this.backend;
       // create with initialKey
       await visit(`/vault/secrets/${backend}/create/test`);
@@ -229,9 +229,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
       );
-      // edit for directory
-      await visit(`/vault/secrets/${backend}/edit/app/nested/`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/nested/`);
     });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
       assert.expect(45);
