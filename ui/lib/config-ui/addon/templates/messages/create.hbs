@@ -3,5 +3,111 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-Messages Create
-{{outlet}}
+<Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-xl">
+  Create message
+</Hds::Text::Display>
+<form>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    {{#each this.model.formFields as |attr|}}
+      {{#if (eq attr.name "authenticated")}}
+        <Hds::Form::Radio::Group @layout="vertical" @name="message-display-location" class="has-bottom-margin-s" as |G|>
+          <G.Legend>Where should we display this message?</G.Legend>
+          <G.Radio::Field
+            @id="authenticated"
+            checked
+            @value={{this.authenticated}}
+            {{on "change" (fn (mut this.authenticated))}}
+            as |F|
+          >
+            <F.Label>After the user logs in</F.Label>
+            <F.HelperText>Display to users after they have successfully logged in to Vault. </F.HelperText>
+          </G.Radio::Field>
+          <G.Radio::Field
+            @id="unauthenticated"
+            @value={{this.authenticated}}
+            {{on "change" (fn (mut this.authenticated))}}
+            as |F|
+          >
+            <F.Label>On the login page</F.Label>
+            <F.HelperText>Display to users on the login page before they have authenticated.</F.HelperText>
+          </G.Radio::Field>
+        </Hds::Form::Radio::Group>
+      {{else if (eq attr.name "type")}}
+        <Hds::Form::Radio::Group @layout="vertical" @name="message-display-location" class="has-bottom-margin-s" as |G|>
+          <G.Legend>Type</G.Legend>
+          <G.Radio::Field @id="modal-display-type" checked @value={{this.type}} {{on "change" (fn (mut this.type))}} as |F|>
+            <F.Label>Alert message</F.Label>
+            <F.HelperText>A banner that appears on the top of every page to display brief but high-signal messages like an
+              update or system alert.</F.HelperText>
+          </G.Radio::Field>
+          <G.Radio::Field @id="banner-display-type" @value={{this.type}} {{on "change" (fn (mut this.type))}} as |F|>
+            <F.Label>Modal</F.Label>
+            <F.HelperText>A pop-up window used to bring immediate attention for important notifications or actions.</F.HelperText>
+          </G.Radio::Field>
+        </Hds::Form::Radio::Group>
+      {{else if (eq attr.name "link")}}
+        <div class="field has-bottom-margin-s">
+          <label for="link" class="is-label">Link</label>
+          <div class="control is-flex-between">
+            <Input
+              @type="text"
+              @value={{this.linkTitle}}
+              id="link-title"
+              class="input"
+              {{on "input" (fn (mut this.linkTitle))}}
+              data-test-link="title"
+            />
+            <Input
+              @type="text"
+              @value={{this.linkHref}}
+              id="link-href"
+              class="input"
+              {{on "input" (fn (mut this.linkHref))}}
+              data-test-link="href"
+            />
+          </div>
+        </div>
+      {{else if (eq attr.name "startTime")}}
+        <Hds::Form::TextInput::Field @type="datetime-local" as |F|>
+          <F.Label>Message starts</F.Label>
+        </Hds::Form::TextInput::Field>
+      {{else if (eq attr.name "endTime")}}
+        <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-m has-bottom-margin-xl" as |G|>
+          <G.Legend>Message expires</G.Legend>
+          <G.Radio::Field
+            @id="never"
+            checked
+            @value={{this.messageEndTime}}
+            {{on "change" (fn (mut this.messageEndTime))}}
+            as |F|
+          >
+            <F.Label>Never</F.Label>
+            <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
+          </G.Radio::Field>
+          <G.Radio::Field
+            @id="specific-date"
+            @value={{this.messageEndTime}}
+            {{on "change" (fn (mut this.messageEndTime))}}
+            as |F|
+          >
+            <F.Label>Specific date</F.Label>
+            <F.HelperText>
+              This message will expire at midnight (local timezone) at the specific date.
+              <Hds::Form::TextInput::Base class="is-block" @type="datetime-local" />
+            </F.HelperText>
+          </G.Radio::Field>
+        </Hds::Form::Radio::Group>
+      {{else}}
+        <FormField class="has-bottom-margin-s" data-test-field={{true}} @attr={{attr}} @model={{this.model}} />
+      {{/if}}
+    {{/each}}
+
+    <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-s">
+      <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
+
+      <Hds::Button @text="Create message" type="submit" />
+
+      <Hds::Button @text="Cancel" @color="secondary" />
+    </Hds::ButtonSet>
+  </div>
+</form>

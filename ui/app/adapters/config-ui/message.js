@@ -26,4 +26,10 @@ export default class MessageAdapter extends ApplicationAdapter {
     const { id } = snapshot;
     return this.ajax(this.getCustomMessagesUrl(id), 'DELETE');
   }
+
+  createRecord(store, type, snapshot) {
+    return this.ajax(this.getCustomMessagesUrl(), 'POST', { data: this.serialize(snapshot) }).then((resp) => {
+      return resp;
+    });
+  }
 }

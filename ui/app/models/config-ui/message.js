@@ -7,13 +7,43 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { withModelValidations } from 'vault/decorators/model-validations';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
+const validations = {
+  name: [{ type: 'presence', message: 'Name is required.' }],
+};
+
+@withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])
+@withModelValidations(validations)
 export default class MessageModel extends Model {
   @attr('boolean') active;
-  @attr('string') type;
-  @attr('boolean') authenticated;
-  @attr('string') title;
-  @attr('string') message;
+  @attr('string', {
+    label: 'Type',
+    editType: 'radio',
+    subText: 'Display to users after they have successfully logged in to Vault.',
+    possibleValues: ['Alert banner', 'Modal'],
+  })
+  type;
+  @attr('boolean', {
+    label: 'Where should we display this message?',
+    editType: 'radio',
+    possibleValues: [true, false],
+  })
+  authenticated;
+  @attr('string', {
+    label: 'Title',
+    fieldValue: 'title',
+    editDisabled: true,
+  })
+  title;
+  @attr('string', {
+    label: 'Message',
+    fieldValue: 'message',
+    editType: 'textarea',
+    editDisabled: true,
+  })
+  message;
   @attr('object') link;
   @attr('string') startTime;
   @attr('string') endTime;
