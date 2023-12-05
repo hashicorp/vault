@@ -151,7 +151,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('it renders enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     await render(
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
@@ -166,7 +166,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('it does not render enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
+    this.version.type = 'community';
     await render(
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }

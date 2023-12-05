@@ -207,6 +207,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
+    test('is redirects to nested secret using old non-engine url (a)', async function (assert) {
+      // Reported bug, backported fix https://github.com/hashicorp/vault/pull/24281
+      assert.expect(1);
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/list/app/`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+    });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
       assert.expect(45);
       const backend = this.backend;

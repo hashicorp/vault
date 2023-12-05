@@ -10,6 +10,8 @@ import (
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
+// NewTestSeal creates a new seal for testing. If you want to use the same seal multiple times, such as for
+// a cluster, use NewTestSealFunc instead.
 func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	t.Helper()
 	opts = seal.NewTestSealOpts(opts)
@@ -49,4 +51,28 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		access, _ := seal.NewTestSeal(opts)
 		return NewAutoSeal(access)
 	}
+}
+
+// NewTestSealFunc returns a function that creates seals. All such seals will have TestWrappers that
+// share the same secret, thus making them equivalent.
+func NewTestSealFunc(t testing.T, opts *seal.TestSealOpts) func() Seal {
+	testSeal := NewTestSeal(t, opts)
+
+	return func() Seal {
+		return cloneTestSeal(t, testSeal)
+	}
+}
+
+// CloneTestSeal creates a new test seal that shares the same seal wrappers as `testSeal`.
+func cloneTestSeal(t testing.T, testSeal Seal) Seal {
+	logger := corehelpers.NewTestLogger(t).Named("sealAccess")
+
+	access, err := seal.NewAccessFromSealWrappers(logger, testSeal.GetAccess().Generation(), testSeal.GetAccess().GetSealGenerationInfo().IsRewrapped(), testSeal.GetAccess().GetAllSealWrappersByPriority())
+	if err != nil {
+		t.Fatal("error cloning seal %v", err)
+	}
+	if testSeal.StoredKeysSupported() == seal.StoredKeysNotSupported {
+		return NewDefaultSeal(access)
+	}
+	return NewAutoSeal(access)
 }

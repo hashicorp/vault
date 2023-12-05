@@ -2143,6 +2143,10 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeInt64,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
 			},
+			"rootless": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -2210,6 +2214,11 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 							"memory_bytes": {
 								Type:        framework.TypeInt64,
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+								Required:    true,
+							},
+							"rootless": {
+								Type:        framework.TypeBool,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
 								Required:    true,
 							},
 						},
@@ -2632,6 +2641,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 								"glob_paths": {
 									Type:     framework.TypeMap,
 									Required: false,
+								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
 								},
 							},
 						}},
@@ -4427,6 +4440,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"delegated_auth_accessors": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_delegated_auth_accessors"][0]),
+				},
 				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
@@ -4475,6 +4492,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"allowed_managed_keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+									Required:    false,
+								},
+								"delegated_auth_accessors": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: strings.TrimSpace(sysHelp["delegated_auth_accessors"][0]),
 									Required:    false,
 								},
 								"allowed_response_headers": {

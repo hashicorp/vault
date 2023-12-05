@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginInfoCommand(tb testing.TB) (*cli.MockUi, *PluginInfoCommand) {
@@ -34,6 +34,12 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		out  string
 		code int
 	}{
+		{
+			"not_enough_args",
+			[]string{"foo"},
+			"Not enough arguments",
+			1,
+		},
 		{
 			"too_many_args",
 			[]string{"foo", "bar", "fizz"},

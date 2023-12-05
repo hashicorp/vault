@@ -47,9 +47,11 @@ func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCore
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      typ,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -73,9 +75,11 @@ func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCl
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      typ,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -101,9 +105,11 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: 1,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeSecrets,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      consts.PluginTypeSecrets,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})

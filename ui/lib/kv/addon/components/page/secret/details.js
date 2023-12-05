@@ -35,11 +35,16 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
-  @tracked syncStatus; // array of association sync status info by destination
+  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.fetchSyncStatus.perform();
+    this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    if (this.originalSecret.lastIndexOf('{') > 0) {
+      // Dumb way to check if there's a nested object in the secret
+      this.secretDataIsAdvanced = true;
+    }
   }
 
   @action

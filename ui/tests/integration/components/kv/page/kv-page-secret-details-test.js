@@ -24,8 +24,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.backend = 'kv-engine';
     this.path = 'my-secret';
+    this.pathComplex = 'my-secret-object';
     this.version = 2;
     this.dataId = kvDataPath(this.backend, this.path);
+    this.dataIdComplex = kvDataPath(this.backend, this.pathComplex);
     this.metadataId = kvMetadataPath(this.backend, this.path);
 
     this.secretData = { foo: 'bar' };
@@ -41,6 +43,22 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       backend: this.backend,
       path: this.path,
     });
+    // nested secret
+    this.secretDataComplex = {
+      foo: {
+        bar: 'baz',
+      },
+    };
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.dataIdComplex,
+      secret_data: this.secretDataComplex,
+      created_time: '2023-08-20T02:12:17.379762Z',
+      custom_metadata: null,
+      deletion_time: '',
+      destroyed: false,
+      version: this.version,
+    });
 
     const metadata = this.server.create('kv-metadatum');
     metadata.id = this.metadataId;
@@ -51,6 +69,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
 
     this.metadata = this.store.peekRecord('kv/metadata', this.metadataId);
     this.secret = this.store.peekRecord('kv/data', this.dataId);
+    this.secretComplex = this.store.peekRecord('kv/data', this.dataIdComplex);
 
     // this is the route model, not an ember data model
     this.model = {
@@ -64,6 +83,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];
+    this.modelComplex = {
+      backend: this.backend,
+      path: this.pathComplex,
+      secret: this.secretComplex,
+      metadata: this.metadata,
+    };
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
@@ -99,6 +124,23 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert
       .dom(PAGE.detail.versionTimestamp)
       .includesText(`Version ${this.version} created`, 'renders version and time created');
+  });
+
+  test('it renders json view when secret is complex', async function (assert) {
+    assert.expect(3);
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.modelComplex.path}}
+        @secret={{this.modelComplex.secret}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+    assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 
   test('it renders deleted empty state', async function (assert) {
