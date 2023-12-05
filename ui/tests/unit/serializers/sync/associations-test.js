@@ -41,4 +41,47 @@ module('Unit | Serializer | sync | association', function (hooks) {
 
     assert.deepEqual(normalized, expected, 'lazy paginated data is extracted from payload');
   });
+
+  test('it should normalize response for fetchByDestinations request', async function (assert) {
+    const payload = {
+      data: {
+        associated_secrets: {
+          'foo/bar': {
+            mount: 'foo',
+            secret_name: 'bar',
+            sync_status: 'SYNCED',
+            updated_at: '2023-09-20T10:51:53.961861096-04:00',
+          },
+          'bar/baz': {
+            mount: 'bar',
+            secret_name: 'baz',
+            sync_status: 'UNSYNCED',
+            updated_at: '2023-11-30T14:51:53.961861096-04:00',
+          },
+        },
+        store_name: 'us-west-1',
+        store_type: 'aws-sm',
+      },
+    };
+    const expected = {
+      icon: 'aws-color',
+      name: 'us-west-1',
+      type: 'aws-sm',
+      associationCount: 2,
+      status: '1 Unsynced',
+      lastUpdated: new Date(payload.data.associated_secrets['bar/baz'].updated_at),
+    };
+    let normalized = this.serializer.normalizeFetchByDestinations(payload);
+
+    assert.deepEqual(normalized, expected, 'Response is normalized from fetchByDestinations request');
+
+    payload.data.associated_secrets['bar/baz'].sync_status = 'SYNCED';
+    normalized = this.serializer.normalizeFetchByDestinations(payload);
+
+    assert.strictEqual(
+      normalized.status,
+      'All synced',
+      'Correct status is set when all associations are synced'
+    );
+  });
 });

@@ -9,18 +9,17 @@ export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
   const records = schema.db.syncAssociations.where({ type, name });
 
-  if (!records.length) {
-    return new Response(404, {}, { errors: [] });
-  }
   return {
     data: {
-      associated_secrets: records.reduce((associations, association) => {
-        const key = `${association.mount}/${association.secret_name}`;
-        delete association.type;
-        delete association.name;
-        associations[key] = association;
-        return associations;
-      }, {}),
+      associated_secrets: records.length
+        ? records.reduce((associations, association) => {
+            const key = `${association.mount}/${association.secret_name}`;
+            delete association.type;
+            delete association.name;
+            associations[key] = association;
+            return associations;
+          }, {})
+        : {},
       store_name: name,
       store_type: type,
     },
@@ -116,6 +115,27 @@ export default function (server) {
     return new Response(204);
   });
   // associations
+  server.get('/sys/sync/associations', (schema) => {
+    const records = schema.db.syncAssociations.where({});
+    if (!records.length) {
+      return new Response(404, {}, { errors: [] });
+    }
+    // for now we only care about the total_associations value
+    return {
+      data: {
+        key_info: {},
+        keys: [],
+        total_associations: records.length,
+        total_secrets: records.reduce((secrets, association) => {
+          const secretPath = `${association.mount}/${association.secret_name}`;
+          if (!secrets.includes(secretPath)) {
+            secrets.push(secretPath);
+          }
+          return secrets;
+        }, []),
+      },
+    };
+  });
   server.get(`${uri}/associations`, (schema, req) => {
     return associationsResponse(schema, req);
   });

@@ -33,9 +33,12 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
     return transformedPayload;
   }
 
-  // uses name for id and spreads connection_details object into data
   _normalizePayload(payload, requestType) {
-    if (requestType !== 'query' && payload?.data) {
+    if (payload?.data) {
+      if (requestType === 'query') {
+        return this.extractLazyPaginatedData(payload);
+      }
+      // uses name for id and spreads connection_details object into data
       const { data } = payload;
       const connection_details = payload.data.connection_details || {};
       data.id = data.name;
