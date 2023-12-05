@@ -324,9 +324,8 @@ is required. Ignored for other types.`,
 		Type:    framework.TypeInt,
 		Default: 0,
 		Description: `The number of bits to use. Allowed values are
-0 (universal default); with rsa key_type: 2048 (default), 3072, or
-4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
-ed25519.`,
+0 (universal default); with rsa key_type: 2048 (default), 3072, 4096 or 8192;
+with ec key_type: 224, 256 (default), 384, or 521; ignored with ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: 0,
 		},
