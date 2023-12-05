@@ -311,7 +311,7 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 			//       checks for the parent certificate having the IsCA basic constraint set.
 			err := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
 			if err != nil {
-				return fmt.Errorf("server under test returned a non-self-signed certificate: %v", err)
+				return fmt.Errorf("server under test returned a non-self-signed certificate: %w", err)
 			}
 
 			if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {

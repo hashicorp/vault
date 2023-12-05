@@ -114,6 +114,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   test('it should show client count on enterprise w/ license', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.license = {
       autoloaded: {
         license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
@@ -142,6 +143,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   test('it should hide client count on enterprise w/o license ', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.isRootNamespace = true;
 
     await render(
@@ -168,6 +170,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   test('it should hide replication on enterprise not on root namespace', async function (assert) {
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     this.isRootNamespace = false;
     this.license = {
       autoloaded: {
@@ -217,6 +220,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     test('shows the learn more card on enterprise', async function (assert) {
       this.version = this.owner.lookup('service:version');
       this.version.version = '1.13.1+ent';
+      this.version.type = 'enterprise';
       this.version.features = [
         'Performance Replication',
         'DR Replication',
