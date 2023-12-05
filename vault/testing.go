@@ -1822,6 +1822,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	testCluster.opts = opts
 	testCluster.start(t)
+
+	if !coreConfig.DisablePerformanceStandby && numCores > 1 && constants.IsEnterprise {
+		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
+	}
 	return &testCluster
 }
 
