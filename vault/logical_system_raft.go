@@ -565,7 +565,8 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		if !ok {
 			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
 		}
-		if req.HTTPRequest == nil || req.HTTPRequest.Body == nil {
+		body, ok := logical.ContextOriginalBodyValue(ctx)
+		if !ok {
 			return nil, errors.New("no reader for request")
 		}
 
@@ -578,7 +579,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		// don't have to hold the full snapshot in memory. We also want to do
 		// the restore in two parts so we can restore the snapshot while the
 		// stateLock is write locked.
-		snapFile, cleanup, metadata, err := raftStorage.WriteSnapshotToTemp(req.HTTPRequest.Body, access)
+		snapFile, cleanup, metadata, err := raftStorage.WriteSnapshotToTemp(body, access)
 		switch {
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):

@@ -68,8 +68,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 
 			Fields: entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity"][0]),
@@ -158,8 +160,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityBatchDelete(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityBatchDelete(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["batch-delete"][0]),
@@ -173,8 +177,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-name",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityNameList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name-list"][0]),
@@ -188,8 +194,10 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-id",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathEntityIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDList(),
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id-list"][0]),
@@ -221,8 +229,11 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 					Description: "Setting this will follow the 'mine' strategy for merging MFA secrets. If there are secrets of the same type both in entities that are merged from and in entity into which all others are getting merged, secrets in the destination will be unaltered. If not set, this API will throw an error containing all the conflicts.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathEntityMergeID(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                  i.pathEntityMergeID(),
+					ForwardPerformanceStandby: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-merge-id"][0]),

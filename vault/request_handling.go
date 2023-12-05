@@ -564,6 +564,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
 	}
+	body, ok := logical.ContextOriginalBodyValue(httpCtx)
+	if ok {
+		ctx = logical.CreateContextOriginalBody(ctx, body)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
