@@ -1,0 +1,3 @@
+```release-note:deprecation
+storage/etcd: deprecate etcd v2 api
+```
