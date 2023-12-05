@@ -140,11 +140,11 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
     assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
 
     await visit(`/vault/replication/dr`);
-
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.dashboard',
       'redirects to dashboard if replication access attempted'
     );
+    assert.dom('[data-test-card="replication"]').doesNotExist('hides replication card on dashboard');
   });
 });
