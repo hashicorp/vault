@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and this.state this.version.isEnterprise)}}
   <div class="link-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
     <Icon @name="info" />
