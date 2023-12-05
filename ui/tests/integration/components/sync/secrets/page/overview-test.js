@@ -77,12 +77,23 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       .hasText('Secrets by destination', 'Overview card title renders for table');
     assert.dom(icon(0)).hasAttribute('data-test-icon', 'aws-color', 'Destination icon renders');
     assert.dom(name(0)).hasText('destination-aws', 'Destination name renders');
+
     assert.dom(badge(0)).hasText('All synced', 'All synced badge renders');
     assert.dom(badge(0)).hasClass('hds-badge--color-success', 'Correct color renders for All synced badge');
-    assert.dom(badge(1)).hasText('1 Unsynced', 'Unsynced badge renders');
-    assert.dom(badge(1)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
+
+    assert.dom(badge(1)).doesNotExist('Status badge does not render for destination with no associations');
+
+    assert.dom(badge(2)).hasText('1 Unsynced', 'Unsynced badge renders');
+    assert.dom(badge(2)).hasClass('hds-badge--color-neutral', 'Correct color renders for unsynced badge');
+
     assert.dom(total(0)).hasText('1', '# of secrets renders');
     assert.dom(updated(0)).hasText(updatedDate, 'Last updated datetime renders');
+
+    assert.dom(total(1)).hasText('0', '# of secrets render for destination with no associations');
+    assert
+      .dom(updated(1))
+      .hasText('—', 'Last updated placeholder renders for destination with no associations');
+
     await click(actionToggle(0));
     assert.dom(action('sync')).hasText('Sync new secrets', 'Sync action renders');
     assert.dom(action('details')).hasText('Details', 'Details action renders');
@@ -92,9 +103,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     const { name, row } = overview.table;
     assert.dom(row).exists({ count: 3 }, 'Correct number of table rows render based on page size');
     assert.dom(name(0)).hasText('destination-aws', 'First destination renders on page 1');
+
     await click(pagination.next);
-    assert.dom(overview.table.row).exists({ count: 2 }, 'New items are fetched and render on page change');
-    assert.dom(name(0)).hasText('destination-gh', 'First destination renders on page 2');
+    assert.dom(overview.table.row).exists({ count: 3 }, 'New items are fetched and rendered on page change');
+    assert.dom(name(0)).hasText('destination-gcp', 'First destination renders on page 2');
   });
 
   test('it should display empty state for secrets by destination table', async function (assert) {
@@ -116,7 +128,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
         cardTitle: 'Total destinations',
         subText: 'The total number of connected destinations',
         actionText: 'Create new',
-        count: '5',
+        count: '6',
       },
       {
         cardTitle: 'Total sync associations',

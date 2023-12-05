@@ -9,18 +9,17 @@ export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
   const records = schema.db.syncAssociations.where({ type, name });
 
-  if (!records.length) {
-    return new Response(404, {}, { errors: [] });
-  }
   return {
     data: {
-      associated_secrets: records.reduce((associations, association) => {
-        const key = `${association.mount}/${association.secret_name}`;
-        delete association.type;
-        delete association.name;
-        associations[key] = association;
-        return associations;
-      }, {}),
+      associated_secrets: records.length
+        ? records.reduce((associations, association) => {
+            const key = `${association.mount}/${association.secret_name}`;
+            delete association.type;
+            delete association.name;
+            associations[key] = association;
+            return associations;
+          }, {})
+        : {},
       store_name: name,
       store_type: type,
     },

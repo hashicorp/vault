@@ -18,4 +18,6 @@ export default function (server) {
       });
     }
   });
+  // create destination with no associations
+  server.create('sync-destination', 'aws-sm', { name: 'new-destination' });
 }

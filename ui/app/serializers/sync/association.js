@@ -51,12 +51,13 @@ export default class SyncAssociationSerializer extends ApplicationSerializer {
       }
     }
 
+    const associationCount = Object.entries(associated_secrets).length;
     return {
       icon: findDestination(store_type).icon,
       name: store_name,
       type: store_type,
-      associationCount: Object.entries(associated_secrets).length,
-      status: unsynced.length ? `${unsynced.length} Unsynced` : 'All synced',
+      associationCount,
+      status: associationCount ? (unsynced.length ? `${unsynced.length} Unsynced` : 'All synced') : null,
       lastUpdated,
     };
   }
