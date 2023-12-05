@@ -90,8 +90,10 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	stabilizationKickOffWaitDuration := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
 	time.Sleep(stabilizationKickOffWaitDuration)
 
-	joinAndStabilizeAndPromote(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
-	joinAndStabilizeAndPromote(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+	joinAndStabilize(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
+	waitUntilVoter(t, 2*autopilot.DefaultReconcileInterval, client, "core-1")
+	joinAndStabilize(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+	waitUntilVoter(t, 2*autopilot.DefaultReconcileInterval, client, "core-2")
 	state, err = client.Sys().RaftAutopilotState()
 	require.NoError(t, err)
 	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
@@ -369,13 +371,14 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 // because it hasn't been heard from in some time.
 func TestRaft_VotersStayVoters(t *testing.T) {
 	t.Parallel()
+	reconcileInterval := 300 * time.Millisecond
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
 			"performance_multiplier":       "5",
-			"autopilot_reconcile_interval": "300ms",
+			"autopilot_reconcile_interval": reconcileInterval.String(),
 			"autopilot_update_interval":    "100ms",
 		},
 		VersionMap: map[int]string{
@@ -391,8 +394,10 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 
 	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
-	joinAndStabilizeAndPromote(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
-	joinAndStabilizeAndPromote(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+	joinAndStabilize(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
+	waitUntilVoter(t, 2*reconcileInterval, client, "core-1")
+	joinAndStabilize(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+	waitUntilVoter(t, 2*reconcileInterval, client, "core-1")
 
 	errIfNonVotersExist := func() error {
 		t.Helper()
@@ -516,52 +521,54 @@ func joinAndStabilizeAndPromote(t *testing.T, core *vault.TestClusterCore, clien
 	// Now that the server is stable, wait for autopilot to reconcile and
 	// promotion to happen. Reconcile interval is 10 seconds. Bound it by
 	// doubling.
-	deadline := time.Now().Add(2 * autopilot.DefaultReconcileInterval)
-	failed := true
-	var err error
-	var state *api.AutopilotState
-	for time.Now().Before(deadline) {
-		state, err = client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		if state.Servers[nodeID].Status == "voter" {
-			failed = false
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
 
-	if failed {
-		t.Fatalf("autopilot failed to promote node: id: %#v: state:%# v\n", nodeID, pretty.Formatter(state))
-	}
+	waitUntilVoter(t, 2*autopilot.DefaultReconcileInterval, client, nodeID)
+}
+
+func waitUntilVoter(t *testing.T, timeout time.Duration, client *api.Client, nodeID string) {
+	t.Helper()
+
+	// Now that the server is stable, wait for autopilot to reconcile and
+	// promotion to happen. Reconcile interval is 10 seconds. Bound it by
+	// doubling.
+	testhelpers.RetryUntil(t, timeout, func() error {
+		state, err := client.Sys().RaftAutopilotState()
+		if err != nil {
+			return err
+		}
+		if state.Servers[nodeID].Status != "voter" {
+			return fmt.Errorf("autopilot failed to promote node: id: %#v: state:%# v\n", nodeID, pretty.Formatter(state))
+		}
+		return nil
+	})
 }
 
 func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster *vault.TestCluster, config *api.AutopilotConfig, nodeID string, numServers int) {
 	t.Helper()
 	joinAndUnseal(t, core, cluster, false, false)
-	time.Sleep(2 * time.Second)
 
-	state, err := client.Sys().RaftAutopilotState()
-	require.NoError(t, err)
-	require.Equal(t, false, state.Healthy)
-	require.Len(t, state.Servers, numServers)
-	require.Equal(t, false, state.Servers[nodeID].Healthy)
-	require.Equal(t, "alive", state.Servers[nodeID].NodeStatus)
-	require.Equal(t, "non-voter", state.Servers[nodeID].Status)
-
-	// Wait till the stabilization period is over
-	deadline := time.Now().Add(config.ServerStabilizationTime)
-	healthy := false
-	for time.Now().Before(deadline) {
+	testhelpers.RetryUntil(t, config.ServerStabilizationTime, func() error {
 		state, err := client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		if state.Healthy {
-			healthy = true
+		if err != nil {
+			return err
 		}
-		time.Sleep(1 * time.Second)
-	}
-	if !healthy {
-		t.Fatalf("cluster failed to stabilize")
-	}
+		if len(state.Servers) != numServers {
+			return fmt.Errorf("expected %d servers, got %d", numServers, len(state.Servers))
+		}
+		if !state.Healthy {
+			return fmt.Errorf("autopilot unhealthy: %# v", pretty.Formatter(state))
+		}
+		ss, ok := state.Servers[nodeID]
+		if !ok {
+			return fmt.Errorf("node %q not present", nodeID)
+		}
+
+		if ss.NodeStatus != "alive" {
+			return fmt.Errorf("expected node %s to be alive, but NodeStatus=%q", nodeID, ss.NodeStatus)
+		}
+
+		return nil
+	})
 }
 
 // joinAsVoterAndUnseal joins the specified core to the specified cluster as a voter and unseals it.
