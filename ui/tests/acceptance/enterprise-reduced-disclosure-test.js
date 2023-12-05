@@ -134,4 +134,17 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
       .dom('[data-test-footer-version]')
       .hasText(`Vault ${versionSvc.version}`, 'Version is shown after login');
   });
+
+  test('does not allow access to replication pages', async function (assert) {
+    await authPage.login();
+    assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
+
+    await visit(`/vault/replication/dr`);
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.dashboard',
+      'redirects to dashboard if replication access attempted'
+    );
+    assert.dom('[data-test-card="replication"]').doesNotExist('hides replication card on dashboard');
+  });
 });
