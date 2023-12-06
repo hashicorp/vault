@@ -540,11 +540,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	}
 
-	if len(config.Seals) > 1 {
-		c.UI.Error("Only one seal block is accepted in recovery mode")
-		return 1
-	}
-
 	ctx := context.Background()
 	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
@@ -564,6 +559,10 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 	if setSealResponse.barrierSeal == nil {
 		c.UI.Error(fmt.Sprintf("Error setting up seal: %v", setSealResponse.sealConfigError))
+		return 1
+	}
+	if setSealResponse.unwrapSeal != nil {
+		c.UI.Error("Recovery mode cannot be started with configuration for seal migration")
 		return 1
 	}
 	barrierSeal = setSealResponse.barrierSeal
