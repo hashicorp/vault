@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and this.showWarning (is-after (now interval=1000) @expirationDate))}}
   <div class="token-expire-warning">
     <AlertBanner
