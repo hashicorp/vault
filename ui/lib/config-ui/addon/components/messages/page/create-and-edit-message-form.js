@@ -31,6 +31,7 @@ class MessageState {
 
 export default class MessagesList extends Component {
   @tracked state = new MessageState();
+  @tracked showStartTime = true;
 
   @action
   updateRadioValue(evt) {

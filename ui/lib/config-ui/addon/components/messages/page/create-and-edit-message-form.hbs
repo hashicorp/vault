@@ -76,9 +76,16 @@
         <label for="message-start" class="has-text-weight-bold is-size-8">
           Message starts
         </label>
-        <div class="control">
-          <Input @type="datetime-local" class="input" data-test-link="title" />
-        </div>
+        {{#if this.showStartTime}}
+          <div class="control">
+            <Input
+              @type="datetime-local"
+              class="input"
+              data-test-date="startTime"
+              {{on "input" (pipe (pick "target.value") (fn (mut this.state.startTime)))}}
+            />
+          </div>
+        {{/if}}
       {{else if (eq attr.name "endTime")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-m has-bottom-margin-xl" as |G|>
           <G.Legend>Message expires</G.Legend>
