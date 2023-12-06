@@ -10,7 +10,7 @@
         @text="{{uppercase this.policyType}} policies"
         @route="vault.cluster.policies"
         @model={{this.policyType}}
-        data-test-policy-list-link={{true}}
+        data-test-policy-list-link
       />
       <Hds::Breadcrumb::Item @text={{this.model.id}} @route="vault.cluster.policy.show" @model={{this.model.id}} />
       <Hds::Breadcrumb::Item @text="Edit" @current={{true}} />
