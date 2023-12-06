@@ -6,10 +6,12 @@ package plugincatalog
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -22,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -976,7 +979,110 @@ func TestSortVersionedPlugins(t *testing.T) {
 	}
 }
 
-// TestRunTestPlugin runs the testFunc which has already been registered to the
+func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
+	for name, tc := range map[string]struct {
+		pluginType        consts.PluginType
+		setRunningVersion string
+	}{
+		"external credential plugin": {
+			pluginType:        consts.PluginTypeCredential,
+			setRunningVersion: "v1.2.3",
+		},
+		"external secrets plugin": {
+			pluginType:        consts.PluginTypeSecrets,
+			setRunningVersion: "v1.2.3",
+		},
+		"external database plugin": {
+			pluginType:        consts.PluginTypeDatabase,
+			setRunningVersion: "v1.2.3",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			pluginCatalog := testPluginCatalog(t)
+			plugin := pluginhelpers.CompilePlugin(t, tc.pluginType, tc.setRunningVersion, pluginCatalog.directory)
+
+			shaBytes, _ := hex.DecodeString(plugin.Sha256)
+			commandFull := filepath.Join(pluginCatalog.directory, plugin.FileName)
+			entry := &pluginutil.PluginRunner{
+				Name:    plugin.Name,
+				Command: commandFull,
+				Args:    nil,
+				Sha256:  shaBytes,
+				Builtin: false,
+			}
+
+			var version logical.PluginVersion
+			var err error
+			if tc.pluginType == consts.PluginTypeDatabase {
+				version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+			} else {
+				version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version.Version != tc.setRunningVersion {
+				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
+			}
+		})
+	}
+}
+
+func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
+	pluginCatalog := testPluginCatalog(t)
+
+	var plugins []pluginhelpers.TestPlugin
+	for _, pluginType := range []consts.PluginType{
+		consts.PluginTypeCredential,
+		consts.PluginTypeSecrets,
+		consts.PluginTypeDatabase,
+	} {
+		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
+		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
+		plugins = append(plugins, plugin)
+	}
+
+	for _, plugin := range plugins {
+		t.Run(plugin.Typ.String(), func(t *testing.T) {
+			for _, ociRuntime := range []string{"runc", "runsc"} {
+				t.Run(ociRuntime, func(t *testing.T) {
+					if _, err := exec.LookPath(ociRuntime); err != nil {
+						t.Skipf("Skipping test as %s not found on path", ociRuntime)
+					}
+
+					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
+					entry := &pluginutil.PluginRunner{
+						Name:     plugin.Name,
+						OCIImage: plugin.Image,
+						Args:     nil,
+						Sha256:   shaBytes,
+						Builtin:  false,
+						Runtime:  ociRuntime,
+						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
+							OCIRuntime: ociRuntime,
+						},
+					}
+
+					var version logical.PluginVersion
+					var err error
+					if plugin.Typ == consts.PluginTypeDatabase {
+						version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+					} else {
+						version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					if version.Version != plugin.Version {
+						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
+					}
+				})
+			}
+		})
+	}
+}
+
+// testRunTestPlugin runs the testFunc which has already been registered to the
 // plugin catalog and returns a pluginClient. This can be called after calling
 // TestAddTestPlugin.
 func testRunTestPlugin(t *testing.T, pluginCatalog *PluginCatalog, pluginType consts.PluginType, pluginName string) *pluginClient {

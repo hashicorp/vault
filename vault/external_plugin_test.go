@@ -5,7 +5,6 @@ package vault
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -19,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
@@ -652,55 +650,6 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 			_, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
 			if err == nil || !strings.Contains(err.Error(), "no such file or directory") {
 				t.Fatalf("should have gotten a no such file or directory error inserting the plugin: %v", err)
-			}
-		})
-	}
-}
-
-func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
-	for name, tc := range map[string]struct {
-		pluginType        consts.PluginType
-		setRunningVersion string
-	}{
-		"external credential plugin": {
-			pluginType:        consts.PluginTypeCredential,
-			setRunningVersion: "v1.2.3",
-		},
-		"external secrets plugin": {
-			pluginType:        consts.PluginTypeSecrets,
-			setRunningVersion: "v1.2.3",
-		},
-		"external database plugin": {
-			pluginType:        consts.PluginTypeDatabase,
-			setRunningVersion: "v1.2.3",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion)
-			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].Sha256, plugins[0].FileName)
-
-			shaBytes, _ := hex.DecodeString(plugins[0].Sha256)
-			commandFull := filepath.Join(c.pluginCatalog.directory, plugins[0].FileName)
-			entry := &pluginutil.PluginRunner{
-				Name:    plugins[0].Name,
-				Command: commandFull,
-				Args:    nil,
-				Sha256:  shaBytes,
-				Builtin: false,
-			}
-
-			var version logical.PluginVersion
-			var err error
-			if tc.pluginType == consts.PluginTypeDatabase {
-				version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-			} else {
-				version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if version.Version != tc.setRunningVersion {
-				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
 			}
 		})
 	}

@@ -108,51 +108,6 @@ func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *Core, plugin pl
 	routeRequest(false)
 }
 
-// func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
-// 	c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{
-// 		consts.PluginTypeCredential,
-// 		consts.PluginTypeSecrets,
-// 		consts.PluginTypeDatabase,
-// 	})
-// 	for _, plugin := range plugins {
-// 		t.Run(plugin.Typ.String(), func(t *testing.T) {
-// 			for _, ociRuntime := range []string{"runc", "runsc"} {
-// 				t.Run(ociRuntime, func(t *testing.T) {
-// 					if _, err := exec.LookPath(ociRuntime); err != nil {
-// 						t.Skipf("Skipping test as %s not found on path", ociRuntime)
-// 					}
-// 					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
-// 					entry := &pluginutil.PluginRunner{
-// 						Name:     plugin.Name,
-// 						OCIImage: plugin.Image,
-// 						Args:     nil,
-// 						Sha256:   shaBytes,
-// 						Builtin:  false,
-// 						Runtime:  ociRuntime,
-// 						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
-// 							OCIRuntime: ociRuntime,
-// 						},
-// 					}
-
-// 					var version logical.PluginVersion
-// 					var err error
-// 					if plugin.Typ == consts.PluginTypeDatabase {
-// 						version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-// 					} else {
-// 						version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-// 					}
-// 					if err != nil {
-// 						t.Fatal(err)
-// 					}
-// 					if version.Version != plugin.Version {
-// 						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
-// 					}
-// 				})
-// 			}
-// 		})
-// 	}
-// }
-
 func registerContainerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha, image, runtime string) {
 	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
