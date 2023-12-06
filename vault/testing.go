@@ -1576,13 +1576,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				t.Skip("Running plugins in containers is only supported on linux")
 			}
 
-			var pluginDir string
-			var cleanup func(t testing.T)
-
 			if coreConfig.PluginDirectory == "" {
-				pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+				pluginDir := corehelpers.MakeTestPluginDir(t)
 				coreConfig.PluginDirectory = pluginDir
-				t.Cleanup(func() { cleanup(t) })
 			}
 
 			for _, version := range pluginType.Versions {

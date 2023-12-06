@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
@@ -30,8 +32,7 @@ const vaultTestingMockPluginEnv = "VAULT_TESTING_MOCK_PLUGIN"
 // version is used to override the plugin's self-reported version
 func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string) (*Core, []pluginhelpers.TestPlugin) {
 	t.Helper()
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	var plugins []pluginhelpers.TestPlugin
 	for _, version := range versions {
@@ -185,8 +186,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
 	pluginName := "therug"
@@ -257,8 +257,7 @@ func TestCore_EnableExternalPlugin_Deregister_SealUnseal(t *testing.T) {
 // version store is cleared.  Vault sees the next unseal as a major upgrade and
 // should immediately shut down.
 func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
 	pluginName := "pending-removal-test-plugin"
@@ -336,8 +335,7 @@ func TestCore_Unseal_isMajorVersionFirstMount_PendingRemoval_Plugin(t *testing.T
 }
 
 func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// create an external plugin to shadow the builtin "pending-removal-test-plugin"
 	pluginName := "pending-removal-test-plugin"
@@ -371,8 +369,7 @@ func TestCore_EnableExternalPlugin_PendingRemoval(t *testing.T) {
 }
 
 func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// create an external plugin to shadow the builtin "approle"
 	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
@@ -450,8 +447,7 @@ func TestCore_EnableExternalPlugin_ShadowBuiltin(t *testing.T) {
 }
 
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// new kv plugin can be registered but not mounted
 	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeSecrets, "v1.2.3", pluginDir)
@@ -503,8 +499,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 
 	// new noop plugin can be registered but not mounted
 	plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
@@ -662,54 +657,54 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 	}
 }
 
-// func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
-// 	for name, tc := range map[string]struct {
-// 		pluginType        consts.PluginType
-// 		setRunningVersion string
-// 	}{
-// 		"external credential plugin": {
-// 			pluginType:        consts.PluginTypeCredential,
-// 			setRunningVersion: "v1.2.3",
-// 		},
-// 		"external secrets plugin": {
-// 			pluginType:        consts.PluginTypeSecrets,
-// 			setRunningVersion: "v1.2.3",
-// 		},
-// 		"external database plugin": {
-// 			pluginType:        consts.PluginTypeDatabase,
-// 			setRunningVersion: "v1.2.3",
-// 		},
-// 	} {
-// 		t.Run(name, func(t *testing.T) {
-// 			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion)
-// 			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].Sha256, plugins[0].FileName)
+func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
+	for name, tc := range map[string]struct {
+		pluginType        consts.PluginType
+		setRunningVersion string
+	}{
+		"external credential plugin": {
+			pluginType:        consts.PluginTypeCredential,
+			setRunningVersion: "v1.2.3",
+		},
+		"external secrets plugin": {
+			pluginType:        consts.PluginTypeSecrets,
+			setRunningVersion: "v1.2.3",
+		},
+		"external database plugin": {
+			pluginType:        consts.PluginTypeDatabase,
+			setRunningVersion: "v1.2.3",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion)
+			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].Sha256, plugins[0].FileName)
 
-// 			shaBytes, _ := hex.DecodeString(plugins[0].Sha256)
-// 			commandFull := filepath.Join(c.pluginCatalog.directory, plugins[0].FileName)
-// 			entry := &pluginutil.PluginRunner{
-// 				Name:    plugins[0].Name,
-// 				Command: commandFull,
-// 				Args:    nil,
-// 				Sha256:  shaBytes,
-// 				Builtin: false,
-// 			}
+			shaBytes, _ := hex.DecodeString(plugins[0].Sha256)
+			commandFull := filepath.Join(c.pluginCatalog.directory, plugins[0].FileName)
+			entry := &pluginutil.PluginRunner{
+				Name:    plugins[0].Name,
+				Command: commandFull,
+				Args:    nil,
+				Sha256:  shaBytes,
+				Builtin: false,
+			}
 
-// 			var version logical.PluginVersion
-// 			var err error
-// 			if tc.pluginType == consts.PluginTypeDatabase {
-// 				version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
-// 			} else {
-// 				version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
-// 			}
-// 			if err != nil {
-// 				t.Fatal(err)
-// 			}
-// 			if version.Version != tc.setRunningVersion {
-// 				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
-// 			}
-// 		})
-// 	}
-// }
+			var version logical.PluginVersion
+			var err error
+			if tc.pluginType == consts.PluginTypeDatabase {
+				version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+			} else {
+				version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version.Version != tc.setRunningVersion {
+				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
+			}
+		})
+	}
+}
 
 func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 	// Turn on the check.
