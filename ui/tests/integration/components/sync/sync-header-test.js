@@ -15,7 +15,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.16.0+ent';
+    this.version.type = 'enterprise';
     this.title = 'Secrets sync';
     this.renderComponent = () => {
       return render(hbs`<SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -42,7 +42,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
   });
 
   test('it should render title and promotional enterprise badge for community version', async function (assert) {
-    this.version.version = '1.16.0';
+    this.version.type = null;
     await this.renderComponent();
     assert.dom('[data-test-page-title]').hasText('Secrets sync Enterprise feature');
   });

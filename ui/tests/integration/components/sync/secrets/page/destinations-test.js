@@ -18,7 +18,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:version').version = '1.16.0+ent';
+    this.owner.lookup('service:version').type = 'enterprise';
 
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 

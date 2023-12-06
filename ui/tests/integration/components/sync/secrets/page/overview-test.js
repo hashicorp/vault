@@ -33,7 +33,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.owner.lookup('service:version').version = '1.16.0+ent';
+    this.owner.lookup('service:version').type = 'enterprise';
     syncScenario(this.server);
     syncHandlers(this.server);
 

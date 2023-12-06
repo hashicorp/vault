@@ -14,7 +14,7 @@
         <Icon @name={{@icon}} @size="24" />
       {{/if}}
       {{@title}}
-      {{#if (is-version "OSS")}}
+      {{#if this.version.isCommunity}}
         <Hds::Badge @text="Enterprise feature" @color="highlight" @size="large" />
       {{/if}}
     </h1>

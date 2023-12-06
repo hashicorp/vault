@@ -10,6 +10,7 @@ export const PAGE = {
   ...GENERAL,
   cta: {
     summary: '[data-test-cta-container] p',
+    link: '[data-test-cta-doc-link]',
     button: '[data-test-cta-button]',
   },
   associations: {
