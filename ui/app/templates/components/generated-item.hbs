@@ -11,6 +11,7 @@
         @route="vault.cluster.access.method.item.list"
         @model={{this.itemType}}
       />
+      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
     </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
