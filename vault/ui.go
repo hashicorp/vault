@@ -27,27 +27,21 @@ type UIConfig struct {
 	l               sync.RWMutex
 	physicalStorage physical.Backend
 	barrierStorage  logical.Storage
-	storagePrefix   string
-
-	nsBarrierView     *BarrierView
-	customMessageLock sync.RWMutex
 
 	enabled        bool
 	defaultHeaders http.Header
 }
 
-// newUIConfig creates a new UI config
-func newUIConfig(enabled bool, storagePrefix string, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
+// NewUIConfig creates a new UI config
+func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
 	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
 	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 
 	return &UIConfig{
-		physicalStorage: physical.NewView(physicalStorage, storagePrefix),
-		barrierStorage:  NewBarrierView(barrierStorage, storagePrefix),
-		nsBarrierView:   nil,
-		storagePrefix:   storagePrefix,
+		physicalStorage: physicalStorage,
+		barrierStorage:  barrierStorage,
 		enabled:         enabled,
 		defaultHeaders:  defaultHeaders,
 	}

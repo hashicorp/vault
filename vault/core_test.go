@@ -323,7 +323,7 @@ func TestNewCore_configureListeners(t *testing.T) {
 			core := &Core{
 				clusterListener:      new(atomic.Value),
 				customListenerHeader: new(atomic.Value),
-				uiConfig:             newUIConfig(false, "", backend, storage),
+				uiConfig:             NewUIConfig(false, backend, storage),
 			}
 
 			err = core.configureListeners(tc.config)
