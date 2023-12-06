@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package plugincatalog
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"path"
 	"sync"
 
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -20,7 +21,6 @@ import (
 )
 
 var (
-	pluginRuntimeCatalogPath           = "core/plugin-runtime-catalog/"
 	ErrPluginRuntimeNotFound           = errors.New("plugin runtime not found")
 	ErrPluginRuntimeBadType            = errors.New("unable to determine plugin runtime type")
 	ErrPluginRuntimeBadContainerConfig = errors.New("bad container config")
@@ -29,23 +29,23 @@ var (
 // PluginRuntimeCatalog keeps a record of plugin runtimes. Plugin runtimes need
 // to be registered to the catalog before they can be used in backends when registering plugins with runtimes
 type PluginRuntimeCatalog struct {
-	catalogView *BarrierView
+	catalogView logical.Storage
 	logger      log.Logger
 
 	lock sync.RWMutex
 }
 
-func (c *Core) setupPluginRuntimeCatalog(ctx context.Context) error {
-	c.pluginRuntimeCatalog = &PluginRuntimeCatalog{
-		catalogView: NewBarrierView(c.barrier, pluginRuntimeCatalogPath),
-		logger:      c.logger,
+func SetupPluginRuntimeCatalog(ctx context.Context, logger hclog.Logger, catalogView logical.Storage) (*PluginRuntimeCatalog, error) {
+	pluginRuntimeCatalog := &PluginRuntimeCatalog{
+		catalogView: catalogView,
+		logger:      logger,
 	}
 
-	if c.logger.IsInfo() {
-		c.logger.Info("successfully setup plugin runtime catalog")
+	if logger.IsInfo() {
+		logger.Info("successfully setup plugin runtime catalog")
 	}
 
-	return nil
+	return pluginRuntimeCatalog, nil
 }
 
 // Get retrieves a plugin runtime with the specified name from the catalog

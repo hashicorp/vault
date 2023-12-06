@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
@@ -26,6 +27,7 @@ import (
 )
 
 func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+	t.Helper()
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -35,12 +37,17 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		t.Fatal(err)
 	}
 
+	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	coreConfig := &vault.CoreConfig{
 		Physical:   inm,
 		HAPhysical: inmha.(physical.HABackend),
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": bplugin.Factory,
 		},
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
@@ -54,7 +61,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
-	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{})
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{

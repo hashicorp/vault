@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
@@ -115,7 +116,14 @@ func TestBackend_PluginMain_Multiplexed(t *testing.T) {
 }
 
 func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func()) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	t.Helper()
+	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
@@ -137,7 +145,7 @@ func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func())
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", pluginCmd, []string{}, "")
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", pluginCmd, []string{})
 
 	return config, func() {
 		cluster.Cleanup()

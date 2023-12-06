@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -106,14 +107,21 @@ func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Sta
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	t.Helper()
+	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
 	cores := cluster.Cores
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{})
 
 	return cluster, sys
 }
