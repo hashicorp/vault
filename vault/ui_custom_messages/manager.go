@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -25,6 +26,8 @@ const (
 // logical.Storage.
 type Manager struct {
 	view logical.Storage
+
+	l sync.RWMutex
 }
 
 // NewManager creates a new Manager struct that has been fully initialized.
@@ -61,6 +64,9 @@ func (m *Manager) FindMessages(ctx context.Context, filters FindFilter) ([]Messa
 // returned Message struct is set to this value. If the maximum number of
 // messages already exists, then the message is not added.
 func (m *Manager) CreateMessage(ctx context.Context, message Message) (*Message, error) {
+	m.l.Lock()
+	defer m.l.Unlock()
+
 	entry, err := m.getEntry(ctx)
 	if err != nil {
 		return nil, err
@@ -99,6 +105,9 @@ func (m *Manager) ReadMessage(ctx context.Context, id string) (*Message, error) 
 // Message struct in the current namespace with its content in the
 // logical.Storage.
 func (m *Manager) UpdateMessage(ctx context.Context, message Message) (*Message, error) {
+	m.l.Lock()
+	defer m.l.Unlock()
+
 	entry, err := m.getEntry(ctx)
 	if err != nil {
 		return nil, err
@@ -125,6 +134,9 @@ func (m *Manager) UpdateMessage(ctx context.Context, message Message) (*Message,
 // current namespace if it exists. The method updates the logical.Storage as
 // well.
 func (m *Manager) DeleteMessage(ctx context.Context, id string) error {
+	m.l.Lock()
+	defer m.l.Unlock()
+
 	entry, err := m.getEntry(ctx)
 	if err != nil {
 		return err
