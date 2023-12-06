@@ -62,6 +62,10 @@ var (
 	// Error indicating that the requested path used to serve a purpose in older
 	// versions, but the functionality has now been removed
 	ErrPathFunctionalityRemoved = errors.New("functionality on this path has been removed")
+
+	// ErrCustomMessageNotFound is an error used to indicate that the custom
+	// message specified in a READ or UPDATE operation does not exist.
+	ErrCustomMessageNotFound = errors.New("custom message not found")
 )
 
 type DelegatedAuthErrorHandler func(ctx context.Context, initiatingRequest, authRequest *Request, authResponse *Response, err error) (*Response, error)
