@@ -131,7 +131,7 @@ require (
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.3.0
 	github.com/hashicorp/raft-snapshot v1.0.4
-	github.com/hashicorp/vault-hcp-lib v0.0.0-20231205170316-defe4ed98b46
+	github.com/hashicorp/vault-hcp-lib v0.0.0-20231206172122-e44741d4c04a
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.16.2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
@@ -178,7 +178,6 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
-	github.com/mitchellh/cli v1.1.5
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1
