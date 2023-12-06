@@ -49,9 +49,9 @@ variable "config_env_vars" {
 }
 
 variable "consul_bind_addr" {
-  type = string
+  type        = string
   description = "The IP that Consul should bind to"
-  default = null
+  default     = null
 }
 
 variable "consul_data_dir" {
