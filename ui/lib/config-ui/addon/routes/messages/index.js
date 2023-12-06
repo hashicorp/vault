@@ -34,4 +34,10 @@ export default class MessagesRoute extends Route {
       throw e;
     }
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const label = controller.authenticated ? 'After User Logs In' : 'On Login Page';
+    controller.breadcrumbs = [{ label: 'Messages' }, { label }];
+  }
 }

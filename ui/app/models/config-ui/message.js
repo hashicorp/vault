@@ -11,7 +11,8 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
+  title: [{ type: 'presence', message: 'Title is required.' }],
+  message: [{ type: 'presence', message: 'Message is required.' }],
 };
 
 @withFormFields(['authenticated', 'type', 'title', 'message', 'link', 'startTime', 'endTime'])

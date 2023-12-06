@@ -33,6 +33,15 @@ export default class MessagesList extends Component {
   @tracked state = new MessageState();
   @tracked showStartTime = true;
 
+  get breadcrumbs() {
+    const authenticated = this.args.authenticated === undefined ? true : this.args.authenticated;
+
+    return [
+      { label: 'Messages', route: 'messages.index', query: { authenticated } },
+      { label: 'Create Message' },
+    ];
+  }
+
   @action
   updateRadioValue(evt) {
     this.state[evt.target.name] = evt.target.value;

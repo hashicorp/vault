@@ -3,9 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::TabPageHeader @authenticated={{@authenticated}} @pageTitle="Custom messages">
+<Messages::TabPageHeader
+  @authenticated={{@authenticated}}
+  @pageTitle="Custom messages"
+  @showTabs={{true}}
+  @breadcrumbs={{this.breadcrumbs}}
+>
   <:toolbarActions>
-    <ToolbarLink data-test-toolbar-create-message @route="messages.create" @type="add">
+    <ToolbarLink
+      data-test-toolbar-create-message
+      @route="messages.create"
+      @query={{hash authenticated=@authenticated}}
+      @type="add"
+    >
       Create message
     </ToolbarLink>
   </:toolbarActions>
@@ -94,6 +104,7 @@
       @iconPosition="leading"
       @text="Create message"
       @route="messages.create"
+      @query={{hash authenticated=@authenticated}}
       class="is-no-underline"
       data-test-action-text="Create message"
     />

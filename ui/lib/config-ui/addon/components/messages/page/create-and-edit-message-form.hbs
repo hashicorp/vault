@@ -3,16 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <Hds::Text::Display @tag="h2" @size="500" class="has-top-margin-m">
-      Create message
-    </Hds::Text::Display>
-  </p.levelLeft>
-</PageHeader>
+<Messages::TabPageHeader @authenticated={{true}} @pageTitle="Custom messages" @breadcrumbs={{this.breadcrumbs}} />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-message-create-edit-form>
   <div class="box is-sideless is-fullwidth is-marginless">

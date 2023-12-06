@@ -21,7 +21,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render nav headings', async function (assert) {
-    const headings = ['Vault', 'Replication', 'Monitoring', 'Settings'];
+    const headings = ['Vault', 'Monitoring', 'Settings'];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
 

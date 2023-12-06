@@ -5,19 +5,21 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { hash } from 'ember-concurrency';
 
 export default class MessagesCreateRoute extends Route {
   @service store;
 
-  model() {
-    return this.store.createRecord('config-ui/message');
-  }
+  queryParams = {
+    authenticated: {
+      refreshModel: true,
+    },
+  };
 
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-    controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages.index', query: { authenticated: true } },
-      { label: 'Create Message' },
-    ];
+  model(params) {
+    return hash({
+      message: this.store.createRecord('config-ui/message'),
+      authenticated: params.authenticated,
+    });
   }
 }
