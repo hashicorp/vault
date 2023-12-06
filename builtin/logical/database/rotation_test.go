@@ -14,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -30,6 +28,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
