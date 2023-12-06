@@ -164,16 +164,19 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, entry.Local)
-	if c.logger.IsInfo() {
-		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
+	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
+	if err != nil {
+		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
 
 	return nil
 }
 
-// disableAudit is used to disable an existing audit backend
+// disableAudit is used to disable an existing audit backend.
+// It returns whether the entry existed, and any errors in disabling it.
 func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool) (bool, error) {
+	var existed bool
+
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -181,7 +184,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	// Ensure there is a name
 	if path == "/" {
-		return false, fmt.Errorf("backend path must be specified")
+		return existed, fmt.Errorf("backend path must be specified")
 	}
 
 	// Remove the entry from the mount table
@@ -191,15 +194,18 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	newTable := c.audit.shallowClone()
 	entry, err := newTable.remove(ctx, path)
 	if err != nil {
-		return false, err
+		return existed, err
 	}
 
 	// Ensure there was a match
 	if entry == nil {
-		return false, fmt.Errorf("no matching backend")
+		return existed, fmt.Errorf("no matching backend")
 	}
 
 	c.removeAuditReloadFunc(entry)
+
+	// We're satisfied that the entry exists now.
+	existed = true
 
 	// When unmounting all entries the JSON code will load back up from storage
 	// as a nil slice, which kills tests...just set it nil explicitly
@@ -210,7 +216,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if updateStorage {
 		// Update the audit table
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return true, errors.New("failed to update audit table")
+			return existed, errors.New("failed to update audit table")
 		}
 	}
 
@@ -218,14 +224,17 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	// Unmount the backend, any returned error can be ignored since the
 	// Backend will already have been removed from the AuditBroker's map.
-	c.auditBroker.Deregister(ctx, path)
+	err = c.auditBroker.Deregister(ctx, path)
+	if err != nil {
+		return existed, fmt.Errorf("failed to deregister %q audit backend %q: %w", entry.Type, entry.Path, err)
+	}
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
 	}
 
 	removeAuditPathChecker(c, entry)
 
-	return true, nil
+	return existed, nil
 }
 
 // loadAudits is invoked as part of postUnseal to load the audit table
