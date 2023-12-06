@@ -75,31 +75,31 @@
         {{/if}}
         {{#if @model.provider}}
           <ConfirmAction
-            @buttonClasses="toolbar-link"
+            class="toolbar-button"
+            @buttonText="Remove key"
+            @buttonColor="secondary"
             @onConfirmAction={{perform this.removeKey}}
             @confirmTitle="Remove this key?"
             @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
-            @confirmButtonText="Remove"
             @isRunning={{this.removeKey.isRunning}}
             data-test-keymgmt-key-remove
-          >
-            Remove key
-          </ConfirmAction>
+          />
         {{/if}}
         {{#if (or @model.canDelete @model.provider)}}
           <div class="toolbar-separator"></div>
         {{/if}}
         <ConfirmAction
-          @buttonClasses="toolbar-link"
+          @buttonText="Rotate key"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @modalColor="warning"
           @onConfirmAction={{perform this.rotateKey}}
           @confirmTitle="Rotate this key?"
           @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
-          @confirmButtonText="Rotate"
+          @color="warning"
           @isRunning={{this.rotateKey.isRunning}}
           data-test-keymgmt-key-rotate
-        >
-          Rotate key
-        </ConfirmAction>
+        />
         {{#if @model.canEdit}}
           <ToolbarSecretLink
             @secret={{@model.id}}

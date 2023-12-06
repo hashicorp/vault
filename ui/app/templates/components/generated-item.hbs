@@ -38,15 +38,12 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete {{this.itemType}}"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
-        @cancelButtonText="Cancel"
-        data-test-secret-delete="true"
-      >
-        Delete
-        {{this.itemType}}
-      </ConfirmAction>
+        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+      />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"

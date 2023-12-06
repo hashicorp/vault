@@ -15,8 +15,8 @@ import (
 
 	"github.com/hashicorp/vault/command/server"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/vault/diagnose"
-	"github.com/mitchellh/cli"
 )
 
 func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {

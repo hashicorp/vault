@@ -19,8 +19,9 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -31,7 +32,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -45,7 +46,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -62,6 +62,7 @@ const (
 	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
 	// that agent should exit after a single successful auth
 	flagNameAgentExitAfterAuth = "exit-after-auth"
+	nameAgent                  = "agent"
 )
 
 type AgentCommand struct {
@@ -78,7 +79,7 @@ type AgentCommand struct {
 
 	logWriter io.Writer
 	logGate   *gatedwriter.Writer
-	logger    log.Logger
+	logger    hclog.Logger
 
 	// Telemetry object
 	metricsHelper *metricsutil.MetricsHelper
@@ -210,7 +211,16 @@ func (c *AgentCommand) Run(args []string) int {
 		c.outputErrors(err)
 		return 1
 	}
+
+	// Update the logger and then base the log writer on that logger.
+	// Log writer is supplied to consul-template runners for templates and execs.
+	// We want to ensure that consul-template will honor the settings, for example
+	// if the -log-format is JSON we want JSON, not a mix of JSON and non-JSON messages.
 	c.logger = l
+	c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{
+		InferLevels:              true,
+		InferLevelsWithTimestamp: true,
+	})
 
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
@@ -489,11 +499,12 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:         proxyClient,
-			BaseContext:    ctx,
-			Proxier:        apiProxy,
-			Logger:         cacheLogger.Named("leasecache"),
-			UserAgentToUse: useragent.ProxyAPIProxyString(),
+			Client:              proxyClient,
+			BaseContext:         ctx,
+			Proxier:             apiProxy,
+			Logger:              cacheLogger.Named("leasecache"),
+			CacheDynamicSecrets: true,
+			UserAgentToUse:      useragent.ProxyAPIProxyString(),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
@@ -1092,42 +1103,44 @@ func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
 }
 
 // newLogger creates a logger based on parsed config field on the Agent Command struct.
-func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
+func (c *AgentCommand) newLogger() (hclog.InterceptLogger, error) {
 	if c.config == nil {
 		return nil, fmt.Errorf("cannot create logger, no config")
 	}
 
-	var errors error
+	var errs *multierror.Error
 
 	// Parse all the log related config
 	logLevel, err := logging.ParseLogLevel(c.config.LogLevel)
 	if err != nil {
-		errors = multierror.Append(errors, err)
+		errs = multierror.Append(errs, err)
 	}
 
 	logFormat, err := logging.ParseLogFormat(c.config.LogFormat)
 	if err != nil {
-		errors = multierror.Append(errors, err)
+		errs = multierror.Append(errs, err)
 	}
 
 	logRotateDuration, err := parseutil.ParseDurationSecond(c.config.LogRotateDuration)
 	if err != nil {
-		errors = multierror.Append(errors, err)
+		errs = multierror.Append(errs, err)
 	}
 
-	if errors != nil {
-		return nil, errors
+	if errs != nil {
+		return nil, errs
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "agent",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameAgent)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameAgent
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {
@@ -1139,20 +1152,20 @@ func (c *AgentCommand) newLogger() (log.InterceptLogger, error) {
 
 // loadConfig attempts to generate an Agent config from the file(s) specified.
 func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
-	var errors error
+	var errs *multierror.Error
 	cfg := agentConfig.NewConfig()
 
 	for _, configPath := range paths {
 		configFromPath, err := agentConfig.LoadConfig(configPath)
 		if err != nil {
-			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
+			errs = multierror.Append(errs, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
 			cfg = cfg.Merge(configFromPath)
 		}
 	}
 
-	if errors != nil {
-		return nil, errors
+	if errs != nil {
+		return nil, errs
 	}
 
 	if err := cfg.ValidateConfig(); err != nil {

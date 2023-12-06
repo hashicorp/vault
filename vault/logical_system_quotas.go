@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -18,10 +19,12 @@ import (
 )
 
 var (
-	ErrExemptRateLimitsOnChildNs = errors.New("exempt paths can only be be configured in the root namespace")
-	ErrInvalidQuotaDeletion      = "cannot delete quota configured for a parent namespace"
-	ErrInvalidQuotaUpdate        = "quotas in parent namespaces cannot be updated"
-	ErrInvalidQuotaOnParentNs    = "quotas cannot be configured for parent namespaces"
+	ErrExemptRateLimitsOnChildNs            = errors.New("exempt paths can only be be configured in the root namespace")
+	ErrInvalidExemptPathsFromChildNs        = errors.New("exempt paths cannot be added for parent namespaces")
+	ErrInvalidQuotaDeletion                 = "cannot delete quota configured for a parent namespace"
+	ErrInvalidQuotaUpdate                   = "quotas in parent namespaces cannot be updated"
+	ErrInvalidQuotaOnParentNs               = "quotas cannot be configured for parent namespaces"
+	ErrExistingAbsolutePathsMustBeSpecified = errors.New("cannot modify absolute exempt paths on parent namespace")
 )
 
 // quotasPaths returns paths that enable quota management
@@ -249,19 +252,40 @@ func (b *SystemBackend) handleQuotasConfigUpdate() framework.OperationFunc {
 		config.EnableRateLimitAuditLogging = d.Get("enable_rate_limit_audit_logging").(bool)
 		config.EnableRateLimitResponseHeaders = d.Get("enable_rate_limit_response_headers").(bool)
 
-		_, ok := d.GetOk("absolute_rate_limit_exempt_paths")
-		// Global rate limit exempt paths can only be defined in the root namespace
-		if ns.ID != namespace.RootNamespaceID && ok {
-			return nil, ErrExemptRateLimitsOnChildNs
-		}
-
-		_, ok = d.GetOk("rate_limit_exempt_paths")
+		_, ok := d.GetOk("rate_limit_exempt_paths")
 		// Relative  rate limit exempt paths can only be defined in the root namespace
 		if ns.ID != namespace.RootNamespaceID && ok {
 			return nil, ErrExemptRateLimitsOnChildNs
 		}
 
-		// Set rate limit exempt paths to correct configuration fields only if in root namespace
+		absPaths, ok := d.GetOk("absolute_rate_limit_exempt_paths")
+
+		// Verify that the global rate limit exempt paths specified from the privileged namespace are valid
+		if ns.ID != namespace.RootNamespaceID && ok {
+			var parentNsPaths []string
+
+			// Gather all the parent ns paths that are already configured
+			if config.AbsoluteRateLimitExemptPaths != nil {
+				for _, path := range config.AbsoluteRateLimitExemptPaths {
+					if !strings.HasPrefix(path, ns.Path) {
+						parentNsPaths = append(parentNsPaths, path)
+					}
+				}
+			}
+
+			// The new absolute path slice must include all the existing exempt paths on parent namespaces
+			if !strutil.StrListSubset(absPaths.([]string), parentNsPaths) {
+				return nil, ErrExistingAbsolutePathsMustBeSpecified
+			}
+			for _, path := range absPaths.([]string) {
+				if !strings.HasPrefix(path, ns.Path) && !strutil.StrListContains(parentNsPaths, path) {
+					return nil, ErrInvalidExemptPathsFromChildNs
+				}
+			}
+			config.AbsoluteRateLimitExemptPaths = absPaths.([]string)
+		}
+
+		// Set rate limit exempt paths to the specified values, or default to an empty slice
 		if ns.ID == namespace.RootNamespaceID {
 			config.RateLimitExemptPaths = d.Get("rate_limit_exempt_paths").([]string)
 			config.AbsoluteRateLimitExemptPaths = d.Get("absolute_rate_limit_exempt_paths").([]string)
