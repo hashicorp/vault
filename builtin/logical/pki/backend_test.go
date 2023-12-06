@@ -5,6 +5,7 @@ package pki
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -26,6 +27,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -3133,6 +3135,9 @@ func TestBackend_OID_SANs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Sort our returned list as SANS are built internally with a map so ordering can be inconsistent
+	slices.SortFunc(foundOtherNames, func(a, b issuing.OtherNameUtf8) int { return cmp.Compare(a.Oid, b.Oid) })
+
 	if diff := deep.Equal(expectedOtherNames, foundOtherNames); len(diff) != 0 {
 		t.Errorf("unexpected otherNames: %v", diff)
 	}
