@@ -8,6 +8,9 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import { render } from '@ember/test-helpers';
+import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
+
+const { breadcrumb, title } = PAGE;
 
 module('Integration | Component | sync | SyncHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -26,25 +29,25 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   test('it should render default breadcrumb', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-breadcrumbs]').exists({ count: 1 }, 'Correct number of breadcrumbs render');
-    assert.dom('[data-test-crumb]').includesText('Secrets sync', 'renders default breadcrumb');
+    assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
+    assert.dom(breadcrumb).includesText('Secrets sync', 'renders default breadcrumb');
   });
 
   test('it should render breadcrumbs', async function (assert) {
     this.breadcrumbs = [{ label: 'Destinations', route: 'destinations' }];
     await this.renderComponent();
-    assert.dom('[data-test-crumb]').includesText('Destinations', 'renders breadcrumb');
+    assert.dom(breadcrumb).includesText('Destinations', 'renders breadcrumb');
   });
 
   test('it should just render title for enterprise version', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-page-title]').hasText('Secrets sync');
+    assert.dom(title).hasText('Secrets sync');
   });
 
   test('it should render title and promotional enterprise badge for community version', async function (assert) {
     this.version.type = null;
     await this.renderComponent();
-    assert.dom('[data-test-page-title]').hasText('Secrets sync Enterprise feature');
+    assert.dom(title).hasText('Secrets sync Enterprise feature');
   });
 
   test('it should yield actions block', async function (assert) {
