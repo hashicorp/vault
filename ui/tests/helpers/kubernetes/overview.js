@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   rolesCardTitle: '[data-test-selectable-card="Roles"] .title',
   rolesCardSubTitle: '[data-test-selectable-card-container="Roles"] p',

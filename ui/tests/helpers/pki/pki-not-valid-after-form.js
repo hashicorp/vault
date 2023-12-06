@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   radioTtl: '[data-test-radio-button="ttl"]',
   radioTtlLabel: '[data-test-radio-label="ttl"]',

@@ -1,3 +1,7 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+
 package api
 
 // Sys is used to perform system-related operations on Vault.

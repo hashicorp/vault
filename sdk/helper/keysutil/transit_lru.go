@@ -1,3 +1,7 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+
 package keysutil
 
 import lru "github.com/hashicorp/golang-lru"

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create, visitable, collection } from 'ember-cli-page-object';
 
 import { getter } from 'ember-cli-page-object/macros';

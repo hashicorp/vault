@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import keys from 'vault/lib/keycodes';
 import argTokenizer from './arg-tokenizer';
 import { parse } from 'shell-quote';

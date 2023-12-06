@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Application from 'vault/app';
 import config from 'vault/config/environment';
 import * as QUnit from 'qunit';

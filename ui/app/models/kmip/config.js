@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { belongsTo } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';

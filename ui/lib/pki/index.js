@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-disable node/no-extraneous-require */
 const { buildEngine } = require('ember-engines/lib/engine-addon');
 

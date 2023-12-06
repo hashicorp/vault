@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../application';
 

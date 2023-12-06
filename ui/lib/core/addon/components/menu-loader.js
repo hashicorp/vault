@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module MenuLoader
  * MenuLoader components are used to show a loading state when fetching data is triggered by opening a
  * popup menu.

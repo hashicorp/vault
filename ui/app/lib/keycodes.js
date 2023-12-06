@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // a map of keyCode for use in keyboard event handlers
 export default {
   ENTER: 13,

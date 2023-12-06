@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-disable */
 import { isEmpty } from '@ember/utils';
 import ApplicationAdapter from './application';

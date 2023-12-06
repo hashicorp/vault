@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, skip, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';

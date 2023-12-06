@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import PkiIssuersListRoute from '../index';
 
 // Single issuer index route extends issuers list route
