@@ -1,3 +1,0 @@
-```release-note:feature
-core: Provide management endpoints for UI Custom Messages
-```
