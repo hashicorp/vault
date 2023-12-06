@@ -12,15 +12,17 @@ const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
   credentials: [{ type: 'presence', message: 'Credentials are required.' }],
 };
-const fields = ['name', 'credentials'];
-
+const displayFields = ['name', 'credentials'];
+const formFieldGroups = [{ default: ['name'] }, { Credentials: ['credentials'] }];
 @withModelValidations(validations)
-@withFormFields(fields)
+@withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {
   @attr('string', {
-    subText: 'JSON credentials for GCP secret manager.',
+    label: 'JSON credentials',
     editType: 'file',
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
-  credentials;
+  credentials; // obfuscated, never returned by API
+
+  // TODO - confirm if project_id is going to be added to READ response (not editable)
 }

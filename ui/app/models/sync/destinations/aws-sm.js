@@ -11,24 +11,29 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
 };
-const fields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
+const displayFields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
+const formFieldGroups = [
+  { default: ['name', 'region'] },
+  { Credentials: ['accessKeyId', 'secretAccessKey'] },
+];
 @withModelValidations(validations)
-@withFormFields(fields)
+@withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
   @attr('string', {
     label: 'Access key ID',
     subText: 'Access key ID to authenticate against the secrets manager.',
   })
-  accessKeyId;
+  accessKeyId; // obfuscated, never returned by API
 
   @attr('string', {
     label: 'Secret access key',
     subText: 'Secret access key to authenticate against the secrets manager.',
   })
-  secretAccessKey;
+  secretAccessKey; // obfuscated, never returned by API
 
   @attr('string', {
     subText: 'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.”',
+    editDisabled: true,
   })
   region;
 }

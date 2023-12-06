@@ -14,19 +14,23 @@ const validations = {
   projectId: [{ type: 'presence', message: 'Project ID is required.' }],
   deploymentEnvironments: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
-const fields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
-
+const displayFields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
+const formFieldGroups = [
+  { default: ['name', 'projectId', 'teamId', 'deploymentEnvironments'] },
+  { Credentials: ['accessToken'] },
+];
 @withModelValidations(validations)
-@withFormFields(fields)
+@withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsVercelProjectModel extends SyncDestinationModel {
   @attr('string', {
     subText: 'Vercel API access token with the permissions to manage environment variables.',
   })
-  accessToken;
+  accessToken; // obfuscated, never returned by API
 
   @attr('string', {
     label: 'Project ID',
     subText: 'Project ID where to manage environment variables.',
+    editDisabled: true,
   })
   projectId;
 

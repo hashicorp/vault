@@ -9,7 +9,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 // Base model for all secret sync destination types
 export default class SyncDestinationModel extends Model {
-  @attr('string', { subText: 'Specifies the name for this destination.' }) name;
+  @attr('string', { subText: 'Specifies the name for this destination.', editDisabled: true }) name;
   @attr type;
 
   // findDestination returns static attributes for each destination type
