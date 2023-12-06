@@ -48,16 +48,24 @@ func setupAcmeDirectory(b *backend, acmePrefix string, unauthPrefix string, opts
 
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeDirectory(b, acmePrefix, opts))
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeNonce(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeNewAccount(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeUpdateAccount(b, acmePrefix, opts))
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeGetOrder(b, acmePrefix, opts))
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeListOrders(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeNewOrder(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeFinalizeOrder(b, acmePrefix, opts))
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeFetchOrderCert(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeChallenge(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeAuthorization(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeRevoke(b, acmePrefix, opts))
+	// TODO: generate, test, document event
 	b.Backend.Paths = append(b.Backend.Paths, pathAcmeNewEab(b, acmePrefix)) // auth'd API that lives underneath the various /acme paths
 
 	// Add specific un-auth'd paths for ACME APIs
