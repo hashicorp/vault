@@ -76,7 +76,9 @@ func TestAddTestPlugin(t testing.T, pluginCatalog *PluginCatalog, name string, p
 	}
 	sum := hash.Sum(nil)
 
-	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
+	// The flag is a regex, so use ^$ to make sure we only run a single test
+	// with an exact match.
+	args := []string{fmt.Sprintf("--test.run=^%s$", testFunc)}
 	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    name,
 		Type:    pluginType,
