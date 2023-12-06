@@ -112,12 +112,7 @@
 
       <Hds::Button @text="Create message" type="submit" />
 
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        @route="vault.cluster.secrets.backend.show"
-        @query={{hash authenticated=true}}
-      />
+      <Hds::Button @text="Cancel" @color="secondary" @route="messages.index" @query={{hash authenticated=true}} />
     </Hds::ButtonSet>
   </div>
 </form>
