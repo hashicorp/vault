@@ -390,21 +390,20 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // setupAudit is invoked after we've loaded the audit able to
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	brokerLogger := c.baseLogger.Named("audit")
-	c.AddLogger(brokerLogger)
+	c.auditLock.Lock()
+	defer c.auditLock.Unlock()
 
 	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
 	if err != nil {
 		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
 	}
 
+	brokerLogger := c.baseLogger.Named("audit")
+
 	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
 	if err != nil {
 		return err
 	}
-
-	c.auditLock.Lock()
-	defer c.auditLock.Unlock()
 
 	var successCount int
 
@@ -435,7 +434,11 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, entry.Local)
+		err = broker.Register(entry.Path, backend, entry.Local)
+		if err != nil {
+			c.logger.Error("failed to setup audit backed", "path", entry.Path, "type", entry.Type, "error", err)
+			continue
+		}
 
 		successCount++
 	}
@@ -445,6 +448,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	}
 
 	c.auditBroker = broker
+	c.AddLogger(brokerLogger)
 	return nil
 }
 
@@ -458,6 +462,10 @@ func (c *Core) teardownAudits() error {
 		for _, entry := range c.audit.Entries {
 			c.removeAuditReloadFunc(entry)
 			removeAuditPathChecker(c, entry)
+			err := c.auditBroker.Deregister(nil, entry.Path)
+			if err != nil {
+				c.logger.Error("unable to deregister audit during teardown", "path", entry.Path, "type", entry.Type, "error", err)
+			}
 		}
 	}
 
