@@ -17,7 +17,6 @@ import (
 	"runtime"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
@@ -538,35 +537,20 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 }
 
 func TestPluginCatalog_NewPluginClient(t *testing.T) {
-	f, err := os.Stat(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(f.Size())
-	start := time.Now()
-	t.Log(time.Since(start))
 	pluginCatalog := testPluginCatalog(t)
-	t.Log(time.Since(start))
 
 	if extPlugins := len(pluginCatalog.externalPlugins); extPlugins != 0 {
 		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", extPlugins)
 	}
 
 	// register plugins
-	t.Log(time.Since(start))
 	TestAddTestPlugin(t, pluginCatalog, "mux-postgres", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{})
-	t.Log(time.Since(start))
 	TestAddTestPlugin(t, pluginCatalog, "single-postgres-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{})
-	t.Log(time.Since(start))
 	TestAddTestPlugin(t, pluginCatalog, "single-postgres-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{})
-	t.Log(time.Since(start))
 
 	TestAddTestPlugin(t, pluginCatalog, "mux-userpass", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{})
-	t.Log(time.Since(start))
 	TestAddTestPlugin(t, pluginCatalog, "single-userpass-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{})
-	t.Log(time.Since(start))
 	TestAddTestPlugin(t, pluginCatalog, "single-userpass-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{})
-	t.Log(time.Since(start))
 
 	getKey := func(pluginName string, pluginType consts.PluginType) externalPluginsKey {
 		t.Helper()
@@ -591,31 +575,23 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	// distinct connections
 	c := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "mux-postgres")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "mux-postgres")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "single-postgres-1")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "single-postgres-2")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 
 	// run "mux-userpass" twice which will start a single plugin for 2
 	// distinct connections
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "single-userpass-1")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "single-userpass-2")
 	pluginClients = append(pluginClients, c)
-	t.Log(time.Since(start))
 
 	externalPlugins := pluginCatalog.externalPlugins
 	if len(externalPlugins) != 6 {
@@ -629,7 +605,6 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	expectConnectionLen(t, 2, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].connections)
 	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].connections)
 	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].connections)
-	t.Log(time.Since(start))
 
 	// check multiplexing support
 	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-postgres", consts.PluginTypeDatabase)].multiplexingSupport)
@@ -638,12 +613,10 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].multiplexingSupport)
 	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].multiplexingSupport)
 	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].multiplexingSupport)
-	t.Log(time.Since(start))
 
 	// cleanup all of the external plugin processes
 	for _, client := range pluginClients {
 		client.Close()
-		t.Log(time.Since(start))
 	}
 
 	// check that externalPlugins map is cleaned up
