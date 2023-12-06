@@ -424,7 +424,7 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
 	token, keys := TestInitUnsealCore(t, core)
 
-	testCoreAddSecretMount(t, core, token)
+	testCoreAddSecretMount(t, core, token, "1")
 	return core, keys, token
 }
 
@@ -442,7 +442,7 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	return token, keys
 }
 
-func testCoreAddSecretMount(t testing.T, core *Core, token string) {
+func testCoreAddSecretMount(t testing.T, core *Core, token, kvVersion string) {
 	kvReq := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: token,
@@ -452,7 +452,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": kvVersion,
 			},
 		},
 	}
@@ -2135,34 +2135,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
-	}
-
-	// Existing tests rely on this; we can make a toggle to disable it
-	// later if we want
-	kvReq := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: tc.RootToken,
-		Path:        "sys/mounts/secret",
-		Data: map[string]interface{}{
-			"type":        "kv",
-			"path":        "secret/",
-			"description": "key/value secret storage",
-			"options": map[string]string{
-				"version": kvVersion,
-			},
-		},
-	}
-	resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), kvReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.IsError() {
-		t.Fatal(err)
-	}
-
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -2202,26 +2174,22 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 	}
 
-	//
 	// Set test cluster core(s) and test cluster
-	//
 	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
 
+	// Enable auditing if required
 	if addAuditBackend {
-		// Enable auditing.
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
-				"type": "noop",
-			},
+			Data:        map[string]interface{}{"type": "noop"},
 		}
-		resp, err = leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
+		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2230,6 +2198,14 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			t.Fatal(err)
 		}
 	}
+
+	// Configure a secret engine (kv)
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (testCluster *TestCluster) getAPIClient(

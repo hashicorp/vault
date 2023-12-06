@@ -267,7 +267,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 	n.formatter = fw
 
 	n.nodeIDList = make([]eventlogger.NodeID, 2)
-	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node, 2)
 
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
@@ -333,6 +333,7 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
+
 	if n.formatter != nil {
 		var w bytes.Buffer
 		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
