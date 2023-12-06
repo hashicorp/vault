@@ -4708,6 +4708,8 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		},
 	}
 
+	resp.Data["chroot_namespace"] = req.ChrootNamespace
+
 	if acl.root {
 		resp.Data["root"] = true
 		return resp, nil
@@ -5288,14 +5290,16 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 }
 
 type HAStatusNode struct {
-	Hostname       string     `json:"hostname"`
-	APIAddress     string     `json:"api_address"`
-	ClusterAddress string     `json:"cluster_address"`
-	ActiveNode     bool       `json:"active_node"`
-	LastEcho       *time.Time `json:"last_echo"`
-	Version        string     `json:"version"`
-	UpgradeVersion string     `json:"upgrade_version,omitempty"`
-	RedundancyZone string     `json:"redundancy_zone,omitempty"`
+	Hostname           string     `json:"hostname"`
+	APIAddress         string     `json:"api_address"`
+	ClusterAddress     string     `json:"cluster_address"`
+	ActiveNode         bool       `json:"active_node"`
+	LastEcho           *time.Time `json:"last_echo"`
+	Version            string     `json:"version"`
+	UpgradeVersion     string     `json:"upgrade_version,omitempty"`
+	RedundancyZone     string     `json:"redundancy_zone,omitempty"`
+	EchoDurationMillis int64      `json:"echo_duration_ms"`
+	ClockSkewMillis    int64      `json:"clock_skew_ms"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

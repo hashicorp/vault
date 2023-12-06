@@ -42,7 +42,7 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to role details route on list item click'
     );
 
-    await click('[data-test-breadcrumb="roles"]');
+    await click('[data-test-breadcrumb="roles"] a');
     await click('[data-test-list-item-link]:nth-of-type(2) a');
     assert.true(
       isURL('roles/static/static-role/details'),
@@ -61,7 +61,7 @@ module('Acceptance | ldap | roles', function (hooks) {
         isURL(`roles/dynamic/dynamic-role/${uri}`),
         `Transitions to ${uri} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="roles"]');
+      await click('[data-test-breadcrumb="roles"] a');
     }
   });
 
@@ -73,7 +73,7 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to credentials route from toolbar link'
     );
 
-    await click('[data-test-breadcrumb="dynamic-role"]');
+    await click('[data-test-breadcrumb="dynamic-role"] a');
     await click('[data-test-edit]');
     assert.true(isURL('roles/dynamic/dynamic-role/edit'), 'Transitions to edit route from toolbar link');
   });

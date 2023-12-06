@@ -37,6 +37,11 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -59,10 +64,6 @@ import (
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -873,7 +874,7 @@ func (c *TestCluster) start(t testing.T) {
 
 	activeCore := -1
 WAITACTIVE:
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 600; i++ {
 		for i, core := range c.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				activeCore = i
@@ -881,7 +882,7 @@ WAITACTIVE:
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if activeCore == -1 {
 		t.Fatalf("no core became active")
@@ -917,12 +918,12 @@ WAITACTIVE:
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
 	t.Helper()
-	if err := c.UnsealCoresWithError(false); err != nil {
+	if err := c.UnsealCoresWithError(t, false); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
+func (c *TestCluster) UnsealCoresWithError(t testing.T, useStoredKeys bool) error {
 	unseal := func(core *Core) error {
 		for _, key := range c.BarrierKeys {
 			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
@@ -959,19 +960,21 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 	}
 
 	// Let them come fully up to standby
-	time.Sleep(2 * time.Second)
+	corehelpers.RetryUntil(t, 2*time.Second, func() error {
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < len(c.Cores); i++ {
+			isLeader, _, _, err := c.Cores[i].Leader()
+			if err != nil {
+				return err
+			}
+			if isLeader {
+				return fmt.Errorf("core[%d] should not be leader", i)
+			}
+		}
 
-	// Ensure cluster connection info is populated.
-	// Other cores should not come up as leaders.
-	for i := 1; i < len(c.Cores); i++ {
-		isLeader, _, _, err := c.Cores[i].Leader()
-		if err != nil {
-			return err
-		}
-		if isLeader {
-			return fmt.Errorf("core[%d] should not be leader", i)
-		}
-	}
+		return nil
+	})
 
 	return nil
 }
@@ -1109,8 +1112,6 @@ func (c *TestCluster) Cleanup() {
 		os.RemoveAll(c.TempDir)
 	}
 
-	// Give time to actually shut down/clean up before the next test
-	time.Sleep(time.Second)
 	if c.CleanupFunc != nil {
 		c.CleanupFunc()
 	}
@@ -2146,13 +2147,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
-	}
-
-	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
-
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -2177,39 +2171,37 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 
 		// Let them come fully up to standby
-		time.Sleep(2 * time.Second)
+		corehelpers.RetryUntil(t, 2*time.Second, func() error {
+			// Ensure cluster connection info is populated.
+			// Other cores should not come up as leaders.
+			for i := 1; i < numCores; i++ {
+				isLeader, _, _, err := tc.Cores[i].Core.Leader()
+				if err != nil {
+					return err
+				}
+				if isLeader {
+					return fmt.Errorf("core[%d] should not be leader", i)
+				}
+			}
 
-		// Ensure cluster connection info is populated.
-		// Other cores should not come up as leaders.
-		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := tc.Cores[i].Core.Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if isLeader {
-				t.Fatalf("core[%d] should not be leader", i)
-			}
-		}
+			return nil
+		})
 	}
 
-	//
 	// Set test cluster core(s) and test cluster
-	//
 	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
 
+	// Enable auditing if required
 	if addAuditBackend {
-		// Enable auditing.
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
-				"type": "noop",
-			},
+			Data:        map[string]interface{}{"type": "noop"},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
@@ -2220,6 +2212,14 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			t.Fatal(err)
 		}
 	}
+
+	// Configure a secret engine (kv)
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (testCluster *TestCluster) getAPIClient(

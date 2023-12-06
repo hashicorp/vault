@@ -31,7 +31,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 		wantLogicalErr bool
 	}{
 		{"all-defaults", "", []int{0}, false},
-		{"rsa", "rsa", []int{0, 2048, 3072, 4096}, false},
+		{"rsa", "rsa", []int{0, 2048, 3072, 4096, 8192}, false},
 		{"ec", "ec", []int{0, 224, 256, 384, 521}, false},
 		{"ed25519", "ed25519", []int{0}, false},
 		{"error-rsa", "rsa", []int{-1, 343444}, true},
