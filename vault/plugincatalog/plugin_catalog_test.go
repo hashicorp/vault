@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -1029,6 +1030,10 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 }
 
 func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Running plugins in containers is only supported on linux")
+	}
+
 	pluginCatalog := testPluginCatalog(t)
 
 	var plugins []pluginhelpers.TestPlugin
@@ -1066,9 +1071,9 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 					var version logical.PluginVersion
 					var err error
 					if plugin.Typ == consts.PluginTypeDatabase {
-						version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+						version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
 					} else {
-						version, err = c.pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+						version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
 					}
 					if err != nil {
 						t.Fatal(err)
