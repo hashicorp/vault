@@ -3,10 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::TabPageHeader @authenticated={{true}} @pageTitle="Custom messages" @breadcrumbs={{this.breadcrumbs}} />
+<Messages::TabPageHeader @authenticated={{true}} @pageTitle="Create message" @breadcrumbs={{this.breadcrumbs}} />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-message-create-edit-form>
-  <div class="box is-sideless is-fullwidth is-marginless">
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
+    <Hds::Text::Body @tag="p" class="has-bottom-margin-l">
+      Create a custom message for all users when they access a Vault system via the UI.
+    </Hds::Text::Body>
     {{#each @messages.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-s" as |G|>
