@@ -80,7 +80,7 @@
           <div class="control">
             <Input
               @type="datetime-local"
-              class="input"
+              class="input has-top-margin-s"
               data-test-date="startTime"
               {{on "input" (pipe (pick "target.value") (fn (mut this.state.startTime)))}}
             />
