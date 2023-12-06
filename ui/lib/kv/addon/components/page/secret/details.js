@@ -35,7 +35,7 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
-  @tracked syncStatus = null;
+  @tracked syncStatus = null; // array of association sync status info by destination
   secretDataIsAdvanced;
 
   constructor() {
