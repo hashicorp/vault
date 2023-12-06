@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
@@ -468,10 +469,13 @@ func (c *Core) teardownAudits() error {
 	defer c.auditLock.Unlock()
 
 	if c.audit != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		for _, entry := range c.audit.Entries {
 			c.removeAuditReloadFunc(entry)
 			removeAuditPathChecker(c, entry)
-			err := c.auditBroker.Deregister(nil, entry.Path)
+			err := c.auditBroker.Deregister(ctx, entry.Path)
 			if err != nil {
 				c.logger.Error("unable to deregister audit during teardown", "path", entry.Path, "type", entry.Type, "error", err)
 			}
