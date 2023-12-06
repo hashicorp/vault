@@ -742,7 +742,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
-	// Gathering failures, but return right away if there is a succesful result
+	// Gathering failures, but return right away if there is a successful result
 	errs := make(map[string]error)
 GATHER_RESULTS:
 	for {

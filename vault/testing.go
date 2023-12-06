@@ -2147,13 +2147,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
-	}
-
-	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
-
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -2195,24 +2188,20 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		})
 	}
 
-	//
 	// Set test cluster core(s) and test cluster
-	//
 	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
 
+	// Enable auditing if required
 	if addAuditBackend {
-		// Enable auditing.
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
-				"type": "noop",
-			},
+			Data:        map[string]interface{}{"type": "noop"},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
@@ -2223,6 +2212,14 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			t.Fatal(err)
 		}
 	}
+
+	// Configure a secret engine (kv)
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (testCluster *TestCluster) getAPIClient(
