@@ -4,13 +4,12 @@
 ~}}
 
 <Hds::Breadcrumb>
-  {{#each this.secretPath as |path index|}}
+  {{#each this.secretPath as |path|}}
     {{#if this.linkToPaths}}
       <Hds::Breadcrumb::Item
         @text={{path.text}}
         @route={{path.path}}
         @model={{path.model}}
-        data-test-secret-root-link={{if (eq index 0) true false}}
         data-test-secret-breadcrumb={{path.text}}
       />
     {{else}}
