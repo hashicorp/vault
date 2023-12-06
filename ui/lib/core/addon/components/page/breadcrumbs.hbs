@@ -4,9 +4,8 @@
 ~}}
 
 <Hds::Breadcrumb data-test-breadcrumbs>
-  {{#each @breadcrumbs as |breadcrumb idx|}}
+  {{#each @breadcrumbs as |breadcrumb|}}
     <Hds::Breadcrumb::Item
-      data-test-crumb={{idx}}
       data-test-breadcrumb={{breadcrumb.label}}
       @text={{breadcrumb.label}}
       @icon={{breadcrumb.icon}}
