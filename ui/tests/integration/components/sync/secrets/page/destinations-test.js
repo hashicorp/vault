@@ -12,6 +12,20 @@ import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 
+import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
+
+const {
+  breadcrumb,
+  title,
+  tab,
+  filter,
+  searchSelect,
+  emptyStateTitle,
+  destinations,
+  menuTrigger,
+  confirmButton,
+} = PAGE;
+
 module('Integration | Component | sync | Page::Destinations', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
@@ -55,10 +69,10 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
-    assert.dom('[data-test-crumb="0"]').includesText('Secrets sync', 'Breadcrumb renders');
-    assert.dom('[data-test-page-title]').hasText('Secrets sync', 'Page title renders');
-    assert.dom('[data-test-tab="Overview"]').exists('Overview tab renders');
-    assert.dom('[data-test-tab="Destinations"]').exists('Destinations tab renders');
+    assert.dom(breadcrumb).includesText('Secrets sync', 'Breadcrumb renders');
+    assert.dom(title).hasText('Secrets sync', 'Page title renders');
+    assert.dom(tab('Overview')).exists('Overview tab renders');
+    assert.dom(tab('Destinations')).exists('Destinations tab renders');
   });
 
   test('it should render toolbar filters and actions', async function (assert) {
@@ -67,23 +81,21 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     this.typeFilter = 'aws-sm';
     await this.renderComponent();
 
+    assert.dom(destinations.list.create).includesText('Create new destination', 'Create action renders');
     assert
-      .dom('[data-test-create-destination]')
-      .includesText('Create new destination', 'Create action renders');
-    assert
-      .dom('[data-test-filter="type"]')
+      .dom(filter('type'))
       .includesText('AWS Secrets Manager', 'Filter is populated for correct initial value');
-    await click('[data-test-selected-list-button="delete"]');
+    await click(searchSelect.removeSelected);
 
-    for (const filter of ['type', 'name']) {
-      await click(`[data-test-filter="${filter}"] .ember-basic-dropdown-trigger`);
-      await click('[data-option-index="0"]');
+    for (const filterType of ['type', 'name']) {
+      await click(`${filter(filterType)} .ember-basic-dropdown-trigger`);
+      await click(searchSelect.option(0));
 
-      const value = filter === 'type' ? 'aws-sm' : 'destination-aws';
+      const value = filterType === 'type' ? 'aws-sm' : 'destination-aws';
       assert.deepEqual(
         this.transitionStub.lastCall.args,
-        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filter]: value } }],
-        `${filter} filter triggered transition with correct query params`
+        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filterType]: value } }],
+        `${filterType} filter triggered transition with correct query params`
       );
     }
   });
@@ -95,9 +107,8 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     await this.renderComponent();
 
-    const selector = '[data-test-empty-state-title]';
     assert
-      .dom(selector)
+      .dom(emptyStateTitle)
       .hasText(
         'There are no foo destinations matching "bar".',
         'Renders correct empty state when both type and name filters are defined'
@@ -105,14 +116,14 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     this.set('nameFilter', undefined);
     assert
-      .dom(selector)
+      .dom(emptyStateTitle)
       .hasText('There are no foo destinations.', 'Renders correct empty state when type filter is defined');
 
     this.setProperties({
       typeFilter: undefined,
       nameFilter: 'bar',
     });
-    assert.dom(selector).hasText('There are no destinations matching "bar".');
+    assert.dom(emptyStateTitle).hasText('There are no destinations matching "bar".');
   });
 
   test('it should render destination list items', async function (assert) {
@@ -125,14 +136,16 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('[data-test-destination-icon]').hasClass('flight-icon-aws-color', 'Correct icon renders');
-    assert.dom('[data-test-destination-name]').hasText('destination-aws', 'Name renders');
-    assert.dom('[data-test-destination-type]').hasText('AWS Secrets Manager', 'Type renders');
+    const { icon, name, type, deleteAction } = destinations.list;
 
-    await click('[data-test-popup-menu-trigger]');
+    assert.dom(icon).hasClass('flight-icon-aws-color', 'Correct icon renders');
+    assert.dom(name).hasText('destination-aws', 'Name renders');
+    assert.dom(type).hasText('AWS Secrets Manager', 'Type renders');
 
-    await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(menuTrigger);
+
+    await click(deleteAction);
+    await click(confirmButton);
 
     assert.propEqual(
       this.transitionStub.lastCall.args,
