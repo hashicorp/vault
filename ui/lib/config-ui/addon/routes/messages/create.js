@@ -16,8 +16,8 @@ export default class MessagesCreateRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
-      { label: 'messages', route: 'messages.index', query: { authenticated: false } },
-      { label: 'create' },
+      { label: 'Messages', route: 'messages.index', query: { authenticated: false } },
+      { label: 'Create Message' },
     ];
   }
 }
