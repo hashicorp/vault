@@ -33,7 +33,7 @@ locals {
   # consul_bind_addr       = {
   #   amazon_linux = "{{ GetInterfaceIP \"eth0\" }}"
   # }
-  enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
+  enable_audit_devices = var.enable_audit_devices && var.initialize_cluster
   // In order to get Terraform to plan we have to use collections with keys
   // that are known at plan time. In order for our module to work our var.target_hosts
   // must be a map with known keys at plan time. Here we're creating locals
