@@ -14,7 +14,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<form>
+<form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-message-create-edit-form>
   <div class="box is-sideless is-fullwidth is-marginless">
     {{#each @messages.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
@@ -86,12 +86,17 @@
             <F.Label>Never</F.Label>
             <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
           </G.Radio::Field>
-          <G.Radio::Field @id="specific-date" @value={{this.messageEndTime}} {{on "change" this.updateRadioValue}} as |F|>
+          <G.Radio::Field @id="specific-date" @value="" {{on "change" this.updateRadioValue}} as |F|>
             <F.Label>Specific date</F.Label>
             <F.HelperText>
               This message will expire at midnight (local timezone) at the specific date.
               <div class="control">
-                <Input @type="datetime-local" class="input has-top-margin-s" data-test-link="title" />
+                <Input
+                  @type="datetime-local"
+                  class="input has-top-margin-s"
+                  data-test-link="title"
+                  {{on "input" (pipe (pick "target.value") (fn (mut this.state.endTime)))}}
+                />
               </div>
             </F.HelperText>
           </G.Radio::Field>

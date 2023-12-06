@@ -6,6 +6,8 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -24,6 +26,7 @@ class MessageState {
   @tracked message = '';
   @tracked linkTitle = '';
   @tracked linkHref = '';
+  @tracked endTime = '';
 }
 
 export default class MessagesList extends Component {
@@ -32,5 +35,18 @@ export default class MessagesList extends Component {
   @action
   updateRadioValue(evt) {
     this.state[evt.target.name] = evt.target.value;
+  }
+
+  @task
+  *save(event) {
+    event.preventDefault();
+    try {
+      const { isNew } = this.args.messages;
+      yield this.args.messages.save();
+      this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
+    } catch (error) {
+      this.errorBanner = errorMessage(error);
+      this.invalidFormAlert = 'There was an error submitting this form.';
+    }
   }
 }
