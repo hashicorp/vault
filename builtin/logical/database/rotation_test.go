@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -996,6 +998,34 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 		"private_key": privKey,
 		"public_key":  pubKey,
 	})
+}
+
+// TestQueueTickIntervalKeyConfig tests the configuration of queueTickIntervalKey
+// Previous to a fix, this test panicked.
+func TestQueueTickIntervalKeyConfig(t *testing.T) {
+	t.Parallel()
+	cluster, sys := getClusterPostgresDB(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+	config.Config[queueTickIntervalKey] = "1"
+
+	// Rotation ticker starts running in Factory call
+	b, err := Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "0"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "-1"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
