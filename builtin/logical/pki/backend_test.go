@@ -1220,7 +1220,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 
 	getRandCsr := func(keyType string, errorOk bool, csrTemplate *x509.CertificateRequest) csrPlan {
-		rsaKeyBits := []int{2048, 3072, 4096}
+		rsaKeyBits := []int{2048, 3072, 4096, 8192}
 		ecKeyBits := []int{224, 256, 384, 521}
 		plan := csrPlan{errorOk: errorOk}
 

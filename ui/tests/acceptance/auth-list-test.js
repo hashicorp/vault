@@ -21,7 +21,7 @@ const SELECTORS = {
   input: (attr) => `[data-test-input="${attr}"]`,
   password: '[data-test-textarea]',
   saveBtn: '[data-test-save-config]',
-  methods: '[data-test-access-methods]',
+  methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
 };
 module('Acceptance | auth backend list', function (hooks) {

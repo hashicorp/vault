@@ -52,8 +52,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Access',
       'Policies',
       'Tools',
-      'Disaster Recovery',
-      'Performance',
       'Replication',
       'Raft Storage',
       'Client Count',

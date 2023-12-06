@@ -208,6 +208,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		Enterprise:                 constants.IsEnterprise,
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
+		ClockSkewMillis:            core.ActiveNodeClockSkewMillis(),
+		EchoDurationMillis:         core.EchoDuration().Milliseconds(),
 	}
 
 	licenseState, err := core.EntGetLicenseState()
@@ -252,4 +254,6 @@ type HealthResponse struct {
 	ClusterID                  string                 `json:"cluster_id,omitempty"`
 	LastWAL                    uint64                 `json:"last_wal,omitempty"`
 	License                    *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis         int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis            int64                  `json:"clock_skew_ms"`
 }

@@ -13,12 +13,12 @@ import (
 	osuser "os/user"
 	"strconv"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/jefferai/isbadcipher"
-	"github.com/mitchellh/cli"
 )
 
 type Listener struct {

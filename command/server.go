@@ -27,6 +27,7 @@ import (
 
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
@@ -62,7 +63,6 @@ import (
 	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
 	"github.com/sasha-s/go-deadlock"

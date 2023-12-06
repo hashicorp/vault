@@ -257,11 +257,12 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 	return path, 0, nil
 }
 
-func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request, chrootNamespace string) (*logical.Request, io.ReadCloser, int, error) {
 	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
+	req.ChrootNamespace = chrootNamespace
 
 	req.SetRequiredState(r.Header.Values(VaultIndexHeaderName))
 	requestAuth(r, req)
@@ -290,22 +291,22 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 //   - Perf standby and token with limited use count.
 //   - Perf standby and token re-validation needed (e.g. due to invalid token).
 //   - Perf standby and control group error.
-func handleLogical(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false, false)
+func handleLogical(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, false, false, chrootNamespace)
 }
 
 // handleLogicalWithInjector returns a handler for processing logical requests
 // that also have their logical response data injected at the top-level payload.
 // All forwarding behavior remains the same as `handleLogical`.
-func handleLogicalWithInjector(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, true, false)
+func handleLogicalWithInjector(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, true, false, chrootNamespace)
 }
 
 // handleLogicalNoForward returns a handler for processing logical local-only
 // requests. These types of requests never forwarded, and return an
 // `vault.ErrCannotForwardLocalOnly` error if attempted to do so.
-func handleLogicalNoForward(core *vault.Core) http.Handler {
-	return handleLogicalInternal(core, false, true)
+func handleLogicalNoForward(core *vault.Core, chrootNamespace string) http.Handler {
+	return handleLogicalInternal(core, false, true, chrootNamespace)
 }
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
@@ -338,9 +339,9 @@ func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Han
 // handleLogicalInternal is a common helper that returns a handler for
 // processing logical requests. The behavior depends on the various boolean
 // toggles. Refer to usage on functions for possible behaviors.
-func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool) http.Handler {
+func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForward bool, chrootNamespace string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, origBody, statusCode, err := buildLogicalRequest(core, w, r)
+		req, origBody, statusCode, err := buildLogicalRequest(core, w, r, chrootNamespace)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return

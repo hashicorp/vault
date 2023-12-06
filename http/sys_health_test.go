@@ -7,9 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
@@ -20,73 +22,54 @@ func TestSysHealth_get(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp, err := http.Get(addr + "/v1/sys/health")
+	// Test without the client first since we want to verify the response code
+	raw, err := http.Get(addr + "/v1/sys/health")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, raw, 501)
+
+	// Test with the client because it's a bit easier to work with structs
+	config := api.DefaultConfig()
+	config.Address = addr
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Sys().Health()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
-		"initialized":                  false,
-		"sealed":                       true,
-		"standby":                      true,
-		"performance_standby":          false,
+	expected := &api.HealthResponse{
+		Enterprise:                 constants.IsEnterprise,
+		Initialized:                false,
+		Sealed:                     true,
+		Standby:                    true,
+		PerformanceStandby:         false,
+		ReplicationPerformanceMode: consts.ReplicationUnknown.GetPerformanceString(),
+		ReplicationDRMode:          consts.ReplicationUnknown.GetDRString(),
 	}
-	testResponseStatus(t, resp, 501)
-	testResponseBody(t, resp, &actual)
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	ignore := cmpopts.IgnoreFields(*expected, "ClusterName", "ClusterID", "ServerTimeUTC", "Version")
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 
 	keys, _ := vault.TestCoreInit(t, core)
-	resp, err = http.Get(addr + "/v1/sys/health")
+	raw, err = http.Get(addr + "/v1/sys/health")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	testResponseStatus(t, raw, 503)
 
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
-		"initialized":                  true,
-		"sealed":                       true,
-		"standby":                      true,
-		"performance_standby":          false,
+	resp, err = client.Sys().Health()
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	testResponseStatus(t, resp, 503)
-	testResponseBody(t, resp, &actual)
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	expected.Initialized = true
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 
 	for _, key := range keys {
@@ -94,38 +77,22 @@ func TestSysHealth_get(t *testing.T) {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
-	resp, err = http.Get(addr + "/v1/sys/health")
+	raw, err = http.Get(addr + "/v1/sys/health")
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	testResponseStatus(t, raw, 200)
 
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationPerformanceDisabled.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
-		"initialized":                  true,
-		"sealed":                       false,
-		"standby":                      false,
-		"performance_standby":          false,
+	resp, err = client.Sys().Health()
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	expected.Sealed = false
+	expected.Standby = false
+	expected.ReplicationPerformanceMode = consts.ReplicationPerformanceDisabled.GetPerformanceString()
+	expected.ReplicationDRMode = consts.ReplicationDRDisabled.GetDRString()
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 }
 
@@ -138,75 +105,53 @@ func TestSysHealth_customcodes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	resp, err := http.Get(queryurl.String())
+	raw, err := http.Get(queryurl.String())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, raw, 581)
+
+	// Test with the client because it's a bit easier to work with structs
+	config := api.DefaultConfig()
+	config.Address = addr
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Sys().Health()
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
-		"initialized":                  false,
-		"sealed":                       true,
-		"standby":                      true,
-		"performance_standby":          false,
+	expected := &api.HealthResponse{
+		Enterprise:                 constants.IsEnterprise,
+		Initialized:                false,
+		Sealed:                     true,
+		Standby:                    true,
+		PerformanceStandby:         false,
+		ReplicationPerformanceMode: consts.ReplicationUnknown.GetPerformanceString(),
+		ReplicationDRMode:          consts.ReplicationUnknown.GetDRString(),
 	}
-	testResponseStatus(t, resp, 581)
-	testResponseBody(t, resp, &actual)
-
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	ignore := cmpopts.IgnoreFields(*expected, "ClusterName", "ClusterID", "ServerTimeUTC", "Version")
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 
 	keys, _ := vault.TestCoreInit(t, core)
-	resp, err = http.Get(queryurl.String())
+	raw, err = http.Get(queryurl.String())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	testResponseStatus(t, raw, 523)
 
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationUnknown.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
-		"initialized":                  true,
-		"sealed":                       true,
-		"standby":                      true,
-		"performance_standby":          false,
+	resp, err = client.Sys().Health()
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	testResponseStatus(t, resp, 523)
-	testResponseBody(t, resp, &actual)
-
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	expected.Initialized = true
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 
 	for _, key := range keys {
@@ -214,38 +159,22 @@ func TestSysHealth_customcodes(t *testing.T) {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
-	resp, err = http.Get(queryurl.String())
+	raw, err = http.Get(queryurl.String())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	testResponseStatus(t, raw, 202)
 
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"enterprise":                   constants.IsEnterprise,
-		"replication_performance_mode": consts.ReplicationPerformanceDisabled.GetPerformanceString(),
-		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
-		"initialized":                  true,
-		"sealed":                       false,
-		"standby":                      false,
-		"performance_standby":          false,
+	resp, err = client.Sys().Health()
+	if err != nil {
+		t.Fatalf("err: %s", err)
 	}
-	testResponseStatus(t, resp, 202)
-	testResponseBody(t, resp, &actual)
-	expected["server_time_utc"] = actual["server_time_utc"]
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	delete(actual, "license")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	expected.Sealed = false
+	expected.Standby = false
+	expected.ReplicationPerformanceMode = consts.ReplicationPerformanceDisabled.GetPerformanceString()
+	expected.ReplicationDRMode = consts.ReplicationDRDisabled.GetDRString()
+	if diff := cmp.Diff(resp, expected, ignore); len(diff) > 0 {
+		t.Fatal(diff)
 	}
 }
 

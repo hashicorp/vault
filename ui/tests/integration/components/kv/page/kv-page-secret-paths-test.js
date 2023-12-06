@@ -25,7 +25,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     ];
 
     this.assertClipboard = (assert, element, expected) => {
-      assert.dom(element).hasAttribute('data-clipboard-text', expected);
+      assert.dom(element).hasAttribute('data-test-copy-button', expected);
     };
   });
 
@@ -110,9 +110,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-clipboard-text', expected.cli);
+    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-test-copy-button', expected.cli);
     assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.apiDisplay);
-    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-clipboard-text', expected.apiCopy);
+    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-test-copy-button', expected.apiCopy);
   });
 
   test('it renders copyable encoded mount and path commands', async function (assert) {
@@ -141,8 +141,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
     );
 
     assert.dom(PAGE.paths.codeSnippet('cli')).hasText(expected.cli);
-    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-clipboard-text', expected.cli);
+    assert.dom(PAGE.paths.snippetCopy('cli')).hasAttribute('data-test-copy-button', expected.cli);
     assert.dom(PAGE.paths.codeSnippet('api')).hasText(expected.apiDisplay);
-    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-clipboard-text', expected.apiCopy);
+    assert.dom(PAGE.paths.snippetCopy('api')).hasAttribute('data-test-copy-button', expected.apiCopy);
   });
 });
