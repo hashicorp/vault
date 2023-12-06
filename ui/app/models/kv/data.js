@@ -82,12 +82,20 @@ export default class KvSecretDataModel extends Model {
     return isDeleted(this.deletionTime);
   }
 
+  get permissionsPath() {
+    return this.fullSecretPath || this.path;
+  }
+
   // Permissions
-  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
-  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
-  @lazyCapabilities(apiPath`${'backend'}/delete/${'path'}`, 'backend', 'path') deletePath;
-  @lazyCapabilities(apiPath`${'backend'}/destroy/${'path'}`, 'backend', 'path') destroyPath;
-  @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path') undeletePath;
+  @lazyCapabilities(apiPath`${'backend'}/data/${'permissionsPath'}`, 'backend', 'permissionsPath') dataPath;
+  @lazyCapabilities(apiPath`${'backend'}/metadata/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  metadataPath;
+  @lazyCapabilities(apiPath`${'backend'}/delete/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  deletePath;
+  @lazyCapabilities(apiPath`${'backend'}/destroy/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  destroyPath;
+  @lazyCapabilities(apiPath`${'backend'}/undelete/${'permissionsPath'}`, 'backend', 'permissionsPath')
+  undeletePath;
 
   get canDeleteLatestVersion() {
     return this.dataPath.get('canDelete') !== false;
