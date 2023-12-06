@@ -120,6 +120,7 @@
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
     "dompurify": "^3.0.2",
+    "ember-a11y-testing": "^5.2.1",
     "ember-auto-import": "2.6.3",
     "ember-basic-dropdown": "6.0.1",
     "ember-cli": "~4.12.1",
