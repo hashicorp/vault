@@ -5,7 +5,7 @@
 
 export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
-  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbs: '[data-test-breadcrumbs]',
   title: '[data-test-page-title]',
   headerContainer: 'header.page-header',

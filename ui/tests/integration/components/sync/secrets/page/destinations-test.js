@@ -69,8 +69,8 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render header and tabs', async function (assert) {
     await this.renderComponent();
-    assert.dom(breadcrumb).includesText('Secrets sync', 'Breadcrumb renders');
-    assert.dom(title).hasText('Secrets sync', 'Page title renders');
+    assert.dom(breadcrumb).includesText('Secrets Sync', 'Breadcrumb renders');
+    assert.dom(title).hasText('Secrets Sync', 'Page title renders');
     assert.dom(tab('Overview')).exists('Overview tab renders');
     assert.dom(tab('Destinations')).exists('Destinations tab renders');
   });

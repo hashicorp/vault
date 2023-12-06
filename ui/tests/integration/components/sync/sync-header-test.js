@@ -19,7 +19,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.version.type = 'enterprise';
-    this.title = 'Secrets sync';
+    this.title = 'Secrets Sync';
     this.renderComponent = () => {
       return render(hbs`<SyncHeader @title={{this.title}} @breadcrumbs={{this.breadcrumbs}} />`, {
         owner: this.engine,
@@ -30,7 +30,7 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
   test('it should render default breadcrumb', async function (assert) {
     await this.renderComponent();
     assert.dom(breadcrumb).exists({ count: 1 }, 'Correct number of breadcrumbs render');
-    assert.dom(breadcrumb).includesText('Secrets sync', 'renders default breadcrumb');
+    assert.dom(breadcrumb).includesText('Secrets Sync', 'renders default breadcrumb');
   });
 
   test('it should render breadcrumbs', async function (assert) {
@@ -41,13 +41,13 @@ module('Integration | Component | sync | SyncHeader', function (hooks) {
 
   test('it should just render title for enterprise version', async function (assert) {
     await this.renderComponent();
-    assert.dom(title).hasText('Secrets sync');
+    assert.dom(title).hasText('Secrets Sync');
   });
 
   test('it should render title and promotional enterprise badge for community version', async function (assert) {
     this.version.type = null;
     await this.renderComponent();
-    assert.dom(title).hasText('Secrets sync Enterprise feature');
+    assert.dom(title).hasText('Secrets Sync Enterprise feature');
   });
 
   test('it should yield actions block', async function (assert) {
