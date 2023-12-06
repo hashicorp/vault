@@ -35,6 +35,7 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
+  @tracked syncStatus = null;
   secretDataIsAdvanced;
 
   constructor() {

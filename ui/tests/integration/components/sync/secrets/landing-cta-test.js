@@ -18,7 +18,6 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
   });
 
   test('it should render promotional copy for community version', async function (assert) {
-    this.version.version = '1.16.0';
     await render(
       hbs`
      <Secrets::LandingCta />
@@ -31,11 +30,11 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
       .hasText(
         'This enterprise feature allows you to sync secrets to platforms and tools across your stack to get secrets when and where you need them.'
       );
-    assert.dom(PAGE.cta.button).hasText('Learn more about secrets sync');
+    assert.dom(PAGE.cta.link).hasText('Learn more about secrets sync');
   });
 
   test('it should render enterprise copy', async function (assert) {
-    this.version.version = '1.16.0+ent';
+    this.version.type = 'enterprise';
     await render(
       hbs`
      <Secrets::LandingCta />
@@ -48,6 +47,6 @@ module('Integration | Component | sync | Secrets::LandingCta', function (hooks) 
       .hasText(
         'Sync secrets to platforms and tools across your stack to get secrets when and where you need them. Secrets sync tutorial'
       );
-    assert.dom(PAGE.cta.button).hasText('Create first destination');
+    assert.dom(PAGE.cta.link).hasText('Secrets sync tutorial');
   });
 });
