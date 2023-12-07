@@ -755,6 +755,11 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			continue
 		}
 
+		if pluginRaw == nil {
+			retErr = multierror.Append(fmt.Errorf("%q plugin entry was nil", pluginName))
+			continue
+		}
+
 		plugin := new(pluginutil.PluginRunner)
 		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
 			retErr = multierror.Append(fmt.Errorf("failed to decode plugin entry: %w", err))
