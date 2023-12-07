@@ -59,6 +59,7 @@ export const PAGE = {
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     filter: `[data-test-kv-list-filter]`,
     listMenuDelete: `[data-test-popup-metadata-delete]`,
+    listMenuCreate: `[data-test-popup-create-new-version]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
     overviewButton: '[data-test-get-secret-detail]',

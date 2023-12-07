@@ -95,7 +95,11 @@
                       {{/if}}
                       {{#if metadata.canCreateVersionData}}
                         <li>
-                          <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
+                          <LinkTo
+                            @route="secret.details.edit"
+                            @model={{metadata.fullSecretPath}}
+                            data-test-popup-create-new-version
+                          >
                             Create new version
                           </LinkTo>
                         </li>

@@ -25,6 +25,14 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   `;
 };
 
+export const dataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
+  return `
+    path "${backend}/data/app/${secretPath}" {
+      capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
 export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
   // "delete" capability on this path can destroy all versions
   return `
@@ -83,8 +91,9 @@ export const personas = {
     deleteVersionsPolicy({ backend }) +
     undeleteVersionsPolicy({ backend }) +
     destroyVersionsPolicy({ backend }),
-  metadataNestedMaintainer: (backend) =>
-    metadataNestedPolicy({ backend, capabilities: ['create', 'read', 'update', 'list', 'delete'] }),
+  secretNestedCreator: (backend) =>
+    dataNestedPolicy({ backend, capabilities: ['create', 'update'] }) +
+    metadataNestedPolicy({ backend, capabilities: ['list', 'delete'] }),
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
