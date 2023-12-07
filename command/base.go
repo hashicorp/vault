@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	config "github.com/hashicorp/vault/command/config/hcp"
+
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
@@ -211,7 +213,7 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 func (c *BaseCommand) applyHCPConfig() error {
 	if c.hcpTokenHelper == nil {
-		return nil
+		c.hcpTokenHelper = c.HCPTokenHelper()
 	}
 
 	hcpToken, err := c.hcpTokenHelper.GetHCPToken()
@@ -262,6 +264,14 @@ func (c *BaseCommand) TokenHelper() (token.TokenHelper, error) {
 		return nil, err
 	}
 	return helper, nil
+}
+
+// HCPTokenHelper returns the HCPToken helper attached to the command.
+func (c *BaseCommand) HCPTokenHelper() hcpvlib.HCPTokenHelper {
+	if c.hcpTokenHelper != nil {
+		return c.hcpTokenHelper
+	}
+	return config.DefaultHCPTokenHelper()
 }
 
 // DefaultWrappingLookupFunc is the default wrapping function based on the
