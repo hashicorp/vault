@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
@@ -3407,5 +3409,87 @@ func TestStatelock_DeadlockDetection(t *testing.T) {
 
 	if !testCore.DetectStateLockDeadlocks() {
 		t.Fatal("statelock doesn't have deadlock detection enabled, it should")
+	}
+}
+
+// TestRunUnsealSetupFunctions verifies the correct behaviour of the
+// runUnsealSetupFunctions function. This function's job is to run each of the
+// function elements it is given with the context.Context that it's provided
+// as the sole argument.
+func TestRunUnsealSetupFunctions(t *testing.T) {
+	// First, check that the context.Context provided to runUnsealSetupFunctions
+	// is actually used to call the function elements, by running a method that
+	// records the context.Context used each time it's called.
+	checker := contextChecker{}
+	setupFunctions := []func(context.Context) error{
+		checker.setupFunction,
+		checker.setupFunction,
+		checker.setupFunction,
+	}
+
+	testContext := context.WithValue(context.Background(), "test", "pass")
+	assert.NoError(t, runUnsealSetupFunctions(testContext, setupFunctions))
+	for _, v := range checker.values {
+		assert.Equal(t, "pass", v.(string))
+	}
+
+	// Finally, check that when an error is returned by a function element, the
+	// runUnsealSetupFunctions function immediately returns it, by using the
+	// same test as above but the second function element is one that returns
+	// an error, so the checker.values slice should only contain 1 element.
+	setupFunctions[1] = func(_ context.Context) error {
+		return errors.New("error")
+	}
+	checker = contextChecker{}
+
+	assert.Error(t, runUnsealSetupFunctions(testContext, setupFunctions))
+	assert.NotNil(t, checker.values)
+	assert.Equal(t, 1, len(checker.values))
+}
+
+// contextChecker is testing struct used to verify that the correct
+// context.Context is passed to the setupFunctions by the
+// runUnsealSetupFunctions function.
+type contextChecker struct {
+	values []any
+}
+
+func (c *contextChecker) setupFunction(ctx context.Context) error {
+	value := ctx.Value("test")
+	c.values = append(c.values, value)
+
+	return nil
+}
+
+// TestBuildUnsealSetupFunctionSlice verifies that the
+// buildUnsealSetupFunctionSlice function returns the correct slice of functions
+// for the provided Core instance.
+func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
+	uint32Ptr := func(value uint32) *uint32 {
+		return &value
+	}
+
+	for _, testcase := range []struct {
+		name           string
+		core           *Core
+		expectedLength int
+	}{
+		{
+			name: "primary core",
+			core: &Core{
+				replicationState: uint32Ptr(uint32(0)),
+			},
+			expectedLength: 25,
+		},
+		{
+			name: "dr secondary core",
+			core: &Core{
+				replicationState: uint32Ptr(uint32(consts.ReplicationDRSecondary)),
+			},
+			expectedLength: 14,
+		},
+	} {
+		funcs := buildUnsealSetupFunctionSlice(testcase.core)
+		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
 	}
 }

@@ -2361,7 +2361,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.entPostUnseal(false); err != nil {
 		return err
 	}
-	if isNotSecondaryCluster(c) {
+	if c.isPrimary() {
 		// Only perf primarys should write feature flags, but we do it by
 		// excluding other states so that we don't have to change it when
 		// a non-replicated cluster becomes a primary.
@@ -2377,13 +2377,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	// Run setup-like functions
-	if err := runSetupFunctionsForUnseal(ctx, c); err != nil {
+	if err := runUnsealSetupFunctions(ctx, buildUnsealSetupFunctionSlice(c)); err != nil {
 		return err
 	}
 
 	if !c.IsDRSecondary() {
 		if err := c.setupCensusAgent(); err != nil {
-			c.logger.Error("skipping reporting for nil agent", "error", err)
+			logger.Error("skipping reporting for nil agent", "error", err)
 		}
 
 		// not waiting on wg to avoid changing existing behavior
@@ -2397,14 +2397,16 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err != nil {
 			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
 		}
-		c.auditBroker, err = NewAuditBroker(c.logger, !disableEventLogger)
+		c.auditBroker, err = NewAuditBroker(logger, !disableEventLogger)
 		if err != nil {
 			return err
 		}
 	}
 
-	if isNotSecondaryCluster(c) {
-		runUnsealSetupForNonSecondaryClusters(ctx, c)
+	if c.isPrimary() {
+		if err := c.runUnsealSetupForPrimary(ctx, logger); err != nil {
+			return err
+		}
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2435,7 +2437,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	return nil
 }
 
-func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
+func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 	// setupFunctions is a slice of functions that need to be called in order,
 	// that if any return an error, processing should immediately cease.
 	setupFunctions := []func(context.Context) error{
@@ -2467,17 +2469,14 @@ func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
 	// the following additional setupFunctions also apply.
-
 	if !c.IsDRSecondary() {
 		// This first setupFunction must be inserted at the beginning of the
 		// slice. The remainder should be appended at the end.
-
 		temp := []func(context.Context) error{
 			c.ensureWrappingKey,
 		}
 
 		setupFunctions = append(temp, setupFunctions...)
-
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			c.updateLockedUserEntries()
 			return nil
@@ -2492,7 +2491,7 @@ func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
 		setupFunctions = append(setupFunctions, c.setupAudits)
 		setupFunctions = append(setupFunctions, c.loadIdentityStoreArtifacts)
-		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return loadPolicyMFAConfigs(ctx, c)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
@@ -2502,6 +2501,13 @@ func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
 		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
 	}
 
+	return setupFunctions
+}
+
+// runUnsealSetupFunctions iterates through the provided slice of functions and
+// calls each one, passing the provided context.Context as the sole argument. If
+// any of the functions returns an error, this function returns it immediately.
+func runUnsealSetupFunctions(ctx context.Context, setupFunctions []func(context.Context) error) error {
 	// call the setupFunctions sequentially
 	for _, fn := range setupFunctions {
 		if err := fn(ctx); err != nil {
@@ -2512,11 +2518,7 @@ func runSetupFunctionsForUnseal(ctx context.Context, c *Core) error {
 	return nil
 }
 
-func isNotSecondaryCluster(c *Core) bool {
-	return !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary)
-}
-
-func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
+func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) error {
 	if err := c.setupPluginReload(); err != nil {
 		return err
 	}
@@ -2524,7 +2526,7 @@ func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
 	// Retrieve the seal generation information from storage
 	existingGenerationInfo, err := PhysicalSealGenInfo(ctx, c.physical)
 	if err != nil {
-		c.logger.Error("cannot read existing seal generation info from storage", "error", err)
+		logger.Error("cannot read existing seal generation info from storage", "error", err)
 		return err
 	}
 
@@ -2537,7 +2539,7 @@ func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
 	case existingGenerationInfo.Generation < sealGenerationInfo.Generation:
 		// We have incremented the seal generation
 		if err := c.SetPhysicalSealGenInfo(ctx, sealGenerationInfo); err != nil {
-			c.logger.Error("failed to store seal generation info", "error", err)
+			logger.Error("failed to store seal generation info", "error", err)
 			return err
 		}
 
@@ -2549,7 +2551,7 @@ func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
 
 	case existingGenerationInfo.Generation > sealGenerationInfo.Generation:
 		// Our seal information is out of date. The previous active node used a newer generation.
-		c.logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
+		logger.Error("A newer seal generation was found in storage. The seal configuration in this node should be updated to match that of the previous active node, and this node should be restarted.")
 		return errors.New("newer seal generation found in storage, in memory seal configuration is out of date")
 	}
 
@@ -2557,7 +2559,7 @@ func runUnsealSetupForNonSecondaryClusters(ctx context.Context, c *Core) error {
 		// Set the migration done flag so that a seal-rewrap gets triggered later.
 		// Note that in the case where multi seal is not supported, Core.migrateSeal() takes care of
 		// triggering the rewrap when necessary.
-		c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
+		logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation)
 		atomic.StoreUint32(c.sealMigrationDone, 1)
 	}
 
