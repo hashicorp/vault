@@ -34,6 +34,14 @@ export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root 
   `;
 };
 
+export const metadataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
+  return `
+    path "${backend}/metadata/app/${secretPath}" {
+        capabilities = [${format(capabilities)}]
+    }
+  `;
+};
+
 export const metadataListPolicy = (backend) => {
   return `
     path "${backend}/metadata" {
@@ -71,11 +79,12 @@ export const personas = {
   dataListReader: (backend) =>
     dataPolicy({ backend, capabilities: ['read', 'delete'] }) + metadataListPolicy(backend),
   metadataMaintainer: (backend) =>
-    metadataListPolicy(backend) +
     metadataPolicy({ backend, capabilities: ['create', 'read', 'update', 'list'] }) +
     deleteVersionsPolicy({ backend }) +
     undeleteVersionsPolicy({ backend }) +
     destroyVersionsPolicy({ backend }),
+  metadataNestedMaintainer: (backend) =>
+    metadataNestedPolicy({ backend, capabilities: ['create', 'read', 'update', 'list', 'delete'] }),
   secretCreator: (backend) =>
     dataPolicy({ backend, capabilities: ['create', 'update'] }) +
     metadataPolicy({ backend, capabilities: ['delete'] }),
