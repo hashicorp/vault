@@ -19,6 +19,8 @@ const formFieldGroups = [{ default: ['name'] }, { Credentials: ['credentials'] }
 export default class SyncDestinationsGoogleCloudSecretManagerModel extends SyncDestinationModel {
   @attr('string', {
     label: 'JSON credentials',
+    subText:
+      'If empty, Vault will use the GOOGLE_APPLICATION_CREDENTIALS environment variable if configured.',
     editType: 'file',
     docLink: '/vault/docs/secrets/gcp#authentication',
   })
