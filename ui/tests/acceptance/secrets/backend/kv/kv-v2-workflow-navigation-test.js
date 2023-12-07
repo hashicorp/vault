@@ -207,7 +207,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a) meep', async function (assert) {
+    test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a)', async function (assert) {
       assert.expect(4);
       const backend = this.backend;
       // create with initialKey
