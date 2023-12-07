@@ -712,7 +712,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			for _, sealWrapper := range wrappersByPriority {
 				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 				if err != nil {
-					reportResult(sealWrapper.Name, nil, false, err)
+					go reportResult(sealWrapper.Name, nil, false, err)
 					continue
 				}
 				if keyId == k {
@@ -757,6 +757,7 @@ GATHER_RESULTS:
 			break GATHER_RESULTS
 		}
 	}
+	close(resultCh)
 
 	// No wrapper was able to decrypt the value, return an error
 	if len(errs) > 0 {
