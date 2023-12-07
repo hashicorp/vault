@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 module('Integration | Component | EnableInput', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders and enabled yielded input', async function (assert) {
+  test('it renders and enables yielded input', async function (assert) {
     assert.expect(4);
     await render(hbs`
     <EnableInput>
