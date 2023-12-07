@@ -21,20 +21,20 @@ interface AttrData {
 
 /**
  * @module EnableInput
- * EnableInput components render a disabled input with a hardcoded value of ********** with an "Edit" button to "enable" the input,
- * clicking "Edit" hides the disabled input and instead renders the yielded component. This way any data management is handled by the parent.
- * These are useful for inputs sensitive values that are not returned by the API, so they are only sent in a POST request if the user
- * has performed an extra click to intentionally edit the field.
+ * EnableInput components render a disabled input with a hardcoded masked value beside an "Edit" button to "enable" the input.
+ * Clicking "Edit" hides the disabled input and renders the yielded component. This way any data management is handled by the parent.
+ * These are useful for editing inputs of sensitive values not returned by the API. The extra click ensures the user is intentionally editing the field.
  *
  * @example
- * <EnableInput class="field" @attr={{attr}}>
- *  <FormField @attr={{attr}} @model={{@destination}} @modelValidations={{this.modelValidations}} />
- * </EnableInput>
- *
- * <EnableInput class="field" @attr={{attr}}>
- *  <FormField @attr={{attr}} @model={{@destination}} @modelValidations={{this.modelValidations}} />
- * </EnableInput>
- *
+ <EnableInput class="field" @attr={{attr}}>
+  <FormField @attr={{attr}} @model={{@destination}} @modelValidations={{this.modelValidations}} />
+ </EnableInput>
+ 
+// without passing @attr
+ <EnableInput>
+  <Input @type="text" />
+ </EnableInput>
+ 
  * @param {object} [attr] - used to generate label for `ReadonlyFormField`, `name` key is required. Can be an attribute from a model exported with expandAttributeMeta.
  */
 
