@@ -438,8 +438,8 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	}
 
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
 	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNode(t, cluster)
 	leader, addressProvider := setupLeaderAndUnseal(t, cluster)
 
 	// Join 2 extra nodes manually, store the 3rd for later
