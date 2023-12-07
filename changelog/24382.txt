@@ -1,0 +1,2 @@
+**Default Lease Count Quota**: Apply a new default limit of 300k leases for all
+new installs of Vault.
