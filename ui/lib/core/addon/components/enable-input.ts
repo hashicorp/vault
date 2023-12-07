@@ -7,9 +7,9 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
 interface Args {
-  attrOptions?: AttrOptions;
+  attr?: AttrData;
 }
-interface AttrOptions {
+interface AttrData {
   name: string; // required
   options?: {
     label?: string;
@@ -35,7 +35,7 @@ interface AttrOptions {
  *  <FormField @attr={{attr}} @model={{@destination}} @modelValidations={{this.modelValidations}} />
  * </EnableInput>
  *
- * @param {object} [attrOptions] - used to generate the label for `ReadonlyFormField`, `name` key is required. Can be an attribute from a model exported with expandAttributeMeta.
+ * @param {object} [attr] - used to generate label for `ReadonlyFormField`, `name` key is required. Can be an attribute from a model exported with expandAttributeMeta.
  */
 
 export default class EnableInputComponent extends Component<Args> {
