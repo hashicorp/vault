@@ -1000,7 +1000,7 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 }
 
 // TestQueueTickIntervalKeyConfig tests the configuration of queueTickIntervalKey
-// Previous to a fix, this test panicked.
+// does not break on invalid values.
 func TestQueueTickIntervalKeyConfig(t *testing.T) {
 	t.Parallel()
 	cluster, sys := getClusterPostgresDB(t)
