@@ -1,8 +1,6 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build !testonly && !ci
-
 package config
 
 import hcpvlib "github.com/hashicorp/vault-hcp-lib"
