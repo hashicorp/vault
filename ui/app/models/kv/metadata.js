@@ -1,114 +1,149 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
+{{!
+  Copyright (c) HashiCorp, Inc.
+}}
 
-import Model, { attr } from '@ember-data/model';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { withModelValidations } from 'vault/decorators/model-validations';
-import { withFormFields } from 'vault/decorators/model-form-fields';
-import { keyIsFolder } from 'core/utils/key-utils';
-import { isDeleted } from 'kv/utils/kv-deleted';
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
+  <:tabLinks>
+    <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
 
-const validations = {
-  maxVersions: [
-    { type: 'number', message: 'Maximum versions must be a number.' },
-    { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
-  ],
-};
-const formFieldProps = ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
+  <:toolbarFilters>
 
-@withModelValidations(validations)
-@withFormFields(formFieldProps)
-export default class KvSecretMetadataModel extends Model {
-  @attr('string') backend;
-  @attr('string') path;
-  @attr('string') fullSecretPath;
+    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
+      <KvListFilter @secrets={{@secrets}} @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
+    {{/if}}
+  </:toolbarFilters>
 
-  @attr('number', {
-    defaultValue: 0,
-    label: 'Maximum number of versions',
-    subText:
-      'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted.',
-  })
-  maxVersions;
-
-  @attr('boolean', {
-    defaultValue: false,
-    label: 'Require Check and Set',
-    subText: `Writes will only be allowed if the key's current version matches the version specified in the cas parameter.`,
-  })
-  casRequired;
-
-  @attr('string', {
-    defaultValue: '0s',
-    editType: 'ttl',
-    label: 'Automate secret deletion',
-    helperTextDisabled: `A secret's version must be manually deleted.`,
-    helperTextEnabled: 'Delete all new versions of this secret after:',
-  })
-  deleteVersionAfter;
-
-  @attr('object', {
-    editType: 'kv',
-    subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
-  })
-  customMetadata;
-
-  // Additional Params only returned on the GET response.
-  @attr('string') createdTime;
-  @attr('number') currentVersion;
-  @attr('number') oldestVersion;
-  @attr('string') updatedTime;
-  @attr('object') versions;
-
-  // used for KV list and list-directory view
-  get pathIsDirectory() {
-    // ex: beep/
-    return keyIsFolder(this.path);
-  }
-
-  // cannot use isDeleted due to ember property conflict
-  get isSecretDeleted() {
-    return isDeleted(this.deletionTime);
-  }
-
-  // turns version object into an array for version dropdown menu
-  get sortedVersions() {
-    const array = [];
-    for (const key in this.versions) {
-      this.versions[key].isSecretDeleted = isDeleted(this.versions[key].deletion_time);
-      array.push({ version: key, ...this.versions[key] });
-    }
-    // version keys are in order created with 1 being the oldest, we want newest first
-    return array.reverse();
-  }
-
-  // helps in long logic statements for state of a currentVersion
-  get currentSecret() {
-    if (!this.versions || !this.currentVersion) return false;
-    const data = this.versions[this.currentVersion];
-    const state = data.destroyed ? 'destroyed' : isDeleted(data.deletion_time) ? 'deleted' : 'created';
-    return {
-      state,
-      isDeactivated: state !== 'created',
-    };
-  }
-
-  // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
-  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
-  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
-
-  get canDeleteMetadata() {
-    return this.metadataPath.get('canDelete') !== false;
-  }
-  get canReadMetadata() {
-    return this.metadataPath.get('canRead') !== false;
-  }
-  get canUpdateMetadata() {
-    return this.metadataPath.get('canUpdate') !== false;
-  }
-  get canCreateVersionData() {
-    return this.dataPath.get('canUpdate') !== false;
-  }
-}
+  <:toolbarActions>
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">
+      Create secret
+    </ToolbarLink>
+  </:toolbarActions>
+</KvPageHeader>
+{{#if (eq @secrets 403)}}
+  <div class="box is-fullwidth is-shadowless has-tall-padding">
+    <div class="selectable-card-container one-card">
+      <OverviewCard
+        @cardTitle="View secret"
+        @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
+      >
+        <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m is-flex">
+          <InputSearch
+            @id="search-input-kv-secret"
+            @initialValue={{@pathToSecret}}
+            @onChange={{this.handleSecretPathInput}}
+            @placeholder="secret/"
+            data-test-view-secret
+          />
+          <button type="submit" class="button is-secondary" disabled={{not this.secretPath}} data-test-get-secret-detail>
+            {{this.buttonText}}
+          </button>
+        </form>
+        {{#if @failedDirectoryQuery}}
+          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
+        {{/if}}
+      </OverviewCard>
+    </div>
+  </div>
+{{else}}
+  {{#if @secrets}}
+    {{#each @secrets as |metadata|}}
+      <LinkedBlock
+        data-test-list-item={{metadata.path}}
+        class="list-item-row"
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") metadata.fullSecretPath}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{metadata.path}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if metadata.pathIsDirectory}}
+                      <li>
+                        <LinkTo @route="list-directory" @model={{metadata.fullSecretPath}}>
+                          Content
+                        </LinkTo>
+                      </li>
+                    {{else}}
+                      <li>
+                        <LinkTo @route="secret.details" @model={{metadata.fullSecretPath}}>
+                          Details
+                        </LinkTo>
+                      </li>
+                      {{#if metadata.canReadMetadata}}
+                        <li>
+                          <LinkTo @route="secret.metadata.versions" @model={{metadata.fullSecretPath}}>
+                            View version history
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canCreateVersionData}}
+                        <li>
+                          <LinkTo
+                            @route="secret.details.edit"
+                            @model={{metadata.fullSecretPath}}
+                            data-test-popup-create-new-version
+                          >
+                            Create new version
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canDeleteMetadata}}
+                        <li>
+                          <ConfirmAction
+                            @buttonClasses="link is-destroy"
+                            @onConfirmAction={{fn this.onDelete metadata}}
+                            @confirmMessage="This will permanently delete this secret and all its versions."
+                            @cancelButtonText="Cancel"
+                            data-test-popup-metadata-delete
+                          >
+                            Permanently delete
+                          </ConfirmAction>
+                        </li>
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
+          </div>
+        </div>
+      </LinkedBlock>
+    {{/each}}
+    {{! Pagination }}
+    <Hds::Pagination::Numbered
+      @currentPage={{@secrets.meta.currentPage}}
+      @currentPageSize={{@secrets.meta.pageSize}}
+      @route={{this.router.currentRoute.localName}}
+      @showSizeSelector={{false}}
+      @totalItems={{@secrets.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  {{else}}
+    {{#if @filterValue}}
+      <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
+    {{else}}
+      <EmptyState
+        data-test-secret-list-empty-state
+        @title="No secrets yet"
+        @message="When created, secrets will be listed here. Create a secret to get started."
+      >
+        <LinkTo class="has-top-margin-xs" @route="create">
+          Create secret
+        </LinkTo>
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+{{/if}}
