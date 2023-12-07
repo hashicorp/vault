@@ -696,6 +696,9 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}
 	resultCh := make(chan *result)
 	stopCh := make(chan struct{})
+	defer close(stopCh)
+	defer close(resultCh)
+
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
 		select {
 		case <-stopCh:
@@ -761,7 +764,6 @@ GATHER_RESULTS:
 
 			case result.oldKey:
 				return result.pt, false, OldKey
-
 			default:
 				return result.pt, isUpToDate, nil
 			}
@@ -769,8 +771,6 @@ GATHER_RESULTS:
 			break GATHER_RESULTS
 		}
 	}
-	close(stopCh)
-	close(resultCh)
 
 	// No wrapper was able to decrypt the value, return an error
 	if len(errs) > 0 {
