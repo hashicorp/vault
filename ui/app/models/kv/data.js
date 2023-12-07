@@ -83,16 +83,11 @@ export default class KvSecretDataModel extends Model {
   }
 
   // Permissions
-  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path')
-  dataPath;
-  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path')
-  metadataPath;
-  @lazyCapabilities(apiPath`${'backend'}/delete/${'path'}`, 'backend', 'path')
-  deletePath;
-  @lazyCapabilities(apiPath`${'backend'}/destroy/${'path'}`, 'backend', 'path')
-  destroyPath;
-  @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path')
-  undeletePath;
+  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
+  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
+  @lazyCapabilities(apiPath`${'backend'}/delete/${'path'}`, 'backend', 'path') deletePath;
+  @lazyCapabilities(apiPath`${'backend'}/destroy/${'path'}`, 'backend', 'path') destroyPath;
+  @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path') undeletePath;
 
   get canDeleteLatestVersion() {
     return this.dataPath.get('canDelete') !== false;
