@@ -696,8 +696,9 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}
 	resultCh := make(chan *result)
 	stopCh := make(chan struct{})
-	defer close(stopCh)
+	// Defers processed in reverse order, so make sure stopCh goes first
 	defer close(resultCh)
+	defer close(stopCh)
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
 		select {
