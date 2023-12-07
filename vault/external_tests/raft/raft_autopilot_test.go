@@ -44,6 +44,9 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 	require.Nil(t, nil, state)
 }
 
+// TestRaft_Autopilot_Stabilization_And_State verifies that nodes get promoted
+// to be voters after the stabilization time has elapsed.  Also checks that
+// the autopilot state is Healthy once all nodes are available.
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, &RaftClusterOpts{

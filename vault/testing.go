@@ -1824,6 +1824,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	testCluster.start(t)
 
 	if !coreConfig.DisablePerformanceStandby && numCores > 1 && constants.IsEnterprise {
+		// Sleep so that perf standbys have the opportunity to run periodicLeaderRefresh
+		// once, otherwise when they re-initialize themselves they can yield 500s.
 		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
 	}
 	return &testCluster
