@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -117,10 +117,7 @@ func TestBackend_PluginMain_Multiplexed(t *testing.T) {
 
 func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func()) {
 	t.Helper()
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		PluginDirectory: pluginDir,
 	}, &vault.TestClusterOptions{

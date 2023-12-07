@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -584,10 +585,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 // The mounts are mounted at sys/mounts/mock-[numMounts] or sys/auth/mock-[numMounts]
 func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType logical.BackendType, pluginVersion string) *vault.TestCluster {
 	t.Helper()
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
@@ -661,10 +659,7 @@ func TestSystemBackend_Plugin_Env(t *testing.T) {
 // testSystemBackend_SingleCluster_Env is a helper func that returns a single
 // cluster and a single mounted plugin logical backend.
 func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.TestCluster {
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"test": plugin.Factory,

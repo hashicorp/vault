@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -731,10 +730,7 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 
 func TestExternalPlugin_DifferentVersionsAndArgs_AreNotMultiplexed(t *testing.T) {
 	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		PluginDirectory: pluginDir,
 	})
@@ -759,10 +755,7 @@ func TestExternalPlugin_DifferentVersionsAndArgs_AreNotMultiplexed(t *testing.T)
 func TestExternalPlugin_DifferentTypes_AreNotMultiplexed(t *testing.T) {
 	const version = "v1.2.3"
 	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		PluginDirectory: pluginDir,
 	})
@@ -789,10 +782,7 @@ func TestExternalPlugin_DifferentEnv_AreNotMultiplexed(t *testing.T) {
 		"FOO=BAR",
 	}
 
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		PluginDirectory: pluginDir,
 	})

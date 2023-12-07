@@ -11,7 +11,6 @@ import (
 	"path"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -35,7 +34,7 @@ type PluginRuntimeCatalog struct {
 	lock sync.RWMutex
 }
 
-func SetupPluginRuntimeCatalog(ctx context.Context, logger hclog.Logger, catalogView logical.Storage) (*PluginRuntimeCatalog, error) {
+func SetupPluginRuntimeCatalog(ctx context.Context, logger log.Logger, catalogView logical.Storage) (*PluginRuntimeCatalog, error) {
 	pluginRuntimeCatalog := &PluginRuntimeCatalog{
 		catalogView: catalogView,
 		logger:      logger,

@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-plugin"
@@ -140,7 +139,7 @@ type pluginClient struct {
 
 func SetupPluginCatalog(
 	ctx context.Context,
-	logger hclog.Logger,
+	logger log.Logger,
 	builtinRegistry BuiltinRegistry,
 	catalogView logical.Storage,
 	pluginDirectory string,

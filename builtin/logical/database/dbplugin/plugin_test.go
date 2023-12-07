@@ -7,13 +7,13 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -108,10 +108,7 @@ func (m *mockPlugin) SetCredentials(ctx context.Context, statements dbplugin.Sta
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	t.Helper()
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		PluginDirectory: pluginDir,
 	}, &vault.TestClusterOptions{

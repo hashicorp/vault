@@ -50,24 +50,16 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
 // This helper also resolves symlinks to make tests happy on OS X.
 func MakeTestPluginDir(t testing.T) string {
-	if t != nil {
-		t.Helper()
-	}
+	t.Helper()
 
 	dir, err := os.MkdirTemp("", "")
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
 	// OSX tempdir are /var, but actually symlinked to /private/var
 	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/benchhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+func getPluginClusterAndCore(t *testing.T, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
 	t.Helper()
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
@@ -37,10 +37,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		t.Fatal(err)
 	}
 
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		Physical:   inm,
 		HAPhysical: inmha.(physical.HABackend),

@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -20,6 +19,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
@@ -37,10 +37,7 @@ import (
 
 func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	t.Helper()
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
@@ -66,10 +63,7 @@ func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView)
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	t.Helper()
-	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
