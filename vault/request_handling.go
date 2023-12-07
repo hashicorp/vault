@@ -1498,11 +1498,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// if user lockout feature is not disabled, check if the user is locked
 	if !isUserLockoutDisabled {
-		isloginUserLocked, err := c.isUserLocked(ctx, entry, req)
+		isLoginUserLocked, err := c.isUserLocked(ctx, entry, req)
 		if err != nil {
 			return nil, nil, err
 		}
-		if isloginUserLocked {
+		if isLoginUserLocked {
 			c.startLockoutLogger()
 			return nil, nil, logical.ErrPermissionDenied
 		}
