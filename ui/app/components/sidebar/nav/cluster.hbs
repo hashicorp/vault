@@ -52,7 +52,14 @@
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.version.isEnterprise this.namespace.inRootNamespace (has-permission "status" routeParams="replication"))}}
+  {{#if
+    (and
+      this.version.isEnterprise
+      this.namespace.inRootNamespace
+      (not this.cluster.replicationRedacted)
+      (has-permission "status" routeParams="replication")
+    )
+  }}
     <Nav.Link
       @route="vault.cluster.replication.index"
       @text="Replication"

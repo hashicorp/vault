@@ -23,6 +23,10 @@ func startPartialSealRewrapping(c *Core) {
 	// nothing to do
 }
 
+func stopPartialSealRewrapping(c *Core) {
+	// nothing to do
+}
+
 func GetPartiallySealWrappedPaths(ctx context.Context, backend physical.Backend) ([]string, error) {
 	return nil, nil
 }

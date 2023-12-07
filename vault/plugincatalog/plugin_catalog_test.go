@@ -1,52 +1,85 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package plugincatalog
 
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sort"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
 )
 
-func TestPluginCatalog_CRUD(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+func testPluginCatalog(t *testing.T) *PluginCatalog {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level: hclog.Trace,
+	})
+	storage, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	core.pluginCatalog.directory = tempDir
+	testDir, err := filepath.EvalSymlinks(filepath.Dir(os.Args[0]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginRuntimeCatalog := testPluginRuntimeCatalog(t)
+	pluginCatalog, err := SetupPluginCatalog(
+		context.Background(),
+		logger,
+		corehelpers.NewMockBuiltinRegistry(),
+		logical.NewLogicalStorage(storage),
+		testDir,
+		false,
+		pluginRuntimeCatalog,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pluginCatalog
+}
 
+func TestPluginCatalog_CRUD(t *testing.T) {
 	const pluginName = "mysql-database-plugin"
 
+	pluginCatalog := testPluginCatalog(t)
+
 	// Get builtin plugin
-	p, err := core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
+	p, err := pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	// Get it again, explicitly specifying builtin version
 	builtinVersion := versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName)
-	p2, err := core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	p2, err := pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -73,14 +106,14 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := os.CreateTemp(tempDir, "temp")
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Version: "",
@@ -94,14 +127,14 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Get the plugin
-	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
+	p, err = pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	// Get it again, explicitly specifying builtin version.
 	// This time it should fail because it was overwritten.
-	p2, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
+	p2, err = pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, builtinVersion)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -112,7 +145,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	expected := &pluginutil.PluginRunner{
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
-		Command: filepath.Join(tempDir, filepath.Base(file.Name())),
+		Command: filepath.Join(pluginCatalog.directory, filepath.Base(file.Name())),
 		Args:    []string{"--test"},
 		Env:     []string{"FOO=BAR"},
 		Sha256:  []byte{'1'},
@@ -125,13 +158,13 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), pluginName, consts.PluginTypeDatabase, "")
+	err = pluginCatalog.Delete(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
 
 	// Get builtin plugin
-	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
+	p, err = pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -155,15 +188,10 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 }
 
 func TestPluginCatalog_VersionedCRUD(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core.pluginCatalog.directory = tempDir
+	pluginCatalog := testPluginCatalog(t)
 
 	// Set a versioned plugin.
-	file, err := ioutil.TempFile(tempDir, "temp")
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +200,7 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 	const name = "mysql-database-plugin"
 	const version = "1.0.0"
 	command := fmt.Sprintf("%s", filepath.Base(file.Name()))
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    name,
 		Type:    consts.PluginTypeDatabase,
 		Version: version,
@@ -186,7 +214,7 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 	}
 
 	// Get the plugin
-	plugin, err := core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
+	plugin, err := pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -195,7 +223,7 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 		Name:    name,
 		Type:    consts.PluginTypeDatabase,
 		Version: version,
-		Command: filepath.Join(tempDir, filepath.Base(file.Name())),
+		Command: filepath.Join(pluginCatalog.directory, filepath.Base(file.Name())),
 		Args:    []string{"--test"},
 		Env:     []string{"FOO=BAR"},
 		Sha256:  []byte{'1'},
@@ -208,7 +236,7 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 
 	// Also get the builtin version to check we can still access that.
 	builtinVersion := versions.GetBuiltinVersion(consts.PluginTypeDatabase, name)
-	plugin, err = core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, builtinVersion)
+	plugin, err = pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, builtinVersion)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -237,13 +265,13 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 	}
 
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), name, consts.PluginTypeDatabase, version)
+	err = pluginCatalog.Delete(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
 
 	// Get plugin - should fail
-	plugin, err = core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
+	plugin, err = pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,19 +281,14 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 }
 
 func TestPluginCatalog_List(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core.pluginCatalog.directory = tempDir
+	pluginCatalog := testPluginCatalog(t)
 
 	// Get builtin plugins and sort them
 	builtinKeys := builtinplugins.Registry.Keys(consts.PluginTypeDatabase)
 	sort.Strings(builtinKeys)
 
 	// List only builtin plugins
-	plugins, err := core.pluginCatalog.List(context.Background(), consts.PluginTypeDatabase)
+	plugins, err := pluginCatalog.List(context.Background(), consts.PluginTypeDatabase)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -280,14 +303,14 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := ioutil.TempFile(tempDir, "temp")
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    "mysql-database-plugin",
 		Type:    consts.PluginTypeDatabase,
 		Version: "",
@@ -301,7 +324,7 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	// Set another plugin
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    "aaaaaaa",
 		Type:    consts.PluginTypeDatabase,
 		Version: "",
@@ -315,7 +338,7 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	// List the plugins
-	plugins, err = core.pluginCatalog.List(context.Background(), consts.PluginTypeDatabase)
+	plugins, err = pluginCatalog.List(context.Background(), consts.PluginTypeDatabase)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -338,19 +361,14 @@ func TestPluginCatalog_List(t *testing.T) {
 }
 
 func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core.pluginCatalog.directory = tempDir
+	pluginCatalog := testPluginCatalog(t)
 
 	// Get builtin plugins and sort them
 	builtinKeys := builtinplugins.Registry.Keys(consts.PluginTypeDatabase)
 	sort.Strings(builtinKeys)
 
 	// List only builtin plugins
-	plugins, err := core.pluginCatalog.ListVersionedPlugins(context.Background(), consts.PluginTypeDatabase)
+	plugins, err := pluginCatalog.ListVersionedPlugins(context.Background(), consts.PluginTypeDatabase)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -367,14 +385,14 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := ioutil.TempFile(tempDir, "temp")
+	file, err := ioutil.TempFile(pluginCatalog.directory, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    "mysql-database-plugin",
 		Type:    consts.PluginTypeDatabase,
 		Version: "",
@@ -388,7 +406,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	}
 
 	// Set another plugin, with version information
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:    "aaaaaaa",
 		Type:    consts.PluginTypeDatabase,
 		Version: "1.1.0",
@@ -402,7 +420,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	}
 
 	// List the plugins
-	plugins, err = core.pluginCatalog.ListVersionedPlugins(context.Background(), consts.PluginTypeDatabase)
+	plugins, err = pluginCatalog.ListVersionedPlugins(context.Background(), consts.PluginTypeDatabase)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -450,14 +468,9 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 }
 
 func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core.pluginCatalog.directory = tempDir
+	pluginCatalog := testPluginCatalog(t)
 
-	file, err := ioutil.TempFile(tempDir, "temp")
+	file, err := os.CreateTemp(pluginCatalog.directory, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -489,7 +502,7 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 		},
 	}
 	for _, entry := range pluginsToRegister {
-		err = core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
+		err = pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
 			Name:    entry.Name,
 			Type:    consts.PluginTypeCredential,
 			Version: entry.Version,
@@ -503,7 +516,7 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 		}
 	}
 
-	plugins, err := core.pluginCatalog.ListVersionedPlugins(ctx, consts.PluginTypeCredential)
+	plugins, err := pluginCatalog.ListVersionedPlugins(ctx, consts.PluginTypeCredential)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,30 +537,25 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 }
 
 func TestPluginCatalog_NewPluginClient(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	core.pluginCatalog.directory = tempDir
+	pluginCatalog := testPluginCatalog(t)
 
-	if extPlugins := len(core.pluginCatalog.externalPlugins); extPlugins != 0 {
+	if extPlugins := len(pluginCatalog.externalPlugins); extPlugins != 0 {
 		t.Fatalf("expected externalPlugins map to be of len 0 but got %d", extPlugins)
 	}
 
 	// register plugins
-	TestAddTestPlugin(t, core, "mux-postgres", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{}, "")
-	TestAddTestPlugin(t, core, "single-postgres-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
-	TestAddTestPlugin(t, core, "single-postgres-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{}, "")
+	TestAddTestPlugin(t, pluginCatalog, "mux-postgres", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_PostgresMultiplexed", []string{})
+	TestAddTestPlugin(t, pluginCatalog, "single-postgres-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{})
+	TestAddTestPlugin(t, pluginCatalog, "single-postgres-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Postgres", []string{})
 
-	TestAddTestPlugin(t, core, "mux-userpass", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{}, "")
-	TestAddTestPlugin(t, core, "single-userpass-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
-	TestAddTestPlugin(t, core, "single-userpass-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
+	TestAddTestPlugin(t, pluginCatalog, "mux-userpass", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_UserpassMultiplexed", []string{})
+	TestAddTestPlugin(t, pluginCatalog, "single-userpass-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{})
+	TestAddTestPlugin(t, pluginCatalog, "single-userpass-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{})
 
 	getKey := func(pluginName string, pluginType consts.PluginType) externalPluginsKey {
 		t.Helper()
 		ctx := context.Background()
-		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, "")
+		plugin, err := pluginCatalog.Get(ctx, pluginName, pluginType, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -565,27 +573,27 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	// run plugins
 	// run "mux-postgres" twice which will start a single plugin for 2
 	// distinct connections
-	c := TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
+	c := testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "mux-postgres")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "mux-postgres")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "mux-postgres")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-1")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "single-postgres-1")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeDatabase, "single-postgres-2")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeDatabase, "single-postgres-2")
 	pluginClients = append(pluginClients, c)
 
 	// run "mux-userpass" twice which will start a single plugin for 2
 	// distinct connections
-	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "mux-userpass")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "mux-userpass")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-1")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "single-userpass-1")
 	pluginClients = append(pluginClients, c)
-	c = TestRunTestPlugin(t, core, consts.PluginTypeCredential, "single-userpass-2")
+	c = testRunTestPlugin(t, pluginCatalog, consts.PluginTypeCredential, "single-userpass-2")
 	pluginClients = append(pluginClients, c)
 
-	externalPlugins := core.pluginCatalog.externalPlugins
+	externalPlugins := pluginCatalog.externalPlugins
 	if len(externalPlugins) != 6 {
 		t.Fatalf("expected externalPlugins map to be of len 6 but got %d", len(externalPlugins))
 	}
@@ -654,13 +662,10 @@ func TestPluginCatalog_MakeExternalPluginsKey_Comparable(t *testing.T) {
 // always allow registration of container plugins (rejecting on non-Linux happens
 // in the logical system API handler).
 func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	catalog := testPluginCatalog(t)
+	tempDir := catalog.directory
+	catalog.directory = ""
 
-	catalog := core.pluginCatalog
 	tests := map[string]func(t *testing.T){
 		"set binary plugin": func(t *testing.T) {
 			file, err := os.CreateTemp(tempDir, "temp")
@@ -694,7 +699,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				t.Fatal("expected error without directory set")
 			}
 			// Make sure we can still get builtins too
-			_, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+			_, err = catalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
 			if err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
@@ -702,7 +707,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 		"set container plugin": func(t *testing.T) {
 			// Should never error.
 			const image = "does-not-exist"
-			err = catalog.Set(context.Background(), pluginutil.SetPluginInput{
+			err := catalog.Set(context.Background(), pluginutil.SetPluginInput{
 				Name:     "container",
 				Type:     consts.PluginTypeDatabase,
 				OCIImage: image,
@@ -719,7 +724,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
 			}
 			// Make sure we can still get builtins too
-			_, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+			_, err = catalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
 			if err != nil {
 				t.Fatalf("unexpected error %v", err)
 			}
@@ -732,7 +737,7 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 		}
 	})
 
-	core.pluginCatalog.directory = tempDir
+	catalog.directory = tempDir
 
 	t.Run("directory set", func(t *testing.T) {
 		for name, test := range tests {
@@ -745,10 +750,10 @@ func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
 // are returned with their container runtime config populated if it was
 // specified.
 func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
+	pluginCatalog := testPluginCatalog(t)
 	const image = "does-not-exist"
 	const runtime = "custom-runtime"
-	err := core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err := pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
 		OCIImage: image,
@@ -759,7 +764,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	}
 
 	const ociRuntime = "some-other-oci-runtime"
-	err = core.pluginRuntimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+	err = pluginCatalog.runtimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
 		Name:       runtime,
 		Type:       consts.PluginRuntimeTypeContainer,
 		OCIRuntime: ociRuntime,
@@ -769,7 +774,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 	}
 
 	// Now setting the plugin with a runtime should succeed.
-	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+	err = pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
 		Name:     "container",
 		Type:     consts.PluginTypeDatabase,
 		OCIImage: image,
@@ -779,7 +784,7 @@ func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p, err := core.pluginCatalog.Get(context.Background(), "container", consts.PluginTypeDatabase, "")
+	p, err := pluginCatalog.Get(context.Background(), "container", consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -873,4 +878,234 @@ func expectMultiplexingSupport(t *testing.T, expected, actual bool) {
 	if expected != actual {
 		t.Fatalf("expected external plugin multiplexing support to be %t", expected)
 	}
+}
+
+func TestSortVersionedPlugins(t *testing.T) {
+	versionedPlugin := func(typ consts.PluginType, name string, pluginVersion string, builtin bool) pluginutil.VersionedPlugin {
+		return pluginutil.VersionedPlugin{
+			Type:    typ.String(),
+			Name:    name,
+			Version: pluginVersion,
+			SHA256:  "",
+			Builtin: builtin,
+			SemanticVersion: func() *version.Version {
+				if pluginVersion != "" {
+					return version.Must(version.NewVersion(pluginVersion))
+				}
+
+				return version.Must(version.NewVersion("0.0.0"))
+			}(),
+		}
+	}
+
+	differingTypes := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+	}
+	differingNames := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
+	}
+	differingVersions := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
+	}
+	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
+	}
+
+	for name, tc := range map[string][]pluginutil.VersionedPlugin{
+		"ascending types":    differingTypes,
+		"ascending names":    differingNames,
+		"ascending versions": differingVersions,
+		// Include differing versions twice so we can test out equality too.
+		"differing types, names and versions": append(differingTypes,
+			append(differingNames,
+				append(differingVersions, differingVersions...)...)...),
+		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
+	} {
+		t.Run(name, func(t *testing.T) {
+			sortVersionedPlugins(tc)
+			for i := 1; i < len(tc); i++ {
+				previous := tc[i-1]
+				current := tc[i]
+				if current.Type > previous.Type {
+					continue
+				}
+				if current.Name > previous.Name {
+					continue
+				}
+				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
+					continue
+				}
+				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
+					continue
+				}
+
+				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
+			}
+		})
+	}
+}
+
+func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
+	for name, tc := range map[string]struct {
+		pluginType        consts.PluginType
+		setRunningVersion string
+	}{
+		"external credential plugin": {
+			pluginType:        consts.PluginTypeCredential,
+			setRunningVersion: "v1.2.3",
+		},
+		"external secrets plugin": {
+			pluginType:        consts.PluginTypeSecrets,
+			setRunningVersion: "v1.2.3",
+		},
+		"external database plugin": {
+			pluginType:        consts.PluginTypeDatabase,
+			setRunningVersion: "v1.2.3",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			pluginCatalog := testPluginCatalog(t)
+			plugin := pluginhelpers.CompilePlugin(t, tc.pluginType, tc.setRunningVersion, pluginCatalog.directory)
+
+			shaBytes, _ := hex.DecodeString(plugin.Sha256)
+			commandFull := filepath.Join(pluginCatalog.directory, plugin.FileName)
+			entry := &pluginutil.PluginRunner{
+				Name:    plugin.Name,
+				Command: commandFull,
+				Args:    nil,
+				Sha256:  shaBytes,
+				Builtin: false,
+			}
+
+			var version logical.PluginVersion
+			var err error
+			if tc.pluginType == consts.PluginTypeDatabase {
+				version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+			} else {
+				version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version.Version != tc.setRunningVersion {
+				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
+			}
+		})
+	}
+}
+
+func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Running plugins in containers is only supported on linux")
+	}
+
+	pluginCatalog := testPluginCatalog(t)
+
+	var plugins []pluginhelpers.TestPlugin
+	for _, pluginType := range []consts.PluginType{
+		consts.PluginTypeCredential,
+		consts.PluginTypeSecrets,
+		consts.PluginTypeDatabase,
+	} {
+		plugin := pluginhelpers.CompilePlugin(t, pluginType, "v1.2.3", pluginCatalog.directory)
+		plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, pluginCatalog.directory)
+		plugins = append(plugins, plugin)
+	}
+
+	for _, plugin := range plugins {
+		t.Run(plugin.Typ.String(), func(t *testing.T) {
+			for _, ociRuntime := range []string{"runc", "runsc"} {
+				t.Run(ociRuntime, func(t *testing.T) {
+					if _, err := exec.LookPath(ociRuntime); err != nil {
+						t.Skipf("Skipping test as %s not found on path", ociRuntime)
+					}
+
+					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
+					entry := &pluginutil.PluginRunner{
+						Name:     plugin.Name,
+						OCIImage: plugin.Image,
+						Args:     nil,
+						Sha256:   shaBytes,
+						Builtin:  false,
+						Runtime:  ociRuntime,
+						RuntimeConfig: &pluginruntimeutil.PluginRuntimeConfig{
+							OCIRuntime: ociRuntime,
+						},
+					}
+
+					var version logical.PluginVersion
+					var err error
+					if plugin.Typ == consts.PluginTypeDatabase {
+						version, err = pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
+					} else {
+						version, err = pluginCatalog.getBackendRunningVersion(context.Background(), entry)
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					if version.Version != plugin.Version {
+						t.Errorf("Expected to get version %v but got %v", plugin.Version, version.Version)
+					}
+				})
+			}
+		})
+	}
+}
+
+// testRunTestPlugin runs the testFunc which has already been registered to the
+// plugin catalog and returns a pluginClient. This can be called after calling
+// TestAddTestPlugin.
+func testRunTestPlugin(t *testing.T, pluginCatalog *PluginCatalog, pluginType consts.PluginType, pluginName string) *pluginClient {
+	t.Helper()
+	config := testPluginClientConfig(pluginCatalog, pluginType, pluginName)
+	client, err := pluginCatalog.NewPluginClient(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return client
+}
+
+func testPluginClientConfig(pluginCatalog *PluginCatalog, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	config := pluginutil.PluginClientConfig{
+		Name:           pluginName,
+		PluginType:     pluginType,
+		Logger:         log.NewNullLogger(),
+		AutoMTLS:       true,
+		IsMetadataMode: false,
+		Wrapper: pluginCatalogStaticSystemView{
+			pluginCatalog: pluginCatalog,
+			StaticSystemView: logical.StaticSystemView{
+				VersionString: "testVersion",
+			},
+		},
+	}
+
+	switch pluginType {
+	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
+		config.PluginSets = backendplugin.PluginSet
+		config.HandshakeConfig = backendplugin.HandshakeConfig
+	case consts.PluginTypeDatabase:
+		config.PluginSets = v5.PluginSets
+		config.HandshakeConfig = v5.HandshakeConfig
+	}
+
+	return config
+}
+
+type pluginCatalogStaticSystemView struct {
+	logical.StaticSystemView
+	pluginCatalog *PluginCatalog
+}
+
+func (p pluginCatalogStaticSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
+	return p.pluginCatalog.NewPluginClient(ctx, config)
 }

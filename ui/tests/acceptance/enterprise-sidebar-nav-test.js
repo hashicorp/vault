@@ -22,7 +22,6 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
   // common links are tested in the sidebar-nav test and will not be covered here
   test('it should render enterprise only navigation links', async function (assert) {
-    assert.expect(12);
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     await click(link('Replication'));
