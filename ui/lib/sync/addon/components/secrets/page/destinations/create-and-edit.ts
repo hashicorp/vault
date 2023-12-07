@@ -60,8 +60,7 @@ export default class DestinationsCreateForm extends Component<Args> {
 
   @action
   cancel() {
-    const method = this.args.destination.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.destination[method]();
-    this.router.transitionTo('vault.cluster.sync.secrets.destinations.create');
+    const { isNew } = this.args.destination;
+    this.router.transitionTo(`vault.cluster.sync.secrets.destinations.${isNew ? 'create' : 'destination'}`);
   }
 }
