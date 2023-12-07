@@ -762,10 +762,10 @@ GATHER_RESULTS:
 				return result.pt, isUpToDate, nil
 			}
 		case <-ctx.Done():
-			close(resultCh)
 			break GATHER_RESULTS
 		}
 	}
+	close(resultCh)
 
 	// No wrapper was able to decrypt the value, return an error
 	if len(errs) > 0 {
