@@ -44,11 +44,15 @@
     >
       <F.HelperText>
         Enter the value as text.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
         {{#if @docLink}}
-          {{or @label "Input"}}
+          See our
           <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
             documentation
-          </Hds::Link::Inline>.
+          </Hds::Link::Inline>
+          for help.
         {{/if}}
       </F.HelperText>
     </Hds::Form::MaskedInput::Field>
@@ -61,11 +65,15 @@
     >
       <F.HelperText>
         Select a file from your computer.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
         {{#if @docLink}}
-          {{or @label "Input"}}
+          See our
           <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
             documentation
-          </Hds::Link::Inline>.
+          </Hds::Link::Inline>
+          for help.
         {{/if}}
       </F.HelperText>
     </Hds::Form::FileInput::Field>
