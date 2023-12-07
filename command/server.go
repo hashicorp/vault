@@ -61,6 +61,7 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/go-testing-interface"
@@ -3152,7 +3153,7 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+					if !errwrap.Contains(err, plugincatalog.ErrPluginBadType.Error()) {
 						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
 					}
 					pluginsNotLoaded = append(pluginsNotLoaded, name)

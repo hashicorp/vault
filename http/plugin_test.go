@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/benchhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -25,7 +26,8 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+func getPluginClusterAndCore(t *testing.T, logger log.Logger) (*vault.TestCluster, *vault.TestClusterCore) {
+	t.Helper()
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -35,12 +37,14 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		t.Fatal(err)
 	}
 
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		Physical:   inm,
 		HAPhysical: inmha.(physical.HABackend),
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": bplugin.Factory,
 		},
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
@@ -54,7 +58,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
-	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{})
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{
