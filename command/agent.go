@@ -19,8 +19,9 @@ import (
 	"time"
 
 	systemd "github.com/coreos/go-systemd/daemon"
+	"github.com/hashicorp/cli"
 	ctconfig "github.com/hashicorp/consul-template/config"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -31,7 +32,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	cache "github.com/hashicorp/vault/command/agentproxyshared/cache"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
@@ -45,7 +46,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 	"golang.org/x/text/cases"
@@ -62,6 +62,7 @@ const (
 	// flagNameAgentExitAfterAuth is used as an Agent specific flag to indicate
 	// that agent should exit after a single successful auth
 	flagNameAgentExitAfterAuth = "exit-after-auth"
+	nameAgent                  = "agent"
 )
 
 type AgentCommand struct {
@@ -1129,15 +1130,17 @@ func (c *AgentCommand) newLogger() (hclog.InterceptLogger, error) {
 		return nil, errs
 	}
 
-	logCfg := &logging.LogConfig{
-		Name:              "agent",
-		LogLevel:          logLevel,
-		LogFormat:         logFormat,
-		LogFilePath:       c.config.LogFile,
-		LogRotateDuration: logRotateDuration,
-		LogRotateBytes:    c.config.LogRotateBytes,
-		LogRotateMaxFiles: c.config.LogRotateMaxFiles,
+	logCfg, err := logging.NewLogConfig(nameAgent)
+	if err != nil {
+		return nil, err
 	}
+	logCfg.Name = nameAgent
+	logCfg.LogLevel = logLevel
+	logCfg.LogFormat = logFormat
+	logCfg.LogFilePath = c.config.LogFile
+	logCfg.LogRotateDuration = logRotateDuration
+	logCfg.LogRotateBytes = c.config.LogRotateBytes
+	logCfg.LogRotateMaxFiles = c.config.LogRotateMaxFiles
 
 	l, err := logging.Setup(logCfg, c.logWriter)
 	if err != nil {

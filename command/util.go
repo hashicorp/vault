@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
-	"github.com/mitchellh/cli"
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.

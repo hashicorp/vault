@@ -9,7 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -17,7 +16,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
@@ -37,6 +35,11 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	raftlib "github.com/hashicorp/raft"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/go-testing-interface"
+	"golang.org/x/crypto/ed25519"
+	"golang.org/x/net/http2"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
@@ -47,22 +50,16 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/copystructure"
-	"github.com/mitchellh/go-testing-interface"
-	"golang.org/x/crypto/ed25519"
-	"golang.org/x/net/http2"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -542,136 +539,9 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 	return &dynamicSystemView{c, me, c.perfStandby}
 }
 
-// TestAddTestPlugin registers the testFunc as part of the plugin command to the
-// plugin catalog. If provided, uses tmpDir as the plugin directory.
-// NB: The test func you pass in MUST be in the same package as the parent test,
-// or the test func won't be compiled into the test binary being run and the output
-// will be something like:
-// stderr (ignored by go-plugin): "testing: warning: no tests to run"
-// stdout: "PASS"
-func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
-	file, err := os.Open(os.Args[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	dirPath := filepath.Dir(os.Args[0])
-	fileName := filepath.Base(os.Args[0])
-
-	if tempDir != "" {
-		fi, err := file.Stat()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Copy over the file to the temp dir
-		dst := filepath.Join(tempDir, fileName)
-
-		// delete the file first to avoid notary failures in macOS
-		_ = os.Remove(dst) // ignore error
-		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer out.Close()
-
-		if _, err = io.Copy(out, file); err != nil {
-			t.Fatal(err)
-		}
-		err = out.Sync()
-		if err != nil {
-			t.Fatal(err)
-		}
-		// Ensure that the file is closed and written. This seems to be
-		// necessary on Linux systems.
-		out.Close()
-
-		dirPath = tempDir
-	}
-
-	// Determine plugin directory full path, evaluating potential symlink path
-	fullPath, err := filepath.EvalSymlinks(dirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reader, err := os.Open(filepath.Join(fullPath, fileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer reader.Close()
-
-	// Find out the sha256
-	hash := sha256.New()
-
-	_, err = io.Copy(hash, reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sum := hash.Sum(nil)
-
-	// Set core's plugin directory and plugin catalog directory
-	c.pluginDirectory = fullPath
-	c.pluginCatalog.directory = fullPath
-
-	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
-		Name:    name,
-		Type:    pluginType,
-		Version: version,
-		Command: fileName,
-		Args:    args,
-		Env:     env,
-		Sha256:  sum,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// TestRunTestPlugin runs the testFunc which has already been registered to the
-// plugin catalog and returns a pluginClient. This can be called after calling
-// TestAddTestPlugin.
-func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) *pluginClient {
+func TestAddTestPlugin(t testing.T, core *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string) {
 	t.Helper()
-	config := TestPluginClientConfig(c, pluginType, pluginName)
-	client, err := c.pluginCatalog.NewPluginClient(context.Background(), config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return client
-}
-
-func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
-	dsv := TestDynamicSystemView(c, nil)
-	switch pluginType {
-	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
-		return pluginutil.PluginClientConfig{
-			Name:            pluginName,
-			PluginType:      pluginType,
-			PluginSets:      backendplugin.PluginSet,
-			HandshakeConfig: backendplugin.HandshakeConfig,
-			Logger:          log.NewNullLogger(),
-			AutoMTLS:        true,
-			IsMetadataMode:  false,
-			Wrapper:         dsv,
-		}
-	case consts.PluginTypeDatabase:
-		return pluginutil.PluginClientConfig{
-			Name:            pluginName,
-			PluginType:      pluginType,
-			PluginSets:      v5.PluginSets,
-			HandshakeConfig: v5.HandshakeConfig,
-			Logger:          log.NewNullLogger(),
-			AutoMTLS:        true,
-			IsMetadataMode:  false,
-			Wrapper:         dsv,
-		}
-	}
-	return pluginutil.PluginClientConfig{}
+	plugincatalog.TestAddTestPlugin(t, core.pluginCatalog, name, pluginType, version, testFunc, env)
 }
 
 var (
@@ -873,7 +743,7 @@ func (c *TestCluster) start(t testing.T) {
 
 	activeCore := -1
 WAITACTIVE:
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 600; i++ {
 		for i, core := range c.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				activeCore = i
@@ -881,7 +751,7 @@ WAITACTIVE:
 			}
 		}
 
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if activeCore == -1 {
 		t.Fatalf("no core became active")
@@ -917,12 +787,12 @@ WAITACTIVE:
 // UnsealCores uses the cluster barrier keys to unseal the test cluster cores
 func (c *TestCluster) UnsealCores(t testing.T) {
 	t.Helper()
-	if err := c.UnsealCoresWithError(false); err != nil {
+	if err := c.UnsealCoresWithError(t, false); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
+func (c *TestCluster) UnsealCoresWithError(t testing.T, useStoredKeys bool) error {
 	unseal := func(core *Core) error {
 		for _, key := range c.BarrierKeys {
 			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
@@ -959,19 +829,21 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 	}
 
 	// Let them come fully up to standby
-	time.Sleep(2 * time.Second)
+	corehelpers.RetryUntil(t, 2*time.Second, func() error {
+		// Ensure cluster connection info is populated.
+		// Other cores should not come up as leaders.
+		for i := 1; i < len(c.Cores); i++ {
+			isLeader, _, _, err := c.Cores[i].Leader()
+			if err != nil {
+				return err
+			}
+			if isLeader {
+				return fmt.Errorf("core[%d] should not be leader", i)
+			}
+		}
 
-	// Ensure cluster connection info is populated.
-	// Other cores should not come up as leaders.
-	for i := 1; i < len(c.Cores); i++ {
-		isLeader, _, _, err := c.Cores[i].Leader()
-		if err != nil {
-			return err
-		}
-		if isLeader {
-			return fmt.Errorf("core[%d] should not be leader", i)
-		}
-	}
+		return nil
+	})
 
 	return nil
 }
@@ -1109,8 +981,6 @@ func (c *TestCluster) Cleanup() {
 		os.RemoveAll(c.TempDir)
 	}
 
-	// Give time to actually shut down/clean up before the next test
-	time.Sleep(time.Second)
 	if c.CleanupFunc != nil {
 		c.CleanupFunc()
 	}
@@ -1706,13 +1576,9 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 				t.Skip("Running plugins in containers is only supported on linux")
 			}
 
-			var pluginDir string
-			var cleanup func(t testing.T)
-
 			if coreConfig.PluginDirectory == "" {
-				pluginDir, cleanup = corehelpers.MakeTestPluginDir(t)
+				pluginDir := corehelpers.MakeTestPluginDir(t)
 				coreConfig.PluginDirectory = pluginDir
-				t.Cleanup(func() { cleanup(t) })
 			}
 
 			for _, version := range pluginType.Versions {
@@ -2146,13 +2012,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
-	}
-
-	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
-
 	cfg, err := leader.Core.seal.BarrierConfig(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -2177,39 +2036,37 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		}
 
 		// Let them come fully up to standby
-		time.Sleep(2 * time.Second)
+		corehelpers.RetryUntil(t, 2*time.Second, func() error {
+			// Ensure cluster connection info is populated.
+			// Other cores should not come up as leaders.
+			for i := 1; i < numCores; i++ {
+				isLeader, _, _, err := tc.Cores[i].Core.Leader()
+				if err != nil {
+					return err
+				}
+				if isLeader {
+					return fmt.Errorf("core[%d] should not be leader", i)
+				}
+			}
 
-		// Ensure cluster connection info is populated.
-		// Other cores should not come up as leaders.
-		for i := 1; i < numCores; i++ {
-			isLeader, _, _, err := tc.Cores[i].Core.Leader()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if isLeader {
-				t.Fatalf("core[%d] should not be leader", i)
-			}
-		}
+			return nil
+		})
 	}
 
-	//
 	// Set test cluster core(s) and test cluster
-	//
 	cluster, err := leader.Core.Cluster(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
 
+	// Enable auditing if required
 	if addAuditBackend {
-		// Enable auditing.
 		auditReq := &logical.Request{
 			Operation:   logical.UpdateOperation,
 			ClientToken: tc.RootToken,
 			Path:        "sys/audit/noop",
-			Data: map[string]interface{}{
-				"type": "noop",
-			},
+			Data:        map[string]interface{}{"type": "noop"},
 		}
 		resp, err := leader.Core.HandleRequest(namespace.RootContext(ctx), auditReq)
 		if err != nil {
@@ -2220,6 +2077,14 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			t.Fatal(err)
 		}
 	}
+
+	// Configure a secret engine (kv)
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
+	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (testCluster *TestCluster) getAPIClient(

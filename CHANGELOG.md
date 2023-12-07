@@ -2,6 +2,41 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.15.3
+### November 30, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.21.4.
+
+IMPROVEMENTS:
+
+* core (enterprise): Speed up unseal when using namespaces
+* core: update sys/seal-status (and CLI vault status) to report the type of
+the seal when unsealed, as well as the type of the recovery seal if an
+auto-seal. [[GH-23022](https://github.com/hashicorp/vault/pull/23022)]
+* secrets/pki: do not check TLS validity on ACME requests redirected to https [[GH-22521](https://github.com/hashicorp/vault/pull/22521)]
+* ui: Sort list view of entities and aliases alphabetically using the item name [[GH-24103](https://github.com/hashicorp/vault/pull/24103)]
+* ui: capabilities-self is always called in the user's root namespace [[GH-24168](https://github.com/hashicorp/vault/pull/24168)]
+
+BUG FIXES:
+
+* activity log (enterprise): De-duplicate client count estimates for license utilization reporting.
+* auth/cert: Handle errors related to expired OCSP server responses [[GH-24193](https://github.com/hashicorp/vault/pull/24193)]
+* core (Enterprise): Treat multiple disabled HA seals as a migration to Shamir.
+* core/audit: Audit logging a Vault response will now use a 5 second context timeout, separate from the original request. [[GH-24238](https://github.com/hashicorp/vault/pull/24238)]
+* core/config: Use correct HCL config value when configuring `log_requests_level`. [[GH-24059](https://github.com/hashicorp/vault/pull/24059)]
+* core/quotas: Close rate-limit blocked client purge goroutines when sealing [[GH-24108](https://github.com/hashicorp/vault/pull/24108)]
+* core: Fix an error that resulted in the wrong seal type being returned by sys/seal-status while
+Vault is in seal migration mode. [[GH-24165](https://github.com/hashicorp/vault/pull/24165)]
+* replication (enterprise): disallow configuring paths filter for a mount path that does not exist
+* secrets-sync (enterprise): Fix panic when setting usage_gauge_period to none
+* secrets/pki: Do not set nextUpdate field in OCSP responses when ocsp_expiry is 0 [[GH-24192](https://github.com/hashicorp/vault/pull/24192)]
+* secrets/transit: Fix a panic when attempting to export a public RSA key [[GH-24054](https://github.com/hashicorp/vault/pull/24054)]
+* ui: Fix JSON editor in KV V2 unable to handle pasted values [[GH-24224](https://github.com/hashicorp/vault/pull/24224)]
+* ui: Fix error when tuning token auth configuration within namespace [[GH-24147](https://github.com/hashicorp/vault/pull/24147)]
+* ui: show error from API when seal fails [[GH-23921](https://github.com/hashicorp/vault/pull/23921)]
+
 ## 1.15.2
 ### November 09, 2023
 
@@ -335,6 +370,31 @@ sdk/ldaputil: use EscapeLDAPValue implementation from cap/ldap [[GH-22249](https
 * ui: fixes long namespace names overflow in the sidebar
 * ui: fixes model defaults overwriting input value when user tries to clear form input [[GH-22458](https://github.com/hashicorp/vault/pull/22458)]
 * ui: fixes text readability issue in revoke token confirmation dialog [[GH-22390](https://github.com/hashicorp/vault/pull/22390)]
+
+## 1.14.7
+### November 30, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.11.
+
+IMPROVEMENTS:
+
+* core (enterprise): Speed up unseal when using namespaces
+* secrets/pki: do not check TLS validity on ACME requests redirected to https [[GH-22521](https://github.com/hashicorp/vault/pull/22521)]
+* ui: Sort list view of entities and aliases alphabetically using the item name [[GH-24103](https://github.com/hashicorp/vault/pull/24103)]
+* ui: Update flat, shell-quote and swagger-ui-dist packages. Remove swagger-ui styling overrides. [[GH-23700](https://github.com/hashicorp/vault/pull/23700)]
+
+BUG FIXES:
+
+* activity log (enterprise): De-duplicate client count estimates for license utilization reporting.
+* auth/cert: Handle errors related to expired OCSP server responses [[GH-24193](https://github.com/hashicorp/vault/pull/24193)]
+* core/config: Use correct HCL config value when configuring `log_requests_level`. [[GH-24058](https://github.com/hashicorp/vault/pull/24058)]
+* core/quotas: Close rate-limit blocked client purge goroutines when sealing [[GH-24108](https://github.com/hashicorp/vault/pull/24108)]
+* replication (enterprise): disallow configuring paths filter for a mount path that does not exist
+* secrets/pki: Do not set nextUpdate field in OCSP responses when ocsp_expiry is 0 [[GH-24192](https://github.com/hashicorp/vault/pull/24192)]
+* secrets/transit: Fix a panic when attempting to export a public RSA key [[GH-24054](https://github.com/hashicorp/vault/pull/24054)]
+* ui: Fix error when tuning token auth configuration within namespace [[GH-24147](https://github.com/hashicorp/vault/pull/24147)]
 
 ## 1.14.6
 ### November 09, 2023
@@ -801,6 +861,28 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes bug in kmip role form that caused `operation_all` to persist after deselecting all operation checkboxes [[GH-19139](https://github.com/hashicorp/vault/pull/19139)]
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
+
+## 1.13.11
+### November 30, 2023
+
+CHANGES:
+
+* core: Bump Go version to 1.20.11.
+
+IMPROVEMENTS:
+
+* core (enterprise): Speed up unseal when using namespaces
+* ui: Sort list view of entities and aliases alphabetically using the item name [[GH-24103](https://github.com/hashicorp/vault/pull/24103)]
+
+BUG FIXES:
+
+* activity log (enterprise): De-duplicate client count estimates for license utilization reporting.
+* auth/cert: Handle errors related to expired OCSP server responses [[GH-24193](https://github.com/hashicorp/vault/pull/24193)]
+* core/config: Use correct HCL config value when configuring `log_requests_level`. [[GH-24057](https://github.com/hashicorp/vault/pull/24057)]
+* core/quotas: Close rate-limit blocked client purge goroutines when sealing [[GH-24108](https://github.com/hashicorp/vault/pull/24108)]
+* replication (enterprise): disallow configuring paths filter for a mount path that does not exist
+* secrets/pki: Do not set nextUpdate field in OCSP responses when ocsp_expiry is 0 [[GH-24192](https://github.com/hashicorp/vault/pull/24192)]
+* ui: Fix error when tuning token auth configuration within namespace [[GH-24147](https://github.com/hashicorp/vault/pull/24147)]
 
 ## 1.13.10
 ### November 09, 2023
