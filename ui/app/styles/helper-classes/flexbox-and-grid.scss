@@ -105,6 +105,7 @@
 }
 
 // moving away from !important, fresh flex styles below
+// FLEX CONTAINER
 .flex {
   display: flex;
   // direction
@@ -124,6 +125,11 @@
   &.column-gap-16 {
     column-gap: $spacing-16;
   }
+}
+
+// FLEX CHILDREN
+.align-self-end {
+  align-self: end;
 }
 
 /* Flex Responsive */
