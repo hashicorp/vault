@@ -433,7 +433,8 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	fieldData.Raw["id"] = "def"
 
 	resp, err = backend.handleReadCustomMessage(nsCtx, &logical.Request{}, fieldData)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, logical.ErrCustomMessageNotFound)
 	assert.Nil(t, resp)
 
 	// Check that there's an error when the id parameter is invalid.
@@ -549,7 +550,8 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 
 	// Try to update non-existant custom message
 	resp, err := backend.handleUpdateCustomMessage(nsCtx, &logical.Request{}, fieldData)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, logical.ErrCustomMessageNotFound)
 	assert.Nil(t, resp)
 
 	// Try to update an existing custom message
