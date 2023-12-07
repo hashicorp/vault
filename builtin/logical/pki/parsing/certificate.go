@@ -6,8 +6,23 @@ package parsing
 import (
 	"crypto/x509"
 	"fmt"
+	"math/big"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 )
+
+// NormalizeSerialForStorageFromBigInt given a serial number, format it as a string
+// that is safe to store within a filesystem
+func NormalizeSerialForStorageFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), "-"))
+}
+
+// NormalizeSerialForStorage given a serial number with ':' characters, convert
+// them to '-' which is safe to store within filesystems
+func NormalizeSerialForStorage(serial string) string {
+	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
+}
 
 func ParseCertificateFromString(pemCert string) (*x509.Certificate, error) {
 	return ParseCertificateFromBytes([]byte(pemCert))

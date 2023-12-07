@@ -288,17 +288,10 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certCounter := b.GetCertificateCounter()
-	certsCounted := certCounter.IsInitialized()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+		return nil, err
 	}
-	certCounter.IncrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
 	warnings, err = b.CrlBuilder().rebuild(sc, true)
@@ -423,17 +416,10 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	key := "certs/" + normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)
-	certCounter := b.GetCertificateCounter()
-	certsCounted := certCounter.IsInitialized()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+		return nil, err
 	}
-	certCounter.IncrementTotalCertificatesCount(certsCounted, key)
 
 	return resp, nil
 }

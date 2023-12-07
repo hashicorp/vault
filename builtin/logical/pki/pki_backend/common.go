@@ -19,3 +19,8 @@ type MountInfo interface {
 type Logger interface {
 	Logger() log.Logger
 }
+
+type CertificateCounter interface {
+	IsInitialized() bool
+	IncrementTotalCertificatesCount(certsCounted bool, newSerial string)
+}

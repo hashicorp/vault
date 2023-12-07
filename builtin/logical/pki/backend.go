@@ -294,6 +294,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.acmeState = NewACMEState()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
+	// It is important that we call SetupEnt at the very end as
+	// some ENT backends need access to the member vars initialized above.
 	b.SetupEnt()
 	return &b
 }

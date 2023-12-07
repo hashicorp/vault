@@ -4,6 +4,7 @@
 package issuing
 
 import (
+	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -26,6 +27,7 @@ import (
 	"golang.org/x/net/idna"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 var (
@@ -1117,4 +1119,20 @@ func ApplyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter tim
 		}
 	}
 	return notAfter, nil
+}
+
+// StoreCertificate given a certificate bundle that was signed, persist the certificate to storage
+func StoreCertificate(ctx context.Context, s logical.Storage, certCounter pki_backend.CertificateCounter, certBundle *certutil.ParsedCertBundle) error {
+	hyphenSerialNumber := parsing.NormalizeSerialForStorageFromBigInt(certBundle.Certificate.SerialNumber)
+	key := "certs/" + hyphenSerialNumber
+	certsCounted := certCounter.IsInitialized()
+	err := s.Put(ctx, &logical.StorageEntry{
+		Key:   key,
+		Value: certBundle.CertificateBytes,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to store certificate locally: %w", err)
+	}
+	certCounter.IncrementTotalCertificatesCount(certsCounted, key)
+	return nil
 }

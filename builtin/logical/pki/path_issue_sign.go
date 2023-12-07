@@ -415,11 +415,6 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	cb, err := parsedBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
-	}
-
 	generateLease := false
 	if role.GenerateLease != nil && *role.GenerateLease {
 		generateLease = true
@@ -431,17 +426,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	if !role.NoStore {
-		key := "certs/" + normalizeSerial(cb.SerialNumber)
-		certCounter := b.GetCertificateCounter()
-		certsCounted := certCounter.IsInitialized()
-		err = req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   key,
-			Value: parsedBundle.CertificateBytes,
-		})
+		err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 		if err != nil {
-			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+			return nil, err
 		}
-		certCounter.IncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {
