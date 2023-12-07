@@ -18,6 +18,17 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
     return `${super.urlForCreateRecord(modelName, snapshot)}/${name}`;
   }
 
+  updateRecord(store, { modelName }, snapshot) {
+    const { name } = snapshot.attributes();
+    // only send changed values
+    const data = snapshot.serialize(); // TODO account for changing from *** to empty
+    // let data = {};
+    // for (const param in snapshot.changedAttributes()) {
+    //   data[param] = snapshot.changedAttributes()[param][1];
+    // }
+    return this.ajax(`${this.buildURL(modelName)}/${name}`, 'POST', { data });
+  }
+
   urlForDeleteRecord(id, modelName, snapshot) {
     const { name, type } = snapshot.attributes();
     // the modelName may be sync/destination or a child depending if it was initiated from the list or details view
