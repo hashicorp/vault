@@ -12,7 +12,7 @@
     </Hds::Text::Body>
     {{#each @messages.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
-        <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-s" as |G|>
+        <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-m" as |G|>
           <G.Legend>Where should we display this message?</G.Legend>
           <G.Radio::Field @id="authenticated" @value={{true}} checked {{on "change" this.updateRadioValue}} as |F|>
             <F.Label>After the user logs in</F.Label>
@@ -24,7 +24,7 @@
           </G.Radio::Field>
         </Hds::Form::Radio::Group>
       {{else if (eq attr.name "type")}}
-        <Hds::Form::Radio::Group @layout="vertical" @name="type" class="has-bottom-margin-s" as |G|>
+        <Hds::Form::Radio::Group @layout="vertical" @name="type" class="has-bottom-margin-m" as |G|>
           <G.Legend>Type</G.Legend>
           <G.Radio::Field @id="modal-display-type" @value="banner" checked {{on "change" this.updateRadioValue}} as |F|>
             <F.Label>Alert message</F.Label>
@@ -37,7 +37,7 @@
           </G.Radio::Field>
         </Hds::Form::Radio::Group>
       {{else if (eq attr.name "link")}}
-        <div class="field has-bottom-margin-s">
+        <div class="field has-bottom-margin-m">
           <label for="link" class="is-label">Link</label>
           <div class="control is-flex-between has-gap-m">
             <Input
@@ -59,7 +59,31 @@
           </div>
         </div>
       {{else if (eq attr.name "startTime")}}
-        <Input
+        <Hds::Form::Toggle::Field
+          name="startTime"
+          class="has-bottom-margin-l"
+          checked={{this.showStartTime}}
+          @id="startTime"
+          {{on "change" (fn (mut this.showStartTime) (not this.showStartTime))}}
+          as |F|
+        >
+          <F.Label>Message starts</F.Label>
+          <F.HelperText>
+            Defaults to 12:00 a.m. the following day (local timezone).
+            {{unless this.showStartTime "When toggled off, message is inactive."}}
+            {{#if this.showStartTime}}
+              <div class="control">
+                <Input
+                  @type="datetime-local"
+                  class="input has-top-margin-xs is-auto-width"
+                  data-test-date="startTime"
+                  {{on "input" (pipe (pick "target.value") (fn (mut this.state.startTime)))}}
+                />
+              </div>
+            {{/if}}
+          </F.HelperText>
+        </Hds::Form::Toggle::Field>
+        {{!-- <Input
           data-test-text-toggle
           id="message-start"
           class="toggle is-success is-small"
@@ -74,40 +98,42 @@
           <div class="control">
             <Input
               @type="datetime-local"
-              class="input has-top-margin-s"
+              class="input has-top-margin-xs is-auto-width"
               data-test-date="startTime"
               {{on "input" (pipe (pick "target.value") (fn (mut this.state.startTime)))}}
             />
           </div>
-        {{/if}}
+        {{/if}} --}}
       {{else if (eq attr.name "endTime")}}
-        <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-m has-bottom-margin-xl" as |G|>
-          <G.Legend>Message expires</G.Legend>
-          <G.Radio::Field @id="never" checked @value="" {{on "change" this.updateRadioValue}} as |F|>
-            <F.Label>Never</F.Label>
-            <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
-          </G.Radio::Field>
-          <G.Radio::Field @id="specific-date" @value="" {{on "change" this.updateRadioValue}} as |F|>
-            <F.Label>Specific date</F.Label>
-            <F.HelperText>
-              This message will expire at midnight (local timezone) at the specific date.
-              <div class="control">
-                <Input
-                  @type="datetime-local"
-                  class="input has-top-margin-s"
-                  data-test-link="title"
-                  {{on "input" (pipe (pick "target.value") (fn (mut this.state.endTime)))}}
-                />
-              </div>
-            </F.HelperText>
-          </G.Radio::Field>
-        </Hds::Form::Radio::Group>
+        {{#if this.showStartTime}}
+          <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
+            <G.Legend>Message expires</G.Legend>
+            <G.Radio::Field @id="never" checked @value="" {{on "change" this.updateRadioValue}} as |F|>
+              <F.Label>Never</F.Label>
+              <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
+            </G.Radio::Field>
+            <G.Radio::Field @id="specific-date" @value="" {{on "change" this.updateRadioValue}} as |F|>
+              <F.Label>Specific date</F.Label>
+              <F.HelperText>
+                This message will expire at midnight (local timezone) at the specific date.
+                <div class="control">
+                  <Input
+                    @type="datetime-local"
+                    class="input has-top-margin-xs is-auto-width"
+                    data-test-link="title"
+                    {{on "input" (pipe (pick "target.value") (fn (mut this.state.endTime)))}}
+                  />
+                </div>
+              </F.HelperText>
+            </G.Radio::Field>
+          </Hds::Form::Radio::Group>
+        {{/if}}
       {{else}}
-        <FormField class="has-bottom-margin-s" data-test-field={{true}} @attr={{attr}} @model={{@messages}} />
+        <FormField class="has-bottom-margin-m" data-test-field={{true}} @attr={{attr}} @model={{@messages}} />
       {{/if}}
     {{/each}}
 
-    <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-s">
+    <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
       {{! TODO: VAULT-21533 preview modal }}
       <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
 
