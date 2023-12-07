@@ -2456,6 +2456,34 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	return nil
 }
 
+// setupPluginRuntimeCatalog wraps the plugincatalog.SetupPluginRuntimeCatalog
+// in way where this method can be included in the slice of functions returned
+// by the buildUnsealSetupFunctionsSlice function.
+func (c *Core) setupPluginRuntimeCatalog(ctx context.Context) error {
+	pluginRuntimeCatalog, err := plugincatalog.SetupPluginRuntimeCatalog(ctx, c.logger, NewBarrierView(c.barrier, pluginRuntimeCatalogPath))
+	if err != nil {
+		return err
+	}
+
+	c.pluginRuntimeCatalog = pluginRuntimeCatalog
+
+	return nil
+}
+
+// setupPluginCatalog wraps the plugincatalog.SetupPluginCatalog in way where
+// this method can be included in the slice of functions returned by the
+// buildUnsealSetupFunctionsSlice function.
+func (c *Core) setupPluginCatalog(ctx context.Context) error {
+	pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, c.logger, c.builtinRegistry, NewBarrierView(c.barrier, pluginCatalogPath), c.pluginDirectory, c.enableMlock, c.pluginRuntimeCatalog)
+	if err != nil {
+		return err
+	}
+
+	c.pluginCatalog = pluginCatalog
+
+	return nil
+}
+
 // buildUnsealSetupFunctionSlice returns a slice of functions, tailored for this
 // Core's replication state, that can be passed to the runUnsealSetupFunctions
 // function.
