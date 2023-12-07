@@ -30,6 +30,31 @@ export default class DestinationsCreateForm extends Component<Args> {
   @tracked invalidFormMessage = '';
   @tracked error = '';
 
+  get header() {
+    const { isNew, typeDisplayName, name } = this.args.destination;
+    return isNew
+      ? {
+          title: `Create Destination for ${typeDisplayName}`,
+          breadcrumbs: [
+            { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Select Destination', route: 'secrets.destinations.create' },
+            { label: 'Create Destination' },
+          ],
+        }
+      : {
+          title: `Edit ${name}`,
+          breadcrumbs: [
+            { label: 'Secrets Sync', route: 'secrets.overview' },
+            {
+              label: 'Destination',
+              route: 'secrets.destinations.destination.secrets',
+              model: this.args.destination,
+            },
+            { label: 'Edit Destination' },
+          ],
+        };
+  }
+
   @task
   @waitFor
   *save(event: Event) {
