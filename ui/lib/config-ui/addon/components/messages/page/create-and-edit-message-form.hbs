@@ -10,6 +10,9 @@
     <Hds::Text::Body @tag="p" class="has-bottom-margin-l">
       Create a custom message for all users when they access a Vault system via the UI.
     </Hds::Text::Body>
+
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+
     {{#each @messages.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-m" as |G|>
@@ -49,74 +52,43 @@
         </Hds::Form::Radio::Group>
       {{else if (eq attr.name "link")}}
         <div class="field has-bottom-margin-m">
-          <label for="link" class="is-label">Link</label>
+          <label for="link" class="is-label">Link
+            <span class="has-text-grey-400 has-font-weight-normal">(optional)</span></label>
           <div class="control is-flex-between has-gap-m">
             <Input
               @type="text"
               @value={{@messages.link.title}}
+              placeholder="Display text (e.g. Learn more)"
               id="link-title"
               class="input"
-              {{on "input" (fn (mut @messages.link.title))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @messages.link.title)))}}
               data-test-link="title"
             />
             <Input
               @type="text"
               @value={{@messages.link.href}}
+              placeholder="Paste URL (e.g. www.learnmore.com)"
               id="link-href"
               class="input"
-              {{on "input" (fn (mut @messages.link.href))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @messages.link.href)))}}
               data-test-link="href"
             />
           </div>
         </div>
       {{else if (eq attr.name "startTime")}}
-        <Hds::Form::Toggle::Field
-          name="startTime"
-          class="has-bottom-margin-l"
-          checked={{this.showStartTime}}
-          @id="startTime"
-          {{on "change" (fn (mut this.showStartTime) (not this.showStartTime))}}
-          as |F|
-        >
-          <F.Label>Message starts</F.Label>
-          <F.HelperText>
-            Defaults to 12:00 a.m. the following day (local timezone).
-            {{unless this.showStartTime "When toggled off, message is inactive."}}
-            {{#if this.showStartTime}}
-              <div class="control">
-                <Input
-                  @type="datetime-local"
-                  class="input has-top-margin-xs is-auto-width"
-                  data-test-date="startTime"
-                  name="startTime"
-                  {{on "input" this.updateDateTime}}
-                />
-              </div>
-            {{/if}}
-          </F.HelperText>
-        </Hds::Form::Toggle::Field>
-        {{! To remove after asking team for feedback on using HDS toggle }}
-        {{!-- <Input
-          data-test-text-toggle
-          id="message-start"
-          class="toggle is-success is-small"
-          @type="checkbox"
-          @checked={{this.showStartTime}}
-          {{on "change" (fn (mut this.showTextArea) (not this.showTextArea))}}
-        />
         <label for="message-start" class="has-text-weight-bold is-size-8">
           Message starts
         </label>
-        {{#if this.showStartTime}}
-          <div class="control">
-            <Input
-              @type="datetime-local"
-              class="input has-top-margin-xs is-auto-width"
-              data-test-date="startTime"
-              {{on "input" (pipe (pick "target.value") (fn (mut this.state.startTime)))}}
-            />
-          </div>
-        {{/if}} --}}
+        <Hds::Text::Body @tag="p" @size="200" class="has-bottom-margin-s">
+          Defaults to 12:00 a.m. the following day (local timezone). When toggled off, message is inactive.
+        </Hds::Text::Body>
+        <Input
+          @type="datetime-local"
+          class="input has-top-margin-xs is-auto-width is-block"
+          data-test-date="startTime"
+          name="startTime"
+          {{on "input" this.updateDateTime}}
+        />
       {{else if (eq attr.name "endTime")}}
         {{#if this.showStartTime}}
           <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
@@ -148,7 +120,13 @@
           </Hds::Form::Radio::Group>
         {{/if}}
       {{else}}
-        <FormField class="has-bottom-margin-m" data-test-field={{true}} @attr={{attr}} @model={{@messages}} />
+        <FormField
+          class="has-bottom-margin-m"
+          data-test-field={{true}}
+          @attr={{attr}}
+          @model={{@messages}}
+          @modelValidations={{this.modelValidations}}
+        />
       {{/if}}
     {{/each}}
 

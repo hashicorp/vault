@@ -20,34 +20,27 @@ const validations = {
 export default class MessageModel extends Model {
   @attr('boolean') active;
   @attr('string', {
-    label: 'Type',
-    editType: 'radio',
-    subText: 'Display to users after they have successfully logged in to Vault.',
-    possibleValues: ['Alert banner', 'Modal'],
+    defaultValue: 'banner',
   })
   type;
   @attr('boolean', {
-    label: 'Where should we display this message?',
-    editType: 'radio',
-    possibleValues: [true, false],
+    defaultValue: true,
   })
   authenticated;
   @attr('string', {
     label: 'Title',
     fieldValue: 'title',
-    editDisabled: true,
   })
   title;
   @attr('string', {
     label: 'Message',
     fieldValue: 'message',
     editType: 'textarea',
-    editDisabled: true,
   })
   message;
   @attr('object') link;
-  @attr('string') startTime;
-  @attr('string') endTime;
+  @attr('string', { defaultValue: new Date().toISOString() }) startTime;
+  @attr('string', { defaultValue: '' }) endTime;
 
   // date helpers
   get isStartTimeAfterToday() {
