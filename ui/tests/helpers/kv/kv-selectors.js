@@ -1,126 +1,149 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
+{{!
+  Copyright (c) HashiCorp, Inc.
+}}
 
-export const PAGE = {
-  // General selectors that are common between pages
-  title: '[data-test-header-title]',
-  breadcrumbs: '[data-test-breadcrumbs]',
-  breadcrumb: '[data-test-breadcrumbs] li',
-  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
-  infoRow: '[data-test-component="info-table-row"]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
-  infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
-  secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
-  emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateMessage: '[data-test-empty-state-message]',
-  emptyStateActions: '[data-test-empty-state-actions]',
-  popup: '[data-test-popup-menu-trigger]',
-  error: {
-    title: '[data-test-page-error] h1',
-    message: '[data-test-page-error] p',
-  },
-  toolbar: 'nav.toolbar',
-  toolbarAction: 'nav.toolbar-actions .toolbar-link',
-  secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
-  // specific page selectors
-  backends: {
-    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
-  },
-  metadata: {
-    editBtn: '[data-test-edit-metadata]',
-    addCustomMetadataBtn: '[data-test-add-custom-metadata]',
-    customMetadataSection: '[data-test-kv-custom-metadata-section]',
-    secretMetadataSection: '[data-test-kv-metadata-section]',
-    deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
-  },
-  detail: {
-    versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
-    versionDropdown: '[data-test-version-dropdown]',
-    version: (number) => `[data-test-version="${number}"]`,
-    createNewVersion: '[data-test-create-new-version]',
-    delete: '[data-test-kv-delete="delete"]',
-    destroy: '[data-test-kv-delete="destroy"]',
-    undelete: '[data-test-kv-delete="undelete"]',
-    copy: '[data-test-copy-menu-trigger]',
-    deleteModal: '[data-test-delete-modal]',
-    deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
-    deleteOption: 'input#delete-version',
-    deleteOptionLatest: 'input#delete-latest-version',
-    deleteConfirm: '[data-test-delete-modal-confirm]',
-  },
-  edit: {
-    toggleDiff: '[data-test-toggle-input="Show diff"',
-    toggleDiffDescription: '[data-test-diff-description]',
-  },
-  list: {
-    createSecret: '[data-test-toolbar-create-secret]',
-    item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
-    filter: `[data-test-kv-list-filter]`,
-    overviewCard: '[data-test-overview-card-container="View secret"]',
-    overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-get-secret-detail]',
-    pagination: '[data-test-pagination]',
-    paginationInfo: '.hds-pagination-info',
-    paginationNext: '.hds-pagination-nav__arrow--direction-next',
-    paginationSelected: '.hds-pagination-nav__number--is-selected',
-  },
-  versions: {
-    icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) =>
-      version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
-    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
-    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
-  },
-  diff: {
-    visualDiff: '[data-test-visual-diff]',
-    added: `.jsondiffpatch-added`,
-    deleted: `.jsondiffpatch-deleted`,
-  },
-  create: {
-    metadataSection: '[data-test-metadata-section]',
-  },
-  paths: {
-    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
-  },
-};
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
+  <:tabLinks>
+    <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
 
-// Form/Interactive selectors that are common between pages and forms
-export const FORM = {
-  inputByAttr: (attr) => `[data-test-input="${attr}"]`,
-  fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
-  toggleJson: '[data-test-toggle-input="json"]',
-  toggleMasked: '[data-test-button="toggle-masked"]',
-  toggleMetadata: '[data-test-metadata-toggle]',
-  jsonEditor: '[data-test-component="code-mirror-modifier"]',
-  ttlValue: (name) => `[data-test-ttl-value="${name}"]`,
-  toggleByLabel: (label) => `[data-test-ttl-toggle="${label}"]`,
-  dataInputLabel: ({ isJson = false }) =>
-    isJson ? '[data-test-component="json-editor-title"]' : '[data-test-kv-label]',
-  // <KvObjectEditor>
-  kvLabel: '[data-test-kv-label]',
-  kvRow: '[data-test-kv-row]',
-  keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
-  valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
-  maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
-  addRow: (idx = 0) => `[data-test-kv-add-row="${idx}"]`,
-  deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
-  // Alerts & validation
-  inlineAlert: '[data-test-inline-alert]',
-  validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
-  messageError: '[data-test-message-error]',
-  validationWarning: '[data-test-validation-warning]',
-  invalidFormAlert: '[data-test-invalid-form-alert]',
-  versionAlert: '[data-test-secret-version-alert]',
-  noReadAlert: '[data-test-secret-no-read-alert]',
-  // Form btns
-  saveBtn: '[data-test-kv-save]',
-  cancelBtn: '[data-test-kv-cancel]',
-};
+  <:toolbarFilters>
 
-export const parseJsonEditor = (find) => {
-  return JSON.parse(find(FORM.jsonEditor).innerText);
-};
+    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
+      <KvListFilter @secrets={{@secrets}} @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
+    {{/if}}
+  </:toolbarFilters>
+
+  <:toolbarActions>
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">
+      Create secret
+    </ToolbarLink>
+  </:toolbarActions>
+</KvPageHeader>
+{{#if (eq @secrets 403)}}
+  <div class="box is-fullwidth is-shadowless has-tall-padding">
+    <div class="selectable-card-container one-card">
+      <OverviewCard
+        @cardTitle="View secret"
+        @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
+      >
+        <form {{on "submit" this.transitionToSecretDetail}} class="has-top-margin-m is-flex">
+          <InputSearch
+            @id="search-input-kv-secret"
+            @initialValue={{@pathToSecret}}
+            @onChange={{this.handleSecretPathInput}}
+            @placeholder="secret/"
+            data-test-view-secret
+          />
+          <button type="submit" class="button is-secondary" disabled={{not this.secretPath}} data-test-get-secret-detail>
+            {{this.buttonText}}
+          </button>
+        </form>
+        {{#if @failedDirectoryQuery}}
+          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
+        {{/if}}
+      </OverviewCard>
+    </div>
+  </div>
+{{else}}
+  {{#if @secrets}}
+    {{#each @secrets as |metadata|}}
+      <LinkedBlock
+        data-test-list-item={{metadata.path}}
+        class="list-item-row"
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") metadata.fullSecretPath}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name={{if metadata.pathIsDirectory "folder" "file"}} class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{metadata.path}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if metadata.pathIsDirectory}}
+                      <li>
+                        <LinkTo @route="list-directory" @model={{metadata.fullSecretPath}}>
+                          Content
+                        </LinkTo>
+                      </li>
+                    {{else}}
+                      <li>
+                        <LinkTo @route="secret.details" @model={{metadata.fullSecretPath}}>
+                          Details
+                        </LinkTo>
+                      </li>
+                      {{#if metadata.canReadMetadata}}
+                        <li>
+                          <LinkTo @route="secret.metadata.versions" @model={{metadata.fullSecretPath}}>
+                            View version history
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canCreateVersionData}}
+                        <li>
+                          <LinkTo
+                            @route="secret.details.edit"
+                            @model={{metadata.fullSecretPath}}
+                            data-test-popup-create-new-version
+                          >
+                            Create new version
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if metadata.canDeleteMetadata}}
+                        <li>
+                          <ConfirmAction
+                            @buttonClasses="link is-destroy"
+                            @onConfirmAction={{fn this.onDelete metadata}}
+                            @confirmMessage="This will permanently delete this secret and all its versions."
+                            @cancelButtonText="Cancel"
+                            data-test-popup-metadata-delete
+                          >
+                            Permanently delete
+                          </ConfirmAction>
+                        </li>
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
+          </div>
+        </div>
+      </LinkedBlock>
+    {{/each}}
+    {{! Pagination }}
+    <Hds::Pagination::Numbered
+      @currentPage={{@secrets.meta.currentPage}}
+      @currentPageSize={{@secrets.meta.pageSize}}
+      @route={{this.router.currentRoute.localName}}
+      @showSizeSelector={{false}}
+      @totalItems={{@secrets.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+  {{else}}
+    {{#if @filterValue}}
+      <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
+    {{else}}
+      <EmptyState
+        data-test-secret-list-empty-state
+        @title="No secrets yet"
+        @message="When created, secrets will be listed here. Create a secret to get started."
+      >
+        <LinkTo class="has-top-margin-xs" @route="create">
+          Create secret
+        </LinkTo>
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+{{/if}}
