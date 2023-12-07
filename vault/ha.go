@@ -835,7 +835,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
