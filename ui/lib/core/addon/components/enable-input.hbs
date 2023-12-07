@@ -9,7 +9,7 @@
   <div class="flex" ...attributes>
     <div class="is-flex-grow-1">
       {{#if @attr}}
-        <ReadonlyFormField class="hds-form-masked-input__control" @attr={{@attr}} @value="**********" />
+        <ReadonlyFormField @attr={{@attr}} @value="**********" />
       {{else}}
         <Input disabled class="input" @type="text" @value="**********" />
       {{/if}}
