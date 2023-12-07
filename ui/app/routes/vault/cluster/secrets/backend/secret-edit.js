@@ -10,7 +10,6 @@ import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 
 export default Route.extend({
   store: service(),
@@ -81,7 +80,7 @@ export default Route.extend({
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
-      if (isAddonEngine(secretEngine.type, secretEngine.version)) {
+      if (secretEngine.type === 'kv' && secretEngine.version === 2) {
         // if no secret param redirect to the create route
         // if secret param they are either viewing or editing secret so navigate to the details route
         return !secret
