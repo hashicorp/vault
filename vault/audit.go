@@ -170,6 +170,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
 
+	c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	return nil
 }
 
@@ -229,9 +230,8 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if err != nil {
 		return existed, fmt.Errorf("failed to deregister %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
-	if c.logger.IsInfo() {
-		c.logger.Info("disabled audit backend", "path", path)
-	}
+
+	c.logger.Info("disabled audit backend", "path", path)
 
 	removeAuditPathChecker(c, entry)
 
@@ -555,24 +555,18 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		}
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
-			if auditLogger.IsInfo() {
-				auditLogger.Info("reloading file audit backend", "path", entry.Path)
-			}
+			auditLogger.Info("reloading file audit backend", "path", entry.Path)
 			return be.Reload(ctx)
 		})
 
 		c.reloadFuncsLock.Unlock()
 	case "socket":
-		if auditLogger.IsDebug() {
-			if entry.Options != nil {
-				auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
-			}
+		if auditLogger.IsDebug() && entry.Options != nil {
+			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
 	case "syslog":
-		if auditLogger.IsDebug() {
-			if entry.Options != nil {
-				auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
-			}
+		if auditLogger.IsDebug() && entry.Options != nil {
+			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
 	}
 
