@@ -13,15 +13,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/strutil"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
@@ -221,7 +221,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	opts.InmemClusterLayers = true
 	opts.KeepStandbysSealed = true
 	opts.SetupFunc = nil
-	timeToHealthyCore2 := 5 * time.Second
+	core2SnapshotDelay := 5 * time.Second
 	opts.PhysicalFactory = func(t testingintf.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 		config := map[string]interface{}{
 			"snapshot_threshold":           "50",
@@ -231,13 +231,12 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 			"snapshot_interval":            "1s",
 		}
 		if coreIdx == 2 {
-			config["snapshot_delay"] = timeToHealthyCore2.String()
+			config["snapshot_delay"] = core2SnapshotDelay.String()
 		}
 		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
 	}
 
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
 	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
 
@@ -278,46 +277,45 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	joinAndUnseal(t, cluster.Cores[1], cluster, false, false)
 	joinAndUnseal(t, cluster.Cores[2], cluster, false, false)
 
-	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
+	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(config.ServerStabilizationTime)
 
+	// Wait for enough time for stabilization to complete if things were good
+	// - but they're not good, due to our snapshot_delay.  So we fail if both
+	// nodes are healthy.
 	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
-	deadline := time.Now().Add(stabilizationWaitDuration)
-	var core1healthy, core2healthy bool
-	for time.Now().Before(deadline) {
+	testhelpers.RetryUntil(t, stabilizationWaitDuration, func() error {
 		state, err := client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		core1healthy = state.Servers["core-1"] != nil && state.Servers["core-1"].Healthy
-		core2healthy = state.Servers["core-2"] != nil && state.Servers["core-2"].Healthy
-		time.Sleep(1 * time.Second)
-	}
-	if !core1healthy || core2healthy {
-		t.Fatalf("expected health: core1=true and core2=false, got: core1=%v, core2=%v", core1healthy, core2healthy)
-	}
+		if err != nil {
+			return err
+		}
+		core1healthy := state.Servers["core-1"] != nil && state.Servers["core-1"].Healthy
+		core2healthy := state.Servers["core-2"] != nil && state.Servers["core-2"].Healthy
 
-	time.Sleep(2 * time.Second) // wait for reconciliation
-	state, err = client.Sys().RaftAutopilotState()
-	require.NoError(t, err)
-	require.Equal(t, []string{"core-0", "core-1"}, state.Voters)
+		if !core1healthy || core2healthy {
+			return fmt.Errorf("expected health: core1=true and core2=false, got: core1=%v, core2=%v", core1healthy, core2healthy)
+		}
 
-	for time.Now().Before(core2shouldBeHealthyAt) {
-		state, err := client.Sys().RaftAutopilotState()
-		require.NoError(t, err)
-		core2healthy = state.Servers["core-2"].Healthy
-		time.Sleep(1 * time.Second)
-		t.Log(core2healthy)
-	}
+		if diff := cmp.Diff(state.Voters, []string{"core-0", "core-1"}); len(diff) > 0 {
+			return fmt.Errorf("expected core-0 and core-1 as voters, diff: %v", diff)
+		}
 
-	deadline = time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
+		return nil
+	})
+
+	// Now we expect that after the snapshot_delay has elapsed, and enough
+	// stabilization time subsequent to that has occurred, that autopilot will
+	// deem core-2 healthy and promote it as a voter.
+	testhelpers.RetryUntil(t, core2shouldBeHealthyAt.Sub(time.Now()), func() error {
 		state, err = client.Sys().RaftAutopilotState()
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
-		if strutil.EquivalentSlices(state.Voters, []string{"core-0", "core-1", "core-2"}) {
-			break
+		if diff := cmp.Diff(state.Voters, []string{"core-0", "core-1", "core-2"}); len(diff) > 0 {
+			return fmt.Errorf("expected all nodes as voters, diff: %v", diff)
 		}
-	}
-	require.Equal(t, []string{"core-0", "core-1", "core-2"}, state.Voters)
+
+		return nil
+	})
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
@@ -583,43 +581,34 @@ func joinAsVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *va
 // and whether to wait (up to a timeout) for the core to be unsealed before returning.
 func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool, waitForUnseal bool) {
 	t.Helper()
-	leader, leaderAddr := clusterLeader(t, cluster)
-	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
-		{
-			LeaderAPIAddr: leaderAddr,
-			TLSConfig:     leader.TLSConfig(),
-			Retry:         true,
-		},
-	}, nonVoter)
+	leaderIdx, err := testcluster.LeaderNode(context.Background(), cluster)
 	require.NoError(t, err)
+	leader := cluster.Cores[leaderIdx]
 
-	time.Sleep(1 * time.Second)
+	resp, err := core.Client.Sys().RaftJoin(&api.RaftJoinRequest{
+		LeaderAPIAddr:    leader.Client.Address(),
+		LeaderCACert:     string(cluster.CACertPEM),
+		LeaderClientCert: string(cluster.CACertPEM),
+		LeaderClientKey:  string(cluster.CAKeyPEM),
+		Retry:            false,
+		NonVoter:         nonVoter,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.Joined)
+
 	cluster.UnsealCore(t, core)
 	if waitForUnseal {
 		waitForCoreUnseal(t, core)
 	}
 }
 
-// clusterLeader gets the leader node and its address from the specified cluster
-func clusterLeader(t *testing.T, cluster *vault.TestCluster) (*vault.TestClusterCore, string) {
-	t.Helper()
-	for _, core := range cluster.Cores {
-		isLeader, addr, _, err := core.Leader()
-		require.NoError(t, err)
-		if isLeader {
-			return core, addr
-		}
-	}
-
-	t.Fatal("unable to find leader")
-	return nil, ""
-}
-
 // setupLeaderAndUnseal configures and unseals the leader node.
 // It will wait until the node is active before returning the core and the address of the leader.
 func setupLeaderAndUnseal(t *testing.T, cluster *vault.TestCluster) (*vault.TestClusterCore, *testhelpers.TestRaftServerAddressProvider) {
 	t.Helper()
-	leader, _ := clusterLeader(t, cluster)
+	leaderIdx, err := testcluster.LeaderNode(context.Background(), cluster)
+	require.NoError(t, err)
+	leader := cluster.Cores[leaderIdx]
 
 	// Lots of tests seem to do this when they deal with a TestRaftServerAddressProvider, it makes the test work rather than error out.
 	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
