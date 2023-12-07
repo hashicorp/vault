@@ -2308,6 +2308,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		c.logger.Debug("runStandby done")
 	}
 
+	stopPartialSealRewrapping(c)
 	c.teardownReplicationResolverHandler()
 
 	// Perform additional cleanup upon sealing.
