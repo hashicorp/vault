@@ -118,6 +118,28 @@ func TestHandler_parseMFAHandler(t *testing.T) {
 	}
 }
 
+// TestHandler_CORS_Patch verifies that http PATCH is included in the list of
+// allowed request methods
+func TestHandler_CORS_Patch(t *testing.T) {
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	corsConfig := core.CORSConfig()
+	err := corsConfig.Enable(context.Background(), []string{addr}, nil)
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodOptions, addr+"/v1/sys/seal-status", nil)
+	require.NoError(t, err)
+
+	req.Header.Set("Origin", addr)
+	req.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
 func TestHandler_cors(t *testing.T) {
 	core, _, _ := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

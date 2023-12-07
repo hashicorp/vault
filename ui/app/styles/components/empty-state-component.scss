@@ -53,9 +53,6 @@
   a,
   .link,
   a:not(.button):not(.file-delete-button):not(.tag) {
-    color: $blue;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
     text-decoration: none;
   }
 

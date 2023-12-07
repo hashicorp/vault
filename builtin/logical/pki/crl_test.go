@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -1063,7 +1064,7 @@ func TestAutoRebuild(t *testing.T) {
 	var revInfo revocationInfo
 	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
 	require.NoError(t, err)
-	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
+	require.Equal(t, revInfo.CertificateIssuer, issuing.IssuerID(rootIssuer))
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
@@ -1201,7 +1202,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotEmpty(t, resp.Data["certificate"])
 	require.NotEmpty(t, resp.Data["issuer_id"])
 	rootCert := resp.Data["certificate"].(string)
-	rootID := resp.Data["issuer_id"].(issuerID)
+	rootID := resp.Data["issuer_id"].(issuing.IssuerID)
 
 	// Create a role for issuance.
 	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
@@ -1495,9 +1496,9 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		key := string(resp.Data["key_id"].(keyID))
+		key := string(resp.Data["key_id"].(issuing.KeyID))
 		keyIDs = append(keyIDs, key)
-		issuer := string(resp.Data["issuer_id"].(issuerID))
+		issuer := string(resp.Data["issuer_id"].(issuing.IssuerID))
 		issuerIDs = append(issuerIDs, issuer)
 	}
 	_, err = CBRead(b, s, "crl/rotate")

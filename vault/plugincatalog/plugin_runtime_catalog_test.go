@@ -1,18 +1,34 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package plugincatalog
 
 import (
 	"context"
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
+func testPluginRuntimeCatalog(t *testing.T) *PluginRuntimeCatalog {
+	logger := hclog.Default()
+	storage, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginRuntimeCatalog, err := SetupPluginRuntimeCatalog(context.Background(), logger, logical.NewLogicalStorage(storage))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pluginRuntimeCatalog
+}
+
 func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
+	pluginRuntimeCatalog := testPluginRuntimeCatalog(t)
 	ctx := context.Background()
 
 	expected := &pluginruntimeutil.PluginRuntimeConfig{
@@ -24,13 +40,13 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set new plugin runtime
-	err := core.pluginRuntimeCatalog.Set(ctx, expected)
+	err := pluginRuntimeCatalog.Set(ctx, expected)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get plugin runtime
-	runner, err := core.pluginRuntimeCatalog.Get(ctx, expected.Name, expected.Type)
+	runner, err := pluginRuntimeCatalog.Get(ctx, expected.Name, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -42,13 +58,13 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	expected.CgroupParent = "memorylimit-cgroup"
 	expected.CPU = 2
 	expected.Memory = 5000
-	err = core.pluginRuntimeCatalog.Set(ctx, expected)
+	err = pluginRuntimeCatalog.Set(ctx, expected)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Get plugin runtime again
-	runner, err = core.pluginRuntimeCatalog.Get(ctx, expected.Name, expected.Type)
+	runner, err = pluginRuntimeCatalog.Get(ctx, expected.Name, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -57,7 +73,7 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", runner, expected)
 	}
 
-	configs, err := core.pluginRuntimeCatalog.List(ctx, expected.Type)
+	configs, err := pluginRuntimeCatalog.List(ctx, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -66,13 +82,13 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete plugin runtime
-	err = core.pluginRuntimeCatalog.Delete(ctx, expected.Name, expected.Type)
+	err = pluginRuntimeCatalog.Delete(ctx, expected.Name, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Assert the plugin runtime catalog is empty
-	configs, err = core.pluginRuntimeCatalog.List(ctx, expected.Type)
+	configs, err = pluginRuntimeCatalog.List(ctx, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
