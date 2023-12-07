@@ -63,6 +63,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
@@ -93,6 +94,11 @@ const (
 	// coreGroupPolicyApplicationPath is used to store the behaviour for
 	// how policies should be applied
 	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// Path in storage for the plugin catalog.
+	pluginCatalogPath = "core/plugin-catalog/"
+	// Path in storage for the plugin runtime catalog.
+	pluginRuntimeCatalogPath = "core/plugin-runtime-catalog/"
 
 	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
 	// policy application modes, which allows only in-namespace-hierarchy policy application
@@ -242,7 +248,7 @@ type Core struct {
 
 	// The registry of builtin plugins is passed in here as an interface because
 	// if it's used directly, it results in import cycles.
-	builtinRegistry BuiltinRegistry
+	builtinRegistry plugincatalog.BuiltinRegistry
 
 	// N.B.: This is used to populate a dev token down replication, as
 	// otherwise, after replication is started, a dev would have to go through
@@ -537,10 +543,10 @@ type Core struct {
 	pluginFilePermissions int
 
 	// pluginCatalog is used to manage plugin configurations
-	pluginCatalog *PluginCatalog
+	pluginCatalog *plugincatalog.PluginCatalog
 
 	// pluginRuntimeCatalog is used to manage plugin runtime configurations
-	pluginRuntimeCatalog *PluginRuntimeCatalog
+	pluginRuntimeCatalog *plugincatalog.PluginRuntimeCatalog
 
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
@@ -699,8 +705,9 @@ type Core struct {
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 
-	echoDuration              *uberAtomic.Duration
-	activeNodeClockSkewMillis *uberAtomic.Int64
+	echoDuration                  *uberAtomic.Duration
+	activeNodeClockSkewMillis     *uberAtomic.Int64
+	periodicLeaderRefreshInterval time.Duration
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -736,7 +743,7 @@ type CoreConfig struct {
 
 	DevToken string
 
-	BuiltinRegistry BuiltinRegistry
+	BuiltinRegistry plugincatalog.BuiltinRegistry
 
 	LogicalBackends map[string]logical.Factory
 
@@ -875,6 +882,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
+
+	PeriodicLeaderRefreshInterval time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -958,6 +967,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
+
+	if conf.PeriodicLeaderRefreshInterval == 0 {
+		conf.PeriodicLeaderRefreshInterval = leaderCheckInterval
 	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
@@ -1058,6 +1071,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		detectDeadlocks:                detectDeadlocks,
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2309,6 +2323,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		c.logger.Debug("runStandby done")
 	}
 
+	stopPartialSealRewrapping(c)
 	c.teardownReplicationResolverHandler()
 
 	// Perform additional cleanup upon sealing.
@@ -2394,11 +2409,15 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+	if pluginRuntimeCatalog, err := plugincatalog.SetupPluginRuntimeCatalog(ctx, c.logger, NewBarrierView(c.barrier, pluginRuntimeCatalogPath)); err != nil {
 		return err
+	} else {
+		c.pluginRuntimeCatalog = pluginRuntimeCatalog
 	}
-	if err := c.setupPluginCatalog(ctx); err != nil {
+	if pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, c.logger, c.builtinRegistry, NewBarrierView(c.barrier, pluginCatalogPath), c.pluginDirectory, c.enableMlock, c.pluginRuntimeCatalog); err != nil {
 		return err
+	} else {
+		c.pluginCatalog = pluginCatalog
 	}
 	if err := c.loadMounts(ctx); err != nil {
 		return err
@@ -3386,17 +3405,6 @@ func (c *Core) MetricSink() *metricsutil.ClusterMetricSink {
 	return c.metricSink
 }
 
-// BuiltinRegistry is an interface that allows the "vault" package to use
-// the registry of builtin plugins without getting an import cycle. It
-// also allows for mocking the registry easily.
-type BuiltinRegistry interface {
-	Contains(name string, pluginType consts.PluginType) bool
-	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
-	Keys(pluginType consts.PluginType) []string
-	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
-	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
-}
-
 func (c *Core) AuditLogger() AuditLogger {
 	return &basicAuditor{c: c}
 }
@@ -3483,7 +3491,12 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
+	qmFlags := &quotas.ManagerFlags{
+		IsPerfStandby: isPerfStandby,
+		IsDRSecondary: c.IsDRSecondary(),
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.

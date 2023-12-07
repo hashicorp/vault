@@ -313,7 +313,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     // navigate using breadcrumbs back to replication.index
-    await click('[data-test-replication-breadcrumb]');
+    await click('[data-test-replication-breadcrumb] a');
 
     assert
       .dom('[data-test-replication-summary-card]')

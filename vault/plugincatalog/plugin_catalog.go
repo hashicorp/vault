@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-package vault
+package plugincatalog
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -33,7 +34,6 @@ import (
 )
 
 var (
-	pluginCatalogPath           = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured   = errors.New("could not set plugin, plugin directory is not configured")
 	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
 	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
@@ -45,7 +45,7 @@ var (
 // plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
 	builtinRegistry BuiltinRegistry
-	catalogView     *BarrierView
+	catalogView     logical.Storage
 	directory       string
 	logger          log.Logger
 
@@ -137,67 +137,37 @@ type pluginClient struct {
 	plugin.ClientProtocol
 }
 
-func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
-	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-		pluginName := conf.Config["plugin_name"]
-		pluginVersion := conf.Config["plugin_version"]
-		pluginTypeRaw := conf.Config["plugin_type"]
-		pluginType, err := consts.ParsePluginType(pluginTypeRaw)
-		if err != nil {
-			return nil, err
-		}
-
-		pluginDescription := fmt.Sprintf("%s plugin %s", pluginTypeRaw, pluginName)
-		if pluginVersion != "" {
-			pluginDescription += " version " + pluginVersion
-		}
-
-		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
-		if err != nil {
-			return nil, fmt.Errorf("failed to find %s in plugin catalog: %w", pluginDescription, err)
-		}
-		if plugin == nil {
-			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
-		}
-		if plugin.OCIImage != "" {
-			return f(ctx, conf)
-		}
-
-		command, err := filepath.Rel(core.pluginCatalog.directory, plugin.Command)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute plugin command: %w", err)
-		}
-
-		if err := core.CheckPluginPerms(command); err != nil {
-			return nil, err
-		}
-		return f(ctx, conf)
-	}
-}
-
-func (c *Core) setupPluginCatalog(ctx context.Context) error {
-	c.pluginCatalog = &PluginCatalog{
-		builtinRegistry: c.builtinRegistry,
-		catalogView:     NewBarrierView(c.barrier, pluginCatalogPath),
-		directory:       c.pluginDirectory,
-		logger:          c.logger,
-		mlockPlugins:    c.enableMlock,
+func SetupPluginCatalog(
+	ctx context.Context,
+	logger log.Logger,
+	builtinRegistry BuiltinRegistry,
+	catalogView logical.Storage,
+	pluginDirectory string,
+	enableMlock bool,
+	pluginRuntimeCatalog *PluginRuntimeCatalog,
+) (*PluginCatalog, error) {
+	pluginCatalog := &PluginCatalog{
+		builtinRegistry: builtinRegistry,
+		catalogView:     catalogView,
+		directory:       pluginDirectory,
+		logger:          logger,
+		mlockPlugins:    enableMlock,
 		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
-		runtimeCatalog:  c.pluginRuntimeCatalog,
+		runtimeCatalog:  pluginRuntimeCatalog,
 	}
 
 	// Run upgrade if untyped plugins exist
-	err := c.pluginCatalog.UpgradePlugins(ctx, c.logger)
+	err := pluginCatalog.UpgradePlugins(ctx, logger)
 	if err != nil {
-		c.logger.Error("error while upgrading plugin storage", "error", err)
-		return err
+		logger.Error("error while upgrading plugin storage", "error", err)
+		return nil, err
 	}
 
-	if c.logger.IsInfo() {
-		c.logger.Info("successfully setup plugin catalog", "plugin-directory", c.pluginDirectory)
+	if logger.IsInfo() {
+		logger.Info("successfully setup plugin catalog", "plugin-directory", pluginDirectory)
 	}
 
-	return nil
+	return pluginCatalog, nil
 }
 
 type pluginClientConn struct {
@@ -230,6 +200,10 @@ func (p *pluginClient) Conn() grpc.ClientConnInterface {
 func (p *pluginClient) Reload() error {
 	p.logger.Debug("reload external plugin process")
 	return p.reloadFunc()
+}
+
+func (c *PluginCatalog) Processes() int {
+	return len(c.externalPlugins)
 }
 
 // reloadExternalPlugin
@@ -781,6 +755,11 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			continue
 		}
 
+		if pluginRaw == nil {
+			retErr = multierror.Append(fmt.Errorf("%q plugin entry was nil", pluginName))
+			continue
+		}
+
 		plugin := new(pluginutil.PluginRunner)
 		if err := jsonutil.DecodeJSON(pluginRaw.Value, plugin); err != nil {
 			retErr = multierror.Append(fmt.Errorf("failed to decode plugin entry: %w", err))
@@ -1187,5 +1166,25 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		})
 	}
 
+	// Sort the result for consistent ordering.
+	sortVersionedPlugins(result)
+
 	return result, nil
+}
+
+func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
+	sort.SliceStable(versionedPlugins, func(i, j int) bool {
+		left, right := versionedPlugins[i], versionedPlugins[j]
+		if left.Type != right.Type {
+			return left.Type < right.Type
+		}
+		if left.Name != right.Name {
+			return left.Name < right.Name
+		}
+		if left.Version != right.Version {
+			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
+		}
+
+		return false
+	})
 }
