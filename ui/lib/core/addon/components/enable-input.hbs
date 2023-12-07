@@ -8,7 +8,11 @@
 {{else}}
   <div class="flex" ...attributes>
     <div class="is-flex-grow-1">
-      <ReadonlyFormField @attr={{@attr}} @value="**********" />
+      {{#if @attrOptions}}
+        <ReadonlyFormField class="hds-form-masked-input__control" @attr={{@attrOptions}} @value="**********" />
+      {{else}}
+        <Input disabled class="input" @type="text" @value="**********" />
+      {{/if}}
     </div>
     <div class="align-self-end">
       <Hds::Button
