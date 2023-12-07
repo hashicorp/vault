@@ -687,6 +687,11 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		err    error
 	}
 	resultCh := make(chan *result)
+	stopCh := make(chan struct{})
+	defer func() {
+		close(stopCh)
+		close(resultCh)
+	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
 		resultCh <- &result{
