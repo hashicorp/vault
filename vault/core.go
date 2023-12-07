@@ -3483,7 +3483,12 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
+	qmFlags := &quotas.ManagerFlags{
+		IsPerfStandby: isPerfStandby,
+		IsDRSecondary: c.IsDRSecondary(),
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
