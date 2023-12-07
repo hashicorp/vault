@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 func pathIssue(b *backend) *framework.Path {
@@ -285,7 +287,7 @@ See the API documentation for more information about required parameters.
 
 // pathIssue issues a certificate and private key from given parameters,
 // subject to role restrictions
-func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
+func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
 	if role.KeyType == "any" {
 		return logical.ErrorResponse("role key type \"any\" not allowed for issuing certificates, only signing"), nil
 	}
@@ -295,19 +297,49 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 
 // pathSign issues a certificate from a submitted CSR, subject to role
 // restrictions
-func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
+func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
 	return b.pathIssueSignCert(ctx, req, data, role, true, false)
 }
 
 // pathSignVerbatim issues a certificate from a submitted CSR, *not* subject to
 // role restrictions
-func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error) {
-	entry := buildSignVerbatimRole(data, role)
+func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
+	opts := []issuing.RoleModifier{
+		issuing.WithKeyUsage(data.Get("key_usage").([]string)),
+		issuing.WithExtKeyUsage(data.Get("ext_key_usage").([]string)),
+		issuing.WithExtKeyUsageOIDs(data.Get("ext_key_usage_oids").([]string)),
+		issuing.WithSignatureBits(data.Get("signature_bits").(int)),
+		issuing.WithUsePSS(data.Get("use_pss").(bool)),
+	}
 
+	// if we did receive a role parameter value with a valid role, use some of its values
+	// to populate and influence the sign-verbatim behavior.
+	if role != nil {
+		opts = append(opts, issuing.WithNoStore(role.NoStore))
+		opts = append(opts, issuing.WithIssuer(role.Issuer))
+
+		if role.TTL > 0 {
+			opts = append(opts, issuing.WithTTL(role.TTL))
+		}
+
+		if role.MaxTTL > 0 {
+			opts = append(opts, issuing.WithMaxTTL(role.MaxTTL))
+		}
+
+		if role.GenerateLease != nil {
+			opts = append(opts, issuing.WithGenerateLease(*role.GenerateLease))
+		}
+
+		if role.NotBeforeDuration > 0 {
+			opts = append(opts, issuing.WithNotBeforeDuration(role.NotBeforeDuration))
+		}
+	}
+
+	entry := issuing.SignVerbatimRoleWithOpts(opts...)
 	return b.pathIssueSignCert(ctx, req, data, entry, true, true)
 }
 
-func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
+func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
 	// Allow performance secondaries to generate and store certificates locally to them.
 	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
@@ -333,7 +365,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	} else {
 		// Otherwise, we must have a newer API which requires an issuer
 		// reference. Fetch it in this case
-		issuerName = getIssuerRef(data)
+		issuerName = GetIssuerRef(data)
 		if len(issuerName) == 0 {
 			return logical.ErrorResponse("missing issuer reference"), nil
 		}
@@ -347,7 +379,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -383,11 +415,6 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	cb, err := parsedBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
-	}
-
 	generateLease := false
 	if role.GenerateLease != nil && *role.GenerateLease {
 		generateLease = true
@@ -399,16 +426,10 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	if !role.NoStore {
-		key := "certs/" + normalizeSerial(cb.SerialNumber)
-		certsCounted := b.certsCounted.Load()
-		err = req.Storage.Put(ctx, &logical.StorageEntry{
-			Key:   key,
-			Value: parsedBundle.CertificateBytes,
-		})
+		err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 		if err != nil {
-			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+			return nil, err
 		}
-		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {

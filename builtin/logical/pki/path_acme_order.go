@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 var maxAcmeCertTTL = 90 * (24 * time.Hour)
@@ -164,7 +166,7 @@ func addFieldsForACMEOrder(fields map[string]*framework.FieldSchema) {
 func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
-	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	order, err := b.GetAcmeState().LoadOrder(ac, uc, orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +234,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		return nil, err
 	}
 
-	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	order, err := b.GetAcmeState().LoadOrder(ac, uc, orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +262,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 	}
 
 	var signedCertBundle *certutil.ParsedCertBundle
-	var issuerId issuerID
+	var issuerId issuing.IssuerID
 	if ac.runtimeOpts.isCiepsEnabled {
 		// Note that issueAcmeCertUsingCieps enforces storage requirements and
 		// does the certificate storage for us
@@ -274,14 +276,14 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 
-		err = storeCertificate(ac.sc, signedCertBundle)
+		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.Backend.GetCertificateCounter(), signedCertBundle)
 		if err != nil {
 			return nil, err
 		}
 	}
 	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 
-	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
+	if err := b.GetAcmeState().TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving account->cert->order reference", "serial_number", hyphenSerialNumber, "error", err)
 		return nil, err
 	}
@@ -291,7 +293,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 	order.CertificateExpiry = signedCertBundle.Certificate.NotAfter
 	order.IssuerId = issuerId
 
-	err = b.acmeState.SaveOrder(ac, order)
+	err = b.GetAcmeState().SaveOrder(ac, order)
 	if err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving order", "serial_number", hyphenSerialNumber, "error", err)
 		return nil, fmt.Errorf("failed saving updated order: %w", err)
@@ -413,7 +415,7 @@ func validateCsrMatchesOrder(csr *x509.CertificateRequest, order *acmeOrder) err
 	return nil
 }
 
-func (b *backend) validateIdentifiersAgainstRole(role *roleEntry, identifiers []*ACMEIdentifier) error {
+func (b *backend) validateIdentifiersAgainstRole(role *issuing.RoleEntry, identifiers []*ACMEIdentifier) error {
 	for _, identifier := range identifiers {
 		switch identifier.Type {
 		case ACMEDNSIdentifier:
@@ -477,21 +479,6 @@ func removeDuplicatesAndSortIps(ipIdentifiers []net.IP) []net.IP {
 	return uniqueIpIdentifiers
 }
 
-func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertBundle) error {
-	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
-	key := "certs/" + hyphenSerialNumber
-	certsCounted := sc.Backend.certsCounted.Load()
-	err := sc.Storage.Put(sc.Context, &logical.StorageEntry{
-		Key:   key,
-		Value: signedCertBundle.CertificateBytes,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	sc.Backend.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
-	return nil
-}
-
 func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
 	// Role doesn't require a CN, so we don't care.
 	if !ac.role.RequireCN {
@@ -520,7 +507,7 @@ func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateReq
 	}
 }
 
-func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
+func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
 		Headers: nil,
@@ -540,7 +527,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	// (TLS) clients are mostly verifying against server's DNS SANs.
 	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
-	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
+	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), issuing.IssuanceUsage)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed loading CA %s: %w", ac.issuer.ID.String(), err)
 	}
@@ -595,7 +582,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 
 	// We only allow ServerAuth key usage from ACME issued certs
 	// when configuration does not allow usage of ExtKeyusage field.
-	config, err := ac.sc.Backend.acmeState.getConfigWithUpdate(ac.sc)
+	config, err := ac.sc.Backend.GetAcmeState().getConfigWithUpdate(ac.sc)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
@@ -655,7 +642,7 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
-	order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+	order, err := b.GetAcmeState().LoadOrder(ac, uc, orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +661,7 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 		filteredAuthorizationIds := []string{}
 
 		for _, authId := range order.AuthorizationIds {
-			authorization, err := b.acmeState.LoadAuthorization(ac, uc, authId)
+			authorization, err := b.GetAcmeState().LoadAuthorization(ac, uc, authId)
 			if err != nil {
 				return nil, err
 			}
@@ -692,14 +679,14 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 }
 
 func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
-	orderIds, err := b.acmeState.ListOrderIds(ac.sc, acct.KeyId)
+	orderIds, err := b.GetAcmeState().ListOrderIds(ac.sc, acct.KeyId)
 	if err != nil {
 		return nil, err
 	}
 
 	orderUrls := []string{}
 	for _, orderId := range orderIds {
-		order, err := b.acmeState.LoadOrder(ac, uc, orderId)
+		order, err := b.GetAcmeState().LoadOrder(ac, uc, orderId)
 		if err != nil {
 			return nil, err
 		}
@@ -771,7 +758,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		}
 		authorizations = append(authorizations, authz)
 
-		err = b.acmeState.SaveAuthorization(ac, authz)
+		err = b.GetAcmeState().SaveAuthorization(ac, authz)
 		if err != nil {
 			return nil, fmt.Errorf("failed storing authorization: %w", err)
 		}
@@ -788,7 +775,7 @@ func (b *backend) acmeNewOrderHandler(ac *acmeContext, _ *logical.Request, _ *fr
 		AuthorizationIds: authorizationIds,
 	}
 
-	err = b.acmeState.SaveOrder(ac, order)
+	err = b.GetAcmeState().SaveOrder(ac, order)
 	if err != nil {
 		return nil, fmt.Errorf("failed storing order: %w", err)
 	}
