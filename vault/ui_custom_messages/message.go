@@ -12,15 +12,29 @@ var allowedMessageTypes = [2]string{
 
 // Message is a struct that contains the fields of a particular custom message.
 type Message struct {
-	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	Message       string         `json:"message"`
-	Type          string         `json:"type"`
-	Authenticated bool           `json:"authenticated"`
-	StartTime     time.Time      `json:"start_time"`
-	EndTime       time.Time      `json:"end_time"`
-	Options       map[string]any `json:"options"`
-	Link          map[string]any `json:"link"`
+	// ID is the unique identifier for this Message automatically generated and
+	// assigned by the (*Entry).CreateMessage method.
+	ID string `json:"id"`
+	// Title contains the title of the message, which the UI uses to identify
+	// this Message to the end user.
+	Title string `json:"title"`
+	// Message contains the body of information of this Message.
+	Message string `json:"message"`
+	// Type is used to store the presentation type of this message. Refer to
+	// allowedMessageTypes above for the valid values.
+	Type string `json:"type"`
+	// Authenticated is used to indicate if the Message is intended to be
+	// presented to the user before authentication (false) or after (true).
+	Authenticated bool `json:"authenticated"`
+	// The time when the Message begins to be active.
+	StartTime time.Time `json:"start_time"`
+	// The time when the Message ceases to be active.
+	EndTime time.Time `json:"end_time"`
+	// Options holds additional properties for the Message.
+	Options map[string]any `json:"options"`
+	// Link can hold a MessageLink struct to represent a hyperlink in the
+	// Message.
+	Link *MessageLink `json:"link"`
 
 	active *bool
 }
@@ -61,10 +75,10 @@ func (m *Message) Matches(filters FindFilter) bool {
 	return true
 }
 
-// ValidateMessageType checks if the Type field of the receiver Message appears
-// in the array of allowed values and returns a bool value to indicate if the
-// value is allowed.
-func (m *Message) ValidateMessageType() bool {
+// HasValidateMessageType checks if the Type field of the receiver Message
+// appears in the array of allowed values and returns a bool value to indicate
+// if the value is allowed.
+func (m *Message) HasValidateMessageType() bool {
 	for _, el := range allowedMessageTypes {
 		if m.Type == el {
 			return true
@@ -74,9 +88,18 @@ func (m *Message) ValidateMessageType() bool {
 	return false
 }
 
-// ValidateStartAndEndTimes evaluates the StartTime and EndTime fields of the
+// HasValidateStartAndEndTimes evaluates the StartTime and EndTime fields of the
 // receiver Message and returns a bool value to indicate if the StartTime is
 // before the EndTime.
-func (m *Message) ValidateStartAndEndTimes() bool {
+func (m *Message) HasValidateStartAndEndTimes() bool {
 	return m.StartTime.Before(m.EndTime)
+}
+
+// MessageLink is a structure that represents a hyperlink included into a
+// Message.
+type MessageLink struct {
+	// Title is the displayed hyperlink text.
+	Title string `json:"title"`
+	// Href is the hyperlink's URL address.
+	Href string `json:"href"`
 }

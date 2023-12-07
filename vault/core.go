@@ -1262,7 +1262,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
-	c.customMessageManager = uicustommessages.NewManager(NewBarrierView(c.barrier, uicustommessages.StoragePrefix))
+	c.customMessageManager = uicustommessages.NewManager(c.barrier)
 
 	// Listeners
 	err = c.configureListeners(conf)

@@ -5,8 +5,10 @@ package uicustommessages
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Entry is a struct that contains a map of custom message ID to Message struct
@@ -18,11 +20,11 @@ type Entry struct {
 	Messages map[string]Message `json:"messages"`
 }
 
-// FindMessages searches through all of the custom messages in the receiver
+// findMessages searches through all of the custom messages in the receiver
 // Entry struct and only returns those that match the criteria set in the
 // provided FindFilter struct.
-func (e *Entry) FindMessages(filter FindFilter) []Message {
-	result := make([]Message, 0)
+func (e *Entry) findMessages(filter FindFilter) []Message {
+	result := []Message{}
 
 	for _, message := range e.Messages {
 		if message.Matches(filter) {
@@ -33,21 +35,21 @@ func (e *Entry) FindMessages(filter FindFilter) []Message {
 	return result
 }
 
-// CreateMessage adds a custom message in the receiver Entry struct using the
+// createMessage adds a custom message in the receiver Entry struct using the
 // provided Message struct to populate its properties. If the either the
 // start/end times are invalid or the maximum number of messages already exists,
 // then the message is not added.
-func (e *Entry) CreateMessage(message *Message) error {
+func (e *Entry) createMessage(message *Message) error {
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
 	}
 
-	if !message.ValidateStartAndEndTimes() {
+	if !message.HasValidateStartAndEndTimes() {
 		return errors.New("message start time must occur before end time")
 	}
 
-	if !message.ValidateMessageType() {
+	if !message.HasValidateMessageType() {
 		return errors.New("unrecognized message type")
 	}
 
@@ -69,29 +71,27 @@ func (e *Entry) CreateMessage(message *Message) error {
 }
 
 // UpdateMessage updates the Message struct stored in the receiver's Messages
-// map with the provided Message struct. If the start/end times are invalid, the
-// message is not updated. The Messages map is not changed if it does not
-// contain the key message.ID.
-func (e *Entry) UpdateMessage(message *Message) (bool, error) {
+// map with the provided Message struct. If the start/end times are invalid or
+// if the type is invalid, the message is not updated. The Messages map is not
+// changed if it does not contain the key message.ID and an error is returned.
+func (e *Entry) updateMessage(message *Message) error {
 	if e.Messages == nil {
 		e.Messages = make(map[string]Message)
 	}
 
 	if _, ok := e.Messages[message.ID]; !ok {
-		// Special case: returning nil, nil indicates that the message with the
-		// specified id doesn't exist.
-		return false, nil
+		return fmt.Errorf("custom message %w", logical.ErrNotFound)
 	}
 
-	if !message.ValidateStartAndEndTimes() {
-		return false, errors.New("message start time must occur before end time")
+	if !message.HasValidateStartAndEndTimes() {
+		return errors.New("message start time must occur before end time")
 	}
 
-	if !message.ValidateMessageType() {
-		return false, errors.New("unrecognized message type")
+	if !message.HasValidateMessageType() {
+		return errors.New("unrecognized message type")
 	}
 
 	e.Messages[message.ID] = *message
 
-	return true, nil
+	return nil
 }

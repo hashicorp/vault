@@ -24,7 +24,7 @@ func TestHandleListCustomMessages(t *testing.T) {
 	endTime := time.Now().Add(time.Hour).Format(time.RFC3339Nano)
 
 	storageEntry := &logical.StorageEntry{
-		Key:   "root",
+		Key:   "sys/config/ui/custom-messages",
 		Value: []byte(fmt.Sprintf(`{"messages":{"000":{"id":"000","title":"title","message":"message","type":"banner","authenticated":true,"start_time":"%s","end_time":"%s"}}}`, startTime, endTime)),
 	}
 
@@ -226,7 +226,10 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 		"start_time":    "2023-01-01T00:00:00Z",
 		"end_time":      "2100-01-01T00:00:00Z",
 		"options":       map[string]any{},
-		"link":          map[string]any{},
+		"link": map[string]any{
+			"title": "link title",
+			"href":  "https://link.ref",
+		},
 	}
 
 	testcases := []struct {
@@ -399,7 +402,7 @@ func TestHandleReadCustomMessage(t *testing.T) {
 		StartTime:     time.Now().Add(-1 * time.Hour),
 		EndTime:       time.Now().Add(time.Hour),
 		Options:       make(map[string]any),
-		Link:          make(map[string]any),
+		Link:          nil,
 	}
 
 	message, err := backend.Core.customMessageManager.CreateMessage(nsCtx, *message)
@@ -434,7 +437,7 @@ func TestHandleReadCustomMessage(t *testing.T) {
 
 	resp, err = backend.handleReadCustomMessage(nsCtx, &logical.Request{}, fieldData)
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, logical.ErrCustomMessageNotFound)
+	assert.ErrorIs(t, err, logical.ErrNotFound)
 	assert.Nil(t, resp)
 
 	// Check that there's an error when the id parameter is invalid.
@@ -493,7 +496,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"modal","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, startTime, endTime)
 
 	storageEntry := &logical.StorageEntry{
-		Key:   "root",
+		Key:   "sys/config/ui/custom-messages",
 		Value: []byte(storageEntryValue),
 	}
 
@@ -551,7 +554,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	// Try to update non-existant custom message
 	resp, err := backend.handleUpdateCustomMessage(nsCtx, &logical.Request{}, fieldData)
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, logical.ErrCustomMessageNotFound)
+	assert.ErrorIs(t, err, logical.ErrNotFound)
 	assert.Nil(t, resp)
 
 	// Try to update an existing custom message

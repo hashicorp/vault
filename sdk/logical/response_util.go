@@ -138,7 +138,7 @@ func RespondErrorCommon(req *Request, resp *Response, err error) (int, error) {
 			statusCode = http.StatusBadRequest
 		case errwrap.Contains(err, ErrInvalidCredentials.Error()):
 			statusCode = http.StatusBadRequest
-		case errwrap.Contains(err, ErrCustomMessageNotFound.Error()):
+		case errors.Is(err, ErrNotFound):
 			statusCode = http.StatusNotFound
 		}
 	}

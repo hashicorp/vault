@@ -3,6 +3,8 @@
 
 package uicustommessages
 
+import "errors"
+
 // FindFilter is a struct to capture the search criteria applied when searching
 // for messages.
 type FindFilter struct {
@@ -40,11 +42,13 @@ func (f *FindFilter) Active(value bool) {
 
 // Type sets the messageType field of the receiver FindFilter struct to the
 // provided value if it matches one of the allowed message types.
-func (f *FindFilter) Type(value string) {
+func (f *FindFilter) Type(value string) error {
 	for _, el := range allowedMessageTypes {
 		if value == el {
 			f.messageType = value
-			return
+			return nil
 		}
 	}
+
+	return errors.New("unrecognized type value for filter")
 }

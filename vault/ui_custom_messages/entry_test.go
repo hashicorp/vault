@@ -60,7 +60,7 @@ func TestEntryFindMessages(t *testing.T) {
 			expectResultsLen: 0,
 		},
 	} {
-		result := testcase.entry.FindMessages(testcase.filter)
+		result := testcase.entry.findMessages(testcase.filter)
 
 		assert.NotNil(t, result, testcase.name)
 		assert.Equal(t, testcase.expectResultsLen, len(result))
@@ -154,7 +154,7 @@ func TestEntryCreateMessage(t *testing.T) {
 		// Count the number of messages to compare after the CreateMessage call.
 		previousMessageCount := len(testcase.messagesMap)
 
-		err := testEntry.CreateMessage(&testcase.message)
+		err := testEntry.createMessage(&testcase.message)
 		if testcase.expectedError {
 			assert.Error(t, err, testcase.name)
 			assert.Contains(t, err.Error(), testcase.expectedErrorKeyword)
@@ -202,13 +202,13 @@ func TestEntryUpdateMessage(t *testing.T) {
 			name:           "uninitialized messages map",
 			messagesMap:    nil,
 			message:        testValidMessage,
-			errorAssertion: assert.NoError,
+			errorAssertion: assert.Error,
 		},
 		{
 			name:           "empty messages map",
 			messagesMap:    make(map[string]Message),
 			message:        testValidMessage,
-			errorAssertion: assert.NoError,
+			errorAssertion: assert.Error,
 		},
 		{
 			name:           "updating existing with invalid times",
@@ -247,16 +247,14 @@ func TestEntryUpdateMessage(t *testing.T) {
 			previousMessage = testEntry.Messages[testcase.message.ID]
 		}
 
-		updated, err := testEntry.UpdateMessage(&testcase.message)
+		err := testEntry.updateMessage(&testcase.message)
 		testcase.errorAssertion(t, err, testcase.name)
 
 		currentMessage := testEntry.Messages[testcase.message.ID]
 
 		if testcase.expectedUpdated {
-			assert.True(t, updated)
 			testcase.compareAssertion(t, previousMessage, currentMessage, testcase.name)
 		} else {
-			assert.False(t, updated, testcase.name)
 			assert.Equal(t, previousMessage, currentMessage, testcase.name)
 		}
 	}

@@ -68,15 +68,14 @@ func TestFindFilterType(t *testing.T) {
 	for _, el := range allowedMessageTypes {
 		filter.messageType = ""
 
-		filter.Type(el)
-
+		assert.NoError(t, filter.Type(el))
 		assert.Equal(t, el, filter.messageType)
 	}
 
 	// Check that other values have no effect.
 	filter.messageType = ""
 
-	filter.Type("watermark")
-
+	err := filter.Type("watermark")
+	assert.Error(t, err)
 	assert.Empty(t, filter.messageType)
 }

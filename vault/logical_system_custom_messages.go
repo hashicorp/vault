@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -251,7 +252,10 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	var filters uicustommessages.FindFilter
 
-	err := parameterValidateAndUse[bool]("authenticated", filters.Authenticated, d)
+	err := parameterValidateAndUse[bool]("authenticated", func(v bool) error {
+		filters.Authenticated(v)
+		return nil
+	}, d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -261,7 +265,10 @@ func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logic
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	err = parameterValidateAndUse[bool]("active", filters.Active, d)
+	err = parameterValidateAndUse[bool]("active", func(v bool) error {
+		filters.Active(v)
+		return nil
+	}, d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -294,7 +301,7 @@ func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logic
 // provided framework.FieldData if it exists and is valid then calls the
 // provided setter method (filterSetter) using that parameter value as the
 // argument.
-func parameterValidateAndUse[T bool | string](parameterName string, filterSetter func(T), d *framework.FieldData) error {
+func parameterValidateAndUse[T bool | string](parameterName string, filterSetter func(T) error, d *framework.FieldData) error {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
 		return fmt.Errorf("invalid %s parameter value: %s", parameterName, err)
@@ -322,17 +329,17 @@ func parameterValidateOrReportMissing[T string | bool | time.Time](parameterName
 	return value.(T), nil
 }
 
-func parameterValidate[T map[string]any](parameterName string, variable *T, d *framework.FieldData) error {
+func parameterValidateMap(parameterName string, d *framework.FieldData) (map[string]any, error) {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
-		return fmt.Errorf("invalid %s parameter value: %s", parameterName, err)
+		return nil, fmt.Errorf("invalid %s parameter value: %s", parameterName, err)
 	}
 
 	if ok {
-		*variable = value.(T)
+		return value.(map[string]any), nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // handleCreateCustomMessages is the operation callback for the CREATE operation
@@ -368,14 +375,37 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	link := make(map[string]any)
-	err = parameterValidate[map[string]any]("link", &link, d)
+	linkMap, err := parameterValidateMap("link", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	options := make(map[string]any)
-	err = parameterValidate[map[string]any]("options", &options, d)
+	var link *uicustommessages.MessageLink
+	if linkMap != nil {
+		link = &uicustommessages.MessageLink{}
+
+		linkTitle, ok := linkMap["title"]
+		if !ok {
+			return logical.ErrorResponse("missing title in link parameter value"), nil
+		}
+
+		link.Title, ok = linkTitle.(string)
+		if !ok {
+			return logical.ErrorResponse("invalid title value in link parameter value"), nil
+		}
+
+		linkHref, ok := linkMap["href"]
+		if !ok {
+			return logical.ErrorResponse("missing href in link parameter value"), nil
+		}
+
+		link.Href, ok = linkHref.(string)
+		if !ok {
+			return logical.ErrorResponse("invalid href value in link parameter value"), nil
+		}
+	}
+
+	options, err := parameterValidateMap("options", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -420,12 +450,11 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 	}
 
 	message, err := b.Core.customMessageManager.ReadMessage(ctx, id)
-	if err != nil {
+	switch {
+	case errors.Is(err, logical.ErrNotFound):
+		return nil, err
+	case err != nil:
 		return logical.ErrorResponse("failed to retrieve custom message: %s", err), nil
-	}
-
-	if message == nil {
-		return nil, logical.ErrCustomMessageNotFound
 	}
 
 	return &logical.Response{
@@ -472,14 +501,37 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	var link map[string]any
-	err = parameterValidate[map[string]any]("link", &link, d)
+	linkMap, err := parameterValidateMap("link", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	var options map[string]any
-	err = parameterValidate[map[string]any]("options", &options, d)
+	var link *uicustommessages.MessageLink
+	if linkMap != nil {
+		link = &uicustommessages.MessageLink{}
+
+		linkTitle, ok := linkMap["title"]
+		if !ok {
+			return logical.ErrorResponse("missing title in link parameter value"), nil
+		}
+
+		link.Title, ok = linkTitle.(string)
+		if !ok {
+			return logical.ErrorResponse("invalid title value in link parameter value"), nil
+		}
+
+		linkHref, ok := linkMap["href"]
+		if !ok {
+			return logical.ErrorResponse("missing href in link parameter value"), nil
+		}
+
+		link.Href, ok = linkHref.(string)
+		if !ok {
+			return logical.ErrorResponse("invalid href value in link parameter value"), nil
+		}
+	}
+
+	options, err := parameterValidateMap("options", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -507,12 +559,11 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	}
 
 	message, err = b.Core.customMessageManager.UpdateMessage(ctx, *message)
-	if err != nil {
+	switch {
+	case errors.Is(err, logical.ErrNotFound):
+		return nil, err
+	case err != nil:
 		return logical.ErrorResponse("failed to update custom message: %s", err), nil
-	}
-
-	if message == nil {
-		return nil, logical.ErrCustomMessageNotFound
 	}
 
 	return &logical.Response{

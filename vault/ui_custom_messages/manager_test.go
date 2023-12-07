@@ -25,7 +25,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
-		testNs = &namespace.Namespace{ID: "root"}
+		testNs = namespace.RootNamespace
 	)
 	for _, testcase := range []struct {
 		name           string
@@ -61,7 +61,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			name:           "entry exists, invalid",
 			context:        context.Background(),
 			ns:             testNs,
-			storage:        buildStorageWithEntry("root", "}-^"),
+			storage:        buildStorageWithEntry("sys/config/ui/custom-messages", "}-^"),
 			errorAssertion: assert.Error,
 			entryAssertion: assert.Nil,
 		},
@@ -69,7 +69,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			name:           "entry exists, valid",
 			context:        context.Background(),
 			ns:             testNs,
-			storage:        buildStorageWithEntry("root", `{"messages":{}}`),
+			storage:        buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{}}`),
 			errorAssertion: assert.NoError,
 			entryAssertion: assert.NotNil,
 		},
@@ -169,6 +169,18 @@ func TestGetNamespacesToSearch(t *testing.T) {
 	assert.NotNil(t, list)
 	assert.Equal(t, 1, len(list))
 	assert.Equal(t, namespace.RootNamespace, list[0])
+}
+
+// TestStorageKeyForNamespace verifies that the storageKeyForNamespace function
+// returns sys/config/ui/custom-messages when the provided namespace is the root
+// namespace, otherwise it returns
+// namespaces/<ns.id>/sys/config/ui/custom-messages.
+func TestStorageKeyForNamespace(t *testing.T) {
+	// Check for root namespace
+	assert.Equal(t, "sys/config/ui/custom-messages", storageKeyForNamespace(*namespace.RootNamespace))
+
+	// Check for a non-root namespace
+	assert.Equal(t, "namespaces/test/sys/config/ui/custom-messages", storageKeyForNamespace(namespace.Namespace{ID: "test", Path: "test/"}))
 }
 
 // TestManagerFindMessages verifies the behaviour of the (*Manager).FindMessages
@@ -320,6 +332,7 @@ func TestManagerReadMessage(t *testing.T) {
 		storage          logical.Storage
 		messageID        string
 		errorAssertion   func(assert.TestingT, error, ...any) bool
+		errorIsAssertion func(assert.TestingT, error, error, ...any) bool
 		messageAssertion func(assert.TestingT, any, ...any) bool
 	}{
 		{
@@ -331,12 +344,13 @@ func TestManagerReadMessage(t *testing.T) {
 		{
 			name:             "message does not exist",
 			storage:          &logical.InmemStorage{},
-			errorAssertion:   assert.NoError,
+			errorAssertion:   assert.Error,
+			errorIsAssertion: assert.ErrorIs,
 			messageAssertion: assert.Nil,
 		},
 		{
 			name:             "message exists",
-			storage:          buildStorageWithEntry("root", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage:          buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			messageID:        "abc",
 			errorAssertion:   assert.NoError,
 			messageAssertion: assert.NotNil,
@@ -346,6 +360,9 @@ func TestManagerReadMessage(t *testing.T) {
 
 		message, err := testManager.ReadMessage(nsCtx, testcase.messageID)
 		testcase.errorAssertion(t, err, testcase.name)
+		if testcase.errorIsAssertion != nil {
+			testcase.errorIsAssertion(t, err, logical.ErrNotFound, testcase.name)
+		}
 		testcase.messageAssertion(t, message, testcase.name)
 	}
 }
@@ -374,7 +391,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 		},
 		{
 			name:    "updating to invalid times",
-			storage: buildStorageWithEntry("root", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage: buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
 				StartTime: time.Now().Add(time.Hour),
@@ -391,7 +408,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 				StartTime: time.Now().Add(-1 * time.Hour),
 				EndTime:   time.Now().Add(3 * time.Hour),
 			},
-			errorAssertion:   assert.NoError,
+			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
 		},
 		{
@@ -408,7 +425,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 		},
 		{
 			name:    "message updated",
-			storage: buildStorageWithEntry("root", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage: buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
 				StartTime: time.Now(),

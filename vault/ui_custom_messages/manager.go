@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/namespace"
@@ -56,7 +57,7 @@ func (m *Manager) FindMessages(ctx context.Context, filters FindFilter) ([]Messa
 			return nil, err
 		}
 
-		results = append(results, entry.FindMessages(filters)...)
+		results = append(results, entry.findMessages(filters)...)
 	}
 
 	return results, nil
@@ -75,7 +76,7 @@ func (m *Manager) CreateMessage(ctx context.Context, message Message) (*Message,
 		return nil, err
 	}
 
-	err = entry.CreateMessage(&message)
+	err = entry.createMessage(&message)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func (m *Manager) ReadMessage(ctx context.Context, id string) (*Message, error) 
 
 	message, ok := entry.Messages[id]
 	if !ok {
-		return nil, nil
+		return nil, fmt.Errorf("custom message %w", logical.ErrNotFound)
 	}
 
 	return &message, nil
@@ -116,14 +117,9 @@ func (m *Manager) UpdateMessage(ctx context.Context, message Message) (*Message,
 		return nil, err
 	}
 
-	found, err := entry.UpdateMessage(&message)
+	err = entry.updateMessage(&message)
 	if err != nil {
 		return nil, err
-	}
-
-	if !found {
-		// If no error occured but the specified message doesn't exist...
-		return nil, nil
 	}
 
 	if err = m.putEntry(ctx, entry); err != nil {
@@ -169,7 +165,7 @@ func (m *Manager) getEntryForNamespace(ctx context.Context, ns *namespace.Namesp
 		return nil, errors.New("missing namespace")
 	}
 
-	storageEntry, err := m.view.Get(ctx, ns.ID)
+	storageEntry, err := m.view.Get(ctx, storageKeyForNamespace(*ns))
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +200,7 @@ func (m *Manager) putEntry(ctx context.Context, entry *Entry) error {
 	}
 
 	storageEntry := &logical.StorageEntry{
-		Key:   ns.ID,
+		Key:   storageKeyForNamespace(*ns),
 		Value: value,
 	}
 
@@ -233,4 +229,14 @@ func getNamespacesToSearch(ctx context.Context, filters FindFilter) ([]*namespac
 	//}
 
 	return nsList, nil
+}
+
+// storageKeyForNamespace returns the appropriate storage entry key, based on
+// the provided namespace.Namespace.
+func storageKeyForNamespace(ns namespace.Namespace) string {
+	if ns.ID == namespace.RootNamespaceID {
+		return "sys/config/ui/custom-messages"
+	}
+
+	return fmt.Sprintf("namespaces/%s/sys/config/ui/custom-messages", ns.ID)
 }
