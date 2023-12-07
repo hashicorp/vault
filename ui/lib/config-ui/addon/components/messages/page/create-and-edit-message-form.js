@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
+import { inject as service } from '@ember/service';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -19,18 +20,10 @@ import errorMessage from 'vault/utils/error-message';
  * @param {array} messages - array message objects
  */
 
-class MessageState {
-  @tracked authenticated = true;
-  @tracked type = 'banner';
-  @tracked title = '';
-  @tracked message = '';
-  @tracked linkTitle = '';
-  @tracked linkHref = '';
-  @tracked endTime = '';
-}
-
 export default class MessagesList extends Component {
-  @tracked state = new MessageState();
+  @service router;
+  @service flashMessages;
+
   @tracked showStartTime = true;
 
   get breadcrumbs() {
@@ -44,7 +37,12 @@ export default class MessagesList extends Component {
 
   @action
   updateRadioValue(evt) {
-    this.state[evt.target.name] = evt.target.value;
+    this.args.messages[evt.target.name] = evt.target.value;
+  }
+
+  @action
+  updateDateTime(evt) {
+    this.args.messages[evt.target.name] = new Date(evt.target.value).toISOString();
   }
 
   @task
@@ -52,8 +50,9 @@ export default class MessagesList extends Component {
     event.preventDefault();
     try {
       const { isNew } = this.args.messages;
-      yield this.args.messages.save();
+      const { id } = yield this.args.messages.save();
       this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
+      this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
     } catch (error) {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';

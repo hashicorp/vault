@@ -17,9 +17,11 @@ export default class MessagesCreateRoute extends Route {
   };
 
   model(params) {
+    const { authenticated } = params;
+
     return hash({
-      message: this.store.createRecord('config-ui/message'),
-      authenticated: params.authenticated,
+      message: this.store.createRecord('config-ui/message', { authenticated }),
+      authenticated,
     });
   }
 }

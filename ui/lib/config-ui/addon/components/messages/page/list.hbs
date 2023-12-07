@@ -53,7 +53,7 @@
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
             <PopupMenu @name="engine-menu">
-              <Confirm as |c|>
+              <ConfirmAction as |c|>
                 <nav class="menu">
                   <ul class="menu-list">
                     {{#if message.canEditCustomMessages}}
@@ -78,7 +78,7 @@
                     {{/if}}
                   </ul>
                 </nav>
-              </Confirm>
+              </ConfirmAction>
             </PopupMenu>
           </div>
         </div>
