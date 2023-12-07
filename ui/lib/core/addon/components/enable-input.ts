@@ -10,7 +10,7 @@ interface Args {
   attr?: AttrData;
 }
 interface AttrData {
-  name: string; // required
+  name: string; // required if @attr is passed
   options?: {
     label?: string;
     helpText?: string;
