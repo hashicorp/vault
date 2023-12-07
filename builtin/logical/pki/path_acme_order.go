@@ -276,7 +276,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 			return nil, err
 		}
 
-		err = storeCertificate(ac.sc, signedCertBundle)
+		err = issuing.StoreCertificate(ac.sc.Context, ac.sc.Storage, ac.sc.Backend.GetCertificateCounter(), signedCertBundle)
 		if err != nil {
 			return nil, err
 		}
@@ -477,22 +477,6 @@ func removeDuplicatesAndSortIps(ipIdentifiers []net.IP) []net.IP {
 		return uniqueIpIdentifiers[i].String() < uniqueIpIdentifiers[j].String()
 	})
 	return uniqueIpIdentifiers
-}
-
-func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertBundle) error {
-	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
-	key := "certs/" + hyphenSerialNumber
-	certCounter := sc.Backend.GetCertificateCounter()
-	certsCounted := certCounter.IsInitialized()
-	err := sc.Storage.Put(sc.Context, &logical.StorageEntry{
-		Key:   key,
-		Value: signedCertBundle.CertificateBytes,
-	})
-	if err != nil {
-		return fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	certCounter.IncrementTotalCertificatesCount(certsCounted, key)
-	return nil
 }
 
 func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -48,11 +49,11 @@ func serialFromBigInt(serial *big.Int) string {
 }
 
 func normalizeSerialFromBigInt(serial *big.Int) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), "-"))
+	return parsing.NormalizeSerialForStorageFromBigInt(serial)
 }
 
 func normalizeSerial(serial string) string {
-	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
+	return parsing.NormalizeSerialForStorage(serial)
 }
 
 func denormalizeSerial(serial string) string {
