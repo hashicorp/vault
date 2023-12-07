@@ -2437,6 +2437,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	return nil
 }
 
+// buildUnsealSetupFunctionSlice returns a slice of functions, tailored for this
+// Core's replication state, that can be passed to the runUnsealSetupFunctions
+// function.
 func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 	// setupFunctions is a slice of functions that need to be called in order,
 	// that if any return an error, processing should immediately cease.
@@ -2518,6 +2521,8 @@ func runUnsealSetupFunctions(ctx context.Context, setupFunctions []func(context.
 	return nil
 }
 
+// runUnsealSetupForPrimary runs some setup code specific to clusters that are
+// in the primary role (as defined by the (*Core).isPrimary method).
 func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) error {
 	if err := c.setupPluginReload(); err != nil {
 		return err
