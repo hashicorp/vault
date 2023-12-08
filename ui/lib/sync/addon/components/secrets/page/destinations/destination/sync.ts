@@ -45,6 +45,11 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   powerSelectAPI: PowerSelectAPI | undefined;
   _lastFetch: KvSecretMetadataModel[] | undefined; // cache the response for filtering purposes
 
+  willDestroy(): void {
+    this.store.clearDataset('sync/association');
+    super.willDestroy();
+  }
+
   // strip trailing slash from mount path
   get mountName() {
     return keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath;
