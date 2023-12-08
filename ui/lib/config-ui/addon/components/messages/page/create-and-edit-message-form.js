@@ -11,7 +11,8 @@ import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { format, addDays, startOfDay } from 'date-fns';
 
-const localDateTimeString = "yyyy-MM-dd'T'HH:mm";
+import { localDateTimeString } from 'vault/models/config-ui/message';
+
 /**
  * @module Page::CreateAndEditMessageForm
  * Page::CreateAndEditMessageForm components are used to display list of messages.
@@ -34,7 +35,6 @@ export default class MessagesList extends Component {
 
   get breadcrumbs() {
     const authenticated = this.args.authenticated === undefined ? true : this.args.authenticated;
-
     return [
       { label: 'Messages', route: 'messages.index', query: { authenticated } },
       { label: 'Create Message' },
@@ -48,12 +48,7 @@ export default class MessagesList extends Component {
 
   @action
   updateDateTime(evt) {
-    if (evt.target.name === 'startTime') {
-      this.startTime = format(new Date(evt.target.value), localDateTimeString);
-    } else {
-      this.endTime = format(new Date(evt.target.value), localDateTimeString);
-    }
-    // this.args.messages[evt.target.name] = new Date(evt.target.value).toISOString();
+    this.args.messages[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
   }
 
   @task
@@ -65,9 +60,6 @@ export default class MessagesList extends Component {
       this.invalidFormAlert = invalidFormMessage;
 
       if (isValid) {
-        this.args.messages.startTime = new Date(this.startTime).toISOString();
-        this.args.messages.endTime = new Date(this.endTime).toISOString();
-
         const { isNew } = this.args.messages;
         const { id } = yield this.args.messages.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);

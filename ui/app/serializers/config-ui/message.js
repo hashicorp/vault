@@ -10,7 +10,8 @@ export default class MessageSerializer extends ApplicationSerializer {
 
   serialize() {
     const json = super.serialize(...arguments);
-
+    json.start_time = new Date(json.start_time).toISOString();
+    json.end_time = new Date(json.end_time).toISOString();
     json.link = {
       title: json.link_title,
       href: json.link_href,
