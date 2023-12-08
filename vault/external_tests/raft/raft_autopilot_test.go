@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
@@ -239,6 +240,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		return teststorage.MakeRaftBackend(t, coreIdx, logger, config)
 	}
 
+	logger := corehelpers.NewTestLogger(t)
+	opts.Logger = logger
 	cluster := vault.NewTestCluster(t, conf, opts)
 	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
@@ -282,6 +285,10 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 
 	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(config.ServerStabilizationTime)
 
+	dumpstate := func(server *api.AutopilotServer) string {
+		return fmt.Sprintf("nodestatus=%s contact=%s term=%d index=%d healthy=%v status=%s stable=%s",
+			server.NodeStatus, server.LastContact, server.LastTerm, server.LastIndex, server.Healthy, server.Status, server.StableSince)
+	}
 	// Wait for enough time for stabilization to complete if things were good
 	// - but they're not good, due to our snapshot_delay.  So we fail if both
 	// nodes are healthy.
@@ -293,6 +300,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		}
 		core1healthy := state.Servers["core-1"] != nil && state.Servers["core-1"].Healthy
 		core2healthy := state.Servers["core-2"] != nil && state.Servers["core-2"].Healthy
+		logger.Trace("core2", "state", dumpstate(state.Servers["core-2"]))
 
 		if !core1healthy || core2healthy {
 			return fmt.Errorf("expected health: core1=true and core2=false, got: core1=%v, core2=%v", core1healthy, core2healthy)
