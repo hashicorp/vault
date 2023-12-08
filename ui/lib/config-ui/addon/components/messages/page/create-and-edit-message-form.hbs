@@ -50,27 +50,27 @@
             <F.HelperText>A pop-up window used to bring immediate attention for important notifications or actions.</F.HelperText>
           </G.Radio::Field>
         </Hds::Form::Radio::Group>
-      {{else if (eq attr.name "link")}}
+      {{else if (eq attr.name "linkTitle")}}
         <div class="field has-bottom-margin-m">
           <label for="link" class="is-label">Link
             <span class="has-text-grey-400 has-font-weight-normal">(optional)</span></label>
           <div class="control is-flex-between has-gap-m">
             <Input
               @type="text"
-              @value={{@messages.link.title}}
+              @value={{@messages.linkTitle}}
               placeholder="Display text (e.g. Learn more)"
               id="link-title"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @messages.link.title)))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @messages.linkTitle)))}}
               data-test-link="title"
             />
             <Input
               @type="text"
-              @value={{@messages.link.href}}
+              @value={{@messages.linkHref}}
               placeholder="Paste URL (e.g. www.learnmore.com)"
               id="link-href"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @messages.link.href)))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @messages.linkHref)))}}
               data-test-link="href"
             />
           </div>
