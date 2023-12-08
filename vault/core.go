@@ -2912,26 +2912,6 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 	return nil
 }
 
-// adjustForSealMigration takes the unwrapSeal, which is nil if (a) we're not
-// configured for seal migration or (b) we might be doing a seal migration away
-// from shamir.  It will only be non-nil if there is a configured seal with
-// the config key disabled=true, which implies a migration away from autoseal.
-//
-// For case (a), the common case, we expect that the stored barrier
-// config matches the seal type, in which case we simply return nil.  If they
-// don't match, and the stored seal config is of type Shamir but the configured
-// seal is not Shamir, that is case (b) and we make an unwrapSeal of type Shamir.
-// Any other unwrapSeal=nil scenario is treated as an error.
-//
-// Given a non-nil unwrapSeal or case (b), we setup c.migrationInfo to prepare
-// for a migration upon receiving a valid migration unseal request.  We cannot
-// check at this time for already performed (or incomplete) migrations because
-// we haven't yet been unsealed, so we have no way of checking whether a
-// shamir seal works to read stored seal-encrypted data.
-//
-// The assumption throughout is that the very last step of seal migration is
-// to write the new barrier/recovery stored seal config.
-
 type sealMigrationCheckResult int
 
 const (
@@ -3013,6 +2993,25 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 	}
 }
 
+// adjustForSealMigration takes the unwrapSeal, which is nil if (a) we're not
+// configured for seal migration or (b) we might be doing a seal migration away
+// from shamir.  It will only be non-nil if there is a configured seal with
+// the config key disabled=true, which implies a migration away from autoseal.
+//
+// For case (a), the common case, we expect that the stored barrier
+// config matches the seal type, in which case we simply return nil.  If they
+// don't match, and the stored seal config is of type Shamir but the configured
+// seal is not Shamir, that is case (b) and we make an unwrapSeal of type Shamir.
+// Any other unwrapSeal=nil scenario is treated as an error.
+//
+// Given a non-nil unwrapSeal or case (b), we setup c.migrationInfo to prepare
+// for a migration upon receiving a valid migration unseal request.  We cannot
+// check at this time for already performed (or incomplete) migrations because
+// we haven't yet been unsealed, so we have no way of checking whether a
+// shamir seal works to read stored seal-encrypted data.
+//
+// The assumption throughout is that the very last step of seal migration is
+// to write the new barrier/recovery stored seal config.
 func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	ctx := context.Background()
 
