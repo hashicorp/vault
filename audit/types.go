@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -142,6 +142,13 @@ type FormatterConfig struct {
 
 	// The required/target format for the event (supported: JSONFormat and JSONxFormat).
 	RequiredFormat format
+}
+
+// EntryFilter should be used to filter audit requests and responses which should
+// make it to a sink.
+type EntryFilter struct {
+	// the evaluator for the bexpr expression that should be applied by the node.
+	evaluator *bexpr.Evaluator
 }
 
 // RequestEntry is the structure of a request audit log entry.
