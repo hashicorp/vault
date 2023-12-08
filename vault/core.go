@@ -3494,6 +3494,7 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 	qmFlags := &quotas.ManagerFlags{
 		IsPerfStandby: isPerfStandby,
 		IsDRSecondary: c.IsDRSecondary(),
+		IsNewInstall:  c.IsNewInstall(ctx),
 	}
 
 	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
