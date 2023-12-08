@@ -144,7 +144,8 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 				},
 			},
 		},
-		"root": false,
+		"root":             false,
+		"chroot_namespace": "",
 	}
 
 	if diff := deep.Equal(resp.Data, exp); diff != nil {

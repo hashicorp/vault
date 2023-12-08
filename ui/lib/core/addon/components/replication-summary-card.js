@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/replication-summary-card';
+import { get } from '@ember/object';
+import Component from '@glimmer/component';
 
 /**
  * @module ReplicationSummaryCard
@@ -22,28 +21,17 @@ import layout from '../templates/components/replication-summary-card';
  * @param {Object} replicationDetails=null - An Ember data object computed off the Ember Model.  It combines the Model.dr and Model.performance objects into one and contains details specific to the mode replication.
  */
 
-export default Component.extend({
-  layout,
-  title: null,
-  replicationDetails: null,
-  lastDrWAL: computed('replicationDetails.dr.lastWAL', function () {
-    return this.replicationDetails.dr.lastWAL || 0;
-  }),
-  lastPerformanceWAL: computed('replicationDetails.performance.lastWAL', function () {
-    return this.replicationDetails.performance.lastWAL || 0;
-  }),
-  merkleRootDr: computed('replicationDetails.dr.merkleRoot', function () {
-    return this.replicationDetails.dr.merkleRoot || '';
-  }),
-  merkleRootPerformance: computed('replicationDetails.performance.merkleRoot', function () {
-    return this.replicationDetails.performance.merkleRoot || '';
-  }),
-  knownSecondariesDr: computed('replicationDetails.dr.knownSecondaries', function () {
-    const knownSecondaries = this.replicationDetails.dr.knownSecondaries;
-    return knownSecondaries.length;
-  }),
-  knownSecondariesPerformance: computed('replicationDetails.performance.knownSecondaries', function () {
-    const knownSecondaries = this.replicationDetails.performance.knownSecondaries;
-    return knownSecondaries.length;
-  }),
-});
+export default class ReplicationSummaryCard extends Component {
+  get key() {
+    return this.args.title === 'Performance' ? 'performance' : 'dr';
+  }
+  get lastWAL() {
+    return get(this.args.replicationDetails, `${this.key}.lastWAL`) || 0;
+  }
+  get merkleRoot() {
+    return get(this.args.replicationDetails, `${this.key}.merkleRoot`) || 'no hash found';
+  }
+  get knownSecondariesCount() {
+    return get(this.args.replicationDetails, `${this.key}.knownSecondaries.length`) || 0;
+  }
+}

@@ -66,12 +66,14 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	}
 
 	if a.broker != nil {
-		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
+		// Attempt to register the pipeline before enabling 'broker level' enforcement
+		// of how many successful sinks we expect.
+		err := b.RegisterNodesAndPipeline(a.broker, name)
 		if err != nil {
 			return err
 		}
-
-		err = b.RegisterNodesAndPipeline(a.broker, name)
+		// Update the success threshold now that the pipeline is registered.
+		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
 		if err != nil {
 			return err
 		}

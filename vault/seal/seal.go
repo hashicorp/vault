@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -18,7 +19,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
-	metrics "github.com/hashicorp/go-metrics"
+	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 
@@ -99,7 +100,7 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 		}
 	}
 
-	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) && os.Getenv("VAULT_SEAL_REWRAP_SAFETY") != "disable" {
 		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 
@@ -694,13 +695,22 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		err    error
 	}
 	resultCh := make(chan *result)
+	stopCh := make(chan struct{})
+	defer func() {
+		close(stopCh)
+		close(resultCh)
+	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
-		resultCh <- &result{
-			name:   name,
-			pt:     plaintext,
-			oldKey: oldKey,
-			err:    err,
+		select {
+		case <-stopCh:
+		default:
+			resultCh <- &result{
+				name:   name,
+				pt:     plaintext,
+				oldKey: oldKey,
+				err:    err,
+			}
 		}
 	}
 
@@ -719,7 +729,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			for _, sealWrapper := range wrappersByPriority {
 				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 				if err != nil {
-					reportResult(sealWrapper.Name, nil, false, err)
+					go reportResult(sealWrapper.Name, nil, false, err)
 					continue
 				}
 				if keyId == k {
@@ -741,7 +751,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
-	// Gathering failures, but return right away if there is a succesful result
+	// Gathering failures, but return right away if there is a successful result
 	errs := make(map[string]error)
 GATHER_RESULTS:
 	for {
@@ -756,7 +766,6 @@ GATHER_RESULTS:
 
 			case result.oldKey:
 				return result.pt, false, OldKey
-
 			default:
 				return result.pt, isUpToDate, nil
 			}

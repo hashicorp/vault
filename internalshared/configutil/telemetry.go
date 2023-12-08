@@ -12,6 +12,7 @@ import (
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-metrics/circonus"
 	"github.com/hashicorp/go-metrics/datadog"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/mitchellh/cli"
 	"google.golang.org/api/option"
 )
 

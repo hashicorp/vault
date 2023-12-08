@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-metrics"
-	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -722,12 +721,7 @@ func TestDefaultMountTable(t *testing.T) {
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		return &corehelpers.NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	me := &MountEntry{
 		Table: auditTableType,

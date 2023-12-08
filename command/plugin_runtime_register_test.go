@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginRuntimeRegisterCommand(tb testing.TB) (*cli.MockUi, *PluginRuntimeRegisterCommand) {

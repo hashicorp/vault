@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/mitchellh/cli"
 )
 
 func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) {
@@ -85,8 +85,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()

@@ -4,6 +4,12 @@
 ~}}
 
 <PageHeader as |p|>
+  <p.top>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Methods" @route="vault.cluster.access.mfa.methods.index" />
+      <Hds::Breadcrumb::Item @text="Configure MFA Method" @current={{true}} />
+    </Hds::Breadcrumb>
+  </p.top>
   <p.levelLeft class="has-border-bottom-light">
     <h1 class="title is-3">
       {{#if this.method}}
@@ -15,18 +21,6 @@
       {{/if}}
     </h1>
   </p.levelLeft>
-  <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.mfa.methods.index">
-            Methods
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
-  </p.top>
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}

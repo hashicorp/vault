@@ -8,7 +8,7 @@
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
     <p.levelLeft>
-      <h1 class="title is-3">
+      <h1 class="title is-3" data-test-replication-title>
         {{#if this.initialReplicationMode}}
           {{#if (eq this.initialReplicationMode "dr")}}
             Enable Disaster Recovery Replication
@@ -36,6 +36,7 @@
         replicationMode=this.replicationMode
       )
     }}
+    data-test-replication-enable-form
   >
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errors={{this.errors}} />
@@ -291,7 +292,7 @@
   {{#if (not (and this.cluster.dr.replicationEnabled this.cluster.performance.replicationEnabled))}}
     <PageHeader as |p|>
       <p.levelLeft>
-        <h1 class="title is-3">
+        <h1 class="title is-3" data-test-replication-title>
           Replication
         </h1>
       </p.levelLeft>

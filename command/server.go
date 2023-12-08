@@ -27,6 +27,7 @@ import (
 
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
@@ -60,9 +61,9 @@ import (
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/posener/complete"
 	"github.com/sasha-s/go-deadlock"
@@ -540,11 +541,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	}
 
-	if len(config.Seals) > 1 {
-		c.UI.Error("Only one seal block is accepted in recovery mode")
-		return 1
-	}
-
 	ctx := context.Background()
 	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
@@ -564,6 +560,10 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 	if setSealResponse.barrierSeal == nil {
 		c.UI.Error(fmt.Sprintf("Error setting up seal: %v", setSealResponse.sealConfigError))
+		return 1
+	}
+	if setSealResponse.unwrapSeal != nil {
+		c.UI.Error("Recovery mode cannot be started with configuration for seal migration")
 		return 1
 	}
 	barrierSeal = setSealResponse.barrierSeal
@@ -3153,7 +3153,7 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
-					if !errwrap.Contains(err, vault.ErrPluginBadType.Error()) {
+					if !errwrap.Contains(err, plugincatalog.ErrPluginBadType.Error()) {
 						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
 					}
 					pluginsNotLoaded = append(pluginsNotLoaded, name)

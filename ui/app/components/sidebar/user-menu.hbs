@@ -54,6 +54,7 @@
                 @container="#container"
                 class="in-dropdown link is-flex-start"
                 {{on "click" (fn (set-flash-message "Token copied!"))}}
+                data-test-copy-button={{this.auth.currentToken}}
               />
             </li>
             {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}

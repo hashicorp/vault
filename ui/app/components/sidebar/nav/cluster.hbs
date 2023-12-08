@@ -43,32 +43,6 @@
   {{/if}}
 
   {{#if
-    (and
-      this.version.isEnterprise
-      this.namespace.inRootNamespace
-      this.cluster.anyReplicationEnabled
-      (has-permission "status" routeParams="replication")
-    )
-  }}
-    <Nav.Title data-test-sidebar-nav-heading="Replication">Replication</Nav.Title>
-    <Nav.Link
-      @route="vault.cluster.replication.mode.index"
-      @model="dr"
-      @text="Disaster Recovery"
-      data-test-sidebar-nav-link="Disaster Recovery"
-    />
-
-    {{#if (has-feature "Performance Replication")}}
-      <Nav.Link
-        @route="vault.cluster.replication.mode.index"
-        @model="performance"
-        @text="Performance"
-        data-test-sidebar-nav-link="Performance"
-      />
-    {{/if}}
-  {{/if}}
-
-  {{#if
     (or
       (and
         this.namespace.inRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
@@ -78,8 +52,20 @@
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
   {{/if}}
-  {{#if (and this.version.isEnterprise this.namespace.inRootNamespace (has-permission "status" routeParams="replication"))}}
-    <Nav.Link @route="vault.cluster.replication.index" @text="Replication" data-test-sidebar-nav-link="Replication" />
+  {{#if
+    (and
+      this.version.isEnterprise
+      this.namespace.inRootNamespace
+      (not this.cluster.replicationRedacted)
+      (has-permission "status" routeParams="replication")
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.replication.index"
+      @text="Replication"
+      data-test-sidebar-nav-link="Replication"
+      @hasSubItems={{true}}
+    />
   {{/if}}
   {{#if (and this.cluster.usingRaft this.namespace.inRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link

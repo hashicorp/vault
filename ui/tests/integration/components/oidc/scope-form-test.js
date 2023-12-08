@@ -177,7 +177,11 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert.dom(MODAL('text')).hasText('Example of a JSON template for scopes:', 'Modal text renders');
     assert
       .dom('#scope-template-modal [data-test-copy-button]')
-      .hasAttribute('data-clipboard-text', exampleTemplate, 'Modal copy button copies the example template');
+      .hasAttribute(
+        'data-test-copy-button',
+        exampleTemplate,
+        'Modal copy button copies the example template'
+      );
     assert.dom('.cm-string').hasText('"username"', 'Example template json renders');
     await click('[data-test-close-modal]');
     assert.dom('.hds#scope-template-modal').doesNotExist('Modal is hidden');

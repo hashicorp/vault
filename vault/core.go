@@ -62,6 +62,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
@@ -92,6 +93,11 @@ const (
 	// coreGroupPolicyApplicationPath is used to store the behaviour for
 	// how policies should be applied
 	coreGroupPolicyApplicationPath = "core/group-policy-application-mode"
+
+	// Path in storage for the plugin catalog.
+	pluginCatalogPath = "core/plugin-catalog/"
+	// Path in storage for the plugin runtime catalog.
+	pluginRuntimeCatalogPath = "core/plugin-runtime-catalog/"
 
 	// groupPolicyApplicationModeWithinNamespaceHierarchy is a configuration option for group
 	// policy application modes, which allows only in-namespace-hierarchy policy application
@@ -241,7 +247,7 @@ type Core struct {
 
 	// The registry of builtin plugins is passed in here as an interface because
 	// if it's used directly, it results in import cycles.
-	builtinRegistry BuiltinRegistry
+	builtinRegistry plugincatalog.BuiltinRegistry
 
 	// N.B.: This is used to populate a dev token down replication, as
 	// otherwise, after replication is started, a dev would have to go through
@@ -536,10 +542,10 @@ type Core struct {
 	pluginFilePermissions int
 
 	// pluginCatalog is used to manage plugin configurations
-	pluginCatalog *PluginCatalog
+	pluginCatalog *plugincatalog.PluginCatalog
 
 	// pluginRuntimeCatalog is used to manage plugin runtime configurations
-	pluginRuntimeCatalog *PluginRuntimeCatalog
+	pluginRuntimeCatalog *plugincatalog.PluginRuntimeCatalog
 
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
@@ -697,6 +703,18 @@ type Core struct {
 	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
+
+	echoDuration                  *uberAtomic.Duration
+	activeNodeClockSkewMillis     *uberAtomic.Int64
+	periodicLeaderRefreshInterval time.Duration
+}
+
+func (c *Core) ActiveNodeClockSkewMillis() int64 {
+	return c.activeNodeClockSkewMillis.Load()
+}
+
+func (c *Core) EchoDuration() time.Duration {
+	return c.echoDuration.Load()
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -724,7 +742,7 @@ type CoreConfig struct {
 
 	DevToken string
 
-	BuiltinRegistry BuiltinRegistry
+	BuiltinRegistry plugincatalog.BuiltinRegistry
 
 	LogicalBackends map[string]logical.Factory
 
@@ -863,6 +881,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
+
+	PeriodicLeaderRefreshInterval time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -946,6 +966,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
+
+	if conf.PeriodicLeaderRefreshInterval == 0 {
+		conf.PeriodicLeaderRefreshInterval = leaderCheckInterval
 	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
@@ -1044,6 +1068,9 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 		WellKnownRedirects:             NewWellKnownRedirects(),
 		detectDeadlocks:                detectDeadlocks,
+		echoDuration:                   uberAtomic.NewDuration(0),
+		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2295,6 +2322,7 @@ func (c *Core) sealInternalWithOptions(grabStateLock, keepHALock, performCleanup
 		c.logger.Debug("runStandby done")
 	}
 
+	stopPartialSealRewrapping(c)
 	c.teardownReplicationResolverHandler()
 
 	// Perform additional cleanup upon sealing.
@@ -2380,11 +2408,15 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+	if pluginRuntimeCatalog, err := plugincatalog.SetupPluginRuntimeCatalog(ctx, c.logger, NewBarrierView(c.barrier, pluginRuntimeCatalogPath)); err != nil {
 		return err
+	} else {
+		c.pluginRuntimeCatalog = pluginRuntimeCatalog
 	}
-	if err := c.setupPluginCatalog(ctx); err != nil {
+	if pluginCatalog, err := plugincatalog.SetupPluginCatalog(ctx, c.logger, c.builtinRegistry, NewBarrierView(c.barrier, pluginCatalogPath), c.pluginDirectory, c.enableMlock, c.pluginRuntimeCatalog); err != nil {
 		return err
+	} else {
+		c.pluginCatalog = pluginCatalog
 	}
 	if err := c.loadMounts(ctx); err != nil {
 		return err
@@ -3372,17 +3404,6 @@ func (c *Core) MetricSink() *metricsutil.ClusterMetricSink {
 	return c.metricSink
 }
 
-// BuiltinRegistry is an interface that allows the "vault" package to use
-// the registry of builtin plugins without getting an import cycle. It
-// also allows for mocking the registry easily.
-type BuiltinRegistry interface {
-	Contains(name string, pluginType consts.PluginType) bool
-	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
-	Keys(pluginType consts.PluginType) []string
-	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
-	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
-}
-
 func (c *Core) AuditLogger() AuditLogger {
 	return &basicAuditor{c: c}
 }
@@ -3469,7 +3490,12 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
+	qmFlags := &quotas.ManagerFlags{
+		IsPerfStandby: isPerfStandby,
+		IsDRSecondary: c.IsDRSecondary(),
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
@@ -3918,13 +3944,15 @@ func (c *Core) ReloadIntrospectionEndpointEnabled() {
 }
 
 type PeerNode struct {
-	Hostname       string    `json:"hostname"`
-	APIAddress     string    `json:"api_address"`
-	ClusterAddress string    `json:"cluster_address"`
-	Version        string    `json:"version"`
-	LastEcho       time.Time `json:"last_echo"`
-	UpgradeVersion string    `json:"upgrade_version,omitempty"`
-	RedundancyZone string    `json:"redundancy_zone,omitempty"`
+	Hostname        string        `json:"hostname"`
+	APIAddress      string        `json:"api_address"`
+	ClusterAddress  string        `json:"cluster_address"`
+	Version         string        `json:"version"`
+	LastEcho        time.Time     `json:"last_echo"`
+	UpgradeVersion  string        `json:"upgrade_version,omitempty"`
+	RedundancyZone  string        `json:"redundancy_zone,omitempty"`
+	EchoDuration    time.Duration `json:"echo_duration"`
+	ClockSkewMillis int64         `json:"clock_skew_millis"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3933,13 +3961,15 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
 		info := item.Object.(nodeHAConnectionInfo)
 		nodes = append(nodes, PeerNode{
-			Hostname:       info.nodeInfo.Hostname,
-			APIAddress:     info.nodeInfo.ApiAddr,
-			ClusterAddress: itemClusterAddr,
-			LastEcho:       info.lastHeartbeat,
-			Version:        info.version,
-			UpgradeVersion: info.upgradeVersion,
-			RedundancyZone: info.redundancyZone,
+			Hostname:        info.nodeInfo.Hostname,
+			APIAddress:      info.nodeInfo.ApiAddr,
+			ClusterAddress:  itemClusterAddr,
+			LastEcho:        info.lastHeartbeat,
+			Version:         info.version,
+			UpgradeVersion:  info.upgradeVersion,
+			RedundancyZone:  info.redundancyZone,
+			EchoDuration:    info.echoDuration,
+			ClockSkewMillis: info.clockSkewMillis,
 		})
 	}
 	return nodes
@@ -3981,19 +4011,6 @@ func (c *Core) LoadNodeID() (string, error) {
 	return hostname, nil
 }
 
-// DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
-// login request, accepting a byte payload
-func (c *Core) DetermineRoleFromLoginRequestFromBytes(ctx context.Context, mountPoint string, payload []byte) string {
-	data := make(map[string]interface{})
-	err := jsonutil.DecodeJSON(payload, &data)
-	if err != nil {
-		// Cannot discern a role from a request we cannot parse
-		return ""
-	}
-
-	return c.DetermineRoleFromLoginRequest(ctx, mountPoint, data)
-}
-
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
 func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}) string {
@@ -4004,7 +4021,33 @@ func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint str
 		// Role based quotas do not apply to this request
 		return ""
 	}
+	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+}
 
+// DetermineRoleFromLoginRequestFromReader will determine the role that should
+// be applied to a quota for a given login request. The reader will only be
+// consumed if the matching backend for the mount point exists and is a secret
+// backend
+func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader) string {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// Role based quotas do not apply to this request
+		return ""
+	}
+
+	data := make(map[string]interface{})
+	err := jsonutil.DecodeJSONFromReader(reader, &data)
+	if err != nil {
+		return ""
+	}
+	return c.doResolveRoleLocked(ctx, mountPoint, matchingBackend, data)
+}
+
+// doResolveRoleLocked does a login and resolve role request on the matching
+// backend. Callers should have a read lock on c.authLock
+func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, matchingBackend logical.Backend, data map[string]interface{}) string {
 	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
 		MountPoint: mountPoint,
 		Path:       "login",
