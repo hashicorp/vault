@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -38,5 +38,21 @@ module('Integration | Component | filter-input', function (hooks) {
 
     await render(hbs`<FilterInput @wait={{0}} @onInput={{this.onInput}} />`);
     await fillIn('[data-test-filter-input]', 'foo');
+  });
+
+  test('it should render icon', async function (assert) {
+    await render(hbs`<FilterInput />`);
+    assert
+      .dom('[data-test-filter-input-container]')
+      .hasClass('has-icons-left', 'Icon class exists on container');
+    assert.dom('[data-test-filter-input-icon]').exists('Icon renders');
+  });
+
+  test('it should hide icon', async function (assert) {
+    await render(hbs`<FilterInput @hideIcon={{true}} />`);
+    assert
+      .dom('[data-test-filter-input-container]')
+      .doesNotHaveClass('has-icons-left', 'Icon class does not exist on container');
+    assert.dom('[data-test-filter-input-icon]').doesNotExist('Icon is hidden');
   });
 });
