@@ -1,11 +1,24 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
+terraform {
+  required_providers {
+    enos = {
+      source = "app.terraform.io/hashicorp-qti/enos"
+    }
+  }
+}
+
 variable "cluster_id" {
   type = string
 }
 
 variable "cluster_meta" {
+  type    = string
+  default = null
+}
+
+variable "cluster_ssh_keypair" {
   type    = string
   default = null
 }
@@ -35,22 +48,21 @@ resource "aws_kms_alias" "alias" {
   target_key_id = aws_kms_key.key.key_id
 }
 
-output "alias" {
-  description = "The key alias name"
-  value       = aws_kms_alias.alias.name
+output "attributes" {
+  description = "Seal device specific attributes"
+  value = {
+    kms_key_id = aws_kms_key.key.arn
+  }
 }
 
-output "id" {
-  description = "The key ID"
-  value       = aws_kms_key.key.key_id
-}
-
+// We output our resource name and a collection of those passed in to create a full list of key
+// resources that might be required for instance roles that are associated with some unseal types.
 output "resource_name" {
-  description = "The ARN"
+  description = "The awskms key name"
   value       = aws_kms_key.key.arn
 }
 
 output "resource_names" {
-  description = "The list of names"
+  description = "The list of awskms key names to associate with a role"
   value       = compact(concat([aws_kms_key.key.arn], var.other_resources))
 }

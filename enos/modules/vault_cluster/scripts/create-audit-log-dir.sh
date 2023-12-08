@@ -2,8 +2,15 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-
 set -eux
+
+fail() {
+  echo "$1" 1>&2
+  exit 1
+}
+
+[[ -z "$LOG_FILE_PATH" ]] && fail "LOG_FILE_PATH env variable has not been set"
+[[ -z "$SERVICE_USER" ]] && fail "SERVICE_USER env variable has not been set"
 
 LOG_DIR=$(dirname "$LOG_FILE_PATH")
 
