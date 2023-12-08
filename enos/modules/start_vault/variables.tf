@@ -65,15 +65,13 @@ variable "seal_alias_secondary" {
   default     = "secondary"
 }
 
-variable "seal_key_name" {
-  type        = string
-  description = "The primary auto-unseal key name"
+variable "seal_attributes" {
+  description = "The primary auto-unseal attributes"
   default     = null
 }
 
-variable "seal_key_name_secondary" {
-  type        = string
-  description = "The secondary auto-unseal key name"
+variable "seal_attributes_secondary" {
+  description = "The secondary auto-unseal attributes"
   default     = null
 }
 
@@ -95,8 +93,8 @@ variable "seal_type" {
   default     = "awskms"
 
   validation {
-    condition     = contains(["awskms", "shamir"], var.seal_type)
-    error_message = "The seal_type must be either awskms or shamir. No other unseal methods are supported."
+    condition     = contains(["awskms", "pkcs11", "shamir"], var.seal_type)
+    error_message = "The seal_type must be either 'awskms', 'pkcs11', or 'shamir'. No other seal types are supported."
   }
 }
 
@@ -106,8 +104,8 @@ variable "seal_type_secondary" {
   default     = "none"
 
   validation {
-    condition     = contains(["awskms", "none"], var.seal_type_secondary)
-    error_message = "The secondary_seal_type must be 'awskms' or 'none'. No other secondary unseal methods are supported."
+    condition     = contains(["awskms", "pkcs11", "none"], var.seal_type_secondary)
+    error_message = "The secondary_seal_type must be 'awskms', 'pkcs11' or 'none'. No other secondary seal types are supported."
   }
 }
 
