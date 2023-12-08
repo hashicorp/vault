@@ -69,6 +69,21 @@ module('Integration | Component | kv-suggestion-input', function (hooks) {
     assert.dom(option()).hasText('my-secret', 'Result set is filtered');
   });
 
+  test('it should replace filter terms with full path to secret', async function (assert) {
+    await fillIn(input, 'sec');
+    await click(option());
+    assert.dom(input).hasValue('my-secret', 'Partial term replaced with selected secret');
+
+    await fillIn(input, '');
+    this.keys = ['secret-nested', 'bar', 'baz'];
+    await click(option());
+    await fillIn(input, 'nest');
+    await click(option());
+    assert
+      .dom(input)
+      .hasValue('foo/secret-nested', 'Partial term in nested path replaced with selected secret');
+  });
+
   test('it should fetch secrets at nested paths', async function (assert) {
     this.keys = ['bar/'];
     await click(input);

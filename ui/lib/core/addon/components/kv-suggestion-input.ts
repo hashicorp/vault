@@ -131,7 +131,10 @@ export default class KvSuggestionInputComponent extends Component<Args> {
 
   @action
   onSuggestionSelect(secret: KvSecretMetadataModel) {
-    this.args.onChange(`${this.args.value || ''}${secret.path}`);
+    // user may partially type a value to filter result set and then select a suggestion
+    // in this case the partially typed value must be replaced with suggestion value
+    // the fullSecretPath contains the previous selections or typed path segments
+    this.args.onChange(secret.fullSecretPath);
     this.updateSuggestions();
   }
 }
