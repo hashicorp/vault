@@ -61,7 +61,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			name:           "entry exists, invalid",
 			context:        context.Background(),
 			ns:             testNs,
-			storage:        buildStorageWithEntry("sys/config/ui/custom-messages", "}-^"),
+			storage:        buildStorageWithEntry(t, "sys/config/ui/custom-messages", "}-^"),
 			errorAssertion: assert.Error,
 			entryAssertion: assert.Nil,
 		},
@@ -69,7 +69,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			name:           "entry exists, valid",
 			context:        context.Background(),
 			ns:             testNs,
-			storage:        buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{}}`),
+			storage:        buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{}}`),
 			errorAssertion: assert.NoError,
 			entryAssertion: assert.NotNil,
 		},
@@ -92,7 +92,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 // simplifies their tests by eliminating duplicate test cases (e.g. error
 // retrieving the namespace.Namespace from the context.Context).
 func TestManagerGetEntry(t *testing.T) {
-	testManager := NewManager(buildStorageWithEntry("root", `{}`))
+	testManager := NewManager(buildStorageWithEntry(t, "root", `{}`))
 
 	entry, err := testManager.getEntry(context.Background())
 	assert.Error(t, err)
@@ -216,7 +216,7 @@ func TestManagerFindMessages(t *testing.T) {
 		{
 			name:            "valid storageEntry",
 			context:         nsCtx,
-			storage:         buildStorageWithEntry("root", `{"messages":{}}`),
+			storage:         buildStorageWithEntry(t, "root", `{"messages":{}}`),
 			errorAssertion:  assert.NoError,
 			resultAssertion: assert.NotNil,
 		},
@@ -347,7 +347,7 @@ func TestManagerReadMessage(t *testing.T) {
 		},
 		{
 			name:             "message exists",
-			storage:          buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage:          buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			messageID:        "abc",
 			errorAssertion:   assert.NoError,
 			messageAssertion: assert.NotNil,
@@ -388,7 +388,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 		},
 		{
 			name:    "updating to invalid times",
-			storage: buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
 				StartTime: time.Now().Add(time.Hour),
@@ -422,7 +422,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 		},
 		{
 			name:    "message updated",
-			storage: buildStorageWithEntry("sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
 				StartTime: time.Now(),
@@ -480,7 +480,7 @@ func TestManagerDeleteMessage(t *testing.T) {
 		},
 		{
 			name:           "message deleted",
-			storage:        buildStorageWithEntry("root", `{"messages":{"abc":{"id":"abc"}}}`),
+			storage:        buildStorageWithEntry(t, "root", `{"messages":{"abc":{"id":"abc"}}}`),
 			messageID:      "abc",
 			errorAssertion: assert.NoError,
 			checkStorage:   true,
@@ -502,7 +502,7 @@ func TestManagerDeleteMessage(t *testing.T) {
 // buildStorageWithEntry is a helper function that returns a logical.Storage
 // with a logical.StorageEntry built using the key and value arguments stored
 // in it.
-func buildStorageWithEntry(key, value string) logical.Storage {
+func buildStorageWithEntry(t *testing.T, key, value string) logical.Storage {
 	storage := &logical.InmemStorage{}
 
 	entry := &logical.StorageEntry{
@@ -510,7 +510,7 @@ func buildStorageWithEntry(key, value string) logical.Storage {
 		Value: []byte(value),
 	}
 
-	storage.Put(context.Background(), entry)
+	require.NoError(t, storage.Put(context.Background(), entry))
 
 	return storage
 }
