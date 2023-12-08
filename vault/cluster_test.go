@@ -175,7 +175,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
-	manualStepDownSleepPeriod = 5 * time.Second
+	manualStepDownSleepPeriod = 2 * time.Second
 
 	t.Run("tcpLayer", func(t *testing.T) {
 		testCluster_ForwardRequestsCommon(t, nil)
