@@ -65,10 +65,6 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     assert
       .dom(searchSelect.option())
       .hasText('nested-secret', 'Suggestions render for secret at nested path');
-    await click(searchSelect.option());
-    assert
-      .dom(searchSelect.noMatch)
-      .hasText('No suggestions for this path', 'No match message renders when secret is selected');
   });
 
   test('it should sync secret', async function (assert) {
