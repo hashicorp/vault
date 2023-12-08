@@ -38,7 +38,7 @@ export default class MessageModel extends Model {
     editType: 'textarea',
   })
   message;
-  @attr('string', { defaultValue: new Date().toISOString() }) startTime;
+  @attr('string') startTime;
   @attr('string', { defaultValue: '' }) endTime;
 
   // the api returns link as an object with title and href as keys, but we separate the link key/values into

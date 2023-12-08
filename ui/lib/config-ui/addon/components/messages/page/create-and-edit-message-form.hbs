@@ -87,38 +87,32 @@
           class="input has-top-margin-xs is-auto-width is-block"
           data-test-date="startTime"
           name="startTime"
+          @value={{this.startTime}}
           {{on "input" this.updateDateTime}}
         />
       {{else if (eq attr.name "endTime")}}
-        {{#if this.showStartTime}}
-          <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
-            <G.Legend>Message expires</G.Legend>
-            <G.Radio::Field @id="never" checked @value="" {{on "change" (fn (mut @messages.endTime) "")}} as |F|>
-              <F.Label>Never</F.Label>
-              <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
-            </G.Radio::Field>
-            <G.Radio::Field
-              @id="specific-date"
-              @value=""
-              {{on "change" (fn (mut @messages.endTime) @messages.endTime)}}
-              as |F|
-            >
-              <F.Label>Specific date</F.Label>
-              <F.HelperText>
-                This message will expire at midnight (local timezone) at the specific date.
-                <div class="control">
-                  <Input
-                    @type="datetime-local"
-                    class="input has-top-margin-xs is-auto-width"
-                    data-test-link="title"
-                    name="endTime"
-                    {{on "input" this.updateDateTime}}
-                  />
-                </div>
-              </F.HelperText>
-            </G.Radio::Field>
-          </Hds::Form::Radio::Group>
-        {{/if}}
+        <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
+          <G.Legend>Message expires</G.Legend>
+          <G.Radio::Field @id="never" checked @value="" {{on "change" (fn (mut this.endTime) "")}} as |F|>
+            <F.Label>Never</F.Label>
+            <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
+          </G.Radio::Field>
+          <G.Radio::Field @id="specific-date" @value="" {{on "change" (fn (mut this.endTime) this.endTime)}} as |F|>
+            <F.Label>Specific date</F.Label>
+            <F.HelperText>
+              This message will expire at midnight (local timezone) at the specific date.
+              <div class="control">
+                <Input
+                  @type="datetime-local"
+                  class="input has-top-margin-xs is-auto-width"
+                  data-test-link="title"
+                  name="endTime"
+                  {{on "input" this.updateDateTime}}
+                />
+              </div>
+            </F.HelperText>
+          </G.Radio::Field>
+        </Hds::Form::Radio::Group>
       {{else}}
         <FormField
           class="has-bottom-margin-m"

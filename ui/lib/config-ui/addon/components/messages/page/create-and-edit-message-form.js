@@ -9,7 +9,9 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
+import { format, addDays, startOfDay } from 'date-fns';
 
+const localDateTimeString = "yyyy-MM-dd'T'HH:mm";
 /**
  * @module Page::CreateAndEditMessageForm
  * Page::CreateAndEditMessageForm components are used to display list of messages.
@@ -24,7 +26,8 @@ export default class MessagesList extends Component {
   @service router;
   @service flashMessages;
 
-  @tracked showStartTime = true;
+  @tracked startTime = format(addDays(startOfDay(new Date()), 1), localDateTimeString);
+  @tracked endTime = '';
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
@@ -45,7 +48,12 @@ export default class MessagesList extends Component {
 
   @action
   updateDateTime(evt) {
-    this.args.messages[evt.target.name] = new Date(evt.target.value).toISOString();
+    if (evt.target.name === 'startTime') {
+      this.startTime = format(new Date(evt.target.value), localDateTimeString);
+    } else {
+      this.endTime = format(new Date(evt.target.value), localDateTimeString);
+    }
+    // this.args.messages[evt.target.name] = new Date(evt.target.value).toISOString();
   }
 
   @task
@@ -57,6 +65,9 @@ export default class MessagesList extends Component {
       this.invalidFormAlert = invalidFormMessage;
 
       if (isValid) {
+        this.args.messages.startTime = new Date(this.startTime).toISOString();
+        this.args.messages.endTime = new Date(this.endTime).toISOString();
+
         const { isNew } = this.args.messages;
         const { id } = yield this.args.messages.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
