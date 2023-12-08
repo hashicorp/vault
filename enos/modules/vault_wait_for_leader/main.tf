@@ -19,11 +19,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "The number of instances in the vault cluster"
-}
-
 variable "vault_hosts" {
   type = map(object({
     private_ip = string
