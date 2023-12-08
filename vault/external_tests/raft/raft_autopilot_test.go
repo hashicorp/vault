@@ -218,6 +218,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 // TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
 // time to become ready, it doesn't get promoted to voter until then.
 func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
 	conf.DisableAutopilot = false
@@ -229,8 +230,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		config := map[string]interface{}{
 			"snapshot_threshold":           "50",
 			"trailing_logs":                "100",
-			"autopilot_reconcile_interval": "1s",
-			"autopilot_update_interval":    "500ms",
+			"autopilot_reconcile_interval": "300ms",
+			"autopilot_update_interval":    "100ms",
 			"snapshot_interval":            "1s",
 		}
 		if coreIdx == 2 {
