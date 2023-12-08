@@ -1,0 +1,22 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Form::Radio::Group @layout="vertical" @name={{@attr.name}} class="has-bottom-margin-m" as |G|>
+  <G.Legend>{{@attr.options.label}}</G.Legend>
+  {{#each @attr.options.possibleOptionLabels as |optionLabel idx|}}
+    <G.Radio::Field
+      @value={{get @attr.options.possibleOptionValues idx}}
+      checked
+      {{on "change" this.updateRadioValue}}
+      as |F|
+    >
+      <F.Label>{{optionLabel}}</F.Label>
+      <F.HelperText>
+        {{get @attr.options.possibleOptionHelperText idx}}
+        {{yield}}
+      </F.HelperText>
+    </G.Radio::Field>
+  {{/each}}
+</Hds::Form::Radio::Group>
