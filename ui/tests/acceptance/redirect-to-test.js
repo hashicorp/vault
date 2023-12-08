@@ -55,7 +55,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     localStorage.clear();
   });
   test('redirect to a route after authentication', async function (assert) {
-    const url = '/vault/secrets/secret/create';
+    const url = '/vault/secrets/secret/kv/create';
     await visit(url);
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
@@ -74,7 +74,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
   });
 
   test('redirect to a route after authentication with a query param', async function (assert) {
-    const url = '/vault/secrets/secret/create?initialKey=hello';
+    const url = '/vault/secrets/secret/kv/create?initialKey=hello';
     await visit(url);
     assert.ok(
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
