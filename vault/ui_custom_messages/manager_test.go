@@ -6,6 +6,7 @@ package uicustommessages
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,7 +26,8 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
-		testNs = namespace.RootNamespace
+		testNs  = namespace.RootNamespace
+		testNs2 = &namespace.Namespace{ID: "abc123", Path: "imaginary/"}
 	)
 	for _, testcase := range []struct {
 		name           string
@@ -58,7 +60,7 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			entryAssertion: assert.NotNil,
 		},
 		{
-			name:           "entry exists, invalid",
+			name:           "invalid entry exists",
 			context:        context.Background(),
 			ns:             testNs,
 			storage:        buildStorageWithEntry(t, "sys/config/ui/custom-messages", "}-^"),
@@ -66,12 +68,28 @@ func TestManagerGetEntryForNamespace(t *testing.T) {
 			entryAssertion: assert.Nil,
 		},
 		{
-			name:           "entry exists, valid",
+			name:           "valid entry exists",
 			context:        context.Background(),
 			ns:             testNs,
 			storage:        buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{}}`),
 			errorAssertion: assert.NoError,
 			entryAssertion: assert.NotNil,
+		},
+		{
+			name:           "valid entry exists, non-root namespace",
+			context:        namespace.ContextWithNamespace(context.Background(), testNs2),
+			ns:             testNs2,
+			storage:        buildStorageWithEntry(t, fmt.Sprintf("namespaces/%s/sys/config/ui/custom-messages", testNs2.ID), `{"messages":{}}`),
+			errorAssertion: assert.NoError,
+			entryAssertion: assert.NotNil,
+		},
+		{
+			name:           "invalid entry exists, non-root namespace",
+			context:        namespace.ContextWithNamespace(context.Background(), testNs2),
+			ns:             testNs2,
+			storage:        buildStorageWithEntry(t, fmt.Sprintf("namespaces/%s/sys/config/ui/custom-messages", testNs2.ID), "}-^"),
+			errorAssertion: assert.Error,
+			entryAssertion: assert.Nil,
 		},
 	} {
 		if testcase.storage != nil {
@@ -98,7 +116,11 @@ func TestManagerGetEntry(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, entry)
 
-	entry, err = testManager.getEntry(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "root"}))
+	entry, err = testManager.getEntry(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace))
+	assert.NoError(t, err)
+	assert.NotNil(t, entry)
+
+	entry, err = testManager.getEntry(namespace.ContextWithNamespace(context.Background(), &namespace.Namespace{ID: "abc123", Path: "imaginary/"}))
 	assert.NoError(t, err)
 	assert.NotNil(t, entry)
 }
@@ -116,7 +138,11 @@ func TestManagerPutEntry(t *testing.T) {
 		testEntry   = &Entry{
 			Messages: make(map[string]Message),
 		}
-		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+		ns2 = &namespace.Namespace{ID: "abc123", Path: "imaginary/"}
+
+		nsCtx  = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+		nsCtx2 = namespace.ContextWithNamespace(context.Background(), ns2)
 	)
 
 	for _, testcase := range []struct {
@@ -151,6 +177,31 @@ func TestManagerPutEntry(t *testing.T) {
 
 		testcase.errorAssertion(t, testManager.putEntry(testcase.context, testEntry), testcase.name)
 	}
+
+	// Check that when an entry is put successfully, the entry is stored with
+	// correct key.
+	testEntry.Messages["test"] = Message{
+		ID:            "test",
+		Title:         "title",
+		Message:       "message",
+		Authenticated: true,
+		Type:          ModalMessageType,
+		StartTime:     time.Now(),
+		EndTime:       time.Now().Add(time.Hour),
+	}
+
+	storage := &logical.InmemStorage{}
+	testManager.view = storage
+
+	assert.NoError(t, testManager.putEntry(nsCtx2, testEntry))
+
+	results, err := storage.List(context.Background(), "namespaces/")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, results)
+
+	results, err = storage.List(context.Background(), "sys/config/ui/")
+	assert.NoError(t, err)
+	assert.Empty(t, results)
 }
 
 // TestGetNamespacesToSearch verifies the behaviour of the getNamespacesToSearch
