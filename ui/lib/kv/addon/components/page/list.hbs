@@ -95,7 +95,11 @@
                       {{/if}}
                       {{#if metadata.canCreateVersionData}}
                         <li>
-                          <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
+                          <LinkTo
+                            @route="secret.details.edit"
+                            @model={{metadata.fullSecretPath}}
+                            data-test-popup-create-new-version
+                          >
                             Create new version
                           </LinkTo>
                         </li>
@@ -106,6 +110,7 @@
                           @isInDropdown={{true}}
                           @onConfirmAction={{fn this.onDelete metadata}}
                           @confirmMessage="This will permanently delete this secret and all its versions."
+                          data-test-popup-metadata-delete
                         />
                       {{/if}}
                     {{/if}}

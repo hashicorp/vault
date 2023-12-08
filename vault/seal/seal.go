@@ -695,13 +695,22 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		err    error
 	}
 	resultCh := make(chan *result)
+	stopCh := make(chan struct{})
+	defer func() {
+		close(stopCh)
+		close(resultCh)
+	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
-		resultCh <- &result{
-			name:   name,
-			pt:     plaintext,
-			oldKey: oldKey,
-			err:    err,
+		select {
+		case <-stopCh:
+		default:
+			resultCh <- &result{
+				name:   name,
+				pt:     plaintext,
+				oldKey: oldKey,
+				err:    err,
+			}
 		}
 	}
 
@@ -720,7 +729,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			for _, sealWrapper := range wrappersByPriority {
 				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 				if err != nil {
-					reportResult(sealWrapper.Name, nil, false, err)
+					go reportResult(sealWrapper.Name, nil, false, err)
 					continue
 				}
 				if keyId == k {
@@ -742,7 +751,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
-	// Gathering failures, but return right away if there is a succesful result
+	// Gathering failures, but return right away if there is a successful result
 	errs := make(map[string]error)
 GATHER_RESULTS:
 	for {
@@ -757,7 +766,6 @@ GATHER_RESULTS:
 
 			case result.oldKey:
 				return result.pt, false, OldKey
-
 			default:
 				return result.pt, isUpToDate, nil
 			}
