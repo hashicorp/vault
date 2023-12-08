@@ -3040,6 +3040,9 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 
 	case sealMigrationCheckDoNotAjust:
 		// unwrapSeal stays as is
+		if unwrapSeal == nil {
+			return nil
+		}
 	}
 
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(ctx)
