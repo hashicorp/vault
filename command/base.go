@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	config "github.com/hashicorp/vault/command/config/hcp"
+	"github.com/hashicorp/vault/command/config"
 
 	"github.com/hashicorp/cli"
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
