@@ -8,11 +8,10 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
-import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
+import { keyIsFolder } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
 
 import type SyncDestinationModel from 'vault/models/sync/destination';
-import type KvSecretMetadataModel from 'vault/models/kv/metadata';
 import type RouterService from '@ember/routing/router-service';
 import type StoreService from 'vault/services/store';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -20,11 +19,6 @@ import type { SearchSelectOption } from 'vault/vault/app-types';
 
 interface Args {
   destination: SyncDestinationModel;
-}
-interface PowerSelectAPI {
-  actions: {
-    open(): void;
-  };
 }
 
 export default class DestinationSyncPageComponent extends Component<Args> {
@@ -38,16 +32,12 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   }
 
   @tracked mounts: SearchSelectOption[] = [];
-  @tracked secrets: KvSecretMetadataModel[] = [];
   @tracked mountPath = '';
   @tracked secretPath = '';
   @tracked error = '';
-  powerSelectAPI: PowerSelectAPI | undefined;
-  _lastFetch: KvSecretMetadataModel[] | undefined; // cache the response for filtering purposes
 
-  // strip trailing slash from mount path
-  get mountName() {
-    return keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath;
+  get isSecretDirectory() {
+    return this.secretPath && keyIsFolder(this.secretPath);
   }
 
   // unable to use built-in fetch functionality of SearchSelect since we need to filter by kv type
@@ -66,92 +56,26 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     }
   }
 
-  async fetchSecrets(isDirectory: boolean) {
-    try {
-      const parentDirectory = parentKeyForKey(this.secretPath);
-      const pathToSecret = isDirectory ? this.secretPath : parentDirectory;
-      const kvModels = (await this.store.query('kv/metadata', {
-        backend: this.mountName,
-        pathToSecret,
-      })) as unknown;
-      // this will be used to filter the existing result set when the search term changes within the same path
-      this._lastFetch = kvModels as KvSecretMetadataModel[];
-      return this._lastFetch;
-    } catch (error) {
-      return [];
-    }
-  }
-
-  filterSecrets(kvModels: KvSecretMetadataModel[] | undefined = [], isDirectory: boolean) {
-    const secretName = keyWithoutParentKey(this.secretPath) || '';
-    return kvModels.filter((model) => {
-      if (!this.secretPath || isDirectory) {
-        return true;
-      }
-      if (this.secretPath === model.fullSecretPath) {
-        // don't show suggestion if it's currently selected
-        return false;
-      }
-      return secretName.toLowerCase().includes(model.path.toLowerCase());
-    });
-  }
-
-  async updateSecretSuggestions() {
-    const isDirectory = keyIsFolder(this.secretPath);
-    if (!this.mountPath) {
-      this.secrets = [];
-    } else if (this.secretPath && !isDirectory && this.secrets) {
-      // if we don't need to fetch from a new path, filter the previous result set with the updated search term
-      this.secrets = this.filterSecrets(this._lastFetch, isDirectory);
-    } else {
-      const kvModels = await this.fetchSecrets(isDirectory);
-      this.secrets = this.filterSecrets(kvModels, isDirectory);
-    }
-  }
-
   @action
-  cancel() {
+  back() {
     this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.secrets');
   }
 
   @action
   setMount(selected: Array<string>) {
     this.mountPath = selected[0] || '';
-    this.updateSecretSuggestions();
-  }
-
-  @action
-  onMountInput(value: string) {
-    this.mountPath = value;
-    this.updateSecretSuggestions();
-  }
-
-  @action
-  onSecretInput(value: string) {
-    this.secretPath = value;
-    this.updateSecretSuggestions();
-  }
-
-  @action
-  onSecretInputClick() {
-    this.powerSelectAPI?.actions?.open();
-  }
-
-  @action
-  onSuggestionSelect(secret: KvSecretMetadataModel) {
-    this.secretPath = this.secretPath + secret.path;
-    this.updateSecretSuggestions();
   }
 
   @task
   *setAssociation(event: Event) {
     event.preventDefault();
     try {
-      const { name, type } = this.args.destination;
+      const { name: destinationName, type: destinationType } = this.args.destination;
+      const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
       const association = this.store.createRecord('sync/association', {
-        destinationName: name,
-        destinationType: type,
-        mount: this.mountName,
+        destinationName,
+        destinationType,
+        mount,
         secretName: this.secretPath,
       });
       yield association.save({ adapterOptions: { action: 'set' } });
