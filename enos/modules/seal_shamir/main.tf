@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
+# SPDX-License-Identifier: MPL-2.0
 
 # A shim seal module for shamir seals. For Shamir seals the enos_vault_init resource will take care
 # of creating our seal.
