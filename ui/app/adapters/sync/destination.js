@@ -5,6 +5,7 @@
 
 import ApplicationAdapter from 'vault/adapters/application';
 import { pluralize } from 'ember-inflector';
+import { decamelize } from '@ember/string';
 
 export default class SyncDestinationAdapter extends ApplicationAdapter {
   namespace = 'v1/sys';
@@ -21,12 +22,13 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
   updateRecord(store, { modelName }, snapshot) {
     const { name } = snapshot.attributes();
     // only send changed values
-    const data = snapshot.serialize(); // TODO account for changing from *** to empty
-    // let data = {};
-    // for (const param in snapshot.changedAttributes()) {
-    //   data[param] = snapshot.changedAttributes()[param][1];
-    // }
-    return this.ajax(`${this.buildURL(modelName)}/${name}`, 'POST', { data });
+    const data = {};
+    for (const attr in snapshot.changedAttributes()) {
+      // first array element is the old value
+      const [, newValue] = snapshot.changedAttributes()[attr];
+      data[decamelize(attr)] = newValue;
+    }
+    return this.ajax(`${this.buildURL(modelName)}/${name}`, 'PATCH', { data });
   }
 
   urlForDeleteRecord(id, modelName, snapshot) {
