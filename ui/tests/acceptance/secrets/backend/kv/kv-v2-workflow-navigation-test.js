@@ -202,12 +202,28 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('is redirects to nested secret using old non-engine url (a)', async function (assert) {
-      // Reported bug, backported fix https://github.com/hashicorp/vault/pull/24281
-      assert.expect(1);
+    test('it redirects from LIST, SHOW and EDIT views using old non-engine url to ember engine url (a)', async function (assert) {
+      assert.expect(4);
       const backend = this.backend;
+      // create with initialKey
+      await visit(`/vault/secrets/${backend}/create/test`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/create?initialKey=test`);
+      // Reported bug, backported fix https://github.com/hashicorp/vault/pull/24281
+      // list for directory
       await visit(`/vault/secrets/${backend}/list/app/`);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list/app/`);
+      // show for secret
+      await visit(`/vault/secrets/${backend}/show/app/nested/secret`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+      );
+      // edit for secret
+      await visit(`/vault/secrets/${backend}/edit/app/nested/secret`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+      );
     });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
       assert.expect(45);
