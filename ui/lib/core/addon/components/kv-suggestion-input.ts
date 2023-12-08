@@ -7,6 +7,8 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
+import { run } from '@ember/runloop';
 import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
 
 import type StoreService from 'vault/services/store';
@@ -62,6 +64,11 @@ export default class KvSuggestionInputComponent extends Component<Args> {
     }
   }
 
+  get inputId() {
+    // add unique segment to id in case multiple instances of component are used on the same page
+    return `suggestion-input-${guidFor(this)}`;
+  }
+
   async fetchSecrets(isDirectory: boolean) {
     const { mountPath } = this.args;
     try {
@@ -102,7 +109,7 @@ export default class KvSuggestionInputComponent extends Component<Args> {
     const isDirectory = keyIsFolder(this.args.value);
     if (!this.args.mountPath) {
       this.secrets = [];
-    } else if (this.args.value && !isDirectory && this._cachedSecrets) {
+    } else if (this.args.value && !isDirectory && this.secrets) {
       // if we don't need to fetch from a new path, filter the previous result set with the updated search term
       this.secrets = this.filterSecrets(this._cachedSecrets, isDirectory);
     } else {
@@ -136,5 +143,7 @@ export default class KvSuggestionInputComponent extends Component<Args> {
     // the fullSecretPath contains the previous selections or typed path segments
     this.args.onChange(secret.fullSecretPath);
     this.updateSuggestions();
+    // refocus the input after selection
+    run(() => document.getElementById(this.inputId)?.focus());
   }
 }

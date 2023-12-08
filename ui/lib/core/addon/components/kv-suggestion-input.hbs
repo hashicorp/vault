@@ -5,6 +5,7 @@
 <div ...attributes {{did-update this.updateSuggestions @mountPath}}>
   <FormFieldLabel @label={{@label}} @subText={{@subText}} />
   <FilterInput
+    id={{this.inputId}}
     placeholder="Path to secret"
     value={{@value}}
     disabled={{not @mountPath}}
