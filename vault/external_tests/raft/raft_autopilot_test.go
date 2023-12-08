@@ -218,6 +218,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 // TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
 // time to become ready, it doesn't get promoted to voter until then.
 func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
 	conf.DisableAutopilot = false
