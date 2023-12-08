@@ -4,6 +4,8 @@
  */
 
 import { Response } from 'miragejs';
+import { camelize } from '@ember/string';
+import { findDestination } from 'core/helpers/sync-destinations';
 
 export const associationsResponse = (schema, req) => {
   const { type, name } = req.params;
@@ -104,7 +106,34 @@ export default function (server) {
   });
   server.post(uri, (schema, req) => {
     const { type, name } = req.params;
-    const data = { ...JSON.parse(req.requestBody), type, name };
+    const request = JSON.parse(req.requestBody);
+    const apiResponse = {};
+    for (const attr in request) {
+      // API returns ***** for credentials sent in a request
+      // and returns nothing if empty (assume using environment variables)
+      const { maskedParams } = findDestination(type);
+      if (maskedParams.includes(camelize(attr))) {
+        apiResponse[attr] = request[attr] === '' ? '' : '*****';
+      }
+    }
+    const data = { ...apiResponse, type, name };
+    schema.db.syncDestinations.firstOrCreate({ type, name }, data);
+    const record = schema.db.syncDestinations.update({ type, name }, data);
+    return destinationResponse(record);
+  });
+  server.patch(uri, (schema, req) => {
+    const { type, name } = req.params;
+    const request = JSON.parse(req.requestBody);
+    const apiResponse = {};
+    for (const attr in request) {
+      // API returns ***** for credentials sent in a request
+      // and returns nothing if empty (assume using environment variables)
+      const { maskedParams } = findDestination(type);
+      if (maskedParams.includes(camelize(attr))) {
+        apiResponse[attr] = request[attr] === '' ? '' : '*****';
+      }
+    }
+    const data = { ...apiResponse, type, name };
     schema.db.syncDestinations.firstOrCreate({ type, name }, data);
     const record = schema.db.syncDestinations.update({ type, name }, data);
     return destinationResponse(record);
