@@ -190,9 +190,6 @@ func TestManagerFindMessages(t *testing.T) {
 		testManager = NewManager(nil)
 
 		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
-
-		// invalidEntryStorage = buildStorageWithEntry("root", "}^-")
-		// validEntryStorage   = buildStorageWithEntry("root", `{"messages":{"abc":{"id":"abc"}}}`)
 	)
 
 	for _, testcase := range []struct {
@@ -248,7 +245,7 @@ func TestManagerCreateMessage(t *testing.T) {
 			StartTime: time.Now(),
 			EndTime:   time.Now().Add(time.Hour),
 			Message:   "created message",
-			Type:      "banner",
+			Type:      BannerMessageType,
 		}
 		invalidMessageTpl = Message{
 			StartTime: time.Now().Add(time.Hour),
@@ -418,7 +415,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 				ID:        "abc",
 				StartTime: time.Now().Add(-5 * time.Hour),
 				EndTime:   time.Now().Add(time.Hour),
-				Type:      "banner",
+				Type:      BannerMessageType,
 			},
 			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
@@ -431,7 +428,7 @@ func TestManagerUpdateMessage(t *testing.T) {
 				StartTime: time.Now(),
 				EndTime:   time.Now().Add(time.Hour),
 				Message:   "updated value",
-				Type:      "banner",
+				Type:      BannerMessageType,
 			},
 			errorAssertion:   assert.NoError,
 			messageAssertion: assert.NotNil,

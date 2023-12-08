@@ -5,9 +5,14 @@ package uicustommessages
 
 import "time"
 
+const (
+	BannerMessageType = "banner"
+	ModalMessageType  = "modal"
+)
+
 var allowedMessageTypes = [2]string{
-	"banner",
-	"modal",
+	BannerMessageType,
+	ModalMessageType,
 }
 
 // Message is a struct that contains the fields of a particular custom message.

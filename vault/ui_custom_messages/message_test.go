@@ -59,11 +59,11 @@ func TestMessageValidateStartAndEndTimes(t *testing.T) {
 // (*Message).ValidateMessageType method in each of its conditional branches.
 func TestMessageValidateMessageType(t *testing.T) {
 	message := Message{
-		Type: "banner",
+		Type: BannerMessageType,
 	}
 	assert.True(t, message.HasValidateMessageType())
 
-	message.Type = "modal"
+	message.Type = ModalMessageType
 	assert.True(t, message.HasValidateMessageType())
 
 	message.Type = "something"
@@ -250,26 +250,26 @@ func TestMessageMatches(t *testing.T) {
 		},
 		{
 			name:        "banner: filter type-banner",
-			messageType: "banner",
-			filter:      filterFn(nil, nil, "banner"),
+			messageType: BannerMessageType,
+			filter:      filterFn(nil, nil, BannerMessageType),
 			assertion:   assert.True,
 		},
 		{
 			name:        "banner: filter type-modal",
-			messageType: "banner",
-			filter:      filterFn(nil, nil, "modal"),
+			messageType: BannerMessageType,
+			filter:      filterFn(nil, nil, ModalMessageType),
 			assertion:   assert.False,
 		},
 		{
 			name:        "modal: filter type-banner",
-			messageType: "modal",
-			filter:      filterFn(nil, nil, "banner"),
+			messageType: ModalMessageType,
+			filter:      filterFn(nil, nil, BannerMessageType),
 			assertion:   assert.False,
 		},
 		{
 			name:        "modal: filter type-modal",
-			messageType: "modal",
-			filter:      filterFn(nil, nil, "modal"),
+			messageType: ModalMessageType,
+			filter:      filterFn(nil, nil, ModalMessageType),
 			assertion:   assert.True,
 		},
 	} {

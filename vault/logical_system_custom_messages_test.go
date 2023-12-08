@@ -85,14 +85,14 @@ func TestHandleListCustomMessages(t *testing.T) {
 		{
 			name: "type-banner",
 			fieldRaw: map[string]any{
-				"type": "banner",
+				"type": uicustommessages.BannerMessageType,
 			},
 			expectKeysInData: true,
 		},
 		{
 			name: "type-modal",
 			fieldRaw: map[string]any{
-				"type": "modal",
+				"type": uicustommessages.ModalMessageType,
 			},
 		},
 		{
@@ -222,7 +222,7 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 		"title":         "title",
 		"message":       "message",
 		"authenticated": "true",
-		"type":          "banner",
+		"type":          uicustommessages.BannerMessageType,
 		"start_time":    "2023-01-01T00:00:00Z",
 		"end_time":      "2100-01-01T00:00:00Z",
 		"options":       map[string]any{},
@@ -398,7 +398,7 @@ func TestHandleReadCustomMessage(t *testing.T) {
 		Title:         "title",
 		Message:       "message",
 		Authenticated: false,
-		Type:          "modal",
+		Type:          uicustommessages.ModalMessageType,
 		StartTime:     time.Now().Add(-1 * time.Hour),
 		EndTime:       time.Now().Add(time.Hour),
 		Options:       make(map[string]any),
@@ -540,7 +540,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			"title":         "title",
 			"message":       "message",
 			"authenticated": "true",
-			"type":          "modal",
+			"type":          uicustommessages.ModalMessageType,
 			"start_time":    startTime,
 			"end_time":      endTime,
 			"link": map[string]any{
@@ -559,14 +559,14 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 
 	// Try to update an existing custom message
 	fieldData.Raw["id"] = "xyz"
-	fieldData.Raw["type"] = "banner"
+	fieldData.Raw["type"] = uicustommessages.BannerMessageType
 
 	resp, err = backend.handleUpdateCustomMessage(nsCtx, &logical.Request{}, fieldData)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
 	assert.Contains(t, resp.Data, "data")
-	assert.Equal(t, "banner", resp.Data["data"].(map[string]any)["type"])
+	assert.Equal(t, uicustommessages.BannerMessageType, resp.Data["data"].(map[string]any)["type"])
 
 	testcases := []struct {
 		name string

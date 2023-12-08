@@ -19,7 +19,7 @@ func TestEntryFindMessages(t *testing.T) {
 			Authenticated: true,
 		},
 		"modal": {
-			Type: "modal",
+			Type: ModalMessageType,
 		},
 		"active": {
 			StartTime: time.Now().Add(-1 * time.Hour),
@@ -45,7 +45,7 @@ func TestEntryFindMessages(t *testing.T) {
 				Messages: testMessagesMap,
 			},
 			filter: FindFilter{
-				messageType: "modal",
+				messageType: ModalMessageType,
 			},
 			expectResultsLen: 1,
 		},
@@ -55,7 +55,7 @@ func TestEntryFindMessages(t *testing.T) {
 				Messages: testMessagesMap,
 			},
 			filter: FindFilter{
-				messageType: "banner",
+				messageType: BannerMessageType,
 			},
 			expectResultsLen: 0,
 		},
@@ -77,12 +77,12 @@ func TestEntryCreateMessage(t *testing.T) {
 		testValidMessage = Message{
 			StartTime: time1,
 			EndTime:   time2,
-			Type:      "banner",
+			Type:      BannerMessageType,
 		}
 		testInvalidTimesMessage = Message{
 			StartTime: time2,
 			EndTime:   time1,
-			Type:      "banner",
+			Type:      BannerMessageType,
 		}
 		testInvalidTypeMessage = Message{
 			StartTime: time1,
@@ -176,12 +176,12 @@ func TestEntryUpdateMessage(t *testing.T) {
 		testValidMessage = Message{
 			StartTime: time.Now(),
 			EndTime:   time.Now().Add(time.Hour),
-			Type:      "banner",
+			Type:      BannerMessageType,
 		}
 		testInvalidTimesMessage = Message{
 			StartTime: time.Now(),
 			EndTime:   time.Now().Add(-1 * time.Hour),
-			Type:      "banner",
+			Type:      BannerMessageType,
 		}
 		testInvalidTypeMessage = Message{
 			StartTime: time.Now(),
