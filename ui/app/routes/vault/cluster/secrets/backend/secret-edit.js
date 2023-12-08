@@ -87,12 +87,8 @@ export default Route.extend({
         // if no secret param redirect to the create route
         // if secret param they are either viewing or editing secret so navigate to the details route
         return !secret
-          ? this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id)
-          : this.router.transitionTo(
-              'vault.cluster.secrets.backend.kv.secret.details',
-              secretEngine.id,
-              secret
-            );
+          ? this.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id)
+          : this.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secretEngine.id, secret);
       }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
