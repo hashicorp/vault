@@ -44,7 +44,7 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   @attr('array', {
     subText: 'Deployment environments where the environment variables are available.',
     editType: 'checkboxList',
-    possibleValues: ['deployment', 'preview', 'production'],
+    possibleValues: ['development', 'preview', 'production'],
     defaultValue: () => [],
   })
   deploymentEnvironments;
