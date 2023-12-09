@@ -40,6 +40,7 @@
         {{#each @attr.options.possibleValues as |option|}}
           <G.Checkbox::Field
             class={{if this.validationError "has-error-border"}}
+            checked={{includes option (get @model this.valuePath)}}
             @value={{option}}
             @id={{option}}
             {{on "change" this.handleChecklist}}

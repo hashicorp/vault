@@ -131,6 +131,8 @@ export default function (server) {
       const { maskedParams } = findDestination(type);
       if (maskedParams.includes(camelize(attr))) {
         apiResponse[attr] = request[attr] === '' ? '' : '*****';
+      } else {
+        apiResponse[attr] = request[attr];
       }
     }
     const data = { ...apiResponse, type, name };

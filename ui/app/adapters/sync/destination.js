@@ -28,6 +28,11 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
       const [, newValue] = snapshot.changedAttributes()[attr];
       data[decamelize(attr)] = newValue;
     }
+    // TODO come back to
+    // changed attributes doesn't track arrays, manually add attr
+    if (Object.keys(snapshot.serialize()).includes('deployment_environments')) {
+      data['deployment_environments'] = snapshot.serialize()['deployment_environments'];
+    }
     return this.ajax(`${this.buildURL(modelName)}/${name}`, 'PATCH', { data });
   }
 

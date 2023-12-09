@@ -13,7 +13,7 @@ import { Response } from 'miragejs';
 import { click, render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
-import { underscore } from '@ember/string';
+import { decamelize, underscore } from '@ember/string';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndEdit', function (hooks) {
@@ -33,16 +33,41 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     };
   });
 
-  test('it navigates back on cancel', async function (assert) {
-    assert.expect(1);
-    const type = SYNC_DESTINATIONS[0].type;
+  test('create: it renders and navigates back to create on cancel', async function (assert) {
+    assert.expect(2);
+    const { type } = SYNC_DESTINATIONS[0];
     this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
 
     await this.renderFormComponent();
-
+    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Select Destination Create Destination');
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
     assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.create on cancel');
+  });
+
+  test('edit: it renders and navigates back to details on cancel', async function (assert) {
+    assert.expect(4);
+    const type = SYNC_DESTINATIONS[0].type;
+    const data = this.server.create('sync-destination', type);
+    const id = `${type}/${data.name}`;
+    data.id = id;
+    this.store.pushPayload(`sync/destinations/${type}`, {
+      modelName: `sync/destinations/${type}`,
+      ...data,
+    });
+    this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
+
+    await this.renderFormComponent();
+    assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destination Edit Destination');
+    assert.dom('h2').hasText('Credentials', 'renders credentials section on edit');
+    assert
+      .dom('p.hds-foreground-faint')
+      .hasText(
+        'Connection credentials are sensitive information and the value cannot be read. Enable the input to update.'
+      );
+    await click(PAGE.cancelButton);
+    const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.destination');
+    assert.true(transition, 'transitions to vault.cluster.sync.secrets.destinations.destination on cancel');
   });
 
   test('it renders API errors', async function (assert) {
@@ -76,7 +101,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
 
-    module(`destination: ${type}`, function (hooks) {
+    module(`create destination: ${type}`, function (hooks) {
       hooks.beforeEach(function () {
         this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
       });
@@ -139,6 +164,73 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           const { message } = validations[attr].find((v) => v.type === 'presence');
           assert.dom(PAGE.validation(attr)).hasText(message, `renders validation: ${message}`);
         }
+      });
+    });
+  }
+
+  const EDITABLE_FIELDS = {
+    'aws-sm': ['accessKeyId', 'secretAccessKey'],
+    'azure-kv': ['clientId', 'clientSecret'],
+    'gcp-sm': ['credentials'],
+    gh: ['accessToken'],
+    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'], // TODO confirm team_id editable
+  };
+  // module runs for each destination type
+  for (const destination of SYNC_DESTINATIONS) {
+    const { type, maskedParams } = destination;
+    module(`edit destination: ${type}`, function (hooks) {
+      hooks.beforeEach(function () {
+        this.data = this.server.create('sync-destination', type);
+        const id = `${type}/${this.data.name}`;
+        this.data.id = id;
+        this.store.pushPayload(`sync/destinations/${type}`, {
+          modelName: `sync/destinations/${type}`,
+          ...this.data,
+        });
+        this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
+      });
+
+      test('it renders destination form and PATCH updates a destination', async function (assert) {
+        const disabledAssertions = this.model.formFields.filter((f) => f.options.editDisabled).length;
+        assert.expect(5 + disabledAssertions);
+        const editable = EDITABLE_FIELDS[this.model.type];
+        this.server.patch(`sys/sync/destinations/${type}/${this.data.name}`, (schema, req) => {
+          const payload = JSON.parse(req.requestBody);
+          assert.ok(true, `makes request: PATCH sys/sync/destinations/${type}/${this.data.name}`);
+          const payloadKeys = Object.keys(payload);
+          const expectedKeys = editable.map((k) => decamelize(k));
+          assert.propEqual(payloadKeys, expectedKeys, 'payload only contains editable attrs');
+          return { payload };
+        });
+
+        await this.renderFormComponent();
+        assert.dom(PAGE.title).hasTextContaining(`Edit ${this.model.name}`);
+
+        for (const attr of this.model.formFields) {
+          // Enable inputs with sensitive values
+          if (maskedParams.includes(attr.name)) {
+            await click(PAGE.form.enableInput(attr.name));
+          }
+          if (editable.includes(attr.name)) {
+            await PAGE.form.fillInByAttr(attr.name, `new-${attr.name}-value`);
+          } else {
+            assert.dom(PAGE.inputByAttr(attr.name)).isDisabled(`${attr.name} is disabled`);
+          }
+        }
+
+        await click(PAGE.saveButton);
+        const actualArgs = this.transitionStub.lastCall.args;
+        const expectedArgs = [
+          'vault.cluster.sync.secrets.destinations.destination.details',
+          type,
+          this.data.name,
+        ];
+        assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
+        assert.propEqual(
+          this.clearDatasetStub.lastCall.args,
+          ['sync/destination'],
+          'Store dataset is cleared on create success'
+        );
       });
     });
   }
