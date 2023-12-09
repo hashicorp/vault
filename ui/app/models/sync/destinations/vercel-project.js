@@ -10,8 +10,6 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
-  accessToken: [{ type: 'presence', message: 'Access token is required.' }],
-  projectId: [{ type: 'presence', message: 'Project ID is required.' }],
   deploymentEnvironments: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
 const displayFields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];

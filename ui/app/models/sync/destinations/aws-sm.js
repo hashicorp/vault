@@ -6,17 +6,12 @@
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import { withModelValidations } from 'vault/decorators/model-validations';
 
-const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
-};
 const displayFields = ['name', 'region', 'accessKeyId', 'secretAccessKey'];
 const formFieldGroups = [
   { default: ['name', 'region'] },
   { Credentials: ['accessKeyId', 'secretAccessKey'] },
 ];
-@withModelValidations(validations)
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAwsSecretsManagerModel extends SyncDestinationModel {
   @attr('string', {

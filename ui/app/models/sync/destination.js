@@ -6,8 +6,14 @@
 import Model, { attr } from '@ember-data/model';
 import { findDestination } from 'vault/helpers/sync-destinations';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
 // Base model for all secret sync destination types
+const validations = {
+  name: [{ type: 'presence', message: 'Name is required.' }],
+};
+
+@withModelValidations(validations)
 export default class SyncDestinationModel extends Model {
   @attr('string', { subText: 'Specifies the name for this destination.', editDisabled: true }) name;
   @attr type;
