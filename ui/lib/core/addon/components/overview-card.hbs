@@ -11,7 +11,7 @@
   ...attributes
 >
   <div class="flex row-wrap space-between has-bottom-margin-m" data-test-overview-card={{@cardTitle}}>
-    <h3 class="has-text-weight-bold is-size-5">{{@cardTitle}}</h3>
+    <p class="has-text-weight-bold is-size-5" data-test-overview-card-title={{@cardTitle}}>{{@cardTitle}}</p>
     {{#if @actionText}}
       <Hds::Link::Standalone
         @icon={{or @actionIcon "chevron-right"}}
@@ -23,6 +23,9 @@
       />
     {{/if}}
   </div>
-  <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>
+  <p
+    class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}"
+    data-test-overview-card-subtitle={{@cardTitle}}
+  >{{@subText}}</p>
   {{yield}}
 </Hds::Card::Container>
