@@ -84,7 +84,7 @@
 }
 
 .masked-input.masked .masked-value {
-  color: $grey-light;
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input .input:focus + .masked-input-toggle {
