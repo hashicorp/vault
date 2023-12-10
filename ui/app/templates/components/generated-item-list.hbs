@@ -19,7 +19,7 @@
 {{#let (tabs-for-auth-section @methodModel "authConfig" @paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-      <nav class="tabs">
+      <nav class="tabs" aria-label="navigation to manage {{@methodModel.id}}">
         <ul>
           {{#each tabs as |tab|}}
             <li>

@@ -6,7 +6,7 @@
 {{#unless @uploadOnly}}
   <div class="level is-mobile">
     <div class="level-left">
-      <label for="input-{{this.elementId}}" class="has-text-weight-semibold" data-test-text-file-label>
+      <label id="text-file-input-label" class="has-text-weight-semibold" data-test-text-file-label>
         {{or @label "File"}}
         {{#if @helpText}}
           <InfoTooltip>
@@ -35,10 +35,10 @@
 <div class="field text-file box is-fullwidth is-marginless is-shadowless is-paddingless" data-test-component="text-file">
   {{#if this.showTextArea}}
     <Hds::Form::MaskedInput::Field
-      id="input-{{this.elementId}}"
       @value={{this.content}}
       @isMultiline={{true}}
       {{on "input" this.handleTextInput}}
+      aria-labelledby="text-file-input-label"
       data-test-text-file-textarea
       as |F|
     >
@@ -46,8 +46,8 @@
     </Hds::Form::MaskedInput::Field>
   {{else}}
     <Hds::Form::FileInput::Field
-      id="file-input-{{this.elementId}}"
       {{on "change" this.handleFileUpload}}
+      aria-labelledby="text-file-input-label"
       data-test-text-file-input
       as |F|
     >

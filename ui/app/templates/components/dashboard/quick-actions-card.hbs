@@ -28,7 +28,7 @@
     </div>
 
     {{#if this.selectedEngine}}
-      <h4 class="title is-6" data-test-card-subtitle="secrets-engines">Action</h4>
+      <h4 id="action-select-title" class="title is-6" data-test-card-subtitle="secrets-engines">Action</h4>
       <Select
         @name="action-select"
         @options={{this.actionOptions}}
@@ -36,6 +36,7 @@
         @selectedValue={{this.selectedAction}}
         @onChange={{this.setSelectedAction}}
         @noDefault={{true}}
+        aria-labelledby="action-select-title"
       />
 
       {{#if this.searchSelectParams.model}}

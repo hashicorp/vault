@@ -84,7 +84,7 @@
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu @name="auth-backend-nav">
-            <nav class="menu">
+            <nav class="menu" aria-label="navigation for managing access method {{method.id}}">
               <ul class="menu-list">
                 <li>
                   <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>

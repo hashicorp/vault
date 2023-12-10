@@ -33,6 +33,7 @@
           @value={{data.value}}
           name={{concat this.elementId "-" index}}
           id={{concat this.elementId "-" index}}
+          aria-label="List item {{index}}"
           {{on "keyup" (action "inputChanged" index)}}
           {{on "change" (action "inputChanged" index)}}
         />
