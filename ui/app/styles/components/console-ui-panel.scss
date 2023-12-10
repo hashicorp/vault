@@ -50,6 +50,10 @@ $console-close-height: 35px;
     margin-left: $spacing-20;
     padding: $spacing-12 $spacing-20;
   }
+
+  .console-ui-panel-intro {
+    color: var(--token-color-foreground-disabled);
+  }
 }
 
 .console-ui-input {
@@ -83,6 +87,7 @@ $console-close-height: 35px;
   padding-right: $spacing-36;
   position: relative;
   background-color: rgba(#000, 0);
+  color: var(--token-color-foreground-disabled);
   &:hover {
     background-color: rgba(#000, 0.5);
   }
@@ -91,6 +96,7 @@ $console-close-height: 35px;
 .console-ui-alert {
   margin-left: calc(#{$spacing-20} - 0.33rem);
   position: relative;
+  color: var(--token-color-foreground-disabled);
 
   svg {
     position: absolute;
