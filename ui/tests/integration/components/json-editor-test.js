@@ -10,6 +10,7 @@ import { render, fillIn, find, waitUntil, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(jsonEditor);
 
@@ -29,6 +30,12 @@ module('Integration | Component | json-editor', function (hooks) {
     this.set('json_blob', JSON_BLOB);
     this.set('bad_json_blob', BAD_JSON_BLOB);
     this.set('hashi-read-only-theme', 'hashi-read-only auto-height');
+    setRunOptions({
+      rules: {
+        // CodeMirror has a secret textarea without a label that causes this problem
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
