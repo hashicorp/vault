@@ -19,6 +19,7 @@
   <Hds::Button
     class="hds-side-nav__icon-button"
     {{on "click" (action "fullscreen")}}
+    title={{if this.isFullscreen "minimize" "maximize"}}
     data-test-tool-tip-trigger
     @icon={{if this.isFullscreen "minimize" "maximize"}}
     @text={{if this.isFullscreen "Minimize" "Maximize"}}
