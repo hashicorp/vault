@@ -562,10 +562,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 		c.UI.Error(fmt.Sprintf("Error setting up seal: %v", setSealResponse.sealConfigError))
 		return 1
 	}
-	if setSealResponse.unwrapSeal != nil {
-		c.UI.Error("Recovery mode cannot be started with configuration for seal migration")
-		return 1
-	}
 	barrierSeal = setSealResponse.barrierSeal
 
 	// Ensure that the seal finalizer is called, even if using verify-only
@@ -580,6 +576,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
+		UnwrapSeal:   setSealResponse.unwrapSeal,
 		LogLevel:     config.LogLevel,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
