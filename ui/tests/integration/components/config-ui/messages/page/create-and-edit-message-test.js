@@ -131,6 +131,10 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
     assert.dom(PAGE.field('linkTitle')).exists();
     assert.dom(PAGE.field('linkHref')).exists();
-    // TODO: VAULT-21534 Format the start and end time values to datetime-local so that it gets prepopulated with the correct values.
+    await click('#specific-date');
+    assert
+      .dom(PAGE.input('startTime'))
+      .hasValue(format(addDays(startOfDay(new Date(this.message.startTime)), 1), localDateTimeString));
+    assert.dom(PAGE.input('endTime')).hasValue(format(new Date(this.message.endTime), localDateTimeString));
   });
 });

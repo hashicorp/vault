@@ -4,32 +4,14 @@
  */
 
 import ApplicationAdapter from '../application';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default class MessageAdapter extends ApplicationAdapter {
-  getCustomMessagesUrl(id) {
-    let url = `${this.buildURL()}/config/ui/custom-messages`;
-
-    if (id) {
-      url = url + '/' + encodePath(id);
-    }
-    return url;
+  pathForType() {
+    return 'config/ui/custom-messages';
   }
 
-  query(store, type, query) {
+  query(store, type, query, recordArray, adapterOptions) {
     const { authenticated } = query;
-
-    return this.ajax(this.getCustomMessagesUrl(), 'GET', { data: { authenticated, list: true } });
-  }
-
-  deleteRecord(store, type, snapshot) {
-    const { id } = snapshot;
-    return this.ajax(this.getCustomMessagesUrl(id), 'DELETE');
-  }
-
-  createRecord(store, type, snapshot) {
-    return this.ajax(this.getCustomMessagesUrl(), 'POST', { data: this.serialize(snapshot) }).then((resp) => {
-      return resp;
-    });
+    return super.query(store, type, { authenticated, list: true }, recordArray, adapterOptions);
   }
 }

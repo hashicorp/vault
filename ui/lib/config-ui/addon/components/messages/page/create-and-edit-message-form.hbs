@@ -116,7 +116,7 @@
         </Hds::Text::Body>
         <Input
           @type="datetime-local"
-          @value={{@message.startTime}}
+          @value={{this.startTime}}
           class="input has-top-margin-xs is-auto-width is-block"
           name="startTime"
           data-test-input="startTime"
@@ -136,7 +136,7 @@
               <div class="control">
                 <Input
                   @type="datetime-local"
-                  @value={{@message.endTime}}
+                  @value={{this.endTime}}
                   class="input has-top-margin-xs is-auto-width"
                   name="endTime"
                   data-test-input="endTime"

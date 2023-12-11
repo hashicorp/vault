@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
-import { format } from 'date-fns';
+import { format, addDays, startOfDay } from 'date-fns';
 
 import { localDateTimeString } from 'vault/models/config-ui/message';
 
@@ -30,6 +30,22 @@ export default class MessagesList extends Component {
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
+  @tracked startTime;
+  @tracked endTime;
+
+  constructor() {
+    super(...arguments);
+
+    if (this.args.message.startTime) {
+      this.startTime = format(
+        addDays(startOfDay(new Date(this.args.message.startTime) || this.startTime), 1),
+        localDateTimeString
+      );
+    }
+    if (this.args.message.endTime) {
+      this.endTime = format(new Date(this.args.message.endTime), localDateTimeString);
+    }
+  }
 
   get breadcrumbs() {
     const authenticated = this.args.authenticated === undefined ? true : this.args.authenticated;
@@ -46,7 +62,8 @@ export default class MessagesList extends Component {
 
   @action
   updateDateTime(evt) {
-    this.args.message[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
+    this[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
+    this.args.message[evt.target.name] = new Date(evt.target.value).toISOString();
   }
 
   @task
