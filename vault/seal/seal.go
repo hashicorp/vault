@@ -719,7 +719,6 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}
 
 	decrypt := func(sealWrapper *SealWrapper) {
-		resultWg.Add(1)
 		pt, oldKey, err := a.tryDecrypt(ctx, sealWrapper, blobInfoMap, options)
 		reportResult(sealWrapper.Name, pt, oldKey, err)
 	}
@@ -746,11 +745,13 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
+	resultWg.Add(1)
 	go decrypt(first)
 	for _, sealWrapper := range wrappersByPriority {
 		sealWrapper := sealWrapper
 		if sealWrapper != first {
 			timer := time.AfterFunc(wrapperDecryptHighPriorityHeadStart, func() {
+				resultWg.Add(1)
 				decrypt(sealWrapper)
 			})
 			defer timer.Stop()
