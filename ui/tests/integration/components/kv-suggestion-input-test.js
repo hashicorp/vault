@@ -20,6 +20,7 @@ module('Integration | Component | kv-suggestion-input', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.label = 'Input something';
     this.mountPath = 'secret/';
     this.keys = ['foo/', 'my-secret'];
     const response = () => ({ data: { keys: this.keys } });
@@ -27,7 +28,7 @@ module('Integration | Component | kv-suggestion-input', function (hooks) {
     this.server.get('/:mount/metadata/*', response);
     return render(hbs`
       <KvSuggestionInput
-        @label="Input something"
+        @label={{this.label}}
         @subText="Suggestions will display"
         @value={{this.secretPath}}
         @mountPath={{this.mountPath}}
@@ -39,6 +40,9 @@ module('Integration | Component | kv-suggestion-input', function (hooks) {
   test('it should render label and sub text', async function (assert) {
     assert.dom('label').hasText('Input something', 'Label renders');
     assert.dom('[data-test-label-subtext]').hasText('Suggestions will display', 'Label subtext renders');
+    this.set('label', null);
+    await settled();
+    assert.dom('label').doesNotExist('Label is hidden when arg is not provided');
   });
 
   test('it should disable input when mountPath is not provided', async function (assert) {

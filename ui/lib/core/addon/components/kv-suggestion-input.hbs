@@ -3,7 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 <div ...attributes {{did-update this.updateSuggestions @mountPath}}>
-  <FormFieldLabel @label={{@label}} @subText={{@subText}} />
+  {{#if @label}}
+    <FormFieldLabel @label={{@label}} @subText={{@subText}} />
+  {{/if}}
   <FilterInput
     id={{this.inputId}}
     placeholder="Path to secret"
