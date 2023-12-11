@@ -221,6 +221,11 @@ func (c *AgentCommand) Run(args []string) int {
 	}
 	c.logger = l
 
+	// release log gate if the disable-gated-logs flag is set
+	if c.logFlags.flagDisableGatedLogs {
+		c.logGate.Flush()
+	}
+
 	infoKeys := make([]string, 0, 10)
 	info := make(map[string]string)
 	info["log level"] = config.LogLevel
