@@ -65,17 +65,24 @@ func Backend(_ *logical.BackendConfig) *backend {
 		Invalidate:        b.invalidate,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
+		// To use rotate root built-in functionality, make sure you include a call to CheckQueue in this implementation
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
 			if b.WriteSafeReplicationState() {
 				return b.rotateExpiredStaticCreds(ctx, req)
 			}
 			return nil
+
+			b.CheckQueue(ctx, req)
 		},
 		BackendType: logical.TypeLogical,
+
+		RotatePassword: rp,
 	}
 
 	return &b
 }
+
+func rp(ctx context.Context, request *logical.Request) error {}
 
 type backend struct {
 	*framework.Backend

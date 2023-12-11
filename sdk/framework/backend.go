@@ -18,11 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+	cron "github.com/robfig/cron/v3"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -110,8 +111,10 @@ type Backend struct {
 	RunningVersion string
 
 	// Functions for rotating the root password of a backend if it exists
-	RotatePassword            func(context.Context, *logical.Request) error           // specific backend developer responsible for handling basically everything
-	RotatePasswordGetSchedule func(context.Context, *logical.Request) (string, error) // schedule string in cron format
+	RotatePassword             func(context.Context, *logical.Request) error                                         // specific backend developer responsible for handling basically everything
+	RotatePasswordGetSchedule  func(context.Context, *logical.Request) (*RootSchedule, error)                        // schedule string in cron format
+	RotatePasswordLeaseStorage func(ctx context.Context, req *logical.Request, name string, lease interface{}) error // function that plugin developer writes that can store a value in request storage
+	Priority                   int64                                                                                 // unix timestamp of next root password rotation time (technically the leading edge of the next window)
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -120,10 +123,39 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
-type RotationItem struct {
-	Key      string // arbitrary reference the specific backend will understand
-	Schedule string
-	Window   string
+// This should be the schedule parts of logical/database/staticAccount
+type RootSchedule struct {
+	Schedule *cron.SpecSchedule `json:"schedule"`
+	Window   int                `json:"schedule_window"` // seconds of window
+}
+
+func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
+	return true
+}
+
+//type RotationItem struct {
+//	Key              string // arbitrary reference the specific backend will understand
+//	NextRotationTime int64  // priority
+//}
+
+//func (ri *RotationItem) Now() bool {
+//	return time.Now().Unix() == ri.NextRotationTime
+//}
+
+// this has the periodic func signature since we want to run it, uh, periodically
+func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
+	rs, err := b.RotatePasswordGetSchedule(ctx, req)
+
+	if rs.IsInsideRotationWindow(b.Priority) {
+		err := b.RotatePassword(ctx, req) // this function should pick a new password (if applicable) and store it how the plugin developer would like. The developer should ensure that if there is an error, the storage is reverted
+		if err != nil {
+			// WALEntry here somewhere
+			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff
+		} else {
+			b.Priority = rs.NextRotationTimeFromInput()
+		}
+
+	}
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
