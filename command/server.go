@@ -1094,6 +1094,11 @@ func (c *ServerCommand) Run(args []string) int {
 	c.logger = l
 	c.allLoggers = append(c.allLoggers, l)
 
+	// flush logs right away if the server is started with the disable-gated-logs flag
+	if c.logFlags.flagDisableGatedLogs {
+		c.flushLog()
+	}
+
 	// reporting Errors found in the config
 	for _, cErr := range configErrors {
 		c.logger.Warn(cErr.String())
