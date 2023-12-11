@@ -23,7 +23,7 @@ import { v4 as uuidv4 } from 'uuid';
  * // All properties are passed in via query params.
  * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}}/>```
  *
- * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
+ * @param {string} [wrappedToken] - A wrapped token.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
