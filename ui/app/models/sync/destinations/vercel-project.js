@@ -11,6 +11,13 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
+  teamId: [
+    {
+      validator: (model) => (Object.keys(model.changedAttributes()).includes('teamId') ? false : true),
+      message: 'Team ID should only be updated if the project was transferred to another account.',
+      level: 'warn',
+    },
+  ],
   // getter/setter for the deploymentEnvironments model attribute
   deploymentEnvironmentsArray: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
