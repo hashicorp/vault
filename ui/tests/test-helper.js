@@ -18,7 +18,7 @@ preloadAssets(manifest).then(() => {
   setup(QUnit.assert);
   setApplication(Application.create(config.APP));
   setupGlobalA11yHooks(() => true, {
-    helpers: ['click'],
+    helpers: ['render'],
   });
   setRunOptions({
     runOnly: {
