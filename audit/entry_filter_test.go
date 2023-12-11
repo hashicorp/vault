@@ -218,7 +218,7 @@ func TestEntryFilter_Process_FilterSuccess(t *testing.T) {
 func TestEntryFilter_Process_FilterFail(t *testing.T) {
 	t.Parallel()
 
-	l, err := NewEntryFilter("mount_type == john")
+	l, err := NewEntryFilter("mount_type == john and operation == create and namespace == root")
 	require.NoError(t, err)
 
 	a, err := NewEvent(RequestType)
