@@ -86,7 +86,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderFormComponent();
 
-        assert.dom(PAGE.title).hasTextContaining(`Create destination for ${name}`);
+        assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
         for (const attr of this.model.formFields) {
           assert.dom(PAGE.inputByAttr(attr.name)).exists();
         }

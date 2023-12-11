@@ -32,6 +32,13 @@ export const PAGE = {
       submit: '[data-test-sync-submit]',
       cancel: '[data-test-sync-cancel]',
     },
+    list: {
+      icon: '[data-test-destination-icon]',
+      name: '[data-test-destination-name]',
+      type: '[data-test-destination-type]',
+      deleteAction: '[data-test-delete]',
+      create: '[data-test-create-destination]',
+    },
   },
   overview: {
     createDestination: '[data-test-create-destination]',

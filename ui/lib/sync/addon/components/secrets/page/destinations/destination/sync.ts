@@ -40,6 +40,11 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     return this.secretPath && keyIsFolder(this.secretPath);
   }
 
+  willDestroy(): void {
+    this.store.clearDataset('sync/association');
+    super.willDestroy();
+  }
+
   // unable to use built-in fetch functionality of SearchSelect since we need to filter by kv type
   async fetchMounts() {
     try {

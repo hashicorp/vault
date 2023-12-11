@@ -5,12 +5,13 @@
 
 export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
-  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbs: '[data-test-breadcrumbs]',
   title: '[data-test-page-title]',
   headerContainer: 'header.page-header',
   icon: (name) => `[data-test-icon="${name}"]`,
   tab: (name) => `[data-test-tab="${name}"]`,
+  filter: (name) => `[data-test-filter="${name}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
   emptyStateTitle: '[data-test-empty-state-title]',
@@ -28,6 +29,7 @@ export const SELECTORS = {
     option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
+    removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
     title: (title) => `[data-test-overview-card="${title}"] h3`,

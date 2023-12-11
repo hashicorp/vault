@@ -118,7 +118,9 @@
     <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
+        @subText={{@attr.options.subText}}
         @helpText={{@attr.options.helpText}}
+        @docLink={{@attr.options.docLink}}
         @onChange={{this.setFile}}
         @validationError={{this.validationError}}
       />

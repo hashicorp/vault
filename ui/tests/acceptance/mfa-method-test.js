@@ -61,7 +61,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.create',
       'New method link transitions to create route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
 
     const methods = this.getMethods();
     const model = this.store.peekRecord('mfa-method', methods[0].id);
@@ -81,7 +81,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.method.index',
       'Details more menu action transitions to method route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
     assert.strictEqual(
@@ -140,7 +140,7 @@ module('Acceptance | mfa-method', function (hooks) {
         const value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
         assert.dom(`[data-test-value-div="${label}"]`).hasText(value, `${label} value renders`);
       });
-      await click('.breadcrumb a');
+      await click('.hds-breadcrumb a');
     }
 
     await click('[data-test-mfa-method-list-item]');
@@ -203,7 +203,7 @@ module('Acceptance | mfa-method', function (hooks) {
         'vault.cluster.access.mfa.methods.method.index',
         `${type} method is displayed on save`
       );
-      await click('.breadcrumb a');
+      await click('.hds-breadcrumb a');
       assert
         .dom('[data-test-mfa-method-list-item]')
         .exists({ count: methodCount + index + 1 }, `List updates with new ${type} method`);
