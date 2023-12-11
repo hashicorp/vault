@@ -3,16 +3,20 @@
 
 scenario "autopilot" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    artifact_type   = ["bundle", "package"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
-    // NOTE: when backporting, make sure that our initial versions are less than that
-    // release branch's version.
-    initial_version = ["1.11.12", "1.12.11", "1.13.6", "1.14.2"]
-    seal            = ["awskms", "shamir"]
+    arch            = global.archs
+    artifact_source = global.artifact_sources
+    artifact_type   = global.artifact_types
+    consul_version  = global.consul_versions
+    distro          = global.distros
+    edition         = global.editions
+    initial_version = global.upgrade_initial_versions
+    seal            = global.seals
     seal_ha_beta    = ["true", "false"]
+
+    # Autopilot wasn't available before 1.11.x
+    exclude {
+      initial_version = ["1.8.12", "1.9.10", "1.10.11"]
+    }
 
     # Our local builder always creates bundles
     exclude {
@@ -24,6 +28,12 @@ scenario "autopilot" {
     exclude {
       arch    = ["arm64"]
       edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    }
+
+    # PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    exclude {
+      seal    = ["pkcs11"]
+      edition = ["ce", "ent", "ent.fips1402"]
     }
   }
 
@@ -78,20 +88,25 @@ scenario "autopilot" {
     }
   }
 
-  step "create_seal_key" {
-    module = "seal_key_${matrix.seal}"
-
-    variables {
-      cluster_id  = step.create_vpc.cluster_id
-      common_tags = global.tags
-    }
-  }
-
   step "read_license" {
     module = module.read_license
 
     variables {
       file_name = global.vault_license_path
+    }
+  }
+
+  step "create_seal_key" {
+    module     = "seal_${matrix.seal}"
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      cluster_id  = step.create_vpc.id
+      common_tags = global.tags
     }
   }
 
@@ -109,6 +124,23 @@ scenario "autopilot" {
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "create_vault_cluster_upgrade_targets" {
+    module     = module.target_ec2_instances
+    depends_on = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id         = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      common_tags    = global.tags
+      cluster_name   = step.create_vault_cluster_targets.cluster_name
+      seal_key_names = step.create_seal_key.resource_names
+      vpc_id         = step.create_vpc.id
     }
   }
 
@@ -133,8 +165,8 @@ scenario "autopilot" {
         edition = matrix.edition
         version = matrix.initial_version
       }
+      seal_attributes = step.create_seal_key.attributes
       seal_ha_beta    = matrix.seal_ha_beta
-      seal_key_name   = step.create_seal_key.resource_name
       seal_type       = matrix.seal
       storage_backend = "raft"
       storage_backend_addl_config = {
@@ -192,23 +224,6 @@ scenario "autopilot" {
     }
   }
 
-  step "create_vault_cluster_upgrade_targets" {
-    module     = module.target_ec2_instances
-    depends_on = [step.create_vpc]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      ami_id         = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      common_tags    = global.tags
-      cluster_name   = step.create_vault_cluster_targets.cluster_name
-      seal_key_names = step.create_seal_key.resource_names
-      vpc_id         = step.create_vpc.id
-    }
-  }
-
   step "upgrade_vault_cluster_with_autopilot" {
     module = module.vault_cluster
     depends_on = [
@@ -236,7 +251,7 @@ scenario "autopilot" {
       packages                    = concat(global.packages, global.distro_packages[matrix.distro])
       root_token                  = step.create_vault_cluster.root_token
       seal_ha_beta                = matrix.seal_ha_beta
-      seal_key_name               = step.create_seal_key.resource_name
+      seal_attributes             = step.create_seal_key.attributes
       seal_type                   = matrix.seal
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"
@@ -555,9 +570,9 @@ scenario "autopilot" {
     value       = step.create_vault_cluster.recovery_keys_hex
   }
 
-  output "seal_key_name" {
-    description = "The Vault cluster seal key name"
-    value       = step.create_seal_key.resource_name
+  output "seal_attributes" {
+    description = "The Vault cluster seal attributes"
+    value       = step.create_seal_key.attributes
   }
 
   output "unseal_keys_b64" {
