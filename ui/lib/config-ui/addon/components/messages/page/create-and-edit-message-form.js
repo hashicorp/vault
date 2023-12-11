@@ -15,12 +15,12 @@ import { localDateTimeString } from 'vault/models/config-ui/message';
 
 /**
  * @module Page::CreateAndEditMessageForm
- * Page::CreateAndEditMessageForm components are used to display list of messages.
+ * Page::CreateAndEditMessageForm components are used to display create and edit message form fields.
  * @example
  * ```js
- * <Page::CreateAndEditMessageForm @messages={{this.messages}}  />
+ * <Page::CreateAndEditMessageForm @messages={{this.messages}} @authenticated={{this.model.authenticated}}  />
  * ```
- * @param {array} messages - array message objects
+ * @param {model} message - message model to pass to form components
  */
 
 export default class MessagesList extends Component {
