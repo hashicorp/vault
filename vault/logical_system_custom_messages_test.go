@@ -405,7 +405,7 @@ func TestHandleReadCustomMessage(t *testing.T) {
 		Link:          nil,
 	}
 
-	message, err := backend.Core.customMessageManager.CreateMessage(nsCtx, *message)
+	message, err := backend.Core.customMessageManager.AddMessage(nsCtx, *message)
 	require.NoError(t, err)
 	require.NotNil(t, message)
 

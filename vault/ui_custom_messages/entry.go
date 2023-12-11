@@ -35,11 +35,11 @@ func (e *Entry) findMessages(filter FindFilter) []Message {
 	return result
 }
 
-// createMessage adds a custom message in the receiver Entry struct using the
+// addMessage adds a custom message in the receiver Entry struct using the
 // provided Message struct to populate its properties. If the either the
 // start/end times are invalid or the maximum number of messages already exists,
 // then the message is not added.
-func (e *Entry) createMessage(message *Message) error {
+func (e *Entry) addMessage(message *Message) error {
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
 		return err

@@ -154,7 +154,7 @@ func TestEntryCreateMessage(t *testing.T) {
 		// Count the number of messages to compare after the CreateMessage call.
 		previousMessageCount := len(testcase.messagesMap)
 
-		err := testEntry.createMessage(&testcase.message)
+		err := testEntry.addMessage(&testcase.message)
 		if testcase.expectedError {
 			assert.Error(t, err, testcase.name)
 			assert.Contains(t, err.Error(), testcase.expectedErrorKeyword)

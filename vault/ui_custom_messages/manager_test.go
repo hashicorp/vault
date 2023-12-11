@@ -347,7 +347,7 @@ func TestManagerCreateMessage(t *testing.T) {
 			testManager.view = testcase.storage
 		}
 
-		message, err := testManager.CreateMessage(nsCtx, testcase.message)
+		message, err := testManager.AddMessage(nsCtx, testcase.message)
 		testcase.errorAssertion(t, err, testcase.name)
 		testcase.messageAssertion(t, message, testcase.name)
 

@@ -421,7 +421,7 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		Options:       options,
 	}
 
-	message, err = b.Core.customMessageManager.CreateMessage(ctx, *message)
+	message, err = b.Core.customMessageManager.AddMessage(ctx, *message)
 	if err != nil {
 		return logical.ErrorResponse("failed to create custom message: %s", err), nil
 	}

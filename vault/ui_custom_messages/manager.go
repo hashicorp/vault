@@ -63,11 +63,11 @@ func (m *Manager) FindMessages(ctx context.Context, filters FindFilter) ([]Messa
 	return results, nil
 }
 
-// CreateMessage handles adding the provided Message in the current namespace.
+// AddMessage handles adding the provided Message in the current namespace.
 // A ID for the message is automatically generated and the ID field of the
 // returned Message struct is set to this value. If the maximum number of
 // messages already exists, then the message is not added.
-func (m *Manager) CreateMessage(ctx context.Context, message Message) (*Message, error) {
+func (m *Manager) AddMessage(ctx context.Context, message Message) (*Message, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 
@@ -76,7 +76,7 @@ func (m *Manager) CreateMessage(ctx context.Context, message Message) (*Message,
 		return nil, err
 	}
 
-	err = entry.createMessage(&message)
+	err = entry.addMessage(&message)
 	if err != nil {
 		return nil, err
 	}
