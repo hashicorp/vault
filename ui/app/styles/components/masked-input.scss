@@ -4,7 +4,7 @@
  */
 
 .masked-font {
-  color: $ui-gray-300;
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input {

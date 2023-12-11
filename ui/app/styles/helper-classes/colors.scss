@@ -92,7 +92,7 @@ select.has-error-border,
 }
 
 .has-text-success {
-  color: $green-500 !important;
+  color: var(--token-color-foreground-success) !important;
 }
 
 .has-text-highlight {
