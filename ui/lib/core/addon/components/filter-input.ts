@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -12,6 +12,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 interface Args {
   wait?: number; // defaults to 500
   autofocus?: boolean; // initially focus the input on did-insert
+  hideIcon?: boolean; // hide the search icon in the input
   onInput(value: string): void; // invoked with input value after debounce timer expires
 }
 

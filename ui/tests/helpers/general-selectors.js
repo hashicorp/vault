@@ -22,8 +22,10 @@ export const SELECTORS = {
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
+  inlineErrorMessage: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
   searchSelect: {
+    options: '.ember-power-select-option',
     option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
@@ -38,5 +40,9 @@ export const SELECTORS = {
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
     prev: '.hds-pagination-nav__arrow--direction-prev',
+  },
+  kvSuggestion: {
+    input: '[data-test-kv-suggestion-input]',
+    select: '[data-test-kv-suggestion-select]',
   },
 };
