@@ -13,6 +13,7 @@
     disabled={{not @mountPath}}
     @hideIcon={{true}}
     @onInput={{this.onInput}}
+    {{! used to trigger dropdown to open }}
     {{on "click" this.onInputClick}}
     data-test-kv-suggestion-input
   />
@@ -23,6 +24,7 @@
     @renderInPlace={{true}}
     @disabled={{not @mountPath}}
     @registerAPI={{fn (mut this.powerSelectAPI)}}
+    {{! hide trigger component and use API to toggle dropdown }}
     @triggerClass="is-hidden"
     @noMatchesMessage="No suggestions for this path"
     data-test-kv-suggestion-select
