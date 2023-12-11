@@ -9,9 +9,9 @@
   @breadcrumbs={{this.breadcrumbs}}
 />
 
-<form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-message-create-edit-form>
+<form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
-    <Hds::Text::Body @tag="p" class="has-bottom-margin-l">
+    <Hds::Text::Body @tag="p" class="has-bottom-margin-l" data-test-form-subtext>
       {{if @message.isNew "Create" "Edit"}}
       a custom message for all users when they access a Vault system via the UI.
     </Hds::Text::Body>
@@ -20,10 +20,17 @@
 
     {{#each @message.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
-        <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-m" as |G|>
+        <Hds::Form::Radio::Group
+          @layout="vertical"
+          @name="authenticated"
+          class="has-bottom-margin-m"
+          data-test-radio-group="authenticated"
+          as |G|
+        >
           <G.Legend>Where should we display this message?</G.Legend>
           <G.Radio::Field
             @value={{@message.authenticate}}
+            data-test-radio-field={{if @message.authenticated "authenticated"}}
             checked
             {{on "change" (fn (mut @message.authenticated) true)}}
             as |F|
@@ -31,20 +38,45 @@
             <F.Label>After the user logs in</F.Label>
             <F.HelperText>Display to users after they have successfully logged in to Vault. </F.HelperText>
           </G.Radio::Field>
-          <G.Radio::Field @value={{@message.authenticated}} {{on "change" (fn (mut @message.authenticated) false)}} as |F|>
+          <G.Radio::Field
+            @value={{@message.authenticated}}
+            data-test-radio-field={{unless @message.authenticated "unauthenticated"}}
+            {{on "change" (fn (mut @message.authenticated) false)}}
+            as |F|
+          >
             <F.Label>On the login page</F.Label>
             <F.HelperText>Display to users on the login page before they have authenticated.</F.HelperText>
           </G.Radio::Field>
         </Hds::Form::Radio::Group>
       {{else if (eq attr.name "type")}}
-        <Hds::Form::Radio::Group @layout="vertical" @name="type" class="has-bottom-margin-m" as |G|>
+        <Hds::Form::Radio::Group
+          @layout="vertical"
+          @name="type"
+          class="has-bottom-margin-m"
+          data-test-radio-group="type"
+          as |G|
+        >
           <G.Legend>Type</G.Legend>
-          <G.Radio::Field @id="modal-display-type" @value="banner" checked {{on "change" this.updateRadioValue}} as |F|>
+          <G.Radio::Field
+            @id="modal-display-type"
+            @value="banner"
+            checked={{eq @message.type "banner"}}
+            data-test-radio-field="banner"
+            {{on "change" this.updateRadioValue}}
+            as |F|
+          >
             <F.Label>Alert message</F.Label>
             <F.HelperText>A banner that appears on the top of every page to display brief but high-signal messages like an
               update or system alert.</F.HelperText>
           </G.Radio::Field>
-          <G.Radio::Field @id="banner-display-type" @value="modal" {{on "change" this.updateRadioValue}} as |F|>
+          <G.Radio::Field
+            @id="banner-display-type"
+            @value="modal"
+            checked={{eq @message.type "modal"}}
+            data-test-radio-field="modal"
+            {{on "change" this.updateRadioValue}}
+            as |F|
+          >
             <F.Label>Modal</F.Label>
             <F.HelperText>A pop-up window used to bring immediate attention for important notifications or actions.</F.HelperText>
           </G.Radio::Field>
@@ -61,7 +93,7 @@
               id="link-title"
               class="input"
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
-              data-test-link="title"
+              data-test-field="linkTitle"
             />
             <Input
               @type="text"
@@ -70,7 +102,7 @@
               id="link-href"
               class="input"
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
-              data-test-link="href"
+              data-test-field="linkHref"
             />
           </div>
         </div>
@@ -84,10 +116,10 @@
         <Input
           @type="datetime-local"
           class="input has-top-margin-xs is-auto-width is-block"
-          data-test-date="startTime"
           name="startTime"
           @value={{@message.startTime}}
           {{on "input" this.updateDateTime}}
+          data-test-input="startTime"
         />
       {{else if (eq attr.name "endTime")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
@@ -104,9 +136,9 @@
                 <Input
                   @type="datetime-local"
                   class="input has-top-margin-xs is-auto-width"
-                  data-test-link="title"
                   name="endTime"
                   {{on "input" this.updateDateTime}}
+                  data-test-input="endTime"
                 />
               </div>
             </F.HelperText>
@@ -130,6 +162,7 @@
       <Hds::Button
         @text="{{if @message.isNew 'Create' 'Edit'}} message"
         disabled={{(or (not @message.title) (not @message.message) (this.save.isRunning))}}
+        data-test-button="save"
         type="submit"
       />
 
