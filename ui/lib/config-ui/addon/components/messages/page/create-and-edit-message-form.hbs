@@ -3,30 +3,35 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::TabPageHeader @authenticated={{@authenticated}} @pageTitle="Create message" @breadcrumbs={{this.breadcrumbs}} />
+<Messages::TabPageHeader
+  @authenticated={{@authenticated}}
+  @pageTitle="{{if @message.isNew 'Create' 'Edit'}} message"
+  @breadcrumbs={{this.breadcrumbs}}
+/>
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-message-create-edit-form>
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
     <Hds::Text::Body @tag="p" class="has-bottom-margin-l">
-      Create a custom message for all users when they access a Vault system via the UI.
+      {{if @message.isNew "Create" "Edit"}}
+      a custom message for all users when they access a Vault system via the UI.
     </Hds::Text::Body>
 
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
-    {{#each @messages.formFields as |attr|}}
+    {{#each @message.formFields as |attr|}}
       {{#if (eq attr.name "authenticated")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="authenticated" class="has-bottom-margin-m" as |G|>
           <G.Legend>Where should we display this message?</G.Legend>
           <G.Radio::Field
-            @value={{@messages.authenticate}}
+            @value={{@message.authenticate}}
             checked
-            {{on "change" (fn (mut @messages.authenticated) true)}}
+            {{on "change" (fn (mut @message.authenticated) true)}}
             as |F|
           >
             <F.Label>After the user logs in</F.Label>
             <F.HelperText>Display to users after they have successfully logged in to Vault. </F.HelperText>
           </G.Radio::Field>
-          <G.Radio::Field @value={{@messages.authenticated}} {{on "change" (fn (mut @messages.authenticated) false)}} as |F|>
+          <G.Radio::Field @value={{@message.authenticated}} {{on "change" (fn (mut @message.authenticated) false)}} as |F|>
             <F.Label>On the login page</F.Label>
             <F.HelperText>Display to users on the login page before they have authenticated.</F.HelperText>
           </G.Radio::Field>
@@ -51,20 +56,20 @@
           <div class="control is-flex-between has-gap-m">
             <Input
               @type="text"
-              @value={{@messages.linkTitle}}
+              @value={{@message.linkTitle}}
               placeholder="Display text (e.g. Learn more)"
               id="link-title"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @messages.linkTitle)))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
               data-test-link="title"
             />
             <Input
               @type="text"
-              @value={{@messages.linkHref}}
+              @value={{@message.linkHref}}
               placeholder="Paste URL (e.g. www.learnmore.com)"
               id="link-href"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @messages.linkHref)))}}
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
               data-test-link="href"
             />
           </div>
@@ -81,22 +86,17 @@
           class="input has-top-margin-xs is-auto-width is-block"
           data-test-date="startTime"
           name="startTime"
-          @value={{@messages.startTime}}
+          @value={{@message.startTime}}
           {{on "input" this.updateDateTime}}
         />
       {{else if (eq attr.name "endTime")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
           <G.Legend>Message expires</G.Legend>
-          <G.Radio::Field @id="never" checked @value="" {{on "change" (fn (mut @messages.endTime) "")}} as |F|>
+          <G.Radio::Field @id="never" checked @value="" {{on "change" (fn (mut @message.endTime) "")}} as |F|>
             <F.Label>Never</F.Label>
             <F.HelperText>This message will never expire unless manually deleted by the operator.</F.HelperText>
           </G.Radio::Field>
-          <G.Radio::Field
-            @id="specific-date"
-            @value=""
-            {{on "change" (fn (mut @messages.endTime) @messages.endTime)}}
-            as |F|
-          >
+          <G.Radio::Field @id="specific-date" @value="" {{on "change" (fn (mut @message.endTime) @message.endTime)}} as |F|>
             <F.Label>Specific date</F.Label>
             <F.HelperText>
               This message will expire at midnight (local timezone) at the specific date.
@@ -117,7 +117,7 @@
           class="has-bottom-margin-m"
           data-test-field={{true}}
           @attr={{attr}}
-          @model={{@messages}}
+          @model={{@message}}
           @modelValidations={{this.modelValidations}}
         />
       {{/if}}
@@ -128,8 +128,8 @@
       <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
 
       <Hds::Button
-        @text="Create message"
-        disabled={{(or (not @messages.title) (not @messages.message) (this.save.isRunning))}}
+        @text="{{if @message.isNew 'Create' 'Edit'}} message"
+        disabled={{(or (not @message.title) (not @message.message) (this.save.isRunning))}}
         type="submit"
       />
 

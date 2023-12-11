@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
-import { format, addDays, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 import { localDateTimeString } from 'vault/models/config-ui/message';
 
@@ -27,8 +27,6 @@ export default class MessagesList extends Component {
   @service router;
   @service flashMessages;
 
-  @tracked startTime = format(addDays(startOfDay(new Date()), 1), localDateTimeString);
-  @tracked endTime = '';
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
@@ -43,25 +41,25 @@ export default class MessagesList extends Component {
 
   @action
   updateRadioValue(evt) {
-    this.args.messages[evt.target.name] = evt.target.value;
+    this.args.message[evt.target.name] = evt.target.value;
   }
 
   @action
   updateDateTime(evt) {
-    this.args.messages[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
+    this.args.message[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
   }
 
   @task
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.messages.validate();
+      const { isValid, state, invalidFormMessage } = this.args.message.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
 
       if (isValid) {
-        const { isNew } = this.args.messages;
-        const { id } = yield this.args.messages.save();
+        const { isNew } = this.args.message;
+        const { id } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
