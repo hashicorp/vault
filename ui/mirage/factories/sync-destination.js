@@ -41,6 +41,6 @@ export default Factory.extend({
     access_token: '*****',
     project_id: 'prj_12345',
     team_id: 'team_12345',
-    deployment_environments: ['development', 'preview'], // 'production' is also an option, but left out for testing
+    deployment_environments: 'development,preview', // 'production' is also an option, but left out for testing to assert form changes value
   }),
 });

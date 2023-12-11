@@ -21,7 +21,7 @@ export const SELECTORS = {
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
-  validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
+  validation: (attr) => `[data-test-field-validation=${attr}]`,
   messageError: '[data-test-message-error]',
   searchSelect: {
     option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,

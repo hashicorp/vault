@@ -35,7 +35,7 @@
           </div>
         {{/each}}
       </div>
-    {{else if (and (eq @attr.type "array") (eq @attr.options.editType "checkboxList"))}}
+    {{else if (eq @attr.options.editType "checkboxList")}}
       <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
         {{#each @attr.options.possibleValues as |option|}}
           <G.Checkbox::Field
@@ -340,7 +340,7 @@
       @type="danger"
       @message={{this.validationError}}
       @paddingTop={{not-eq @attr.options.editType "ttl"}}
-      data-test-field-validation={{@attr.name}}
+      data-test-field-validation={{this.valuePath}}
       class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
     />
   {{/if}}
@@ -349,7 +349,7 @@
       @type="warning"
       @message={{this.validationWarning}}
       @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
-      data-test-validation-warning={{@attr.name}}
+      data-test-validation-warning={{this.valuePath}}
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}

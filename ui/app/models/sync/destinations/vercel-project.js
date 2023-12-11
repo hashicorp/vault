@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { isArray } from '@ember/array';
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
@@ -10,7 +11,8 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
-  deploymentEnvironments: [{ type: 'presence', message: 'At least one environment is required.' }],
+  // getter/setter for the deploymentEnvironments model attribute
+  deploymentEnvironmentsArray: [{ type: 'presence', message: 'At least one environment is required.' }],
 };
 const displayFields = ['name', 'accessToken', 'projectId', 'teamId', 'deploymentEnvironments'];
 const formFieldGroups = [
@@ -38,12 +40,27 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   })
   teamId;
 
-  // TODO can also be a string, return and test how this works with live API
-  @attr('array', {
+  // comma separated string, updated as array using deploymentEnvironmentsArray
+  @attr({
     subText: 'Deployment environments where the environment variables are available.',
     editType: 'checkboxList',
     possibleValues: ['development', 'preview', 'production'],
-    defaultValue: () => [],
+    fieldValue: 'deploymentEnvironmentsArray', // getter/setter used to update value
   })
   deploymentEnvironments;
+
+  // Instead of using the 'array' attr transform, we keep deploymentEnvironments a string to leverage Ember's changedAttributes()
+  // which only tracks updates to string types. However, arrays are easier for managing multi-option selection so
+  // the fieldValue is used to get/set the deploymentEnvironments attribute to/from an array
+  get deploymentEnvironmentsArray() {
+    // if undefined or an empty string, return empty array
+    if (!this.deploymentEnvironments) return [];
+    return this.deploymentEnvironments.split(',');
+  }
+
+  set deploymentEnvironmentsArray(value) {
+    if (isArray(value)) {
+      this.deploymentEnvironments = value.join(',');
+    }
+  }
 }

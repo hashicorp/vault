@@ -173,7 +173,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     'azure-kv': ['clientId', 'clientSecret'],
     'gcp-sm': ['credentials'],
     gh: ['accessToken'],
-    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'], // TODO confirm team_id editable
+    'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'],
   };
   // module runs for each destination type
   for (const destination of SYNC_DESTINATIONS) {
@@ -192,14 +192,19 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
       test('it renders destination form and PATCH updates a destination', async function (assert) {
         const disabledAssertions = this.model.formFields.filter((f) => f.options.editDisabled).length;
-        assert.expect(5 + disabledAssertions);
         const editable = EDITABLE_FIELDS[this.model.type];
+        assert.expect(5 + disabledAssertions + editable.length);
         this.server.patch(`sys/sync/destinations/${type}/${this.data.name}`, (schema, req) => {
-          const payload = JSON.parse(req.requestBody);
           assert.ok(true, `makes request: PATCH sys/sync/destinations/${type}/${this.data.name}`);
+          const payload = JSON.parse(req.requestBody);
           const payloadKeys = Object.keys(payload);
           const expectedKeys = editable.map((k) => decamelize(k));
-          assert.propEqual(payloadKeys, expectedKeys, 'payload only contains editable attrs');
+          assert.propEqual(payloadKeys, expectedKeys, `${type} payload only contains editable attrs`);
+          expectedKeys.forEach((key) => {
+            // deploymentEnvironment field fixed possible options
+            const expectedValue = key === 'deployment_environments' ? 'production' : `new-${key}-value`;
+            assert.strictEqual(payload[key], expectedValue, `destination: ${type} updates key: ${key}`);
+          });
           return { payload };
         });
 
@@ -212,7 +217,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
             await click(PAGE.form.enableInput(attr.name));
           }
           if (editable.includes(attr.name)) {
-            await PAGE.form.fillInByAttr(attr.name, `new-${attr.name}-value`);
+            await PAGE.form.fillInByAttr(attr.name, `new-${decamelize(attr.name)}-value`);
           } else {
             assert.dom(PAGE.inputByAttr(attr.name)).isDisabled(`${attr.name} is disabled`);
           }
