@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/vault/internal/observability/event"
 )
 
-var _ eventlogger.Node = (*EntryFormatter)(nil)
+var _ eventlogger.Node = (*EntryFilter)(nil)
 
 // NewEntryFilter should be used to create an EntryFilter node.
 // The filter supplied should be in bexpr format and reference fields from logical.LogInputBexpr.
