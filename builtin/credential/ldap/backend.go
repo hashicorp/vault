@@ -63,9 +63,6 @@ func Backend() *backend {
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
 		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (string, error) {
-			cfg := b.Config(ctx, req)
-			return cfg.RootSchedule, nil
-			return "", nil
 		},
 		RotatePassword: func(ctx context.Context, req *logical.Request) error {
 			// lock the backend's state - really just the config state - for mutating
@@ -96,40 +93,59 @@ func Backend() *backend {
 				return err
 			}
 
-			err = conn.Bind(u, p)
+			// TODO: retrieve lease
+			// getRotationLease(ctx, keyID)
+			// if rotation lease exists and if rotation is due call rotate password
+			// update the lease after rotation
+			rotationLease, err := b.GetRotationLease(ctx, "test")
 			if err != nil {
 				return err
 			}
 
-			lreq := &goldap.ModifyRequest{
-				DN: cfg.BindDN,
-			}
+			// first check if rotation lease exists and if rotation is due, then rotate password
+			if rotationLease != nil && isRotationDue(rotationLease) {
+				err = conn.Bind(u, p)
+				if err != nil {
+					return err
+				}
 
-			var newPassword string
-			if cfg.PasswordPolicy != "" {
-				newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
-			} else {
-				newPassword, err = base62.Random(defaultPasswordLength)
-			}
-			if err != nil {
-				return err
-			}
+				lreq := &goldap.ModifyRequest{
+					DN: cfg.BindDN,
+				}
 
-			lreq.Replace("userPassword", []string{newPassword})
+				var newPassword string
+				if cfg.PasswordPolicy != "" {
+					newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
+				} else {
+					newPassword, err = base62.Random(defaultPasswordLength)
+				}
+				if err != nil {
+					return err
+				}
 
-			err = conn.Modify(lreq)
-			if err != nil {
-				return err
-			}
-			// update config with new password
-			cfg.BindPassword = newPassword
-			entry, err := logical.StorageEntryJSON("config", cfg)
-			if err != nil {
-				return err
-			}
-			if err := req.Storage.Put(ctx, entry); err != nil {
-				// we might have to roll-back the password here?
-				return err
+				lreq.Replace("userPassword", []string{newPassword})
+
+				err = conn.Modify(lreq)
+				if err != nil {
+					return err
+				}
+
+				// Update rotation lease after rotation
+				err = b.CreateOrUpdateRotationLease(ctx, "test", newPassword, rotationLease.RotationSchedule)
+				if err != nil {
+					return err
+				}
+
+				// update config with new password
+				cfg.BindPassword = newPassword
+				entry, err := logical.StorageEntryJSON("config", cfg)
+				if err != nil {
+					return err
+				}
+				if err := req.Storage.Put(ctx, entry); err != nil {
+					// we might have to roll-back the password here?
+					return err
+				}
 			}
 
 			return nil

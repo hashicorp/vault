@@ -111,10 +111,25 @@ type Backend struct {
 	RunningVersion string
 
 	// Functions for rotating the root password of a backend if it exists
+<<<<<<< HEAD
 	RotatePassword             func(context.Context, *logical.Request) error                                         // specific backend developer responsible for handling basically everything
 	RotatePasswordGetSchedule  func(context.Context, *logical.Request) (*RootSchedule, error)                        // schedule string in cron format
 	RotatePasswordLeaseStorage func(ctx context.Context, req *logical.Request, name string, lease interface{}) error // function that plugin developer writes that can store a value in request storage
 	Priority                   int64                                                                                 // unix timestamp of next root password rotation time (technically the leading edge of the next window)
+=======
+	RotatePassword            func(context.Context, *logical.Request) error           // specific backend developer responsible for handling basically everything
+	RotatePasswordGetSchedule func(context.Context, *logical.Request) (string, error) // schedule string in cron format
+	RotationLease             RotationLease
+	Scheduler                 Scheduler
+
+	// CreateOrUpdateRotationLease is a callback function that plugins can provide to create or update a rotation lease.
+	CreateOrUpdateRotationLeaseFunc func(ctx context.Context, keyID, password, rotationSchedule string) error
+
+	// GetRotationLeaseFunc is a callback function that plugins can provide to get the current rotation lease.
+	GetRotationLeaseFunc func(ctx context.Context, keyID string) (*RotationLease, error)
+
+	//RotationConfig RotationConfig
+>>>>>>> 86d60ea7cd3847b2782c2a246ac5295f4d7908af
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -123,6 +138,7 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
+<<<<<<< HEAD
 // This should be the schedule parts of logical/database/staticAccount
 type RootSchedule struct {
 	Schedule *cron.SpecSchedule `json:"schedule"`
@@ -156,6 +172,73 @@ func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
 		}
 
 	}
+=======
+type RotationLease struct {
+	TimeRotated      time.Time
+	Password         string
+	RotationSchedule string
+	Window           string
+	RotationWindow   int
+	PasswordPolicy   string
+}
+
+func (b *Backend) CreateOrUpdateRotationLease(ctx context.Context, req *logical.Request, keyID string, password string, rotationSchedule string) error {
+	if b.CreateOrUpdateRotationLeaseFunc != nil {
+		return b.CreateOrUpdateRotationLeaseFunc(ctx, keyID, password, rotationSchedule)
+	}
+
+	// TODO: func to create or update the rotation lease
+	// we can use keyID to be able to identify the rotation lease
+
+	// Retrieve the rotation lease from storage
+	rotationLease, err := b.GetRotationLease(ctx, keyID)
+	if err != nil {
+		return err
+	}
+
+	// Update or create a new rotation lease
+	if rotationLease != nil {
+		rotationLease.Password = password
+		rotationLease.TimeRotated = time.Now()
+		rotationLease.RotationSchedule = rotationSchedule
+	} else {
+		rotationLease = &RotationLease{
+			Password:         password,
+			TimeRotated:      time.Now(),
+			RotationSchedule: rotationSchedule,
+		}
+	}
+
+	// Save or update the rotation lease in storage
+	leaseData, err := json.Marshal(rotationLease)
+	if err != nil {
+		return err
+	}
+	// TODO: idk.. something like this? any previous examples of how we do this?
+	err = req.Storage().Put(ctx, &logical.StorageEntry{
+		Key:   "" + keyID, // how do we want to store leases in storage?
+		Value: leaseData,
+	})
+
+	return err
+}
+
+func (b *Backend) GetRotationLease(ctx context.Context, req *logical.Request, keyID string) (*RotationLease, error) {
+	if b.GetRotationLeaseFunc != nil {
+		return b.GetRotationLeaseFunc(ctx, keyID)
+	}
+
+	// get the rotation lease from storage??
+	existingLease, err := req.Storage().Get(ctx, keyID)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: check if existing lease is not nil, then parse data in rotation lease struct
+	var rotationLease RotationLease
+
+	return &rotationLease, nil
+>>>>>>> 86d60ea7cd3847b2782c2a246ac5295f4d7908af
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
