@@ -71,10 +71,7 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, fmt.Errorf("%s: cannot obtain namespace: %w", op, err)
 	}
 
-	datum, err := a.Data.BexprDatum(ns.ID)
-	if err != nil {
-		return nil, fmt.Errorf("%s: cannot convert audit entry in order to evaluate filter: %w", op, err)
-	}
+	datum := a.Data.BexprDatum(ns.Path)
 
 	result, err := f.evaluator.Evaluate(datum)
 	if err != nil {

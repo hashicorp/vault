@@ -25,14 +25,14 @@ type OptMarshaler interface {
 type LogInputBexpr struct {
 	MountPoint string `bexpr:"mount_point"`
 	MountType  string `bexpr:"mount_type"`
-	Namespace  string `bexpr:"namespace"` // TODO: PW: ns.ID, ns.Path? what should bexpr look like?
+	Namespace  string `bexpr:"namespace"`
 	Operation  string `bexpr:"operation"`
 	Path       string `bexpr:"path"`
 }
 
 // BexprDatum returns values from a LogInput formatted for use in evaluating go-bexpr boolean expressions.
 // The namespace should be supplied from the current request's context.
-func (l *LogInput) BexprDatum(namespace string) (any, error) {
+func (l *LogInput) BexprDatum(namespace string) any {
 	var mountPoint string
 	var mountType string
 	var operation string
@@ -51,5 +51,5 @@ func (l *LogInput) BexprDatum(namespace string) (any, error) {
 		Namespace:  namespace,
 		Operation:  operation,
 		Path:       path,
-	}, nil
+	}
 }
