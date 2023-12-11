@@ -22,11 +22,10 @@ preloadAssets(manifest).then(() => {
   });
   setRunOptions({
     runOnly: {
-      type: 'tag',
-      values: ['wcag2a'],
+      type: 'rule',
+      values: ['color-contrast'],
     },
   });
-
   start({
     setupTestIsolationValidation: true,
   });
