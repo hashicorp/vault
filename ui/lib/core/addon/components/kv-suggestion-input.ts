@@ -56,17 +56,13 @@ export default class KvSuggestionInputComponent extends Component<Args> {
   @tracked secrets: KvSecretMetadataModel[] = [];
   powerSelectAPI: PowerSelectAPI | undefined;
   _cachedSecrets: KvSecretMetadataModel[] = []; // cache the response for filtering purposes
+  inputId = `suggestion-input-${guidFor(this)}`; // add unique segment to id in case multiple instances of component are used on the same page
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     if (this.args.mountPath) {
       this.updateSuggestions();
     }
-  }
-
-  get inputId() {
-    // add unique segment to id in case multiple instances of component are used on the same page
-    return `suggestion-input-${guidFor(this)}`;
   }
 
   async fetchSecrets(isDirectory: boolean) {
