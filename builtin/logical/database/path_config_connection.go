@@ -94,14 +94,86 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		// Close plugin and delete the entry in the connections cache.
-		if err := b.ClearConnection(name); err != nil {
+		if err := b.reloadConnection(ctx, name, req.Storage); err != nil {
 			return nil, err
 		}
 
-		// Execute plugin again, we don't need the object so throw away.
-		if _, err := b.GetConnection(ctx, req.Storage, name); err != nil {
+		return nil, nil
+	}
+}
+
+func (b *databaseBackend) reloadConnection(ctx context.Context, name string, storage logical.Storage) error {
+	// Close plugin and delete the entry in the connections cache.
+	if err := b.ClearConnection(name); err != nil {
+		return err
+	}
+
+	// Execute plugin again, we don't need the object so throw away.
+	if _, err := b.GetConnection(ctx, storage, name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// pathReloadPlugin reloads all connections using a named plugin.
+func pathReloadPlugin(b *databaseBackend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("reload/%s", framework.GenericNameRegex("plugin_name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationVerb:   "reload",
+			OperationSuffix: "plugin",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"plugin_name": {
+				Type:        framework.TypeString,
+				Description: "Name of the database plugin",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.reloadPlugin(),
+		},
+
+		HelpSynopsis:    pathResetConnectionHelpSyn,
+		HelpDescription: pathResetConnectionHelpDesc,
+	}
+}
+
+// reloadPlugin reloads all instances of a named plugin by closing the existing
+// instances and creating new ones.
+func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		pluginName := data.Get("plugin_name").(string)
+		if pluginName == "" {
+			return logical.ErrorResponse(respErrEmptyPluginName), nil
+		}
+
+		connNames, err := req.Storage.List(ctx, "config/")
+		if err != nil {
 			return nil, err
+		}
+		for _, connName := range connNames {
+			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read connection configuration: %w", err)
+			}
+			if entry == nil {
+				continue
+			}
+
+			var config DatabaseConfig
+			if err := entry.DecodeJSON(&config); err != nil {
+				return nil, err
+			}
+			if config.PluginName == pluginName {
+				if err := b.reloadConnection(ctx, connName, req.Storage); err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		return nil, nil
@@ -550,4 +622,13 @@ Resets a database plugin.
 const pathResetConnectionHelpDesc = `
 This path resets the database connection by closing the existing database plugin
 instance and running a new one.
+`
+
+const pathReloadPluginHelpSyn = `
+Reloads all connections using a named database plugin.
+`
+
+const pathReloadPluginHelpDesc = `
+This path resets each database connection using a named plugin by closing each
+existing database plugin instance and running a new one.
 `

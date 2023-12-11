@@ -717,17 +717,38 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Reset Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "reset/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	// Test endpoints for reloading plugins.
+	for _, reloadPath := range []string{
+		"reset/plugin-test",
+		"reload/postgresql-database-plugin",
+	} {
+		dbBackend, ok := b.(*databaseBackend)
+		if !ok {
+			t.Fatal("could not convert logical.Backend to databaseBackend")
+		}
+		dbi := dbBackend.connections.Get("plugin-test")
+		if dbi == nil {
+			t.Fatal("no plugin-test dbi")
+		}
+		initialID := dbi.ID()
+		data = map[string]interface{}{}
+		req = &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      reloadPath,
+			Storage:   config.StorageView,
+			Data:      data,
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+		dbi = dbBackend.connections.Get("plugin-test")
+		if dbi == nil {
+			t.Fatal("no plugin-test dbi")
+		}
+		if initialID == dbi.ID() {
+			t.Fatal("ID unchanged after connection reset")
+		}
 	}
 
 	// Get creds
