@@ -92,8 +92,8 @@
               placeholder="Display text (e.g. Learn more)"
               id="link-title"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
               data-test-field="linkTitle"
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
             />
             <Input
               @type="text"
@@ -101,8 +101,8 @@
               placeholder="Paste URL (e.g. www.learnmore.com)"
               id="link-href"
               class="input"
-              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
               data-test-field="linkHref"
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
             />
           </div>
         </div>
@@ -115,11 +115,11 @@
         </Hds::Text::Body>
         <Input
           @type="datetime-local"
+          @value={{@message.startTime}}
           class="input has-top-margin-xs is-auto-width is-block"
           name="startTime"
-          @value={{@message.startTime}}
-          {{on "input" this.updateDateTime}}
           data-test-input="startTime"
+          {{on "input" this.updateDateTime}}
         />
       {{else if (eq attr.name "endTime")}}
         <Hds::Form::Radio::Group @layout="vertical" @name="endTime" class="has-top-margin-l" as |G|>
@@ -135,10 +135,11 @@
               <div class="control">
                 <Input
                   @type="datetime-local"
+                  @value={{@message.endTime}}
                   class="input has-top-margin-xs is-auto-width"
                   name="endTime"
-                  {{on "input" this.updateDateTime}}
                   data-test-input="endTime"
+                  {{on "input" this.updateDateTime}}
                 />
               </div>
             </F.HelperText>
@@ -146,11 +147,11 @@
         </Hds::Form::Radio::Group>
       {{else}}
         <FormField
-          class="has-bottom-margin-m"
-          data-test-field={{true}}
           @attr={{attr}}
           @model={{@message}}
           @modelValidations={{this.modelValidations}}
+          class="has-bottom-margin-m"
+          data-test-field={{true}}
         />
       {{/if}}
     {{/each}}
@@ -162,7 +163,7 @@
       <Hds::Button
         @text="{{if @message.isNew 'Create' 'Edit'}} message"
         disabled={{(or (not @message.title) (not @message.message) (this.save.isRunning))}}
-        data-test-button="save"
+        data-test-button="create-message"
         type="submit"
       />
 
