@@ -29,9 +29,9 @@
         >
           <G.Legend>Where should we display this message?</G.Legend>
           <G.Radio::Field
-            @value={{@message.authenticate}}
+            @value={{@message.authenticated}}
+            checked={{@message.authenticated}}
             data-test-radio-field={{if @message.authenticated "authenticated"}}
-            checked
             {{on "change" (fn (mut @message.authenticated) true)}}
             as |F|
           >
@@ -40,6 +40,7 @@
           </G.Radio::Field>
           <G.Radio::Field
             @value={{@message.authenticated}}
+            checked={{not @message.authenticated}}
             data-test-radio-field={{unless @message.authenticated "unauthenticated"}}
             {{on "change" (fn (mut @message.authenticated) false)}}
             as |F|

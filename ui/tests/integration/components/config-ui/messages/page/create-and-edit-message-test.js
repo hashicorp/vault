@@ -13,7 +13,6 @@ import { localDateTimeString } from 'vault/models/config-ui/message';
 import { format, addDays, startOfDay } from 'date-fns';
 
 const PAGE = {
-  // General selectors that are common between pages
   radioGroup: (groupName) => `[data-test-radio-group="${groupName}"]`,
   radioField: (fieldName) => `[data-test-radio-field="${fieldName}"]`,
   field: (fieldName) => `[data-test-field="${fieldName}"]`,
@@ -125,20 +124,13 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       .dom('[data-test-form-subtext]')
       .hasText('Edit a custom message for all users when they access a Vault system via the UI.');
     assert.dom(PAGE.radioGroup('authenticated')).exists();
-    // assert.dom(`${PAGE.radioGroup('authenticated')} ${PAGE.radioField('unauthenticated')}`).isChecked();
+    assert.dom(`${PAGE.radioGroup('authenticated')} ${PAGE.radioField('unauthenticated')}`).isChecked();
     assert.dom(PAGE.radioGroup('type')).exists();
     assert.dom(`${PAGE.radioGroup('type')} ${PAGE.radioField('modal')}`).isChecked();
     assert.dom(PAGE.input('title')).hasValue('Hello world');
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
     assert.dom(PAGE.field('linkTitle')).exists();
     assert.dom(PAGE.field('linkHref')).exists();
-    // assert.dom(PAGE.input('startTime')).exists();
-    // await this.pauseTest();
-    // assert
-    //   .dom(PAGE.input('startTime'))
-    //   .hasValue(format(addDays(startOfDay(new Date(this.message.startTime)), 1), localDateTimeString));
-    // assert.dom(PAGE.input('endTime')).exists();
-    // assert.dom(PAGE.input('endTime')).hasValue(format(new Date(this.message.endTime), localDateTimeString));
-    // await this.pauseTest();
+    // TODO: VAULT-21534 Format the start and end time values to datetime-local so that it gets prepopulated with the correct values.
   });
 });
