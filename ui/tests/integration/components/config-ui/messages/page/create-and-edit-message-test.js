@@ -62,22 +62,23 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should create new message', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
-    // this.server.post('/sys/config/ui/custom-messages', (schema, req) => {
-    //   const data = JSON.parse(req.requestBody);
-    //   const expected = {
-    //     type: 'banner',
-    //     authenticated: true,
-    //     title: 'Awesome custom message title',
-    //     message:
-    //       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.',
-    //     start_time: '2023-12-21T08:00:00.000Z',
-    //     end_time: '2023-12-21T08:00:00.000Z',
-    //     link: {},
-    //   };
-    //   assert.deepEqual(data, expected, 'POST request made with correct properties when creating messages');
-    // });
+    this.server.post('/sys/config/ui/custom-messages', (schema, req) => {
+      const data = JSON.parse(req.requestBody);
+      const expected = {
+        type: 'banner',
+        authenticated: true,
+        title: 'Awesome custom message title',
+        message:
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.',
+        start_time: '2023-12-12T08:00:00.000Z',
+        end_time: '2023-12-21T08:00:00.000Z',
+        link: {},
+      };
+      assert.ok(true, 'Request made to save secret');
+      assert.deepEqual(data, expected, 'POST request made with correct properties when creating messages');
+    });
 
     await render(
       hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
@@ -92,7 +93,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     );
     await fillIn(
       PAGE.input('startTime'),
-      format(addDays(startOfDay(new Date('2023-12-12')), 10), localDateTimeString)
+      format(addDays(startOfDay(new Date('2023-12-12')), 1), localDateTimeString)
     );
     await click('#specific-date');
     await fillIn(
