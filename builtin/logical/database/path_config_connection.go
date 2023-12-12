@@ -94,7 +94,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		if err := b.reloadConnection(ctx, name, req.Storage); err != nil {
+		if err := b.reloadConnection(ctx, req.Storage, name); err != nil {
 			return nil, err
 		}
 
@@ -102,7 +102,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 	}
 }
 
-func (b *databaseBackend) reloadConnection(ctx context.Context, name string, storage logical.Storage) error {
+func (b *databaseBackend) reloadConnection(ctx context.Context, storage logical.Storage, name string) error {
 	// Close plugin and delete the entry in the connections cache.
 	if err := b.ClearConnection(name); err != nil {
 		return err
@@ -138,8 +138,8 @@ func pathReloadPlugin(b *databaseBackend) *framework.Path {
 			logical.UpdateOperation: b.reloadPlugin(),
 		},
 
-		HelpSynopsis:    pathResetConnectionHelpSyn,
-		HelpDescription: pathResetConnectionHelpDesc,
+		HelpSynopsis:    pathReloadPluginHelpSyn,
+		HelpDescription: pathReloadPluginHelpDesc,
 	}
 }
 
@@ -170,7 +170,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 				return nil, err
 			}
 			if config.PluginName == pluginName {
-				if err := b.reloadConnection(ctx, connName, req.Storage); err != nil {
+				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
 					return nil, err
 				}
 			}

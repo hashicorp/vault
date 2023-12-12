@@ -626,6 +626,23 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	// Configure a second connection to confirm below it doesn't get restarted.
+	data = map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test-hana",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
 	// Create a role
 	data = map[string]interface{}{
 		"db_name":               "plugin-test",
@@ -722,32 +739,35 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"reset/plugin-test",
 		"reload/postgresql-database-plugin",
 	} {
-		dbBackend, ok := b.(*databaseBackend)
-		if !ok {
-			t.Fatal("could not convert logical.Backend to databaseBackend")
+		getConnectionID := func(name string) string {
+			t.Helper()
+			dbBackend, ok := b.(*databaseBackend)
+			if !ok {
+				t.Fatal("could not convert logical.Backend to databaseBackend")
+			}
+			dbi := dbBackend.connections.Get(name)
+			if dbi == nil {
+				t.Fatal("no plugin-test dbi")
+			}
+			return dbi.ID()
 		}
-		dbi := dbBackend.connections.Get("plugin-test")
-		if dbi == nil {
-			t.Fatal("no plugin-test dbi")
-		}
-		initialID := dbi.ID()
-		data = map[string]interface{}{}
+		initialID := getConnectionID("plugin-test")
+		hanaID := getConnectionID("plugin-test-hana")
 		req = &logical.Request{
 			Operation: logical.UpdateOperation,
 			Path:      reloadPath,
 			Storage:   config.StorageView,
-			Data:      data,
+			Data:      map[string]interface{}{},
 		}
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
-		dbi = dbBackend.connections.Get("plugin-test")
-		if dbi == nil {
-			t.Fatal("no plugin-test dbi")
-		}
-		if initialID == dbi.ID() {
+		if initialID == getConnectionID("plugin-test") {
 			t.Fatal("ID unchanged after connection reset")
+		}
+		if hanaID != getConnectionID("plugin-test-hana") {
+			t.Fatal("hana plugin got restarted but shouldn't have been")
 		}
 	}
 
