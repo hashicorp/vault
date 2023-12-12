@@ -85,6 +85,7 @@
         @valueAttribute="type"
         @selectedValue={{this.selectedTargetType}}
         @onChange={{this.onTargetSelect}}
+        @name="target-type"
         data-test-mlef-select="target-type"
         aria-label="Target type"
       />
@@ -107,6 +108,7 @@
             @noDefault={{true}}
             @selectedValue={{this.selectedTargetValue}}
             @onChange={{this.setTargetValue}}
+            @name="Auth method"
             data-test-mlef-select="auth-method"
             aria-label="Auth method"
           />
