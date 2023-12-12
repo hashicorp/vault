@@ -50,12 +50,6 @@
   display: flex;
   justify-content: space-between;
 
-  a,
-  .link,
-  a:not(.button):not(.file-delete-button):not(.tag) {
-    text-decoration: none;
-  }
-
   > * + * {
     margin-left: $spacing-12;
     margin-right: $spacing-12;
