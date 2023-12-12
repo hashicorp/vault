@@ -79,6 +79,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   setAssociation = task({}, async (event: Event) => {
     event.preventDefault();
     try {
+      this.syncedSecret = '';
       const { name: destinationName, type: destinationType } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
       const association = this.store.createRecord('sync/association', {
