@@ -44,9 +44,7 @@
 
   {{#if
     (or
-      (and
-        this.namespace.inRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal"))
-      )
+      (and this.isRootNamespace (has-permission "status" routeParams=(array "replication" "raft" "license" "seal")))
       (has-permission "clients" routeParams="activity")
     )
   }}
@@ -55,7 +53,7 @@
   {{#if
     (and
       this.version.isEnterprise
-      this.namespace.inRootNamespace
+      this.isRootNamespace
       (not this.cluster.replicationRedacted)
       (has-permission "status" routeParams="replication")
     )
@@ -67,7 +65,7 @@
       @hasSubItems={{true}}
     />
   {{/if}}
-  {{#if (and this.cluster.usingRaft this.namespace.inRootNamespace (has-permission "status" routeParams="raft"))}}
+  {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
       @route="vault.cluster.storage"
       @model={{this.cluster.name}}
@@ -81,7 +79,7 @@
   {{#if
     (and
       this.version.features
-      this.namespace.inRootNamespace
+      this.isRootNamespace
       (has-permission "status" routeParams="license")
       (not this.cluster.dr.isSecondary)
     )
@@ -93,7 +91,7 @@
       data-test-sidebar-nav-link="License"
     />
   {{/if}}
-  {{#if (and this.namespace.inRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
+  {{#if (and this.isRootNamespace (has-permission "status" routeParams="seal") (not this.cluster.dr.isSecondary))}}
     <Nav.Link
       @route="vault.cluster.settings.seal"
       @model={{this.cluster.name}}
