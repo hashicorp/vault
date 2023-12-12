@@ -41,6 +41,10 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     return this.secretPath && keyIsFolder(this.secretPath);
   }
 
+  get isSubmitDisabled() {
+    return !this.mountPath || !this.secretPath || this.isSecretDirectory || this.setAssociation.isRunning;
+  }
+
   willDestroy(): void {
     this.store.clearDataset('sync/association');
     super.willDestroy();
@@ -72,8 +76,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     this.mountPath = selected[0] || '';
   }
 
-  @task
-  *setAssociation(event: Event) {
+  setAssociation = task({}, async (event: Event) => {
     event.preventDefault();
     try {
       const { name: destinationName, type: destinationType } = this.args.destination;
@@ -84,10 +87,10 @@ export default class DestinationSyncPageComponent extends Component<Args> {
         mount,
         secretName: this.secretPath,
       });
-      yield association.save({ adapterOptions: { action: 'set' } });
+      await association.save({ adapterOptions: { action: 'set' } });
       this.syncedSecret = this.secretPath;
     } catch (error) {
       this.error = `Sync operation error: \n ${errorMessage(error)}`;
     }
-  }
+  });
 }
