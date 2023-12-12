@@ -79,16 +79,16 @@ func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
 		ImageTag:      "latest",
 	})
 	if err != nil {
-		return fmt.Errorf("error creating runner: %s", err)
+		return fmt.Errorf("error creating runner: %w", err)
 	}
 
 	f, err := os.Open(vaultBinary)
 	if err != nil {
-		return fmt.Errorf("error opening vault binary file: %s", err)
+		return fmt.Errorf("error opening vault binary file: %w", err)
 	}
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return fmt.Errorf("error reading vault binary file: %s", err)
+		return fmt.Errorf("error reading vault binary file: %w", err)
 	}
 	bCtx := dockhelper.NewBuildContext()
 	bCtx["vault"] = &dockhelper.FileContents{
@@ -106,7 +106,7 @@ COPY vault /bin/vault
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{fmt.Sprintf("hashicorp/vault:%s", imageTag)}))
 	if err != nil {
-		return fmt.Errorf("error building docker image: %s", err)
+		return fmt.Errorf("error building docker image: %w", err)
 	}
 
 	return nil
@@ -125,14 +125,14 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 		LogConsumer: logConsumer,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error creating runner: %s", err)
+		return nil, nil, fmt.Errorf("error creating runner: %w", err)
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
 		return *dockhelper.NewServiceURL(url.URL{Scheme: "http", Host: fmt.Sprintf("%s:%d", host, port)}), nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not start docker vault: %s", err)
+		return nil, nil, fmt.Errorf("could not start docker vault: %w", err)
 	}
 
 	return svc, runner, nil
@@ -141,7 +141,7 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockhelper.Service, *transitContainerConfig, error) {
 	rootToken, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, fmt.Errorf("err: %s", err)
+		return nil, nil, fmt.Errorf("error generating UUID: %w", err)
 	}
 
 	mountPaths := make([]string, numKeys)
@@ -150,12 +150,12 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 	for i := range mountPaths {
 		mountPaths[i], err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, nil, fmt.Errorf("error generating UUID: %s", err)
+			return nil, nil, fmt.Errorf("error generating UUID: %w", err)
 		}
 
 		keyNames[i], err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, nil, fmt.Errorf("error generating UUID: %s", err)
+			return nil, nil, fmt.Errorf("error generating UUID: %w", err)
 		}
 	}
 
@@ -171,7 +171,7 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 		Ports: []string{"8200/tcp"},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not create runner: %s", err)
+		return nil, nil, fmt.Errorf("could not create runner: %w", err)
 	}
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
@@ -201,13 +201,13 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 		return c, nil
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not start docker vault: %s", err)
+		return nil, nil, fmt.Errorf("could not start docker vault: %w", err)
 	}
 
 	mapping, err := runner.GetNetworkAndAddresses(svc.Container.Name)
 	if err != nil {
 		svc.Cleanup()
-		return nil, nil, fmt.Errorf("failed to get container network information: %s", err)
+		return nil, nil, fmt.Errorf("failed to get container network information: %w", err)
 	}
 
 	if len(mapping) != 1 {
@@ -232,7 +232,7 @@ func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockh
 func validateVaultStatusAndSealType(client *api.Client, expectedSealType string) error {
 	statusResp, err := client.Sys().SealStatus()
 	if err != nil {
-		return fmt.Errorf("error getting vault status: %s", err)
+		return fmt.Errorf("error getting vault status: %w", err)
 	}
 
 	if statusResp.Sealed {
@@ -301,12 +301,12 @@ func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner
 
 	tar, err := bCtx.ToTarball()
 	if err != nil {
-		return fmt.Errorf("error creating config tarball: %s", err)
+		return fmt.Errorf("error creating config tarball: %w", err)
 	}
 
 	err = runner.DockerAPI.CopyToContainer(context.Background(), containerID, "/vault/config", tar, types.CopyToContainerOptions{})
 	if err != nil {
-		return fmt.Errorf("error copying config to container: %s", err)
+		return fmt.Errorf("error copying config to container: %w", err)
 	}
 
 	return nil
