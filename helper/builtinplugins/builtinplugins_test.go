@@ -6,12 +6,11 @@ package builtinplugins
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
