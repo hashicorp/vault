@@ -769,6 +769,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 		if hanaID != getConnectionID("plugin-test-hana") {
 			t.Fatal("hana plugin got restarted but shouldn't have been")
 		}
+		if strings.HasPrefix(reloadPath, "reload/") {
+			if resp.Data["reloaded"] != 1 {
+				t.Fatal("expected 1 reload to be reported but got: ", resp.Data)
+			}
+		}
 	}
 
 	// Get creds
