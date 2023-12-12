@@ -86,7 +86,8 @@ export default class DestinationsCreateForm extends Component<Args> {
   }
 
   @action
-  warningValidation() {
+  updateWarningValidation() {
+    if (this.args.destination.isNew) return;
     // check for warnings on change
     const { state } = this.args.destination.validate();
     this.modelValidations = state;

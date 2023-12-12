@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { click, render } from '@ember/test-helpers';
+import { click, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
 import { decamelize, underscore } from '@ember/string';
@@ -97,7 +97,38 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       );
   });
 
-  // module runs for each destination type
+  test('it renders warning validation only when editing vercel-project team_id', async function (assert) {
+    assert.expect(2);
+    const type = 'vercel-project';
+    // new model
+    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
+    await this.renderFormComponent();
+    await typeIn(PAGE.inputByAttr('teamId'), 'id');
+    assert
+      .dom(PAGE.validationWarning('teamId'))
+      .doesNotExist('does not render warning validation for new vercel-project destination');
+
+    // existing model
+    const data = this.server.create('sync-destination', type);
+    const id = `${type}/${data.name}`;
+    data.id = id;
+    this.store.pushPayload(`sync/destinations/${type}`, {
+      modelName: `sync/destinations/${type}`,
+      ...data,
+    });
+    this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
+    await this.renderFormComponent();
+    await PAGE.form.fillInByAttr('teamId', '');
+    await typeIn(PAGE.inputByAttr('teamId'), 'edit');
+    assert
+      .dom(PAGE.validationWarning('teamId'))
+      .hasText(
+        'Team ID should only be updated if the project was transferred to another account.',
+        'it renders validation warning'
+      );
+  });
+
+  // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
 
@@ -152,22 +183,28 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       });
 
       test('it validates inputs', async function (assert) {
-        const validations = this.model._validations;
-        assert.expect(Object.keys(validations).length);
+        const warningValidations = ['teamId'];
+        const validationAssertions = this.model._validations;
+        // remove warning validations to
+        warningValidations.forEach((warning) => {
+          delete validationAssertions[warning];
+        });
+        assert.expect(Object.keys(validationAssertions).length);
 
         await this.renderFormComponent();
 
         await click(PAGE.saveButton);
 
-        // only asserts validations for presence, may want to refactor if validations change
-        for (const attr in validations) {
-          const { message } = validations[attr].find((v) => v.type === 'presence');
+        // only asserts validations for presence, refactor if validations change
+        for (const attr in validationAssertions) {
+          const { message } = validationAssertions[attr].find((v) => v.type === 'presence');
           assert.dom(PAGE.validation(attr)).hasText(message, `renders validation: ${message}`);
         }
       });
     });
   }
 
+  // EDIT FORM ASSERTIONS FOR EACH DESTINATION TYPE
   const EDITABLE_FIELDS = {
     'aws-sm': ['accessKeyId', 'secretAccessKey'],
     'azure-kv': ['clientId', 'clientSecret'],
@@ -175,7 +212,6 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     gh: ['accessToken'],
     'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'],
   };
-  // module runs for each destination type
   for (const destination of SYNC_DESTINATIONS) {
     const { type, maskedParams } = destination;
     module(`edit destination: ${type}`, function (hooks) {

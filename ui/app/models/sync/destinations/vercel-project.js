@@ -12,7 +12,8 @@ const validations = {
   name: [{ type: 'presence', message: 'Name is required.' }],
   teamId: [
     {
-      validator: (model) => (Object.keys(model.changedAttributes()).includes('teamId') ? false : true),
+      validator: (model) =>
+        !model.isNew && Object.keys(model.changedAttributes()).includes('teamId') ? false : true,
       message: 'Team ID should only be updated if the project was transferred to another account.',
       level: 'warn',
     },
