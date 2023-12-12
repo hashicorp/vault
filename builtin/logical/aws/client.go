@@ -36,23 +36,25 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string, lo
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
+		credsConfig.Region = config.Region
 		maxRetries = config.MaxRetries
 		switch {
 		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = *aws.String(config.IAMEndpoint)
 		case clientType == "sts" && config.STSEndpoint != "":
 			endpoint = *aws.String(config.STSEndpoint)
-			credsConfig.Region = config.Region
-		default:
-			credsConfig.Region = config.Region
+			if config.STSRegion != "" {
+				credsConfig.Region = config.STSRegion
+			}
 		}
+	}
+
+	if credsConfig.Region == "" {
+		credsConfig.Region = os.Getenv("AWS_REGION")
 		if credsConfig.Region == "" {
-			credsConfig.Region = os.Getenv("AWS_REGION")
+			credsConfig.Region = os.Getenv("AWS_DEFAULT_REGION")
 			if credsConfig.Region == "" {
-				credsConfig.Region = os.Getenv("AWS_DEFAULT_REGION")
-				if credsConfig.Region == "" {
-					credsConfig.Region = "us-east-1"
-				}
+				credsConfig.Region = "us-east-1"
 			}
 		}
 	}

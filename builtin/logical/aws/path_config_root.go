@@ -45,6 +45,10 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Endpoint to custom STS server URL",
 			},
+			"sts_region": {
+				Type:        framework.TypeString,
+				Description: "Specific region for STS API calls.",
+			},
 			"max_retries": {
 				Type:        framework.TypeInt,
 				Default:     aws.UseServiceDefaultRetries,
@@ -100,6 +104,7 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"region":            config.Region,
 		"iam_endpoint":      config.IAMEndpoint,
 		"sts_endpoint":      config.STSEndpoint,
+		"sts_region":        config.STSRegion,
 		"max_retries":       config.MaxRetries,
 		"username_template": config.UsernameTemplate,
 	}
@@ -112,6 +117,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	region := data.Get("region").(string)
 	iamendpoint := data.Get("iam_endpoint").(string)
 	stsendpoint := data.Get("sts_endpoint").(string)
+	stsregion := data.Get("sts_region").(string)
 	maxretries := data.Get("max_retries").(int)
 	usernameTemplate := data.Get("username_template").(string)
 	if usernameTemplate == "" {
@@ -126,6 +132,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		SecretKey:        data.Get("secret_key").(string),
 		IAMEndpoint:      iamendpoint,
 		STSEndpoint:      stsendpoint,
+		STSRegion:        stsregion,
 		Region:           region,
 		MaxRetries:       maxretries,
 		UsernameTemplate: usernameTemplate,
@@ -151,6 +158,7 @@ type rootConfig struct {
 	SecretKey        string `json:"secret_key"`
 	IAMEndpoint      string `json:"iam_endpoint"`
 	STSEndpoint      string `json:"sts_endpoint"`
+	STSRegion        string `json:"sts_region"`
 	Region           string `json:"region"`
 	MaxRetries       int    `json:"max_retries"`
 	UsernameTemplate string `json:"username_template"`
