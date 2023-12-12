@@ -656,6 +656,7 @@ func TestWaitActive(t testing.T, core *Core) {
 }
 
 func TestWaitActiveForwardingReady(t testing.T, core *Core) {
+	t.Helper()
 	TestWaitActive(t, core)
 
 	deadline := time.Now().Add(2 * time.Second)

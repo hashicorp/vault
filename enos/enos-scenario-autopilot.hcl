@@ -6,7 +6,6 @@ scenario "autopilot" {
     arch            = global.archs
     artifact_source = global.artifact_sources
     artifact_type   = global.artifact_types
-    consul_version  = global.consul_versions
     distro          = global.distros
     edition         = global.editions
     initial_version = global.upgrade_initial_versions
