@@ -67,7 +67,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
       .hasText('nested-secret', 'Suggestions render for secret at nested path');
   });
 
-  test('it should Sync secrets', async function (assert) {
+  test('it should sync secret', async function (assert) {
     assert.expect(3);
 
     const { type, name } = this.destination;
