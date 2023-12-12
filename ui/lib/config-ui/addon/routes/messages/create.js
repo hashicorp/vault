@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'ember-concurrency';
 
 export default class MessagesCreateRoute extends Route {
   @service store;
@@ -19,9 +18,6 @@ export default class MessagesCreateRoute extends Route {
   model(params) {
     const { authenticated } = params;
 
-    return hash({
-      message: this.store.createRecord('config-ui/message', { authenticated }),
-      authenticated,
-    });
+    return this.store.createRecord('config-ui/message', { authenticated });
   }
 }

@@ -34,12 +34,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
-    await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom('[data-test-page-title]').hasText('Create message');
     assert
@@ -68,12 +65,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       assert.ok(true, 'POST request made to create message');
     });
 
-    await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
     await fillIn(PAGE.input('title'), 'Awesome custom message title');
     await fillIn(
       PAGE.input('message'),
@@ -93,12 +87,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
   });
 
   test('it should have form vaildations', async function (assert) {
-    await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
     await click(PAGE.button('create-message'));
     assert.dom(PAGE.input('title')).hasClass('has-error-border', 'show error border for title field');
     assert.dom(`${PAGE.fieldVaildation('title')} ${PAGE.inlineErrorMessage}`).hasText('Title is required.');
@@ -120,12 +111,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       end_time: '2023-12-21T08:00:00.000Z',
     });
     this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
-    await render(
-      hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom('[data-test-page-title]').hasText('Edit message');
     assert
