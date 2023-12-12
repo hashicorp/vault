@@ -429,20 +429,20 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 
 // RegisterNodesAndPipeline registers the nodes and a pipeline as required by
 // the audit.Backend interface.
-func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
-	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node); err != nil {
+func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range n.nodeMap {
+		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
 			return err
 		}
 	}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
-		NodeIDs:    b.nodeIDList,
+		EventType:  eventlogger.EventType(event.AuditType.String()),
+		NodeIDs:    n.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
 type TestLogger struct {
