@@ -106,7 +106,6 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
         service_account_names: 'foo@bar.com,bar@baz.com',
         ttl: '24h',
         max_ttl: '24h',
-        name: 'new-library',
         disable_check_in_enforcement: true,
       };
       assert.deepEqual(data, expected, 'POST request made with correct properties when creating library');

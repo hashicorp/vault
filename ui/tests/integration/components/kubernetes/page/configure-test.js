@@ -22,14 +22,6 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.store = this.owner.lookup('service:store');
     this.newModel = this.store.createRecord('kubernetes/config', { backend: 'kubernetes-new' });
     this.existingConfig = {
-      backend: 'kubernetes-edit',
-      kubernetes_host: 'https://192.168.99.100:8443',
-      kubernetes_ca_cert: '-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----',
-      service_account_jwt: 'test-jwt',
-      disable_local_ca_jwt: true,
-    };
-    this.newConfig = {
-      backend: 'kubernetes-new',
       kubernetes_host: 'https://192.168.99.100:8443',
       kubernetes_ca_cert: '-----BEGIN CERTIFICATE-----\n.....\n-----END CERTIFICATE-----',
       service_account_jwt: 'test-jwt',
@@ -37,6 +29,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     };
     this.store.pushPayload('kubernetes/config', {
       modelName: 'kubernetes/config',
+      backend: 'kubernetes-edit',
       ...this.existingConfig,
     });
     this.editModel = this.store.peekRecord('kubernetes/config', 'kubernetes-edit');
@@ -46,7 +39,6 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       { label: 'configure' },
     ];
     this.expectedInferred = {
-      backend: 'kubernetes-new',
       disable_local_ca_jwt: false,
       kubernetes_ca_cert: null,
       kubernetes_host: null,
@@ -129,7 +121,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     this.server.post('/:path/config', (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.deepEqual(json, this.newConfig, 'Values are passed to create endpoint');
+      assert.deepEqual(json, this.existingConfig, 'Values are passed to create endpoint');
       return new Response(204, {});
     });
 
