@@ -26,11 +26,11 @@
   </nav>
 </div>
 
-<Toolbar>
-  <ToolbarFilters>
+<Toolbar aria-label="nav for managing LDAP">
+  <ToolbarFilters aria-label="filter for LDAP items">
     {{yield to="toolbarFilters"}}
   </ToolbarFilters>
-  <ToolbarActions>
+  <ToolbarActions aria-label="actions for LDAP items">
     {{yield to="toolbarActions"}}
   </ToolbarActions>
 </Toolbar>
