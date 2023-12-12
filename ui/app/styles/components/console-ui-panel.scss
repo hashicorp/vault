@@ -52,7 +52,7 @@ $console-close-height: 35px;
   }
 
   .console-ui-panel-intro {
-    color: var(--token-color-foreground-disabled);
+    color: var(--token-color-palette-neutral-400);
   }
 }
 
@@ -87,7 +87,7 @@ $console-close-height: 35px;
   padding-right: $spacing-36;
   position: relative;
   background-color: rgba(#000, 0);
-  color: var(--token-color-foreground-disabled);
+  color: var(--token-color-palette-neutral-400);
   &:hover {
     background-color: rgba(#000, 0.5);
   }
@@ -96,12 +96,21 @@ $console-close-height: 35px;
 .console-ui-alert {
   margin-left: calc(#{$spacing-20} - 0.33rem);
   position: relative;
-  color: var(--token-color-foreground-disabled);
+  color: var(--token-color-palette-neutral-400);
 
   svg {
     position: absolute;
     left: 0;
     top: 0;
+  }
+
+  &.console-ui-alert--error {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    color: lighten(#e52228, 20%);
+  }
+  &.console-ui-alert--success {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    color: lighten(#008a22, 20%);
   }
 }
 
