@@ -32,9 +32,12 @@ func (c *TokenCapabilitiesCommand) Help() string {
 Usage: vault token capabilities [options] [TOKEN | ACCESSOR] PATH
 
   Fetches the capabilities of a token or accessor for a given path. If a TOKEN
-  is provided as an argument, the "/sys/capabilities" endpoint and permission
-  is used. If no TOKEN is provided, the "/sys/capabilities-self" endpoint and
-  permission is used with the locally authenticated token.
+  is provided as an argument, the "/sys/capabilities" endpoint is used, which
+  returns the capabilities of the provided TOKEN. If an ACCESSOR is provided
+  as an argument along with the -accessor option, the "/sys/capabilities-accessor"
+  endpoint is used, which returns the capabilities of the token referenced by
+  ACCESSOR. If no TOKEN is provided, the "/sys/capabilities-self" endpoint
+  is used, which returns the capabilities of the locally authenticated token.
 
   List capabilities for the local token on the "secret/foo" path:
 
