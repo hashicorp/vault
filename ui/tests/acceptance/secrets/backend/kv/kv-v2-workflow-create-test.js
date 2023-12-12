@@ -1003,6 +1003,26 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
   });
 
+  module('secret-nested-creator persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      const token = await runCmd(
+        tokenWithPolicyCmd('secret-nested-creator', personas.secretNestedCreator(this.backend))
+      );
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
+    });
+    test('can create a secret from the nested list view (snc)', async function (assert) {
+      assert.expect(1);
+      // go to nested secret directory list view
+      await visit(`/vault/secrets/${this.backend}/kv/list/app/`);
+      // correct popup menu items appear on list view
+      const popupSelector = `${PAGE.list.item('first')} ${PAGE.popup}`;
+      await click(popupSelector);
+      assert.dom(PAGE.list.listMenuCreate).exists('shows the option to create new version');
+    });
+  });
+
   module('enterprise controlled access persona', function (hooks) {
     hooks.beforeEach(async function () {
       this.controlGroup = this.owner.lookup('service:control-group');

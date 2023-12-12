@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
@@ -35,11 +36,14 @@ import (
 )
 
 func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -52,17 +56,20 @@ func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView)
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{})
 
 	return cluster, sys
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -1473,7 +1480,7 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{})
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
