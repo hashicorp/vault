@@ -10,7 +10,6 @@ export default class LdapLibrarySerializer extends ApplicationSerializer {
 
   attrs = {
     backend: { serialize: false },
-    name: { serialize: false },
   };
 
   // disable_check_in_enforcement is a boolean but needs to be presented as Disabled or Enabled
