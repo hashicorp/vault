@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { isArray } from '@ember/array';
 import SyncDestinationModel from '../destination';
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
@@ -61,13 +60,10 @@ export default class SyncDestinationsVercelProjectModel extends SyncDestinationM
   // the fieldValue is used to get/set the deploymentEnvironments attribute to/from an array
   get deploymentEnvironmentsArray() {
     // if undefined or an empty string, return empty array
-    if (!this.deploymentEnvironments) return [];
-    return this.deploymentEnvironments.split(',');
+    return !this.deploymentEnvironments ? [] : this.deploymentEnvironments.split(',');
   }
 
   set deploymentEnvironmentsArray(value) {
-    if (isArray(value)) {
-      this.deploymentEnvironments = value.join(',');
-    }
+    this.deploymentEnvironments = value.join(',');
   }
 }
