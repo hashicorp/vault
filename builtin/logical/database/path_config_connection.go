@@ -156,7 +156,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		var reloaded int
+		reloadedConnections := []string{}
 		for _, connName := range connNames {
 			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
 			if err != nil {
@@ -171,18 +171,25 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 				return nil, err
 			}
 			if config.PluginName == pluginName {
-				reloaded++
+				reloadedConnections = append(reloadedConnections, connName)
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
 					return nil, fmt.Errorf("failed to reload connection %q: %w", connName, err)
 				}
 			}
 		}
 
-		return &logical.Response{
+		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"reloaded": reloaded,
+				"connections": reloadedConnections,
+				"count":       len(reloadedConnections),
 			},
-		}, nil
+		}
+
+		if len(reloadedConnections) == 0 {
+			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
+		}
+
+		return resp, nil
 	}
 }
 

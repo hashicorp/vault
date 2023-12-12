@@ -770,8 +770,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 			t.Fatal("hana plugin got restarted but shouldn't have been")
 		}
 		if strings.HasPrefix(reloadPath, "reload/") {
-			if resp.Data["reloaded"] != 1 {
-				t.Fatal("expected 1 reload to be reported but got: ", resp.Data)
+			if expected := 1; expected != resp.Data["count"] {
+				t.Fatalf("expected %d but got %d", expected, resp.Data["count"])
+			}
+			if expected := []string{"plugin-test"}; !reflect.DeepEqual(expected, resp.Data["connections"]) {
+				t.Fatalf("expected %v but got %v", expected, resp.Data["connections"])
 			}
 		}
 	}
