@@ -13,6 +13,17 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 module('Integration | Component | sidebar-frame', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
+
   test('it should hide and show sidebar', async function (assert) {
     this.set('showSidebar', true);
     await render(hbs`

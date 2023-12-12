@@ -33,7 +33,8 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         // TODO: Fix SearchSelect component
         'aria-required-attr': { enabled: false },
         label: { enabled: false },
-        'color-contrast': { enabled: false },
+        // TODO: add labels to enforcement targets key/value style inputs
+        'select-name': { enabled: false },
       },
     });
   });

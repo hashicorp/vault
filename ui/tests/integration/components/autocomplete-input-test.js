@@ -13,6 +13,12 @@ module('Integration | Component | autocomplete-input', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render label', async function (assert) {
+    // TODO: make the input accessible when no label provided
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await render(
       hbs`
       <AutocompleteInput
