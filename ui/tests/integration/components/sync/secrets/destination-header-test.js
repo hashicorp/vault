@@ -38,7 +38,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
   });
 
   test('it should render toolbar', async function (assert) {
-    ['Delete destination', 'Sync new secret', 'Edit destination'].forEach((btn) => {
+    ['Delete destination', 'Sync secrets', 'Edit destination'].forEach((btn) => {
       assert.dom(PAGE.toolbar(btn)).hasText(btn, `${btn} toolbar action renders`);
     });
   });

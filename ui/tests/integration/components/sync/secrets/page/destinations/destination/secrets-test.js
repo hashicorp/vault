@@ -48,7 +48,7 @@ module(
           'Select secrets from existing KV version 2 engines and sync them to the destination.',
           'Empty state message renders'
         );
-      assert.dom(PAGE.emptyStateActions).hasText('Sync secret', 'Empty state action renders');
+      assert.dom(PAGE.emptyStateActions).hasText('Sync secrets', 'Empty state action renders');
     });
 
     test('it should render list item details', async function (assert) {
