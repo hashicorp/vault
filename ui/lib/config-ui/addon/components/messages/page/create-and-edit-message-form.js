@@ -35,7 +35,6 @@ export default class MessagesList extends Component {
 
   constructor() {
     super(...arguments);
-
     if (this.args.message.startTime) {
       this.startTime = format(
         addDays(startOfDay(new Date(this.args.message.startTime) || this.startTime), 1),
@@ -54,11 +53,6 @@ export default class MessagesList extends Component {
       { label: 'Messages', route: 'messages.index', query: { authenticated } },
       { label: 'Create Message' },
     ];
-  }
-
-  @action
-  updateRadioValue(evt) {
-    this.args.message[evt.target.name] = evt.target.value;
   }
 
   @action
