@@ -397,8 +397,7 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	return nil
 }
 
-// setupAudit is invoked after we've loaded the audit able to
-// initialize the audit backends
+// setupAudits is invoked after we've loaded the audit table to initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
