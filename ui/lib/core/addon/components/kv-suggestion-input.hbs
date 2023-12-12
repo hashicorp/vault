@@ -4,7 +4,7 @@
 ~}}
 <div ...attributes {{did-update this.updateSuggestions @mountPath}}>
   {{#if @label}}
-    <FormFieldLabel @label={{@label}} @subText={{@subText}} />
+    <FormFieldLabel for={{this.inputId}} @label={{@label}} @subText={{@subText}} />
   {{/if}}
   <FilterInput
     id={{this.inputId}}
