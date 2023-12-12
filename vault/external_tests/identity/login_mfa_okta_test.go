@@ -132,7 +132,7 @@ path "secret/foo" {
 		"org_name":        org_name,
 		"api_token":       api_token,
 		"primary_email":   true,
-		"username_format": "{{entity.metadata.email}}",
+		"username_format": "{{identity.entity.metadata.email}}",
 	}
 	_, err = client.Logical().Write("sys/mfa/method/okta/my_okta", mfaConfigData)
 	if err != nil {
