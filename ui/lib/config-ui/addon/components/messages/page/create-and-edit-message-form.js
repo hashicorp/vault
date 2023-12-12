@@ -63,7 +63,7 @@ export default class MessagesList extends Component {
   @action
   updateDateTime(evt) {
     this[evt.target.name] = format(new Date(evt.target.value), localDateTimeString);
-    this.args.message[evt.target.name] = new Date(evt.target.value).toISOString();
+    this.args.message[evt.target.name] = new Date(evt.target.value);
   }
 
   @task
@@ -76,6 +76,10 @@ export default class MessagesList extends Component {
 
       if (isValid) {
         const { isNew } = this.args.message;
+        if (typeof this.args.message.startTime === 'string')
+          this.args.message.startTime = new Date(this.args.message.startTime);
+        if (typeof this.args.message.endTime === 'string')
+          this.args.message.endTime = new Date(this.args.message.endTime);
         const { id } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);

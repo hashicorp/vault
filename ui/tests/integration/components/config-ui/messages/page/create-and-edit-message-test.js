@@ -18,6 +18,8 @@ const PAGE = {
   field: (fieldName) => `[data-test-field="${fieldName}"]`,
   input: (input) => `[data-test-input="${input}"]`,
   button: (buttonName) => `[data-test-button="${buttonName}"]`,
+  inlineErrorMessage: `[data-test-inline-error-message]`,
+  fieldVaildation: (fieldName) => `[data-test-field-validation="${fieldName}"]`,
 };
 
 module('Integration | Component | messages/page/create-and-edit-message', function (hooks) {
@@ -90,14 +92,20 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     await click(PAGE.button('create-message'));
   });
 
-  test('it should show a disabled create form button when there are no title or message', async function (assert) {
+  test('it should have form vaildations', async function (assert) {
     await render(
       hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} @authenticated={{true}} />`,
       {
         owner: this.engine,
       }
     );
-    assert.dom(PAGE.button('create-message')).isDisabled();
+    await click(PAGE.button('create-message'));
+    assert.dom(PAGE.input('title')).hasClass('has-error-border', 'show error border for title field');
+    assert.dom(`${PAGE.fieldVaildation('title')} ${PAGE.inlineErrorMessage}`).hasText('Title is required.');
+    assert.dom(PAGE.input('message')).hasClass('has-error-border', 'show error border for message field');
+    assert
+      .dom(`${PAGE.fieldVaildation('message')} ${PAGE.inlineErrorMessage}`)
+      .hasText('Message is required.');
   });
 
   test('it should prepopulate form if form is in edit mode', async function (assert) {

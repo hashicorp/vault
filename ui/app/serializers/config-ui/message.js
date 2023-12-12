@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { encodeString } from 'core/utils/b64';
 import ApplicationSerializer from '../application';
 
 export default class MessageSerializer extends ApplicationSerializer {
@@ -10,8 +11,7 @@ export default class MessageSerializer extends ApplicationSerializer {
 
   serialize() {
     const json = super.serialize(...arguments);
-    // json.start_time = new Date(json.start_time).toISOString();
-    // json.end_time = new Date(json.end_time).toISOString();
+    json.message = encodeString(json.message);
     json.link = {
       title: json.link_title,
       href: json.link_href,
