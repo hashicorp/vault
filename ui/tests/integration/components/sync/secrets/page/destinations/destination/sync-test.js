@@ -9,15 +9,15 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupModels } from 'vault/tests/helpers/sync/setup-models';
 import hbs from 'htmlbars-inline-precompile';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, settled } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 
-const { destinations, searchSelect, messageError } = PAGE;
-const { mountSelect, mountInput, secretInput, submit, cancel } = destinations.sync;
+const { destinations, searchSelect, messageError, kvSuggestion } = PAGE;
+const { mountSelect, mountInput, submit, cancel } = destinations.sync;
 
 module('Integration | Component | sync | Secrets::Page::Destinations::Destination::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -51,24 +51,20 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   });
 
   test('it should render secret suggestions for selected mount', async function (assert) {
-    assert.dom(secretInput).isDisabled('Secret input disabled when mount has not been selected');
+    assert.dom(kvSuggestion.input).isDisabled('Secret input disabled when mount has not been selected');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
-    await click(secretInput);
+    await click(kvSuggestion.input);
     assert.dom(searchSelect.option()).hasText('my-path/', 'Nested secret path renders');
     assert.dom(searchSelect.option(1)).hasText('my-secret', 'Secret renders');
   });
 
   test('it should render secret suggestions for nested paths', async function (assert) {
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
-    await click(secretInput);
+    await click(kvSuggestion.input);
     await click(searchSelect.option());
     assert
       .dom(searchSelect.option())
       .hasText('nested-secret', 'Suggestions render for secret at nested path');
-    await click(searchSelect.option());
-    assert
-      .dom(searchSelect.noMatch)
-      .hasText('No suggestions for this path', 'No match message renders when secret is selected');
   });
 
   test('it should sync secret', async function (assert) {
@@ -85,7 +81,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
     assert.dom(submit).isDisabled('Submit button is disabled when secret is not selected');
-    await click(secretInput);
+    await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
   });
@@ -110,7 +106,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     });
 
     await fillIn(mountInput, 'my-kv');
-    await click(secretInput);
+    await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
   });
@@ -135,10 +131,31 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     });
 
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
-    await click(secretInput);
+    await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
 
     assert.dom(messageError).hasTextContaining(error, 'Error renders in alert banner');
+  });
+
+  test('it should clear sync associations from store in willDestroy hook', async function (assert) {
+    const clearDatasetStub = sinon.stub(this.store, 'clearDataset');
+
+    this.renderComponent = true;
+    await render(
+      hbs`
+      {{#if this.renderComponent}}
+        <Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} />
+      {{/if}}
+    `,
+      { owner: this.engine }
+    );
+    this.set('renderComponent', false);
+    await settled();
+
+    assert.true(
+      clearDatasetStub.calledWith('sync/association'),
+      'Sync associations are cleared from store on component teardown'
+    );
   });
 });
