@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentRouteName, visit } from '@ember/test-helpers';
+import { currentRouteName } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -110,7 +110,7 @@ module('Acceptance | chroot-namespace enterprise ui', function (hooks) {
       assert.dom(navLink(nav)).doesNotExist(`Does not show ${nav} nav item`);
     });
 
-    visit(`/vault/dashboard?namespace=${namespace}/child`);
+    await authPage.loginNs(`${namespace}/child`, childReader);
     ['Dashboard', 'Secrets Engines', 'Access', 'Policies', 'Tools', 'Client Count'].forEach((nav) => {
       assert.dom(navLink(nav)).exists(`Shows ${nav} nav item within child namespace`);
     });
