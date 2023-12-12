@@ -19,70 +19,7 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
     {{#each @message.formFields as |attr|}}
-      {{#if (eq attr.name "authenticated")}}
-        <Hds::Form::Radio::Group
-          @layout="vertical"
-          @name="authenticated"
-          class="has-bottom-margin-m"
-          data-test-radio-group="authenticated"
-          as |G|
-        >
-          <G.Legend>Where should we display this message?</G.Legend>
-          <G.Radio::Field
-            @value={{@message.authenticated}}
-            checked={{@message.authenticated}}
-            data-test-radio-field={{if @message.authenticated "authenticated"}}
-            {{on "change" (fn (mut @message.authenticated) true)}}
-            as |F|
-          >
-            <F.Label>After the user logs in</F.Label>
-            <F.HelperText>Display to users after they have successfully logged in to Vault. </F.HelperText>
-          </G.Radio::Field>
-          <G.Radio::Field
-            @value={{@message.authenticated}}
-            checked={{not @message.authenticated}}
-            data-test-radio-field={{unless @message.authenticated "unauthenticated"}}
-            {{on "change" (fn (mut @message.authenticated) false)}}
-            as |F|
-          >
-            <F.Label>On the login page</F.Label>
-            <F.HelperText>Display to users on the login page before they have authenticated.</F.HelperText>
-          </G.Radio::Field>
-        </Hds::Form::Radio::Group>
-      {{else if (eq attr.name "type")}}
-        <Hds::Form::Radio::Group
-          @layout="vertical"
-          @name="type"
-          class="has-bottom-margin-m"
-          data-test-radio-group="type"
-          as |G|
-        >
-          <G.Legend>Type</G.Legend>
-          <G.Radio::Field
-            @id="modal-display-type"
-            @value="banner"
-            checked={{eq @message.type "banner"}}
-            data-test-radio-field="banner"
-            {{on "change" (fn (mut @message.type) "banner")}}
-            as |F|
-          >
-            <F.Label>Alert message</F.Label>
-            <F.HelperText>A banner that appears on the top of every page to display brief but high-signal messages like an
-              update or system alert.</F.HelperText>
-          </G.Radio::Field>
-          <G.Radio::Field
-            @id="banner-display-type"
-            @value="modal"
-            checked={{eq @message.type "modal"}}
-            data-test-radio-field="modal"
-            {{on "change" (fn (mut @message.type) "modal")}}
-            as |F|
-          >
-            <F.Label>Modal</F.Label>
-            <F.HelperText>A pop-up window used to bring immediate attention for important notifications or actions.</F.HelperText>
-          </G.Radio::Field>
-        </Hds::Form::Radio::Group>
-      {{else if (eq attr.name "linkTitle")}}
+      {{#if (eq attr.name "linkTitle")}}
         <div class="field has-bottom-margin-m">
           <label for="link" class="is-label">Link
             <span class="has-text-grey-400 has-font-weight-normal">(optional)</span></label>

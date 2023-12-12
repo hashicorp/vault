@@ -75,8 +75,16 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
+  get isRadioGroup() {
+    return (
+      !!this.args?.attr?.options?.possibleHelperTextOptions ||
+      !!this.args?.attrs?.options?.possibleLabelOptions
+    );
+  }
+
   get hideLabel() {
     const { type, options } = this.args.attr;
+    if (this.isRadioGroup) return false;
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
       return true;
     }

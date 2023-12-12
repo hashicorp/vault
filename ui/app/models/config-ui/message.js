@@ -22,10 +22,26 @@ const validations = {
 export default class MessageModel extends Model {
   @attr('boolean') active;
   @attr('string', {
+    label: 'Type',
+    editType: 'radio',
+    possibleValues: ['banner', 'modal'],
+    possibleLabelOptions: ['Alert message', 'Modal'],
+    possibleHelperTextOptions: [
+      'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
+      'A pop-up window used to bring immediate attention for important notifications or actions.',
+    ],
     defaultValue: 'banner',
   })
   type;
   @attr('boolean', {
+    label: 'Where should we display this message?',
+    editType: 'radio',
+    possibleValues: [true, false],
+    possibleLabelOptions: ['After the user logs in', 'On the login page'],
+    possibleHelperTextOptions: [
+      'Display to users after they have successfully logged in to Vault.',
+      'Display to users on the login page before they have authenticated.',
+    ],
     defaultValue: true,
   })
   authenticated;
