@@ -18,9 +18,9 @@ export default Factory.extend({
     name: 'destination-azure',
     key_vault_uri: 'https://keyvault-1234abcd.vault.azure.net',
     subscription_id: 'subscription-id',
-    tenant_id: 'tenant-id', // TODO confirm masked
-    client_id: '*****', // TODO confirm masked
-    client_secret: '*****', // TODO confirm masked
+    tenant_id: 'tenant-id',
+    client_id: 'azure-client-id',
+    client_secret: '*****',
   }),
   ['gcp-sm']: trait({
     type: 'gcp-sm',
@@ -38,9 +38,9 @@ export default Factory.extend({
   ['vercel-project']: trait({
     type: 'vercel-project',
     name: 'destination-vercel',
-    access_token: '*****', // TODO confirm masked
+    access_token: '*****',
     project_id: 'prj_12345',
     team_id: 'team_12345',
-    deployment_environments: ['development', 'preview', 'production'],
+    deployment_environments: 'development,preview', // 'production' is also an option, but left out for testing to assert form changes value
   }),
 });

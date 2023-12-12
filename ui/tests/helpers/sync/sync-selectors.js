@@ -62,6 +62,7 @@ export const PAGE = {
   saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
+    enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`,
     fillInByAttr: async (attr, value) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
@@ -69,7 +70,7 @@ export const PAGE = {
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);
         case 'deploymentEnvironments':
-          await click('[data-test-input="deploymentEnvironments"] input#deployment');
+          await click('[data-test-input="deploymentEnvironments"] input#development');
           await click('[data-test-input="deploymentEnvironments"] input#preview');
           return await click('[data-test-input="deploymentEnvironments"] input#production');
         default:

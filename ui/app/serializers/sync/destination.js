@@ -4,12 +4,26 @@
  */
 
 import ApplicationSerializer from 'vault/serializers/application';
-
+import { decamelize } from '@ember/string';
 export default class SyncDestinationSerializer extends ApplicationSerializer {
   attrs = {
     name: { serialize: false },
     type: { serialize: false },
   };
+
+  serialize(snapshot) {
+    // special serialization only for PATCH requests
+    if (snapshot.isNew) return super.serialize(snapshot);
+
+    // only send changed values
+    const data = {};
+    for (const attr in snapshot.changedAttributes()) {
+      // first array element is the old value
+      const [, newValue] = snapshot.changedAttributes()[attr];
+      data[decamelize(attr)] = newValue;
+    }
+    return data;
+  }
 
   // interrupt application's normalizeItems, which is called in normalizeResponse by application serializer
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {

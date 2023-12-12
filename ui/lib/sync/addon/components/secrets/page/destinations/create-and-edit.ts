@@ -30,11 +30,38 @@ export default class DestinationsCreateForm extends Component<Args> {
   @tracked invalidFormMessage = '';
   @tracked error = '';
 
+  get header() {
+    const { isNew, typeDisplayName, name } = this.args.destination;
+    return isNew
+      ? {
+          title: `Create Destination for ${typeDisplayName}`,
+          breadcrumbs: [
+            { label: 'Secrets Sync', route: 'secrets.overview' },
+            { label: 'Select Destination', route: 'secrets.destinations.create' },
+            { label: 'Create Destination' },
+          ],
+        }
+      : {
+          title: `Edit ${name}`,
+          breadcrumbs: [
+            { label: 'Secrets Sync', route: 'secrets.overview' },
+            {
+              label: 'Destination',
+              route: 'secrets.destinations.destination.secrets',
+              model: this.args.destination,
+            },
+            { label: 'Edit Destination' },
+          ],
+        };
+  }
+
   @task
   @waitFor
   *save(event: Event) {
     event.preventDefault();
 
+    // clear out validation warnings
+    this.modelValidations = null;
     const { destination } = this.args;
     const { isValid, state, invalidFormMessage } = destination.validate();
 
@@ -59,9 +86,18 @@ export default class DestinationsCreateForm extends Component<Args> {
   }
 
   @action
+  updateWarningValidation() {
+    if (this.args.destination.isNew) return;
+    // check for warnings on change
+    const { state } = this.args.destination.validate();
+    this.modelValidations = state;
+  }
+
+  @action
   cancel() {
-    const method = this.args.destination.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    const { isNew } = this.args.destination;
+    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.args.destination[method]();
-    this.router.transitionTo('vault.cluster.sync.secrets.destinations.create');
+    this.router.transitionTo(`vault.cluster.sync.secrets.destinations.${isNew ? 'create' : 'destination'}`);
   }
 }

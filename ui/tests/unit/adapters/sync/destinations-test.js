@@ -24,7 +24,7 @@ module('Unit | Adapter | sync | destination', function (hooks) {
     for (const type of types) {
       const name = 'my-dest';
       this.server.post(`sys/sync/destinations/${type}/${name}`, () => {
-        assert.ok(true, `request is made to GET sys/sync/destinations/${type}/my-dest endpoint on create`);
+        assert.ok(true, `request is made to POST sys/sync/destinations/${type}/my-dest endpoint on create`);
         return {
           data: {
             connection_details: {},
@@ -34,6 +34,32 @@ module('Unit | Adapter | sync | destination', function (hooks) {
         };
       });
       this.model = this.store.createRecord(`sync/destinations/${type}`, { type, name });
+      this.model.save();
+    }
+  });
+
+  test('it calls the correct endpoint for updateRecord', async function (assert) {
+    const types = destinationTypes();
+    assert.expect(types.length);
+
+    for (const type of types) {
+      const data = this.server.create('sync-destination', type);
+      this.server.patch(`sys/sync/destinations/${type}/${data.name}`, () => {
+        assert.ok(
+          true,
+          `request is made to PATCH sys/sync/destinations/${type}/${data.name} endpoint on update`
+        );
+        return {
+          data: {},
+        };
+      });
+      const id = `${type}/${data.name}`;
+      data.id = id;
+      this.store.pushPayload(`sync/destinations/${type}`, {
+        modelName: `sync/destinations/${type}`,
+        ...data,
+      });
+      this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
       this.model.save();
     }
   });

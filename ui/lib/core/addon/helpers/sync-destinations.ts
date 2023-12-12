@@ -13,8 +13,6 @@ to return static display attributes that rely on type
 maskedParams: attributes for sensitive data, the API returns these values as '*****'
 */
 
-// TODO update maskedParams for other types: https://hashicorp.atlassian.net/browse/VAULT-21428
-
 const SYNC_DESTINATIONS: Array<SyncDestination> = [
   {
     name: 'AWS Secrets Manager',
@@ -28,14 +26,14 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'azure-kv',
     icon: 'azure-color',
     category: 'cloud',
-    maskedParams: [],
+    maskedParams: ['clientSecret'],
   },
   {
     name: 'Google Secret Manager',
     type: 'gcp-sm',
     icon: 'gcp-color',
     category: 'cloud',
-    maskedParams: [],
+    maskedParams: ['credentials'],
   },
   {
     name: 'Github Actions',
@@ -49,7 +47,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     type: 'vercel-project',
     icon: 'vercel-color',
     category: 'dev-tools',
-    maskedParams: [],
+    maskedParams: ['accessToken'],
   },
 ];
 
