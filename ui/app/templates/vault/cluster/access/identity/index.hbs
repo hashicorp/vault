@@ -33,7 +33,7 @@
         </div>
         <div class="column has-text-right">
           <PopupMenu @name="identity-item" @onOpen={{action "reloadRecord" item}}>
-            <nav class="menu">
+            <nav class="menu" aria-label="navigation for managing identity">
               <ul class="menu-list">
                 <li class="action">
                   <LinkTo @route="vault.cluster.access.identity.show" @models={{array item.id "details"}}>

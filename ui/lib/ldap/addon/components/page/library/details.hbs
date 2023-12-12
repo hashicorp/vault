@@ -24,7 +24,7 @@
 </div>
 
 <Toolbar>
-  <ToolbarActions>
+  <ToolbarActions aria-label="actions for library {{@model.id}}">
     {{#if @model.canDelete}}
       <ConfirmAction
         @buttonText="Delete library"
