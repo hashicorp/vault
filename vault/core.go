@@ -66,6 +66,7 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/patrickmn/go-cache"
 	uberAtomic "go.uber.org/atomic"
@@ -524,7 +525,8 @@ type Core struct {
 	activeNodeReplicationState *uint32
 
 	// uiConfig contains UI configuration
-	uiConfig *UIConfig
+	uiConfig             *UIConfig
+	customMessageManager *uicustommessages.Manager
 
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool
@@ -705,8 +707,9 @@ type Core struct {
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
 
-	echoDuration              *uberAtomic.Duration
-	activeNodeClockSkewMillis *uberAtomic.Int64
+	echoDuration                  *uberAtomic.Duration
+	activeNodeClockSkewMillis     *uberAtomic.Int64
+	periodicLeaderRefreshInterval time.Duration
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -881,6 +884,8 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 
 	NumRollbackWorkers int
+
+	PeriodicLeaderRefreshInterval time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -964,6 +969,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	if conf.NumRollbackWorkers == 0 {
 		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
+
+	if conf.PeriodicLeaderRefreshInterval == 0 {
+		conf.PeriodicLeaderRefreshInterval = leaderCheckInterval
 	}
 
 	effectiveSDKVersion := conf.EffectiveSDKVersion
@@ -1064,6 +1073,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		detectDeadlocks:                detectDeadlocks,
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1203,6 +1213,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// For recovery mode we've now configured enough to return early.
 	if c.recoveryMode {
+		checkResult, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
+		if err != nil {
+			return nil, fmt.Errorf("error checking if a seal migration is needed")
+		}
+		if conf.UnwrapSeal != nil || checkResult == sealMigrationCheckAdjust {
+			return nil, errors.New("cannot run in recovery mode when a seal migration is needed")
+		}
 		return c, nil
 	}
 
@@ -1245,6 +1262,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// UI
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
+	c.customMessageManager = uicustommessages.NewManager(c.barrier)
 
 	// Listeners
 	err = c.configureListeners(conf)
@@ -2897,6 +2915,87 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 	return nil
 }
 
+type sealMigrationCheckResult int
+
+const (
+	sealMigrationCheckError sealMigrationCheckResult = iota
+	sealMigrationCheckSkip
+	sealMigrationCheckAdjust
+	sealMigrationCheckDoNotAjust
+)
+
+func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (sealMigrationCheckResult, error) {
+	existBarrierSealConfig, _, err := c.PhysicalSealConfigs(ctx)
+	if err != nil {
+		return sealMigrationCheckError, fmt.Errorf("Error checking for existing seal: %s", err)
+	}
+
+	// If we don't have an existing config or if it's the deprecated auto seal
+	// which needs an upgrade, skip out
+	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == WrapperTypeHsmAutoDeprecated.String() {
+		return sealMigrationCheckSkip, nil
+	}
+
+	if unwrapSeal == nil {
+		// With unwrapSeal==nil, either we're not migrating, or we're migrating
+		// from shamir.
+
+		storedType := SealConfigType(existBarrierSealConfig.Type)
+		configuredType := c.seal.BarrierSealConfigType()
+
+		switch {
+		case storedType == configuredType:
+			// We have the same barrier type and the unwrap seal is nil so we're not
+			// migrating from same to same, IOW we assume it's not a migration.
+			return sealMigrationCheckDoNotAjust, nil
+		case configuredType == SealConfigTypeShamir:
+			// The stored barrier config is not shamir, there is no disabled seal
+			// in config, and either no configured seal (which equates to Shamir)
+			// or an explicitly configured Shamir seal.
+			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
+				existBarrierSealConfig.Type)
+		case storedType == SealConfigTypeShamir:
+			// The configured seal is not Shamir, the stored seal config is Shamir.
+			// This is a migration away from Shamir.
+
+			return sealMigrationCheckAdjust, nil
+		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
+			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return sealMigrationCheckDoNotAjust, nil
+		case configuredType == SealConfigTypeMultiseal:
+			// The configured seal is multiseal and we know the stored type is not shamir, thus
+			// we are going from auto seal to multiseal.
+			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
+		case storedType == SealConfigTypeMultiseal:
+			// The stored type is multiseal and we know the type the configured type is not shamir,
+			// thus we are going from multiseal to autoseal.
+			//
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return sealMigrationCheckDoNotAjust, nil
+		default:
+			// We know at this point that there is a configured non-Shamir seal,
+			// that it does not match the stored non-Shamir seal config, and that
+			// there is no explicitly disabled seal stanza.
+			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
+		}
+	} else {
+		// If we're not coming from Shamir we expect the previous seal to be
+		// in the config and disabled.
+
+		if unwrapSeal.BarrierSealConfigType() == SealConfigTypeShamir {
+			return sealMigrationCheckError, errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
+		}
+		return sealMigrationCheckDoNotAjust, nil
+	}
+}
+
 // adjustForSealMigration takes the unwrapSeal, which is nil if (a) we're not
 // configured for seal migration or (b) we might be doing a seal migration away
 // from shamir.  It will only be non-nil if there is a configured seal with
@@ -2918,79 +3017,39 @@ func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath strin
 // to write the new barrier/recovery stored seal config.
 func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	ctx := context.Background()
+
+	checkResult, err := c.checkForSealMigration(ctx, unwrapSeal)
+	if err != nil {
+		return err
+	}
+	switch checkResult {
+	case sealMigrationCheckSkip:
+		// If we don't have an existing config or if it's the deprecated auto seal
+		// which needs an upgrade, skip out
+		return nil
+
+	case sealMigrationCheckAdjust:
+		// The configured seal is not Shamir, the stored seal config is Shamir.
+		// This is a migration away from Shamir.
+
+		// See note about creating a SealGenerationInfo for the unwrap seal in
+		// function setSeal in server.go.
+		sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
+		if err != nil {
+			return err
+		}
+		unwrapSeal = NewDefaultSeal(sealAccess)
+
+	case sealMigrationCheckDoNotAjust:
+		// unwrapSeal stays as is
+		if unwrapSeal == nil {
+			return nil
+		}
+	}
+
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
 		return fmt.Errorf("Error checking for existing seal: %s", err)
-	}
-
-	// If we don't have an existing config or if it's the deprecated auto seal
-	// which needs an upgrade, skip out
-	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == WrapperTypeHsmAutoDeprecated.String() {
-		return nil
-	}
-
-	if unwrapSeal == nil {
-		// With unwrapSeal==nil, either we're not migrating, or we're migrating
-		// from shamir.
-
-		storedType := SealConfigType(existBarrierSealConfig.Type)
-		configuredType := c.seal.BarrierSealConfigType()
-
-		switch {
-		case storedType == configuredType:
-			// We have the same barrier type and the unwrap seal is nil so we're not
-			// migrating from same to same, IOW we assume it's not a migration.
-			return nil
-		case configuredType == SealConfigTypeShamir:
-			// The stored barrier config is not shamir, there is no disabled seal
-			// in config, and either no configured seal (which equates to Shamir)
-			// or an explicitly configured Shamir seal.
-			return fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
-				existBarrierSealConfig.Type)
-		case storedType == SealConfigTypeShamir:
-			// The configured seal is not Shamir, the stored seal config is Shamir.
-			// This is a migration away from Shamir.
-
-			// See note about creating a SealGenerationInfo for the unwrap seal in
-			// function setSeal in server.go.
-			sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
-			if err != nil {
-				return err
-			}
-			unwrapSeal = NewDefaultSeal(sealAccess)
-		case configuredType == SealConfigTypeMultiseal && server.IsMultisealSupported():
-			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
-			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
-			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
-
-			return nil
-		case configuredType == SealConfigTypeMultiseal:
-			// The configured seal is multiseal and we know the stored type is not shamir, thus
-			// we are going from auto seal to multiseal.
-			return fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
-				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
-		case storedType == SealConfigTypeMultiseal:
-			// The stored type is multiseal and we know the type the configured type is not shamir,
-			// thus we are going from multiseal to autoseal.
-			//
-			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
-			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
-
-			return nil
-		default:
-			// We know at this point that there is a configured non-Shamir seal,
-			// that it does not match the stored non-Shamir seal config, and that
-			// there is no explicitly disabled seal stanza.
-			return fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
-				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
-		}
-	} else {
-		// If we're not coming from Shamir we expect the previous seal to be
-		// in the config and disabled.
-
-		if unwrapSeal.BarrierSealConfigType() == SealConfigTypeShamir {
-			return errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
-		}
 	}
 
 	// If we've reached this point it's a migration attempt and we should have both
@@ -3483,7 +3542,13 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 		return nil
 	}
 
-	return c.quotaManager.Setup(ctx, c.systemBarrierView, isPerfStandby, c.IsDRSecondary())
+	qmFlags := &quotas.ManagerFlags{
+		IsPerfStandby: isPerfStandby,
+		IsDRSecondary: c.IsDRSecondary(),
+		IsNewInstall:  c.IsNewInstall(ctx),
+	}
+
+	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
 }
 
 // ApplyRateLimitQuota checks the request against all the applicable quota rules.
@@ -3948,9 +4013,17 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	var nodes []PeerNode
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
 		info := item.Object.(nodeHAConnectionInfo)
+		var hostname, apiAddr string
+
+		// nodeInfo can be nil if there's a node with a much older version in
+		// the cluster
+		if info.nodeInfo != nil {
+			hostname = info.nodeInfo.Hostname
+			apiAddr = info.nodeInfo.ApiAddr
+		}
 		nodes = append(nodes, PeerNode{
-			Hostname:        info.nodeInfo.Hostname,
-			APIAddress:      info.nodeInfo.ApiAddr,
+			Hostname:        hostname,
+			APIAddress:      apiAddr,
 			ClusterAddress:  itemClusterAddr,
 			LastEcho:        info.lastHeartbeat,
 			Version:         info.version,
