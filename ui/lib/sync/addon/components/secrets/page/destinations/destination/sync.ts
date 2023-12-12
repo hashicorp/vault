@@ -35,9 +35,14 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @tracked mountPath = '';
   @tracked secretPath = '';
   @tracked error = '';
+  @tracked syncedSecret = '';
 
   get isSecretDirectory() {
     return this.secretPath && keyIsFolder(this.secretPath);
+  }
+
+  get isSubmitDisabled() {
+    return !this.mountPath || !this.secretPath || this.isSecretDirectory || this.setAssociation.isRunning;
   }
 
   willDestroy(): void {
@@ -71,10 +76,10 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     this.mountPath = selected[0] || '';
   }
 
-  @task
-  *setAssociation(event: Event) {
+  setAssociation = task({}, async (event: Event) => {
     event.preventDefault();
     try {
+      this.syncedSecret = '';
       const { name: destinationName, type: destinationType } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
       const association = this.store.createRecord('sync/association', {
@@ -83,13 +88,10 @@ export default class DestinationSyncPageComponent extends Component<Args> {
         mount,
         secretName: this.secretPath,
       });
-      yield association.save({ adapterOptions: { action: 'set' } });
-      // this message can be expanded after testing -- deliberately generic for now
-      this.flashMessages.success(
-        'Sync operation successfully initiated. Status will be updated on secret when complete.'
-      );
+      await association.save({ adapterOptions: { action: 'set' } });
+      this.syncedSecret = this.secretPath;
     } catch (error) {
       this.error = `Sync operation error: \n ${errorMessage(error)}`;
     }
-  }
+  });
 }

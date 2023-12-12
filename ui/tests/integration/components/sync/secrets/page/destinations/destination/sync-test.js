@@ -17,7 +17,7 @@ import sinon from 'sinon';
 import { Response } from 'miragejs';
 
 const { destinations, searchSelect, messageError, kvSuggestion } = PAGE;
-const { mountSelect, mountInput, submit, cancel } = destinations.sync;
+const { mountSelect, mountInput, submit, cancel, successMessage } = destinations.sync;
 
 module('Integration | Component | sync | Secrets::Page::Destinations::Destination::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -68,14 +68,14 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   });
 
   test('it should sync secret', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
 
     const { type, name } = this.destination;
     this.server.post(`/sys/sync/destinations/${type}/${name}/associations/set`, (schema, req) => {
       const data = JSON.parse(req.requestBody);
       const expected = { mount: 'my-kv', secret_name: 'my-secret' };
       assert.deepEqual(data, expected, 'Sync request made with mount and secret name');
-      return {};
+      return { data: { associated_secrets: {} } };
     });
 
     assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
@@ -84,6 +84,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
     await click(submit);
+    assert
+      .dom(successMessage)
+      .includesText('Sync operation successfully initiated for "my-secret".', 'Success banner renders');
   });
 
   test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {
