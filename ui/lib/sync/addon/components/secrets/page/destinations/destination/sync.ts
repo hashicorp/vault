@@ -35,6 +35,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @tracked mountPath = '';
   @tracked secretPath = '';
   @tracked error = '';
+  @tracked syncedSecret = '';
 
   get isSecretDirectory() {
     return this.secretPath && keyIsFolder(this.secretPath);
@@ -84,10 +85,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
         secretName: this.secretPath,
       });
       yield association.save({ adapterOptions: { action: 'set' } });
-      // this message can be expanded after testing -- deliberately generic for now
-      this.flashMessages.success(
-        'Sync operation successfully initiated. Status will be updated on secret when complete.'
-      );
+      this.syncedSecret = this.secretPath;
     } catch (error) {
       this.error = `Sync operation error: \n ${errorMessage(error)}`;
     }

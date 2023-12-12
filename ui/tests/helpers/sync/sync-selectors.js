@@ -31,6 +31,7 @@ export const PAGE = {
       mountInput: '[data-test-sync-mount-input]',
       submit: '[data-test-sync-submit]',
       cancel: '[data-test-sync-cancel]',
+      successMessage: '[data-test-sync-success-message]',
     },
     list: {
       icon: '[data-test-destination-icon]',
