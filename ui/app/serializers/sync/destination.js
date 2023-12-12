@@ -48,10 +48,11 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
   }
 
   _normalizePayload(payload, requestType) {
-    if (payload?.data) {
-      if (requestType === 'query') {
-        return this.extractLazyPaginatedData(payload);
-      }
+    // if request is from lazyPaginatedQuery it will already have been extracted and meta will be set on object
+    // for store.query it will be the raw response which will need to be extracted
+    if (requestType === 'query') {
+      return payload.meta ? payload : this.extractLazyPaginatedData(payload);
+    } else if (payload?.data) {
       // uses name for id and spreads connection_details object into data
       const { data } = payload;
       const connection_details = payload.data.connection_details || {};
