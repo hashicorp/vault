@@ -45,7 +45,7 @@ module(
       assert
         .dom(PAGE.emptyStateMessage)
         .hasText(
-          'Select secrets from existing K/V engines and sync them to the destination.',
+          'Select secrets from existing KV version 2 engines and sync them to the destination.',
           'Empty state message renders'
         );
       assert.dom(PAGE.emptyStateActions).hasText('Sync secret', 'Empty state action renders');
