@@ -25,7 +25,7 @@ export default class KvEngine extends Engine {
       'flash-messages',
       'control-group',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'syncDestination'],
   };
 }
 
