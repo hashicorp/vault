@@ -30,18 +30,17 @@
         @container="#shamir-flow-modal"
       />
     </div>
-    <div class="field is-grouped">
-      <div class="control">
-        <button type="button" class="button" {{on "click" (fn (mut this.selectedPgp) "")}} data-test-confirm-pgp-back-button>
-          Back
-        </button>
-      </div>
-      <div class="control">
-        <button type="submit" disabled={{not this.pgpKey}} class="button is-primary" data-test-confirm-pgp-key-submit>
-          {{this.buttonText}}
-        </button>
-      </div>
-    </div>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Back"
+        @color="tertiary"
+        @icon="chevron-left"
+        {{on "click" (fn (mut this.selectedPgp) "")}}
+        data-test-confirm-pgp-back-button
+      />
+
+      <Hds::Button @text={{this.buttonText}} type="submit" disabled={{not this.pgpKey}} data-test-confirm-pgp-key-submit />
+    </Hds::ButtonSet>
   </form>
 {{else}}
   <form
@@ -56,17 +55,15 @@
       </p>
       <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{this.setKey}} />
     </div>
-    <div class="field is-grouped">
-      <div class="control">
-        <button type="button" class="button" {{on "click" @onCancel}} data-test-use-pgp-key-cancel>
-          Back
-        </button>
-      </div>
-      <div class="control">
-        <button type="submit" disabled={{not this.pgpKeyFile.value}} class="button is-primary" data-test-use-pgp-key-button>
-          Use PGP Key
-        </button>
-      </div>
-    </div>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Back"
+        @color="tertiary"
+        @icon="chevron-left"
+        {{on "click" @onCancel}}
+        data-test-use-pgp-key-cancel
+      />
+      <Hds::Button @text="Use PGP Key" type="submit" disabled={{not this.pgpKeyFile.value}} data-test-use-pgp-key-button />
+    </Hds::ButtonSet>
   </form>
 {{/if}}

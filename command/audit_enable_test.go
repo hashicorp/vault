@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testAuditEnableCommand(tb testing.TB) (*cli.MockUi, *AuditEnableCommand) {

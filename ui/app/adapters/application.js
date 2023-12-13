@@ -36,7 +36,7 @@ export default RESTAdapter.extend({
     return false;
   },
 
-  addHeaders(url, options) {
+  addHeaders(url, options, method) {
     const token = options.clientToken || this.auth.currentToken;
     const headers = {};
     if (token && !options.unauthenticated) {
@@ -44,6 +44,9 @@ export default RESTAdapter.extend({
     }
     if (options.wrapTTL) {
       headers['X-Vault-Wrap-TTL'] = options.wrapTTL;
+    }
+    if (method === 'PATCH') {
+      headers['Content-Type'] = 'application/merge-patch+json';
     }
     const namespace =
       typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
@@ -53,8 +56,8 @@ export default RESTAdapter.extend({
     options.headers = assign(options.headers || {}, headers);
   },
 
-  _preRequest(url, options) {
-    this.addHeaders(url, options);
+  _preRequest(url, options, method) {
+    this.addHeaders(url, options, method);
     const isPolling = POLLING_URLS.some((str) => url.includes(str));
     if (!isPolling) {
       this.auth.setLastFetch(Date.now());
@@ -83,7 +86,7 @@ export default RESTAdapter.extend({
         },
       };
     }
-    const opts = this._preRequest(url, options);
+    const opts = this._preRequest(url, options, method);
 
     return this._super(url, type, opts).then((...args) => {
       if (controlGroupToken) {

@@ -8,9 +8,9 @@ package command
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
 import (
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 )
 
 func entInitCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {

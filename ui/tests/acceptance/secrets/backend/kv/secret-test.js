@@ -281,7 +281,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'secret path is encoded in URL'
       );
       assert.dom('h1').hasText(secretPath, 'Path renders correctly on show page');
-      await click(`[data-test-secret-breadcrumb="${firstPath}"]`);
+      await click(`[data-test-secret-breadcrumb="${firstPath}"] a`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
@@ -325,7 +325,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.filterInput('filter/foo1');
       assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');
       await listPage.secrets.objectAt(0).click();
-      await showPage.breadcrumbs.filterBy('text', 'filter')[0].click();
+      await click('[data-test-secret-breadcrumb="filter"] a');
       assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
       assert.strictEqual(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
     });

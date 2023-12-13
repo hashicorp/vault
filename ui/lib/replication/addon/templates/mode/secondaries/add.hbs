@@ -25,7 +25,7 @@
         name="activation-token-id"
         id="activation-token-id"
         @value={{this.id}}
-        data-test-replication-secondary-id={{true}}
+        data-test-replication-secondary-id
       />
     </div>
     <p class="help has-text-grey">
@@ -45,18 +45,11 @@
   {{#if (eq this.replicationMode "performance")}}
     <PathFilterConfigList @paths={{this.paths}} @config={{this.filterConfig}} @id={{this.id}} />
   {{/if}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <div class="control">
-      <button type="submit" class="button is-primary" data-test-secondary-add={{true}}>
-        Generate token
-      </button>
-    </div>
-    <div class="control">
-      <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} class="button">
-        Cancel
-      </LinkTo>
-    </div>
-  </div>
+  <hr class="has-background-gray-100" />
+  <Hds::ButtonSet>
+    <Hds::Button @text="Generate token" type="submit" data-test-secondary-add />
+    <Hds::Button @text="Cancel" @color="secondary" @route="mode.secondaries" @model={{this.model.replicationMode}} />
+  </Hds::ButtonSet>
 </form>
 
 {{#if this.isModalActive}}

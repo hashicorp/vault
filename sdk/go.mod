@@ -24,13 +24,13 @@ require (
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.8
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.5.2
+	github.com/hashicorp/go-plugin v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.1
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.2
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.3.0
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.2
 	github.com/hashicorp/go-sockaddr v1.0.2
@@ -82,6 +82,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgtype v1.14.0 // indirect
 	github.com/jackc/pgx/v4 v4.18.1 // indirect
+	github.com/joshlf/go-acl v0.0.0-20200411065538-eae00ae38531 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

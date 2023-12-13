@@ -4,41 +4,42 @@
 ~}}
 
 <PopupMenu @name="alias-menu">
-  <Confirm as |c|>
-    {{#let (get this.params "0") as |item|}}
-      <nav class="menu">
-        <ul class="menu-list">
+  {{#let (get this.params "0") as |item|}}
+    <nav class="menu">
+      <ul class="menu-list">
+        <li class="action">
+          <LinkTo
+            @route="vault.cluster.access.identity.aliases.show"
+            @models={{array (pluralize item.parentType) item.id "details"}}
+          >
+            Details
+          </LinkTo>
+        </li>
+        {{#if item.updatePath.isPending}}
           <li class="action">
-            <LinkTo
-              @route="vault.cluster.access.identity.aliases.show"
-              @models={{array (pluralize item.parentType) item.id "details"}}
-            >
-              Details
-            </LinkTo>
+            <LoadingDropdownOption />
           </li>
-          {{#if item.updatePath.isPending}}
+        {{else}}
+          {{#if item.canEdit}}
             <li class="action">
-              <LoadingDropdownOption />
+              <LinkTo
+                @route="vault.cluster.access.identity.aliases.edit"
+                @models={{array (pluralize item.parentType) item.id}}
+              >
+                Edit
+              </LinkTo>
             </li>
-          {{else}}
-            {{#if item.canEdit}}
-              <li class="action">
-                <LinkTo
-                  @route="vault.cluster.access.identity.aliases.edit"
-                  @models={{array (pluralize item.parentType) item.id}}
-                >
-                  Edit
-                </LinkTo>
-              </li>
-            {{/if}}
-            {{#if item.canDelete}}
-              <li class="action">
-                <c.Message @id={{item.id}} @onConfirm={{action "performTransaction" item}} data-test-item-delete />
-              </li>
-            {{/if}}
           {{/if}}
-        </ul>
-      </nav>
-    {{/let}}
-  </Confirm>
+          {{#if item.canDelete}}
+            <ConfirmAction
+              @buttonText="Delete"
+              @isInDropdown={{true}}
+              @onConfirmAction={{action "performTransaction" item}}
+              data-test-item-delete
+            />
+          {{/if}}
+        {{/if}}
+      </ul>
+    </nav>
+  {{/let}}
 </PopupMenu>

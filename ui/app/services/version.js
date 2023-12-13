@@ -11,7 +11,17 @@ export default class VersionService extends Service {
   @service store;
   @tracked features = [];
   @tracked version = null;
+  @tracked type = null;
 
+  get isEnterprise() {
+    return this.type === 'enterprise';
+  }
+
+  get isCommunity() {
+    return !this.isEnterprise;
+  }
+
+  /* Features */
   get hasPerfReplication() {
     return this.features.includes('Performance Replication');
   }
@@ -32,26 +42,35 @@ export default class VersionService extends Service {
     return this.features.includes('Control Groups');
   }
 
-  get isEnterprise() {
-    if (!this.version) return false;
-    return this.version.includes('+');
+  get versionDisplay() {
+    if (!this.version) {
+      return '';
+    }
+    return this.isEnterprise ? `v${this.version.slice(0, this.version.indexOf('+'))}` : `v${this.version}`;
   }
 
-  get isOSS() {
-    return !this.isEnterprise;
+  @task({ drop: true })
+  *getVersion() {
+    if (this.version) return;
+    const response = yield this.store.adapterFor('cluster').fetchVersion();
+    this.version = response.data?.version;
   }
 
   @task
-  *getVersion() {
-    if (this.version) return;
-    const response = yield this.store.adapterFor('cluster').sealStatus();
-    this.version = response.version;
-    return;
+  *getType() {
+    if (this.type !== null) return;
+    const response = yield this.store.adapterFor('cluster').health();
+    if (response.has_chroot_namespace) {
+      // chroot_namespace feature is only available in enterprise
+      this.type = 'enterprise';
+      return;
+    }
+    this.type = response.enterprise ? 'enterprise' : 'community';
   }
 
   @keepLatestTask
   *getFeatures() {
-    if (this.features?.length || this.isOSS) {
+    if (this.features?.length || this.isCommunity) {
       return;
     }
     try {
@@ -65,6 +84,10 @@ export default class VersionService extends Service {
 
   fetchVersion() {
     return this.getVersion.perform();
+  }
+
+  fetchType() {
+    return this.getType.perform();
   }
 
   fetchFeatures() {

@@ -6,15 +6,14 @@
 <Toolbar>
   <ToolbarActions>
     {{#if (and @isRotatable @canRotate)}}
-      <button
-        type="button"
-        class="toolbar-link"
+      <Hds::Button
+        @text="Rotate this root"
+        @color="secondary"
+        @icon="rotate-cw"
+        class="toolbar-button"
         {{on "click" (fn (mut this.showRotationModal) true)}}
         data-test-pki-issuer-rotate-root
-      >
-        Rotate this root
-        <Icon @name="rotate-cw" />
-      </button>
+      />
     {{/if}}
     {{#if @canCrossSign}}
       <ToolbarLink @route="issuers.issuer.cross-sign" @type="pen-tool" @model={{@issuer.id}} data-test-pki-issuer-cross-sign>

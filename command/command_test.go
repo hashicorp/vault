@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -25,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
-	"github.com/mitchellh/cli"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
