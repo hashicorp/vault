@@ -98,7 +98,15 @@ in `transit`, etc.) can be satisfied by the local secondary, allowing Vault to s
 relatively horizontally with the number of secondaries rather than vertically as
 in the past.
 
-~> Note: Automated integrated storage snapshots are not replicated in Performance Replication. Each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) should be configured to create separate automated snapshots.
+<Note title="Performance replication does not include automated integrated storage snapshots">
+
+Vault does not replicate automated integrated storage snapshots as a part of
+performance replication. 
+
+You must explicitly configure each of the primary and secondary performance
+clusters to create individual automated snapshots replicas.
+
+</Note>
 
 ### Paths filter
 
