@@ -538,7 +538,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	auditLogger := c.baseLogger.Named("audit")
-	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":
@@ -569,6 +568,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		}
 	}
 
+	c.AddLogger(auditLogger)
 	return be, err
 }
 

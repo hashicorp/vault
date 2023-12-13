@@ -226,6 +226,8 @@ func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
 
 func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
+
+	// Set the salt to be a known key and value for comparing hash values in tests.
 	err := view.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
@@ -234,15 +236,11 @@ func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	if config.SaltView == nil {
-		config.SaltView = view
-	}
-
-	if config.SaltConfig == nil {
-		config.SaltConfig = &salt.Config{
-			HMAC:     sha256.New,
-			HMACType: "hmac-sha256",
-		}
+	// Override parts of config for testing purposes.
+	config.SaltView = view
+	config.SaltConfig = &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
 	}
 
 	n := &NoopAudit{Config: config}
