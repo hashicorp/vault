@@ -173,7 +173,10 @@ export default function (server) {
     }
     const data = { type, name, mount, secret_name };
     schema.db.syncAssociations.firstOrCreate({ type, name }, data);
-    schema.db.syncAssociations.update({ type, name }, { ...data, sync_status: 'SYNCED' });
+    schema.db.syncAssociations.update(
+      { type, name },
+      { ...data, sync_status: 'SYNCED', updated_at: new Date().toISOString() }
+    );
     return associationsResponse(schema, req);
   });
   server.post(`${uri}/associations/remove`, (schema, req) => {
