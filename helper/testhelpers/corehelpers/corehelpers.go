@@ -293,6 +293,8 @@ func NoopAuditFactory(records **[][]byte) audit.Factory {
 	}
 }
 
+var _ audit.Backend = (*NoopAudit)(nil)
+
 type NoopAudit struct {
 	Config         *audit.BackendConfig
 	ReqErr         error
@@ -318,6 +320,26 @@ type NoopAudit struct {
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+}
+
+func (n *NoopAudit) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+func (n *NoopAudit) IsFilteringPipeline() bool {
+	return false
+}
+
+func (n *NoopAudit) Name() string {
+	return "noop"
+}
+
+func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return n.nodeMap
+}
+
+func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
+	return n.nodeIDList
 }
 
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
