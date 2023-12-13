@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
@@ -156,7 +157,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 		if err != nil {
 			return nil, err
 		}
-		reloadedConnections := []string{}
+		reloaded := []string{}
 		for _, connName := range connNames {
 			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
 			if err != nil {
@@ -171,21 +172,27 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 				return nil, err
 			}
 			if config.PluginName == pluginName {
-				reloadedConnections = append(reloadedConnections, connName)
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
-					return nil, fmt.Errorf("failed to reload connection %q: %w", connName, err)
+					var successfullyReloaded string
+					if len(reloaded) > 0 {
+						successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ",
+							len(reloaded),
+							strings.Join(reloaded, ", "))
+					}
+					return nil, fmt.Errorf("%sfailed to reload connection %q: %w", successfullyReloaded, connName, err)
 				}
+				reloaded = append(reloaded, connName)
 			}
 		}
 
 		resp := &logical.Response{
 			Data: map[string]interface{}{
-				"connections": reloadedConnections,
-				"count":       len(reloadedConnections),
+				"connections": reloaded,
+				"count":       len(reloaded),
 			},
 		}
 
-		if len(reloadedConnections) == 0 {
+		if len(reloaded) == 0 {
 			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
 		}
 
