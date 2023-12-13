@@ -127,7 +127,7 @@ module('Unit | Adapter | sync | destination', function (hooks) {
   test('it should make request to correct endpoint for deleteRecord with base model', async function (assert) {
     assert.expect(1);
 
-    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1', () => {
+    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1?purge=true', () => {
       assert.ok(true, 'DELETE request made to correct endpoint');
       return {};
     });
@@ -147,8 +147,7 @@ module('Unit | Adapter | sync | destination', function (hooks) {
     assert.expect(1);
 
     const destination = this.server.create('sync-destination', 'aws-sm');
-
-    this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}`, () => {
+    this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}?purge=true`, () => {
       assert.ok(true, 'DELETE request made to correct endpoint');
       return {};
     });

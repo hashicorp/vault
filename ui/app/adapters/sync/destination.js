@@ -25,12 +25,8 @@ export default class SyncDestinationAdapter extends ApplicationAdapter {
 
   urlForDeleteRecord(id, modelName, snapshot) {
     const { name, type } = snapshot.attributes();
-    // the modelName may be sync/destination or a child depending if it was initiated from the list or details view
-    // since the id for sync/destinations is type/name it will actually generate the correct url but the slash will be encoded
-    // if we normalize to use the child model name for url generation instead things will be consistent
-    const normalizedModelName =
-      modelName === 'sync/destination' ? `${pluralize(modelName)}/${type}` : modelName;
-    return `${super.urlForDeleteRecord(name, normalizedModelName, snapshot)}`;
+    // the only delete option in the UI is to purge which unsyncs all secrets prior to deleting
+    return `${this.buildURL('sync/destinations')}/${type}/${name}?purge=true`;
   }
 
   query(store, { modelName }) {
