@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: BUSL
+// SPDX-License-Identifier: BUSL-1.1
 
 package syslog
 
@@ -16,10 +16,10 @@ func TestBackend_formatterConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		config          map[string]string
-		want            audit.FormatterConfig
-		wantErr         bool
-		expectedMessage string
+		config         map[string]string
+		want           audit.FormatterConfig
+		wantErr        bool
+		expectedErrMsg string
 	}{
 		"happy-path-json": {
 			config: map[string]string{
@@ -57,18 +57,18 @@ func TestBackend_formatterConfig(t *testing.T) {
 				"log_raw":              "true",
 				"elide_list_responses": "true",
 			},
-			want:            audit.FormatterConfig{},
-			wantErr:         true,
-			expectedMessage: "audit.NewFormatterConfig: error applying options: audit.(format).validate: 'squiggly' is not a valid format: invalid parameter",
+			want:           audit.FormatterConfig{},
+			wantErr:        true,
+			expectedErrMsg: "audit.NewFormatterConfig: error applying options: audit.(format).validate: 'squiggly' is not a valid format: invalid parameter",
 		},
 		"invalid-hmac-accessor": {
 			config: map[string]string{
 				"format":        audit.JSONFormat.String(),
 				"hmac_accessor": "maybe",
 			},
-			want:            audit.FormatterConfig{},
-			wantErr:         true,
-			expectedMessage: "syslog.formatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			want:           audit.FormatterConfig{},
+			wantErr:        true,
+			expectedErrMsg: "syslog.formatterConfig: unable to parse 'hmac_accessor': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-log-raw": {
 			config: map[string]string{
@@ -76,9 +76,9 @@ func TestBackend_formatterConfig(t *testing.T) {
 				"hmac_accessor": "true",
 				"log_raw":       "maybe",
 			},
-			want:            audit.FormatterConfig{},
-			wantErr:         true,
-			expectedMessage: "syslog.formatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			want:           audit.FormatterConfig{},
+			wantErr:        true,
+			expectedErrMsg: "syslog.formatterConfig: unable to parse 'log_raw': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 		"invalid-elide-bool": {
 			config: map[string]string{
@@ -87,25 +87,25 @@ func TestBackend_formatterConfig(t *testing.T) {
 				"log_raw":              "true",
 				"elide_list_responses": "maybe",
 			},
-			want:            audit.FormatterConfig{},
-			wantErr:         true,
-			expectedMessage: "syslog.formatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
+			want:           audit.FormatterConfig{},
+			wantErr:        true,
+			expectedErrMsg: "syslog.formatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 	}
-	for name, testCase := range tests {
+	for name, tc := range tests {
 		name := name
-		testCase := testCase
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := formatterConfig(testCase.config)
-			if testCase.wantErr {
+			got, err := formatterConfig(tc.config)
+			if tc.wantErr {
 				require.Error(t, err)
-				require.EqualError(t, err, testCase.expectedMessage)
+				require.EqualError(t, err, tc.expectedErrMsg)
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, testCase.want, got)
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -139,9 +139,9 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			expectedErrorMsg: "syslog.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
 		},
 	}
-	for name, testCase := range tests {
+	for name, tc := range tests {
 		name := name
-		testCase := testCase
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -150,15 +150,15 @@ func TestBackend_configureFilterNode(t *testing.T) {
 				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 			}
 
-			err := b.configureFilterNode(testCase.filter)
+			err := b.configureFilterNode(tc.filter)
 
 			switch {
-			case testCase.wantErr:
+			case tc.wantErr:
 				require.Error(t, err)
-				require.ErrorContains(t, err, testCase.expectedErrorMsg)
+				require.ErrorContains(t, err, tc.expectedErrorMsg)
 				require.Len(t, b.nodeIDList, 0)
 				require.Len(t, b.nodeMap, 0)
-			case testCase.shouldSkipNode:
+			case tc.shouldSkipNode:
 				require.NoError(t, err)
 				require.Len(t, b.nodeIDList, 0)
 				require.Len(t, b.nodeMap, 0)
@@ -195,4 +195,119 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	id := b.nodeIDList[0]
 	node := b.nodeMap[id]
 	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
+}
+
+// TestBackend_configureSinkNode ensures that we can correctly configure the sink
+// node on the Backend, and any incorrect parameters result in the relevant errors.
+func TestBackend_configureSinkNode(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		name           string
+		format         string
+		wantErr        bool
+		expectedErrMsg string
+		expectedName   string
+	}{
+		"name-empty": {
+			name:           "",
+			wantErr:        true,
+			expectedErrMsg: "syslog.(Backend).configureSinkNode: name is required: invalid parameter",
+		},
+		"name-whitespace": {
+			name:           "   ",
+			wantErr:        true,
+			expectedErrMsg: "syslog.(Backend).configureSinkNode: name is required: invalid parameter",
+		},
+		"format-empty": {
+			name:           "foo",
+			format:         "",
+			wantErr:        true,
+			expectedErrMsg: "syslog.(Backend).configureSinkNode: format is required: invalid parameter",
+		},
+		"format-whitespace": {
+			name:           "foo",
+			format:         "   ",
+			wantErr:        true,
+			expectedErrMsg: "syslog.(Backend).configureSinkNode: format is required: invalid parameter",
+		},
+		"happy": {
+			name:         "foo",
+			format:       "json",
+			wantErr:      false,
+			expectedName: "foo",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &Backend{
+				nodeIDList: []eventlogger.NodeID{},
+				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
+			}
+
+			err := b.configureSinkNode(tc.name, tc.format)
+
+			if tc.wantErr {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrMsg)
+				require.Len(t, b.nodeIDList, 0)
+				require.Len(t, b.nodeMap, 0)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, b.nodeIDList, 1)
+				require.Len(t, b.nodeMap, 1)
+				id := b.nodeIDList[0]
+				node := b.nodeMap[id]
+				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
+				sw, ok := node.(*audit.SinkWrapper)
+				require.True(t, ok)
+				require.Equal(t, tc.expectedName, sw.Name)
+			}
+		})
+	}
+}
+
+// TestBackend_configureFilterFormatterSink ensures that configuring all three
+// types of nodes on a Backend works as expected, i.e. we have all three nodes
+// at the end and nothing gets overwritten. The order of calls influences the
+// slice of IDs on the Backend.
+func TestBackend_configureFilterFormatterSink(t *testing.T) {
+	t.Parallel()
+
+	b := &Backend{
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
+	}
+
+	formatConfig, err := audit.NewFormatterConfig()
+	require.NoError(t, err)
+
+	err = b.configureFilterNode("foo == bar")
+	require.NoError(t, err)
+
+	err = b.configureFormatterNode(formatConfig)
+	require.NoError(t, err)
+
+	err = b.configureSinkNode("foo", "json")
+	require.NoError(t, err)
+
+	require.Len(t, b.nodeIDList, 3)
+	require.Len(t, b.nodeMap, 3)
+
+	id := b.nodeIDList[0]
+	node := b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
+
+	id = b.nodeIDList[1]
+	node = b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
+
+	id = b.nodeIDList[2]
+	node = b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeSink, node.Type())
 }

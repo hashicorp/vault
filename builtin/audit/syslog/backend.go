@@ -224,7 +224,6 @@ func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name stri
 	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
-// HACK: KW: tests
 // formatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
 func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
@@ -265,7 +264,6 @@ func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
 	return audit.NewFormatterConfig(opts...)
 }
 
-// HACK: KW: tests
 // configureFilterNode is used to configure a filter node and associated ID on the Backend.
 func (b *Backend) configureFilterNode(filter string) error {
 	const op = "syslog.(Backend).configureFilterNode"
@@ -290,7 +288,6 @@ func (b *Backend) configureFilterNode(filter string) error {
 	return nil
 }
 
-// HACK: KW: tests
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
 func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opts ...audit.Option) error {
 	const op = "syslog.(Backend).configureFormatterNode"
@@ -310,14 +307,18 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 	return nil
 }
 
-// HACK: KW: tests
 // configureSinkNode is used to configure a sink node and associated ID on the Backend.
 func (b *Backend) configureSinkNode(name string, format string, opts ...event.Option) error {
 	const op = "syslog.(Backend).configureSinkNode"
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, eventlogger.ErrInvalidParameter)
+		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
+
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return fmt.Errorf("%s: format is required: %w", op, event.ErrInvalidParameter)
 	}
 
 	sinkNodeID, err := event.GenerateNodeID()

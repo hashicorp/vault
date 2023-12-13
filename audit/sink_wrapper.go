@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var _ eventlogger.Node = (*SinkWrapper)(nil)
+
 // SinkWrapper is a wrapper for any kind of Sink Node that processes events
 // containing an auditEvent payload.
 type SinkWrapper struct {

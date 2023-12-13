@@ -483,14 +483,23 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 	return nil
 }
 
-// HACK: KW: tests
 // configureSinkNode is used to configure a sink node and associated ID on the Backend.
 func (b *Backend) configureSinkNode(name string, filePath string, mode string, format string) error {
 	const op = "file.(Backend).configureSinkNode"
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, eventlogger.ErrInvalidParameter)
+		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
+
+	filePath = strings.TrimSpace(filePath)
+	if filePath == "" {
+		return fmt.Errorf("%s: file path is required: %w", op, event.ErrInvalidParameter)
+	}
+
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return fmt.Errorf("%s: format is required: %w", op, event.ErrInvalidParameter)
 	}
 
 	sinkNodeID, err := event.GenerateNodeID()
@@ -506,21 +515,26 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 	}
 
 	var sinkNode eventlogger.Node
+	var sinkName string
+
 	switch filePath {
 	case stdout:
-		sinkNode = &audit.SinkWrapper{Name: stdout, Sink: event.NewStdoutSinkNode(format)}
+		sinkName = stdout
+		sinkNode, err = event.NewStdoutSinkNode(format)
 	case discard:
-		sinkNode = &audit.SinkWrapper{Name: discard, Sink: event.NewNoopSink()}
+		sinkName = discard
+		sinkNode = event.NewNoopSink()
 	default:
-		var err error
-
 		// The NewFileSink function attempts to open the file and will return an error if it can't.
-		n, err := event.NewFileSink(filePath, format, []event.Option{event.WithFileMode(mode)}...)
-		if err != nil {
-			return fmt.Errorf("%s: file sink creation failed for path %q: %w", op, filePath, err)
-		}
-		sinkNode = &audit.SinkWrapper{Name: name, Sink: n}
+		sinkName = name
+		sinkNode, err = event.NewFileSink(filePath, format, []event.Option{event.WithFileMode(mode)}...)
 	}
+
+	if err != nil {
+		return fmt.Errorf("%s: file sink creation failed for path %q: %w", op, filePath, err)
+	}
+
+	sinkNode = &audit.SinkWrapper{Name: sinkName, Sink: sinkNode}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
 	b.nodeMap[sinkNodeID] = sinkNode

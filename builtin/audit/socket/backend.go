@@ -316,7 +316,6 @@ func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name stri
 	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
-// HACK: KW: tests
 // formatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
 func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
@@ -357,7 +356,6 @@ func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
 	return audit.NewFormatterConfig(cfgOpts...)
 }
 
-// HACK: KW: tests
 // configureFilterNode is used to configure a filter node and associated ID on the Backend.
 func (b *Backend) configureFilterNode(filter string) error {
 	const op = "socket.(Backend).configureFilterNode"
@@ -382,7 +380,6 @@ func (b *Backend) configureFilterNode(filter string) error {
 	return nil
 }
 
-// HACK: KW: tests
 // configureFormatterNode is used to configure a formatter node and associated ID on the Backend.
 func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opts ...audit.Option) error {
 	const op = "socket.(Backend).configureFormatterNode"
@@ -402,30 +399,36 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 	return nil
 }
 
-// HACK: KW: tests
 // configureSinkNode is used to configure a sink node and associated ID on the Backend.
 func (b *Backend) configureSinkNode(name string, address string, format string, opts ...event.Option) error {
 	const op = "socket.(Backend).configureSinkNode"
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, eventlogger.ErrInvalidParameter)
+		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
 	}
 
 	address = strings.TrimSpace(address)
 	if address == "" {
-		return fmt.Errorf("%s: address is required", op)
+		return fmt.Errorf("%s: address is required: %w", op, event.ErrInvalidParameter)
 	}
 
-	n, err := event.NewSocketSink(format, address, opts...)
-	if err != nil {
-		return fmt.Errorf("%s: error creating socket sink node: %w", op, err)
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return fmt.Errorf("%s: format is required: %w", op, event.ErrInvalidParameter)
 	}
-	sinkNode := &audit.SinkWrapper{Name: name, Sink: n}
+
 	sinkNodeID, err := event.GenerateNodeID()
 	if err != nil {
 		return fmt.Errorf("%s: error generating random NodeID for sink node: %w", op, err)
 	}
+
+	n, err := event.NewSocketSink(address, format, opts...)
+	if err != nil {
+		return fmt.Errorf("%s: error creating socket sink node: %w", op, err)
+	}
+
+	sinkNode := &audit.SinkWrapper{Name: name, Sink: n}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
 	b.nodeMap[sinkNodeID] = sinkNode

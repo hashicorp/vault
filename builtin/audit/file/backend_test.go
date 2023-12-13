@@ -147,6 +147,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	}
 
 	_, err = Factory(context.Background(), &audit.BackendConfig{
+		MountPath:  "foo/bar",
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
@@ -294,20 +295,20 @@ func TestBackend_formatterConfig(t *testing.T) {
 			expectedMessage: "file.formatterConfig: unable to parse 'elide_list_responses': strconv.ParseBool: parsing \"maybe\": invalid syntax",
 		},
 	}
-	for name, testCase := range tests {
+	for name, tc := range tests {
 		name := name
-		testCase := testCase
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := formatterConfig(testCase.config)
-			if testCase.wantErr {
+			got, err := formatterConfig(tc.config)
+			if tc.wantErr {
 				require.Error(t, err)
-				require.EqualError(t, err, testCase.expectedMessage)
+				require.EqualError(t, err, tc.expectedMessage)
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, testCase.want, got)
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -341,9 +342,9 @@ func TestBackend_configureFilterNode(t *testing.T) {
 			expectedErrorMsg: "file.(Backend).configureFilterNode: error creating filter node: audit.NewEntryFilter: cannot create new audit filter",
 		},
 	}
-	for name, testCase := range tests {
+	for name, tc := range tests {
 		name := name
-		testCase := testCase
+		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -352,15 +353,15 @@ func TestBackend_configureFilterNode(t *testing.T) {
 				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
 			}
 
-			err := b.configureFilterNode(testCase.filter)
+			err := b.configureFilterNode(tc.filter)
 
 			switch {
-			case testCase.wantErr:
+			case tc.wantErr:
 				require.Error(t, err)
-				require.ErrorContains(t, err, testCase.expectedErrorMsg)
+				require.ErrorContains(t, err, tc.expectedErrorMsg)
 				require.Len(t, b.nodeIDList, 0)
 				require.Len(t, b.nodeMap, 0)
-			case testCase.shouldSkipNode:
+			case tc.shouldSkipNode:
 				require.NoError(t, err)
 				require.Len(t, b.nodeIDList, 0)
 				require.Len(t, b.nodeMap, 0)
@@ -399,28 +400,179 @@ func TestBackend_configureFormatterNode(t *testing.T) {
 	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
 }
 
-/*
-SINKS:
-	name: (should never be bad really as its mount path, but better safe than sorry)
-		empty
-		spaces
-		happy
-	filePath:
-		empty
-		spaces
-		stdout
-		discard
-		some-legit-value
-		some-value-we-dont-have-permission-to
-	mode:
-		bs mode
-		empty mode
-		spaces
-		legit mode
-	format:
-		json
-		jsonx
-		bs value
-		nothing
-		spaces
-*/
+// TestBackend_configureSinkNode ensures that we can correctly configure the sink
+// node on the Backend, and any incorrect parameters result in the relevant errors.
+func TestBackend_configureSinkNode(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		name           string
+		filePath       string
+		mode           string
+		format         string
+		wantErr        bool
+		expectedErrMsg string
+		expectedName   string
+	}{
+		"name-empty": {
+			name:           "",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: name is required: invalid parameter",
+		},
+		"name-whitespace": {
+			name:           "   ",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: name is required: invalid parameter",
+		},
+		"filePath-empty": {
+			name:           "foo",
+			filePath:       "",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: file path is required: invalid parameter",
+		},
+		"filePath-whitespace": {
+			name:           "foo",
+			filePath:       "   ",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: file path is required: invalid parameter",
+		},
+		"filePath-stdout-lower": {
+			name:         "foo",
+			expectedName: "stdout",
+			filePath:     "stdout",
+			format:       "json",
+		},
+		"filePath-stdout-upper": {
+			name:         "foo",
+			expectedName: "stdout",
+			filePath:     "STDOUT",
+			format:       "json",
+		},
+		"filePath-stdout-mixed": {
+			name:         "foo",
+			expectedName: "stdout",
+			filePath:     "StdOut",
+			format:       "json",
+		},
+		"filePath-discard-lower": {
+			name:         "foo",
+			expectedName: "discard",
+			filePath:     "discard",
+			format:       "json",
+		},
+		"filePath-discard-upper": {
+			name:         "foo",
+			expectedName: "discard",
+			filePath:     "DISCARD",
+			format:       "json",
+		},
+		"filePath-discard-mixed": {
+			name:         "foo",
+			expectedName: "discard",
+			filePath:     "DisCArd",
+			format:       "json",
+		},
+		"format-empty": {
+			name:           "foo",
+			filePath:       "/tmp/",
+			format:         "",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: format is required: invalid parameter",
+		},
+		"format-whitespace": {
+			name:           "foo",
+			filePath:       "/tmp/",
+			format:         "   ",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: format is required: invalid parameter",
+		},
+		"filePath-weird-with-mode-zero": {
+			name:           "foo",
+			filePath:       "/tmp/qwerty",
+			format:         "json",
+			mode:           "0",
+			wantErr:        true,
+			expectedErrMsg: "file.(Backend).configureSinkNode: file sink creation failed for path \"/tmp/qwerty\": event.NewFileSink: unable to determine existing file mode: stat /tmp/qwerty: no such file or directory",
+		},
+		"happy": {
+			name:         "foo",
+			filePath:     "/tmp/audit.log",
+			mode:         "",
+			format:       "json",
+			wantErr:      false,
+			expectedName: "foo",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			b := &Backend{
+				nodeIDList: []eventlogger.NodeID{},
+				nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
+			}
+
+			err := b.configureSinkNode(tc.name, tc.filePath, tc.mode, tc.format)
+
+			if tc.wantErr {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrMsg)
+				require.Len(t, b.nodeIDList, 0)
+				require.Len(t, b.nodeMap, 0)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, b.nodeIDList, 1)
+				require.Len(t, b.nodeMap, 1)
+				id := b.nodeIDList[0]
+				node := b.nodeMap[id]
+				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
+				sw, ok := node.(*audit.SinkWrapper)
+				require.True(t, ok)
+				require.Equal(t, tc.expectedName, sw.Name)
+			}
+		})
+	}
+}
+
+// TestBackend_configureFilterFormatterSink ensures that configuring all three
+// types of nodes on a Backend works as expected, i.e. we have all three nodes
+// at the end and nothing gets overwritten. The order of calls influences the
+// slice of IDs on the Backend.
+func TestBackend_configureFilterFormatterSink(t *testing.T) {
+	t.Parallel()
+
+	b := &Backend{
+		nodeIDList: []eventlogger.NodeID{},
+		nodeMap:    map[eventlogger.NodeID]eventlogger.Node{},
+	}
+
+	formatConfig, err := audit.NewFormatterConfig()
+	require.NoError(t, err)
+
+	err = b.configureFilterNode("foo == bar")
+	require.NoError(t, err)
+
+	err = b.configureFormatterNode(formatConfig)
+	require.NoError(t, err)
+
+	err = b.configureSinkNode("foo", "/tmp/foo", "0777", "json")
+	require.NoError(t, err)
+
+	require.Len(t, b.nodeIDList, 3)
+	require.Len(t, b.nodeMap, 3)
+
+	id := b.nodeIDList[0]
+	node := b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeFilter, node.Type())
+
+	id = b.nodeIDList[1]
+	node = b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeFormatter, node.Type())
+
+	id = b.nodeIDList[2]
+	node = b.nodeMap[id]
+	require.Equal(t, eventlogger.NodeTypeSink, node.Type())
+}
