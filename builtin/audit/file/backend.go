@@ -386,18 +386,18 @@ func (b *Backend) Invalidate(_ context.Context) {
 // the audit.Backend interface.
 func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
 	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node); err != nil {
+		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
 			return err
 		}
 	}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
+		EventType:  eventlogger.EventType(event.AuditType.String()),
 		NodeIDs:    b.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
 // formatterConfig creates the configuration required by a formatter node using
