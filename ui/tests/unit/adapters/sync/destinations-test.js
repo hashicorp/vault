@@ -125,10 +125,11 @@ module('Unit | Adapter | sync | destination', function (hooks) {
   });
 
   test('it should make request to correct endpoint for deleteRecord with base model', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
-    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1?purge=true', () => {
+    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1', (schema, req) => {
       assert.ok(true, 'DELETE request made to correct endpoint');
+      assert.propEqual(req.queryParams, { purge: 'true' }, 'Purge query param is passed in request');
       return {};
     });
 
@@ -144,12 +145,13 @@ module('Unit | Adapter | sync | destination', function (hooks) {
   });
 
   test('it should make request to correct endpoint for deleteRecord', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
     const destination = this.server.create('sync-destination', 'aws-sm');
 
-    this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}?purge=true`, () => {
+    this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}`, (schema, req) => {
       assert.ok(true, 'DELETE request made to correct endpoint');
+      assert.propEqual(req.queryParams, { purge: 'true' }, 'Purge query param is passed in request');
       return {};
     });
 
