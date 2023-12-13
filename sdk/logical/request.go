@@ -6,6 +6,7 @@ package logical
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -246,6 +247,9 @@ type Request struct {
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
 	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure
@@ -452,4 +456,15 @@ type CtxKeyRequestRole struct{}
 
 func (c CtxKeyRequestRole) String() string {
 	return "request-role"
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
 }

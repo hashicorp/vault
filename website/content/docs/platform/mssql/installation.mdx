@@ -47,6 +47,12 @@ EKM provider to use it.
         token_policies=tde-policy
     ```
 
+-> **Note:** After authenticating to Vault with the AppRole, the EKM provider
+will re-use the token it receives until it expires, at which point it will
+authenticate using the AppRole credentials again; it will not attempt to renew
+its token. The example AppRole configuraiton here will work for this, but keep
+that in mind if you choose to use a different AppRole configuration.
+
 1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
 
     ```bash

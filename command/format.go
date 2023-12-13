@@ -326,13 +326,14 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	var status SealStatusOutput = data.(SealStatusOutput)
 	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
 
 	out := []string{}
 	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Seal Type | %s", status.Type))
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+		out = append(out, fmt.Sprintf("Recovery Seal Type | %s", status.RecoverySealType))
+	}
 	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))

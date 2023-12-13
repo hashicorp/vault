@@ -15,6 +15,7 @@ import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 export default Route.extend({
   store: service(),
   pathHelp: service('path-help'),
+  router: service(),
   wizard: service(),
 
   secretParam() {
@@ -78,14 +79,27 @@ export default Route.extend({
 
   beforeModel({ to: { queryParams } }) {
     const secret = this.secretParam();
+    const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     return this.buildModel(secret, queryParams).then(() => {
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
+      // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
+      if (secretEngine.type === 'kv' && secretEngine.version === 2) {
+        // if no secret param redirect to the create route
+        // if secret param they are either viewing or editing secret so navigate to the details route
+        return !secret
+          ? this.router.transitionTo('vault.cluster.secrets.backend.kv.create', secretEngine.id)
+          : this.router.transitionTo(
+              'vault.cluster.secrets.backend.kv.secret.details',
+              secretEngine.id,
+              secret
+            );
+      }
       if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
-          return this.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
+          return this.router.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
-          return this.transitionTo('vault.cluster.secrets.backend.list-root');
+          return this.router.transitionTo('vault.cluster.secrets.backend.list-root');
         }
       }
     });

@@ -170,37 +170,35 @@ variable "seal_ha_beta" {
   default     = true
 }
 
-variable "seal_key_name" {
-  type        = string
-  description = "The auto-unseal key name"
+variable "seal_attributes" {
+  description = "The auto-unseal device attributes"
   default     = null
 }
 
-variable "seal_key_name_secondary" {
-  type        = string
-  description = "The secondary auto-unseal key name"
+variable "seal_attributes_secondary" {
+  description = "The secondary auto-unseal device attributes"
   default     = null
 }
 
 variable "seal_type" {
   type        = string
-  description = "The method by which to unseal the Vault cluster"
+  description = "The primary seal device type"
   default     = "awskms"
 
   validation {
-    condition     = contains(["awskms", "shamir"], var.seal_type)
-    error_message = "The seal_type must be either awskms or shamir. No other unseal methods are supported."
+    condition     = contains(["awskms", "pkcs11", "shamir"], var.seal_type)
+    error_message = "The seal_type must be either 'awskms', 'pkcs11', or 'shamir'. No other seal types are supported."
   }
 }
 
 variable "seal_type_secondary" {
   type        = string
-  description = "A secondary HA seal method. Only supported in Vault Enterprise >= 1.15"
+  description = "A secondary HA seal device type. Only supported in Vault Enterprise >= 1.15"
   default     = "none"
 
   validation {
-    condition     = contains(["awskms", "none"], var.seal_type_secondary)
-    error_message = "The secondary_seal_type must be 'awskms' or 'none'. No other secondary unseal methods are supported."
+    condition     = contains(["awskms", "none", "pkcs11"], var.seal_type_secondary)
+    error_message = "The secondary_seal_type must be 'awskms', 'none', or 'pkcs11'. No other secondary seal types are supported."
   }
 }
 
