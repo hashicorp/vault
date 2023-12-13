@@ -18,6 +18,7 @@ export const SELECTORS = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
+  listItem: '[data-test-list-item-link]',
   // FORMS
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,

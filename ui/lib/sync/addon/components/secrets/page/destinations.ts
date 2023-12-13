@@ -40,7 +40,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   get destinationTypes() {
     return this.args.destinations.reduce((types: Array<{ id: string; name: string }>, destination) => {
       const { typeDisplayName } = destination;
-      const isUnique = !types.find((type) => type.name === typeDisplayName);
+      const isUnique = !types.find((type) => type.id === typeDisplayName);
       if (isUnique) {
         types.push({ id: typeDisplayName, name: destination.type });
       }
