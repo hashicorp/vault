@@ -1,0 +1,3 @@
+```release-note:feature
+**Secrets Sync UI**: Adds new enterprise feature to sync KVv2 secrets to external destinations such as AWS Secrets Manager, Azure Key Vault and more from the UI.
+```
