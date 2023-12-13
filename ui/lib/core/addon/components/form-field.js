@@ -75,7 +75,7 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
-  get isRadioGroup() {
+  get columnRadio() {
     // check to see if the first item has a label and helpertext, if there is,
     // it's a radiogroup
     return (

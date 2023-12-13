@@ -32,6 +32,7 @@
               class="input"
               data-test-field="linkTitle"
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
+              aria-label="Link title"
             />
             <Input
               @type="text"
@@ -41,6 +42,7 @@
               class="input"
               data-test-field="linkHref"
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
+              aria-label="Link href"
             />
           </div>
         </div>
@@ -50,7 +52,7 @@
           @model={{@message}}
           @modelValidations={{this.modelValidations}}
           class="has-bottom-margin-m"
-          data-test-field={{true}}
+          data-test-field
         >
           <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
         </FormField>
