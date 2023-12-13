@@ -211,14 +211,20 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 }
 
 func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
-	n, err := NewNoopAudit(config)
+	cfg := &audit.BackendConfig{
+		SaltView:   nil,
+		SaltConfig: nil,
+		Config:     config,
+		MountPath:  "noop/",
+	}
+	n, err := NewNoopAudit(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return n
 }
 
-func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
+func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
 	err := view.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
@@ -228,16 +234,18 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	n := &NoopAudit{
-		Config: &audit.BackendConfig{
-			SaltView: view,
-			SaltConfig: &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			},
-			Config: config,
-		},
+	if config.SaltView == nil {
+		config.SaltView = view
 	}
+
+	if config.SaltConfig == nil {
+		config.SaltConfig = &salt.Config{
+			HMAC:     sha256.New,
+			HMACType: "hmac-sha256",
+		}
+	}
+
+	n := &NoopAudit{Config: config}
 
 	cfg, err := audit.NewFormatterConfig()
 	if err != nil {
@@ -281,7 +289,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
 	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		n, err := NewNoopAudit(config.Config)
+		n, err := NewNoopAudit(config)
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +339,7 @@ func (n *NoopAudit) IsFilteringPipeline() bool {
 }
 
 func (n *NoopAudit) Name() string {
-	return "noop/"
+	return n.Config.MountPath
 }
 
 func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
