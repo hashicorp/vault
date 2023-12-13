@@ -272,6 +272,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   test('advanced secret values default to JSON display', async function (assert) {
+    const obscuredData = `{
+  "foo3": {
+    "name": "********"
+  }
+}`;
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
@@ -279,10 +284,23 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     assert.strictEqual(codemirror().getValue(), '{ "": "" }');
     codemirror().setValue('{ "foo3": { "name": "bar3" } }');
     await click(FORM.saveBtn);
-    // Future: test that json is automatic on details too
+
+    // Details view
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
+    assert.strictEqual(
+      codemirror().getValue(),
+      obscuredData,
+      'Value is obscured by default on details view when advanced'
+    );
+    await click('[data-test-toggle-input="revealValues"]');
+    assert.false(codemirror().getValue().includes('*'), 'Value unobscured after toggle');
+
+    // New version view
     await click(PAGE.detail.createNewVersion);
     assert.dom(FORM.toggleJson).isDisabled();
     assert.dom(FORM.toggleJson).isChecked();
+    assert.false(codemirror().getValue().includes('*'), 'Values are not obscured on edit view');
   });
   test('does not register as advanced when value includes {', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
