@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -1690,7 +1691,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 		}
 		if len(plug.Sha256) > 0 {
 			runningSha = hex.EncodeToString(plug.Sha256)

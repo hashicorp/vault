@@ -6,6 +6,32 @@
 /* Helpers that define anything with the CSS flexbox or CSS grid. */
 
 /* Flexbox helpers */
+
+// FLEX CONTAINER (child helpers at end of file)
+// new flex classes, these do not use !important
+.flex {
+  display: flex;
+
+  // direction
+  &.row-wrap {
+    flex-flow: row wrap;
+  }
+
+  // alignment
+  &.space-between {
+    justify-content: space-between;
+  }
+
+  &.row-gap-8 {
+    row-gap: $spacing-8;
+  }
+
+  &.column-gap-16 {
+    column-gap: $spacing-16;
+  }
+}
+
+// avoid !important flex classes below
 .is-flex {
   display: flex !important;
 }
@@ -104,28 +130,6 @@
   flex: 50%;
 }
 
-// moving away from !important, fresh flex styles below
-.flex {
-  display: flex;
-  // direction
-  &.row-wrap {
-    flex-flow: row wrap;
-  }
-
-  // alignment
-  &.space-between {
-    justify-content: space-between;
-  }
-
-  &.row-gap-8 {
-    row-gap: $spacing-8;
-  }
-
-  &.column-gap-16 {
-    column-gap: $spacing-16;
-  }
-}
-
 /* Flex Responsive */
 @media screen and (min-width: 769px), print {
   .is-flex-v-centered-tablet {
@@ -163,10 +167,6 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-.align-self-center {
-  align-self: center;
-}
-
 .is-medium-height {
   height: 125px;
 }
@@ -177,4 +177,14 @@
 
 .grid-align-items-start {
   align-items: start;
+}
+
+// CHILD ELEMENT HELPERS
+
+.align-self-center {
+  align-self: center;
+}
+
+.align-self-end {
+  align-self: end;
 }

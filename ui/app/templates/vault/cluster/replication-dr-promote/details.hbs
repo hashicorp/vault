@@ -13,22 +13,18 @@
           @message={{Page.message}}
           @icon="alert-circle"
           @bottomBorder={{true}}
+          class="is-shadowless"
         >
-          <nav class="breadcrumb">
-            <ul class="is-grouped-split">
-              <li>
-                <LinkTo @route="vault.cluster.secrets.backends">
-                  <span class="sep"></span>
-                  Go back
-                </LinkTo>
-              </li>
-              <li>
-                <DocLink @path="/vault/tutorials/enterprise/disaster-recovery" @class="has-text-grey">
-                  Need help?
-                </DocLink>
-              </li>
-            </ul>
-          </nav>
+          <Hds::ButtonSet>
+            <Hds::Link::Standalone @icon="chevron-left" @text="Go back" @route="vault.cluster.secrets.backends" />
+            <Hds::Link::Standalone
+              @icon="learn-link"
+              @iconPosition="trailing"
+              @color="secondary"
+              @text="Disaster recovery tutorial"
+              @href={{doc-link "/vault/tutorials/enterprise/disaster-recovery"}}
+            />
+          </Hds::ButtonSet>
         </EmptyState>
       {{else}}
         <Page.dashboard

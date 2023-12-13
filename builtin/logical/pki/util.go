@@ -4,7 +4,6 @@
 package pki
 
 import (
-	"crypto"
 	"crypto/x509"
 	"fmt"
 	"math/big"
@@ -14,6 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -24,7 +26,7 @@ import (
 const (
 	managedKeyNameArg = "managed_key_name"
 	managedKeyIdArg   = "managed_key_id"
-	defaultRef        = "default"
+	defaultRef        = issuing.DefaultRef
 
 	// Constants for If-Modified-Since operation
 	headerIfModifiedSince = "If-Modified-Since"
@@ -47,11 +49,11 @@ func serialFromBigInt(serial *big.Int) string {
 }
 
 func normalizeSerialFromBigInt(serial *big.Int) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), "-"))
+	return parsing.NormalizeSerialForStorageFromBigInt(serial)
 }
 
 func normalizeSerial(serial string) string {
-	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
+	return parsing.NormalizeSerialForStorage(serial)
 }
 
 func denormalizeSerial(serial string) string {
@@ -92,26 +94,6 @@ type managedKeyId interface {
 	String() string
 }
 
-type (
-	UUIDKey string
-	NameKey string
-)
-
-func (u UUIDKey) String() string {
-	return string(u)
-}
-
-func (n NameKey) String() string {
-	return string(n)
-}
-
-type managedKeyInfo struct {
-	publicKey crypto.PublicKey
-	keyType   certutil.PrivateKeyType
-	name      NameKey
-	uuid      UUIDKey
-}
-
 // getManagedKeyId returns a NameKey or a UUIDKey, whichever was specified in the
 // request API data.
 func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
@@ -120,9 +102,9 @@ func getManagedKeyId(data *framework.FieldData) (managedKeyId, error) {
 		return nil, err
 	}
 
-	var keyId managedKeyId = NameKey(name)
+	var keyId managedKeyId = managed_key.NameKey(name)
 	if len(UUID) > 0 {
-		keyId = UUIDKey(UUID)
+		keyId = managed_key.UUIDKey(UUID)
 	}
 
 	return keyId, nil
@@ -188,7 +170,7 @@ func getIssuerName(sc *storageContext, data *framework.FieldData) (string, error
 			return issuerName, errIssuerNameInUse
 		}
 
-		if err != nil && issuerId != IssuerRefNotFound {
+		if err != nil && issuerId != issuing.IssuerRefNotFound {
 			return issuerName, errutil.InternalError{Err: err.Error()}
 		}
 	}
@@ -213,14 +195,14 @@ func getKeyName(sc *storageContext, data *framework.FieldData) (string, error) {
 			return "", errKeyNameInUse
 		}
 
-		if err != nil && keyId != KeyRefNotFound {
+		if err != nil && keyId != issuing.KeyRefNotFound {
 			return "", errutil.InternalError{Err: err.Error()}
 		}
 	}
 	return keyName, nil
 }
 
-func getIssuerRef(data *framework.FieldData) string {
+func GetIssuerRef(data *framework.FieldData) string {
 	return extractRef(data, issuerRefParam)
 }
 
@@ -286,7 +268,7 @@ const (
 type IfModifiedSinceHelper struct {
 	req       *logical.Request
 	reqType   ifModifiedReqType
-	issuerRef issuerID
+	issuerRef issuing.IssuerID
 }
 
 func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
@@ -326,7 +308,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 
 	switch helper.reqType {
 	case ifModifiedCRL, ifModifiedDeltaCRL:
-		if sc.Backend.crlBuilder.invalidate.Load() {
+		if sc.Backend.CrlBuilder().invalidate.Load() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....
@@ -346,7 +328,7 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 			lastModified = crlConfig.DeltaLastModified
 		}
 	case ifModifiedUnifiedCRL, ifModifiedUnifiedDeltaCRL:
-		if sc.Backend.crlBuilder.invalidate.Load() {
+		if sc.Backend.CrlBuilder().invalidate.Load() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
 			// renamed some issuers or are about to rebuild a new CRL....
