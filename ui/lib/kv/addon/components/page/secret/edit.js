@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import { isAdvancedSecret } from 'kv/utils/advanced-secret';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret

@@ -11,7 +11,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { isDeleted } from 'kv/utils/kv-deleted';
-import { isAdvancedSecret } from 'kv/utils/advanced-secret';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
