@@ -9,7 +9,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"maps"
+	"net/textproto"
 	"os"
+	paths "path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -577,6 +581,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if disable_repl_status, ok := logical.ContextDisableReplicationStatusEndpointsValue(httpCtx); ok {
 		ctx = logical.CreateContextDisableReplicationStatusEndpoints(ctx, disable_repl_status)
 	}
+	body, ok := logical.ContextOriginalBodyValue(httpCtx)
+	if ok {
+		ctx = logical.CreateContextOriginalBody(ctx, body)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -767,7 +775,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1379,6 +1387,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Return the response and error
 	if routeErr != nil {
+		if _, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
+			routeErr = fmt.Errorf("delegated authentication requested but authentication token present")
+		}
+
 		retErr = multierror.Append(retErr, routeErr)
 	}
 
@@ -1496,15 +1508,23 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 
-	// if routeErr has invalid credentials error, update the userFailedLoginMap
-	if routeErr != nil && routeErr == logical.ErrInvalidCredentials {
+	handleInvalidCreds := func(err error) (*logical.Response, *logical.Auth, error) {
 		if !isUserLockoutDisabled {
 			err := c.failedUserLoginProcess(ctx, entry, req)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
-		return resp, nil, routeErr
+		return resp, nil, err
+	}
+
+	if routeErr != nil {
+		// if routeErr has invalid credentials error, update the userFailedLoginMap
+		if routeErr == logical.ErrInvalidCredentials {
+			return handleInvalidCreds(routeErr)
+		} else if da, ok := routeErr.(*logical.RequestDelegatedAuthError); ok {
+			return c.handleDelegatedAuth(ctx, req, da, entry, handleInvalidCreds)
+		}
 	}
 
 	if resp != nil {
@@ -1835,6 +1855,117 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	return resp, auth, routeErr
+}
+
+type invalidCredentialHandler func(err error) (*logical.Response, *logical.Auth, error)
+
+// handleDelegatedAuth when a backend request returns logical.RequestDelegatedAuthError, it is requesting that
+// an authentication workflow of its choosing be implemented prior to it being able to accept it. Normally
+// this is used for standard protocols that communicate the credential information in a non-standard Vault way
+func (c *Core) handleDelegatedAuth(ctx context.Context, origReq *logical.Request, da *logical.RequestDelegatedAuthError, entry *MountEntry, invalidCredHandler invalidCredentialHandler) (*logical.Response, *logical.Auth, error) {
+	// Make sure we didn't get into a routing loop.
+	if origReq.ClientTokenSource == logical.ClientTokenFromInternalAuth {
+		return nil, nil, fmt.Errorf("%w: original request had delegated auth token, "+
+			"forbidding another delegated request from path '%s'", ErrInternalError, origReq.Path)
+	}
+
+	// Backend has requested internally delegated authentication
+	requestedAccessor := da.MountAccessor()
+	if strings.TrimSpace(requestedAccessor) == "" {
+		return nil, nil, fmt.Errorf("%w: backend returned an invalid mount accessor '%s'", ErrInternalError, requestedAccessor)
+	}
+	// First, is this allowed by the mount tunable?
+	if !slices.Contains(entry.Config.DelegatedAuthAccessors, requestedAccessor) {
+		return nil, nil, fmt.Errorf("delegated auth to accessor %s not permitted", requestedAccessor)
+	}
+
+	reqNamespace, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed looking up namespace from context: %w", err)
+	}
+
+	mount := c.router.MatchingMountByAccessor(requestedAccessor)
+	if mount == nil {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication accessor '%s' was not found", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.Table != credentialTableType {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount '%s' was not an auth mount", logical.ErrPermissionDenied, requestedAccessor)
+	}
+	if mount.NamespaceID != reqNamespace.ID {
+		return nil, nil, fmt.Errorf("%w: requested delegate authentication mount was in a different namespace than request", logical.ErrPermissionDenied)
+	}
+
+	// Found it, now form the login path and issue the request
+	path := paths.Join("auth", mount.Path, da.Path())
+	authReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	authReq.MountAccessor = requestedAccessor
+	authReq.Path = path
+	authReq.Operation = logical.UpdateOperation
+
+	// filter out any response wrapping headers, for our embedded login request
+	delete(authReq.Headers, textproto.CanonicalMIMEHeaderKey(consts.WrapTTLHeaderName))
+	authReq.WrapInfo = nil
+
+	// Insert the data fields from the delegated auth error in our auth request
+	authReq.Data = maps.Clone(da.Data())
+
+	// Make sure we are going to perform a login request and not expose other backend types to this request
+	if !c.isLoginRequest(ctx, authReq) {
+		return nil, nil, fmt.Errorf("delegated path '%s' was not considered a login request", authReq.Path)
+	}
+
+	authResp, err := c.handleCancelableRequest(ctx, authReq)
+	if err != nil || authResp.IsError() {
+		// see if the backend wishes to handle the failed auth
+		if da.AuthErrorHandler() != nil {
+			resp, err := da.AuthErrorHandler()(ctx, origReq, authReq, authResp, err)
+			return resp, nil, err
+		}
+		switch err {
+		case nil:
+			return authResp, nil, nil
+		case logical.ErrInvalidCredentials:
+			return invalidCredHandler(err)
+		default:
+			return authResp, nil, err
+		}
+	}
+	if authResp == nil {
+		return nil, nil, fmt.Errorf("%w: delegated auth request returned empty response for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	// A login request should never return a secret!
+	if authResp.Secret != nil {
+		return nil, nil, fmt.Errorf("%w: unexpected Secret response for login path for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth == nil {
+		return nil, nil, fmt.Errorf("%w: Auth response was nil for request_path: %s", ErrInternalError, authReq.Path)
+	}
+	if authResp.Auth.ClientToken == "" {
+		if authResp.Auth.MFARequirement != nil {
+			return nil, nil, fmt.Errorf("%w: delegated auth request requiring MFA is not supported: %s", logical.ErrPermissionDenied, authReq.Path)
+		}
+		return nil, nil, fmt.Errorf("%w: delegated auth request did not return a client token for login path: %s", ErrInternalError, authReq.Path)
+	}
+
+	// Delegated auth tokens should only be batch tokens, as we don't want to incur
+	// the cost of storage/tidying for protocols that will be generating a token per
+	// request.
+	if !IsBatchToken(authResp.Auth.ClientToken) {
+		return nil, nil, fmt.Errorf("%w: delegated auth requests must be configured to issue batch tokens", logical.ErrPermissionDenied)
+	}
+
+	// Authentication successful, use the resulting ClientToken to reissue the original request
+	secondReq, err := origReq.Clone()
+	if err != nil {
+		return nil, nil, err
+	}
+	secondReq.ClientToken = authResp.Auth.ClientToken
+	secondReq.ClientTokenSource = logical.ClientTokenFromInternalAuth
+	resp, err := c.handleCancelableRequest(ctx, secondReq)
+	return resp, nil, err
 }
 
 // LoginCreateToken creates a token as a result of a login request.

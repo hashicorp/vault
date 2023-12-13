@@ -50,7 +50,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
   module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version = this.owner.lookup('service:version');
-      this.version.version = '1.12.1+ent';
+      this.version.type = 'enterprise';
     });
 
     test('it renders correct items for enterprise secrets', async function (assert) {

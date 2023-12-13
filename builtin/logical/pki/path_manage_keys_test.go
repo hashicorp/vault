@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -31,7 +32,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 		wantLogicalErr bool
 	}{
 		{"all-defaults", "", []int{0}, false},
-		{"rsa", "rsa", []int{0, 2048, 3072, 4096}, false},
+		{"rsa", "rsa", []int{0, 2048, 3072, 4096, 8192}, false},
 		{"ec", "ec", []int{0, 224, 256, 384, 521}, false},
 		{"ed25519", "ed25519", []int{0}, false},
 		{"error-rsa", "rsa", []int{-1, 343444}, true},
@@ -152,7 +153,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	require.NotEmpty(t, resp.Data["key_id"], "key id for ec import response was empty")
 	require.Equal(t, "my-ec-key", resp.Data["key_name"], "key_name was incorrect for ec key")
 	require.Equal(t, certutil.ECPrivateKey, resp.Data["key_type"])
-	keyId1 := resp.Data["key_id"].(keyID)
+	keyId1 := resp.Data["key_id"].(issuing.KeyID)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -170,7 +171,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	require.NotEmpty(t, resp.Data["key_id"], "key id for rsa import response was empty")
 	require.Equal(t, "my-rsa-key", resp.Data["key_name"], "key_name was incorrect for ec key")
 	require.Equal(t, certutil.RSAPrivateKey, resp.Data["key_type"])
-	keyId2 := resp.Data["key_id"].(keyID)
+	keyId2 := resp.Data["key_id"].(issuing.KeyID)
 
 	require.NotEqual(t, keyId1, keyId2)
 
@@ -251,7 +252,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 	require.NotEmpty(t, resp.Data["key_id"], "key id for rsa import response was empty")
 	require.Equal(t, "my-rsa-key", resp.Data["key_name"], "key_name was incorrect for ec key")
 	require.Equal(t, certutil.RSAPrivateKey, resp.Data["key_type"])
-	keyId2Reimport := resp.Data["key_id"].(keyID)
+	keyId2Reimport := resp.Data["key_id"].(issuing.KeyID)
 
 	require.NotEqual(t, keyId2, keyId2Reimport, "re-importing key 2 did not generate a new key id")
 }
@@ -270,7 +271,7 @@ func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 	require.NoError(t, err, "Failed generating key")
 	require.NotNil(t, resp, "Got nil response generating key")
 	require.False(t, resp.IsError(), "resp contained errors generating key: %#v", resp.Error())
-	keyId := resp.Data["key_id"].(keyID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.DeleteOperation,
@@ -298,7 +299,7 @@ func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 	require.NoError(t, err, "Failed generating issuer")
 	require.NotNil(t, resp, "Got nil response generating issuer")
 	require.False(t, resp.IsError(), "resp contained errors generating issuer: %#v", resp.Error())
-	keyId := resp.Data["key_id"].(keyID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.DeleteOperation,
@@ -325,7 +326,7 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 	require.NoError(t, err, "Failed generating key")
 	require.NotNil(t, resp, "Got nil response generating key")
 	require.False(t, resp.IsError(), "resp contained errors generating key: %#v", resp.Error())
-	keyId := resp.Data["key_id"].(keyID)
+	keyId := resp.Data["key_id"].(issuing.KeyID)
 
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation:  logical.UpdateOperation,

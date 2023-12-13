@@ -11,6 +11,7 @@ import { assert } from '@ember/debug';
 import { set, get } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
+import sortObjects from 'vault/utils/sort-objects';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
@@ -63,8 +64,9 @@ export default class StoreService extends Store {
   //     the array of items will be found
   //   page: the page number to return
   //   size: the size of the page
-  //   pageFilter: a string that will be used to do a fuzzy match against the
-  //     results, this is done pre-pagination
+  //   pageFilter: a string that will be used to do a fuzzy match against the results,
+  //     OR a function to be executed that will receive the dataset as the lone arg.
+  //     Filter is done pre-pagination.
   lazyPaginatedQuery(modelType, query, adapterOptions) {
     const skipCache = query.skipCache;
     // We don't want skipCache to be part of the actual query key, so remove it
@@ -102,10 +104,14 @@ export default class StoreService extends Store {
   filterData(filter, dataset) {
     let newData = dataset || [];
     if (filter) {
-      newData = dataset.filter(function (item) {
-        const id = item.id || item.name || item;
-        return id.toLowerCase().includes(filter.toLowerCase());
-      });
+      if (filter instanceof Function) {
+        newData = filter(dataset);
+      } else {
+        newData = dataset.filter((item) => {
+          const id = item.id || item.name || item;
+          return id.toLowerCase().includes(filter.toLowerCase());
+        });
+      }
     }
     return newData;
   }
@@ -184,11 +190,12 @@ export default class StoreService extends Store {
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
   storeDataset(modelName, query, response, array) {
-    const dataSet = {
+    const dataset = query.sortBy ? sortObjects(array, query.sortBy) : array;
+    const value = {
       response,
-      dataset: array,
+      dataset,
     };
-    this.setLazyCacheForModel(modelName, query, dataSet);
+    this.setLazyCacheForModel(modelName, query, value);
   }
 
   clearDataset(modelName) {

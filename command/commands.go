@@ -8,12 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 
 	/*
 		The builtinplugins package is initialized here because it, in turn,
@@ -148,6 +148,8 @@ const (
 	flagNameDisableRedirects = "disable-redirects"
 	// flagNameCombineLogs is used to specify whether log output should be combined and sent to stdout
 	flagNameCombineLogs = "combine-logs"
+	// flagDisableGatedLogs is used to disable gated logs and immediately show the vault logs as they become available
+	flagDisableGatedLogs = "disable-gated-logs"
 	// flagNameLogFile is used to specify the path to the log file that Vault should use for logging
 	flagNameLogFile = "log-file"
 	// flagNameLogRotateBytes is the flag used to specify the number of bytes a log file should be before it is rotated.
@@ -161,6 +163,9 @@ const (
 	// flagNameLogLevel is used to specify the log level applied to logging
 	// Supported log levels: Trace, Debug, Error, Warn, Info
 	flagNameLogLevel = "log-level"
+	// flagNameDelegatedAuthAccessors allows operators to specify the allowed mount accessors a backend can delegate
+	// authentication
+	flagNameDelegatedAuthAccessors = "delegated-auth-accessors"
 )
 
 var (

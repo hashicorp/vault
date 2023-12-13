@@ -14,14 +14,12 @@
   </div>
 
   <div class="action-block-action">
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut this.isModalActive) true}}
+    <Hds::Button
+      @text="Recover"
+      @color="secondary"
+      {{on "click" (action (mut this.isModalActive) true)}}
       data-test-replication-action-trigger="recover"
-    >
-      Recover
-    </button>
+    />
   </div>
 </div>
 

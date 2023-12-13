@@ -5,18 +5,14 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">
-            /
-          </span>
-          <LinkTo @route="vault.cluster.access.method.item.list" @model={{this.itemType}}>
-            {{pluralize this.itemType}}
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text={{pluralize this.itemType}}
+        @route="vault.cluster.access.method.item.list"
+        @model={{this.itemType}}
+      />
+      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     {{#if (eq this.mode "show")}}
@@ -38,15 +34,12 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete {{this.itemType}}"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
-        @cancelButtonText="Cancel"
-        data-test-secret-delete="true"
-      >
-        Delete
-        {{this.itemType}}
-      </ConfirmAction>
+        @confirmMessage="Are you sure you want to delete {{this.itemType}} {{this.model.id}}?"
+      />
       <div class="toolbar-separator"></div>
       <ToolbarLink
         @route="vault.cluster.access.method.item.edit"
