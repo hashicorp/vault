@@ -36,10 +36,12 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
+  @tracked syncStatus = null; // array of association sync status info by destination
   secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
+    this.fetchSyncStatus.perform();
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
     this.secretDataIsAdvanced = isAdvancedSecret(this.originalSecret);
   }
@@ -68,6 +70,18 @@ export default class KvSecretDetails extends Component {
       this.flashMessages.success('Secret successfully wrapped!');
     } catch (error) {
       this.flashMessages.danger('Could not wrap secret.');
+    }
+  }
+
+  @task
+  @waitFor
+  *fetchSyncStatus() {
+    const { backend, path } = this.args.secret;
+    const syncAdapter = this.store.adapterFor('sync/association');
+    try {
+      this.syncStatus = yield syncAdapter.fetchSyncStatus({ mount: backend, secretName: path });
+    } catch (e) {
+      // silently error
     }
   }
 
