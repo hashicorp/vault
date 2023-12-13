@@ -40,9 +40,10 @@ type Backend struct {
 	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 	mode         os.FileMode
+	name         string
 	nodeIDList   []eventlogger.NodeID
 	nodeMap      map[eventlogger.NodeID]eventlogger.Node
-	path         string
+	filePath     string
 	salt         *atomic.Value
 	saltConfig   *salt.Config
 	saltMutex    sync.RWMutex
@@ -105,12 +106,13 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	}
 
 	b := &Backend{
-		path:         filePath,
+		filePath:     filePath,
+		formatConfig: cfg,
 		mode:         mode,
+		name:         conf.MountPath,
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
 		salt:         new(atomic.Value),
-		formatConfig: cfg,
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
@@ -122,6 +124,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	if err != nil {
 		return nil, fmt.Errorf("%s: error creating formatter: %w", op, err)
 	}
+
 	var w audit.Writer
 	switch b.formatConfig.RequiredFormat {
 	case audit.JSONFormat:
@@ -205,7 +208,7 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 // Deprecated: Use eventlogger.
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
-	switch b.path {
+	switch b.filePath {
 	case stdout:
 		writer = os.Stdout
 	case discard:
@@ -238,7 +241,7 @@ func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) er
 	if _, err := reader.WriteTo(writer); err == nil {
 		b.fileLock.Unlock()
 		return nil
-	} else if b.path == stdout {
+	} else if b.filePath == stdout {
 		b.fileLock.Unlock()
 		return err
 	}
@@ -263,7 +266,7 @@ func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) er
 // Deprecated: Use eventlogger.
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
-	switch b.path {
+	switch b.filePath {
 	case stdout:
 		writer = os.Stdout
 	case discard:
@@ -287,7 +290,7 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, conf
 
 	// Old behavior
 	var writer io.Writer
-	switch b.path {
+	switch b.filePath {
 	case stdout:
 		writer = os.Stdout
 	case discard:
@@ -314,23 +317,23 @@ func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(b.path), b.mode); err != nil {
+	if err := os.MkdirAll(filepath.Dir(b.filePath), b.mode); err != nil {
 		return err
 	}
 
 	var err error
-	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.mode)
+	b.f, err = os.OpenFile(b.filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.mode)
 	if err != nil {
 		return err
 	}
 
 	// Change the file mode in case the log file already existed. We special
 	// case /dev/null since we can't chmod it and bypass if the mode is zero
-	switch b.path {
+	switch b.filePath {
 	case "/dev/null":
 	default:
 		if b.mode != 0 {
-			err = os.Chmod(b.path, b.mode)
+			err = os.Chmod(b.filePath, b.mode)
 			if err != nil {
 				return err
 			}
@@ -352,7 +355,7 @@ func (b *Backend) Reload(_ context.Context) error {
 		return nil
 	} else {
 		// old non-eventlogger behavior
-		switch b.path {
+		switch b.filePath {
 		case stdout, discard:
 			return nil
 		}
@@ -380,24 +383,6 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt.Store((*salt.Salt)(nil))
-}
-
-// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
-// the audit.Backend interface.
-func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
-	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
-			return err
-		}
-	}
-
-	pipeline := eventlogger.Pipeline{
-		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType(event.AuditType.String()),
-		NodeIDs:    b.nodeIDList,
-	}
-
-	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
 // formatterConfig creates the configuration required by a formatter node using
@@ -539,4 +524,29 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
 	b.nodeMap[sinkNodeID] = sinkNode
 	return nil
+}
+
+// Name for this backend, this would ideally correspond to the mount path for the audit device.
+func (b *Backend) Name() string {
+	return b.name
+}
+
+// Nodes returns the nodes which should be used by the event framework to process audit entries.
+func (b *Backend) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return b.nodeMap
+}
+
+// NodeIDs returns the IDs of the nodes, in the order they are required.
+func (b *Backend) NodeIDs() []eventlogger.NodeID {
+	return b.nodeIDList
+}
+
+// EventType returns the event type for the backend.
+func (b *Backend) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+// IsFilteringPipeline determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
+func (b *Backend) IsFilteringPipeline() bool {
+	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }
