@@ -8,7 +8,7 @@ description: |-
 # kv delete
 
 The `kv delete` command deletes the data for the provided path in
-the key/value secrets engine. If using K/V Version 2, its versioned data will
+the key/value secrets engine. If using KV version 2, its versioned data will
 not be fully removed, but marked as deleted and will no longer be returned in
 normal get requests.
 
@@ -21,7 +21,7 @@ $ vault kv delete -mount=secret creds
 Success! Data deleted (if it existed) at: secret/creds
 ```
 
-**[K/V Version 2]** Delete version 11 of key "creds":
+**[KV version 2]** Delete version 11 of key "creds":
 
 ```shell-session
 $ vault kv delete -mount=secret -versions=11 creds
@@ -45,4 +45,4 @@ included on all commands.
   data will not be deleted, but it will no longer be returned in normal get
   requests.
 
-~> **NOTE:** The `-versions` command option is only for K/V v2.
+~> **NOTE:** The `-versions` command option is only for KV v2.
