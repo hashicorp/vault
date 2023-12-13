@@ -331,7 +331,7 @@ func (n *NoopAudit) IsFilteringPipeline() bool {
 }
 
 func (n *NoopAudit) Name() string {
-	return "noop"
+	return "noop/"
 }
 
 func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
