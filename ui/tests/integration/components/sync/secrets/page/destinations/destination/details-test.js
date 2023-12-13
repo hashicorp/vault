@@ -51,7 +51,7 @@ module(
       await this.renderFormComponent();
 
       assert.dom(PAGE.toolbar('Delete destination')).exists();
-      assert.dom(PAGE.toolbar('Sync new secret')).exists();
+      assert.dom(PAGE.toolbar('Sync secrets')).exists();
       assert.dom(PAGE.toolbar('Edit destination')).exists();
     });
 

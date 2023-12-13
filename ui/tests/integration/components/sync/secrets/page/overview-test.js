@@ -95,7 +95,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
       .hasText('—', 'Last updated placeholder renders for destination with no associations');
 
     await click(actionToggle(0));
-    assert.dom(action('sync')).hasText('Sync new secrets', 'Sync action renders');
+    assert.dom(action('sync')).hasText('Sync secrets', 'Sync action renders');
     assert.dom(action('details')).hasText('Details', 'Details action renders');
   });
 
