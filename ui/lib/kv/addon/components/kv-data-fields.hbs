@@ -16,6 +16,7 @@
   <JsonEditor
     @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
     @value={{this.codeMirrorString}}
+    @obscure={{@obscureJson}}
     @valueUpdated={{this.handleJson}}
     @readOnly={{eq @type "details"}}
   />
