@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { isAdvancedSecret } from 'vault/utils/advanced-secret';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | advanced-secret', function () {
   test('it returns false for non-valid JSON', function (assert) {
-    assert.expect(4);
+    assert.expect(5);
     let result;
-    ['some-string', 'character{string', '{value}', '[blah]'].forEach((value) => {
+    ['some-string', 'character{string', '{value}', '[blah]', 'multi\nline\nstring'].forEach((value) => {
       result = isAdvancedSecret('some-string');
       assert.false(result, `returns false for ${value}`);
     });
@@ -28,11 +28,13 @@ module('Unit | Utility | advanced-secret', function () {
   test('it returns true for any nested object', function (assert) {
     assert.expect(3);
     let result;
-    [{ single: { one: 'uno' } }, { first: ['this', 'counts'] }, { deeply: { nested: { item: 1 } } }].forEach(
-      (value) => {
-        result = isAdvancedSecret(JSON.stringify(value));
-        assert.true(result, `returns true for object ${JSON.stringify(value)}`);
-      }
-    );
+    [
+      { single: { one: 'uno' } },
+      { first: ['this', 'counts\ntoo'] },
+      { deeply: { nested: { item: 1 } } },
+    ].forEach((value) => {
+      result = isAdvancedSecret(JSON.stringify(value));
+      assert.true(result, `returns true for object ${JSON.stringify(value)}`);
+    });
   });
 });
