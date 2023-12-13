@@ -75,18 +75,13 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
-  get columnRadio() {
-    // check to see if the first item has a label and helpertext, if there is,
-    // it's a radiogroup
-    return (
-      !!this.args?.attr?.options?.possibleValues?.[0].label &&
-      !!this.args?.attr?.options?.possibleValues?.[0].helperText
-    );
+  get hasRadioSubText() {
+    // check to see if any of the possibleValues has a subText for radio buttons.
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
   }
 
   get hideLabel() {
     const { type, options } = this.args.attr;
-    if (this.isRadioGroup) return false;
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
       return true;
     }

@@ -2,7 +2,6 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
 <Messages::TabPageHeader
   @authenticated={{@message.authenticated}}
   @pageTitle="{{if @message.isNew 'Create' 'Edit'}} message"
@@ -70,12 +69,7 @@
         type="submit"
       />
 
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        @route="messages.index"
-        @query={{hash authenticated=@message.authenticated}}
-      />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
     </Hds::ButtonSet>
   </div>
 </form>

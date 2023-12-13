@@ -26,46 +26,55 @@ export default class MessageModel extends Model {
     possibleValues: [
       {
         label: 'Alert message',
-        helperText:
+        subText:
           'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
         value: 'banner',
       },
       {
         label: 'Modal',
-        helperText:
-          'A pop-up window used to bring immediate attention for important notifications or actions.',
+        subText: 'A pop-up window used to bring immediate attention for important notifications or actions.',
         value: 'modal',
       },
     ],
     defaultValue: 'banner',
   })
   type;
-  @attr('boolean', {
+  // The authenticated attr is a boolean. The authenticatedString getter and setter is used to get the and set
+  // the values as strings. The server and query params expects the attr to be boolean values.
+  @attr({
     label: 'Where should we display this message?',
     editType: 'radio',
+    fieldValue: 'authenticatedString',
     possibleValues: [
       {
         label: 'After the user logs in',
-        helperText: 'Display to users after they have successfully logged in to Vault.',
-        value: true,
+        subText: 'Display to users after they have successfully logged in to Vault.',
+        value: 'authenticated',
       },
       {
         label: 'On the login page',
-        helperText: 'Display to users on the login page before they have authenticated.',
-        value: false,
+        subText: 'Display to users on the login page before they have authenticated.',
+        value: 'unauthenticated',
       },
     ],
     defaultValue: true,
   })
   authenticated;
+
+  get authenticatedString() {
+    return this.authenticated ? 'authenticated' : 'unauthenticated';
+  }
+
+  set authenticatedString(value) {
+    this.authenticated = value === 'authenticated' ? true : false;
+  }
+
   @attr('string', {
     label: 'Title',
-    fieldValue: 'title',
   })
   title;
   @attr('string', {
     label: 'Message',
-    fieldValue: 'message',
     editType: 'textarea',
   })
   message;

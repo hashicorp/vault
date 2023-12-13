@@ -9,6 +9,7 @@ import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { format } from 'date-fns';
+import { action } from '@ember/object';
 
 import { localDateTimeString } from 'vault/models/config-ui/message';
 
@@ -36,6 +37,13 @@ export default class MessagesList extends Component {
     if (this.args.message.endTime) {
       this.endTime = format(new Date(this.args.message.endTime), localDateTimeString);
     }
+  }
+
+  willDestroy() {
+    super.willDestroy();
+    const { isNew } = this.args.message;
+    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.message[method]();
   }
 
   get breadcrumbs() {
@@ -74,5 +82,13 @@ export default class MessagesList extends Component {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
+  }
+
+  @action
+  cancel() {
+    const { authenticated, isNew } = this.args.message;
+    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.message[method]();
+    this.router.transitionTo('vault.cluster.config-ui.messages.index', { queryParams: { authenticated } });
   }
 }
