@@ -84,10 +84,10 @@ func (m *Message) Matches(filters FindFilter) bool {
 	return true
 }
 
-// HasValidateMessageType checks if the Type field of the receiver Message
+// HasValidMessageType checks if the Type field of the receiver Message
 // appears in the array of allowed values and returns a bool value to indicate
 // if the value is allowed.
-func (m *Message) HasValidateMessageType() bool {
+func (m *Message) HasValidMessageType() bool {
 	for _, el := range allowedMessageTypes {
 		if m.Type == el {
 			return true
@@ -97,11 +97,11 @@ func (m *Message) HasValidateMessageType() bool {
 	return false
 }
 
-// HasValidateStartAndEndTimes evaluates the StartTime and EndTime fields of the
+// HasValidStartAndEndTimes evaluates the StartTime and EndTime fields of the
 // receiver Message. This method returns true if the EndTime field does not
 // point to a time.Time value, otherwise it returns a bool value to indicate if
 // the StartTime is before the value pointed to by EndTime.
-func (m *Message) HasValidateStartAndEndTimes() bool {
+func (m *Message) HasValidStartAndEndTimes() bool {
 	if m.EndTime == nil {
 		return true
 	}

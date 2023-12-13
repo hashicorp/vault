@@ -57,7 +57,7 @@ func TestMessageValidateStartAndEndTimes(t *testing.T) {
 			assertion: assert.True,
 		},
 	} {
-		testcase.assertion(t, messageFn(testcase.time1, testcase.time2).HasValidateStartAndEndTimes(), testcase.name)
+		testcase.assertion(t, messageFn(testcase.time1, testcase.time2).HasValidStartAndEndTimes(), testcase.name)
 	}
 }
 
@@ -67,13 +67,13 @@ func TestMessageValidateMessageType(t *testing.T) {
 	message := Message{
 		Type: BannerMessageType,
 	}
-	assert.True(t, message.HasValidateMessageType())
+	assert.True(t, message.HasValidMessageType())
 
 	message.Type = ModalMessageType
-	assert.True(t, message.HasValidateMessageType())
+	assert.True(t, message.HasValidMessageType())
 
 	message.Type = "something"
-	assert.False(t, message.HasValidateMessageType())
+	assert.False(t, message.HasValidMessageType())
 }
 
 func TestMessageActive(t *testing.T) {
