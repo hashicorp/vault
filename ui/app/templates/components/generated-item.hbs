@@ -5,18 +5,14 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">
-            /
-          </span>
-          <LinkTo @route="vault.cluster.access.method.item.list" @model={{this.itemType}}>
-            {{pluralize this.itemType}}
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text={{pluralize this.itemType}}
+        @route="vault.cluster.access.method.item.list"
+        @model={{this.itemType}}
+      />
+      <Hds::Breadcrumb::Item @text={{if (eq this.mode "show") this.model.id (capitalize this.mode)}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     {{#if (eq this.mode "show")}}

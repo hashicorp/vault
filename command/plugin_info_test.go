@@ -85,8 +85,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -116,8 +115,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("version flag", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
@@ -162,8 +160,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 	t.Run("field", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-		defer cleanup(t)
+		pluginDir := corehelpers.MakeTestPluginDir(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
 		defer closer()
