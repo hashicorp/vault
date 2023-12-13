@@ -32,7 +32,7 @@ module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
     await settled();
   });
 
-  test.skip('it allows delete from the edit form', async function (assert) {
+  test('it allows delete from the edit form', async function (assert) {
     // TODO figure out what is wrong with this test
     assert.expect(4);
     const name = `alias-${Date.now()}`;

@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-.masked-font {
+.masked-font,
+pre.masked-font {
   color: var(--token-color-foreground-faint);
 }
 
