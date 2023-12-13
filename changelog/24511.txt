@@ -1,0 +1,3 @@
+```release-note:improvement
+fairshare/jobmanager: Add pause/unpause method to JobManager. Remove Stopped method.
+```
