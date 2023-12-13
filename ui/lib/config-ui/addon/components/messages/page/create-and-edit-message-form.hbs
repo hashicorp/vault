@@ -1,201 +1,79 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: BUSL-1.1
- */
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { capitalize } from 'vault/helpers/capitalize';
-import { humanize } from 'vault/helpers/humanize';
-import { dasherize } from 'vault/helpers/dasherize';
-import { assert } from '@ember/debug';
-/**
- * @module FormField
- * `FormField` components are field elements associated with a particular model.
- *
- * @example
- * ```js
- * {{#each @model.fields as |attr|}}
- *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
- * {{/each}}
- * ```
- * example attr object:
- * attr = {
- *   name: "foo", // name of attribute -- used to populate various fields and pull value from model
- *   options: {
- *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
- *     defaultValue: "", // default value to display if model value is not present
- *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
- *     helpText: "This will be in a tooltip",
- *     readOnly: true
- *   },
- *   type: "boolean" // type of attribute value -- string, boolean, etc.
- * }
- * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
- * @param {Model} model - Ember Data model that `attr` is defined on
- * @param {boolean} [disabled=false] - whether the field is disabled
- * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
- * @param {string} [subText] - text to be displayed below the label
- * @param {string} [mode] - used when editType is 'kv'
- * @param {ModelValidations} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
- * @callback onChangeCallback
- * @param {onChangeCallback} [onChange] - called whenever a value on the model changes via the component
- * @callback onKeyUpCallback
- * @param {onKeyUpCallback} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
- *
- */
+<Messages::TabPageHeader
+  @authenticated={{@message.authenticated}}
+  @pageTitle="{{if @message.isNew 'Create' 'Edit'}} message"
+  @breadcrumbs={{this.breadcrumbs}}
+/>
 
-export default class FormFieldComponent extends Component {
-  emptyData = '{\n}';
-  shouldHideLabel = [
-    'boolean',
-    'file',
-    'json',
-    'kv',
-    'mountAccessor',
-    'optionalText',
-    'regex',
-    'searchSelect',
-    'stringArray',
-    'ttl',
-  ];
-  @tracked showInput = false;
+<form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-s">
+    <Hds::Text::Body @tag="p" class="has-bottom-margin-l" data-test-form-subtext>
+      {{if @message.isNew "Create" "Edit"}}
+      a custom message for all users when they access a Vault system via the UI.
+    </Hds::Text::Body>
 
-  constructor() {
-    super(...arguments);
-    const { attr, model } = this.args;
-    const valuePath = attr.options?.fieldValue || attr.name;
-    assert(
-      'Form is attempting to modify an ID. Ember-data does not allow this.',
-      valuePath.toLowerCase() !== 'id'
-    );
-    const modelValue = model[valuePath];
-    this.showInput = !!modelValue;
-  }
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
 
-  get isRadioGroup() {
-    // check to see if the first item has a lable and helpertext, if there is,
-    // it's a radiogroup
-    return (
-      !!this.args?.attr?.options?.possibleValues?.[0].label &&
-      !!this.args?.attr?.options?.possibleValues?.[0].helperText
-    );
-  }
+    {{#each @message.formFields as |attr|}}
+      {{#if (eq attr.name "linkTitle")}}
+        <div class="field has-bottom-margin-m">
+          <label for="link" class="is-label">Link
+            <span class="has-text-grey-400 has-font-weight-normal">(optional)</span></label>
+          <div class="control is-flex-between has-gap-m">
+            <Input
+              @type="text"
+              @value={{@message.linkTitle}}
+              placeholder="Display text (e.g. Learn more)"
+              id="link-title"
+              class="input"
+              data-test-field="linkTitle"
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
+            />
+            <Input
+              @type="text"
+              @value={{@message.linkHref}}
+              placeholder="Paste URL (e.g. www.learnmore.com)"
+              id="link-href"
+              class="input"
+              data-test-field="linkHref"
+              {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
+            />
+          </div>
+        </div>
+      {{else}}
+        <FormField
+          @attr={{attr}}
+          @model={{@message}}
+          @modelValidations={{this.modelValidations}}
+          class="has-bottom-margin-m"
+          data-test-field={{true}}
+        >
+          <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
+        </FormField>
+      {{/if}}
+    {{/each}}
 
-  get hideLabel() {
-    const { type, options } = this.args.attr;
-    if (this.isRadioGroup) return false;
-    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
-      return true;
-    }
-    // falsey values render a <FormFieldLabel>
-    return this.shouldHideLabel.includes(options?.editType);
-  }
+    <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
+      {{! TODO: VAULT-21533 preview modal }}
+      <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
 
-  get disabled() {
-    return this.args.disabled || false;
-  }
-  get showHelpText() {
-    return this.args.showHelpText === false ? false : true;
-  }
-  get subText() {
-    return this.args.subText || '';
-  }
-  // used in the label element next to the form element
-  get labelString() {
-    const label = this.args.attr.options?.label || '';
-    if (label) {
-      return label;
-    }
-    if (this.args.attr.name) {
-      return capitalize([humanize([dasherize([this.args.attr.name])])]);
-    }
-    return '';
-  }
-  // both the path to mutate on the model, and the path to read the value from
-  get valuePath() {
-    return this.args.attr.options?.fieldValue || this.args.attr.name;
-  }
-  get isReadOnly() {
-    const readonly = this.args.attr.options?.readOnly || false;
-    return readonly && this.args.mode === 'edit';
-  }
-  get validationError() {
-    const validations = this.args.modelValidations || {};
-    const state = validations[this.valuePath];
-    return state && !state.isValid ? state.errors.join(' ') : null;
-  }
-  get validationWarning() {
-    const validations = this.args.modelValidations || {};
-    const state = validations[this.valuePath];
-    return state?.warnings?.length ? state.warnings.join(' ') : null;
-  }
+      <Hds::Button
+        @text="{{if @message.isNew 'Create' 'Edit'}} message"
+        disabled={{(or this.invalidFormMessage this.save.isRunning)}}
+        data-test-button="create-message"
+        type="submit"
+      />
 
-  onChange() {
-    if (this.args.onChange) {
-      this.args.onChange(...arguments);
-    }
-  }
-
-  @action
-  setFile(keyFile) {
-    const path = this.valuePath;
-    const { value } = keyFile;
-    this.args.model.set(path, value);
-    this.onChange(path, value);
-  }
-  @action
-  setAndBroadcast(value) {
-    this.args.model.set(this.valuePath, value);
-    this.onChange(this.valuePath, value);
-  }
-  @action
-  setAndBroadcastBool(trueVal, falseVal, event) {
-    const valueToSet = event.target.checked === true ? trueVal : falseVal;
-    this.setAndBroadcast(valueToSet);
-  }
-  @action
-  setAndBroadcastTtl(value) {
-    const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
-    this.setAndBroadcast(`${valueToSet}`);
-  }
-  @action
-  setAndBroadcastDatetimeLocal(evt) {
-    this.setAndBroadcast(evt.target.value);
-  }
-  @action
-  codemirrorUpdated(isString, value, codemirror) {
-    codemirror.performLint();
-    const hasErrors = codemirror.state.lint.marked.length > 0;
-    const valToSet = isString ? value : JSON.parse(value);
-
-    if (!hasErrors) {
-      this.args.model.set(this.valuePath, valToSet);
-      this.onChange(this.valuePath, valToSet);
-    }
-  }
-  @action
-  toggleShow() {
-    const value = !this.showInput;
-    this.showInput = value;
-    if (!value) {
-      this.setAndBroadcast(null);
-    }
-  }
-  @action
-  handleKeyUp(maybeEvent) {
-    const value = typeof maybeEvent === 'object' ? maybeEvent.target.value : maybeEvent;
-    if (!this.args.onKeyUp) {
-      return;
-    }
-    this.args.onKeyUp(this.valuePath, value);
-  }
-  @action
-  onChangeWithEvent(event) {
-    const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
-    this.setAndBroadcast(event.target[prop]);
-  }
-}
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        @route="messages.index"
+        @query={{hash authenticated=@message.authenticated}}
+      />
+    </Hds::ButtonSet>
+  </div>
+</form>
