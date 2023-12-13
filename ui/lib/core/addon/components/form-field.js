@@ -184,4 +184,12 @@ export default class FormFieldComponent extends Component {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
   }
+
+  @action
+  handleChecklist(event) {
+    const valueArray = this.args.model[this.valuePath];
+    const method = event.target.checked ? 'addObject' : 'removeObject';
+    valueArray[method](event.target.value);
+    this.setAndBroadcast(valueArray);
+  }
 }

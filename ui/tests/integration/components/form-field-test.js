@@ -106,13 +106,23 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType file', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
+    const subText = 'My subtext.';
+    await setup.call(this, createAttr('foo', 'string', { editType: 'file', subText, docLink: '/docs' }));
     assert.ok(component.hasTextFile, 'renders the text-file component');
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(
+        `Select a file from your computer. ${subText} See our documentation for help.`,
+        'renders subtext'
+      );
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await click('[data-test-text-toggle]');
+    // assert again after toggling because subtext is rendered differently for each input
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
-    assert.dom('[data-test-text-file-textarea]').hasClass('masked-font');
-    await click('[data-test-button="toggle-masked"]');
-    assert.dom('[data-test-text-file-textarea]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function (assert) {

@@ -182,6 +182,25 @@ func (c *Core) isMajorVersionFirstMount(ctx context.Context) bool {
 	return isMilestoneUpdate || isMajorVersionUpdate
 }
 
+// IsNewInstall consults the version store to check for empty history. This
+// property should hold during unseal of new installations of Vault.
+func (c *Core) IsNewInstall(ctx context.Context) bool {
+	oldestVersion, _, err := c.FindOldestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	newestVersion, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	// We store the Vault version history at the end of unseal setup. During
+	// early unseal on a new install, the old and new versions will both be
+	// empty.
+	return oldestVersion == "" && newestVersion == ""
+}
+
 func IsJWT(token string) bool {
 	return len(token) > 3 && strings.Count(token, ".") == 2 &&
 		(token[3] != '.' && token[1] != '.')

@@ -12,9 +12,12 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 )
 
-func comparePublicKey(sc *storageContext, key *keyEntry, publicKey crypto.PublicKey) (bool, error) {
+func comparePublicKey(sc *storageContext, key *issuing.KeyEntry, publicKey crypto.PublicKey) (bool, error) {
 	publicKeyForKeyEntry, err := getPublicKey(sc.Context, sc.Backend, key)
 	if err != nil {
 		return false, err
@@ -23,13 +26,9 @@ func comparePublicKey(sc *storageContext, key *keyEntry, publicKey crypto.Public
 	return certutil.ComparePublicKeysAndType(publicKeyForKeyEntry, publicKey)
 }
 
-func getPublicKey(ctx context.Context, b *backend, key *keyEntry) (crypto.PublicKey, error) {
+func getPublicKey(ctx context.Context, b *backend, key *issuing.KeyEntry) (crypto.PublicKey, error) {
 	if key.PrivateKeyType == certutil.ManagedPrivateKey {
-		keyId, err := extractManagedKeyId([]byte(key.PrivateKey))
-		if err != nil {
-			return nil, err
-		}
-		return getManagedKeyPublicKey(ctx, b, keyId)
+		return managed_key.GetPublicKeyFromKeyBytes(ctx, b, []byte(key.PrivateKey))
 	}
 
 	signer, _, _, err := getSignerFromKeyEntryBytes(key)
@@ -39,7 +38,7 @@ func getPublicKey(ctx context.Context, b *backend, key *keyEntry) (crypto.Public
 	return signer.Public(), nil
 }
 
-func getSignerFromKeyEntryBytes(key *keyEntry) (crypto.Signer, certutil.BlockType, *pem.Block, error) {
+func getSignerFromKeyEntryBytes(key *issuing.KeyEntry) (crypto.Signer, certutil.BlockType, *pem.Block, error) {
 	if key.PrivateKeyType == certutil.UnknownPrivateKey {
 		return nil, certutil.UnknownBlock, nil, errutil.InternalError{Err: fmt.Sprintf("unsupported unknown private key type for key: %s (%s)", key.ID, key.Name)}
 	}
@@ -78,7 +77,7 @@ func getPublicKeyFromBytes(keyBytes []byte) (crypto.PublicKey, error) {
 	return signer.Public(), nil
 }
 
-func importKeyFromBytes(sc *storageContext, keyValue string, keyName string) (*keyEntry, bool, error) {
+func importKeyFromBytes(sc *storageContext, keyValue string, keyName string) (*issuing.KeyEntry, bool, error) {
 	signer, _, _, err := getSignerFromBytes([]byte(keyValue))
 	if err != nil {
 		return nil, false, err

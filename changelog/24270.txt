@@ -1,0 +1,3 @@
+```release-note:change
+api: add the `enterprise` parameter to the `/sys/health` endpoint
+```

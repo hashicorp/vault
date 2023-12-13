@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
+import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 
 module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -23,8 +24,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.backend = 'kv-engine';
     this.path = 'my-secret';
+    this.pathComplex = 'my-secret-object';
     this.version = 2;
     this.dataId = kvDataPath(this.backend, this.path);
+    this.dataIdComplex = kvDataPath(this.backend, this.pathComplex);
     this.metadataId = kvMetadataPath(this.backend, this.path);
 
     this.secretData = { foo: 'bar' };
@@ -33,6 +36,24 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       id: this.dataId,
       secret_data: this.secretData,
       created_time: '2023-07-20T02:12:17.379762Z',
+      custom_metadata: null,
+      deletion_time: '',
+      destroyed: false,
+      version: this.version,
+      backend: this.backend,
+      path: this.path,
+    });
+    // nested secret
+    this.secretDataComplex = {
+      foo: {
+        bar: 'baz',
+      },
+    };
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.dataIdComplex,
+      secret_data: this.secretDataComplex,
+      created_time: '2023-08-20T02:12:17.379762Z',
       custom_metadata: null,
       deletion_time: '',
       destroyed: false,
@@ -48,6 +69,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
 
     this.metadata = this.store.peekRecord('kv/metadata', this.metadataId);
     this.secret = this.store.peekRecord('kv/data', this.dataId);
+    this.secretComplex = this.store.peekRecord('kv/data', this.dataIdComplex);
 
     // this is the route model, not an ember data model
     this.model = {
@@ -61,10 +83,21 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];
+    this.modelComplex = {
+      backend: this.backend,
+      path: this.pathComplex,
+      secret: this.secretComplex,
+      metadata: this.metadata,
+    };
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
-    assert.expect(6);
+    assert.expect(8);
+    this.server.get(`sys/sync/associations/:mount/*name`, (schema, req) => {
+      assert.ok(true, 'request made to fetch sync status');
+      // no records so response returns 404
+      return syncStatusResponse(schema, req);
+    });
 
     await render(
       hbs`
@@ -78,6 +111,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
 
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .doesNotExist('sync page alert banner does not render when sync status errors');
     assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(PAGE.infoRowValue('foo')).exists('renders row for secret data');
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -88,6 +124,23 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert
       .dom(PAGE.detail.versionTimestamp)
       .includesText(`Version ${this.version} created`, 'renders version and time created');
+  });
+
+  test('it renders json view when secret is complex', async function (assert) {
+    assert.expect(3);
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.modelComplex.path}}
+        @secret={{this.modelComplex.secret}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+    assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
+    assert.dom(FORM.toggleJson).isDisabled();
+    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
   });
 
   test('it renders deleted empty state', async function (assert) {
@@ -170,5 +223,43 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert
       .dom(`${PAGE.detail.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
+  });
+
+  test('it renders sync status page alert', async function (assert) {
+    assert.expect(3); // assert count important because confirms request made to fetch sync status twice
+    const destinationName = 'my-destination';
+    this.server.create('sync-association', {
+      type: 'aws-sm',
+      name: destinationName,
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.get('sys/sync/associations/:mount/*name', (schema, req) => {
+      // this assertion should be hit twice, once on init and again when the 'Refresh' button is clicked
+      assert.ok(true, 'request made to fetch sync status');
+      return syncStatusResponse(schema, req);
+    });
+
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    assert
+      .dom(PAGE.detail.syncAlert(destinationName))
+      .hasTextContaining(
+        'Synced my-destination - last updated September',
+        'renders sync status alert banner'
+      );
+
+    // sync status refresh button
+    await click(`${PAGE.detail.syncAlert()} button`);
   });
 });

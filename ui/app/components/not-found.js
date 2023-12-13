@@ -4,14 +4,23 @@
  */
 
 import { inject as service } from '@ember/service';
-import { alias } from '@ember/object/computed';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  // public
-  model: null,
+/**
+ * @module NotFound
+ * NotFound components are used to show a message that the route was not found.
+ *
+ * @example
+ * ```js
+ * <NotFound @model={{this.model}} />
+ * ```
+ * @param {object} model - routes model passed into the component.
+ */
 
-  tagName: '',
-  router: service(),
-  path: alias('router.currentURL'),
-});
+export default class NotFound extends Component {
+  @service router;
+
+  get path() {
+    return this.router.currentURL;
+  }
+}

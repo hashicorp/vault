@@ -272,11 +272,12 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = NewLeaseCache(&LeaseCacheConfig{
-			Client:         clienToUse,
-			BaseContext:    ctx,
-			Proxier:        apiProxy,
-			Logger:         cacheLogger.Named("leasecache"),
-			UserAgentToUse: "test",
+			Client:              clienToUse,
+			BaseContext:         ctx,
+			Proxier:             apiProxy,
+			Logger:              cacheLogger.Named("leasecache"),
+			CacheDynamicSecrets: true,
+			UserAgentToUse:      "test",
 		})
 		if err != nil {
 			t.Fatal(err)
