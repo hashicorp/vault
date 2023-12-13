@@ -34,7 +34,7 @@ type Message struct {
 	// The time when the Message begins to be active.
 	StartTime time.Time `json:"start_time"`
 	// The time when the Message ceases to be active.
-	EndTime time.Time `json:"end_time"`
+	EndTime *time.Time `json:"end_time"`
 	// Options holds additional properties for the Message.
 	Options map[string]any `json:"options"`
 	// Link can hold a MessageLink struct to represent a hyperlink in the
@@ -46,15 +46,19 @@ type Message struct {
 
 // Active determines if the active field of the receiver Message has yet to be
 // set (if it's nil), and if so calculates it by checking if the current time
-// is after the StartTime field value AND before the EndTime field value and
-// sets the active field accordingly. Finally, the value of the active field
-// is returned.
+// is after the StartTime field value AND in the case where the endTimeSet
+// field is true, that the current time is before the EndTime field value. Once
+// the calculation is complete, the active field is set accordingly. Finally,
+// the value of the active field is returned.
 func (m *Message) Active() bool {
 	if m.active == nil {
-
 		now := time.Now()
 
-		activeValue := now.After(m.StartTime) && now.Before(m.EndTime)
+		activeValue := now.After(m.StartTime)
+		if activeValue && m.EndTime != nil {
+			activeValue = now.Before(*m.EndTime)
+		}
+
 		m.active = &activeValue
 	}
 
@@ -94,10 +98,15 @@ func (m *Message) HasValidateMessageType() bool {
 }
 
 // HasValidateStartAndEndTimes evaluates the StartTime and EndTime fields of the
-// receiver Message and returns a bool value to indicate if the StartTime is
-// before the EndTime.
+// receiver Message. This method returns true if the EndTime field does not
+// point to a time.Time value, otherwise it returns a bool value to indicate if
+// the StartTime is before the value pointed to by EndTime.
 func (m *Message) HasValidateStartAndEndTimes() bool {
-	return m.StartTime.Before(m.EndTime)
+	if m.EndTime == nil {
+		return true
+	}
+
+	return m.StartTime.Before(*m.EndTime)
 }
 
 // MessageLink is a structure that represents a hyperlink included into a
