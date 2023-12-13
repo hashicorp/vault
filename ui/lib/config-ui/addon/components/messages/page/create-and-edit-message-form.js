@@ -85,6 +85,11 @@ export default class MessagesList extends Component {
   }
 
   @action
+  onHandleEndTime(endTime) {
+    this.args.message.endTime = endTime;
+  }
+
+  @action
   cancel() {
     const { authenticated, isNew } = this.args.message;
     const method = isNew ? 'unloadRecord' : 'rollbackAttributes';

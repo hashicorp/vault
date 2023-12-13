@@ -80,7 +80,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       PAGE.input('startTime'),
       format(addDays(startOfDay(new Date('2023-12-12')), 1), localDateTimeString)
     );
-    await click('#specific-date');
+    await click('#specificDate');
     await fillIn(
       PAGE.input('endTime'),
       format(addDays(startOfDay(new Date('2023-12-12')), 10), localDateTimeString)
@@ -130,7 +130,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
     assert.dom(PAGE.field('linkTitle')).exists();
     assert.dom(PAGE.field('linkHref')).exists();
-    await click('#specific-date');
+    await click('#specificDate');
     assert
       .dom(PAGE.input('startTime'))
       .hasValue(format(new Date(this.message.startTime), localDateTimeString));
