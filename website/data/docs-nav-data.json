@@ -1361,11 +1361,11 @@
             "path": "secrets/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version  1",
             "path": "secrets/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version  2",
             "path": "secrets/kv/kv-v2"
           }
         ]
