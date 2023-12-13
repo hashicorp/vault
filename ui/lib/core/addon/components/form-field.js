@@ -3,195 +3,106 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
-import { capitalize } from 'vault/helpers/capitalize';
-import { humanize } from 'vault/helpers/humanize';
-import { dasherize } from 'vault/helpers/dasherize';
-import { assert } from '@ember/debug';
-/**
- * @module FormField
- * `FormField` components are field elements associated with a particular model.
- *
- * @example
- * ```js
- * {{#each @model.fields as |attr|}}
- *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
- * {{/each}}
- * ```
- * example attr object:
- * attr = {
- *   name: "foo", // name of attribute -- used to populate various fields and pull value from model
- *   options: {
- *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
- *     defaultValue: "", // default value to display if model value is not present
- *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
- *     helpText: "This will be in a tooltip",
- *     readOnly: true
- *   },
- *   type: "boolean" // type of attribute value -- string, boolean, etc.
- * }
- * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
- * @param {Model} model - Ember Data model that `attr` is defined on
- * @param {boolean} [disabled=false] - whether the field is disabled
- * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
- * @param {string} [subText] - text to be displayed below the label
- * @param {string} [mode] - used when editType is 'kv'
- * @param {ModelValidations} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
- * @callback onChangeCallback
- * @param {onChangeCallback} [onChange] - called whenever a value on the model changes via the component
- * @callback onKeyUpCallback
- * @param {onKeyUpCallback} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
- *
- */
+import Model, { attr } from '@ember-data/model';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { isAfter, format, addDays, startOfDay } from 'date-fns';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { withModelValidations } from 'vault/decorators/model-validations';
+import { withFormFields } from 'vault/decorators/model-form-fields';
 
-export default class FormFieldComponent extends Component {
-  emptyData = '{\n}';
-  shouldHideLabel = [
-    'boolean',
-    'file',
-    'json',
-    'kv',
-    'mountAccessor',
-    'optionalText',
-    'regex',
-    'searchSelect',
-    'stringArray',
-    'ttl',
-  ];
-  @tracked showInput = false;
+export const localDateTimeString = "yyyy-MM-dd'T'HH:mm";
 
-  constructor() {
-    super(...arguments);
-    const { attr, model } = this.args;
-    const valuePath = attr.options?.fieldValue || attr.name;
-    assert(
-      'Form is attempting to modify an ID. Ember-data does not allow this.',
-      valuePath.toLowerCase() !== 'id'
-    );
-    const modelValue = model[valuePath];
-    this.showInput = !!modelValue;
-  }
+const validations = {
+  title: [{ type: 'presence', message: 'Title is required.' }],
+  message: [{ type: 'presence', message: 'Message is required.' }],
+};
 
-  get isRadioGroup() {
-    // check to see if the first item has a lable and helpertext, if there is,
-    // it's a radiogroup
-    return (
-      !!this.args?.attr?.options?.possibleValues?.[0].label &&
-      !!this.args?.attr?.options?.possibleValues?.[0].helperText
-    );
-  }
+@withFormFields(['authenticated', 'type', 'title', 'message', 'linkTitle', 'startTime', 'endTime'])
+@withModelValidations(validations)
+export default class MessageModel extends Model {
+  @attr('boolean') active;
+  @attr('string', {
+    label: 'Type',
+    editType: 'radio',
+    possibleValues: [
+      {
+        label: 'Alert message',
+        helperText:
+          'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
+        value: 'banner',
+      },
+      {
+        label: 'Modal',
+        helperText:
+          'A pop-up window used to bring immediate attention for important notifications or actions.',
+        value: 'modal',
+      },
+    ],
+    defaultValue: 'banner',
+  })
+  type;
+  @attr('boolean', {
+    label: 'Where should we display this message?',
+    editType: 'radio',
+    possibleValues: [
+      {
+        label: 'After the user logs in',
+        helperText: 'Display to users after they have successfully logged in to Vault.',
+        value: true,
+      },
+      {
+        label: 'On the login page',
+        helperText: 'Display to users on the login page before they have authenticated.',
+        value: false,
+      },
+    ],
+    defaultValue: true,
+  })
+  authenticated;
+  @attr('string', {
+    label: 'Title',
+    fieldValue: 'title',
+  })
+  title;
+  @attr('string', {
+    label: 'Message',
+    fieldValue: 'message',
+    editType: 'textarea',
+  })
+  message;
+  @attr('date', {
+    editType: 'dateTimeLocal',
+    label: 'Message starts',
+    subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
+    defaultValue: format(addDays(startOfDay(new Date() || this.startTime), 1), localDateTimeString),
+  })
+  startTime;
+  @attr('date', { editType: 'yield', label: 'Message expires' }) endTime;
 
-  get hideLabel() {
-    const { type, options } = this.args.attr;
-    if (this.isRadioGroup) return false;
-    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
-      return true;
-    }
-    // falsey values render a <FormFieldLabel>
-    return this.shouldHideLabel.includes(options?.editType);
+  // the api returns link as an object with title and href as keys, but we separate the link key/values into
+  // different attributes to easily show link title and href fields on the create form. In our serializer,
+  // we send the link attribute in to the correct format (as an object) to the server.
+  @attr('string', { fieldValue: 'linkTitle' }) linkTitle;
+  @attr('string', { fieldValue: 'linkHref' }) linkHref;
+
+  // date helpers
+  get isStartTimeAfterToday() {
+    return isAfter(parseAPITimestamp(this.startTime), new Date());
   }
 
-  get disabled() {
-    return this.args.disabled || false;
-  }
-  get showHelpText() {
-    return this.args.showHelpText === false ? false : true;
-  }
-  get subText() {
-    return this.args.subText || '';
-  }
-  // used in the label element next to the form element
-  get labelString() {
-    const label = this.args.attr.options?.label || '';
-    if (label) {
-      return label;
-    }
-    if (this.args.attr.name) {
-      return capitalize([humanize([dasherize([this.args.attr.name])])]);
-    }
-    return '';
-  }
-  // both the path to mutate on the model, and the path to read the value from
-  get valuePath() {
-    return this.args.attr.options?.fieldValue || this.args.attr.name;
-  }
-  get isReadOnly() {
-    const readonly = this.args.attr.options?.readOnly || false;
-    return readonly && this.args.mode === 'edit';
-  }
-  get validationError() {
-    const validations = this.args.modelValidations || {};
-    const state = validations[this.valuePath];
-    return state && !state.isValid ? state.errors.join(' ') : null;
-  }
-  get validationWarning() {
-    const validations = this.args.modelValidations || {};
-    const state = validations[this.valuePath];
-    return state?.warnings?.length ? state.warnings.join(' ') : null;
-  }
+  // capabilities
+  @lazyCapabilities(apiPath`sys/config/ui/custom-messages`) customMessagesPath;
 
-  onChange() {
-    if (this.args.onChange) {
-      this.args.onChange(...arguments);
-    }
+  get canCreateCustomMessages() {
+    return this.customMessagesPath.get('canCreate') !== false;
   }
-
-  @action
-  setFile(keyFile) {
-    const path = this.valuePath;
-    const { value } = keyFile;
-    this.args.model.set(path, value);
-    this.onChange(path, value);
+  get canReadCustomMessages() {
+    return this.customMessagesPath.get('canRead') !== false;
   }
-  @action
-  setAndBroadcast(value) {
-    this.args.model.set(this.valuePath, value);
-    this.onChange(this.valuePath, value);
+  get canEditCustomMessages() {
+    return this.customMessagesPath.get('canUpdate') !== false;
   }
-  @action
-  setAndBroadcastBool(trueVal, falseVal, event) {
-    const valueToSet = event.target.checked === true ? trueVal : falseVal;
-    this.setAndBroadcast(valueToSet);
-  }
-  @action
-  setAndBroadcastTtl(value) {
-    const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
-    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
-    this.setAndBroadcast(`${valueToSet}`);
-  }
-  @action
-  codemirrorUpdated(isString, value, codemirror) {
-    codemirror.performLint();
-    const hasErrors = codemirror.state.lint.marked.length > 0;
-    const valToSet = isString ? value : JSON.parse(value);
-
-    if (!hasErrors) {
-      this.args.model.set(this.valuePath, valToSet);
-      this.onChange(this.valuePath, valToSet);
-    }
-  }
-  @action
-  toggleShow() {
-    const value = !this.showInput;
-    this.showInput = value;
-    if (!value) {
-      this.setAndBroadcast(null);
-    }
-  }
-  @action
-  handleKeyUp(maybeEvent) {
-    const value = typeof maybeEvent === 'object' ? maybeEvent.target.value : maybeEvent;
-    if (!this.args.onKeyUp) {
-      return;
-    }
-    this.args.onKeyUp(this.valuePath, value);
-  }
-  @action
-  onChangeWithEvent(event) {
-    const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
-    this.setAndBroadcast(event.target[prop]);
+  get canDeleteCustomMessages() {
+    return this.customMessagesPath.get('canDelete') !== false;
   }
 }
