@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import isAdvancedSecret from 'vault/utils/is-advanced-secret';
+import { isAdvancedSecret } from 'vault/utils/advanced-secret';
 import { module, test } from 'qunit';
 
-module('Unit | Utility | is-advanced-secret', function () {
+module('Unit | Utility | advanced-secret', function () {
   test('it returns false for non-valid JSON', function (assert) {
     assert.expect(4);
     let result;
