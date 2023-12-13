@@ -272,6 +272,12 @@ func TestLogger_ChangeLogLevels(t *testing.T) {
 	assert.Equal(t, hclog.Debug, logger.GetLevel())
 	assert.Equal(t, hclog.Info, logger2.GetLevel())
 	assert.Equal(t, hclog.Error, logger3.GetLevel())
+
+	logger.SetLevel(hclog.Trace)
+
+	assert.Equal(t, hclog.Trace, logger.GetLevel())
+	assert.Equal(t, hclog.Trace, logger2.GetLevel())
+	assert.Equal(t, hclog.Trace, logger3.GetLevel())
 }
 
 func newTestLogConfig(t *testing.T) *LogConfig {
