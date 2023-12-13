@@ -36,6 +36,7 @@
               @onChange={{this.setAndBroadcast}}
               @groupValue={{(get @model this.valuePath)}}
               @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+              data-test-radio="{{if (or (eq @attr.type 'boolean') val.value) val.value val}}"
             />
             <div class="has-left-margin-xs">
               <label
@@ -82,8 +83,8 @@
       @type="datetime-local"
       @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
       class="input has-top-margin-xs is-auto-width is-block"
-      name="startTime"
-      data-test-input="startTime"
+      name={{@attr.name}}
+      data-test-input={{@attr.name}}
       {{on "input" this.setAndBroadcastDatetimeLocal}}
     />
   {{else if (eq @attr.options.editType "searchSelect")}}

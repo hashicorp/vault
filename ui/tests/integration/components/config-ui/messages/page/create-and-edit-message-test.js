@@ -13,8 +13,7 @@ import { localDateTimeString } from 'vault/models/config-ui/message';
 import { format, addDays, startOfDay } from 'date-fns';
 
 const PAGE = {
-  radioGroup: (groupName) => `[data-test-radio-group="${groupName}"]`,
-  radioField: (fieldName) => `[data-test-radio-field="${fieldName}"]`,
+  radio: (radioName) => `[data-test-radio="${radioName}"]`,
   field: (fieldName) => `[data-test-field="${fieldName}"]`,
   input: (input) => `[data-test-input="${input}"]`,
   button: (buttonName) => `[data-test-button="${buttonName}"]`,
@@ -42,10 +41,14 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert
       .dom('[data-test-form-subtext]')
       .hasText('Create a custom message for all users when they access a Vault system via the UI.');
-    assert.dom(PAGE.radioGroup('authenticated')).exists();
-    assert.dom(`${PAGE.radioGroup('authenticated')} ${PAGE.radioField('authenticated')}`).isChecked();
-    assert.dom(PAGE.radioGroup('type')).exists();
-    assert.dom(`${PAGE.radioGroup('type')} ${PAGE.radioField('banner')}`).isChecked();
+    assert.dom(PAGE.radio('true')).exists();
+    assert.dom(PAGE.radio('false')).exists();
+    assert.dom(PAGE.radio('true')).isChecked();
+    assert.dom(PAGE.radio('false')).isNotChecked();
+    assert.dom(PAGE.radio('banner')).exists();
+    assert.dom(PAGE.radio('modal')).exists();
+    assert.dom(PAGE.radio('banner')).isChecked();
+    assert.dom(PAGE.radio('modal')).isNotChecked();
     assert.dom(PAGE.field('title')).exists();
     assert.dom(PAGE.field('message')).exists();
     assert.dom(PAGE.field('linkTitle')).exists();
@@ -119,10 +122,10 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert
       .dom('[data-test-form-subtext]')
       .hasText('Edit a custom message for all users when they access a Vault system via the UI.');
-    assert.dom(PAGE.radioGroup('authenticated')).exists();
-    assert.dom(`${PAGE.radioGroup('authenticated')} ${PAGE.radioField('unauthenticated')}`).isChecked();
-    assert.dom(PAGE.radioGroup('type')).exists();
-    assert.dom(`${PAGE.radioGroup('type')} ${PAGE.radioField('modal')}`).isChecked();
+    assert.dom(PAGE.radio('true')).exists();
+    assert.dom(PAGE.radio('false')).isChecked();
+    assert.dom(PAGE.radio('modal')).exists();
+    assert.dom(PAGE.radio('modal')).isChecked();
     assert.dom(PAGE.input('title')).hasValue('Hello world');
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
     assert.dom(PAGE.field('linkTitle')).exists();
@@ -130,7 +133,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     await click('#specific-date');
     assert
       .dom(PAGE.input('startTime'))
-      .hasValue(format(addDays(startOfDay(new Date(this.message.startTime)), 1), localDateTimeString));
+      .hasValue(format(new Date(this.message.startTime), localDateTimeString));
     assert.dom(PAGE.input('endTime')).hasValue(format(new Date(this.message.endTime), localDateTimeString));
   });
 });
