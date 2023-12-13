@@ -17,7 +17,7 @@
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
       <div class="control {{unless this.isRadioGroup 'columns'}}" data-test-radio-input>
-        {{#each (path-or-array @attr.options.possibleValues @model) as |val idx|}}
+        {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
           <div
             class="is-flex-center
               {{unless
@@ -42,10 +42,10 @@
                 for="{{or val.value val}}"
                 class="has-left-margin-xs {{if this.isRadioGroup 'has-text-black is-size-7'}}"
               >
-                {{or (get @attr.options.possibleLabelOptions idx) val.value val}}
+                {{or val.label val.value val}}
                 {{#if this.isRadioGroup}}
                   <div class="has-left-margin-xs has-text-grey is-size-8">
-                    {{get @attr.options.possibleHelperTextOptions idx}}
+                    {{val.helperText}}
                   </div>
                 {{/if}}
               </label>

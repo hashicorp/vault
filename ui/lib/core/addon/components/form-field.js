@@ -76,9 +76,11 @@ export default class FormFieldComponent extends Component {
   }
 
   get isRadioGroup() {
+    // check to see if the first item has a lable and helpertext, if there is,
+    // it's a radiogroup
     return (
-      !!this.args?.attr?.options?.possibleHelperTextOptions ||
-      !!this.args?.attrs?.options?.possibleLabelOptions
+      !!this.args?.attr?.options?.possibleValues?.[0].label &&
+      !!this.args?.attr?.options?.possibleValues?.[0].helperText
     );
   }
 

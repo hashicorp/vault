@@ -24,11 +24,19 @@ export default class MessageModel extends Model {
   @attr('string', {
     label: 'Type',
     editType: 'radio',
-    possibleValues: ['banner', 'modal'],
-    possibleLabelOptions: ['Alert message', 'Modal'],
-    possibleHelperTextOptions: [
-      'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
-      'A pop-up window used to bring immediate attention for important notifications or actions.',
+    possibleValues: [
+      {
+        label: 'Alert message',
+        helperText:
+          'A banner that appears on the top of every page to display brief but high-signal messages like an update or system alert.',
+        value: 'banner',
+      },
+      {
+        label: 'Modal',
+        helperText:
+          'A pop-up window used to bring immediate attention for important notifications or actions.',
+        value: 'modal',
+      },
     ],
     defaultValue: 'banner',
   })
@@ -36,11 +44,17 @@ export default class MessageModel extends Model {
   @attr('boolean', {
     label: 'Where should we display this message?',
     editType: 'radio',
-    possibleValues: [true, false],
-    possibleLabelOptions: ['After the user logs in', 'On the login page'],
-    possibleHelperTextOptions: [
-      'Display to users after they have successfully logged in to Vault.',
-      'Display to users on the login page before they have authenticated.',
+    possibleValues: [
+      {
+        label: 'After the user logs in',
+        helperText: 'Display to users after they have successfully logged in to Vault.',
+        value: true,
+      },
+      {
+        label: 'On the login page',
+        helperText: 'Display to users on the login page before they have authenticated.',
+        value: false,
+      },
     ],
     defaultValue: true,
   })
