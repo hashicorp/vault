@@ -176,7 +176,6 @@ func TestJobManager_Stop(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
 	j.Start()
-	assert.False(t, j.Stopped())
 
 	doneCh := make(chan struct{})
 	timeout := time.After(5 * time.Second)
@@ -188,7 +187,6 @@ func TestJobManager_Stop(t *testing.T) {
 
 	select {
 	case <-doneCh:
-		assert.True(t, j.Stopped())
 		break
 	case <-timeout:
 		t.Fatal("timed out")
@@ -750,4 +748,29 @@ func TestFairshare_queueWorkersSaturated(t *testing.T) {
 		}
 		j.l.RUnlock()
 	}
+}
+
+func TestFairshare_Restart(t *testing.T) {
+	j := NewJobManager("test-job-mgr", 20, nil, nil)
+	j.Start()
+	defer j.Stop()
+	j.Pause()
+	var wg sync.WaitGroup
+	finishedJobs := 0
+	wg.Add(1)
+	job := newTestJob(t, "job-0", func(_ string) error {
+		defer wg.Done()
+		finishedJobs++
+		return nil
+	},
+		func(_ error) {})
+
+	j.AddJob(&job, "queue")
+	timer := time.NewTimer(100 * time.Millisecond)
+	<-timer.C
+	assert.Equal(t, 0, finishedJobs)
+
+	j.Unpause()
+	wg.Wait()
+	assert.Equal(t, 1, finishedJobs)
 }

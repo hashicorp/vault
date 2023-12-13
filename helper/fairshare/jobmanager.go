@@ -47,7 +47,7 @@ type JobManager struct {
 	// track queues by index for round robin worker assignment
 	queuesIndex       []string
 	lastQueueAccessed int
-	stopped           atomic.Bool
+	paused            atomic.Bool
 }
 
 // NewJobManager creates a job manager, with an optional name
@@ -100,12 +100,7 @@ func (j *JobManager) Stop() {
 		j.logger.Trace("terminating job manager...")
 		close(j.quit)
 		j.workerPool.stop()
-		j.stopped.Store(true)
 	})
-}
-
-func (j *JobManager) Stopped() bool {
-	return j.stopped.Load()
 }
 
 // AddJob adds a job to the given queue, creating the queue if it doesn't exist
@@ -292,6 +287,10 @@ func (j *JobManager) assignWork() {
 				default:
 				}
 
+				if j.paused.Load() {
+					break
+				}
+
 				job, queueID := j.getNextJob()
 				if job != nil {
 					j.workerPool.dispatch(job,
@@ -363,4 +362,15 @@ func (j *JobManager) removeLastQueueAccessed() {
 	} else {
 		j.lastQueueAccessed = len(j.queuesIndex) - 1
 	}
+}
+
+// Pause adds the ability to temporarily stop the job manager. It can be unpaused using Unpause.
+// It is a no-op if the job manager is already paused.
+func (j *JobManager) Pause() {
+	j.paused.Store(true)
+}
+
+// Unpause unpauses a paused JobManager. If the JobManager is not paused, it is a no-op.
+func (j *JobManager) Unpause() {
+	j.paused.Store(false)
 }
