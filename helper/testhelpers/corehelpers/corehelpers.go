@@ -211,15 +211,23 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 }
 
 func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
-	n, err := NewNoopAudit(config)
+	cfg := &audit.BackendConfig{
+		SaltView:   nil,
+		SaltConfig: nil,
+		Config:     config,
+		MountPath:  "noop/",
+	}
+	n, err := NewNoopAudit(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return n
 }
 
-func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
+func NewNoopAudit(config *audit.BackendConfig) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
+
+	// Set the salt to be a known key and value for comparing hash values in tests.
 	err := view.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
@@ -228,16 +236,14 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	n := &NoopAudit{
-		Config: &audit.BackendConfig{
-			SaltView: view,
-			SaltConfig: &salt.Config{
-				HMAC:     sha256.New,
-				HMACType: "hmac-sha256",
-			},
-			Config: config,
-		},
+	// Override parts of config for testing purposes.
+	config.SaltView = view
+	config.SaltConfig = &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
 	}
+
+	n := &NoopAudit{Config: config}
 
 	cfg, err := audit.NewFormatterConfig()
 	if err != nil {
@@ -281,7 +287,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
 	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		n, err := NewNoopAudit(config.Config)
+		n, err := NewNoopAudit(config)
 		if err != nil {
 			return nil, err
 		}
@@ -292,6 +298,8 @@ func NoopAuditFactory(records **[][]byte) audit.Factory {
 		return n, nil
 	}
 }
+
+var _ audit.Backend = (*NoopAudit)(nil)
 
 type NoopAudit struct {
 	Config         *audit.BackendConfig
@@ -318,6 +326,26 @@ type NoopAudit struct {
 
 	nodeIDList []eventlogger.NodeID
 	nodeMap    map[eventlogger.NodeID]eventlogger.Node
+}
+
+func (n *NoopAudit) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+func (n *NoopAudit) IsFilteringPipeline() bool {
+	return false
+}
+
+func (n *NoopAudit) Name() string {
+	return n.Config.MountPath
+}
+
+func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return n.nodeMap
+}
+
+func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
+	return n.nodeIDList
 }
 
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {

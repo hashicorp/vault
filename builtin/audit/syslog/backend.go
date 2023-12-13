@@ -26,11 +26,12 @@ type Backend struct {
 	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 	logger       gsyslog.Syslogger
-	saltMutex    sync.RWMutex
+	name         string
 	nodeIDList   []eventlogger.NodeID
 	nodeMap      map[eventlogger.NodeID]eventlogger.Node
 	salt         *salt.Salt
 	saltConfig   *salt.Config
+	saltMutex    sync.RWMutex
 	saltView     logical.Storage
 }
 
@@ -69,10 +70,11 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	}
 
 	b := &Backend{
+		formatConfig: cfg,
 		logger:       logger,
+		name:         conf.MountPath,
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
-		formatConfig: cfg,
 	}
 
 	// Configure the formatter for either case.
@@ -206,24 +208,6 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.salt = nil
 }
 
-// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
-// the audit.Backend interface.
-func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
-	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
-			return err
-		}
-	}
-
-	pipeline := eventlogger.Pipeline{
-		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType(event.AuditType.String()),
-		NodeIDs:    b.nodeIDList,
-	}
-
-	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
-}
-
 // formatterConfig creates the configuration required by a formatter node using
 // the config map supplied to the factory.
 func formatterConfig(config map[string]string) (audit.FormatterConfig, error) {
@@ -337,4 +321,29 @@ func (b *Backend) configureSinkNode(name string, format string, opts ...event.Op
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
 	b.nodeMap[sinkNodeID] = sinkNode
 	return nil
+}
+
+// Name for this backend, this would ideally correspond to the mount path for the audit device.
+func (b *Backend) Name() string {
+	return b.name
+}
+
+// Nodes returns the nodes which should be used by the event framework to process audit entries.
+func (b *Backend) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return b.nodeMap
+}
+
+// NodeIDs returns the IDs of the nodes, in the order they are required.
+func (b *Backend) NodeIDs() []eventlogger.NodeID {
+	return b.nodeIDList
+}
+
+// EventType returns the event type for the backend.
+func (b *Backend) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+// IsFilteringPipeline determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
+func (b *Backend) IsFilteringPipeline() bool {
+	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }

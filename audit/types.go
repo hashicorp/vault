@@ -8,8 +8,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -275,6 +275,10 @@ type Backend interface {
 	// Salter interface must be implemented by anything implementing Backend.
 	Salter
 
+	// The Pipeliner interface allows backends to surface information about their
+	// nodes for node and pipeline registration.
+	event.Pipeliner
+
 	// LogRequest is used to synchronously log a request. This is done after the
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in any way. They should be deep copied if this is
@@ -298,12 +302,6 @@ type Backend interface {
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
-
-	// RegisterNodesAndPipeline provides an eventlogger.Broker pointer so that
-	// the Backend can call its RegisterNode and RegisterPipeline methods with
-	// the nodes and the pipeline that were created in the corresponding
-	// Factory function.
-	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
