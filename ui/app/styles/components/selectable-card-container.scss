@@ -26,13 +26,6 @@
   @include until($mobile) {
     grid-template-columns: 2fr;
   }
-
-  .selectable-card.is-grid-container {
-    display: grid;
-    grid-template-columns: 2fr 0.5fr;
-    grid-template-rows: 1fr 2fr 0.5fr;
-    padding: $spacing-l 0 14px $spacing-l; // modify bottom spacing to better align with other cards
-  }
 }
 
 .selectable-card-container.has-grid.has-three-col-grid {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
   <h3 class="title is-4">Quick actions</h3>
   {{#if this.filteredSecretEngines}}
@@ -54,15 +59,13 @@
         />
 
         <div>
-          <button
-            type="button"
-            class="button is-primary has-top-margin-m"
+          <Hds::Button
+            @text={{this.searchSelectParams.buttonText}}
+            class="has-top-margin-m"
             disabled={{(not (and this.selectedAction this.selectedEngine this.paramValue))}}
             {{on "click" this.navigateToPage}}
             data-test-button={{this.searchSelectParams.buttonText}}
-          >
-            {{this.searchSelectParams.buttonText}}
-          </button>
+          />
         </div>
       {{/if}}
     {{else}}

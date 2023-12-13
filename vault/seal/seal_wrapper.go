@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package seal
 
 import (
@@ -11,6 +14,14 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
+
+type PartialSealWrapError struct {
+	Err error
+}
+
+func (p *PartialSealWrapError) Error() string {
+	return p.Err.Error()
+}
 
 // SealWrapper contains a Wrapper and related information needed by the seal that uses it.
 // Use NewSealWrapper to construct new instances, do not do it directly.

@@ -9,9 +9,7 @@
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">
-            <button type="button" class="button link" onclick={{action "dismissWizard"}}>
-              Dismiss
-            </button>
+            <Hds::Button @text="Dismiss" @color="secondary" class="link" {{on "click" (action "dismissWizard")}} />
           </li>
         </ul>
       </nav>

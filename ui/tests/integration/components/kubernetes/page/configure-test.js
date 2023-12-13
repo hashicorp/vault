@@ -199,14 +199,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await render(
       hbs`
-      <div id="modal-wormhole"></div>
-      <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
+            <Page::Configure @model={{this.editModel}} @breadcrumbs={{this.breadcrumbs}} />
     `,
       { owner: this.engine }
     );
     await click('[data-test-config-save]');
     assert
-      .dom('.modal-card-body')
+      .dom('[data-test-edit-config-body]')
       .hasText(
         'Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are you sure?',
         'Confirm modal renders'
@@ -223,9 +222,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom('[data-test-field-validation="kubernetesHost"] [data-test-inline-error-message]')
       .hasText('Kubernetes host is required', 'Error renders for required field');
-    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+    assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });
 
   test('it should save inferred config', async function (assert) {

@@ -126,8 +126,8 @@ module('Acceptance | pki workflow', function (hooks) {
 
       await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(SELECTORS.deleteRoleButton).exists('Delete role button is shown');
-      await click(`${SELECTORS.deleteRoleButton} [data-test-confirm-action-trigger]`);
-      await click(`[data-test-confirm-button]`);
+      await click(SELECTORS.deleteRoleButton);
+      await click('[data-test-confirm-button]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/roles`,
@@ -432,7 +432,7 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom(SELECTORS.issuerDetails.configure)
         .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/edit`);
       await click(SELECTORS.issuerDetails.rotateRoot);
-      assert.dom(find(SELECTORS.issuerDetails.rotateModal).parentElement).hasClass('is-active');
+      assert.dom(SELECTORS.issuerDetails.rotateModal).exists('rotate root modal opens');
       await click(SELECTORS.issuerDetails.rotateModalGenerate);
       assert.strictEqual(
         currentURL(),

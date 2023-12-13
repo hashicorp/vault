@@ -9,6 +9,8 @@ description: >-
 
 # Vault Enterprise replication
 
+@include 'alerts/enterprise-and-hcp.mdx'
+
 ## Overview
  
 Many organizations have infrastructure that spans multiple datacenters. Vault
@@ -83,7 +85,7 @@ secondaries to have a different configuration than their primary.  Tokens and le
 
 ## Performance replication
 
-@include 'alerts/enterprise-and-hcp-plus.mdx'
+@include 'alerts/enterprise-and-hcp.mdx'
 
 In Performance Replication, secondaries keep track of their own tokens and leases
 but share the underlying configuration, policies, and supporting secrets (K/V values,

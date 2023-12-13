@@ -14,5 +14,7 @@
     @text="Copy"
     @textToCopy={{or @clipboardCode @codeBlock}}
     @isIconOnly={{@isIconOnly}}
+    @container={{@container}}
+    data-test-copy-button={{or @clipboardCode @codeBlock}}
   />
 </div>

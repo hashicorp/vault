@@ -105,7 +105,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     this.validateRoute(assert, 'roles.role.edit', 'Transitions to edit route');
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert
       .dom('[data-test-list-item-link]')

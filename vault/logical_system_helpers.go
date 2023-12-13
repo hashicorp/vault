@@ -34,6 +34,10 @@ var (
 		return nil
 	}
 
+	sysClean = func(b *SystemBackend) func(context.Context) {
+		return nil
+	}
+
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
 	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }

@@ -11,7 +11,6 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )

@@ -99,7 +99,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     ]);
     await mountSecrets.visit();
     await mountSecrets.selectType(engine.type);
-    await mountSecrets.next().path(engine.type).submit();
+    await mountSecrets.path(engine.type).submit();
     assert.strictEqual(
       currentRouteName(),
       `vault.cluster.secrets.backend.${engine.engineRoute}`,

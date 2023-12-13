@@ -31,7 +31,6 @@ module('Acceptance | settings', function (hooks) {
 
     await mountSecrets.selectType(type);
     await mountSecrets
-      .next()
       .path(path)
       .toggleOptions()
       .enableDefaultTtl()

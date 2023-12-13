@@ -6,14 +6,14 @@ description: The `/sys/monitor` endpoint is used to receive streaming logs from 
 
 # `/sys/monitor`
 
+@include 'alerts/restricted-admin.mdx'
+
 The `/sys/monitor` endpoint is used to receive streaming logs from the Vault server.
 
 If Vault is emitting log messages faster than a receiver can process them, then
 some log lines will be dropped.
 
 ## Monitor system logs
-
-- @include 'alerts/restricted-admin.mdx'
 
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
 does not return JSON by default. This will send back data in whatever log format Vault has been configured with. By

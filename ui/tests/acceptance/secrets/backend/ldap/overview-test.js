@@ -33,7 +33,6 @@ module('Acceptance | ldap | overview', function (hooks) {
     await visit('/vault/secrets');
     await click('[data-test-enable-engine]');
     await click('[data-test-mount-type="ldap"]');
-    await click('[data-test-mount-next]');
     await fillIn('[data-test-input="path"]', 'ldap-test');
     await click('[data-test-mount-submit]');
     assert.true(isURL('overview'), 'Transitions to ldap overview route on mount success');
@@ -56,7 +55,7 @@ module('Acceptance | ldap | overview', function (hooks) {
     await click('[data-test-config-cta] a');
     assert.true(isURL('configure'), 'Transitions to configure route on cta link click');
 
-    await click('[data-test-breadcrumb="ldap-test"]');
+    await click('[data-test-breadcrumb="ldap-test"] a');
     await click('[data-test-toolbar-action="config"]');
     assert.true(isURL('configure'), 'Transitions to configure route on toolbar link click');
   });
@@ -93,7 +92,7 @@ module('Acceptance | ldap | overview', function (hooks) {
       'Transitions to role credentials route on generate credentials action'
     );
 
-    await click('[data-test-breadcrumb="ldap-test"]');
+    await click('[data-test-breadcrumb="ldap-test"] a');
     await selectChoose('.search-select', 'dynamic-role');
     await click('[data-test-generate-credential-button]');
     assert.true(

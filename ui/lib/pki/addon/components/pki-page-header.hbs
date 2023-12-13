@@ -5,18 +5,10 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumbs">
-      <ul>
-        <li>
-          <span class="sep">/</span>
-          <LinkToExternal @route="secrets">secrets</LinkToExternal>
-        </li>
-        <li>
-          <span class="sep">/</span>
-          <span>{{@backend.id}}</span>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Secrets" @route="secrets" @isRouteExternal={{true}} />
+      <Hds::Breadcrumb::Item @text={{@backend.id}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-header-title>

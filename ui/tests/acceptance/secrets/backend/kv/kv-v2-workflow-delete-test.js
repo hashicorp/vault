@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'vault/tests/helpers';
@@ -35,9 +40,11 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     this.store = this.owner.lookup('service:store');
     this.backend = `kv-delete-${uuidv4()}`;
     this.secretPath = 'bad-secret';
+    this.nestedSecretPath = 'app/nested/bad-secret';
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
+    await writeVersionedSecret(this.backend, this.nestedSecretPath, 'foo', 'bar', 1);
     await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
     // Delete latest version for testing undelete for users that can't delete
     await runCmd(deleteLatestCmd(this.backend, 'nuke'));
@@ -345,6 +352,33 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+    });
+  });
+
+  module('secret-nested-creator persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      const token = await runCmd(
+        tokenWithPolicyCmd('secret-nested-creator', personas.secretNestedCreator(this.backend))
+      );
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
+    });
+    test('can delete all secret versions from the nested list view (snc)', async function (assert) {
+      assert.expect(1);
+      // go to nested secret directory list view
+      await visit(`/vault/secrets/${this.backend}/kv/list/app/nested`);
+      // correct popup menu items appear on list view
+      const popupSelector = `${PAGE.list.item('bad-secret')} ${PAGE.popup}`;
+      await click(popupSelector);
+      assert.dom(PAGE.list.listMenuDelete).exists('shows the option to permanently delete');
+    });
+    test('can not delete all secret versions from root list view (snc)', async function (assert) {
+      assert.expect(1);
+      // go to root secret directory list view
+      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      // shows overview card and not list view
+      assert.dom(PAGE.list.overviewCard).exists('renders overview card');
     });
   });
 

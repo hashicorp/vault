@@ -40,8 +40,8 @@
           @text="Copy"
           @isIconOnly={{true}}
           @textToCopy={{@value}}
-          class="transparent icon-only is-paddingless"
-          data-test-copy-button
+          class="transparent has-padding-xxs"
+          data-test-copy-button={{@value}}
         />
       {{/if}}
       {{#if (has-block)}}
@@ -95,7 +95,7 @@
                       @isIconOnly={{true}}
                       @textToCopy={{@tooltipText}}
                       class="transparent white-icon"
-                      data-test-tooltip-copy
+                      data-test-tooltip-copy={{@tooltipText}}
                     />
                   {{/if}}
                 </div>

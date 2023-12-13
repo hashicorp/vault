@@ -31,7 +31,7 @@
           <ul class="menu-list">
             {{#if @item.canEdit}}
               <li class="action">
-                <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                <SecretLink @mode="edit" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                   Edit connection
                 </SecretLink>
               </li>
@@ -45,9 +45,12 @@
             {{/if}}
             {{#if @item.canReset}}
               <li class="action">
-                <button type="button" class="link" {{on "click" (fn this.resetConnection @item.id)}}>
-                  Reset connection
-                </button>
+                <Hds::Button
+                  @text="Reset connection"
+                  @color="secondary"
+                  class="link"
+                  {{on "click" (fn this.resetConnection @item.id)}}
+                />
               </li>
             {{/if}}
             {{#if (and (eq @item.type "dynamic") @item.canGenerateCredentials)}}
@@ -73,16 +76,22 @@
             {{/if}}
             {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
               <li class="action">
-                <button type="button" class="link" {{on "click" (fn this.rotateRoleCred @item.id)}}>
-                  Rotate credentials
-                </button>
+                <Hds::Button
+                  @text="Rotate credentials"
+                  @color="secondary"
+                  class="link"
+                  {{on "click" (fn this.rotateRoleCred @item.id)}}
+                />
               </li>
             {{/if}}
             {{#if @item.canRotateRoot}}
               <li class="action">
-                <button type="button" class="link" {{on "click" (fn this.rotateRootCred @item.id)}}>
-                  Rotate root credentials
-                </button>
+                <Hds::Button
+                  @text="Rotate root credentials"
+                  @color="secondary"
+                  class="link"
+                  {{on "click" (fn this.rotateRootCred @item.id)}}
+                />
               </li>
             {{/if}}
           </ul>

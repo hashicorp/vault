@@ -29,8 +29,9 @@ else
 fi
 
 # git diff with ... shows the differences between base_commit and head_commit starting at the last common commit
-changed_dir=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq)
-change_count=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq | wc -l)
+# excluding the changelog directory
+changed_dir=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq | sed '/changelog/d')
+change_count=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq | sed '/changelog/d' | wc -l)
 
 # There are 4 main conditions to check:
 #

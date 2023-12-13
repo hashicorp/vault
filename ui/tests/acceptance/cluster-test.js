@@ -82,4 +82,22 @@ module('Acceptance | cluster', function (hooks) {
 
     assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
   });
+
+  test('shows error banner if resultant-acl check fails', async function (assert) {
+    const login_only = `
+      path "auth/token/lookup-self" {
+        capabilities = ["read"]
+      },
+    `;
+    await consoleComponent.runCommands([
+      `write sys/policies/acl/login-only policy=${btoa(login_only)}`,
+      `write -field=client_token auth/token/create no_default_policy=true policies="login-only"`,
+    ]);
+    const noDefaultPolicyUser = consoleComponent.lastLogOutput;
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Resultant ACL banner does not show as root');
+    await logout.visit();
+    assert.dom('[data-test-resultant-acl-banner]').doesNotExist('Does not show on login page');
+    await authPage.login(noDefaultPolicyUser);
+    assert.dom('[data-test-resultant-acl-banner]').includesText('Resultant ACL check failed');
+  });
 });

@@ -391,27 +391,39 @@ func (b *Backend) open() error {
 }
 
 func (b *Backend) Reload(_ context.Context) error {
-	switch b.path {
-	case stdout, discard:
+	// When there are nodes created in the map, use the eventlogger behavior.
+	if len(b.nodeMap) > 0 {
+		for _, n := range b.nodeMap {
+			if n.Type() == eventlogger.NodeTypeSink {
+				return n.Reopen()
+			}
+		}
+
 		return nil
-	}
+	} else {
+		// old non-eventlogger behavior
+		switch b.path {
+		case stdout, discard:
+			return nil
+		}
 
-	b.fileLock.Lock()
-	defer b.fileLock.Unlock()
+		b.fileLock.Lock()
+		defer b.fileLock.Unlock()
 
-	if b.f == nil {
+		if b.f == nil {
+			return b.open()
+		}
+
+		err := b.f.Close()
+		// Set to nil here so that even if we error out, on the next access open()
+		// will be tried
+		b.f = nil
+		if err != nil {
+			return err
+		}
+
 		return b.open()
 	}
-
-	err := b.f.Close()
-	// Set to nil here so that even if we error out, on the next access open()
-	// will be tried
-	b.f = nil
-	if err != nil {
-		return err
-	}
-
-	return b.open()
 }
 
 func (b *Backend) Invalidate(_ context.Context) {
@@ -424,16 +436,16 @@ func (b *Backend) Invalidate(_ context.Context) {
 // the audit.Backend interface.
 func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
 	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node); err != nil {
+		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
 			return err
 		}
 	}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
+		EventType:  eventlogger.EventType(event.AuditType.String()),
 		NodeIDs:    b.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }

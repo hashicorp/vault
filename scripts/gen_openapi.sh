@@ -94,6 +94,7 @@ if [[ -n "${VAULT_LICENSE:-}" ]]; then
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"
+    vault auth enable "saml"
 fi
 
 # Output OpenAPI, optionally formatted

@@ -349,3 +349,92 @@ func TestCreateCredential(t *testing.T) {
 		})
 	}
 }
+
+// TestRequeueOnError verifies that in the case of an error, the entry will still be in the queue for later rotation
+func TestRequeueOnError(t *testing.T) {
+	bgCTX := context.Background()
+
+	cred := staticRoleEntry{
+		Name:           "test",
+		Username:       "jane-doe",
+		RotationPeriod: 30 * time.Minute,
+	}
+
+	ak := "long-access-key-id"
+	oldSecret := "abcdefghijklmnopqrstuvwxyz"
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+
+	// go through the process of adding a key
+	miam, err := awsutil.NewMockIAM(
+		awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
+			AccessKeyMetadata: []*iam.AccessKeyMetadata{
+				{},
+			},
+		}),
+		// initial key to store
+		awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
+			AccessKey: &iam.AccessKey{
+				AccessKeyId:     aws.String(ak),
+				SecretAccessKey: aws.String(oldSecret),
+			},
+		}),
+		awsutil.WithGetUserOutput(&iam.GetUserOutput{
+			User: &iam.User{
+				UserId:   aws.String(cred.ID),
+				UserName: aws.String(cred.Username),
+			},
+		}),
+	)(nil)
+	if err != nil {
+		t.Fail()
+	}
+
+	b.iamClient = miam
+
+	err = b.createCredential(bgCTX, config.StorageView, cred, true)
+	if err != nil {
+		t.Fatalf("couldn't insert credential: %s", err)
+	}
+
+	// put the cred in the queue but age it out
+	item := &queue.Item{
+		Key:      cred.Name,
+		Value:    cred,
+		Priority: time.Now().Add(-10 * time.Minute).Unix(),
+	}
+	err = b.credRotationQueue.Push(item)
+	if err != nil {
+		t.Fatalf("couldn't push item onto queue: %s", err)
+	}
+
+	// update the mock iam with the next requests
+	miam, err = awsutil.NewMockIAM(
+		awsutil.WithGetUserError(errors.New("oh no")),
+	)(nil)
+	if err != nil {
+		t.Fatalf("couldn't initialize the mock iam: %s", err)
+	}
+	b.iamClient = miam
+
+	// now rotate, but it will fail
+	r, e := b.rotateCredential(bgCTX, config.StorageView)
+	if !r {
+		t.Fatalf("rotate credential should return true in this case, but it didn't")
+	}
+	if e == nil {
+		t.Fatalf("we expected an error when rotating a credential, but didn't get one")
+	}
+	// the queue should be updated though
+	i, e := b.credRotationQueue.PopByKey(cred.Name)
+	if err != nil {
+		t.Fatalf("queue error: %s", e)
+	}
+	delta := time.Now().Add(10*time.Second).Unix() - i.Priority
+	if delta < -5 || delta > 5 {
+		t.Fatalf("priority should be within 5 seconds of our backoff interval")
+	}
+}

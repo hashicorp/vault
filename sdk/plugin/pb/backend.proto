@@ -58,6 +58,11 @@ message Paths {
   //
   // See extended note in /sdk/logical/logical.go.
   repeated string write_forwarded_storage = 5;
+
+  // Binary are paths whose request bodies are binary, not JSON
+  //
+  // See note in /sdk/logical/logical.go.
+  repeated string binary = 6;
 }
 
 message Request {

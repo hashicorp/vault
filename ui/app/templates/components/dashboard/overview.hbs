@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Dashboard::VaultVersionTitle @version={{@version}} />
 
 <div class="has-bottom-margin-xl">
@@ -7,7 +12,9 @@
         {{#if @license}}
           <Dashboard::ClientCountCard @license={{@license}} />
         {{/if}}
-        {{#if (and @isRootNamespace (has-permission "status" routeParams="replication"))}}
+        {{#if
+          (and @isRootNamespace (has-permission "status" routeParams="replication") (not (is-empty-value @replication)))
+        }}
           <Dashboard::ReplicationCard
             @replication={{@replication}}
             @version={{@version}}

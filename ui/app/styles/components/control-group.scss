@@ -17,7 +17,7 @@
 }
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
-  padding: $size-9 $size-6;
+  padding: $spacing-10 $spacing-14;
   background: $grey-lightest;
   color: $grey-dark;
   position: relative;
@@ -32,5 +32,5 @@
 }
 
 .control-group .authorizations {
-  margin-top: $size-9;
+  margin-top: $spacing-10;
 }

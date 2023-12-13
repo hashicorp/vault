@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, currentRouteName, settled, find, findAll, click } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -23,14 +23,10 @@ module('Acceptance | policies/acl', function (hooks) {
 
   test('it lists default and root acls', async function (assert) {
     await page.visit({ type: 'acl' });
-    await settled();
     assert.strictEqual(currentURL(), '/vault/policies/acl');
+    await fillIn('[data-test-component="navigate-input"]', 'default');
     assert.ok(page.findPolicyByName('default'), 'default policy shown in the list');
-    if (find('nav.pagination')) {
-      // Root ACL is always last in the list
-      const paginationLinks = findAll('.pagination-link');
-      await click(paginationLinks[paginationLinks.length - 1]);
-    }
+    await fillIn('[data-test-component="navigate-input"]', 'root');
     assert.ok(page.findPolicyByName('root'), 'root policy shown in the list');
   });
 

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 )
 
 const (
@@ -115,7 +117,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 
 	// Ensure the token backend is a singleton
-	if entry.Type == "token" {
+	if entry.Type == mountTypeToken {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
@@ -883,7 +885,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		// Check if this is the token store
-		if entry.Type == "token" {
+		if entry.Type == mountTypeToken {
 			c.tokenStore = backend.(*TokenStore)
 
 			// At some point when this isn't beta we may persist this but for
@@ -893,7 +895,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, mountPathCubbyhole).(*CubbyholeBackend)
 			}
 		}
 
@@ -969,7 +971,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 		}
 		if len(plug.Sha256) > 0 {
 			runningSha = hex.EncodeToString(plug.Sha256)
@@ -997,6 +999,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
+	c.AddLogger(authLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeCredential.String(),
 		MountAccessor: entry.Accessor,
@@ -1026,6 +1029,44 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	return b, runningSha, nil
 }
 
+func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
+	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+		pluginName := conf.Config["plugin_name"]
+		pluginVersion := conf.Config["plugin_version"]
+		pluginTypeRaw := conf.Config["plugin_type"]
+		pluginType, err := consts.ParsePluginType(pluginTypeRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		pluginDescription := fmt.Sprintf("%s plugin %s", pluginTypeRaw, pluginName)
+		if pluginVersion != "" {
+			pluginDescription += " version " + pluginVersion
+		}
+
+		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog: %w", pluginDescription, err)
+		}
+		if plugin == nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
+		}
+		if plugin.OCIImage != "" {
+			return f(ctx, conf)
+		}
+
+		command, err := filepath.Rel(core.pluginDirectory, plugin.Command)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute plugin command: %w", err)
+		}
+
+		if err := core.CheckPluginPerms(command); err != nil {
+			return nil, err
+		}
+		return f(ctx, conf)
+	}
+}
+
 // defaultAuthTable creates a default auth table
 func (c *Core) defaultAuthTable() *MountTable {
 	table := &MountTable{
@@ -1046,7 +1087,7 @@ func (c *Core) defaultAuthTable() *MountTable {
 	tokenAuth := &MountEntry{
 		Table:            credentialTableType,
 		Path:             "token/",
-		Type:             "token",
+		Type:             mountTypeToken,
 		Description:      "token based credentials",
 		UUID:             tokenUUID,
 		Accessor:         tokenAccessor,

@@ -21,6 +21,7 @@ import { assert } from '@ember/debug';
  * @param {string} mode - delete, delete-metadata, or destroy.
  * @param {object} secret - The kv/data model.
  * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete" or "metadata-delete".
+ * @param {string} [text] - Button text that renders in KV v2 toolbar, defaults to capitalize @mode
  * @param {callback} onDelete - callback function fired to handle delete event.
  */
 
@@ -34,20 +35,20 @@ export default class KvDeleteModal extends Component {
       case 'delete':
         return {
           title: 'Delete version?',
-          type: 'warning',
+          color: 'warning',
           intro:
             'There are two ways to delete a version of a secret. Both delete actions can be undeleted later. How would you like to proceed?',
         };
       case 'destroy':
         return {
           title: 'Destroy version?',
-          type: 'danger',
+          color: 'critical',
           intro: `This action will permanently destroy Version ${this.args.version} of the secret, and the secret data cannot be read or recovered later.`,
         };
       case 'delete-metadata':
         return {
           title: 'Delete metadata and secret data?',
-          type: 'danger',
+          color: 'critical',
           intro:
             'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.',
         };

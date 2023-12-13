@@ -292,7 +292,7 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 
 	config, err := b.lockedClientConfigEntry(ctx, req.Storage)
 	if err != nil {
-		return "", nil, nil, logical.ErrorResponse("error getting configuration"), nil
+		return "", nil, nil, nil, fmt.Errorf("error getting configuration: %w", err)
 	}
 
 	endpoint := "https://sts.amazonaws.com"
@@ -319,23 +319,23 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		if config.MaxRetries >= 0 {
 			maxRetries = config.MaxRetries
 		}
-	}
 
-	// Extract and use a regional STS endpoint
-	// based on the region set in the Authorization header.
-	if config.UseSTSRegionFromClient {
-		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
-		if err != nil {
-			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+		// Extract and use a regional STS endpoint
+		// based on the region set in the Authorization header.
+		if config.UseSTSRegionFromClient {
+			clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
+			if err != nil {
+				return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+			}
+
+			url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+			if err != nil {
+				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+			}
+
+			b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+			endpoint = url
 		}
-
-		url, err := stsRegionalEndpoint(clientSpecifiedRegion)
-		if err != nil {
-			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
-		}
-
-		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
-		endpoint = url
 	}
 
 	b.Logger().Debug("submitting caller identity request", "endpoint", endpoint)

@@ -390,9 +390,9 @@ module('Acceptance | client counts dashboard tab', function (hooks) {
       .dom(SELECTORS.emptyStateTitle)
       .includesText('start date found', 'Empty state shows no billing start date');
     await click(SELECTORS.monthDropdown);
-    await click(this.element.querySelector('[data-test-month-list] button:not([disabled])'));
+    await click(this.element.querySelector('[data-test-dropdown-month]:not([disabled])'));
     await click(SELECTORS.yearDropdown);
-    await click(this.element.querySelector('[data-test-year-list] button:not([disabled])'));
+    await click(this.element.querySelector('[data-test-dropdown-year]:not([disabled])'));
     await click(SELECTORS.dateDropdownSubmit);
     assert
       .dom(SELECTORS.emptyStateTitle)

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
@@ -45,8 +50,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').hasText(this.backend, 'engine name renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(3) a').hasText(this.path, 'secret path renders');
     assert
-      .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .hasText('/ edit', 'final breadcrumb renders and it is not a link.');
+      .dom('[data-test-breadcrumbs] li:nth-child(4) .hds-breadcrumb__current')
+      .exists('final breadcrumb renders and it is not a link.');
   });
 
   test('it renders a custom title for a non engine view', async function (assert) {

@@ -70,7 +70,10 @@ func (c *Core) GetRaftNodeID() string {
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+	return c.GetRaftIndexesLocked()
+}
 
+func (c *Core) GetRaftIndexesLocked() (committed uint64, applied uint64) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return 0, 0
@@ -198,6 +201,7 @@ func (c *Core) monitorUndoLogs() error {
 	}
 
 	if persisted {
+		c.EnableUndoLogs()
 		logger.Debug("undo logs are safe, no need to check any more")
 		return nil
 	}
@@ -310,14 +314,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
-	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-	disableAutopilot := c.disableAutopilot
-
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
-
 	c.pendingRaftPeers = &sync.Map{}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
@@ -330,7 +326,18 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	if err := c.monitorUndoLogs(); err != nil {
 		return err
 	}
-	return c.startPeriodicRaftTLSRotate(ctx)
+
+	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
+		return err
+	}
+
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+	}
+	disableAutopilot := c.disableAutopilot
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	return nil
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -359,6 +366,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
+	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -1328,7 +1336,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {
