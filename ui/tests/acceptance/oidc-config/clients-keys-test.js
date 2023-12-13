@@ -81,7 +81,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // navigate to default key details from pop-up menu
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-key-menu-link="details"]');
-    assert.dom(SELECTORS.keyDeleteButton).isDisabled('delete button is disabled for default key');
+    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete button is hidden for default key');
     await click(SELECTORS.keyEditButton);
     assert.strictEqual(
       currentRouteName(),
@@ -100,7 +100,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       .exists('lists correct app with default');
 
     // create a new key
-    await click('[data-test-breadcrumb-link="oidc-keys"]');
+    await click('[data-test-breadcrumb-link="oidc-keys"] a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.index',

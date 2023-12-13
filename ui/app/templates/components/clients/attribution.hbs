@@ -112,17 +112,24 @@
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} />
       </Hds::ButtonSet>
       {{#if @upgradeExplanation}}
-        <div class="has-text-grey is-size-8 has-top-padding-m">
-          <AlertInline @type="warning">
-            Your data contains an upgrade.
-            <DocLink
-              @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+        <Hds::Alert class="has-top-padding-m" @type="compact" @color="warning" as |A|>
+          <A.Description>
+            <strong>Your data contains an upgrade.</strong>
+            {{@upgradeExplanation}}
+            Visit our
+            <Hds::Link::Inline
+              @icon="docs-link"
+              @iconPosition="trailing"
+              @isHrefExternal={{true}}
+              @href={{doc-link
+                "/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+              }}
             >
-              Learn more here.
-            </DocLink>
-          </AlertInline>
-          <p class="has-left-padding-l">{{@upgradeExplanation}}</p>
-        </div>
+              Client count FAQ
+            </Hds::Link::Inline>
+            for more information.
+          </A.Description>
+        </Hds::Alert>
       {{/if}}
     </M.Footer>
   </Hds::Modal>

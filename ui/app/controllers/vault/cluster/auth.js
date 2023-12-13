@@ -9,11 +9,12 @@ import { task, timeout } from 'ember-concurrency';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
-  flashMessages: service(),
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
+  flashMessages: service(),
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
+  version: service(),
   auth: service(),
   router: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
@@ -56,6 +57,7 @@ export default Controller.extend({
 
   authSuccess({ isRoot, namespace }) {
     let transition;
+    this.version.fetchVersion();
     if (this.redirectTo) {
       // here we don't need the namespace because it will be encoded in redirectTo
       transition = this.router.transitionTo(this.redirectTo);

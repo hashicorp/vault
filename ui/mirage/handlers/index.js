@@ -17,6 +17,7 @@ import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
 import reducedDisclosure from './reduced-disclosure';
+import sync from './sync';
 
 export {
   base,
@@ -31,4 +32,5 @@ export {
   mfaLogin,
   oidcConfig,
   reducedDisclosure,
+  sync,
 };

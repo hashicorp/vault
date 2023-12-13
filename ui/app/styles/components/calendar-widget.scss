@@ -18,7 +18,7 @@ $dark-gray: #535f73;
   }
 }
 .calendar-title {
-  padding: $size-10 $size-8;
+  padding: $spacing-10 $spacing-12;
 }
 
 .select-year {
@@ -88,7 +88,7 @@ $dark-gray: #535f73;
   background-color: $ui-gray-700;
   color: $white;
   font-size: $size-8;
-  padding: $size-9;
+  padding: $spacing-10;
   border-radius: $radius-large;
   width: 141px;
 }

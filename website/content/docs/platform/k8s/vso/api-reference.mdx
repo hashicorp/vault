@@ -7,7 +7,7 @@ description: >-
 
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=7efe3dd7b7558369b736a5cfd174dd16bd0b8776
+  commit SHA=107235204b2dace4e46f1b7f4b7d02b37457b30e
 -->
 # API Reference
 
@@ -265,6 +265,24 @@ _Appears in:_
 | `secretRef` _string_ | SecretRef is the name of a Kubernetes secret in the consumer's (VDS/VSS/PKI) namespace which provides the AppRole Role's SecretID. The secret must have a key named `id` which holds the AppRole Role's secretID. |
 
 
+#### VaultAuthConfigGCP
+
+
+
+VaultAuthConfigGCP provides VaultAuth configuration options needed for authenticating to Vault via a GCP AuthMethod, using workload identity
+
+_Appears in:_
+- [VaultAuthSpec](#vaultauthspec)
+
+| Field | Description |
+| --- | --- |
+| `role` _string_ | Vault role to use for authenticating |
+| `workloadIdentityServiceAccount` _string_ | WorkloadIdentityServiceAccount is the name of a Kubernetes service account (in the same Kubernetes namespace as the Vault*Secret referencing this resource) which has been configured for workload identity in GKE. Should be annotated with "iam.gke.io/gcp-service-account". |
+| `region` _string_ | GCP Region of the GKE cluster's identity provider. Defaults to the region returned from the operator pod's local metadata server. |
+| `clusterName` _string_ | GKE cluster name. Defaults to the cluster-name returned from the operator pod's local metadata server. |
+| `projectID` _string_ | GCP project ID. Defaults to the project-id returned from the operator pod's local metadata server. |
+
+
 #### VaultAuthConfigJWT
 
 
@@ -338,6 +356,7 @@ _Appears in:_
 | `appRole` _[VaultAuthConfigAppRole](#vaultauthconfigapprole)_ | AppRole specific auth configuration, requires that the Method be set to `appRole`. |
 | `jwt` _[VaultAuthConfigJWT](#vaultauthconfigjwt)_ | JWT specific auth configuration, requires that the Method be set to `jwt`. |
 | `aws` _[VaultAuthConfigAWS](#vaultauthconfigaws)_ | AWS specific auth configuration, requires that Method be set to `aws`. |
+| `gcp` _[VaultAuthConfigGCP](#vaultauthconfiggcp)_ | GCP specific auth configuration, requires that Method be set to `gcp`. |
 | `storageEncryption` _[StorageEncryption](#storageencryption)_ | StorageEncryption provides the necessary configuration to encrypt the client storage cache. This should only be configured when client cache persistence with encryption is enabled. This is done by passing setting the manager's commandline argument --client-cache-persistence-model=direct-encrypted. Typically, there should only ever be one VaultAuth configured with StorageEncryption in the Cluster, and it should have the label: cacheStorageEncryption=true |
 
 

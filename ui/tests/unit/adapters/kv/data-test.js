@@ -79,7 +79,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
-    this.version.version = 'example+ent'; // Required for testing control-group flow
+    this.version.type = 'enterprise'; // Required for testing control-group flow
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.backend = 'my/kv-back&end';
     this.secretMountPath.currentPath = this.backend;
