@@ -147,6 +147,7 @@ module('Unit | Adapter | sync | destination', function (hooks) {
     assert.expect(1);
 
     const destination = this.server.create('sync-destination', 'aws-sm');
+
     this.server.delete(`/sys/sync/destinations/${destination.type}/${destination.name}?purge=true`, () => {
       assert.ok(true, 'DELETE request made to correct endpoint');
       return {};
