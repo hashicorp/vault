@@ -1147,6 +1147,7 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 type ManagerFlags struct {
 	IsPerfStandby bool
 	IsDRSecondary bool
+	IsNewInstall  bool
 }
 
 // Setup loads the quota configuration and all the quota rules into the
@@ -1167,6 +1168,7 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, flags *Man
 	}
 	m.isPerfStandby = flags.IsPerfStandby
 	m.isDRSecondary = flags.IsDRSecondary
+	m.isNewInstall = flags.IsNewInstall
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.
@@ -1199,6 +1201,11 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, flags *Man
 	m.setEnableRateLimitAuditLoggingLocked(config.EnableRateLimitAuditLogging)
 	m.setEnableRateLimitResponseHeadersLocked(config.EnableRateLimitResponseHeaders)
 	m.setRateLimitExemptPathsLocked(exemptPaths)
+
+	if err := m.setupDefaultLeaseCountQuotaInStorage(ctx); err != nil {
+		m.logger.Warn("skipping initialization of default lease count quota", "error", err)
+	}
+
 	if err = m.resetCache(); err != nil {
 		return err
 	}
