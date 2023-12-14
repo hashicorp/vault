@@ -41,18 +41,18 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert
       .dom('[data-test-form-subtext]')
       .hasText('Create a custom message for all users when they access a Vault system via the UI.');
-    assert.dom(PAGE.radio('true')).exists();
-    assert.dom(PAGE.radio('false')).exists();
-    assert.dom(PAGE.radio('true')).isChecked();
-    assert.dom(PAGE.radio('false')).isNotChecked();
+    assert.dom(PAGE.radio('authenticated')).exists();
+    assert.dom(PAGE.radio('unauthenticated')).exists();
+    assert.dom(PAGE.radio('authenticated')).isChecked();
+    assert.dom(PAGE.radio('unauthenticated')).isNotChecked();
     assert.dom(PAGE.radio('banner')).exists();
     assert.dom(PAGE.radio('modal')).exists();
     assert.dom(PAGE.radio('banner')).isChecked();
     assert.dom(PAGE.radio('modal')).isNotChecked();
     assert.dom(PAGE.field('title')).exists();
     assert.dom(PAGE.field('message')).exists();
-    assert.dom(PAGE.field('linkTitle')).exists();
-    assert.dom(PAGE.field('linkHref')).exists();
+    assert.dom(PAGE.input('linkTitle')).exists();
+    assert.dom(PAGE.input('linkHref')).exists();
     assert.dom(PAGE.input('startTime')).exists();
     assert
       .dom(PAGE.input('startTime'))
@@ -122,14 +122,14 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert
       .dom('[data-test-form-subtext]')
       .hasText('Edit a custom message for all users when they access a Vault system via the UI.');
-    assert.dom(PAGE.radio('true')).exists();
-    assert.dom(PAGE.radio('false')).isChecked();
+    assert.dom(PAGE.radio('authenticated')).exists();
+    assert.dom(PAGE.radio('unauthenticated')).isChecked();
     assert.dom(PAGE.radio('modal')).exists();
     assert.dom(PAGE.radio('modal')).isChecked();
     assert.dom(PAGE.input('title')).hasValue('Hello world');
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
-    assert.dom(PAGE.field('linkTitle')).exists();
-    assert.dom(PAGE.field('linkHref')).exists();
+    assert.dom(PAGE.input('linkTitle')).exists();
+    assert.dom(PAGE.input('linkHref')).exists();
     await click('#specificDate');
     assert
       .dom(PAGE.input('startTime'))

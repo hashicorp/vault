@@ -39,7 +39,7 @@
               placeholder="Paste URL (e.g. www.learnmore.com)"
               id="link-href"
               class="input"
-              data-test-input="{{attr.name}}"
+              data-test-input="linkHref"
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkHref)))}}
               aria-label="Link href"
             />
