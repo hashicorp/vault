@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
 
 interface Args {
   attr?: AttrData;
-  name?: string;
+  label?: string;
 }
 interface AttrData {
   name: string; // required if @attr is passed
