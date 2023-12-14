@@ -1465,7 +1465,7 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	// Create a noop audit backend
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
 		var err error
@@ -1631,7 +1631,7 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	// Create a badass credential backend that always logs in as armon
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
