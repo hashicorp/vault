@@ -2563,8 +2563,13 @@
             "path": "enterprise/namespaces/create-admin-namespace"
           },
           {
-            "title": "Using many namespaces",
-            "path": "enterprise/namespaces/namespace-limits"
+            "title": "Run Vault with many namespaces",
+            "path": "enterprise/namespaces/namespace-limits",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            }
           }
         ]
       },

@@ -1,26 +1,27 @@
 ---
 layout: docs
-page_title: Running Vault Enterprise with many namespaces
+page_title: Run Vault Enterprise with many namespaces
 description: >-
   Guidance for using thousands of namespaces with Vault Enterprise
 ---
 
-# Many namespaces
+# Run Vault Enterprise with many namespaces
 
-Namespaces can be used to create isolated environments within Vault Enterprise.
-Vault has a default limit to the number of namespaces that can be created, but
-the limit can be modified if needed. This page provides guidance of what to
-expect when operating a Vault cluster with thousands of namespaces.
+Use namespaces to create isolated environments within Vault Enterprise.
+By default, Vault limits the number and depth of namespaces based on your
+storage configuration. The information below provides guidance on how to modify
+your namespace limits and what expect when operating a Vault cluster with 7000+
+namespaces.
 
-# Default limit
+## Default namespace limits
 
 @include 'namespace-limits.mdx'
 
-# Modifying the limit
+## How to modify your namespace limit
 
 @include 'storage-entry-size.mdx'
 
-# Performance
+## Performance considerations
 
 Running Vault with thousands of namespaces can have operational impacts on a
 cluster. Below are some performance considerations to take into account before
@@ -31,31 +32,36 @@ lower than 1.13.9, 1.14.5, or 1.15.0. Improvements were released in those
 versions which can improve the reliability of Raft heartbeats when using many
 namespaces.
 
-All the data below was tested by creating a varying number of namespaces (using
-only the default mounts) on a 3-node Vault cluster using integrated storage. The
-cluster ran on Google Kubernetes Engine. These scenarios were tested using
-n2-standard-16 and n2-standard-32 nodes.
+<Note title="Testing parameters">
 
-## Unseal time
+  The aggregated performance data below assumes a 3-node Vault cluster running
+  on N2 standard VMs with Google Kubernetes Engine, default mounts, and 
+  integrated storage. The results average metrics from multiple `n2-standard-16`
+  and `n2-standard-32` VMs with a varying number of namespaces.
 
-Immediately after an unseal Vault will set up and initialize every mount, and
-Vault **may be unresponsive** while this initialization is happening. Each
-namespace has at least the 4 default mounts (`sys`, `identity`, `cubbyhole`, and
-`token`) that need to be set up.
+</Note>
 
-Testing a varying number of namespaces, the following post-unseal times
-were observed:
+### Unseal times
 
-| Number of namespaces | Post-unseal time  |
+Vault sets up and initializes every mount after an unseal event. At minimum,
+the initialization process includes the default mounts for all active namespaces
+(`sys`, `identity`, `cubbyhole`, and `token`).
+
+The more namespaces and custom mounts in the deployment, the longer the
+post-unseal initalization takes. As a result, **even with auto-unseal**, Vault
+may be unresponsive during initialization for deployments with many namespaces.
+
+Post-unseal times observed during testing:
+
+| Number of namespaces | Unseal initialization time  |
 |----------------------|-------------------|
 | 10                   | ~5 seconds        |
 | 10000                | ~2-3 minutes      |
 | 20000                | ~12-14 minutes    |
 | 30000                | ~33-36 minutes    |
 
-This period of unresponsiveness can occur even when Vault is using auto-unseal.
 
-## Leadership transfers
+### Cluster leadership transfer times
 
 Leadership transfers take longer with more namespaces, and risk leaving the
 cluster in a leaderless state for longer.
@@ -70,41 +76,49 @@ command, the following times were observed:
 | 20000                | ~1-2 minutes                           |
 | 30000                | ~4 minutes                             |
 
-## Memory usage
+## System requirements
 
-Each namespace requires at least 435 kilobytes of memory to store information
-about the paths available within the namespace. It is important to verify that
-the machines running Vault have enough memory to support the number of
-namespaces.
+### Minimum memory requirements
 
-## Rollback and periodic functions
+Each namespace requires at least 435 KB of memory to store information
+about the paths available within the namespace. Given `N` namespacecs, your
+Vault deployment must include at least (435 x N) KB memory for namespace support
+to avoid degraded performance.
 
-Once every minute, Vault will perform a rollback operation on every mount. By
-default, Vault will use 256 workers to perform these rollback operations. If
-some mounts take too long to complete the rollback operation, then the rollbacks
-can become backed up. The effects of this will vary based on the particular
-mounts that are being used. It may mean that stale data takes longer to be
-cleaned up, or that periodic rotations happen less frequently than intended.
+### Rollback and rotation worker requirements
 
-Backups in rollback operations can be detected by monitoring the
-[`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics),
-and [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)
-metrics. If the number of queued items stays larger than 256, or if the waiting
-period is longer than 60 seconds, then the number of rollback workers isn't able
-to keep up.
+By default, Vault uses 256 workers to perform rollback operations on active
+mounts once every minute. Mounts with a large number of namespaces can become
+bottlenecks that slow down the overall rollback process. The effects of the
+slowdown vary based on the particular mounts. At minimum, your Vault deployment
+will take longer to fully purge stale data and perodic rotations may happen less
+frequentyl than intended.
+
+You can tell whether the number of rollback workers is sufficient by monitoring
+the following metrics:
+
+Expected range | Metric
+-------------- | ------
+0 – 256        | [`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)
+0 – 60         | [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)
 
 ## Identity secret engine
 
-When using many namespaces, it is common to see warning level log lines from the
-root namespace's `identity` secret mount:
+When using OIDC with many namespaces, you may see warnings in your Vault logs
+from the `identity` secret mount under the `root` namespace. For example:
 
 ```text
 2023-10-24T15:47:56.594Z [WARN]  secrets.identity.identity_51eb2411: error expiring OIDC public keys: err="context deadline exceeded"
 2023-10-24T15:47:56.594Z [WARN]  secrets.identity.identity_51eb2411: error rotating OIDC keys: err="context deadline exceeded"
 ```
 
-These errors occur because the root namespace is responsible for rotating the
-[OIDC keys](/vault/docs/secrets/identity/oidc-provider) of all other namespaces.
-It is not recommended to use thousands of namespaces if you are intending to use
-Vault as an [OIDC provider](/vault/docs/concepts/oidc-provider), as rotations and
-invalidations of OIDC keys can be delayed.
+The `secrets.identity` warnings occur because the root namespace is responsible
+for rotating the [OIDC keys](/vault/docs/secrets/identity/oidc-provider) of all
+other namespaces.
+
+<Warning title="Avoid OIDC with many namespaces">
+
+  Using Vault as an [OIDC provider](/vault/docs/concepts/oidc-provider) with
+  many namespaces can severly delay the rotation and invalidation of OIDC keys.
+
+</Warning>

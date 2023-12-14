@@ -1,19 +1,20 @@
 The maximum size of an object written to a storage backend is determined
 by that backend.
 
-For the integrated storage backend, the default limit (introduced in
-Vault 1.5.0) is 1 MiB. This may be configured via `max_entry_size` in
-the [storage stanza](/vault/docs/configuration/storage/raft#max_entry_size).
-When storage entries larger than 512 KiB but lower than `max_entry_size` are
-written, Vault will chunk these entries into smaller pieces when writing the
-entry to Raft.
+The default entry size limit for the integrated storage backend, is 1 MiB. You
+can configure the allowable entry size with the `max_entry_size` paramter in
+your the [storage stanza](/vault/docs/configuration/storage/raft#max_entry_size).
+Vault automatically chunks any storage entry that is larger than 512 KiB but
+smaller than `max_entry_size` into smaller pieces before writing the entry to Raft.
 
-For the Consul storage backend, the default limit imposed by Consul is
-512 KiB. This may be configured via Consul’s
+For Vault deployments using the Consul storage backend, the default entry size
+limit is 512 KiB. The default size in enforced by Consol rather than Vault. You
+can configure the entry size limit with the 
 [`kv_max_value_size`](/consul/docs/agent/config/config-files#kv_max_value_size)
-parameter, introduced in version 1.5.3. However, Consul's internal storage
-implementation will not chunk the storage entry into smaller pieces, and will
-instead write the entry as a single, large write. Using large writes can
-negatively affect performance, as even a small change may become a large
-read-modify-write cycle on the entire entry. Larger writes may also destabilize
-the Consul cluster by delaying heartbeats, leading to leadership instability.
+Consul parameter.
+
+However, Consul **does not** chunk storage entries the way Vault does. Consul
+stores the entry as a single, large write. Even small changes may result in
+large read-modify-write cycles for storage entries, which can degrade Vault
+performance. Larger writes may also destabilize your Consul cluster by delaying
+heartbeats, which can lead to cluster leadership instability.
