@@ -346,6 +346,9 @@ type NoopAudit struct {
 // that were formatted and track the overall bytes that a formatted event uses when
 // it's ready to head down the pipeline to the sink node (a noop for us).
 func (n *noopWrapper) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	n.backend.l.Lock()
+	defer n.backend.l.Unlock()
+
 	var err error
 
 	// We're expecting audit events since this is an audit device.
