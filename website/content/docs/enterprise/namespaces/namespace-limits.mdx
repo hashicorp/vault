@@ -35,7 +35,7 @@ namespaces.
 <Note title="Testing parameters">
 
   The aggregated performance data below assumes a 3-node Vault cluster running
-  on N2 standard VMs with Google Kubernetes Engine, default mounts, and 
+  on N2 standard VMs with Google Kubernetes Engine, default mounts, and
   integrated storage. The results average metrics from multiple `n2-standard-16`
   and `n2-standard-32` VMs with a varying number of namespaces.
 
@@ -48,8 +48,8 @@ the initialization process includes the default mounts for all active namespaces
 (`sys`, `identity`, `cubbyhole`, and `token`).
 
 The more namespaces and custom mounts in the deployment, the longer the
-post-unseal initalization takes. As a result, **even with auto-unseal**, Vault
-may be unresponsive during initialization for deployments with many namespaces.
+post-unseal initialization takes. As a result, **even with auto-unseal**, Vault
+will be unresponsive during initialization for deployments with many namespaces.
 
 Post-unseal times observed during testing:
 
@@ -63,11 +63,20 @@ Post-unseal times observed during testing:
 
 ### Cluster leadership transfer times
 
-Leadership transfers take longer with more namespaces, and risk leaving the
-cluster in a leaderless state for longer.
+Vault high availability clusters have a leader (also known as an active node)
+which is the server that accepts writes to the cluster and replicates the
+written data to the follower nodes. If the leader crashes or needs to be removed
+from the cluster, one of the follower nodes must take over leadership. This is
+known as a leadership transfer.
 
-When testing a [`vault operator step-down`](/vault/docs/commands/operator/step-down)
-command, the following times were observed:
+Whenever a leadership transfer happens, the new active node must go through all
+of the mounts in the cluster and set them up before the node can be ready to be
+the leader. Because every namespace has at least 4 mounts (`sys`, `identity`,
+`cubbyhole`, and `token`), the time for a leadership transfer to complete will
+increase with the number of namespaces.
+
+Leadership transfer times observed for the [`vault operator step-down`](/vault/docs/commands/operator/step-down)
+command:
 
 | Number of namespaces | Time until a node is elected as leader |
 |----------------------|----------------------------------------|
@@ -81,28 +90,32 @@ command, the following times were observed:
 ### Minimum memory requirements
 
 Each namespace requires at least 435 KB of memory to store information
-about the paths available within the namespace. Given `N` namespacecs, your
+about the paths available within the namespace. Given `N` namespaces, your
 Vault deployment must include at least (435 x N) KB memory for namespace support
 to avoid degraded performance.
 
 ### Rollback and rotation worker requirements
 
-By default, Vault uses 256 workers to perform rollback operations on active
-mounts once every minute. Mounts with a large number of namespaces can become
-bottlenecks that slow down the overall rollback process. The effects of the
-slowdown vary based on the particular mounts. At minimum, your Vault deployment
-will take longer to fully purge stale data and perodic rotations may happen less
-frequentyl than intended.
+Sometimes, Vault secret and auth engines need to clean up data after a request
+is canceled or a request fails halfway through. Vault issues rollback operations
+every minute to each mount in order to periodically trigger the clean up
+process.
+
+By default, Vault uses 256 workers to perform rollback operations. Mounts with a
+large number of namespaces can become bottlenecks that slow down the overall
+rollback process. The effects of the slowdown vary based on the particular
+mounts. At minimum, your Vault deployment will take longer to fully purge stale
+data and periodic rotations may happen less frequently than intended.
 
 You can tell whether the number of rollback workers is sufficient by monitoring
 the following metrics:
 
-Expected range | Metric
--------------- | ------
-0 – 256        | [`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)
-0 – 60         | [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)
+| Expected range | Metric                                                                                           |
+|----------------|--------------------------------------------------------------------------------------------------|
+| 0 – 256        | [`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)  |
+| 0 – 60         | [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics) |
 
-## Identity secret engine
+## Identity secret engine warnings
 
 When using OIDC with many namespaces, you may see warnings in your Vault logs
 from the `identity` secret mount under the `root` namespace. For example:
@@ -119,6 +132,6 @@ other namespaces.
 <Warning title="Avoid OIDC with many namespaces">
 
   Using Vault as an [OIDC provider](/vault/docs/concepts/oidc-provider) with
-  many namespaces can severly delay the rotation and invalidation of OIDC keys.
+  many namespaces can severely delay the rotation and invalidation of OIDC keys.
 
 </Warning>
