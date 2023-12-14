@@ -159,6 +159,27 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
   });
+  test('it renders: radio buttons for possible values, labels, and subtext', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'radio',
+        possibleValues: [
+          { label: 'Label 1', subText: 'Some subtext 1', value: 'SHA1' },
+          { label: 'Label 2', subText: 'Some subtext 2', value: 'SHA256' },
+        ],
+      })
+    );
+    assert.ok(component.hasRadio, 'renders radio buttons');
+    const selectedValue = 'SHA256';
+    await component.selectRadioInput(selectedValue);
+    assert.dom('[data-test-radio-label="Label 1"] span').hasText('Label 1');
+    assert.dom('[data-test-radio-label="Label 2"] span').hasText('Label 2');
+    assert.dom('[data-test-radio-subText="Some subtext 1"]').hasText('Some subtext 1');
+    assert.dom('[data-test-radio-subText="Some subtext 2"]').hasText('Some subtext 2');
+    assert.strictEqual(model.get('foo'), selectedValue);
+    assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
 
   test('it renders: editType stringArray', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
