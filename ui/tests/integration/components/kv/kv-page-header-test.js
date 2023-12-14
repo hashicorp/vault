@@ -79,8 +79,8 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
   <:tabLinks>
-    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
-    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+    <li><LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
   </KvPageHeader>
     `,
