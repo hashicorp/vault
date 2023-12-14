@@ -110,12 +110,16 @@
       this.identityType
     }} in this namespace will be listed here. Create your first {{this.identityType}} to get started."
   >
-    <Hds::Link::Standalone @route="vault.cluster.access.identity.create" @model={{pluralize this.identityType}}>
-      Create
-      {{this.identityType}}
-    </Hds::Link::Standalone>
-    <Hds::Link::Standalone @href={{doc-link "/vault/tutorials/auth-methods/identity"}} @icon="docs-link">
-      Learn more
-    </Hds::Link::Standalone>
+    <Hds::Link::Standalone
+      @text="Create {{this.identityType}}"
+      @icon="plus"
+      @route="vault.cluster.access.identity.create"
+      @model={{pluralize this.identityType}}
+    />
+    <Hds::Link::Standalone
+      @text="Learn more"
+      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+      @icon="docs-link"
+    />
   </EmptyState>
 {{/if}}
