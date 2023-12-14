@@ -587,6 +587,13 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
 			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
 
+			// If it's been more than 5 seconds since we got a heartbeat, consider it disconnected
+			if float32(timeSinceLastHeartbeat) > 5000 {
+				followerGauge(peerID, "connection_status", 0)
+			} else {
+				followerGauge(peerID, "connection_status", 1)
+			}
+
 			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
