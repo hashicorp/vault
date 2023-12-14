@@ -102,20 +102,15 @@ func TestInteg_PolicyMFAOkta(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
-	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-	if err != nil {
-		t.Fatalf("failed to enable userpass auth: %v", err)
-	}
+	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 
-	err = mfaGenerateOktaPolicyMFATest(client)
+	err := mfaGenerateOktaPolicyMFATest(client, mountAccessor)
 	if err != nil {
 		t.Fatalf("Okta failed: %s", err)
 	}
 }
 
-func mfaGenerateOktaPolicyMFATest(client *api.Client) error {
+func mfaGenerateOktaPolicyMFATest(client *api.Client, mountAccessor string) error {
 	var err error
 
 	rules := `
@@ -129,13 +124,6 @@ path "secret/foo" {
 	if err != nil {
 		return fmt.Errorf("failed to create mfa_policy: %v", err)
 	}
-
-	// listing auth mounts to find the mount accessor for the userpass
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return fmt.Errorf("error listing auth mounts")
-	}
-	mountAccessor := auths["userpass/"].Accessor
 
 	// creating a user in userpass
 	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
@@ -238,27 +226,16 @@ func TestInteg_LoginMFAOkta(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
-	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-	if err != nil {
-		t.Fatalf("failed to enable userpass auth: %v", err)
-	}
+	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 
-	err = mfaGenerateOktaLoginMFATest(client)
+	err := mfaGenerateOktaLoginMFATest(client, mountAccessor)
 	if err != nil {
 		t.Fatalf("Okta failed: %s", err)
 	}
 }
 
-func mfaGenerateOktaLoginMFATest(client *api.Client) error {
+func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor string) error {
 	var err error
-
-	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		return fmt.Errorf("failed to list auth mounts")
-	}
-	mountAccessor := auths["userpass/"].Accessor
 
 	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
