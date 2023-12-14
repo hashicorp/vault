@@ -194,9 +194,9 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom("[data-test-input='bar']").exists();
     await fillIn(
       "[data-test-input='bar']",
-      format(startOfDay(new Date('2023-12-12'), 1), "yyyy-MM-dd'T'HH:mm")
+      format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm")
     );
-    assert.deepEqual(model.get('bar'), '2023-12-11T00:00', 'sets the value on the model');
+    assert.deepEqual(model.get('bar'), '2023-12-17T00:00', 'sets the value on the model');
   });
 
   test('it renders: editType stringArray', async function (assert) {
