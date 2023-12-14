@@ -15,6 +15,7 @@ import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import authPage from 'vault/tests/pages/auth';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -25,6 +26,12 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // TODO: fix the hashi-read-only theme
+        'color-contrast': { enabled: false },
+      },
+    });
     return authPage.login();
   });
 

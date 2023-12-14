@@ -250,7 +250,7 @@ p.data-details {
 }
 
 .chart-tooltip {
-  background-color: $ui-gray-700;
+  background-color: $black;
   color: white;
   font-size: $size-9;
   padding: 6px;
@@ -282,7 +282,7 @@ p.data-details {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 9px solid $ui-gray-700;
+  border-top: 9px solid $black;
   position: absolute;
   opacity: 0.8;
   bottom: -9px;
