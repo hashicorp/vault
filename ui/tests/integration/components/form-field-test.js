@@ -11,6 +11,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
+import { format, startOfDay } from 'date-fns';
 
 const component = create(formFields);
 
@@ -167,6 +168,7 @@ module('Integration | Component | form field', function (hooks) {
         possibleValues: [
           { label: 'Label 1', subText: 'Some subtext 1', value: 'SHA1' },
           { label: 'Label 2', subText: 'Some subtext 2', value: 'SHA256' },
+          { subText: 'Some subtext 3', value: 'SHA256' },
         ],
       })
     );
@@ -175,10 +177,26 @@ module('Integration | Component | form field', function (hooks) {
     await component.selectRadioInput(selectedValue);
     assert.dom('[data-test-radio-label="Label 1"] span').hasText('Label 1');
     assert.dom('[data-test-radio-label="Label 2"] span').hasText('Label 2');
+    assert.dom('[data-test-radio-label="SHA256"] span').hasText('SHA256');
     assert.dom('[data-test-radio-subText="Some subtext 1"]').hasText('Some subtext 1');
     assert.dom('[data-test-radio-subText="Some subtext 2"]').hasText('Some subtext 2');
+    assert.dom('[data-test-radio-subText="Some subtext 3"]').hasText('Some subtext 3');
     assert.strictEqual(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
+  test('it renders: datetimelocal', async function (assert) {
+    const [model] = await setup.call(
+      this,
+      createAttr('bar', null, {
+        editType: 'dateTimeLocal',
+      })
+    );
+    assert.dom("[data-test-input='bar']").exists();
+    await fillIn(
+      "[data-test-input='bar']",
+      format(startOfDay(new Date('2023-12-12'), 1), "yyyy-MM-dd'T'HH:mm")
+    );
+    assert.deepEqual(model.get('bar'), '2023-12-11T00:00', 'sets the value on the model');
   });
 
   test('it renders: editType stringArray', async function (assert) {

@@ -16,15 +16,11 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control {{unless this.hasRadioSubTextAndLabel 'columns'}}" data-test-radio-input>
+      <div class="control {{unless this.hasRadioSubText 'columns'}}" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
           <div
             class="is-flex-center
-              {{if
-                this.hasRadioSubTextAndLabel
-                'has-top-padding-xs has-bottom-padding-s'
-                'column is-narrow has-text-grey has-right-margin-s'
-              }}"
+              {{if this.hasRadioSubText 'has-top-padding-xs has-bottom-padding-s' 'column is-narrow has-right-margin-s'}}"
             data-test-input={{@attr.name}}
           >
             <RadioButton
@@ -41,11 +37,11 @@
             <div class="has-left-margin-xs">
               <label
                 for="{{or val.value val}}"
-                class="has-left-margin-xs {{if this.hasRadioSubTextAndLabel 'has-text-black is-size-7'}}"
+                class="has-left-margin-xs has-text-black is-size-7"
                 data-test-radio-label={{or val.label val.value val}}
               >
                 <span>{{or val.label val.value val}}</span>
-                {{#if this.hasRadioSubTextAndLabel}}
+                {{#if this.hasRadioSubText}}
                   <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
                     {{val.subText}}
                   </p>
