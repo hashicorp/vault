@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	goldap "github.com/go-ldap/ldap/v3"
 
@@ -62,7 +63,19 @@ func Backend() *backend {
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
-		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (string, error) {
+		// dummy implementation
+		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (*framework.RootSchedule, error) {
+			d := &framework.DefaultSchedule{}
+			cron, err := d.Parse("0 0 0 0 0")
+			if err != nil {
+				return nil, err
+			}
+			return &framework.RootSchedule{
+				Schedule:          cron,
+				RotationWindow:    15 * time.Second,
+				RotationSchedule:  "0 0 0 0 0",
+				NextVaultRotation: cron.Next(time.Now()),
+			}, nil
 		},
 		RotatePassword: func(ctx context.Context, req *logical.Request) error {
 			// lock the backend's state - really just the config state - for mutating
@@ -93,59 +106,41 @@ func Backend() *backend {
 				return err
 			}
 
-			// TODO: retrieve lease
-			// getRotationLease(ctx, keyID)
-			// if rotation lease exists and if rotation is due call rotate password
-			// update the lease after rotation
-			rotationLease, err := b.GetRotationLease(ctx, "test")
+			err = conn.Bind(u, p)
 			if err != nil {
 				return err
 			}
 
-			// first check if rotation lease exists and if rotation is due, then rotate password
-			if rotationLease != nil && isRotationDue(rotationLease) {
-				err = conn.Bind(u, p)
-				if err != nil {
-					return err
-				}
+			lreq := &goldap.ModifyRequest{
+				DN: cfg.BindDN,
+			}
 
-				lreq := &goldap.ModifyRequest{
-					DN: cfg.BindDN,
-				}
+			var newPassword string
+			if cfg.PasswordPolicy != "" {
+				newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
+			} else {
+				newPassword, err = base62.Random(defaultPasswordLength)
+			}
+			if err != nil {
+				return err
+			}
 
-				var newPassword string
-				if cfg.PasswordPolicy != "" {
-					newPassword, err = b.System().GeneratePasswordFromPolicy(ctx, cfg.PasswordPolicy)
-				} else {
-					newPassword, err = base62.Random(defaultPasswordLength)
-				}
-				if err != nil {
-					return err
-				}
+			lreq.Replace("userPassword", []string{newPassword})
 
-				lreq.Replace("userPassword", []string{newPassword})
+			err = conn.Modify(lreq)
+			if err != nil {
+				return err
+			}
 
-				err = conn.Modify(lreq)
-				if err != nil {
-					return err
-				}
-
-				// Update rotation lease after rotation
-				err = b.CreateOrUpdateRotationLease(ctx, "test", newPassword, rotationLease.RotationSchedule)
-				if err != nil {
-					return err
-				}
-
-				// update config with new password
-				cfg.BindPassword = newPassword
-				entry, err := logical.StorageEntryJSON("config", cfg)
-				if err != nil {
-					return err
-				}
-				if err := req.Storage.Put(ctx, entry); err != nil {
-					// we might have to roll-back the password here?
-					return err
-				}
+			// update config with new password
+			cfg.BindPassword = newPassword
+			entry, err := logical.StorageEntryJSON("config", cfg)
+			if err != nil {
+				return err
+			}
+			if err := req.Storage.Put(ctx, entry); err != nil {
+				// we might have to roll-back the password here?
+				return err
 			}
 
 			return nil
