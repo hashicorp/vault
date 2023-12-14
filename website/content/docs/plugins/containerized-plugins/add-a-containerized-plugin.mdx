@@ -272,7 +272,7 @@ new plugin.
    
    </CodeBlockConfig>
 
-## Working with alternative runtimes ((#alt-runtimes))
+## Use alternative runtimes ((#alt-runtimes))
 
 You can force Vault to use alternative runtimes provided the runtime is
 installed locally.
@@ -282,7 +282,9 @@ To use an alternative runtime:
 1. Register and name the runtime with `vault plugin runtime register`. For
    example, to register the default Docker runtime (`runc`) as `docker-rt`:
    ```shell-session
-   $ vault plugin runtime register -oci_runtime=runc -type=container docker-rt
+   $ vault plugin runtime register  \
+      -oci_runtime=runc             \
+      -type=container docker-rt
    ```
 
 1. Use the `--runtime` flag during plugin registration to tell Vault what
