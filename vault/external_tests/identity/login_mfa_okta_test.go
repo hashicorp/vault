@@ -6,24 +6,45 @@ package identity
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
-var (
-	// Add your test values in these vars when manually running these tests.
-	org_name  = "<okta org name>"
-	api_token = "<okta api token>"
-	testGroup = "testgroup"
-	username  = "<okta username>"
-	password  = "<okta password>"
-)
+// To run these tests, set the following env variables:
+// VAULT_ACC=1
+// OKTA_ORG=dev-219337
+// OKTA_API_TOKEN=<generate via web UI, see Confluence for login details>
+// OKTA_USERNAME=test3@example.com
+// OKTA_PASSWORD=<find in 1password>
+//
+// You will need to install the Okta client app on your mobile device and
+// setup MFA in order to use the Okta web UI.  This test does not exercise
+// MFA however (which is an enterprise feature), and therefore the test
+// user in OKTA_USERNAME should not be configured with it.  Currently
+// test3@example.com is not a member of testgroup, which is the group with
+// the profile that requires MFA. If you need to use a different group name
+// for the test group, you can set:
+// OKTA_TEST_GROUP=alttestgroup
 
 func TestOktaEngineMFA(t *testing.T) {
-	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		"OKTA_ORG",
+		"OKTA_API_TOKEN",
+		"OKTA_USERNAME",
+		"OKTA_PASSWORD",
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -37,11 +58,16 @@ func TestOktaEngineMFA(t *testing.T) {
 
 	_, err = client.Logical().Write("auth/okta/config", map[string]interface{}{
 		"base_url":  "okta.com",
-		"org_name":  org_name,
-		"api_token": api_token,
+		"org_name":  os.Getenv("OKTA_ORG"),
+		"api_token": os.Getenv("OKTA_API_TOKEN"),
 	})
 	if err != nil {
 		t.Fatalf("error configuring okta mount: %v", err)
+	}
+
+	testGroup := os.Getenv("OKTA_TEST_GROUP")
+	if len(testGroup) == 0 {
+		testGroup = "testgroup"
 	}
 
 	_, err = client.Logical().Write("auth/okta/groups/"+testGroup, map[string]interface{}{
@@ -51,8 +77,8 @@ func TestOktaEngineMFA(t *testing.T) {
 		t.Fatalf("error configuring okta group, %v", err)
 	}
 
-	_, err = client.Logical().Write("auth/okta/login/"+username, map[string]interface{}{
-		"password": password,
+	_, err = client.Logical().Write("auth/okta/login/"+os.Getenv("OKTA_USERNAME"), map[string]interface{}{
+		"password": os.Getenv("OKTA_PASSWORD"),
 	})
 	if err != nil {
 		t.Fatalf("error configuring okta group, %v", err)
@@ -60,7 +86,18 @@ func TestOktaEngineMFA(t *testing.T) {
 }
 
 func TestInteg_PolicyMFAOkta(t *testing.T) {
-	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		"OKTA_ORG",
+		"OKTA_API_TOKEN",
+		"OKTA_USERNAME",
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -113,7 +150,7 @@ path "secret/foo" {
 		"name":     "test-entity",
 		"policies": "mfa_policy",
 		"metadata": map[string]string{
-			"email": username,
+			"email": os.Getenv("OKTA_USERNAME"),
 		},
 	})
 	if err != nil {
@@ -133,8 +170,8 @@ path "secret/foo" {
 
 	mfaConfigData := map[string]interface{}{
 		"mount_accessor":  mountAccessor,
-		"org_name":        org_name,
-		"api_token":       api_token,
+		"org_name":        os.Getenv("OKTA_ORG"),
+		"api_token":       os.Getenv("OKTA_API_TOKEN"),
 		"primary_email":   true,
 		"username_format": "{{identity.entity.metadata.email}}",
 	}
@@ -185,7 +222,18 @@ path "secret/foo" {
 }
 
 func TestInteg_LoginMFAOkta(t *testing.T) {
-	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	if os.Getenv("VAULT_ACC") == "" {
+		t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
+	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		"OKTA_ORG",
+		"OKTA_API_TOKEN",
+		"OKTA_USERNAME",
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
@@ -222,7 +270,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name": "test-entity",
 		"metadata": map[string]string{
-			"email": username,
+			"email": os.Getenv("OKTA_USERNAME"),
 		},
 	})
 	if err != nil {
@@ -246,8 +294,8 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 		// create a config
 		mfaConfigData := map[string]interface{}{
 			"mount_accessor":  mountAccessor,
-			"org_name":        org_name,
-			"api_token":       api_token,
+			"org_name":        os.Getenv("OKTA_ORG"),
+			"api_token":       os.Getenv("OKTA_API_TOKEN"),
 			"primary_email":   true,
 			"username_format": "{{identity.entity.metadata.email}}",
 		}
