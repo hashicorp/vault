@@ -88,12 +88,4 @@ export default class MessagesList extends Component {
   onHandleEndTime(endTime) {
     this.args.message.endTime = endTime;
   }
-
-  @action
-  cancel() {
-    const { authenticated, isNew } = this.args.message;
-    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.message[method]();
-    this.router.transitionTo('vault.cluster.config-ui.messages.index', { queryParams: { authenticated } });
-  }
 }

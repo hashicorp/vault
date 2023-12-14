@@ -75,9 +75,8 @@
       <Hds::Button
         @text="Cancel"
         @color="secondary"
-        {{on "click" this.cancel}}
-        @route="messages.index"
-        @model={{hash authenticated=@message.authenticated}}
+        @route="messages"
+        @query={{hash authenticated=@message.authenticated}}
       />
     </Hds::ButtonSet>
   </div>

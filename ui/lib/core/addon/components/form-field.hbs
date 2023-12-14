@@ -36,7 +36,7 @@
               @onChange={{this.setAndBroadcast}}
               @groupValue={{get @model this.valuePath}}
               @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-              data-test-radio="{{if (or (eq @attr.type 'boolean') val.value) val.value val}}"
+              data-test-radio={{or val.value val}}
             />
             <div class="has-left-margin-xs">
               <label
