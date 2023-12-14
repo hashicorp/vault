@@ -29,8 +29,6 @@ Install one of the supported container engines:
 
   - [Docker](https://docs.docker.com/engine/install/)
   - [Rootless Docker](https://docs.docker.com/engine/security/rootless/)
-  - [Podman](https://podman.io/docs/installation#installing-on-linux)
-  - [Rootless Podman](https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md)
 
 ## Step 2: Configure your container runtime 
 
@@ -96,56 +94,6 @@ and plugin binary.
 
 </Tab>
 
-<Tab heading="Podman">
-
-  1. Create an executable script to configure the OCI runtime flags.
-     For example:
-    ```shell-session
-    sudo tee /usr/local/bin/runsc.podman <<EOF
-    #!/bin/bash
-    /usr/local/bin/runsc --host-uds=all "$\@"
-    EOF
-    ```
-
-  1. Grant execute permission to `runsc` for Podman:
-      ```shell-session
-      chmod a+x /usr/local/bin/runsc.podman
-      ```
-
-  1. Start the [Docker-compatible Podman API](https://docs.podman.io/en/latest/_static/api.html)
-      ```shell-session
-      podman --runtime=/usr/local/bin/runsc.podman system service -t 0 &
-      ```
-
-</Tab>
-
-<Tab heading="Rootless Podman">
-
-  1. Create a local `bin` directory if it does not exist already:
-    ```shell-session
-      mkdir -p "$HOME/local/bin"
-    ```
-
-  1. Create an executable script to configure the OCI runtime flags:
-    ```shell-session
-      tee ~/local/bin/runsc.podman <<EOF
-      #!/bin/bash
-      /usr/local/bin/runsc --host-uds=all --ignore-cgroups "\$@"
-      EOF
-    ```
-
-  1. Grant execute permission to `runsc` for Podman:
-      ```shell-session
-        chmod u+x "$HOME/local/bin/runsc.podman"
-      ```
-
-  1. Start the [Docker-compatible Podman API](https://docs.podman.io/en/latest/_static/api.html)
-      ```shell-session
-        podman --runtime="$HOME/local/bin/runsc.podman" system service -t 0 &
-      ```
-
-</Tab>
-
 </Tabs>
 
 ## Step 3: Update the HashiCorp `go-plugin` library
@@ -173,7 +121,7 @@ $ go install github.com/hashicorp/go-plugin@latest
 
 ## Step 4: Build the plugin container
 
-Containerized plugins should run as a binary in the finished container and
+Containerized plugins must run as a binary in the finished container and
 behave the same whether run in a container or as a standalone application:
 
 1. Build your plugin binary so it runs on Linux.
@@ -185,32 +133,27 @@ For example, to build a containerized version of the built-in key-value (KV)
 secrets plugin for Docker:
 
 1. Clone the latest version of the KV secrets plugin from
-   `hashicorp/vault-plugin-secrets-kv`:
+   `hashicorp/vault-plugin-secrets-kv`.
     ```shell-session
     $ git clone https://github.com/hashicorp/vault-plugin-secrets-kv.git
     ```
-1. Build the Go binary for Linux:
+1. Build the Go binary for Linux.
     ```shell-session
     $ cd vault-plugin-secrets-kv ; CGO_ENABLED=0 GOOS=linux \
-    go build -o kv cmd/vault-plugin-secrets-kv/main.go ; cd ..
+    go build -o kv cmd/vault-plugin-secrets-kv/main.go
     ```
-1. Create a new directory for the containerized plugin:
+1. Create an empty Dockerfile.
     ```shell-session
-    $ mkdir kv-plugin ; cd kv-plugin
+    $ touch Dockerfile
     ```
-1. Copy the compiled directory to the new directory and create an empty
-   Dockerfile:
-    ```shell-session
-    $ cp ../vault-plugin-secrets-kv/kv . ; touch Dockerfile
-    ```
-1. Update the empty a `Dockerfile` with the infrastructure build details and the
-   compiled binary as the entry-point:
+1. Update the empty `Dockerfile` with your infrastructure build details and the
+   compiled binary as the entry-point.
    ```Dockerfile
    FROM gcr.io/distroless/static-debian12
    COPY kv /bin/kv
    ENTRYPOINT [ "/bin/kv" ]
    ```
-1. Build a Docker image with the tag `hashicorp/vault-plugin-secrets-kv:mycontainer`:
+1. Build the container image and assign an identifiable tag.
    ```shell-session
    $ docker build -t hashicorp/vault-plugin-secrets-kv:mycontainer .
    ```
@@ -218,7 +161,7 @@ secrets plugin for Docker:
 ## Step 5: Register the plugin
 
 Registering a containerized plugin with Vault is similar to registering any
-other external plugins as long as the containers are available locally.
+other external plugin that is available locally to Vault.
 
 1. Store the SHA256 of the plugin image:
    ```shell-session
@@ -328,3 +271,60 @@ new plugin.
    ```
    
    </CodeBlockConfig>
+
+## Working with alternative runtimes ((#alt-runtimes))
+
+You can force Vault to use alternative runtimes provided the runtime is
+installed locally.
+
+To use an alternative runtime:
+
+1. Register and name the runtime with `vault plugin runtime register`. For
+   example, to register the default Docker runtime (`runc`) as `docker-rt`:
+   ```shell-session
+   $ vault plugin runtime register -oci_runtime=runc -type=container docker-rt
+   ```
+
+1. Use the `--runtime` flag during plugin registration to tell Vault what
+   runtime to use:
+   ```shell-session
+   $ vault plugin register  \
+      -runtime=RUNTIME_NAME \
+      -sha256="${SHA256}"   \
+      -oci_image=YOUR_PLUGIN_IMAGE_TAG \
+      NEW_PLUGIN_TYPE NEW_PLUGIN_ID
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault plugin register \
+      -runtime=docker-rt   \
+      -sha256="${SHA256}"  \
+      -oci_image=hashicorp/vault-plugin-secrets-kv:mycontainer \
+      secret my-kv-container
+   ```
+
+## Troubleshooting
+
+### Invalid backend version error
+
+If you run into the following error while registering your plugin:
+
+```shell-session
+invalid backend version error: 2 errors occurred:
+        * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
+        * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
+```
+
+it means that Vault cannot find the executable for `runsc`. Confirm the
+following is true before trying again:
+
+1. You have gVisor installed locally to Vault.
+1. The path to `runsc` is correct in you your Docker configuration.
+1. Vault has permission to run the `runsc` executable.
+
+If you still get errors when registering a plugin, the recommended workaround is
+to use the default Docker runtime (`runc`) as an
+[alternative runtime](#alt-runtimes).
