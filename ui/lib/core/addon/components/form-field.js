@@ -75,6 +75,11 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
+  get hasRadioSubTextAndLabel() {
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    return this.args?.attr?.options?.possibleValues?.every((v) => v.subText && v.label);
+  }
+
   get hideLabel() {
     const { type, options } = this.args.attr;
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
