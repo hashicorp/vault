@@ -1,5 +1,9 @@
 [
   {
+    "title": "Changelog",
+    "path": "changelog"
+  },
+  {
     "title": "What is Vault?",
     "path": "what-is-vault"
   },
