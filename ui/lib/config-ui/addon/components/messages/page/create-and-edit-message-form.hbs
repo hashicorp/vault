@@ -29,7 +29,7 @@
               placeholder="Display text (e.g. Learn more)"
               id="link-title"
               class="input"
-              data-test-input="{{attr.name}}"
+              data-test-input={{attr.name}}
               {{on "input" (pipe (pick "target.value") (fn (mut @message.linkTitle)))}}
               aria-label="Link title"
             />

@@ -56,7 +56,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.input('startTime')).exists();
     assert
       .dom(PAGE.input('startTime'))
-      .hasValue(format(addDays(startOfDay(new Date()), 1), localDateTimeString));
+      .hasValue(format(addDays(startOfDay(new Date()), 1), this.message.datetimeLocalStringFormat));
     assert.dom(PAGE.input('endTime')).exists();
     assert.dom(PAGE.input('endTime')).hasValue('');
   });

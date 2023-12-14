@@ -69,12 +69,9 @@ export default class MessageModel extends Model {
     this.authenticated = value === 'authenticated' ? true : false;
   }
 
-  @attr('string', {
-    label: 'Title',
-  })
+  @attr('string')
   title;
   @attr('string', {
-    label: 'Message',
     editType: 'textarea',
   })
   message;
@@ -90,8 +87,8 @@ export default class MessageModel extends Model {
   // the api returns link as an object with title and href as keys, but we separate the link key/values into
   // different attributes to easily show link title and href fields on the create form. In our serializer,
   // we send the link attribute in to the correct format (as an object) to the server.
-  @attr('string', { fieldValue: 'linkTitle' }) linkTitle;
-  @attr('string', { fieldValue: 'linkHref' }) linkHref;
+  @attr('string') linkTitle;
+  @attr('string') linkHref;
 
   // date helpers
   get isStartTimeAfterToday() {

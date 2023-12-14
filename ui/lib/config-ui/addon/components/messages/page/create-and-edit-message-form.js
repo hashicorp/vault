@@ -8,9 +8,6 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
-import { format } from 'date-fns';
-
-import { localDateTimeString } from 'vault/models/config-ui/message';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -29,14 +26,6 @@ export default class MessagesList extends Component {
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
-  @tracked endTime;
-
-  constructor() {
-    super(...arguments);
-    if (this.args.message.endTime) {
-      this.endTime = format(new Date(this.args.message.endTime), localDateTimeString);
-    }
-  }
 
   willDestroy() {
     super.willDestroy();

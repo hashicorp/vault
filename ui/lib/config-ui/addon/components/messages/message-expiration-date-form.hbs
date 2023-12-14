@@ -26,11 +26,11 @@
 <div class="has-top-padding-xs has-bottom-padding-s is-narrow is-flex-align-baseline">
   <RadioButton
     class="radio"
-    name="{{@attr.name}}"
+    name={{@attr.name}}
     id="specificDate"
     value="specificDate"
     @value="specificDate"
-    @onChange={{(fn (mut @message.endTime) this.formDateTime)}}
+    @onChange={{fn (mut @message.endTime) this.formDateTime}}
     @groupValue={{this.groupValue}}
   />
   <label for="specificDate" class="has-left-margin-xs has-text-black is-size-7">
@@ -43,7 +43,7 @@
     <div class="has-left-margin-xs control">
       <Input
         @type="datetime-local"
-        @value={{if this.formDateTime (date-format this.formDateTime this.localDateTimeString) this.formDateTime}}
+        @value={{if this.formDateTime (date-format this.formDateTime this.localDateTimeString) ""}}
         class="input has-top-margin-xs is-auto-width"
         name="endTime"
         data-test-input="endTime"
