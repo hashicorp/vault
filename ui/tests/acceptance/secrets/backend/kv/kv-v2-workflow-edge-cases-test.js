@@ -95,7 +95,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
 
       // Title correct
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} version 2`);
       // Tabs correct
       assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
       assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
