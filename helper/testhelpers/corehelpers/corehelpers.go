@@ -16,13 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -50,36 +48,27 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
 // This helper also resolves symlinks to make tests happy on OS X.
-func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
-	if t != nil {
-		t.Helper()
-	}
+func MakeTestPluginDir(t testing.T) string {
+	t.Helper()
 
 	dir, err := os.MkdirTemp("", "")
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
 	// OSX tempdir are /var, but actually symlinked to /private/var
 	dir, err = filepath.EvalSymlinks(dir)
 	if err != nil {
-		if t == nil {
-			panic(err)
-		}
 		t.Fatal(err)
 	}
 
-	return dir, func(t testing.T) {
+	t.Cleanup(func() {
 		if err := os.RemoveAll(dir); err != nil {
-			if t == nil {
-				panic(err)
-			}
 			t.Fatal(err)
 		}
-	}
+	})
+
+	return dir
 }
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
@@ -268,7 +257,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 	n.formatter = fw
 
 	n.nodeIDList = make([]eventlogger.NodeID, 2)
-	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node, 2)
 
 	formatterNodeID, err := event.GenerateNodeID()
 	if err != nil {
@@ -334,6 +323,7 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
+
 	if n.formatter != nil {
 		var w bytes.Buffer
 		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
@@ -438,20 +428,20 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 
 // RegisterNodesAndPipeline registers the nodes and a pipeline as required by
 // the audit.Backend interface.
-func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
-	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node); err != nil {
+func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range n.nodeMap {
+		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
 			return err
 		}
 	}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
-		NodeIDs:    b.nodeIDList,
+		EventType:  eventlogger.EventType(event.AuditType.String()),
+		NodeIDs:    n.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
 
 type TestLogger struct {
@@ -459,32 +449,6 @@ type TestLogger struct {
 	Path string
 	File *os.File
 	sink hclog.SinkAdapter
-	// For managing temporary start-up state
-	sync.RWMutex
-	AllLoggers []hclog.Logger
-	logging.SubloggerAdder
-}
-
-// RegisterSubloggerAdder checks to see if the provided logger interface is a
-// TestLogger and re-assigns the SubloggerHook implementation if so.
-func RegisterSubloggerAdder(logger hclog.Logger, adder logging.SubloggerAdder) {
-	if l, ok := logger.(*TestLogger); ok {
-		l.Lock()
-		l.SubloggerAdder = adder
-		l.Unlock()
-	}
-}
-
-// AppendToAllLoggers appends the sub logger to allLoggers, or if the TestLogger
-// is assigned to a SubloggerAdder implementation, it calls the underlying hook.
-func (l *TestLogger) AppendToAllLoggers(sub hclog.Logger) hclog.Logger {
-	l.Lock()
-	defer l.Unlock()
-	if l.SubloggerAdder == nil {
-		l.AllLoggers = append(l.AllLoggers, sub)
-		return sub
-	}
-	return l.SubloggerHook(sub)
 }
 
 func NewTestLogger(t testing.T) *TestLogger {
@@ -508,29 +472,26 @@ func NewTestLogger(t testing.T) *TestLogger {
 		output = logFile
 	}
 
-	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
-		Output:            output,
-		Level:             hclog.Trace,
-		IndependentLevels: true,
-	})
-
-	testLogger := &TestLogger{
-		Path: logPath,
-		File: logFile,
-		sink: sink,
-	}
-
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
 		Output:            io.Discard,
 		IndependentLevels: true,
 		Name:              t.Name(),
-		SubloggerHook:     testLogger.AppendToAllLoggers,
 	})
-
+	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
+		Output:            output,
+		Level:             hclog.Trace,
+		IndependentLevels: true,
+	})
 	logger.RegisterSink(sink)
-	testLogger.InterceptLogger = logger
+
+	testLogger := &TestLogger{
+		Path:            logPath,
+		File:            logFile,
+		InterceptLogger: logger,
+		sink:            sink,
+	}
 
 	t.Cleanup(func() {
 		testLogger.StopLogging()

@@ -20,6 +20,10 @@
   </p.levelLeft>
 </PageHeader>
 
+{{#if (has-block "syncDetails")}}
+  {{yield to="syncDetails"}}
+{{/if}}
+
 {{#if (has-block "tabLinks")}}
   <div class="tabs-container box is-bottomless is-marginless is-paddingless">
     <nav class="tabs" aria-label="kv tabs">

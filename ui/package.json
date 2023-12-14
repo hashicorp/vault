@@ -26,6 +26,7 @@
     "fmt:styles": "prettier --write app/styles/**/*.*",
     "start": "VAULT_ADDR=http://localhost:8200; ember server --proxy=$VAULT_ADDR",
     "start2": "ember server --proxy=http://localhost:8202 --port=4202",
+    "start:chroot": "ember server --proxy=http://localhost:8300 --port=4300",
     "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "npm-run-all --print-name lint:js:quiet lint:hbs:quiet && node scripts/start-vault.js",
     "test:enos": "npm-run-all lint:js:quiet lint:hbs:quiet && node scripts/enos-test-ember.js",
@@ -242,12 +243,13 @@
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",
-      "lib/service-worker-authenticated-download"
+      "lib/service-worker-authenticated-download",
+      "lib/sync"
     ]
   },
   "dependencies": {
-    "@hashicorp/design-system-components": "^2.13.0",
-    "@hashicorp/ember-flight-icons": "^3.1.3",
+    "@hashicorp/design-system-components": "^3.3.0",
+    "@hashicorp/ember-flight-icons": "^4.0.4",
     "handlebars": "4.7.7",
     "highlight.js": "^10.4.1",
     "node-notifier": "^8.0.1",

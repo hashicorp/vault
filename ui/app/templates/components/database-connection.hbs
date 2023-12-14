@@ -35,15 +35,14 @@
         {{/if}}
         {{#if @model.canReset}}
           <ConfirmAction
-            @buttonClasses="toolbar-link"
+            @buttonText="Reset connection"
+            class="toolbar-button"
+            @buttonColor="secondary"
             @onConfirmAction={{action "reset"}}
             @confirmTitle="Reset connection?"
             @confirmMessage="This will close the connection and its underlying plugin and restart it with the configuration stored in the barrier."
-            @confirmButtonText="Reset"
             data-test-database-connection-reset
-          >
-            Reset connection
-          </ConfirmAction>
+          />
         {{/if}}
         {{#if (or @model.canReset @model.canDelete)}}
           <div class="toolbar-separator"></div>
@@ -51,15 +50,15 @@
         {{#if @model.canRotateRoot}}
           {{! template-lint-disable quotes }}
           <ConfirmAction
-            @buttonClasses="toolbar-link"
+            @buttonText="Rotate root credentials"
+            class="toolbar-button"
+            @buttonColor="secondary"
             @onConfirmAction={{this.rotate}}
             @confirmTitle="Rotate credentials?"
             @confirmMessage='This will rotate the "root" user credentials stored for the database connection. The password will not be accessible once rotated.'
-            @confirmButtonText="Rotate"
+            @modalColor="warning"
             data-test-database-connection-rotate
-          >
-            Rotate root credentials
-          </ConfirmAction>
+          />
           {{! template-lint-enable }}
         {{/if}}
         {{#if @model.canAddRole}}
@@ -215,8 +214,6 @@
                       <div class="field">
                         <Toggle
                           @name="show-{{attr.name}}"
-                          @status="success"
-                          @size="small"
                           @onChange={{fn this.updateShowPassword (not this.showPasswordField)}}
                           @checked={{this.showPasswordField}}
                           data-test-toggle={{attr.name}}

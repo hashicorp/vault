@@ -32,8 +32,7 @@ import (
 )
 
 func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		PluginDirectory: pluginDir,
 		LogicalBackends: map[string]logical.Factory{
@@ -47,9 +46,11 @@ func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCore
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      typ,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -61,8 +62,7 @@ func getClusterWithFileAuditBackend(t *testing.T, typ consts.PluginType, numCore
 }
 
 func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCluster {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		PluginDirectory: pluginDir,
 		LogicalBackends: map[string]logical.Factory{
@@ -73,9 +73,11 @@ func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCl
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: numCores,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      typ,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      typ,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -90,8 +92,7 @@ func getCluster(t *testing.T, typ consts.PluginType, numCores int) *vault.TestCl
 // rollback and reload a plugin without triggering race conditions by the go
 // race detector
 func TestExternalPlugin_RollbackAndReload(t *testing.T) {
-	pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-	t.Cleanup(func() { cleanup(t) })
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		// set rollback period to a short interval to make conditions more "racy"
 		RollbackPeriod:  1 * time.Second,
@@ -101,9 +102,11 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		TempDir:  pluginDir,
 		NumCores: 1,
-		Plugins: &vault.TestPluginConfig{
-			Typ:      consts.PluginTypeSecrets,
-			Versions: []string{""},
+		Plugins: []*vault.TestPluginConfig{
+			{
+				Typ:      consts.PluginTypeSecrets,
+				Versions: []string{""},
+			},
 		},
 		HandlerFunc: vaulthttp.Handler,
 	})

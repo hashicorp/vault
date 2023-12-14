@@ -69,7 +69,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Cancel transitions to enforcements list'
     );
     await click('[data-test-enforcement-create]');
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
@@ -121,7 +121,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Details more menu action transitions to enforcement route'
     );
-    await click('.breadcrumb a');
+    await click('.hds-breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(

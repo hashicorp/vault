@@ -18,6 +18,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -36,7 +37,6 @@ import (
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -436,7 +436,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	var setSealResponse *SetSealResponse
 	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
 	if err != nil {
-		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
+		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal generation information from storage: %s.", err.Error()))
 		goto SEALFAIL
 	}
 

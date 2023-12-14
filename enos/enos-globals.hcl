@@ -2,7 +2,11 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 globals {
-  backend_tag_key = "VaultStorage"
+  archs            = ["amd64", "arm64"]
+  artifact_sources = ["local", "crt", "artifactory"]
+  artifact_types   = ["bundle", "package"]
+  backends         = ["consul", "raft"]
+  backend_tag_key  = "VaultStorage"
   build_tags = {
     "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
@@ -10,25 +14,32 @@ globals {
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
     "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
   }
+  consul_versions = ["1.14.11", "1.15.7", "1.16.3", "1.17.0"]
+  distros         = ["ubuntu", "rhel"]
   distro_version = {
     "rhel"   = var.rhel_distro_version
     "ubuntu" = var.ubuntu_distro_version
   }
+  editions = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
   packages = ["jq"]
   distro_packages = {
     ubuntu = ["netcat"]
     rhel   = ["nc"]
   }
   sample_attributes = {
-    # NOTE(9/28/23): Temporarily use us-east-2 due to another networking in us-east-1
-    # aws_region = ["us-east-1", "us-west-2"]
-    aws_region = ["us-east-2", "us-west-2"]
+    aws_region = ["us-east-1", "us-west-2"]
   }
+  seals = ["awskms", "pkcs11", "shamir"]
   tags = merge({
     "Project Name" : var.project_name
     "Project" : "Enos",
     "Environment" : "ci"
   }, var.tags)
+  // NOTE: when backporting, make sure that our initial versions are less than that
+  // release branch's version. Also beware if adding versions below 1.11.x. Some scenarios
+  // that use this global might not work as expected with earlier versions. Below 1.8.x is
+  // not supported in any way.
+  upgrade_initial_versions = ["1.11.12", "1.12.11", "1.13.11", "1.14.7", "1.15.3"]
   vault_install_dir_packages = {
     rhel   = "/bin"
     ubuntu = "/usr/bin"

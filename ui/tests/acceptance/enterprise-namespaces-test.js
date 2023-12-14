@@ -4,7 +4,7 @@
  */
 
 import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -13,7 +13,7 @@ import logout from 'vault/tests/pages/logout';
 
 const shell = create(consoleClass);
 
-const createNS = async (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
+const createNS = (name) => shell.runCommands(`write sys/namespaces/${name} -force`);
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -34,7 +34,11 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
-  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
+  // this test is flaky and is intentionally being skipped for now
+  // after seeing it fail both in CI and locally, an attempt at stabilizing it was made in https://github.com/hashicorp/vault/pull/23867
+  // this seemed to make it consistently pass locally while continuing to fail sporadically in CI
+  // that fix attempt was reverted in favor of skipping until it can be reworked to reliably pass
+  skip('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
     await click('[data-test-namespace-toggle]');
@@ -52,7 +56,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       assert
         .dom(`[data-test-namespace-link="${targetNamespace}"]`)
         .hasText(ns, `shows the namespace ${ns} in the toggle component`);
-      // because quint does not like page reloads, visiting url directing instead of clicking on namespace in toggle
+      // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
       await visit(url);
     }
 

@@ -15,6 +15,7 @@ const SELECTORS = {
   value: '[data-test-certificate-value]',
   icon: '[data-test-certificate-icon]',
   copyButton: '[data-test-copy-button]',
+  copyIcon: '[data-test-icon="clipboard-copy"]',
 };
 
 module('Integration | Component | certificate-card', function (hooks) {
@@ -26,7 +27,7 @@ module('Integration | Component | certificate-card', function (hooks) {
     assert.dom(SELECTORS.label).hasNoText('There is no label because there is no value');
     assert.dom(SELECTORS.value).hasNoText('There is no value because none was provided');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
-    assert.dom(SELECTORS.copyButton).exists('The copy button exists');
+    assert.dom(SELECTORS.copyIcon).exists('The copy icon renders');
   });
 
   test('it renders with an example PEM Certificate', async function (assert) {

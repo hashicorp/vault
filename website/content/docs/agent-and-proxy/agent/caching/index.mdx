@@ -7,17 +7,22 @@ description: |-
   newly created tokens.
 ---
 
-# Vault agent caching
+# Vault Agent caching
+
+<Note title="Use Vault Proxy for static secret caching">
+
+  [Static secret caching](/vault/docs/agent-and-proxy/proxy/caching/static-secret-caching)
+  (KVv1 and KVv2) with API proxy minimizes the number of requests forwarded to
+  Vault. Vault Agent does not support static secret caching with API proxy. We
+  recommend using [Vault Proxy](/vault/docs/agent-and-proxy/proxy) for API Proxy
+  related workflows.
+
+</Note>
 
 Vault Agent Caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
 newly created tokens. The renewals of the cached tokens and leases are also
 managed by the agent.
-
--> **Note:** Vault Agent Caching works best with servers/clusters that are
-running on Vault 1.1 and above due to changes that were introduced
-alongside this feature, such as the exposure of the `orphan` field in token
-creation responses.
 
 ## Caching and renewals
 
@@ -68,7 +73,7 @@ entries based on some of the query criteria used for indexing the cache entries.
 
 ## Request uniqueness
 
-In order to detect repeat requests and return cached responses, agent will need
+In order to detect repeat requests and return cached responses, Agent needs
 to have a way to uniquely identify the requests. This computation as it stands
 today takes a simplistic approach (may change in future) of serializing and
 hashing the HTTP request along with all the headers and the request body. This

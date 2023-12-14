@@ -35,7 +35,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
 
     assert.dom('.menu-label').hasText('Token', 'Auth data display name renders');
     assert.dom('li').exists({ count: 2 }, 'Correct number of menu items render');
-    assert.dom('[data-clipboard-text="root"]').exists('Copy token action renders');
+    assert.dom('[data-test-copy-button="root"]').exists('Copy token action renders');
     assert.dom('#logout').hasText('Log out', 'Log out action renders');
   });
 

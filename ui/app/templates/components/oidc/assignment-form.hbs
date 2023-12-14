@@ -63,7 +63,7 @@
       data-test-oidc-assignment-cancel
     />
     {{#if this.modelValidations.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} class="has-top-padding-s" />
     {{/if}}
   </div>
 </form>

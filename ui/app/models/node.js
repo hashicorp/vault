@@ -9,17 +9,16 @@ import { alias, and, equal } from '@ember/object/computed';
 export default Model.extend({
   name: attr('string'),
   // https://developer.hashicorp.com/vault/api-docs/system/health
-  initialized: attr('boolean'),
-  sealed: attr('boolean'),
-  isSealed: alias('sealed'),
   standby: attr('boolean'),
   isActive: equal('standby', false),
-  clusterName: attr('string'),
   clusterId: attr('string'),
 
   isLeader: and('initialized', 'isActive'),
 
   // https://developer.hashicorp.com/vault/api-docs/system/seal-status
+  initialized: attr('boolean'),
+  sealed: attr('boolean'),
+  isSealed: alias('sealed'),
   // The "t" parameter is the threshold, and "n" is the number of shares.
   t: attr('number'),
   n: attr('number'),

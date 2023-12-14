@@ -6,6 +6,7 @@ package logical
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -56,6 +57,7 @@ const (
 	NoClientToken ClientTokenSource = iota
 	ClientTokenFromVaultHeader
 	ClientTokenFromAuthzHeader
+	ClientTokenFromInternalAuth
 )
 
 type WALState struct {
@@ -246,6 +248,9 @@ type Request struct {
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
 	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure
@@ -482,38 +487,6 @@ func CreateContextDisableReplicationStatusEndpoints(parent context.Context, valu
 	return context.WithValue(parent, ctxKeyDisableReplicationStatusEndpoints{}, value)
 }
 
-// CtxKeyMaxRequestSize is a custom type used as a key in context.Context to
-// store the value of the max_request_size set for the listener through which
-// a request was received.
-type ctxKeyMaxRequestSize struct{}
-
-// String returns a string representation of the receiver type.
-func (c ctxKeyMaxRequestSize) String() string {
-	return "max_request_size"
-}
-
-// ContextMaxRequestSizeValue examines the provided context.Context for the max
-// request size value and returns it as an int64 value if it's found along with
-// the ok value set to true; otherwise the ok return value is false.
-func ContextMaxRequestSizeValue(ctx context.Context) (value int64, ok bool) {
-	value, ok = ctx.Value(ctxKeyMaxRequestSize{}).(int64)
-
-	return
-}
-
-// CreateContextMaxRequestSize creates a new context.Context based on the
-// provided parent that also includes the provided max request size value for
-// the ctxKeyMaxRequestSize key.
-func CreateContextMaxRequestSize(parent context.Context, value int64) context.Context {
-	return context.WithValue(parent, ctxKeyMaxRequestSize{}, value)
-}
-
-// ContextContainsMaxRequestSize returns a bool value that indicates if the
-// provided Context contains a value for the ctxKeyMaxRequestSize key.
-func ContextContainsMaxRequestSize(ctx context.Context) bool {
-	return ctx.Value(ctxKeyMaxRequestSize{}) != nil
-}
-
 // CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
 // to store the original request path.
 type ctxKeyOriginalRequestPath struct{}
@@ -537,4 +510,15 @@ func ContextOriginalRequestPathValue(ctx context.Context) (value string, ok bool
 // for the ctxKeyOriginalRequestPath key.
 func CreateContextOriginalRequestPath(parent context.Context, value string) context.Context {
 	return context.WithValue(parent, ctxKeyOriginalRequestPath{}, value)
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
 }

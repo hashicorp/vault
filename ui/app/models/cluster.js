@@ -17,6 +17,10 @@ export default class ClusterModel extends Model {
   @attr('string') type;
   @attr('object') license;
 
+  // manually set on response in cluster adapter
+  @attr('boolean') hasChrootNamespace;
+  @attr('boolean') replicationRedacted;
+
   /* Licensing concerns */
   get licenseExpiry() {
     return this.license?.expiry_time;
@@ -74,7 +78,9 @@ export default class ClusterModel extends Model {
 
   //replication mode - will only ever be 'unsupported'
   //otherwise the particular mode will have the relevant mode attr through replication-attributes
-  @attr('string') mode;
+  // eg dr.mode or performance.mode
+  @attr('string')
+  mode;
   get allReplicationDisabled() {
     return this.dr?.replicationDisabled && this.performance?.replicationDisabled;
   }

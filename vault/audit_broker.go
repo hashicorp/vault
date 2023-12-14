@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -66,12 +66,14 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	}
 
 	if a.broker != nil {
-		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
+		// Attempt to register the pipeline before enabling 'broker level' enforcement
+		// of how many successful sinks we expect.
+		err := b.RegisterNodesAndPipeline(a.broker, name)
 		if err != nil {
 			return err
 		}
-
-		err = b.RegisterNodesAndPipeline(a.broker, name)
+		// Update the success threshold now that the pipeline is registered.
+		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
 		if err != nil {
 			return err
 		}
@@ -297,7 +299,22 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 			e.Data = in
 
-			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			// In cases where we are trying to audit the response, we detach
+			// ourselves from the original context (keeping only the namespace).
+			// This is so that we get a fair run at writing audit entries if Vault
+			// Took up a lot of time handling the request before audit (response)
+			// is triggered. Pipeline nodes may check for a cancelled context and
+			// refuse to process the nodes further.
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
+				return retErr.ErrorOrNil()
+			}
+
+			auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer auditCancel()
+			auditContext = namespace.ContextWithNamespace(auditContext, ns)
+			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
 				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
