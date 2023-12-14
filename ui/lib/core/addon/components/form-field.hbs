@@ -16,12 +16,12 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control {{unless this.hasRadioSubText 'columns'}}" data-test-radio-input>
+      <div class="control {{unless this.hasRadioSubTextAndLabel 'columns'}}" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
           <div
             class="is-flex-center
               {{if
-                this.hasRadioSubText
+                this.hasRadioSubTextAndLabel
                 'has-top-padding-xs has-bottom-padding-s'
                 'column is-narrow has-text-grey has-right-margin-s'
               }}"
@@ -34,17 +34,17 @@
               value={{or val.value val}}
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
-              @groupValue={{(get @model this.valuePath)}}
+              @groupValue={{get @model this.valuePath}}
               @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
               data-test-radio="{{if (or (eq @attr.type 'boolean') val.value) val.value val}}"
             />
             <div class="has-left-margin-xs">
               <label
                 for="{{or val.value val}}"
-                class="has-left-margin-xs {{if this.hasRadioSubText 'has-text-black is-size-7'}}"
+                class="has-left-margin-xs {{if this.hasRadioSubTextAndLabel 'has-text-black is-size-7'}}"
               >
                 {{or val.label val.value val}}
-                {{#if this.hasRadioSubText}}
+                {{#if this.hasRadioSubTextAndLabel}}
                   <p class="has-left-margin-xs has-text-grey is-size-8">
                     {{val.subText}}
                   </p>

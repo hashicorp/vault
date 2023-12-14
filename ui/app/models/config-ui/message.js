@@ -39,8 +39,8 @@ export default class MessageModel extends Model {
     defaultValue: 'banner',
   })
   type;
-  // The authenticated attr is a boolean. The authenticatedString getter and setter is used to get the and set
-  // the values as strings. The server and query params expects the attr to be boolean values.
+  // The authenticated attr is a boolean. The authenticatedString getter and setter is used only in forms to get and set the boolean via
+  // strings values. The server and query params expects the attr to be boolean values.
   @attr({
     label: 'Where should we display this message?',
     editType: 'radio',

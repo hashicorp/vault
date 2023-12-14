@@ -10,8 +10,8 @@ export default class MessageAdapter extends ApplicationAdapter {
     return 'config/ui/custom-messages';
   }
 
-  query(store, type, query, recordArray, adapterOptions) {
+  query(store, type, query) {
     const { authenticated } = query;
-    return super.query(store, type, { authenticated, list: true }, recordArray, adapterOptions);
+    return super.query(store, type, { authenticated, list: true });
   }
 }
