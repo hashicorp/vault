@@ -76,7 +76,7 @@ export default class FormFieldComponent extends Component {
   }
 
   get hasRadioSubTextAndLabel() {
-    // for 'radio' editType, check to see if any of the possibleValues has a subText and label
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
     return this.args?.attr?.options?.possibleValues?.every((v) => v.subText && v.label);
   }
 
