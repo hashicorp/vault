@@ -40,9 +40,11 @@ export default class MessagesList extends Component {
 
   willDestroy() {
     super.willDestroy();
-    const { isNew } = this.args.message;
-    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.message[method]();
+    const noTeardown = this.store && !this.store.isDestroying;
+    const { model } = this;
+    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
+      model.rollbackAttributes();
+    }
   }
 
   get breadcrumbs() {
