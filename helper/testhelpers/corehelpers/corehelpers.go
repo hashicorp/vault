@@ -226,12 +226,12 @@ func TestNoopAudit(t testing.T, path string, config map[string]string, opts ...a
 }
 
 // NewNoopAudit should be used to create a NoopAudit as it handles creation of a
-// predicable salt and wraps eventlogger nodes so information can be retrieved on
+// predictable salt and wraps eventlogger nodes so information can be retrieved on
 // what they've seen or formatted.
 func NewNoopAudit(config *audit.BackendConfig, opts ...audit.Option) (*NoopAudit, error) {
 	view := &logical.InmemStorage{}
 
-	// Create the salt with a known key for predicable hmac values.
+	// Create the salt with a known key for predictable hmac values.
 	se := &logical.StorageEntry{Key: "salt", Value: []byte("foo")}
 	err := view.Put(context.Background(), se)
 	if err != nil {
