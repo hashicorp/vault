@@ -4,6 +4,12 @@ export function sanitizePath(path) {
   return path.trim().replace(/^\/+|\/+$/g, '');
 }
 
+export function sanitizeStart(path) {
+  if (!path) return '';
+  //remove leading slashes
+  return path.trim().replace(/^\/+/, '');
+}
+
 export function ensureTrailingSlash(path) {
   return path.replace(/(\w+[^/]$)/g, '$1/');
 }
