@@ -63,12 +63,8 @@ select.has-error-border,
   color: var(--token-color-foreground-faint) !important;
 }
 
-.has-text-grey-400 {
-  color: $ui-gray-400;
-}
-
 .has-text-grey {
-  color: $ui-gray-500 !important;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey-dark {
