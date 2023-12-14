@@ -18,8 +18,6 @@ import (
 	"sync"
 	"time"
 
-	cron "github.com/robfig/cron/v3"
-
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -123,12 +121,6 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
-// This should be the schedule parts of logical/database/staticAccount
-type RootSchedule struct {
-	Schedule *cron.SpecSchedule `json:"schedule"`
-	Window   int                `json:"schedule_window"` // seconds of window
-}
-
 func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
 	return true
 }
@@ -144,15 +136,20 @@ func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
 
 // this has the periodic func signature since we want to run it, uh, periodically
 func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
+	fmt.Println("tick!")
 	rs, err := b.RotatePasswordGetSchedule(ctx, req)
+	if err != nil {
+		// this indicates that there is no rotation schedule set, which should mean we can just end
+		return nil
+	}
 
 	if rs.IsInsideRotationWindow(b.Priority) {
 		err := b.RotatePassword(ctx, req) // this function should pick a new password (if applicable) and store it how the plugin developer would like. The developer should ensure that if there is an error, the storage is reverted
 		if err != nil {
-			// WALEntry here somewhere
+			// reschedule for later
 			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff
 		} else {
-			b.Priority = rs.NextRotationTimeFromInput()
+			b.Priority = defaultScheduler.NextRotationTime(rs).Unix()
 		}
 
 	}
