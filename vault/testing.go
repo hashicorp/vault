@@ -656,6 +656,7 @@ func TestWaitActive(t testing.T, core *Core) {
 }
 
 func TestWaitActiveForwardingReady(t testing.T, core *Core) {
+	t.Helper()
 	TestWaitActive(t, core)
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -708,7 +709,6 @@ type TestCluster struct {
 	SetupFunc          func()
 
 	cleanupFuncs      []func()
-	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
@@ -1188,7 +1188,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
-	testCluster.base = base
 
 	switch {
 	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():

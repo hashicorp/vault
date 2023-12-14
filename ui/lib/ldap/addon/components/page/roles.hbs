@@ -6,13 +6,7 @@
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles.meta.total)}}
-      <FilterInput
-        @placeholder="Filter roles"
-        @value={{@pageFilter}}
-        @wait={{500}}
-        @autofocus={{true}}
-        @onInput={{this.onFilterChange}}
-      />
+      <FilterInput placeholder="Filter roles" value={{@pageFilter}} @autofocus={{true}} @onInput={{this.onFilterChange}} />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>

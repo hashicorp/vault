@@ -35,6 +35,21 @@
           </div>
         {{/each}}
       </div>
+    {{else if (eq @attr.options.editType "checkboxList")}}
+      <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        {{#each @attr.options.possibleValues as |option|}}
+          <G.Checkbox::Field
+            class={{if this.validationError "has-error-border"}}
+            checked={{includes option (get @model this.valuePath)}}
+            @value={{option}}
+            @id={{option}}
+            {{on "change" this.handleChecklist}}
+            as |F|
+          >
+            <F.Label>{{option}}</F.Label>
+          </G.Checkbox::Field>
+        {{/each}}
+      </Hds::Form::Checkbox::Group>
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
@@ -101,7 +116,7 @@
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <div class="has-bottom-margin-m">
+    <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
         @subText={{@attr.options.subText}}
@@ -325,7 +340,7 @@
       @type="danger"
       @message={{this.validationError}}
       @paddingTop={{not-eq @attr.options.editType "ttl"}}
-      data-test-field-validation={{@attr.name}}
+      data-test-field-validation={{this.valuePath}}
       class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
     />
   {{/if}}
@@ -334,7 +349,7 @@
       @type="warning"
       @message={{this.validationWarning}}
       @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
-      data-test-validation-warning={{@attr.name}}
+      data-test-validation-warning={{this.valuePath}}
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}
