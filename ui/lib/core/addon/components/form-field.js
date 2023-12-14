@@ -158,10 +158,6 @@ export default class FormFieldComponent extends Component {
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
-  setAndBroadcastDatetimeLocal(evt) {
-    this.setAndBroadcast(evt.target.value);
-  }
-  @action
   codemirrorUpdated(isString, value, codemirror) {
     codemirror.performLint();
     const hasErrors = codemirror.state.lint.marked.length > 0;
