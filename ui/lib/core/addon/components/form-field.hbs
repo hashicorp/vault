@@ -85,7 +85,7 @@
       class="input has-top-margin-xs is-auto-width is-block"
       name={{@attr.name}}
       data-test-input={{@attr.name}}
-      {{on "input" this.setAndBroadcastDatetimeLocal}}
+      {{on "change" this.onChangeWithEvent}}
     />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
