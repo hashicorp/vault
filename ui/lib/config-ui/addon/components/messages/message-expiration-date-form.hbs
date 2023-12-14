@@ -43,7 +43,7 @@
     <div class="has-left-margin-xs control">
       <Input
         @type="datetime-local"
-        @value={{if this.formDateTime (date-format this.formDateTime this.localDateTimeString) ""}}
+        @value={{if this.formDateTime (date-format this.formDateTime this.datetimeLocalStringFormat) ""}}
         class="input has-top-margin-xs is-auto-width"
         name="endTime"
         data-test-input="endTime"

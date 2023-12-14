@@ -5,11 +5,9 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { isAfter, format, addDays, startOfDay } from 'date-fns';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { datetimeLocalStringFormat, parseAPITimestamp } from 'core/utils/date-formatters';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-
-export const localDateTimeString = "yyyy-MM-dd'T'HH:mm";
 
 const validations = {
   title: [{ type: 'presence', message: 'Title is required.' }],
@@ -79,7 +77,7 @@ export default class MessageModel extends Model {
     editType: 'dateTimeLocal',
     label: 'Message starts',
     subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
-    defaultValue: format(addDays(startOfDay(new Date() || this.startTime), 1), localDateTimeString),
+    defaultValue: format(addDays(startOfDay(new Date() || this.startTime), 1), datetimeLocalStringFormat),
   })
   startTime;
   @attr('date', { editType: 'yield', label: 'Message expires' }) endTime;

@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupEngine } from 'ember-engines/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { localDateTimeString } from 'vault/models/config-ui/message';
+import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
 
 const PAGE = {
@@ -56,7 +56,7 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.input('startTime')).exists();
     assert
       .dom(PAGE.input('startTime'))
-      .hasValue(format(addDays(startOfDay(new Date()), 1), localDateTimeString));
+      .hasValue(format(addDays(startOfDay(new Date()), 1), datetimeLocalStringFormat));
     assert.dom(PAGE.input('endTime')).exists();
     assert.dom(PAGE.input('endTime')).hasValue('');
   });
@@ -78,12 +78,12 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     );
     await fillIn(
       PAGE.input('startTime'),
-      format(addDays(startOfDay(new Date('2023-12-12')), 1), localDateTimeString)
+      format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
     );
     await click('#specificDate');
     await fillIn(
       PAGE.input('endTime'),
-      format(addDays(startOfDay(new Date('2023-12-12')), 10), localDateTimeString)
+      format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
     );
 
     await click(PAGE.button('create-message'));
@@ -133,7 +133,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     await click('#specificDate');
     assert
       .dom(PAGE.input('startTime'))
-      .hasValue(format(new Date(this.message.startTime), localDateTimeString));
-    assert.dom(PAGE.input('endTime')).hasValue(format(new Date(this.message.endTime), localDateTimeString));
+      .hasValue(format(new Date(this.message.startTime), datetimeLocalStringFormat));
+    assert
+      .dom(PAGE.input('endTime'))
+      .hasValue(format(new Date(this.message.endTime), datetimeLocalStringFormat));
   });
 });

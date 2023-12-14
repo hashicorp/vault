@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { localDateTimeString } from 'vault/models/config-ui/message';
+import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 
 /**
  * @module Messages::MessageExpirationDateForm
@@ -18,7 +18,7 @@ import { localDateTimeString } from 'vault/models/config-ui/message';
  */
 
 export default class MessageExpirationDateForm extends Component {
-  localDateTimeString = localDateTimeString;
+  datetimeLocalStringFormat = datetimeLocalStringFormat;
   @tracked groupValue = 'never';
   @tracked formDateTime = '';
 
