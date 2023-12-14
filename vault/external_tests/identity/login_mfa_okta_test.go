@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
@@ -30,6 +31,9 @@ import (
 // the profile that requires MFA. If you need to use a different group name
 // for the test group, you can set:
 // OKTA_TEST_GROUP=alttestgroup
+//
+// To test with Okta TOTP (instead of Okta push verify), set:
+// OKTA_PROMPT_FOR_TOTP=1
 
 func TestOktaEngineMFA(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
@@ -287,11 +291,22 @@ func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor, entityID str
 		}
 	}
 
+	// gather info from test user if needed
+	var passcodes []string
+	if os.Getenv("OKTA_PROMPT_FOR_TOTP") != "" {
+		log("Okta TOTP for test (will be hidden): ")
+		totp, err := password.Read(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("failed to prompt for test Okta TOTP: %v", err)
+		}
+		passcodes = []string{totp}
+	}
+
 	// validation
 	secret, err = client.Sys().MFAValidateWithContext(context.Background(),
 		secret.Auth.MFARequirement.MFARequestID,
 		map[string]interface{}{
-			methodID: []string{},
+			methodID: passcodes,
 		},
 	)
 	if err != nil {
