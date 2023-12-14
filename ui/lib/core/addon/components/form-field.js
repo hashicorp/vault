@@ -75,6 +75,11 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
+  get hasRadioSubText() {
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
+  }
+
   get hideLabel() {
     const { type, options } = this.args.attr;
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
@@ -183,5 +188,13 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
+  }
+
+  @action
+  handleChecklist(event) {
+    const valueArray = this.args.model[this.valuePath];
+    const method = event.target.checked ? 'addObject' : 'removeObject';
+    valueArray[method](event.target.value);
+    this.setAndBroadcast(valueArray);
   }
 }

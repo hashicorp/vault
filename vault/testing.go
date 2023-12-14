@@ -709,7 +709,6 @@ type TestCluster struct {
 	SetupFunc          func()
 
 	cleanupFuncs      []func()
-	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
@@ -1189,7 +1188,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
-	testCluster.base = base
 
 	switch {
 	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
