@@ -1754,10 +1754,10 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
+        "title": "Containerized plugins",
         "routes": [
           {
-            "title": "Containerized plugins overview",
+            "title": "Overview",
             "path": "plugins/containerized-plugins",
             "badge": {
               "text": "BETA",
