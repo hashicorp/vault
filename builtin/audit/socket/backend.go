@@ -12,10 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -336,16 +335,16 @@ func (b *Backend) Invalidate(_ context.Context) {
 // the audit.Backend interface.
 func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
 	for id, node := range b.nodeMap {
-		if err := broker.RegisterNode(id, node); err != nil {
+		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
 			return err
 		}
 	}
 
 	pipeline := eventlogger.Pipeline{
 		PipelineID: eventlogger.PipelineID(name),
-		EventType:  eventlogger.EventType("audit"),
+		EventType:  eventlogger.EventType(event.AuditType.String()),
 		NodeIDs:    b.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline)
+	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 }
