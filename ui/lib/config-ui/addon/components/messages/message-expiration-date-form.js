@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
@@ -26,11 +25,5 @@ export default class MessageExpirationDateForm extends Component {
     if (this.args.message.endTime) {
       this.groupValue = 'specificDate';
     }
-  }
-
-  @action
-  setAndBroadcast(evt) {
-    this.formDateTime = evt.target.value;
-    this.args.handleEndTime(this.formDateTime);
   }
 }

@@ -52,11 +52,7 @@
           @modelValidations={{this.modelValidations}}
           class="has-bottom-margin-m"
         >
-          <Messages::MessageExpirationDateForm
-            @message={{@message}}
-            @attr={{attr}}
-            @handleEndTime={{this.onHandleEndTime}}
-          />
+          <Messages::MessageExpirationDateForm @message={{@message}} @attr={{attr}} />
         </FormField>
       {{/if}}
     {{/each}}

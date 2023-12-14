@@ -9,7 +9,6 @@ import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { format } from 'date-fns';
-import { action } from '@ember/object';
 
 import { localDateTimeString } from 'vault/models/config-ui/message';
 
@@ -82,10 +81,5 @@ export default class MessagesList extends Component {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
-  }
-
-  @action
-  onHandleEndTime(endTime) {
-    this.args.message.endTime = endTime;
   }
 }

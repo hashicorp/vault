@@ -47,7 +47,8 @@
         class="input has-top-margin-xs is-auto-width"
         name="endTime"
         data-test-input="endTime"
-        {{on "input" this.setAndBroadcast}}
+        {{on "change" (pipe (pick "target.value") (fn (mut @message.endTime)))}}
+        onchange={{this.onChangeWithEvent}}
       />
     </div>
   </label>
