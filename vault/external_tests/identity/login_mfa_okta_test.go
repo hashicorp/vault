@@ -103,14 +103,23 @@ func TestInteg_PolicyMFAOkta(t *testing.T) {
 
 	// Enable Userpass authentication
 	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
+	entityClient, entityID, _ := testhelpers.CreateCustomEntityAndAliasWithinMount(t,
+		client, mountAccessor, "userpass", "testuser",
+		map[string]interface{}{
+			"name":     "test-entity",
+			"policies": "mfa_policy",
+			"metadata": map[string]string{
+				"email": os.Getenv("OKTA_USERNAME"),
+			},
+		})
 
-	err := mfaGenerateOktaPolicyMFATest(client, mountAccessor)
+	err := mfaGenerateOktaPolicyMFATest(entityClient, mountAccessor, entityID)
 	if err != nil {
 		t.Fatalf("Okta failed: %s", err)
 	}
 }
 
-func mfaGenerateOktaPolicyMFATest(client *api.Client, mountAccessor string) error {
+func mfaGenerateOktaPolicyMFATest(client *api.Client, mountAccessor, entityID string) error {
 	var err error
 
 	rules := `
@@ -123,37 +132,6 @@ path "secret/foo" {
 	err = client.Sys().PutPolicy("mfa_policy", rules)
 	if err != nil {
 		return fmt.Errorf("failed to create mfa_policy: %v", err)
-	}
-
-	// creating a user in userpass
-	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to configure userpass backend: %v", err)
-	}
-
-	// creating an identity with email metadata to be used for MFA validation
-	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name":     "test-entity",
-		"policies": "mfa_policy",
-		"metadata": map[string]string{
-			"email": os.Getenv("OKTA_USERNAME"),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create an entity")
-	}
-	entityID := secret.Data["id"].(string)
-
-	// assigning the entity ID to the testuser alias
-	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "testuser",
-		"canonical_id":   entityID,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create an entity alias")
 	}
 
 	mfaConfigData := map[string]interface{}{
@@ -183,7 +161,7 @@ path "secret/foo" {
 	defer client.SetToken(originalToken)
 
 	// login to the testuser
-	secret, err = client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -228,42 +206,23 @@ func TestInteg_LoginMFAOkta(t *testing.T) {
 	// Enable Userpass authentication
 	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 
-	err := mfaGenerateOktaLoginMFATest(client, mountAccessor)
+	// Create testuser entity and alias
+	entityClient, entityID, _ := testhelpers.CreateCustomEntityAndAliasWithinMount(t,
+		client, mountAccessor, "userpass", "testuser",
+		map[string]interface{}{
+			"name": "test-entity",
+			"metadata": map[string]string{
+				"email": os.Getenv("OKTA_USERNAME"),
+			},
+		})
+
+	err := mfaGenerateOktaLoginMFATest(entityClient, mountAccessor, entityID, t.Log)
 	if err != nil {
 		t.Fatalf("Okta failed: %s", err)
 	}
 }
 
-func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor string) error {
-	var err error
-
-	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to configure userpass backend: %v", err)
-	}
-
-	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "test-entity",
-		"metadata": map[string]string{
-			"email": os.Getenv("OKTA_USERNAME"),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create an entity")
-	}
-	entityID := secret.Data["id"].(string)
-
-	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "testuser",
-		"canonical_id":   entityID,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create an entity alias")
-	}
-
+func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor, entityID string, log func(...any)) error {
 	var methodID string
 	var userpassToken string
 	// login MFA
@@ -299,7 +258,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor string) error
 		}
 	}
 
-	secret, err = client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -317,7 +276,7 @@ func mfaGenerateOktaLoginMFATest(client *api.Client, mountAccessor string) error
 	}
 	mfaConstraints, ok := secret.Auth.MFARequirement.MFAConstraints["randomName"]
 	if !ok {
-		return fmt.Errorf("failed to find the mfaConstrains")
+		return fmt.Errorf("failed to find the mfaConstraints")
 	}
 	if mfaConstraints.Any == nil || len(mfaConstraints.Any) == 0 {
 		return fmt.Errorf("")
