@@ -70,7 +70,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     });
     assert
       .dom('[data-test-header-title]')
-      .hasText(`${this.backend} Version 2`, 'Mount path and Version tag render for title.');
+      .hasText(`${this.backend} version 2`, 'Mount path and version tag render for title.');
     assert.dom('[data-test-header-title] span').hasClass('hs-icon', 'An icon renders next to title.');
   });
 
