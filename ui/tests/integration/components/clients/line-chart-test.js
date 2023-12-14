@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
-import { find, render, findAll, triggerEvent } from '@ember/test-helpers';
+import { find, render, findAll, triggerEvent, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { format, formatRFC3339, subMonths } from 'date-fns';
 import { formatChartDate } from 'core/utils/date-formatters';
@@ -110,6 +110,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders tooltip', async function (assert) {
+    assert.expect(5);
     const now = timestamp.now();
     const tooltipData = [
       {
@@ -159,6 +160,8 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     `);
 
     const tooltipHoverCircles = findAll('[data-test-line-chart] circle.hover-circle');
+    assert.strictEqual(tooltipHoverCircles.length, tooltipData.length, 'all data circles are rendered');
+    await settled();
     for (const [i, bar] of tooltipHoverCircles.entries()) {
       await triggerEvent(bar, 'mouseover');
       const tooltip = document.querySelector('.ember-modal-dialog');
