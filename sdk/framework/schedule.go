@@ -16,6 +16,7 @@ const (
 	parseOptions             = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
+// RootSchedule holds the parsed and unparsed versions of the schedule, along with the projected next rotation time.
 type RootSchedule struct {
 	Schedule          *cron.SpecSchedule `json:"schedule"`
 	RotationWindow    time.Duration      `json:"rotation_window"` // seconds of window
@@ -33,7 +34,7 @@ type Scheduler interface {
 	SetNextVaultRotation(next *RootSchedule, t time.Time)
 }
 
-var _ Scheduler = &DefaultSchedule{}
+var defaultScheduler Scheduler = &DefaultSchedule{}
 
 type DefaultSchedule struct{}
 

@@ -43,6 +43,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pierrec/lz4 v2.6.1+incompatible
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/stretchr/testify v1.8.3
 	go.uber.org/atomic v1.9.0
