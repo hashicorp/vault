@@ -656,6 +656,7 @@ func TestWaitActive(t testing.T, core *Core) {
 }
 
 func TestWaitActiveForwardingReady(t testing.T, core *Core) {
+	t.Helper()
 	TestWaitActive(t, core)
 
 	deadline := time.Now().Add(2 * time.Second)
@@ -708,7 +709,6 @@ type TestCluster struct {
 	SetupFunc          func()
 
 	cleanupFuncs      []func()
-	base              *CoreConfig
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
@@ -1188,7 +1188,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
-	testCluster.base = base
 
 	switch {
 	case opts != nil && opts.Logger != nil && !reflect.ValueOf(opts.Logger).IsNil():
@@ -1509,6 +1508,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.RollbackPeriod = base.RollbackPeriod
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
+		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1522,6 +1522,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	if coreConfig.ClusterHeartbeatInterval == 0 {
 		// Set this lower so that state populates quickly to standby nodes
 		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
+	}
+
+	if coreConfig.PeriodicLeaderRefreshInterval == 0 {
+		// Set this lower so that perf standby nodes become stable more quickly
+		coreConfig.PeriodicLeaderRefreshInterval = 250 * time.Millisecond
 	}
 
 	if coreConfig.RawConfig == nil {
@@ -1681,6 +1686,12 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	testCluster.opts = opts
 	testCluster.start(t)
+
+	if !coreConfig.DisablePerformanceStandby && numCores > 1 && constants.IsEnterprise {
+		// Sleep so that perf standbys have the opportunity to run periodicLeaderRefresh
+		// once, otherwise when they re-initialize themselves they can yield 500s.
+		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
+	}
 	return &testCluster
 }
 
