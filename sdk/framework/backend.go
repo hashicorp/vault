@@ -258,6 +258,9 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRevokeRenew(ctx, req)
 	case logical.RollbackOperation:
 		return b.handleRollback(ctx, req)
+	case logical.RotationOperation:
+		b.logger.Info("rotating")
+		return nil, logical.ErrUnsupportedOperation
 	}
 
 	// If the path is empty and it is a help operation, handle that.

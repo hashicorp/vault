@@ -698,6 +698,9 @@ type Core struct {
 	WellKnownRedirects *wellKnownRedirectRegistry // RFC 5785
 	// Config value for "detect_deadlocks".
 	detectDeadlocks []string
+
+	// the rotation manager handles periodic rotation of credentials
+	rotationManager *RotationManager
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -2456,6 +2459,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
+			return err
+		}
+
+		if err := c.startRotation(); err != nil {
 			return err
 		}
 	} else {
