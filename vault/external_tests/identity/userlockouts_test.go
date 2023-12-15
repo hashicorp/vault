@@ -6,6 +6,11 @@ package identity
 import (
 	"bufio"
 	"bytes"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -14,10 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"os"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -286,7 +287,6 @@ func TestUserLockoutLogger_ManualUnlockTest(t *testing.T) {
 	if !(strings.Count(result, expected) > 1) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
-
 }
 
 // TestIdentityStore_DisableUserLockoutTest tests that user login will

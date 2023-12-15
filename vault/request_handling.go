@@ -1503,7 +1503,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isLoginUserLocked {
-			c.startLockoutLogger()
 			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
@@ -2480,6 +2479,9 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 				return err
 			}
 
+			// Start lockout logger
+			// We run this as locked false since we already hold the userFailedLoginInfoLock here
+			c.startLockoutLogger(false)
 		}
 
 	default:

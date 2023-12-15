@@ -3829,7 +3829,10 @@ func (c *Core) setupCachedMFAResponseAuth() {
 	return
 }
 
-func (c *Core) startLockoutLogger() {
+// startLockoutLogger starts a background goroutine to emit a log while a user lockout
+// exists anywhere in Vault. locked should be set to true if we need to hold the
+// userFailedLoginInfoLock when getting the locked user count.
+func (c *Core) startLockoutLogger(locked bool) {
 	// Are we already running a logger
 	if c.lockoutLoggerCancel.Load() != nil {
 		return
@@ -3839,7 +3842,7 @@ func (c *Core) startLockoutLogger() {
 	c.lockoutLoggerCancel.Store(&cancelFunc)
 
 	// Perform first check for lockout entries
-	lockedUserCount := c.getUserFailedLoginCount(ctx)
+	lockedUserCount := c.getUserFailedLoginCount(locked, ctx)
 
 	if lockedUserCount > 0 {
 		c.Logger().Warn("user lockout(s) in effect; review by using /sys/locked-users endpoint")
@@ -3854,7 +3857,7 @@ func (c *Core) startLockoutLogger() {
 			select {
 			case <-ticker.C:
 				// Check for lockout entries
-				lockedUserCount := c.getUserFailedLoginCount(ctx)
+				lockedUserCount := c.getUserFailedLoginCount(true, ctx)
 
 				if lockedUserCount > 0 {
 					c.Logger().Warn("user lockout(s) in effect; review by using /sys/locked-users endpoint")
@@ -3903,9 +3906,11 @@ func (c *Core) updateLockedUserEntries() {
 	}()
 }
 
-func (c *Core) getUserFailedLoginCount(ctx context.Context) int {
-	c.userFailedLoginInfoLock.Lock()
-	defer c.userFailedLoginInfoLock.Unlock()
+func (c *Core) getUserFailedLoginCount(locked bool, ctx context.Context) int {
+	if locked {
+		c.userFailedLoginInfoLock.Lock()
+		defer c.userFailedLoginInfoLock.Unlock()
+	}
 
 	return len(c.userFailedLoginInfo)
 }
