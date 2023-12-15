@@ -2390,7 +2390,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	// Mark the active time. We do this first so it can be correlated to the logs
 	// for the active startup.
-	c.activeTime = time.Now().UTC()
 
 	if err := postUnsealPhysical(c); err != nil {
 		return err
@@ -2766,7 +2765,6 @@ func (c *Core) preSeal() error {
 	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
-	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
