@@ -134,29 +134,6 @@ func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
 //	return time.Now().Unix() == ri.NextRotationTime
 //}
 
-// this has the periodic func signature since we want to run it, uh, periodically
-func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
-	fmt.Println("tick!")
-	rs, err := b.RotatePasswordGetSchedule(ctx, req)
-	if err != nil {
-		// this indicates that there is no rotation schedule set, which should mean we can just end
-		return nil
-	}
-
-	if rs.IsInsideRotationWindow(b.Priority) {
-		err := b.RotatePassword(ctx, req) // this function should pick a new password (if applicable) and store it how the plugin developer would like. The developer should ensure that if there is an error, the storage is reverted
-		if err != nil {
-			// reschedule for later
-			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff
-		} else {
-			b.Priority = defaultScheduler.NextRotationTime(rs).Unix()
-		}
-
-	}
-
-	return nil
-}
-
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
 // This can be utilized by the backends to do anything it wants.
 type periodicFunc func(context.Context, *logical.Request) error
@@ -260,7 +237,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRollback(ctx, req)
 	case logical.RotationOperation:
 		b.logger.Info("rotating")
-		return nil, logical.ErrUnsupportedOperation
+		return b.handleRotation(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
@@ -704,6 +681,19 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 		}
 	}
 	return resp, merr.ErrorOrNil()
+}
+
+// handleRotation invokes the RotatePassword func set on the backend.
+func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if b.RotatePassword == nil {
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	err := b.RotatePassword(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{}, nil
 }
 
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {

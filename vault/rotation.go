@@ -25,7 +25,8 @@ type RotationManager struct {
 	queue queue.PriorityQueue
 	done  chan struct{}
 
-	router *Router
+	router   *Router
+	backends func() *[]MountEntry // list of logical and auth backends, remember to call RUnlock
 }
 
 func (rm *RotationManager) Start() error {
@@ -33,31 +34,39 @@ func (rm *RotationManager) Start() error {
 	go func() {
 		rm.logger.Info("started ticker")
 		for {
-			// hack to solve weird double loading
 			rm.mu.Lock()
 			select {
 			case <-rm.done:
 				return
 			case t := <-ticker.C:
 				rm.logger.Info("time", "time", t.Format(time.RFC3339))
-				rm.CheckQueue()
+				err := rm.CheckQueue()
+				if err != nil {
+					rm.logger.Error("check queue error", "err", err)
+				}
 			}
-			rm.mu.Unlock()
 		}
 	}()
 	return nil
 }
 
-func (rm *RotationManager) CheckQueue() {
+func (rm *RotationManager) CheckQueue() error {
+	// loop runs forever, so break whenever you get to the first credential that doesn't need updating
 	for {
 		now := time.Now()
 		i, err := rm.queue.Pop()
 		if err != nil {
-			return
+			rm.logger.Info("queue empty")
+			return nil
 		}
 		if i.Priority > now.Unix() {
-			rm.queue.Push(i)
-			break
+			err := rm.queue.Push(i)
+			if err != nil {
+				// this is pretty bad because we have no real way to fix it and save the item, but the Push operation only
+				// errors on malformed items, which shouldn't be possible here
+				return err
+			}
+			break // this item is not ripe yet, which means all later items are also unripe, so exit the check loop
 		}
 
 		// do rotation
@@ -69,8 +78,23 @@ func (rm *RotationManager) CheckQueue() {
 		if errors.Is(err, logical.ErrUnsupportedOperation) {
 			rm.logger.Info("unsupported")
 			continue
+		} else if err != nil {
+			// requeue with backoff
+			rm.logger.Info("other rotate error", "err", err)
+			// TODO: We can either check the window here, or let the priority check above handle it
+			i.Priority = i.Priority + 10
+		}
+
+		// success
+		i.Priority = time.Now().Add(5 * time.Minute).Unix() // TODO: here we want to access the schedule and update the priority based on that
+		err = rm.queue.Push(i)
+		if err != nil {
+			// again, this is bad because we can't really fix the item, but it also shouldn't happen because the item was good before
+			return err
 		}
 	}
+
+	return nil
 }
 
 // A RotationSchedule is a way to store the requested rotation schedule of a credential
