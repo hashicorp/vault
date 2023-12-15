@@ -24,6 +24,9 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   test('it should render enterprise only navigation links', async function (assert) {
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
+    await click(link('Secrets Sync'));
+    assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'Sync route renders');
+
     await click(link('Replication'));
     assert.strictEqual(currentURL(), '/vault/replication', 'Replication route renders');
     assert.dom(panel('Replication')).exists(`Replication nav panel renders`);

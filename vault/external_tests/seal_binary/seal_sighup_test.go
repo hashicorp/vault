@@ -101,7 +101,15 @@ func TestSealReloadSIGHUP(t *testing.T) {
 		},
 	}
 
-	err = createDockerImage("hashicorp/vault", "test-image", os.Getenv("VAULT_BINARY"))
+	containerFile := `
+FROM hashicorp/vault:latest
+COPY vault /bin/vault
+`
+	bCtx, err := createBuildContextWithBinary(os.Getenv("VAULT_BINARY"))
+	if err != nil {
+		t.Fatalf("error creating build context: %s", err)
+	}
+	err = createDockerImage("hashicorp/vault", "test-image", containerFile, bCtx)
 	if err != nil {
 		t.Fatalf("error creating docker image: %s", err)
 	}
