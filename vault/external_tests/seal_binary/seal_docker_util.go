@@ -72,7 +72,26 @@ type transitContainerConfig struct {
 	KeyNames   []string
 }
 
-func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
+func createBuildContextWithBinary(vaultBinary string) (dockhelper.BuildContext, error) {
+	f, err := os.Open(vaultBinary)
+	if err != nil {
+		return nil, fmt.Errorf("error opening vault binary file: %w", err)
+	}
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("error reading vault binary file: %w", err)
+	}
+
+	bCtx := dockhelper.NewBuildContext()
+	bCtx["vault"] = &dockhelper.FileContents{
+		Data: data,
+		Mode: 0o755,
+	}
+
+	return bCtx, nil
+}
+
+func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelper.BuildContext) error {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ContainerName: "vault",
 		ImageRepo:     imageRepo,
@@ -82,29 +101,10 @@ func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
 		return fmt.Errorf("error creating runner: %w", err)
 	}
 
-	f, err := os.Open(vaultBinary)
-	if err != nil {
-		return fmt.Errorf("error opening vault binary file: %w", err)
-	}
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return fmt.Errorf("error reading vault binary file: %w", err)
-	}
-	bCtx := dockhelper.NewBuildContext()
-	bCtx["vault"] = &dockhelper.FileContents{
-		Data: data,
-		Mode: 0o755,
-	}
-
-	containerFile := fmt.Sprintf(`
-FROM %s:latest
-COPY vault /bin/vault
-`, imageRepo)
-
 	_, err = runner.BuildImage(context.Background(), containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
-		dockhelper.BuildTags([]string{fmt.Sprintf("hashicorp/vault:%s", imageTag)}))
+		dockhelper.BuildTags([]string{fmt.Sprintf("%s:%s", imageRepo, imageTag)}))
 	if err != nil {
 		return fmt.Errorf("error building docker image: %w", err)
 	}

@@ -12,13 +12,17 @@
       {{#if @mountName}}
         <Icon @name="kv" @size="24" class="has-text-grey-light" />
         {{@mountName}}
-        <span class="tag">Version 2</span>
+        <span class="tag">version 2</span>
       {{else}}
         {{@pageTitle}}
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
+
+{{#if (has-block "syncDetails")}}
+  {{yield to="syncDetails"}}
+{{/if}}
 
 {{#if (has-block "tabLinks")}}
   <div class="tabs-container box is-bottomless is-marginless is-paddingless">
