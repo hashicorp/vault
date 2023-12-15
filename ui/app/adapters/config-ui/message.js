@@ -14,4 +14,14 @@ export default class MessageAdapter extends ApplicationAdapter {
     const { authenticated } = query;
     return super.query(store, type, { authenticated, list: true });
   }
+
+  queryRecord(store, type, id) {
+    return this.ajax(`${this.buildURL(type)}/${id}`, 'GET');
+  }
+
+  updateRecord(store, type, snapshot) {
+    return this.ajax(`${this.buildURL(type)}/${snapshot.record.id}`, 'POST', {
+      data: this.serialize(snapshot.record),
+    });
+  }
 }

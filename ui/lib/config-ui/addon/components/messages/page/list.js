@@ -21,31 +21,35 @@ import { dateFormat } from 'core/helpers/date-format';
 export default class MessagesList extends Component {
   @service store;
 
-  get getMessages() {
+  get formattedMessages() {
     return this.args.messages.map((message) => {
-      let badgeDisplayText = '';
+      const badgeDisplay = {};
 
       if (message.active) {
         if (message.endTime) {
-          badgeDisplayText = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplay.text = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
+          badgeDisplay.color = 'success';
         } else {
-          badgeDisplayText = 'Active';
+          badgeDisplay.text = 'Active';
+          badgeDisplay.color = 'success';
         }
       } else {
         if (message.isStartTimeAfterToday) {
-          badgeDisplayText = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplay.text = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
+          badgeDisplay.color = 'highlight';
         } else {
-          badgeDisplayText = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplay.text = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
+          badgeDisplay.color = 'neutral';
         }
       }
 
-      message.badgeDisplayText = badgeDisplayText;
+      message.badgeDisplay = badgeDisplay;
       return message;
     });
   }

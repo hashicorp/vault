@@ -38,10 +38,10 @@ export default class MessagesList extends Component {
 
   get breadcrumbs() {
     const authenticated =
-      this.args.message.authenticated === undefined ? true : this.args.message.authenticated;
+      this.args.message?.authenticated === undefined ? true : this.args.message?.authenticated;
     return [
       { label: 'Messages', route: 'messages.index', query: { authenticated } },
-      { label: 'Create Message' },
+      { label: `${this.args.message.isNew ? 'Create' : 'Edit'} Message` },
     ];
   }
 

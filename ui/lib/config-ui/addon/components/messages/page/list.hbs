@@ -22,7 +22,7 @@
 </Messages::TabPageHeader>
 
 {{#if @messages.length}}
-  {{#each this.getMessages as |message|}}
+  {{#each this.formattedMessages as |message|}}
     <LinkedBlock
       data-test-list-item={{message.id}}
       class="list-item-row"
@@ -38,13 +38,13 @@
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
               <Hds::Badge
-                @text={{message.badgeDisplayText}}
-                @color={{if message.active "highlight" "neutral"}}
+                @text={{message.badgeDisplay.text}}
+                @color={{message.badgeDisplay.color}}
                 data-test-badge={{concat "active:" message.active}}
               />
               <Hds::Badge
                 @text={{(capitalize message.type)}}
-                @color={{if message.active "highlight" "neutral"}}
+                @color={{message.badgeDisplay.color}}
                 data-test-badge={{message.type}}
               />
             </div>

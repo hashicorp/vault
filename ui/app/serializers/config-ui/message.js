@@ -3,11 +3,25 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { encodeString } from 'core/utils/b64';
+import { decodeString, encodeString } from 'core/utils/b64';
 import ApplicationSerializer from '../application';
 
 export default class MessageSerializer extends ApplicationSerializer {
   primaryKey = 'id';
+
+  normalizeResponse(store, primaryModelClass, payload) {
+    if (payload.data.data && payload.data.data?.message) {
+      payload.data.data.message = decodeString(payload.data.data.message);
+      payload.data = {
+        id: payload.data.id,
+        linkTitle: payload.data.data.link?.title,
+        linkHref: payload.data.data.link?.href,
+        ...payload.data.data,
+      };
+      delete payload.data.data;
+    }
+    return super.normalizeResponse(...arguments);
+  }
 
   serialize() {
     const json = super.serialize(...arguments);
@@ -19,6 +33,7 @@ export default class MessageSerializer extends ApplicationSerializer {
 
     delete json.link_title;
     delete json.link_href;
+    delete json.active;
 
     return json;
   }
