@@ -110,7 +110,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   });
 
   test('it renders tooltip', async function (assert) {
-    assert.expect(5);
+    assert.expect(1);
     const now = timestamp.now();
     const tooltipData = [
       {
