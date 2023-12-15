@@ -61,9 +61,10 @@ module('Integration | Component | text-file', function (hooks) {
   });
 
   test('it correctly parses uploaded files', async function (assert) {
-    this.file = new File(['some content for a file'], 'filename.txt');
+    const file = new Blob([['some content for a file']], { type: 'text/plain' });
+    file.name = 'filename.txt';
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
-    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [this.file] });
+    await triggerEvent(SELECTORS.fileUpload, 'change', { files: [file] });
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {

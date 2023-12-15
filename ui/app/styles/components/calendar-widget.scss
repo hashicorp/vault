@@ -58,3 +58,8 @@ $dark-gray: #535f73;
   grid-gap: 0.7rem;
   padding: 7px 28px 28px 28px;
 }
+
+// for modal-dialog tooltips
+.ember-modal-dialog {
+  z-index: 1000;
+}
