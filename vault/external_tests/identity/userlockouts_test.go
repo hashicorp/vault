@@ -4,20 +4,290 @@
 package identity
 
 import (
-	"os"
-	"strings"
-	"testing"
-
+	"bufio"
+	"bytes"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"os"
+	"strings"
+	"testing"
+	"time"
 )
 
 const (
 	UserLockoutThresholdDefault = 5
 )
+
+func TestUserLockoutLogger_ConfigTest(t *testing.T) {
+	// cluster setup
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		UserLockoutLogInterval: 1 * time.Second,
+	}
+
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	clusterOpts := vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{},
+		},
+		Logger: logging.NewVaultLoggerWithWriter(writer, hclog.Trace),
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &clusterOpts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	// Setup userpass
+	if err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// get mount accessor for userpass mount
+	secret, err := client.Logical().Read("sys/auth/userpass")
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	mountAccessor := secret.Data["accessor"].(string)
+
+	// tune auth mount
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold:            "3",
+		LockoutDuration:             "5s",
+		LockoutCounterResetDuration: "5s",
+	}
+	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
+		UserLockoutConfig: userlockoutConfig,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a user for userpass
+	_, err = client.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// login failure 3 times to lock user
+	for i := 0; i < 3; i++ {
+		_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+			"password": "wrongPassword",
+		})
+		if err == nil {
+			t.Fatal("expected login to fail due to wrong credentials")
+		}
+		if !strings.Contains(err.Error(), "invalid username or password") {
+			t.Fatal(err)
+		}
+	}
+
+	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// Check that Logger triggered
+	expected := "user lockout(s) in effect; review by using /sys/locked-users endpoint"
+	writer.Flush()
+	result := buf.String()
+	if !strings.Contains(result, expected) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+
+	// Check that logger interval configuration applied successfully
+	time.Sleep(5 * time.Second)
+	expected = "user lockout(s) in effect; review by using /sys/locked-users endpoint"
+	writer.Flush()
+	result = buf.String()
+	if !(strings.Count(result, expected) > 1) {
+		t.Fatalf("expected second log to contain %s, got %s", expected, result)
+	}
+
+	// Clear lockout
+	if _, err = client.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that Logger cleared
+	expected = "user lockout(s) cleared"
+	writer.Flush()
+	result = buf.String()
+	if !strings.Contains(result, expected) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+}
+
+func TestUserLockoutLogger_ManualUnlockTest(t *testing.T) {
+	// cluster setup
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+
+	clusterOpts := vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{},
+		},
+		Logger: logging.NewVaultLoggerWithWriter(writer, hclog.Trace),
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &clusterOpts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[1].Client
+
+	// Setup userpass
+	if err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// get mount accessor for userpass mount
+	secret, err := client.Logical().Read("sys/auth/userpass")
+	if err != nil || secret == nil {
+		t.Fatal(err)
+	}
+	mountAccessor := secret.Data["accessor"].(string)
+
+	// tune auth mount
+	userlockoutConfig := &api.UserLockoutConfigInput{
+		LockoutThreshold:            "3",
+		LockoutDuration:             "5s",
+		LockoutCounterResetDuration: "5s",
+	}
+	err = client.Sys().TuneMount("auth/userpass", api.MountConfigInput{
+		UserLockoutConfig: userlockoutConfig,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a user for userpass
+	_, err = client.Logical().Write("auth/userpass/users/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// login failure 3 times to lock user
+	for i := 0; i < 3; i++ {
+		_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+			"password": "wrongPassword",
+		})
+		if err == nil {
+			t.Fatal("expected login to fail due to wrong credentials")
+		}
+		if !strings.Contains(err.Error(), "invalid username or password") {
+			t.Fatal(err)
+		}
+	}
+
+	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// Check that Logger triggered
+	expected := "user lockout(s) in effect; review by using /sys/locked-users endpoint"
+	writer.Flush()
+	result := buf.String()
+	if !strings.Contains(result, expected) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+
+	// Clear lockout
+	if _, err = client.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that Logger cleared
+	expected = "user lockout(s) cleared"
+	writer.Flush()
+	result = buf.String()
+	if !strings.Contains(result, expected) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+
+	// login failure 3 times to lock user
+	for i := 0; i < 3; i++ {
+		_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+			"password": "wrongPassword",
+		})
+		if err == nil {
+			t.Fatal("expected login to fail due to wrong credentials")
+		}
+		if !strings.Contains(err.Error(), "invalid username or password") {
+			t.Fatal(err)
+		}
+	}
+
+	_, err = client.Logical().Write("auth/userpass/login/bsmith", map[string]interface{}{
+		"password": "training",
+	})
+	if err == nil {
+		t.Fatal("expected login to fail as user locked out")
+	}
+	if !strings.Contains(err.Error(), logical.ErrPermissionDenied.Error()) {
+		t.Fatalf("expected to see permission denied error as user locked out, got %v", err)
+	}
+
+	// Check that Logger triggered
+	expected = "user lockout(s) in effect; review by using /sys/locked-users endpoint"
+	writer.Flush()
+	result = buf.String()
+	if !(strings.Count(result, expected) > 1) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+
+	// Clear lockout
+	if _, err = client.Logical().Write("sys/locked-users/"+mountAccessor+"/unlock/bsmith", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that Logger cleared
+	expected = "user lockout(s) cleared"
+	writer.Flush()
+	result = buf.String()
+	if !(strings.Count(result, expected) > 1) {
+		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	}
+
+}
 
 // TestIdentityStore_DisableUserLockoutTest tests that user login will
 // fail when supplied with wrong credentials. If the user is locked,

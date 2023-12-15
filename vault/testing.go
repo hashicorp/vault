@@ -1453,6 +1453,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
 		coreConfig.ServiceRegistration = base.ServiceRegistration
 		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
+		coreConfig.UserLockoutLogInterval = base.UserLockoutLogInterval
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
