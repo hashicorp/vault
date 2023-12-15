@@ -121,10 +121,6 @@ type Backend struct {
 	pathsRe []*regexp.Regexp
 }
 
-func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
-	return true
-}
-
 //type RotationItem struct {
 //	Key              string // arbitrary reference the specific backend will understand
 //	NextRotationTime int64  // priority
@@ -143,13 +139,13 @@ func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
 		return nil
 	}
 
-	if rs.IsInsideRotationWindow(b.Priority) {
+	if rs.IsInsideRotationWindow(time.Unix(b.Priority, 0)) {
 		err := b.RotatePassword(ctx, req) // this function should pick a new password (if applicable) and store it how the plugin developer would like. The developer should ensure that if there is an error, the storage is reverted
 		if err != nil {
 			// reschedule for later
-			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff
+			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff - we don't need to care about scheduling, the InsideRotationWindow check will handle it
 		} else {
-			b.Priority = defaultScheduler.NextRotationTime(rs).Unix()
+			b.Priority = rs.NextRotationTime(rs).Unix()
 		}
 
 	}
