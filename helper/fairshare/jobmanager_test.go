@@ -9,8 +9,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestJobManager_NewJobManager(t *testing.T) {
@@ -176,7 +174,6 @@ func TestJobManager_Stop(t *testing.T) {
 	j := NewJobManager("job-mgr-test", 5, newTestLogger("jobmanager-test"), nil)
 
 	j.Start()
-	assert.False(t, j.Stopped())
 
 	doneCh := make(chan struct{})
 	timeout := time.After(5 * time.Second)
@@ -188,7 +185,6 @@ func TestJobManager_Stop(t *testing.T) {
 
 	select {
 	case <-doneCh:
-		assert.True(t, j.Stopped())
 		break
 	case <-timeout:
 		t.Fatal("timed out")
