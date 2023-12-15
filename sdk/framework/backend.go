@@ -147,6 +147,10 @@ func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
 		// this indicates that there is no rotation schedule set, which should mean we can just end
 		return nil
 	}
+	if rs == nil {
+		b.logger.Info("no schedule")
+		return nil
+	}
 
 	b.logger.Info("got schedule")
 	b.logger.Info("checking time", "priority", time.Unix(b.Priority, 0).Format(time.RFC3339), "target", rs.NextVaultRotation.Format(time.RFC3339), "window", rs.RotationWindow/time.Second)
@@ -162,7 +166,7 @@ func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
 			next := rs.NextRotationTime()
 			b.Priority = next.Unix()
 			rs.NextVaultRotation = next
-			b.logger.Info("updating", "priority", b.Priority)
+			b.logger.Info("updating", "priority", time.Unix(b.Priority, 0).Format(time.RFC3339))
 		}
 
 	}

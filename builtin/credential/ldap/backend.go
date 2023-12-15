@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	goldap "github.com/go-ldap/ldap/v3"
 
@@ -65,17 +64,18 @@ func Backend() *backend {
 		BackendType: logical.TypeCredential,
 		// dummy implementation
 		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (*framework.RootSchedule, error) {
-			d := &framework.DefaultSchedule{}
-			cron, err := d.Parse("10 * * * *")
-			if err != nil {
-				return nil, err
-			}
-			return &framework.RootSchedule{
-				Schedule:          cron,
-				RotationWindow:    15 * time.Second,
-				RotationSchedule:  "10 * * * *",
-				NextVaultRotation: cron.Next(time.Now()),
-			}, nil
+			//d := &framework.DefaultSchedule{}
+			//cron, err := d.Parse("10 * * * *")
+			//if err != nil {
+			//	return nil, err
+			//}
+			//return &framework.RootSchedule{
+			//	Schedule:          cron,
+			//	RotationWindow:    15 * time.Second,
+			//	RotationSchedule:  "10 * * * *",
+			//	NextVaultRotation: cron.Next(time.Now()),
+			//}, nil
+			return b.rootSchedule, nil
 		},
 		RotatePassword: func(ctx context.Context, req *logical.Request) error {
 			// lock the backend's state - really just the config state - for mutating
@@ -156,6 +156,8 @@ type backend struct {
 	*framework.Backend
 
 	mu sync.RWMutex
+
+	rootSchedule *framework.RootSchedule
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {

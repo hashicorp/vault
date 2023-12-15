@@ -31,6 +31,10 @@ type Scheduler interface {
 
 var defaultScheduler Scheduler = &DefaultSchedule{}
 
+func Parse(rotationSchedule string) (*cron.SpecSchedule, error) {
+	return defaultScheduler.Parse(rotationSchedule)
+}
+
 type DefaultSchedule struct{}
 
 func (d *DefaultSchedule) Parse(rotationSchedule string) (*cron.SpecSchedule, error) {

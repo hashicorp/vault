@@ -6,6 +6,7 @@ package ldap
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -52,6 +53,11 @@ func pathConfig(b *backend) *framework.Path {
 	p.Fields["password_policy"] = &framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "Password policy to use to rotate the root password",
+	}
+
+	p.Fields["schedule"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "Cron style schedule for rotating the root password",
 	}
 
 	return p
@@ -210,6 +216,19 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
+	if schedule, ok := d.GetOk("schedule"); ok {
+		cfg.Schedule = schedule.(string)
+		sched, err := framework.Parse(cfg.Schedule)
+		if err != nil {
+			logical.ErrorResponse("invalid schedule: %q", err)
+		}
+		b.rootSchedule = &framework.RootSchedule{
+			Schedule:         sched,
+			RotationWindow:   10 * time.Second, // TODO: hardcode for now
+			RotationSchedule: cfg.Schedule,
+		}
+		b.rootSchedule.NextVaultRotation = b.rootSchedule.NextRotationTime()
+	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
@@ -253,6 +272,7 @@ type ldapConfigEntry struct {
 	*ldaputil.ConfigEntry
 
 	PasswordPolicy string `json:"password_policy"`
+	Schedule       string `json:"schedule"`
 }
 
 const pathConfigHelpSyn = `
