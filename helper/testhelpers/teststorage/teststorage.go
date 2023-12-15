@@ -10,8 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
-
 	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/audit"
@@ -23,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -105,7 +104,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 	}
 }
 
-func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}) *vault.PhysicalBackendBundle {
+func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	raftDir, err := ioutil.TempDir("", "vault-raft-")
 	if err != nil {
@@ -118,6 +117,19 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 
 	logger.Info("raft dir", "dir", raftDir)
 
+	backend, err := makeRaftBackend(logger, nodeID, raftDir, extraConf, bridge)
+	if err != nil {
+		cleanupFunc()
+		t.Fatal(err)
+	}
+
+	return &vault.PhysicalBackendBundle{
+		Backend: backend,
+		Cleanup: cleanupFunc,
+	}
+}
+
+func makeRaftBackend(logger hclog.Logger, nodeID, raftDir string, extraConf map[string]interface{}, bridge *raft.ClusterAddrBridge) (physical.Backend, error) {
 	conf := map[string]string{
 		"path":                         raftDir,
 		"node_id":                      nodeID,
@@ -134,14 +146,13 @@ func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf ma
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
-		cleanupFunc()
-		t.Fatal(err)
+		return nil, err
+	}
+	if bridge != nil {
+		backend.(*raft.RaftBackend).SetServerAddressProvider(bridge)
 	}
 
-	return &vault.PhysicalBackendBundle{
-		Backend: backend,
-		Cleanup: cleanupFunc,
-	}
+	return backend, nil
 }
 
 // RaftHAFactory returns a PhysicalBackendBundle with raft set as the HABackend
@@ -224,7 +235,14 @@ func FileBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 
 func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.KeepStandbysSealed = true
-	opts.PhysicalFactory = MakeRaftBackend
+	var bridge *raft.ClusterAddrBridge
+	if !opts.InmemClusterLayers && opts.ClusterLayers == nil {
+		bridge = raft.NewClusterAddrBridge()
+	}
+	conf.ClusterAddrBridge = bridge
+	opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+		return MakeRaftBackend(t, coreIdx, logger, conf, bridge)
+	}
 	opts.SetupFunc = func(t testing.T, c *vault.TestCluster) {
 		if opts.NumCores != 1 {
 			testhelpers.RaftClusterJoinNodes(t, c)
@@ -234,7 +252,7 @@ func RaftBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 }
 
 func RaftHASetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, bundler PhysicalBackendBundler) {
-	opts.KeepStandbysSealed = true
+	opts.InmemClusterLayers = true
 	opts.PhysicalFactory = RaftHAFactory(bundler)
 }
 

@@ -256,8 +256,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for 110% of the stabilization time to add nodes
-	stabilizationKickOffWaitDuration := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
-	time.Sleep(stabilizationKickOffWaitDuration)
+	stabilizationPadded := time.Duration(math.Ceil(1.25 * float64(config.ServerStabilizationTime)))
+	time.Sleep(stabilizationPadded)
 
 	cli := cluster.Cores[0].Client
 	// Write more keys than snapshot_threshold
@@ -273,13 +273,14 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	joinAndUnseal(t, cluster.Cores[1], cluster, false, false)
 	joinAndUnseal(t, cluster.Cores[2], cluster, false, false)
 
-	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(config.ServerStabilizationTime)
+	// Add an extra fudge factor, since once the snapshot delay completes it can
+	// take time for the snapshot to actually be applied.
+	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(stabilizationPadded).Add(5 * time.Second)
 
 	// Wait for enough time for stabilization to complete if things were good
 	// - but they're not good, due to our snapshot_delay.  So we fail if both
 	// nodes are healthy.
-	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
-	testhelpers.RetryUntil(t, stabilizationWaitDuration, func() error {
+	testhelpers.RetryUntil(t, stabilizationPadded, func() error {
 		state, err := client.Sys().RaftAutopilotState()
 		if err != nil {
 			return err
