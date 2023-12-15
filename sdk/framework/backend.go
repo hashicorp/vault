@@ -113,6 +113,7 @@ type Backend struct {
 	RotatePasswordGetSchedule  func(context.Context, *logical.Request) (*RootSchedule, error)                        // schedule string in cron format
 	RotatePasswordLeaseStorage func(ctx context.Context, req *logical.Request, name string, lease interface{}) error // function that plugin developer writes that can store a value in request storage
 	Priority                   int64                                                                                 // unix timestamp of next root password rotation time (technically the leading edge of the next window)
+	qMu                        sync.Mutex
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -133,27 +134,47 @@ type Backend struct {
 // this has the periodic func signature since we want to run it, uh, periodically
 func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
 	b.logger.Info("tick!")
+	b.qMu.Lock()
+	defer b.qMu.Unlock()
+
 	if b.RotatePasswordGetSchedule == nil {
+		b.logger.Info("no schedule func")
 		return nil // nothing to rotate
 	}
 	rs, err := b.RotatePasswordGetSchedule(ctx, req)
 	if err != nil {
+		b.logger.Info("no schedule", "err", err)
 		// this indicates that there is no rotation schedule set, which should mean we can just end
 		return nil
 	}
 
+	b.logger.Info("got schedule")
+	b.logger.Info("checking time", "priority", time.Unix(b.Priority, 0).Format(time.RFC3339), "target", rs.NextVaultRotation.Format(time.RFC3339), "window", rs.RotationWindow/time.Second)
+
 	if rs.IsInsideRotationWindow(time.Unix(b.Priority, 0)) {
+		b.logger.Info("passed window check")
 		err := b.RotatePassword(ctx, req) // this function should pick a new password (if applicable) and store it how the plugin developer would like. The developer should ensure that if there is an error, the storage is reverted
 		if err != nil {
+			b.logger.Info("rotation error", "err", err)
 			// reschedule for later
 			b.Priority = time.Now().Add(10 * time.Second).Unix() // backoff - we don't need to care about scheduling, the InsideRotationWindow check will handle it
 		} else {
-			b.Priority = rs.NextRotationTime(rs).Unix()
+			next := rs.NextRotationTime()
+			b.Priority = next.Unix()
+			rs.NextVaultRotation = next
+			b.logger.Info("updating", "priority", b.Priority)
 		}
 
 	}
 
 	return nil
+}
+
+// Plugins call this to update their root rotate schedule
+func (b *Backend) RotatePasswordUpdateSchedule(rs *RootSchedule) {
+	b.qMu.Lock()
+	b.Priority = rs.NextRotationTime().Unix()
+	b.qMu.Unlock()
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.

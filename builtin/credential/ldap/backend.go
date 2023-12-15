@@ -66,14 +66,14 @@ func Backend() *backend {
 		// dummy implementation
 		RotatePasswordGetSchedule: func(ctx context.Context, req *logical.Request) (*framework.RootSchedule, error) {
 			d := &framework.DefaultSchedule{}
-			cron, err := d.Parse("0 0 0 0 0")
+			cron, err := d.Parse("10 * * * *")
 			if err != nil {
 				return nil, err
 			}
 			return &framework.RootSchedule{
 				Schedule:          cron,
 				RotationWindow:    15 * time.Second,
-				RotationSchedule:  "0 0 0 0 0",
+				RotationSchedule:  "10 * * * *",
 				NextVaultRotation: cron.Next(time.Now()),
 			}, nil
 		},
@@ -124,6 +124,8 @@ func Backend() *backend {
 			if err != nil {
 				return err
 			}
+
+			//b.Logger().Info("passwords", "old", p, "new", newPassword)
 
 			lreq.Replace("userPassword", []string{newPassword})
 

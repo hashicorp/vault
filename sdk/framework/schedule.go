@@ -54,8 +54,8 @@ func (d *DefaultSchedule) ValidateRotationWindow(s int) error {
 }
 
 // NextRotationTime calculates the next scheduled rotation
-func (rs *RootSchedule) NextRotationTime(next *RootSchedule) time.Time {
-	return next.Schedule.Next(time.Now())
+func (rs *RootSchedule) NextRotationTime() time.Time {
+	return rs.Schedule.Next(time.Now())
 }
 
 // NextRotationTimeFromInput calculates and returns the next rotation time based on the provided  schedule and input time
