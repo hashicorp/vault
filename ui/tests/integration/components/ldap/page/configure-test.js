@@ -85,7 +85,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
       .dom('[data-test-field="bindpass"] [data-test-inline-error-message]')
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
-      .dom('[data-test-invalid-form-message] p')
+      .dom('[data-test-invalid-form-message]')
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

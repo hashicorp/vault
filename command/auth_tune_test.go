@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/mitchellh/cli"
 )
 
 func testAuthTuneCommand(tb testing.TB) (*cli.MockUi, *AuthTuneCommand) {
@@ -78,8 +78,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
-			defer cleanup(t)
+			pluginDir := corehelpers.MakeTestPluginDir(t)
 
 			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()

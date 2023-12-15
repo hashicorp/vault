@@ -112,15 +112,16 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.',
         'renders Next steps alert banner'
       );
+
     assert
       .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
-      .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')
-      .hasAttribute('data-clipboard-text', this.model.keyId, 'it renders copyable key_id');
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert
       .dom('[data-test-value-div="Private key"] [data-test-certificate-card] button')
-      .hasAttribute('data-clipboard-text', this.model.privateKey, 'it renders copyable private_key');
+      .hasAttribute('data-test-copy-button', this.model.privateKey, 'it renders copyable private_key');
     assert
       .dom('[data-test-value-div="Private key type"]')
       .hasText(this.model.privateKeyType, 'renders private_key_type');
@@ -145,10 +146,10 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       );
     assert
       .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
-      .hasAttribute('data-clipboard-text', this.model.csr, 'it renders copyable csr');
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
       .dom('[data-test-value-div="Key ID"] button')
-      .hasAttribute('data-clipboard-text', this.model.keyId, 'it renders copyable key_id');
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert.dom('[data-test-value-div="Private key"]').hasText('internal', 'does not render private key');
     assert
       .dom('[data-test-value-div="Private key type"]')

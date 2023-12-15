@@ -96,7 +96,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('[data-test-tooltip-copy]').exists('Tooltip has copy button');
     assert
       .dom('[data-test-tooltip-copy]')
-      .hasAttribute('data-clipboard-text', 'Foo bar', 'Copy button will copy the tooltip text');
+      .hasAttribute('data-test-tooltip-copy', 'Foo bar', 'Copy button will copy the tooltip text');
   });
 
   test('it renders a string with no link if isLink is true and the item type is not an array.', async function (assert) {

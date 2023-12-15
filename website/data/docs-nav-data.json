@@ -1354,18 +1354,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secrets/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version  1",
             "path": "secrets/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version  2",
             "path": "secrets/kv/kv-v2"
           }
         ]
@@ -1984,7 +1984,25 @@
                   },
                   {
                     "title": "Vault",
-                    "path": "platform/k8s/vso/sources/vault"
+                    "routes": [
+                      {
+                        "title": "Overview",
+                        "path": "platform/k8s/vso/sources/vault"
+                      },
+                      {
+                        "title": "Auth Methods",
+                        "routes": [
+                          {
+                            "title": "AWS",
+                            "path": "platform/k8s/vso/sources/vault/auth/aws"
+                          },
+                          {
+                            "title": "GCP",
+                            "path": "platform/k8s/vso/sources/vault/auth/gcp"
+                          }
+                        ]
+                      }
+                    ]
                   },
                   {
                     "title": "HCP Vault Secrets",

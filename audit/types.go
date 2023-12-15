@@ -35,8 +35,8 @@ type subtype string
 // format defines types of format audit events support.
 type format string
 
-// auditEvent is the audit event.
-type auditEvent struct {
+// AuditEvent is the audit event.
+type AuditEvent struct {
 	ID        string            `json:"id"`
 	Version   string            `json:"version"`
 	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.

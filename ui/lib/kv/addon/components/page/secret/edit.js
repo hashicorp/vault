@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { isAdvancedSecret } from 'core/utils/advanced-secret';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret
@@ -38,10 +39,12 @@ export default class KvSecretEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   originalSecret;
+  secretDataIsAdvanced;
 
   constructor() {
     super(...arguments);
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+    this.secretDataIsAdvanced = isAdvancedSecret(this.originalSecret);
   }
 
   get showOldVersionAlert() {

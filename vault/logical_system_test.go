@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-	semver "github.com/hashicorp/go-version"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/experiments"
@@ -43,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
@@ -2173,7 +2173,14 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 }
 
 func TestSystemBackend_tuneAuth(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	tempDir, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: tempDir,
+	})
+	b := c.systemBackend
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{BackendType: logical.TypeCredential}, nil
 	}
@@ -2188,7 +2195,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -2209,24 +2216,19 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	req.Data["description"] = ""
 	req.Data["plugin_version"] = "v1.0.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), plugincatalog.ErrPluginNotFound.Error()) {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
 	}
 
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
 
 	// Register the plugin in the catalog, and then try the same request again.
 	{
-		tempDir, err := filepath.EvalSymlinks(t.TempDir())
-		if err != nil {
-			t.Fatal(err)
-		}
-		c.pluginCatalog.directory = tempDir
 		file, err := os.Create(filepath.Join(tempDir, "foo"))
 		if err != nil {
 			t.Fatal(err)
@@ -2263,7 +2265,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	}
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3323,13 +3325,14 @@ func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
 }
 
 func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	c.pluginCatalog.directory = sym
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	req := logical.TestRequest(t, logical.ListOperation, "plugins/catalog/database")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -3339,7 +3342,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3356,7 +3359,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3401,7 +3404,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3440,7 +3443,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	schema.ValidateResponse(
 		t,
-		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
 		resp,
 		true,
 	)
@@ -3500,13 +3503,14 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 // TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
 // with oci_image set get recorded properly in the catalog.
 func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	c.pluginCatalog.directory = sym
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	for name, tc := range map[string]struct {
 		in, expected map[string]any
@@ -3618,13 +3622,14 @@ func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *
 }
 
 func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	c.pluginCatalog.directory = sym
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	// Set a plugin
 	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
@@ -5816,79 +5821,6 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 	}
 }
 
-func TestSortVersionedPlugins(t *testing.T) {
-	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
-		return pluginutil.VersionedPlugin{
-			Type:    typ.String(),
-			Name:    name,
-			Version: version,
-			SHA256:  "",
-			Builtin: builtin,
-			SemanticVersion: func() *semver.Version {
-				if version != "" {
-					return semver.Must(semver.NewVersion(version))
-				}
-
-				return semver.Must(semver.NewVersion("0.0.0"))
-			}(),
-		}
-	}
-
-	differingTypes := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-	}
-	differingNames := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
-	}
-	differingVersions := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
-	}
-	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
-	}
-
-	for name, tc := range map[string][]pluginutil.VersionedPlugin{
-		"ascending types":    differingTypes,
-		"ascending names":    differingNames,
-		"ascending versions": differingVersions,
-		// Include differing versions twice so we can test out equality too.
-		"differing types, names and versions": append(differingTypes,
-			append(differingNames,
-				append(differingVersions, differingVersions...)...)...),
-		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
-	} {
-		t.Run(name, func(t *testing.T) {
-			sortVersionedPlugins(tc)
-			for i := 1; i < len(tc); i++ {
-				previous := tc[i-1]
-				current := tc[i]
-				if current.Type > previous.Type {
-					continue
-				}
-				if current.Name > previous.Name {
-					continue
-				}
-				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
-					continue
-				}
-				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
-					continue
-				}
-
-				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
-			}
-		})
-	}
-}
-
 func TestValidateVersion(t *testing.T) {
 	b := testSystemBackend(t).(*SystemBackend)
 	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
@@ -5927,12 +5859,13 @@ func TestValidateVersion(t *testing.T) {
 }
 
 func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	tempDir, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("error: %v", err)
 	}
-	core.pluginCatalog.directory = tempDir
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: tempDir,
+	})
 	b := core.systemBackend
 
 	// Shadow a builtin and test getting a helpful error back.
@@ -6104,6 +6037,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		CgroupParent: "/cpulimit/",
 		CPU:          1,
 		Memory:       10000,
+		Rootless:     true,
 	}
 
 	// Register the plugin runtime
@@ -6113,6 +6047,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -6153,6 +6088,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
 	}
 	if !reflect.DeepEqual(resp.Data, readExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)
@@ -6327,7 +6263,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 		})
 	}
 
-	shamirSeal := NewDefaultSeal(seal.NewAccess(nil,
+	a, err := seal.NewAccess(nil,
 		&seal.SealGenerationInfo{
 			Generation: 1,
 			Seals:      []*configutil.KMS{{Type: wrapping.WrapperTypeShamir.String()}},
@@ -6340,7 +6276,9 @@ func TestGetSealBackendStatus(t *testing.T) {
 				Configured:     true,
 			},
 		},
-	))
+	)
+	require.NoError(t, err)
+	shamirSeal := NewDefaultSeal(a)
 
 	c := TestCoreWithSeal(t, shamirSeal, false)
 	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
@@ -6373,7 +6311,14 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	if runtime.GOOS != "linux" {
 		t.Skip("Currently plugincontainer only supports linux")
 	}
-	c, b, _ := testCoreSystemBackend(t)
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	conf := pluginruntimeutil.PluginRuntimeConfig{
 		Name:         "foo",
@@ -6400,13 +6345,6 @@ func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
-
-	// Bootstrap the pluginCatalog
-	sym, err := filepath.EvalSymlinks(os.TempDir())
-	if err != nil {
-		t.Fatalf("error: %v", err)
-	}
-	c.pluginCatalog.directory = sym
 
 	// Register the plugin referencing the runtime.
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")

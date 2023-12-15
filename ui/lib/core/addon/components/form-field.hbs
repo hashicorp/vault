@@ -16,9 +16,13 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control columns" data-test-radio-input>
+      <div class="control {{unless this.hasRadioSubText 'columns'}}" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-          <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s" data-test-input={{@attr.name}}>
+          <div
+            class="is-flex-center
+              {{if this.hasRadioSubText 'has-top-padding-xs has-bottom-padding-s' 'column is-narrow has-right-margin-s'}}"
+            data-test-input={{@attr.name}}
+          >
             <RadioButton
               class="radio"
               name={{@attr.name}}
@@ -26,15 +30,42 @@
               value={{or val.value val}}
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
-              @groupValue={{(get @model this.valuePath)}}
+              @groupValue={{get @model this.valuePath}}
               @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+              data-test-radio={{or val.value val}}
             />
-            <label for={{or val.value val}} class="has-left-margin-xs">
-              {{or val.value val}}
-            </label>
+            <div class="has-left-margin-xs">
+              <label
+                for="{{or val.value val}}"
+                class="has-left-margin-xs has-text-black is-size-7"
+                data-test-radio-label={{or val.label val.value val}}
+              >
+                <span>{{or val.label val.value val}}</span>
+                {{#if this.hasRadioSubText}}
+                  <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
+                    {{val.subText}}
+                  </p>
+                {{/if}}
+              </label>
+            </div>
           </div>
         {{/each}}
       </div>
+    {{else if (eq @attr.options.editType "checkboxList")}}
+      <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        {{#each @attr.options.possibleValues as |option|}}
+          <G.Checkbox::Field
+            class={{if this.validationError "has-error-border"}}
+            checked={{includes option (get @model this.valuePath)}}
+            @value={{option}}
+            @id={{option}}
+            {{on "change" this.handleChecklist}}
+            as |F|
+          >
+            <F.Label>{{option}}</F.Label>
+          </G.Checkbox::Field>
+        {{/each}}
+      </Hds::Form::Checkbox::Group>
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
@@ -59,6 +90,15 @@
         </div>
       </div>
     {{/if}}
+  {{else if (eq @attr.options.editType "dateTimeLocal")}}
+    <Input
+      @type="datetime-local"
+      @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
+      class="input has-top-margin-xs is-auto-width is-block"
+      name={{@attr.name}}
+      data-test-input={{@attr.name}}
+      {{on "change" this.onChangeWithEvent}}
+    />
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
       <SearchSelect
@@ -101,10 +141,12 @@
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <div class="has-bottom-margin-m">
+    <div class="has-bottom-margin-m" data-test-input={{@attr.name}}>
       <TextFile
         @label={{this.labelString}}
+        @subText={{@attr.options.subText}}
         @helpText={{@attr.options.helpText}}
+        @docLink={{@attr.options.docLink}}
         @onChange={{this.setFile}}
         @validationError={{this.validationError}}
       />
@@ -323,7 +365,7 @@
       @type="danger"
       @message={{this.validationError}}
       @paddingTop={{not-eq @attr.options.editType "ttl"}}
-      data-test-field-validation={{@attr.name}}
+      data-test-field-validation={{this.valuePath}}
       class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
     />
   {{/if}}
@@ -332,7 +374,7 @@
       @type="warning"
       @message={{this.validationWarning}}
       @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
-      data-test-validation-warning={{@attr.name}}
+      data-test-validation-warning={{this.valuePath}}
       class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
     />
   {{/if}}

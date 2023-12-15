@@ -42,7 +42,19 @@
       data-test-text-file-textarea
       as |F|
     >
-      <F.HelperText>Enter the value as text </F.HelperText>
+      <F.HelperText>
+        Enter the value as text.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
+        {{#if @docLink}}
+          See our
+          <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
+            documentation
+          </Hds::Link::Inline>
+          for help.
+        {{/if}}
+      </F.HelperText>
     </Hds::Form::MaskedInput::Field>
   {{else}}
     <Hds::Form::FileInput::Field
@@ -51,13 +63,25 @@
       data-test-text-file-input
       as |F|
     >
-      <F.HelperText>Select a file from your computer</F.HelperText>
+      <F.HelperText>
+        Select a file from your computer.
+        {{#if @subText}}
+          {{@subText}}
+        {{/if}}
+        {{#if @docLink}}
+          See our
+          <Hds::Link::Inline @href={{doc-link @docLink}} @icon="docs-link" @iconPosition="trailing">
+            documentation
+          </Hds::Link::Inline>
+          for help.
+        {{/if}}
+      </F.HelperText>
     </Hds::Form::FileInput::Field>
     {{#if (or @validationError this.uploadError)}}
       <AlertInline
         @type="danger"
         @message={{or @validationError this.uploadError}}
-        @paddingTop={{true}}
+        class="has-top-padding-s"
         data-test-field-validation="text-file"
       />
     {{/if}}

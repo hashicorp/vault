@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testKVPutCommand(tb testing.TB) (*cli.MockUi, *KVPutCommand) {
