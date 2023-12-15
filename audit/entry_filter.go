@@ -59,7 +59,7 @@ func (f *EntryFilter) Process(ctx context.Context, e *eventlogger.Event) (*event
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*auditEvent)
+	a, ok := e.Payload.(*AuditEvent)
 	if !ok {
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
