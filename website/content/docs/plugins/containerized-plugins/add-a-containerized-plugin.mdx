@@ -5,7 +5,7 @@ description: >-
   Add a containerized secrets plugin to your Vault instance.
 ---
 
-## Add a containerized secrets plugin to Vault
+# Add a containerized secrets plugin to Vault
 
 @include 'alerts/beta.mdx'
 
@@ -41,8 +41,9 @@ and plugin binary.
 
   1. Add `runsc` to your
      [Docker daemon configuration](https://docs.docker.com/config/daemon):
+
       ```shell-session
-      sudo tee PATH_TO_DOCKER_DAEMON_CONFIG_FILE <<EOF
+      $ sudo tee PATH_TO_DOCKER_DAEMON_CONFIG_FILE <<EOF
       {
         "runtimes": {
           "runsc": {
@@ -57,8 +58,9 @@ and plugin binary.
       ```
 
   1. Restart Docker:
+
       ```shell-session
-      sudo systemctl reload docker
+      $ sudo systemctl reload docker
       ```
 
 </Tab>
@@ -66,31 +68,34 @@ and plugin binary.
 <Tab heading="Rootless Docker">
 
   1. Create a configuration directory if it does not exist already:
-      ```shell-session
-      mkdir -p ~/.config/docker
-      ```
+
+    ```shell-session
+    $ mkdir -p ~/.config/docker
+    ```
 
   1. Add `runsc` to your Docker configuration:
-      ```shell-session
-      tee ~/.config/docker/daemon.json  <<EOF
-      {
-        "runtimes": {
-          "runsc": {
-            "path": "PATH_TO_RUNSC_INSTALLATION",
-            "runtimeArgs": [
-              "--host-uds=all"
-              "--ignore-cgroups"
-            ]
-          }
+
+    ```shell-session
+    $ tee ~/.config/docker/daemon.json  <<EOF
+    {
+      "runtimes": {
+        "runsc": {
+          "path": "PATH_TO_RUNSC_INSTALLATION",
+          "runtimeArgs": [
+            "--host-uds=all"
+            "--ignore-cgroups"
+          ]
         }
       }
-      EOF
-      ```
+    }
+    EOF
+    ```
 
   1. Restart Docker:
-      ```shell-session
-      systemctl --user restart docker
-      ```
+
+    ```shell-session
+    $ systemctl --user restart docker
+    ```
 
 </Tab>
 
@@ -165,24 +170,20 @@ other external plugin that is available locally to Vault.
 
 1. Store the SHA256 of the plugin image:
    ```shell-session
-   export SHA256=$(
-     docker images          \
-       --no-trunc           \
+   $ export SHA256=$(docker images \
+       --no-trunc \
        --format="{{ .ID }}" \
-       YOUR_PLUGIN_IMAGE_TAG | cut -d: -f2
-   )
+       YOUR_PLUGIN_IMAGE_TAG | cut -d: -f2)
    ```
    For example:
    
    <CodeBlockConfig hideClipboard>
 
    ```shell-session
-   $ export SHA256=$(
-     docker images          \
-       --no-trunc           \
+   $ export SHA256=$(docker images \
+       --no-trunc \
        --format="{{ .ID }}" \
-       hashicorp/vault-plugin-secrets-kv:mycontainer | cut -d: -f2
-   )
+       hashicorp/vault-plugin-secrets-kv:mycontainer | cut -d: -f2)
    ```
    
    </CodeBlockConfig>
@@ -211,7 +212,7 @@ other external plugin that is available locally to Vault.
 1. Enable the new plugin for your Vault instance with `vault secrets enable` and
    the new plugin ID:
    ```shell-session
-    $ vault secrets enable NEW_PLUGIN_ID
+   $ vault secrets enable NEW_PLUGIN_ID
    ```
    For example:
    
@@ -316,11 +317,15 @@ To use an alternative runtime:
 
 If you run into the following error while registering your plugin:
 
-```shell-session
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 invalid backend version error: 2 errors occurred:
         * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
         * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
 ```
+
+</CodeBlockConfig>
 
 it means that Vault cannot find the executable for `runsc`. Confirm the
 following is true before trying again:
