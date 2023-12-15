@@ -4,6 +4,7 @@
  */
 
 import modifyPassthroughResponse from '../helpers/modify-passthrough-response';
+import { Response } from 'miragejs';
 
 export default function (server) {
   server.get('/sys/health', (schema, req) =>
@@ -12,7 +13,10 @@ export default function (server) {
   server.get('/sys/seal-status', (schema, req) =>
     modifyPassthroughResponse(req, { version: '', cluster_name: '', build_date: '' })
   );
-  server.get('sys/replication/status', () => new Response(404));
-  server.get('sys/replication/dr/status', () => new Response(404));
-  server.get('sys/replication/performance/status', () => new Response(404));
+  server.get('sys/replication/status', () => new Response(404, {}, { errors: ['disabled path'] }));
+  server.get('sys/replication/dr/status', () => new Response(404, {}, { errors: ['disabled path'] }));
+  server.get(
+    'sys/replication/performance/status',
+    () => new Response(404, {}, { errors: ['disabled path'] })
+  );
 }

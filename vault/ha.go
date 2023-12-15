@@ -663,6 +663,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
+			c.activeTime = time.Now()
 			c.leaderUUID = uuid
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 		}
@@ -715,6 +716,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 
 			// Mark as standby
 			c.standby = true
+			c.activeTime = time.Time{}
 			c.leaderUUID = ""
 			c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 
@@ -835,7 +837,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
-		timer := time.NewTimer(leaderCheckInterval)
+		timer := time.NewTimer(c.periodicLeaderRefreshInterval)
 		select {
 		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)

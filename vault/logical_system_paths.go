@@ -251,7 +251,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
 			HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
 		},
-
 		{
 			Pattern: "generate-root(/attempt)?$",
 
@@ -2641,6 +2640,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 								"glob_paths": {
 									Type:     framework.TypeMap,
 									Required: false,
+								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
 								},
 							},
 						}},

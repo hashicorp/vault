@@ -18,7 +18,7 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
@@ -48,7 +48,7 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequest(core, w, r)
+		req, _, statusCode, err := buildLogicalRequest(core, w, r, "")
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return

@@ -61,6 +61,12 @@ export default ApplicationAdapter.extend({
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
         ret = Object.assign(ret, replicationStatus.data);
+      } else if (
+        replicationStatus instanceof AdapterError &&
+        replicationStatus?.errors.find((err) => err === 'disabled path')
+      ) {
+        // set redacted if result is an error which only happens when redacted
+        ret = Object.assign(ret, { replication_redacted: true });
       }
       return resolve(ret);
     });
