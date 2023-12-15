@@ -9,11 +9,6 @@ terraform {
   }
 }
 
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the Vault binary will be installed"
-}
-
 variable "vault_instance_count" {
   type        = number
   description = "How many vault instances are in the cluster"
@@ -37,6 +32,18 @@ variable "vault_autopilot_default_max_leases" {
   description = "The autopilot upgrade expected max_leases"
 }
 
+variable "timeout" {
+  type        = number
+  description = "The max number of seconds to wait before timing out"
+  default     = 60
+}
+
+variable "retry_interval" {
+  type        = number
+  description = "How many seconds to wait between each retry"
+  default     = 2
+}
+
 locals {
   public_ips = {
     for idx in range(var.vault_instance_count) : idx => {
@@ -46,14 +53,15 @@ locals {
   }
 }
 
-resource "enos_remote_exec" "smoke-verify-default-lcq" {
+resource "enos_remote_exec" "smoke_verify_default_lcq" {
   for_each = local.public_ips
 
   environment = {
-    VAULT_ADDR        = "http://localhost:8200"
-    VAULT_INSTALL_DIR = var.vault_install_dir
-    VAULT_TOKEN       = var.vault_root_token
-    DEFAULT_LCQ       = var.vault_autopilot_default_max_leases
+    RETRY_INTERVAL  = var.retry_interval
+    TIMEOUT_SECONDS = var.timeout
+    VAULT_ADDR      = "http://localhost:8200"
+    VAULT_TOKEN     = var.vault_root_token
+    DEFAULT_LCQ     = var.vault_autopilot_default_max_leases
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-default-lcq.sh")]
