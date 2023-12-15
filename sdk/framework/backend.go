@@ -132,7 +132,10 @@ type Backend struct {
 
 // this has the periodic func signature since we want to run it, uh, periodically
 func (b *Backend) CheckQueue(ctx context.Context, req *logical.Request) error {
-	fmt.Println("tick!")
+	b.logger.Info("tick!")
+	if b.RotatePasswordGetSchedule == nil {
+		return nil // nothing to rotate
+	}
 	rs, err := b.RotatePasswordGetSchedule(ctx, req)
 	if err != nil {
 		// this indicates that there is no rotation schedule set, which should mean we can just end
@@ -696,6 +699,13 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 			merr = multierror.Append(merr, err)
 		}
 	}
+
+	// wire directly to the periodic func for now (this can't stay here)
+	err := b.CheckQueue(ctx, req)
+	if err != nil {
+		b.logger.Error("queue check error", "err", err)
+	}
+
 	return resp, merr.ErrorOrNil()
 }
 
