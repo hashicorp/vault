@@ -275,9 +275,9 @@ type Backend interface {
 	// Salter interface must be implemented by anything implementing Backend.
 	Salter
 
-	// The Pipeliner interface allows backends to surface information about their
+	// The PipelineReader interface allows backends to surface information about their
 	// nodes for node and pipeline registration.
-	event.Pipeliner
+	event.PipelineReader
 
 	// LogRequest is used to synchronously log a request. This is done after the
 	// request is authorized but before the request is executed. The arguments
