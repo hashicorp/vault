@@ -241,6 +241,10 @@ func mfaGenerateOktaLoginMFATest(t *testing.T, client *api.Client, mountAccessor
 
 	var methodID string
 	var userpassToken string
+
+	// OKTA_USE_TOTP allows the test runner to decide whether to use TOTP or Push verification.
+	useTOTP := os.Getenv("OKTA_USE_TOTP") != ""
+
 	// login MFA
 	{
 		// create a config
@@ -250,6 +254,9 @@ func mfaGenerateOktaLoginMFATest(t *testing.T, client *api.Client, mountAccessor
 			"api_token":       os.Getenv("OKTA_API_TOKEN"),
 			"primary_email":   true,
 			"username_format": "{{identity.entity.metadata.email}}",
+		}
+		if useTOTP {
+			mfaConfigData["use_passcode"] = true
 		}
 		resp, err := client.Logical().Write("identity/mfa/method/okta", mfaConfigData)
 
@@ -298,14 +305,14 @@ func mfaGenerateOktaLoginMFATest(t *testing.T, client *api.Client, mountAccessor
 		return fmt.Errorf("")
 	}
 	for _, mfaAny := range mfaConstraints.Any {
-		if mfaAny.ID != methodID || mfaAny.Type != "okta" {
+		if mfaAny.ID != methodID || mfaAny.Type != "okta" || (mfaAny.UsesPasscode != useTOTP) {
 			return fmt.Errorf("invalid mfa constraints")
 		}
 	}
 
 	// get totp from file if requested by test runner
 	var passcodes []string
-	if os.Getenv("OKTA_USE_TOTP") != "" {
+	if useTOTP {
 		// generate tmp file path
 		tempDir := t.TempDir()
 		totpFile := tempDir + string(os.PathSeparator) + "totp.txt"
@@ -333,6 +340,9 @@ func mfaGenerateOktaLoginMFATest(t *testing.T, client *api.Client, mountAccessor
 			passcodes = []string{totp}
 			break
 		}
+	} else {
+		// passcodes must not be nil (must be [] instead of none) for the MFAValidate endpoint.
+		passcodes = []string{}
 	}
 
 	// validation
