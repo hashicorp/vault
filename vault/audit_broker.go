@@ -367,7 +367,7 @@ func (a *AuditBroker) Invalidate(ctx context.Context, key string) {
 func (a *AuditBroker) requiredSuccessThresholdSinks() int {
 	threshold := 0
 	for _, be := range a.backends {
-		if !be.backend.IsFilteringPipeline() {
+		if !be.backend.HasFiltering() {
 			threshold = 1
 			break
 		}

@@ -439,7 +439,7 @@ func (b *Backend) EventType() eventlogger.EventType {
 	return eventlogger.EventType(event.AuditType.String())
 }
 
-// IsFilteringPipeline determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
-func (b *Backend) IsFilteringPipeline() bool {
+// HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
+func (b *Backend) HasFiltering() bool {
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }

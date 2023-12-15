@@ -617,7 +617,7 @@ func (n *NoopAudit) EventType() eventlogger.EventType {
 	return eventlogger.EventType(event.AuditType.String())
 }
 
-func (n *NoopAudit) IsFilteringPipeline() bool {
+func (n *NoopAudit) HasFiltering() bool {
 	return false
 }
 
