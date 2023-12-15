@@ -117,7 +117,7 @@ func TestInteg_PolicyMFAOkta(t *testing.T) {
 
 	// Enable Userpass authentication
 	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
-	entityClient, entityID, _ := testhelpers.CreateCustomEntityAndAliasWithinMount(t,
+	entityClient, _, _ := testhelpers.CreateCustomEntityAndAliasWithinMount(t,
 		client, mountAccessor, "userpass", "testuser",
 		map[string]interface{}{
 			"name":     "test-entity",
@@ -127,13 +127,13 @@ func TestInteg_PolicyMFAOkta(t *testing.T) {
 			},
 		})
 
-	err := mfaGenerateOktaPolicyMFATest(entityClient, mountAccessor, entityID)
+	err := mfaGenerateOktaPolicyMFATest(entityClient, mountAccessor)
 	if err != nil {
 		t.Fatalf("Okta failed: %s", err)
 	}
 }
 
-func mfaGenerateOktaPolicyMFATest(client *api.Client, mountAccessor, entityID string) error {
+func mfaGenerateOktaPolicyMFATest(client *api.Client, mountAccessor string) error {
 	var err error
 
 	rules := `
