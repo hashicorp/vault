@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -143,7 +144,13 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.iamClient = nil
 	b.stsClient = nil
 
-	return nil, nil
+	rotationSchedule := data.Get("rotation_schedule").(string)
+	rotationWindow := data.Get("rotation_window").(int)
+
+	rc, err := logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
+	return &logical.Response{
+		RootCredential: rc,
+	}, nil
 }
 
 type rootConfig struct {

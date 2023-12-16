@@ -5,12 +5,14 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -60,6 +62,12 @@ func Backend(_ *logical.BackendConfig) *backend {
 
 		Secrets: []*framework.Secret{
 			secretAccessKeys(&b),
+		},
+
+		// placeholder
+		RotatePassword: func(ctx context.Context, request *logical.Request) error {
+			fmt.Print("aws.RotatePassword called\n")
+			return nil
 		},
 
 		Invalidate:        b.invalidate,

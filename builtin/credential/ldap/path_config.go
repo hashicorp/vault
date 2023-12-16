@@ -110,6 +110,14 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		persistNeeded = true
 	}
 
+	if result.RotationSchedule == "" {
+		result.RotationSchedule = "0 0 0 0 0"
+	}
+
+	if result.RotationWindow == 0 {
+		// default rotation windoe
+	}
+
 	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
 		if err != nil {
@@ -225,7 +233,19 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}, nil
 	}
 
-	return nil, nil
+	// get rotation-specific fields
+	rotationSchedule := cfg.RotationSchedule
+	rotationWindow := cfg.RotationWindow
+
+	rc, err := logical.GetRootCredential(rotationSchedule, "ldap/config",
+		"ldap-root-creds", rotationWindow)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	return &logical.Response{
+		RootCredential: rc,
+	}, nil
 }
 
 /*
@@ -252,7 +272,9 @@ type ldapConfigEntry struct {
 	tokenutil.TokenParams
 	*ldaputil.ConfigEntry
 
-	PasswordPolicy string `json:"password_policy"`
+	PasswordPolicy   string `json:"password_policy"`
+	RotationSchedule string
+	RotationWindow   int
 }
 
 const pathConfigHelpSyn = `

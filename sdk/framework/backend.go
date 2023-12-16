@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -109,10 +110,7 @@ type Backend struct {
 	RunningVersion string
 
 	// Functions for rotating the root password of a backend if it exists
-	RotatePassword             func(context.Context, *logical.Request) error                                         // specific backend developer responsible for handling basically everything
-	RotatePasswordGetSchedule  func(context.Context, *logical.Request) (*RootSchedule, error)                        // schedule string in cron format
-	RotatePasswordLeaseStorage func(ctx context.Context, req *logical.Request, name string, lease interface{}) error // function that plugin developer writes that can store a value in request storage
-	Priority                   int64                                                                                 // unix timestamp of next root password rotation time (technically the leading edge of the next window)
+	RotatePassword func(context.Context, *logical.Request) error // specific backend developer responsible for handling basically everything
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -120,19 +118,6 @@ type Backend struct {
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
-
-func (rs *RootSchedule) IsInsideRotationWindow(int64) bool {
-	return true
-}
-
-//type RotationItem struct {
-//	Key              string // arbitrary reference the specific backend will understand
-//	NextRotationTime int64  // priority
-//}
-
-//func (ri *RotationItem) Now() bool {
-//	return time.Now().Unix() == ri.NextRotationTime
-//}
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
 // This can be utilized by the backends to do anything it wants.

@@ -59,6 +59,10 @@ type Response struct {
 	// Secret, if not nil, denotes that this response represents a secret.
 	Secret *Secret `json:"secret" structs:"secret" mapstructure:"secret"`
 
+	// RootCredential, if not nil, denotes that this response contains the root
+	// credential.
+	RootCredential *RootCredential `json:"root_credential" structs:"root_credential" mapstructure:"root_credential"`
+
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for
 	// credential backends.
