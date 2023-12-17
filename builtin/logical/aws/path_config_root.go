@@ -55,6 +55,16 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Template to generate custom IAM usernames",
 			},
+			"rotation_schedule": {
+				Type: framework.TypeString,
+				Description: "CRON-style string that will define the schedule on which " +
+					"rotations should occur",
+			},
+			"rotation_window": {
+				Type: framework.TypeInt,
+				Description: "Specifies the amount of time in which the rotation is allowed " +
+					"to occur starting from a given rotation_schedule",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -103,6 +113,8 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"sts_endpoint":      config.STSEndpoint,
 		"max_retries":       config.MaxRetries,
 		"username_template": config.UsernameTemplate,
+		"rotation_schedule": config.RotationSchedule,
+		"rotation_window":   config.RotationWindow,
 	}
 	return &logical.Response{
 		Data: configData,
@@ -119,6 +131,9 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		usernameTemplate = defaultUserNameTemplate
 	}
 
+	rotationSchedule := data.Get("rotation_schedule").(string)
+	rotationWindow := data.Get("rotation_window").(int)
+
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
@@ -130,6 +145,8 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		Region:           region,
 		MaxRetries:       maxretries,
 		UsernameTemplate: usernameTemplate,
+		RotationSchedule: rotationSchedule,
+		RotationWindow:   rotationWindow,
 	})
 	if err != nil {
 		return nil, err
@@ -144,10 +161,11 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.iamClient = nil
 	b.stsClient = nil
 
-	rotationSchedule := data.Get("rotation_schedule").(string)
-	rotationWindow := data.Get("rotation_window").(int)
-
 	rc, err := logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	return &logical.Response{
 		RootCredential: rc,
 	}, nil
@@ -161,6 +179,8 @@ type rootConfig struct {
 	Region           string `json:"region"`
 	MaxRetries       int    `json:"max_retries"`
 	UsernameTemplate string `json:"username_template"`
+	RotationSchedule string `json:"rotation_schedule"`
+	RotationWindow   int    `json:"rotation_window"`
 }
 
 const pathConfigRootHelpSyn = `

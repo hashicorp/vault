@@ -43,6 +43,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -66,9 +67,6 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/patrickmn/go-cache"
-	uberAtomic "go.uber.org/atomic"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -2431,6 +2429,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupExpiration(expireLeaseStrategyFairsharing); err != nil {
 			return err
 		}
+		c.Logger().Info("Starting Rotation Manager")
+		if err := c.startRotation(); err != nil {
+			return err
+		}
 		if err := c.loadAudits(ctx); err != nil {
 			return err
 		}
@@ -2462,9 +2464,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if err := c.startRotation(); err != nil {
-			return err
-		}
 	} else {
 		var err error
 		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
