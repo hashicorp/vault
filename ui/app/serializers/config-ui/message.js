@@ -27,8 +27,8 @@ export default class MessageSerializer extends ApplicationSerializer {
     const json = super.serialize(...arguments);
     json.message = encodeString(json.message);
     json.link = {
-      title: json.link_title,
-      href: json.link_href,
+      title: json?.link_title || '',
+      href: json?.link_href || '',
     };
 
     delete json.link_title;

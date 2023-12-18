@@ -21,6 +21,7 @@ import { inject as service } from '@ember/service';
 
 export default class MessagesList extends Component {
   @service router;
+  @service store;
   @service flashMessages;
 
   @tracked errorBanner = '';
@@ -63,9 +64,9 @@ export default class MessagesList extends Component {
           this.args.message.startTime = new Date(this.args.message.startTime);
         if (typeof this.args.message.endTime === 'string')
           this.args.message.endTime = new Date(this.args.message.endTime);
-
-        const { id } = yield this.args.message.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
+        this.store.clearDataset('config-ui/message');
+        const { id, title } = yield this.args.message.save();
+        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {

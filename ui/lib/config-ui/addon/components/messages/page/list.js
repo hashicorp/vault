@@ -20,6 +20,8 @@ import { dateFormat } from 'core/helpers/date-format';
 
 export default class MessagesList extends Component {
   @service store;
+  @service router;
+  @service flashMessages;
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -72,5 +74,7 @@ export default class MessagesList extends Component {
   *deleteMessage(message) {
     this.store.clearDataset('config-ui/message');
     yield message.destroyRecord(message.id);
+    this.router.transitionTo('vault.cluster.config-ui.messages');
+    this.flashMessages.success(`Successfully deleted ${message.title}.`);
   }
 }
