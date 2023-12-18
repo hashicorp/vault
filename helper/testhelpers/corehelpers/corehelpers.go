@@ -612,3 +612,23 @@ func NewTestLogger(t testing.T) *TestLogger {
 func (tl *TestLogger) StopLogging() {
 	tl.InterceptLogger.DeregisterSink(tl.sink)
 }
+
+func (n *NoopAudit) EventType() eventlogger.EventType {
+	return eventlogger.EventType(event.AuditType.String())
+}
+
+func (n *NoopAudit) HasFiltering() bool {
+	return false
+}
+
+func (n *NoopAudit) Name() string {
+	return n.Config.MountPath
+}
+
+func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
+	return n.nodeMap
+}
+
+func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
+	return n.nodeIDList
+}
