@@ -166,6 +166,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	b.Logger().Debug("Injecting Root Credential into system backend")
 	return &logical.Response{
 		RootCredential: rc,
 	}, nil

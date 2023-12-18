@@ -1196,6 +1196,40 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
+	// If there is a RootCredential in the response, we must register it
+	// with the RotationManager and push it to the rotation queue.
+	if resp != nil && resp.RootCredential != nil {
+		c.logger.Debug("Root Credential in response detected")
+		matchingMountEntry := c.router.MatchingMountEntry(ctx, req.Path)
+		if matchingMountEntry == nil {
+			c.logger.Error("unable to retrieve mount entry from router")
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		sysView := c.router.MatchingSystemView(ctx, req.Path)
+		if sysView == nil {
+			c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
+			return nil, nil, ErrInternalError
+		}
+
+		registerFunc, funcGetErr := getRotationRegisterFunc(c)
+		if funcGetErr != nil {
+			retErr = multierror.Append(retErr, funcGetErr)
+			return nil, auth, retErr
+		}
+
+		c.logger.Debug("Registering Root Credential to queue")
+		rotationID, err := registerFunc(ctx, req, resp)
+		if err != nil {
+			c.logger.Error("failed to register rotation", "request_path", req.Path, "error", err)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+		resp.RootCredential.RotationID = rotationID
+
+	}
+
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") &&
@@ -1562,40 +1596,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				SealWrap:     sealWrap,
 			}
 		}
-	}
-
-	// If there is a RootCredential in the response, we must register it
-	// with the RotationManager and push it to the rotation queue.
-	if resp != nil && resp.RootCredential != nil {
-		c.logger.Debug("Root Credential in response detected")
-		matchingMountEntry := c.router.MatchingMountEntry(ctx, req.Path)
-		if matchingMountEntry == nil {
-			c.logger.Error("unable to retrieve mount entry from router")
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-
-		sysView := c.router.MatchingSystemView(ctx, req.Path)
-		if sysView == nil {
-			c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
-			return nil, nil, ErrInternalError
-		}
-
-		registerFunc, funcGetErr := getRotationRegisterFunc(c)
-		if funcGetErr != nil {
-			retErr = multierror.Append(retErr, funcGetErr)
-			return nil, auth, retErr
-		}
-
-		c.logger.Debug("Registering Root Credential to queue")
-		rotationID, err := registerFunc(ctx, req, resp)
-		if err != nil {
-			c.logger.Error("failed to register rotation", "request_path", req.Path, "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, auth, retErr
-		}
-		resp.RootCredential.RotationID = rotationID
-
 	}
 
 	// A login request should never return a secret!

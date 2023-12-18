@@ -67,6 +67,9 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
+	"github.com/patrickmn/go-cache"
+	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/grpc"
 )
 
 const (
