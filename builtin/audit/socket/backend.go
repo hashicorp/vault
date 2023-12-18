@@ -461,7 +461,8 @@ func (b *Backend) HasFiltering() bool {
 }
 
 // IsFallback can be used to determine if this audit backend device is intended to
-// be used as a fallback to catch all events that are not written any filtered sinks.
+// be used as a fallback to catch all events that are not written when only using
+// filtered pipelines.
 func (b *Backend) IsFallback() bool {
 	return b.fallback
 }
