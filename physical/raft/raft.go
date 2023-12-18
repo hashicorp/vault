@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -309,6 +310,33 @@ func EnsurePath(path string, dir bool) error {
 		path = filepath.Dir(path)
 	}
 	return os.MkdirAll(path, 0o700)
+}
+
+func NewClusterAddrBridge() *ClusterAddrBridge {
+	return &ClusterAddrBridge{
+		clusterAddressByNodeID: make(map[string]string),
+	}
+}
+
+type ClusterAddrBridge struct {
+	l                      sync.RWMutex
+	clusterAddressByNodeID map[string]string
+}
+
+func (c *ClusterAddrBridge) UpdateClusterAddr(nodeId string, clusterAddr string) {
+	c.l.Lock()
+	defer c.l.Unlock()
+	cu, _ := url.Parse(clusterAddr)
+	c.clusterAddressByNodeID[nodeId] = cu.Host
+}
+
+func (c *ClusterAddrBridge) ServerAddr(id raft.ServerID) (raft.ServerAddress, error) {
+	c.l.RLock()
+	defer c.l.RUnlock()
+	if addr, ok := c.clusterAddressByNodeID[string(id)]; ok {
+		return raft.ServerAddress(addr), nil
+	}
+	return "", fmt.Errorf("could not find cluster addr for id=%s", id)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -1344,7 +1372,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
 		}
-		b.logger.Trace("adding server to raft", "id", peerID)
+		b.logger.Trace("adding server to raft", "id", peerID, "addr", clusterAddr)
 		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 		return future.Error()
 	}
@@ -1353,7 +1381,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		return errors.New("raft storage autopilot is not initialized")
 	}
 
-	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID, "addr", clusterAddr)
 	return b.autopilot.AddServer(&autopilot.Server{
 		ID:          raft.ServerID(peerID),
 		Name:        peerID,
