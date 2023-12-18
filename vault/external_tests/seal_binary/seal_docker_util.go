@@ -63,6 +63,11 @@ const (
 	}
 }
 `
+	// recoveryModeFileName serves as a signal for the softhsmSetupScript to add the `-recovery` flag
+	// when launching Vault.
+	recoveryModeFileName     = "start-in-recovery-mode"
+	recoveryModeFileDir      = "/root/"
+	recoveryModeFileContents = "Script setup-softhsm.sh looks for this file and starts vault in recovery mode if it sees it"
 )
 
 type transitContainerConfig struct {
