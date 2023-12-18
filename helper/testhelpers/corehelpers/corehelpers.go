@@ -632,3 +632,7 @@ func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
 func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
 	return n.nodeIDList
 }
+
+func (n *NoopAudit) IsFallback() bool {
+	return false
+}

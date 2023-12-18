@@ -279,6 +279,10 @@ type Backend interface {
 	// nodes for node and pipeline registration.
 	event.PipelineReader
 
+	// IsFallback can be used to determine if this audit backend device is intended to
+	// be used as a fallback to catch all events that are not written any filtered sinks.
+	IsFallback() bool
+
 	// LogRequest is used to synchronously log a request. This is done after the
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in any way. They should be deep copied if this is

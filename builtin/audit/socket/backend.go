@@ -29,6 +29,7 @@ type Backend struct {
 	sync.Mutex
 	address       string
 	connection    net.Conn
+	fallback      bool
 	formatter     *audit.EntryFormatterWriter
 	formatConfig  audit.FormatterConfig
 	name          string
@@ -73,12 +74,27 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 		return nil, fmt.Errorf("%s: failed to parse 'write_timeout': %w", op, err)
 	}
 
+	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
+	// device catches everything, so it cannot be allowed to filter.
+	var fallback bool
+	if fallbackRaw, ok := conf.Config["fallback"]; ok {
+		fallback, err = strconv.ParseBool(fallbackRaw)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to parse 'fallback': %w", op, err)
+		}
+	}
+
+	if _, ok := conf.Config["filter"]; ok && fallback {
+		return nil, fmt.Errorf("%s: cannot configure a fallback device with a filter: %w", op, event.ErrInvalidParameter)
+	}
+
 	cfg, err := formatterConfig(conf.Config)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
 	}
 
 	b := &Backend{
+		fallback:      fallback,
 		address:       address,
 		formatConfig:  cfg,
 		name:          conf.MountPath,
@@ -442,4 +458,10 @@ func (b *Backend) EventType() eventlogger.EventType {
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
 func (b *Backend) HasFiltering() bool {
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
+}
+
+// IsFallback can be used to determine if this audit backend device is intended to
+// be used as a fallback to catch all events that are not written any filtered sinks.
+func (b *Backend) IsFallback() bool {
+	return b.fallback
 }
