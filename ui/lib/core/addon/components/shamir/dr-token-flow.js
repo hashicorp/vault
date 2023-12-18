@@ -111,7 +111,7 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
       await adapter.generateDrOperationToken({}, { cancel: true });
     }
     this.reset();
-    if (this.args.onCancel) {
+    if (typeof this.args.onCancel === 'function') {
       this.args.onCancel();
     }
   }
