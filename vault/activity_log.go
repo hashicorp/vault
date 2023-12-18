@@ -2017,7 +2017,7 @@ func (p *processCounts) add(client *activity.EntityRecord) {
 	clientType := getClientType(client)
 	_, ok := p.ClientsByType[clientType]
 	if !ok {
-		p.ClientsByType[clientType] = make(map[string]struct{})
+		p.ClientsByType[clientType] = make(clientIDSet)
 	}
 	p.ClientsByType[clientType][client.ClientID] = struct{}{}
 }
@@ -2055,7 +2055,7 @@ func (p *processCounts) countByType(typ string) int {
 func (p *processCounts) clientsByType(typ string) clientIDSet {
 	switch typ {
 	case nonEntityTokenActivityType:
-		clients := make(map[string]struct{})
+		clients := make(clientIDSet)
 		for c := range p.ClientsByType[nonEntityTokenActivityType] {
 			clients[c] = struct{}{}
 		}

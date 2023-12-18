@@ -4276,7 +4276,7 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 	clientID := "client-id"
 	run := func(t *testing.T, clientType string) {
 		t.Helper()
-		isNonEntity := clientType == entityActivityType || clientType == ACMEActivityType
+		isNonEntity := clientType == nonEntityTokenActivityType || clientType == ACMEActivityType
 		record := &activity.EntityRecord{
 			MountAccessor: mount,
 			NamespaceID:   namespace,
@@ -4304,6 +4304,9 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 	t.Run("entity", func(t *testing.T) {
 		run(t, entityActivityType)
 	})
+	t.Run("non entity", func(t *testing.T) {
+		run(t, nonEntityTokenActivityType)
+	})
 	t.Run("secret sync", func(t *testing.T) {
 		run(t, secretSyncAssociationActivityType)
 	})
@@ -4321,7 +4324,7 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 	clientID := "client-id"
 	run := func(t *testing.T, clientType string) {
 		t.Helper()
-		isNonEntity := clientType == entityActivityType || clientType == ACMEActivityType
+		isNonEntity := clientType == nonEntityTokenActivityType || clientType == ACMEActivityType
 		record := &activity.EntityRecord{
 			MountAccessor: mount,
 			NamespaceID:   namespace,
