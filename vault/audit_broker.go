@@ -256,7 +256,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			}
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
-			if len(status.Warnings) > 0 && len(status.CompleteSinks()) < 1 {
+			if len(status.Warnings) > 0 {
 				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
 			}
 		}
@@ -362,7 +362,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			}
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
-			if len(status.Warnings) > 0 && len(status.CompleteSinks()) < 1 {
+			if len(status.Warnings) > 0 {
 				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
 			}
 		}
