@@ -15,6 +15,8 @@ import (
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
+// uiCustomMessagePaths returns a slice of *framework.Path elements that are
+// added to the receiver SystemBackend.
 func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -307,7 +309,8 @@ func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logic
 // parameterValidateAndUse is a helper that retrieves a parameter from the
 // provided framework.FieldData if it exists and is valid then calls the
 // provided setter method (filterSetter) using that parameter value as the
-// argument.
+// argument. If the parameter contains an invalid value, an error is returned.
+// If the parameter does not have a value, nothing happens.
 func parameterValidateAndUse[T bool | string](parameterName string, filterSetter func(T) error, d *framework.FieldData) error {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
@@ -321,6 +324,10 @@ func parameterValidateAndUse[T bool | string](parameterName string, filterSetter
 	return nil
 }
 
+// parameterValidateOrReportMissing is a helper that retrieves a parameter from
+// the provided framework.FieldData if it exists and is valid. If the parameter
+// contains an invalid value, an error is returned. If the parameter does not
+// have a value, an error is returned.
 func parameterValidateOrReportMissing[T string | bool | time.Time](parameterName string, d *framework.FieldData) (T, error) {
 	var empty T
 
@@ -336,6 +343,10 @@ func parameterValidateOrReportMissing[T string | bool | time.Time](parameterName
 	return value.(T), nil
 }
 
+// parameterValidateOrUseDefault is a helper that retrieves a parameter from
+// the provided framework.FieldData if it exists and is valid. If the parameter
+// contains an invalid value, an error is returned. If the parameter does not
+// have a value, its default value is returned.
 func parameterValidateOrUseDefault[T string | bool](parameterName string, d *framework.FieldData) (T, error) {
 	var empty T
 
@@ -351,6 +362,10 @@ func parameterValidateOrUseDefault[T string | bool](parameterName string, d *fra
 	return value.(T), nil
 }
 
+// parameterValidateMap is a helper that retrieves a parameter from the provided
+// framework.FieldData if it exists and is valid. If the parameter contains an
+// invalid value, an error is returned. If the parameter does not have a value,
+// nothing happens.
 func parameterValidateMap(parameterName string, d *framework.FieldData) (map[string]any, error) {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
@@ -475,6 +490,8 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 	}, nil
 }
 
+// handleReadCustomMessage is the operation callback for the READ operation of
+// the custom messages endpoint.
 func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	id, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -512,6 +529,8 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 	}, nil
 }
 
+// handleUpdateCustomMessage is the operation callback for the UPDATE operation
+// of the custom messages endpoint.
 func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	messageID, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -627,6 +646,8 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	}, nil
 }
 
+// handleDeleteCustomMessage is the operation callback for the DELETE operation
+// of the custom messages endpoint.
 func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	id, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -640,6 +661,8 @@ func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logi
 	return nil, nil
 }
 
+// handleCustomMessageExistenceCheck is the function that fills the
+// framework.Path ExistenceCheck role for custom messages.
 func (b *SystemBackend) handleCustomMessageExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	_, ok := d.Schema["id"]
 	return ok, nil
