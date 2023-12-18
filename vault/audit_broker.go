@@ -247,7 +247,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// Audit event ended up in at least 1 sink.
@@ -257,7 +258,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
 			if len(status.Warnings) > 0 {
-				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 		}
 	}
@@ -353,7 +355,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			auditContext = namespace.ContextWithNamespace(auditContext, ns)
 			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// Audit event ended up in at least 1 sink.
@@ -363,7 +366,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
 			if len(status.Warnings) > 0 {
-				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 		}
 	}
