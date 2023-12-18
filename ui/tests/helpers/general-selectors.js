@@ -33,10 +33,10 @@ export const SELECTORS = {
     removeSelected: '[data-test-selected-list-button="delete"]',
   },
   overviewCard: {
-    title: (title) => `[data-test-overview-card="${title}"] h3`,
-    description: (title) => `[data-test-overview-card-container="${title}"] p`,
+    title: (title) => `[data-test-overview-card-title="${title}"]`,
+    description: (title) => `[data-test-overview-card-subtitle="${title}"]`,
     content: (title) => `[data-test-overview-card-content="${title}"]`,
-    action: (title) => `[data-test-overview-card="${title}"] a`,
+    action: (title) => `[data-test-overview-card-container="${title}"] [data-test-action-text]`,
   },
   pagination: {
     next: '.hds-pagination-nav__arrow--direction-next',
