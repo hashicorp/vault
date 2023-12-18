@@ -20,7 +20,7 @@
   </p.levelLeft>
 </PageHeader>
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs sub-nav" aria-label="tabs">
+  <nav class="tabs sub-nav" aria-label="navigation for managing {{this.model.identityType}}">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType this.model.type) as |tab|}}
         <LinkTo

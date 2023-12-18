@@ -171,6 +171,40 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		local:   local,
 	}
 
+	if a.broker != nil {
+		if name != b.Name() {
+			return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, b.Name())
+		}
+
+		for id, node := range b.Nodes() {
+			err := a.broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite))
+			if err != nil {
+				return fmt.Errorf("%s: unable to register nodes for %q: %w", op, name, err)
+			}
+		}
+
+		pipeline := eventlogger.Pipeline{
+			PipelineID: eventlogger.PipelineID(b.Name()),
+			EventType:  b.EventType(),
+			NodeIDs:    b.NodeIDs(),
+		}
+
+		err := a.broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+		if err != nil {
+			return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, name, err)
+		}
+
+		// Establish if we ONLY have pipelines that include filter nodes.
+		// Otherwise, we can rely on the eventlogger broker guarantee.
+		threshold := a.requiredSuccessThresholdSinks()
+
+		// Update the success threshold now that the pipeline is registered.
+		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
+		if err != nil {
+			return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
+		}
+	}
+
 	return nil
 }
 
@@ -341,7 +375,8 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// Audit event ended up in at least 1 sink.
@@ -350,8 +385,9 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			}
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
-			if len(status.Warnings) > 0 && len(status.CompleteSinks()) < 1 {
-				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+			if len(status.Warnings) > 0 {
+				retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// If a fallback device is registered we can rely on that to 'catch all'
@@ -457,7 +493,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			auditContext = namespace.ContextWithNamespace(auditContext, ns)
 			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// Audit event ended up in at least 1 sink.
@@ -466,8 +503,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			}
 
 			// There were errors from inside the pipeline and we didn't write to a sink.
-			if len(status.Warnings) > 0 && len(status.CompleteSinks()) < 1 {
-				return multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+			if len(status.Warnings) > 0 {
+				retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+				return retErr.ErrorOrNil()
 			}
 
 			// If a fallback device is registered we can rely on that to 'catch all'

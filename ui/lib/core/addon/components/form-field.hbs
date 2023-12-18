@@ -96,6 +96,7 @@
       @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
       class="input has-top-margin-xs is-auto-width is-block"
       name={{@attr.name}}
+      id={{@attr.name}}
       data-test-input={{@attr.name}}
       {{on "change" this.onChangeWithEvent}}
     />

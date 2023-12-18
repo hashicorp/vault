@@ -7,6 +7,7 @@
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
       <FilterInput
+        aria-label="Filter libraries"
         placeholder="Filter libraries"
         value={{this.filterValue}}
         @wait={{200}}
