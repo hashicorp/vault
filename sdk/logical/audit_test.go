@@ -17,6 +17,7 @@ func TestLogInput_BexprDatum(t *testing.T) {
 	tests := map[string]struct {
 		Request            *Request
 		Namespace          string
+		ExpectedPath       string
 		ExpectedMountPoint string
 		ExpectedMountType  string
 		ExpectedNamespace  string
@@ -25,6 +26,7 @@ func TestLogInput_BexprDatum(t *testing.T) {
 		"nil-no-namespace": {
 			Request:            nil,
 			Namespace:          "",
+			ExpectedPath:       "",
 			ExpectedMountPoint: "",
 			ExpectedMountType:  "",
 			ExpectedNamespace:  "",
@@ -33,6 +35,7 @@ func TestLogInput_BexprDatum(t *testing.T) {
 		"nil-namespace": {
 			Request:            nil,
 			Namespace:          "juan",
+			ExpectedPath:       "",
 			ExpectedMountPoint: "",
 			ExpectedMountType:  "",
 			ExpectedNamespace:  "juan",
@@ -46,6 +49,7 @@ func TestLogInput_BexprDatum(t *testing.T) {
 				Path:       "IAmAPath",
 			},
 			Namespace:          "juan",
+			ExpectedPath:       "IAmAPath",
 			ExpectedMountPoint: "IAmAMountPoint",
 			ExpectedMountType:  "IAmAMountType",
 			ExpectedNamespace:  "juan",
@@ -63,6 +67,7 @@ func TestLogInput_BexprDatum(t *testing.T) {
 
 			d := l.BexprDatum(tc.Namespace)
 
+			require.Equal(t, tc.ExpectedPath, d.Path)
 			require.Equal(t, tc.ExpectedMountPoint, d.MountPoint)
 			require.Equal(t, tc.ExpectedMountType, d.MountType)
 			require.Equal(t, tc.ExpectedNamespace, d.Namespace)
