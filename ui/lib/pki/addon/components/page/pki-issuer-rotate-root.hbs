@@ -15,8 +15,8 @@
 </PageHeader>
 
 {{#if @newRootModel.id}}
-  <Toolbar>
-    <ToolbarActions>
+  <Toolbar aria-label="manu for managing PKI certificate">
+    <ToolbarActions aria-label="actions for managing PKI certificate">
       <ToolbarLink
         @route="issuers.issuer.cross-sign"
         @type="pen-tool"

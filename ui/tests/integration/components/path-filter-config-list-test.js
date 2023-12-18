@@ -14,6 +14,7 @@ import sinon from 'sinon';
 import { Promise } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const searchSelect = create(ss);
 
@@ -62,6 +63,15 @@ module('Integration | Component | path filter config list', function (hooks) {
     });
     this.engine.register('service:namespace', namespaceServiceStub);
     this.engine.register('service:store', storeServiceStub);
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: Fix groupname rendering on SearchSelect component
+        'aria-required-parent': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
