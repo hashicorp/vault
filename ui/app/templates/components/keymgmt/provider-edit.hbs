@@ -26,7 +26,7 @@
 {{else}}
   {{#if this.isShowing}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-      <nav class="tabs">
+      <nav class="tabs" aria-label="navigation for managing providers">
         <ul>
           <li class={{unless this.viewingKeys "active"}} data-test-kms-provider-tab="details">
             <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
@@ -44,7 +44,10 @@
       </nav>
     </div>
     {{#unless this.viewingKeys}}
-      <Toolbar data-test-kms-provider-details-actions>
+      <Toolbar
+        data-test-kms-provider-details-actions
+        aria-label="options for managing for key/management provider {{@model.id}}"
+      >
         <ToolbarActions>
           {{#if @model.canDelete}}
             <ConfirmAction

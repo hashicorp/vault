@@ -710,6 +710,8 @@ type Core struct {
 	echoDuration                  *uberAtomic.Duration
 	activeNodeClockSkewMillis     *uberAtomic.Int64
 	periodicLeaderRefreshInterval time.Duration
+
+	clusterAddrBridge *raft.ClusterAddrBridge
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -886,6 +888,8 @@ type CoreConfig struct {
 	NumRollbackWorkers int
 
 	PeriodicLeaderRefreshInterval time.Duration
+
+	ClusterAddrBridge *raft.ClusterAddrBridge
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1308,6 +1312,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.events = events
 	c.events.Start()
+
+	c.clusterAddrBridge = conf.ClusterAddrBridge
 
 	return c, nil
 }

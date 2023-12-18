@@ -33,7 +33,8 @@ h6 {
 
 a:hover,
 body,
-pre,
+// default set here is too dark for HDS codeblock
+pre:not(.hds-code-block__code),
 strong,
 table th {
   color: $ui-gray-900;

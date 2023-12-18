@@ -34,7 +34,15 @@
       {{this.inputLabel}}
     </label>
     <div class="control">
-      <Input class="input" @type="password" name="key" @value={{this.key}} autocomplete="off" data-test-shamir-key-input />
+      <Input
+        class="input"
+        @type="password"
+        id="key"
+        name="key"
+        @value={{this.key}}
+        autocomplete="off"
+        data-test-shamir-key-input
+      />
     </div>
   </div>
   <div class="columns is-mobile">
