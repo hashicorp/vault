@@ -26,7 +26,7 @@
       <div class="column has-text-right">
         {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
           <PopupMenu name="secret-menu">
-            <nav class="menu">
+            <nav class="menu" aria-label="navigation for managing transformation item {{@itemPath}}">
               <ul class="menu-list">
                 {{#if @item.updatePath.canRead}}
                   <li class="action">
