@@ -15,6 +15,7 @@ export default class SidebarUserMenuComponent extends Component {
   @service router;
 
   @tracked fakeRenew = false;
+  @tracked showRevokeTokenModal = false;
 
   get hasEntityId() {
     // root users will not have an entity_id because they are not associated with an entity.
@@ -45,6 +46,7 @@ export default class SidebarUserMenuComponent extends Component {
 
   @action
   revokeToken() {
+    this.showRevokeTokenModal = false;
     this.auth.revokeCurrentToken().then(() => {
       this.transitionToRoute('vault.cluster.logout');
     });

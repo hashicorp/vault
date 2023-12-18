@@ -153,7 +153,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-user-menu-trigger]'));
     await click('[data-test-user-menu-trigger]');
-    await click('#logout');
+    await click('[data-test-user-menu-item="logout"]');
     assert
       .dom('[data-test-select="auth-method"]')
       .hasValue('saml', 'Previous auth method selected on logout');
