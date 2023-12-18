@@ -63,13 +63,10 @@ func TestLogInput_BexprDatum(t *testing.T) {
 
 			d := l.BexprDatum(tc.Namespace)
 
-			res, ok := d.(*LogInputBexpr)
-			require.True(t, ok)
-			require.NotNil(t, res)
-			require.Equal(t, tc.ExpectedMountPoint, res.MountPoint)
-			require.Equal(t, tc.ExpectedMountType, res.MountType)
-			require.Equal(t, tc.ExpectedNamespace, res.Namespace)
-			require.Equal(t, tc.ExpectedOperation, res.Operation)
+			require.Equal(t, tc.ExpectedMountPoint, d.MountPoint)
+			require.Equal(t, tc.ExpectedMountType, d.MountType)
+			require.Equal(t, tc.ExpectedNamespace, d.Namespace)
+			require.Equal(t, tc.ExpectedOperation, d.Operation)
 		})
 	}
 }

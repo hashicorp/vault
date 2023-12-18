@@ -32,7 +32,7 @@ type LogInputBexpr struct {
 
 // BexprDatum returns values from a LogInput formatted for use in evaluating go-bexpr boolean expressions.
 // The namespace should be supplied from the current request's context.
-func (l *LogInput) BexprDatum(namespace string) any {
+func (l *LogInput) BexprDatum(namespace string) *LogInputBexpr {
 	var mountPoint string
 	var mountType string
 	var operation string
