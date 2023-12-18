@@ -519,10 +519,19 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 		return fmt.Errorf("%s: file sink creation failed for path %q: %w", op, filePath, err)
 	}
 
-	sinkNode = &audit.SinkWrapper{Name: sinkName, Sink: sinkNode}
+	// wrap the sink node with metrics middleware
+	sinkMetricTimer, err := audit.NewSinkMetricTimer(sinkName, sinkNode)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, filePath, err)
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, audit.MetricCounterAuditSink{})
+	if err != nil {
+		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, filePath, err)
+	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
+	b.nodeMap[sinkNodeID] = sinkMetricCounter
 	return nil
 }
 

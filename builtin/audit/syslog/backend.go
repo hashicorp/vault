@@ -316,10 +316,18 @@ func (b *Backend) configureSinkNode(name string, format string, opts ...event.Op
 	}
 
 	// wrap the sink node with metrics middleware
-	sinkNode := &audit.SinkWrapper{Name: name, Sink: n}
+	sinkMetricTimer, err := audit.NewSinkMetricTimer(name, n)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, name, err)
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(name, sinkMetricTimer, audit.MetricCounterAuditSink{})
+	if err != nil {
+		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, name, err)
+	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
+	b.nodeMap[sinkNodeID] = sinkMetricCounter
 	return nil
 }
 

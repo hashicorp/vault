@@ -529,7 +529,7 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*audit.SinkWrapper)
+				sw, ok := node.(*audit.SinkMetricTimer)
 				require.True(t, ok)
 				require.Equal(t, tc.expectedName, sw.Name)
 			}
