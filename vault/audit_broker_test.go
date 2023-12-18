@@ -133,4 +133,11 @@ func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	res, ok = a.broker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
 	require.True(t, ok)
 	require.Equal(t, 0, res)
+
+	// Re-register a backend that doesn't use filtering.
+	err = a.Register("b2-no-filter", noFilterBackend, false)
+	require.NoError(t, err)
+	res, ok = a.broker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, ok)
+	require.Equal(t, 1, res)
 }
