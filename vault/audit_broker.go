@@ -341,7 +341,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 			status, err := a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
 
 			// Audit event ended up in at least 1 sink.
@@ -457,7 +457,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			auditContext = namespace.ContextWithNamespace(auditContext, ns)
 			status, err := a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
+				return multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			}
 
 			// Audit event ended up in at least 1 sink.
