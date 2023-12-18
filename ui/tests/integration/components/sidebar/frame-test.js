@@ -55,7 +55,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom('.panel-open').exists('Console ui panel opens');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').doesNotExist('Console ui panel closes');
-    assert.dom('[data-test-user-menu]').exists('User menu renders');
+    assert.dom('.hds-side-nav__dropdown').exists('User menu renders');
   });
 
   test('it should render namespace picker in sidebar footer', async function (assert) {

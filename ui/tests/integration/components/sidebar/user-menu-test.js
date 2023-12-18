@@ -23,7 +23,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
       .dom('[data-test-user-menu-trigger] [data-test-icon="user"]')
       .exists('Correct icon renders for menu trigger');
     await click('[data-test-user-menu-trigger]');
-    assert.dom('[data-test-user-menu-content]').exists('User menu content renders');
+    assert.dom('.hds-side-nav__dropdown').exists('User menu content renders');
   });
 
   test('it should render default menu items', async function (assert) {
@@ -33,13 +33,14 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     await render(hbs`<Sidebar::UserMenu />`);
     await click('[data-test-user-menu-trigger]');
 
-    assert.dom('.menu-label').hasText('Token', 'Auth data display name renders');
-    assert.dom('li').exists({ count: 2 }, 'Correct number of menu items render');
-    assert.dom('[data-test-copy-button="root"]').exists('Copy token action renders');
-    assert.dom('#logout').hasText('Log out', 'Log out action renders');
+    assert.dom('[data-test-user-menu-title]').hasText('Token', 'Auth data display name renders');
+    assert.dom('li').exists({ count: 4 }, 'Correct number of menu items render'); // title, separator, copy snippet, logout
+    assert.dom('button.hds-copy-snippet').exists('Copy token button renders');
+    assert.dom('[data-test-user-menu-item="logout"]').hasText('Log out', 'Log out action renders');
   });
 
   test('it should render conditional menu items', async function (assert) {
+    assert.expect(5);
     const router = this.owner.lookup('service:router');
     const transitionStub = sinon.stub(router, 'transitionTo');
     const renewStub = sinon.stub(this.auth, 'renew').resolves();
@@ -63,6 +64,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
       'Route transitions to log out on revoke success'
     );
 
+    await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="renew token"]');
     assert.true(renewStub.calledOnce, 'Auth renew token method called');
   });

@@ -60,7 +60,7 @@ export default create({
   },
   clickLogout: async function (clearNamespace = false) {
     await click('[data-test-user-menu-trigger]');
-    await click('[data-test-user-menu-content] a#logout');
+    await click('[data-test-user-menu-item="logout"]');
     if (clearNamespace) {
       await this.namespaceInput('');
     }
