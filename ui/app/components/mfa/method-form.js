@@ -18,7 +18,7 @@ import { task } from 'ember-concurrency';
  * ```
  * @param {Object} model - MFA method model
  * @param {boolean} [hasActions] - whether the action buttons will be rendered or not
- * @param {onSave} [onSave] - callback when save is successful
+ * @param {onSave} [onSave] - callback when save is successful. used by edit mode only.
  * @param {onClose} [onClose] - callback when cancel is triggered
  */
 export default class MfaMethodForm extends Component {
