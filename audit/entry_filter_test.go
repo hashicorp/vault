@@ -54,7 +54,6 @@ func TestEntryFilter_NewEntryFilter(t *testing.T) {
 			f, err := NewEntryFilter(tc.Filter)
 			switch {
 			case tc.IsErrorExpected:
-				require.Error(t, err)
 				require.ErrorContains(t, err, tc.ExpectedErrorMessage)
 				require.Nil(t, f)
 			default:

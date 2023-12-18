@@ -40,6 +40,8 @@ func TestNewSyslogSink(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := NewSyslogSink(tc.format, tc.opts...)
 
 			if tc.wantErr {

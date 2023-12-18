@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testBackend will create an audit.Backend (which expects to use the eventlogger).
-func testBackend(t *testing.T, path string, config map[string]string) audit.Backend {
+// testAuditBackend will create an audit.Backend (which expects to use the eventlogger).
+func testAuditBackend(t *testing.T, path string, config map[string]string) audit.Backend {
 	t.Helper()
 
 	headersCfg := &AuditedHeadersConfig{
@@ -62,8 +62,8 @@ func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
-	noFilterBackend := testBackend(t, "b2-no-filter", map[string]string{})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	// Should be set to 0 for required sinks (and not found, as we've never registered before).
 	res, ok := a.broker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
@@ -104,8 +104,8 @@ func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
-	filterBackend := testBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
-	noFilterBackend := testBackend(t, "b2-no-filter", map[string]string{})
+	filterBackend := testAuditBackend(t, "b1-filter", map[string]string{"filter": "foo == bar"})
+	noFilterBackend := testAuditBackend(t, "b2-no-filter", map[string]string{})
 
 	err = a.Register("b1-filter", filterBackend, false)
 	require.NoError(t, err)
