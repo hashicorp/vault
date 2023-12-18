@@ -40,7 +40,7 @@ func GetRootCredential(rotationSchedule, path, credentialName string, rotationWi
 	rs := &RootSchedule{
 		Schedule:         cronSc,
 		RotationSchedule: rotationSchedule,
-		RotationWindow:   time.Duration(rotationWindow),
+		RotationWindow:   time.Duration(rotationWindow) * time.Second,
 		// TODO
 		// decide if next rotation should be set here
 		// or when we actually push item into queue
