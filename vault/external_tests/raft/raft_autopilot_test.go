@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"testing"
@@ -221,9 +222,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
-			"snapshot_threshold": "50",
-			"trailing_logs":      "100",
-			"snapshot_interval":  "1s",
+			"trailing_logs": "10",
 		},
 		PerNodePhysicalFactoryConfig: map[int]map[string]interface{}{
 			2: {
@@ -256,12 +255,12 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for 110% of the stabilization time to add nodes
-	stabilizationKickOffWaitDuration := time.Duration(math.Ceil(1.1 * float64(config.ServerStabilizationTime)))
-	time.Sleep(stabilizationKickOffWaitDuration)
+	stabilizationPadded := time.Duration(math.Ceil(1.25 * float64(config.ServerStabilizationTime)))
+	time.Sleep(stabilizationPadded)
 
 	cli := cluster.Cores[0].Client
 	// Write more keys than snapshot_threshold
-	for i := 0; i < 250; i++ {
+	for i := 0; i < 50; i++ {
 		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
 			"test": "data",
 		})
@@ -270,16 +269,24 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		}
 	}
 
+	// Take a snpashot, which should compact the raft log db, which should prevent
+	// followers from getting logs and require that they instead apply a snapshot,
+	// which should allow our snapshot_delay to come into play, which should result
+	// in core2 coming online slower.
+	err = client.Sys().RaftSnapshot(io.Discard)
+	require.NoError(t, err)
+
 	joinAndUnseal(t, cluster.Cores[1], cluster, false, false)
 	joinAndUnseal(t, cluster.Cores[2], cluster, false, false)
 
-	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(config.ServerStabilizationTime)
+	// Add an extra fudge factor, since once the snapshot delay completes it can
+	// take time for the snapshot to actually be applied.
+	core2shouldBeHealthyAt := time.Now().Add(core2SnapshotDelay).Add(stabilizationPadded).Add(5 * time.Second)
 
 	// Wait for enough time for stabilization to complete if things were good
 	// - but they're not good, due to our snapshot_delay.  So we fail if both
 	// nodes are healthy.
-	stabilizationWaitDuration := time.Duration(1.25 * float64(config.ServerStabilizationTime))
-	testhelpers.RetryUntil(t, stabilizationWaitDuration, func() error {
+	testhelpers.RetryUntil(t, stabilizationPadded, func() error {
 		state, err := client.Sys().RaftAutopilotState()
 		if err != nil {
 			return err

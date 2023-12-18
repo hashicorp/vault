@@ -1508,6 +1508,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
+		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1868,6 +1869,9 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
 		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+	}
+	if opts != nil && opts.BaseClusterListenPort != 0 {
+		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {
