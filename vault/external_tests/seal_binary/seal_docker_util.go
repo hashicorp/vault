@@ -102,8 +102,12 @@ func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelpe
 	}
 
 	_, err = runner.BuildImage(context.Background(), containerFile, bCtx,
+<<<<<<< HEAD
 		dockhelper.BuildRemove(true),
 		dockhelper.BuildForceRemove(true),
+=======
+		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
+>>>>>>> origin/main
 		dockhelper.BuildPullParent(true),
 		dockhelper.BuildTags([]string{fmt.Sprintf("%s:%s", imageRepo, imageTag)}))
 	if err != nil {
@@ -121,10 +125,16 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 		Cmd: []string{
 			"server", "-log-level=trace",
 		},
+<<<<<<< HEAD
 		Ports:           []string{"8200/tcp"},
 		Env:             []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
 		LogConsumer:     logConsumer,
 		DoNotAutoRemove: true,
+=======
+		Ports:       []string{"8200/tcp"},
+		Env:         []string{fmt.Sprintf("VAULT_LICENSE=%s", os.Getenv("VAULT_LICENSE")), fmt.Sprintf("VAULT_LOCAL_CONFIG=%s", config)},
+		LogConsumer: logConsumer,
+>>>>>>> origin/main
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating runner: %w", err)
@@ -294,7 +304,17 @@ func initializeVault(client *api.Client, sealType string) ([]string, string, err
 	return keys, token, nil
 }
 
+<<<<<<< HEAD
 func copyConfigToContainer(containerID string, bCtx dockhelper.BuildContext, runner *dockhelper.Runner) error {
+=======
+func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner) error {
+	bCtx := dockhelper.NewBuildContext()
+	bCtx["local.json"] = &dockhelper.FileContents{
+		Data: []byte(config),
+		Mode: 0o644,
+	}
+
+>>>>>>> origin/main
 	tar, err := bCtx.ToTarball()
 	if err != nil {
 		return fmt.Errorf("error creating config tarball: %w", err)
