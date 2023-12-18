@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -7,6 +12,33 @@
 </PageHeader>
 
 <Toolbar>
+  <ToolbarFilters>
+    <SearchSelect
+      @id="filter-by-auth-type"
+      @options={{this.authMethodArrayByType}}
+      @selectLimit="1"
+      @disallowNewItems={{true}}
+      @fallbackComponent="input-search"
+      @onChange={{this.filterAuthType}}
+      @placeholder={{"Filter by auth type"}}
+      @displayInherit={{true}}
+      @inputValue={{if this.selectedAuthType (array this.selectedAuthType)}}
+      @disabled={{if this.selectedAuthName true false}}
+      class="is-marginless"
+    />
+    <SearchSelect
+      @id="filter-by-auth-name"
+      @options={{this.authMethodArrayByName}}
+      @selectLimit="1"
+      @disallowNewItems={{true}}
+      @fallbackComponent="input-search"
+      @onChange={{this.filterAuthName}}
+      @placeholder={{"Filter by auth name"}}
+      @displayInherit={{true}}
+      @inputValue={{if this.selectedAuthName (array this.selectedAuthName)}}
+      class="is-marginless has-left-padding-s"
+    />
+  </ToolbarFilters>
   <ToolbarActions>
     <ToolbarLink @route="vault.cluster.settings.auth.enable" @type="add" data-test-auth-enable>
       Enable new method
@@ -14,7 +46,7 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each (sort-by "path" this.model) as |method|}}
+{{#each (sort-by "path" this.authMethodList) as |method|}}
   <LinkedBlock
     @params={{array "vault.cluster.access.method" method.id}}
     class="list-item-row"
@@ -52,36 +84,32 @@
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu @name="auth-backend-nav">
-            <Confirm as |c|>
-              <nav class="menu">
-                <ul class="menu-list">
+            <nav class="menu">
+              <ul class="menu-list">
+                <li>
+                  <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
+                    View configuration
+                  </LinkTo>
+                </li>
+                {{#if method.canEdit}}
                   <li>
-                    <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>
-                      View configuration
+                    <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
+                      Edit configuration
                     </LinkTo>
                   </li>
-                  {{#if method.canEdit}}
-                    <li>
-                      <LinkTo @route="vault.cluster.settings.auth.configure" @model={{method.id}}>
-                        Edit configuration
-                      </LinkTo>
-                    </li>
-                  {{/if}}
+                {{/if}}
 
-                  {{#if (and (not-eq method.methodType "token") method.canDisable)}}
-                    <li class="action">
-                      <c.Message
-                        @id={{method.id}}
-                        @title="Disable method?"
-                        @message="This may affect access to Vault data."
-                        @triggerText="Disable"
-                        @onConfirm={{perform this.disableMethod method}}
-                      />
-                    </li>
-                  {{/if}}
-                </ul>
-              </nav>
-            </Confirm>
+                {{#if (and (not-eq method.methodType "token") method.canDisable)}}
+                  <ConfirmAction
+                    @isInDropdown={{true}}
+                    @confirmTitle="Disable method?"
+                    @confirmMessage="This may affect access to Vault data."
+                    @buttonText="Disable"
+                    @onConfirmAction={{perform this.disableMethod method}}
+                  />
+                {{/if}}
+              </ul>
+            </nav>
           </PopupMenu>
         </div>
       </div>

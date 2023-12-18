@@ -1,62 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and this.state this.version.isEnterprise)}}
-  <div class="navbar-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
-    <Icon @name="info" />
-    <p data-test-link-status>
+  <Hds::Alert @type="page" @color={{if (eq this.state "connected") "neutral" "warning"}} as |A|>
+    <A.Title data-test-link-status>
       {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to
         <ExternalLink @href="https://portal.cloud.hashicorp.com/sign-in">
           HCP.
         </ExternalLink>
       {{else}}
-        There was an error connecting to HCP. Click
-        <button type="button" class="text-button is-underline" {{on "click" (fn (mut this.showModal))}}>
-          here
-        </button>
-        for more information.
+        Error connecting to HCP
       {{/if}}
-    </p>
-  </div>
+    </A.Title>
+    {{#if this.error}}
+      <A.Description data-test-link-error>
+        Since
+        {{this.timestamp}},
+        {{this.error}}. Check the logs for more information.
+      </A.Description>
+    {{/if}}
+  </Hds::Alert>
 {{/if}}
-
-<Modal
-  @title="HCP Link error"
-  @onClose={{fn (mut this.showModal) false}}
-  @isActive={{this.showModal}}
-  @type="info"
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body">
-    <div>
-      <p class="has-text-weight-bold">Timestamp</p>
-      <p data-test-link-status-timestamp>
-        {{or this.timestamp "Not available"}}
-      </p>
-    </div>
-    <div class="has-top-bottom-margin">
-      <p class="has-text-weight-bold">Error</p>
-      {{#if this.error}}
-        <code class="tag has-text-danger" data-test-link-status-error>
-          {{this.error}}
-        </code>
-      {{else}}
-        <p data-test-link-status-error>
-          Not available
-        </p>
-      {{/if}}
-    </div>
-    <div>
-      <p class="has-text-weight-bold">Additional information</p>
-      <p>Check the logs for more information</p>
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      {{on "click" (fn (mut this.showModal) false)}}
-      data-test-link-status-close
-    >
-      Close
-    </button>
-  </footer>
-</Modal>

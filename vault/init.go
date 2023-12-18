@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -9,11 +12,9 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault/seal"
 
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
@@ -39,7 +40,6 @@ type InitResult struct {
 }
 
 var (
-	initPTFunc                = func(c *Core) func() { return nil }
 	initInProgress            uint32
 	ErrInitWithoutAutoloading = errors.New("cannot initialize storage without an autoloaded license")
 )
@@ -160,7 +160,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
-	if err := LicenseInitCheck(c); err != nil {
+	if err := c.entCheckLicenseInit(); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +263,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, fmt.Errorf("error initializing seal: %w", err)
 	}
 
-	initPTCleanup := initPTFunc(c)
+	initPTCleanup := c.entInitWALPassThrough()
 	if initPTCleanup != nil {
 		defer initPTCleanup()
 	}
@@ -277,7 +277,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	var sealKey []byte
 	var sealKeyShares [][]byte
 
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -325,7 +325,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedShamirRoot:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(sealKey); err != nil {
+		if err := c.seal.GetAccess().SetShamirSealKey(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, fmt.Errorf("failed to set seal key: %w", err)
 		}
@@ -440,12 +440,12 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		return nil
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
+	if c.IsInSealMigrationMode(true) && !c.IsSealMigrated(true) {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 

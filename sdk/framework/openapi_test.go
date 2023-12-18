@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -157,13 +160,13 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		out, err := expandPattern(test.inPattern)
+		paths, _, err := expandPattern(test.inPattern)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sort.Strings(out)
-		if !reflect.DeepEqual(out, test.outPathlets) {
-			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, out)
+		sort.Strings(paths)
+		if !reflect.DeepEqual(paths, test.outPathlets) {
+			t.Fatalf("Test %d: Expected %v got %v", i, test.outPathlets, paths)
 		}
 	}
 }
@@ -185,7 +188,7 @@ func TestOpenAPI_ExpandPattern_ReturnsError(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		_, err := expandPattern(test.inPattern)
+		_, _, err := expandPattern(test.inPattern)
 		if err != test.outError {
 			t.Fatalf("Test %d: Expected %q got %q", i, test.outError, err)
 		}
@@ -193,72 +196,175 @@ func TestOpenAPI_ExpandPattern_ReturnsError(t *testing.T) {
 }
 
 func TestOpenAPI_SplitFields(t *testing.T) {
+	paths, captures, err := expandPattern("some/" + GenericNameRegex("a") + "/path" + OptionalParamRegex("e"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	fields := map[string]*FieldSchema{
 		"a": {Description: "path"},
 		"b": {Description: "body"},
 		"c": {Description: "body"},
 		"d": {Description: "body"},
 		"e": {Description: "path"},
+		"f": {Description: "query", Query: true},
 	}
 
-	pathFields, bodyFields := splitFields(fields, "some/{a}/path/{e}")
+	for index, path := range paths {
+		pathFields, queryFields, bodyFields := splitFields(fields, path, captures)
 
-	lp := len(pathFields)
-	lb := len(bodyFields)
-	l := len(fields)
-	if lp+lb != l {
-		t.Fatalf("split length error: %d + %d != %d", lp, lb, l)
-	}
-
-	for name, field := range pathFields {
-		if field.Description != "path" {
-			t.Fatalf("expected field %s to be in 'path', found in %s", name, field.Description)
+		numPath := len(pathFields)
+		numQuery := len(queryFields)
+		numBody := len(bodyFields)
+		numExpectedDiscarded := 0
+		// The first path generated is expected to be the one omitting the optional parameter field "e"
+		if index == 0 {
+			numExpectedDiscarded = 1
 		}
-	}
-	for name, field := range bodyFields {
-		if field.Description != "body" {
-			t.Fatalf("expected field %s to be in 'body', found in %s", name, field.Description)
+		l := len(fields)
+		if numPath+numQuery+numBody+numExpectedDiscarded != l {
+			t.Fatalf("split length error: %d + %d + %d + %d != %d", numPath, numQuery, numBody, numExpectedDiscarded, l)
+		}
+
+		for name, field := range pathFields {
+			if field.Description != "path" {
+				t.Fatalf("expected field %s to be in 'path', found in %s", name, field.Description)
+			}
+		}
+		for name, field := range queryFields {
+			if field.Description != "query" {
+				t.Fatalf("expected field %s to be in 'query', found in %s", name, field.Description)
+			}
+		}
+		for name, field := range bodyFields {
+			if field.Description != "body" {
+				t.Fatalf("expected field %s to be in 'body', found in %s", name, field.Description)
+			}
 		}
 	}
 }
 
 func TestOpenAPI_SpecialPaths(t *testing.T) {
-	tests := []struct {
-		pattern     string
-		rootPaths   []string
-		root        bool
-		unauthPaths []string
-		unauth      bool
+	tests := map[string]struct {
+		pattern                 string
+		rootPaths               []string
+		rootExpected            bool
+		unauthenticatedPaths    []string
+		unauthenticatedExpected bool
 	}{
-		{"foo", []string{}, false, []string{"foo"}, true},
-		{"foo", []string{"foo"}, true, []string{"bar"}, false},
-		{"foo/bar", []string{"foo"}, false, []string{"foo/*"}, true},
-		{"foo/bar", []string{"foo/*"}, true, []string{"foo"}, false},
-		{"foo/", []string{"foo/*"}, true, []string{"a", "b", "foo/"}, true},
-		{"foo", []string{"foo*"}, true, []string{"a", "fo*"}, true},
-		{"foo/bar", []string{"a", "b", "foo/*"}, true, []string{"foo/baz/*"}, false},
+		"empty": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{},
+			unauthenticatedExpected: false,
+		},
+		"exact-match-unauthenticated": {
+			pattern:                 "foo",
+			rootPaths:               []string{},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: true,
+		},
+		"exact-match-root": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"bar"},
+			unauthenticatedExpected: false,
+		},
+		"asterisk-match-unauthenticated": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-root": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo"},
+			unauthenticatedExpected: false,
+		},
+		"path-ends-with-slash": {
+			pattern:                 "foo/",
+			rootPaths:               []string{"foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "b", "foo*"},
+			unauthenticatedExpected: true,
+		},
+		"asterisk-match-no-slash": {
+			pattern:                 "foo",
+			rootPaths:               []string{"foo*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"a", "fo*"},
+			unauthenticatedExpected: true,
+		},
+		"multiple-root-paths": {
+			pattern:                 "foo/bar",
+			rootPaths:               []string{"a", "b", "foo/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/baz/*"},
+			unauthenticatedExpected: false,
+		},
+		"plus-match-unauthenticated": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/bar"},
+			rootExpected:            false,
+			unauthenticatedPaths:    []string{"foo/+/baz"},
+			unauthenticatedExpected: true,
+		},
+		"plus-match-root": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/baz"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
+		"plus-and-asterisk": {
+			pattern:                 "foo/bar/baz/something",
+			rootPaths:               []string{"foo/+/baz/*"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/+/baz*"},
+			unauthenticatedExpected: true,
+		},
+		"double-plus-good": {
+			pattern:                 "foo/bar/baz",
+			rootPaths:               []string{"foo/+/+"},
+			rootExpected:            true,
+			unauthenticatedPaths:    []string{"foo/bar"},
+			unauthenticatedExpected: false,
+		},
 	}
-	for i, test := range tests {
-		doc := NewOASDocument("version")
-		path := Path{
-			Pattern: test.pattern,
-		}
-		sp := &logical.Paths{
-			Root:            test.rootPaths,
-			Unauthenticated: test.unauthPaths,
-		}
-		err := documentPath(&path, sp, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		result := test.root
-		if doc.Paths["/"+test.pattern].Sudo != result {
-			t.Fatalf("Test (root) %d: Expected %v got %v", i, test.root, result)
-		}
-		result = test.unauth
-		if doc.Paths["/"+test.pattern].Unauthenticated != result {
-			t.Fatalf("Test (unauth) %d: Expected %v got %v", i, test.unauth, result)
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			doc := NewOASDocument("version")
+			path := Path{
+				Pattern: test.pattern,
+			}
+			backend := &Backend{
+				PathsSpecial: &logical.Paths{
+					Root:            test.rootPaths,
+					Unauthenticated: test.unauthenticatedPaths,
+				},
+				BackendType: logical.TypeLogical,
+			}
+
+			if err := documentPath(&path, backend, "kv", doc); err != nil {
+				t.Fatal(err)
+			}
+
+			actual := doc.Paths["/"+test.pattern].Sudo
+			if actual != test.rootExpected {
+				t.Fatalf("Test (root): expected: %v; got: %v", test.rootExpected, actual)
+			}
+
+			actual = doc.Paths["/"+test.pattern].Unauthenticated
+			if actual != test.unauthenticatedExpected {
+				t.Fatalf("Test (unauth): expected: %v; got: %v", test.unauthenticatedExpected, actual)
+			}
+		})
 	}
 }
 
@@ -480,66 +586,6 @@ func TestOpenAPI_Paths(t *testing.T) {
 	})
 }
 
-func TestOpenAPI_OperationID(t *testing.T) {
-	path1 := &Path{
-		Pattern: "foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation:   &PathOperation{},
-			logical.UpdateOperation: &PathOperation{},
-			logical.DeleteOperation: &PathOperation{},
-		},
-	}
-
-	path2 := &Path{
-		Pattern: "Foo/" + GenericNameRegex("id"),
-		Fields: map[string]*FieldSchema{
-			"id": {Type: TypeString},
-		},
-		Operations: map[logical.Operation]OperationHandler{
-			logical.ReadOperation: &PathOperation{},
-		},
-	}
-
-	for _, context := range []string{"", "bar"} {
-		doc := NewOASDocument("version")
-		err := documentPath(path1, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = documentPath(path2, nil, "kv", logical.TypeLogical, doc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		doc.CreateOperationIDs(context)
-
-		tests := []struct {
-			path string
-			op   string
-			opID string
-		}{
-			{"/Foo/{id}", "get", "getFooId"},
-			{"/foo/{id}", "get", "getFooId_2"},
-			{"/foo/{id}", "post", "postFooId"},
-			{"/foo/{id}", "delete", "deleteFooId"},
-		}
-
-		for _, test := range tests {
-			actual := getPathOp(doc.Paths[test.path], test.op).OperationID
-			expected := test.opID
-			if context != "" {
-				expected += "_" + context
-			}
-
-			if actual != expected {
-				t.Fatalf("expected %v, got %v", expected, actual)
-			}
-		}
-	}
-}
-
 func TestOpenAPI_CustomDecoder(t *testing.T) {
 	p := &Path{
 		Pattern:      "foo",
@@ -569,7 +615,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument("version")
-	err := documentPath(p, nil, "kv", logical.TypeLogical, docOrig)
+	err := documentPath(p, &Backend{BackendType: logical.TypeLogical}, "kv", docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -628,11 +674,224 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 	}
 }
 
+func TestOpenAPI_constructOperationID(t *testing.T) {
+	tests := map[string]struct {
+		path                string
+		pathIndex           int
+		pathAttributes      *DisplayAttributes
+		operation           logical.Operation
+		operationAttributes *DisplayAttributes
+		defaultPrefix       string
+		expected            string
+	}{
+		"empty": {
+			path:                "",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.Operation(""),
+			operationAttributes: nil,
+			defaultPrefix:       "",
+			expected:            "",
+		},
+		"simple-read": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.ReadOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-read-path-to-thing",
+		},
+		"simple-write": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-write-path-to-thing",
+		},
+		"operation-verb": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "do-something",
+		},
+		"operation-verb-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationVerb: "do-something"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationVerb: "do-something-else"},
+			defaultPrefix:       "test",
+			expected:            "do-something-else",
+		},
+		"operation-prefix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "my-prefix-write-path-to-thing",
+		},
+		"operation-prefix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-path-to-thing",
+		},
+		"operation-prefix-and-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "my-prefix-write-my-suffix",
+		},
+		"operation-prefix-and-suffix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-better-suffix",
+		},
+		"operation-prefix-verb-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-create-better-suffix",
+		},
+		"operation-prefix-verb-suffix-override": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      &DisplayAttributes{OperationPrefix: "my-prefix", OperationSuffix: "my-suffix", OperationVerb: "Create"},
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "better-suffix", OperationVerb: "Login"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-login-better-suffix",
+		},
+		"operation-prefix-verb": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationVerb: "Login"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-login",
+		},
+		"operation-verb-suffix": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationVerb: "Login", OperationSuffix: "better-suffix"},
+			defaultPrefix:       "test",
+			expected:            "login-better-suffix",
+		},
+		"pipe-delimited-suffix-0": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-suffix0",
+		},
+		"pipe-delimited-suffix-1": {
+			path:                "path/to/thing",
+			pathIndex:           1,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-suffix1",
+		},
+		"pipe-delimited-suffix-2-fallback": {
+			path:                "path/to/thing",
+			pathIndex:           2,
+			pathAttributes:      nil,
+			operation:           logical.UpdateOperation,
+			operationAttributes: &DisplayAttributes{OperationPrefix: "better-prefix", OperationSuffix: "suffix0|suffix1"},
+			defaultPrefix:       "test",
+			expected:            "better-prefix-write-path-to-thing",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := constructOperationID(
+				test.path,
+				test.pathIndex,
+				test.pathAttributes,
+				test.operation,
+				test.operationAttributes,
+				test.defaultPrefix,
+			)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
+func TestOpenAPI_hyphenatedToTitleCase(t *testing.T) {
+	tests := map[string]struct {
+		in       string
+		expected string
+	}{
+		"simple": {
+			in:       "test",
+			expected: "Test",
+		},
+		"two-words": {
+			in:       "two-words",
+			expected: "TwoWords",
+		},
+		"three-words": {
+			in:       "one-two-three",
+			expected: "OneTwoThree",
+		},
+		"not-hyphenated": {
+			in:       "something_like_this",
+			expected: "Something_like_this",
+		},
+	}
+
+	for name, test := range tests {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := hyphenatedToTitleCase(test.in)
+			if actual != test.expected {
+				t.Fatalf("expected: %s; got: %s", test.expected, actual)
+			}
+		})
+	}
+}
+
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
 	doc := NewOASDocument("dummyversion")
-	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
+	if err := documentPath(path, &Backend{
+		PathsSpecial: sp,
+		BackendType:  logical.TypeLogical,
+	}, "kv", doc); err != nil {
 		t.Fatal(err)
 	}
 	doc.CreateOperationIDs("")

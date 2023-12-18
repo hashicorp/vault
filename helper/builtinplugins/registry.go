@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package builtinplugins
 
 import (
@@ -61,8 +64,6 @@ import (
 // Thus, rather than creating multiple instances of it, we only need one.
 var Registry = newRegistry()
 
-var addExternalPlugins = addExtPluginsImpl
-
 // BuiltinFactory is the func signature that should be returned by
 // the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
@@ -101,10 +102,13 @@ func newRegistry() *registry {
 				Factory:           removedFactory,
 				DeprecationStatus: consts.Removed,
 			},
-			"approle":    {Factory: credAppRole.Factory},
-			"aws":        {Factory: credAws.Factory},
-			"azure":      {Factory: credAzure.Factory},
-			"centrify":   {Factory: credCentrify.Factory},
+			"approle": {Factory: credAppRole.Factory},
+			"aws":     {Factory: credAws.Factory},
+			"azure":   {Factory: credAzure.Factory},
+			"centrify": {
+				Factory:           credCentrify.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"cert":       {Factory: credCert.Factory},
 			"cf":         {Factory: credCF.Factory},
 			"gcp":        {Factory: credGcp.Factory},
@@ -146,7 +150,10 @@ func newRegistry() *registry {
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
-			"ad":       {Factory: logicalAd.Factory},
+			"ad": {
+				Factory:           logicalAd.Factory,
+				DeprecationStatus: consts.Deprecated,
+			},
 			"alicloud": {Factory: logicalAlicloud.Factory},
 			"aws":      {Factory: logicalAws.Factory},
 			"azure":    {Factory: logicalAzure.Factory},
@@ -190,7 +197,7 @@ func newRegistry() *registry {
 		},
 	}
 
-	addExternalPlugins(reg)
+	entAddExtPlugins(reg)
 
 	return reg
 }

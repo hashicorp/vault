@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import EmberObject from '@ember/object';
@@ -38,6 +43,7 @@ module('Unit | Component | auth-jwt', function (hooks) {
     cancelTimers();
   });
 
+  // TODO: Flaky
   // test case for https://github.com/hashicorp/vault/issues/12436
   test('it should ignore messages sent from outside the app while waiting for oidc callback', async function (assert) {
     assert.expect(2);

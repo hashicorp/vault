@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -6,6 +12,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
@@ -1414,12 +1421,18 @@ module('Integration | Component | clients/running-total', function (hooks) {
     entity_clients: 20818,
     non_entity_clients: 17850,
   };
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(new Date()));
+    this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   test('it renders with full monthly activity data', async function (assert) {
@@ -1431,15 +1444,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewNonEntity = formatNumber([calculateAverage(NEW_ACTIVITY, 'non_entity_clients')]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <Clients::RunningTotal
+            <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
       @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
       @upgradeData={{this.upgradeDuringActivity}}
       @responseTimestamp={{this.timestamp}}
-      @isHistoricalMonth={{false}}           
+      @isHistoricalMonth={{false}}
     />
     `);
 
@@ -1502,14 +1514,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedTotalNonEntity = formatNumber([TOTAL_USAGE_COUNTS.non_entity_clients]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <Clients::RunningTotal
+            <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
       @byMonthActivityData={{this.byMonthActivityData}}
       @runningTotals={{this.totalUsageCounts}}
       @responseTimestamp={{this.timestamp}}
-      @isHistoricalMonth={{false}} 
+      @isHistoricalMonth={{false}}
     />
     `);
     assert.dom('[data-test-running-total]').exists('running total component renders');
@@ -1545,8 +1556,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedNewNonEntity = formatNumber([singleMonthNew.non_entity_clients]);
 
     await render(hbs`
-      <div id="modal-wormhole"></div>
-      <Clients::RunningTotal
+            <Clients::RunningTotal
       @chartLegend={{this.chartLegend}}
       @selectedAuthMethod={{this.selectedAuthMethod}}
       @byMonthActivityData={{this.singleMonth}}

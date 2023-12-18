@@ -1,0 +1,3 @@
+```release-note:bug
+core/quotas: Only perform ResolveRoleOperation for role-based quotas and lease creation.
+```

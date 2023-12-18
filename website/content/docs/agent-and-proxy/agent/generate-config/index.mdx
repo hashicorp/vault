@@ -1,0 +1,128 @@
+---
+layout: docs
+page_title: agent generate-config - Command
+description: |-
+  Generates a simple Vault Agent configuration file from the given parameters.
+---
+
+# agent generate-config
+
+Generates a simple Vault Agent configuration file from the given parameters.
+
+Currently, the only supported configuration type is `env-template`, which
+helps you generate a configuration file with environment variable templates
+for running Vault Agent in
+[process supervisor](/vault/docs/agent-and-proxy/agent/process-supervisor)
+mode.
+
+For every specified secret `-path`, the command will attempt to generate one or
+multiple `env_template` entries based on the `JSON` key(s) stored in the
+specified secret. If the secret `-path` ends with `/*`, the command will
+attempt to recurse through the secrets tree rooted at the given path,
+generating `env_template` entries for each encountered secret. Currently,
+only [kv-v1](/vault/docs/secrets/kv/kv-v1) and
+[kv-v2](/vault/docs/secrets/kv/kv-v2) paths are supported.
+
+The command specified in the `-exec` option will be used to generate an
+`exec` entry, which will tell Vault Agent which child process to run.
+
+In addition to the `env_template` entries, the command generates an `auto_auth`
+section with `token_file` authentication method. While this method is very
+convenient for local testing, it should **NOT** be used in production. In a
+production environment, please use any other
+[Auto-Auth method](/vault/docs/agent-and-proxy/autoauth/methods) instead.
+
+By default, the file will be generated in the local directory as `agent.hcl`
+unless a path is specified as an argument.
+
+## Example
+
+Before generating a configuration file, let's insert a secret `foo`:
+
+```shell-session
+$ vault kv put -mount=secret foo user="admin" password="s3cr3t"
+```
+
+Generate an agent configuration file which will reference `secret/foo`:
+
+```shell-session
+$ vault agent generate-config \
+         -type="env-template" \
+         -exec="./my-app arg1 arg2" \
+         -namespace="my/ns/" \
+         -path="secret/foo" \
+         my-config.hcl
+```
+
+**Expected output:** 
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Successfully generated "my-config.hcl" configuration file!
+Warning: the generated file uses 'token_file' authentication method, which is not suitable for production environments.
+```
+
+</CodeBlockConfig>
+
+This will produce `my-config.hcl` file in the current directory with contents
+similar to the following:
+
+```hcl
+auto_auth {
+
+  method {
+    type = "token_file"
+
+    config {
+      token_file_path = "/Users/avean/.vault-token"
+    }
+  }
+}
+
+template_config {
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+}
+
+vault {
+  address = "http://localhost:8200"
+}
+
+env_template "FOO_PASSWORD" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "FOO_USER" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.user }}{{ end }}"
+  error_on_missing_key = true
+}
+
+exec {
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_stop_signal       = "SIGTERM"
+}
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included in all commands.
+
+- `type` `(string: <required>)` - The type of configuration file to generate;
+  currently, only `env-template` is supported.
+
+- `path` `(string: "")` - Path to a kv-v1 or kv-v2 secret
+  (e.g. `secret/data/foo`, `kv-v2/my-app/*`); multiple secrets and tail `*`
+  wildcards are allowed.
+
+- `-exec` `(string: "env")` - The command to execute in agent process
+  supervisor mode.
+
+
+## Tutorial
+
+Refer to the [Vault Agent - secrets as environment
+variables](/vault/tutorials/vault-agent/agent-env-vars) tutorial for an
+end-to-end example.

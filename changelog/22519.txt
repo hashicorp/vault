@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix display for "Last Vault Rotation" timestamp for static database roles which was not rendering or copyable
+```

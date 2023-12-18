@@ -1,5 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 ## DOCKERHUB DOCKERFILE ##
-FROM alpine:3.15 as default
+FROM alpine:3.18 as default
 
 ARG BIN_NAME
 # NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
@@ -59,7 +62,7 @@ EXPOSE 8200
 # The entry point script uses dumb-init as the top-level process to reap any
 # zombie processes created by Vault sub-processes.
 #
-# For production derivatives of this container, you shoud add the IPC_LOCK
+# For production derivatives of this container, you should add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY .release/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
@@ -71,7 +74,7 @@ CMD ["server", "-dev"]
 
 
 ## UBI DOCKERFILE ##
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8 as ubi
 
 ARG BIN_NAME
 # PRODUCT_VERSION is the version built dist/$TARGETOS/$TARGETARCH/$BIN_NAME,
@@ -142,7 +145,7 @@ EXPOSE 8200
 # The entry point script uses dumb-init as the top-level process to reap any
 # zombie processes created by Vault sub-processes.
 #
-# For production derivatives of this container, you shoud add the IPC_LOCK
+# For production derivatives of this container, you should add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]

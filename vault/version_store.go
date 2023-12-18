@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -177,6 +180,25 @@ func (c *Core) isMajorVersionFirstMount(ctx context.Context) bool {
 	isMajorVersionUpdate := curr.Segments()[1] > prev.Segments()[1]
 
 	return isMilestoneUpdate || isMajorVersionUpdate
+}
+
+// IsNewInstall consults the version store to check for empty history. This
+// property should hold during unseal of new installations of Vault.
+func (c *Core) IsNewInstall(ctx context.Context) bool {
+	oldestVersion, _, err := c.FindOldestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	newestVersion, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	// We store the Vault version history at the end of unseal setup. During
+	// early unseal on a new install, the old and new versions will both be
+	// empty.
+	return oldestVersion == "" && newestVersion == ""
 }
 
 func IsJWT(token string) bool {

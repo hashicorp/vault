@@ -1,17 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
 @withConfirmLeave()
-export default class PkiIssuerDetailRoute extends Route {
+export default class PkiIssuerEditRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/issuer', this.secretMountPath.currentPath);
-  }
 
   model() {
     const { issuer_ref } = this.paramsFor('issuers/issuer');

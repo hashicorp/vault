@@ -1,0 +1,3 @@
+```release-note:bug
+core: Don't exit just because we think there's a potential deadlock.
+```

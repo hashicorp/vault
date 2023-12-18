@@ -1,14 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -649,13 +655,26 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 }
 
 // Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
-func TestTransit_BatchEncryptionCase13(t *testing.T) {
+func TestTransit_EncryptionCase13(t *testing.T) {
 	var err error
 
 	b, s := createBackendWithStorage(t)
 
+	// Non-batch first
+	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"}
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected invalid request")
+	}
+
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"},
 	}
 
 	batchData := map[string]interface{}{
@@ -667,9 +686,70 @@ func TestTransit_BatchEncryptionCase13(t *testing.T) {
 		Storage:   s,
 		Data:      batchData,
 	}
-	_, err = b.HandleRequest(context.Background(), batchReq)
+	resp, err = b.HandleRequest(context.Background(), batchReq)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
+		t.Fatal("expected request error")
+	}
+}
+
+// Case14: Incorrect input for nonce when we are in convergent version 3 should fail
+func TestTransit_EncryptionCase14(t *testing.T) {
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	cReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/my-key",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"convergent_encryption": "true",
+			"derived":               "true",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), cReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Non-batch first
+	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "context": "SGVsbG8sIFdvcmxkCg==", "nonce": "R80hr9eNUIuFV52e"}
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      data,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected invalid request")
+	}
+
+	batchInput := []interface{}{
+		data,
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	resp, err = b.HandleRequest(context.Background(), batchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
+		t.Fatal("expected request error")
 	}
 }
 
@@ -939,5 +1019,50 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestTransit_EncryptWithRSAPublicKey(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyType := "rsa-2048"
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Import key
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      fmt.Sprintf("encrypt/%s", keyID),
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "bXkgc2VjcmV0IGRhdGE=",
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

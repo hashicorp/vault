@@ -8,11 +8,11 @@ description: |-
 
 # kv metadata
 
-~> **NOTE:** This is a [K/V Version 2](/vault/docs/secrets/kv/kv-v2) secrets
+~> **NOTE:** This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets
 engine command, and not available for Version 1.
 
 The `kv metadata` command has subcommands for interacting with the metadata and
-versions for the versioned secrets (K/V Version 2 secrets engine) at the
+versions for the versioned secrets (KV version 2 secrets engine) at the
 specified path.
 
 ## Usage
@@ -86,12 +86,12 @@ destroyed        false
 
 ### kv metadata put
 
-The `kv metadata put` command can be used to create a blank key in the K/V v2
+The `kv metadata put` command can be used to create a blank key in the KV v2
 secrets engine or to update key configuration for a specified key.
 
 #### Examples
 
-Create a key in the K/V v2 with no data at the key "creds":
+Create a key in the KV v2 with no data at the key "creds":
 
 ```shell-session
 $ vault kv metadata put -mount=secret creds
@@ -130,13 +130,13 @@ set to a duration greater than the backend's, the backend's Delete-Version-After
 setting will be used. Any changes to the Delete-Version-After setting will only
 be applied to new versions.
 
-#### Output Options
+#### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-#### Subcommand Options
+#### Subcommand options
 
 - `-cas-required` `(bool: false)` - If true the key will require the cas
   parameter to be set on all write requests. If false, the backend’s

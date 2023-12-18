@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -14,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -23,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/version"
 	"github.com/mholt/archiver/v3"
-	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
 )

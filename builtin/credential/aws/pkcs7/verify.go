@@ -118,7 +118,7 @@ func verifySignatureAtTime(p7 *PKCS7, signer signerInfo, truststore *x509.CertPo
 	}
 }
 
-// dsaSignature verifies the DSA signature on a PKCS7 document. DSA support was
+// dsaCheckSignature verifies the DSA signature on a PKCS7 document. DSA support was
 // removed from Go's crypto/x509 support prior to Go 1.16. This allows
 // verifying legacy signatures until affected applications can be migrated off
 // of DSA.

@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import {
   parseCommand,
-  extractDataAndFlags,
   logFromResponse,
   logFromError,
-  logErrorFromInput,
+  formattedErrorFromInput,
+  extractFlagsFromStrings,
+  extractDataFromStrings,
 } from 'vault/lib/console-helpers';
 
 module('Unit | Lib | console helpers', function () {
@@ -15,16 +21,16 @@ module('Unit | Lib | console helpers', function () {
       access_key=AKIAJWVN5Z4FOFT7NLNA \
       secret_key=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 \
       region=us-east-1`,
-      expected: [
-        'write',
-        [],
-        'aws/config/root',
-        [
+      expected: {
+        method: 'write',
+        flagArray: [],
+        path: 'aws/config/root',
+        dataArray: [
           'access_key=AKIAJWVN5Z4FOFT7NLNA',
           'secret_key=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',
           'region=us-east-1',
         ],
-      ],
+      },
     },
     {
       name: 'write with space in a value',
@@ -38,11 +44,11 @@ module('Unit | Lib | console helpers', function () {
       insecure_tls=true \
       starttls=false
       `,
-      expected: [
-        'write',
-        [],
-        'auth/ldap/config',
-        [
+      expected: {
+        method: 'write',
+        flagArray: [],
+        path: 'auth/ldap/config',
+        dataArray: [
           'url=ldap://ldap.example.com:3268',
           'binddn=CN=ServiceViewDev,OU=Service Accounts,DC=example,DC=com',
           'bindpass=xxxxxxxxxxxxxxxxxxxxxxxxxx',
@@ -51,7 +57,7 @@ module('Unit | Lib | console helpers', function () {
           'insecure_tls=true',
           'starttls=false',
         ],
-      ],
+      },
     },
     {
       name: 'write with double quotes',
@@ -59,7 +65,7 @@ module('Unit | Lib | console helpers', function () {
       auth/token/create \
       policies="foo"
       `,
-      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+      expected: { method: 'write', flagArray: [], path: 'auth/token/create', dataArray: ['policies=foo'] },
     },
     {
       name: 'write with single quotes',
@@ -67,7 +73,7 @@ module('Unit | Lib | console helpers', function () {
       auth/token/create \
       policies='foo'
       `,
-      expected: ['write', [], 'auth/token/create', ['policies=foo']],
+      expected: { method: 'write', flagArray: [], path: 'auth/token/create', dataArray: ['policies=foo'] },
     },
     {
       name: 'write with unmatched quotes',
@@ -75,30 +81,35 @@ module('Unit | Lib | console helpers', function () {
       auth/token/create \
       policies="'foo"
       `,
-      expected: ['write', [], 'auth/token/create', ["policies='foo"]],
+      expected: { method: 'write', flagArray: [], path: 'auth/token/create', dataArray: ["policies='foo"] },
     },
     {
       name: 'write with shell characters',
       /* eslint-disable no-useless-escape */
       command: `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" default_ttl=1h max_ttl=24h
       `,
-      expected: [
-        'write',
-        [],
-        'database/roles/api-prod',
-        [
+      expected: {
+        method: 'write',
+        flagArray: [],
+        path: 'database/roles/api-prod',
+        dataArray: [
           'db_name=apiprod',
           `creation_statements=CREATE ROLE {{name}} WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO {{name}};`,
           'default_ttl=1h',
           'max_ttl=24h',
         ],
-      ],
+      },
     },
 
     {
       name: 'read with field',
       command: `vault read -field=access_key aws/creds/my-role`,
-      expected: ['read', ['-field=access_key'], 'aws/creds/my-role', []],
+      expected: {
+        method: 'read',
+        flagArray: ['-field=access_key'],
+        path: 'aws/creds/my-role',
+        dataArray: [],
+      },
     },
   ];
 
@@ -110,16 +121,14 @@ module('Unit | Lib | console helpers', function () {
   });
 
   test('#parseCommand: invalid commands', function (assert) {
+    assert.expect(1);
     const command = 'vault kv get foo';
-    const result = parseCommand(command);
-    assert.false(result, 'parseCommand returns false by default');
-
     assert.throws(
       () => {
-        parseCommand(command, true);
+        parseCommand(command);
       },
       /invalid command/,
-      'throws on invalid command when `shouldThrow` is true'
+      'throws on invalid command'
     );
   });
 
@@ -127,14 +136,12 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'read',
       name: 'data fields',
-      input: [
-        [
-          'access_key=AKIAJWVN5Z4FOFT7NLNA',
-          'secret_key=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',
-          'region=us-east-1',
-        ],
-        [],
+      dataInput: [
+        'access_key=AKIAJWVN5Z4FOFT7NLNA',
+        'secret_key=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',
+        'region=us-east-1',
       ],
+      flagInput: [],
       expected: {
         data: {
           access_key: 'AKIAJWVN5Z4FOFT7NLNA',
@@ -147,7 +154,8 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'read',
       name: 'repeated data and a flag',
-      input: [['allowed_domains=example.com', 'allowed_domains=foo.example.com'], ['-wrap-ttl=2h']],
+      dataInput: ['allowed_domains=example.com', 'allowed_domains=foo.example.com'],
+      flagInput: ['-wrap-ttl=2h'],
       expected: {
         data: {
           allowed_domains: ['example.com', 'foo.example.com'],
@@ -159,8 +167,25 @@ module('Unit | Lib | console helpers', function () {
     },
     {
       method: 'read',
+      name: 'triple data',
+      dataInput: [
+        'allowed_domains=example.com',
+        'allowed_domains=foo.example.com',
+        'allowed_domains=dev.example.com',
+      ],
+      flagInput: [],
+      expected: {
+        data: {
+          allowed_domains: ['example.com', 'foo.example.com', 'dev.example.com'],
+        },
+        flags: {},
+      },
+    },
+    {
+      method: 'read',
       name: 'data with more than one equals sign',
-      input: [['foo=bar=baz', 'foo=baz=bop', 'some=value=val'], []],
+      dataInput: ['foo=bar=baz', 'foo=baz=bop', 'some=value=val'],
+      flagInput: [],
       expected: {
         data: {
           foo: ['bar=baz', 'baz=bop'],
@@ -172,7 +197,8 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'read',
       name: 'data with empty values',
-      input: [[`foo=`, 'some=thing'], []],
+      dataInput: [`foo=`, 'some=thing'],
+      flagInput: [],
       expected: {
         data: {
           foo: '',
@@ -184,7 +210,8 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'write',
       name: 'write with force flag',
-      input: [[], ['-force']],
+      dataInput: [],
+      flagInput: ['-force'],
       expected: {
         data: {},
         flags: {
@@ -195,7 +222,8 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'write',
       name: 'write with force short flag',
-      input: [[], ['-f']],
+      dataInput: [],
+      flagInput: ['-f'],
       expected: {
         data: {},
         flags: {
@@ -206,7 +234,8 @@ module('Unit | Lib | console helpers', function () {
     {
       method: 'write',
       name: 'write with GNU style force flag',
-      input: [[], ['--force']],
+      dataInput: [],
+      flagInput: ['--force'],
       expected: {
         data: {},
         flags: {
@@ -217,9 +246,12 @@ module('Unit | Lib | console helpers', function () {
   ];
 
   testExtractCases.forEach(function (testCase) {
-    test(`#extractDataAndFlags: ${testCase.name}`, function (assert) {
-      const { data, flags } = extractDataAndFlags(testCase.method, ...testCase.input);
+    test(`#extractDataFromStrings: ${testCase.name}`, function (assert) {
+      const data = extractDataFromStrings(testCase.dataInput);
       assert.deepEqual(data, testCase.expected.data, 'has expected data');
+    });
+    test(`#extractFlagsFromStrings: ${testCase.name}`, function (assert) {
+      const flags = extractFlagsFromStrings(testCase.flagInput, testCase.method);
       assert.deepEqual(flags, testCase.expected.flags, 'has expected flags');
     });
   });
@@ -464,8 +496,8 @@ module('Unit | Lib | console helpers', function () {
   ];
 
   testCommandCases.forEach(function (testCase) {
-    test(`#logErrorFromInput: ${testCase.name}`, function (assert) {
-      const data = logErrorFromInput(...testCase.args);
+    test(`#formattedErrorFromInput: ${testCase.name}`, function (assert) {
+      const data = formattedErrorFromInput(...testCase.args);
 
       assert.deepEqual(
         data,

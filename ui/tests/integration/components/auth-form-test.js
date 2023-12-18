@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';
@@ -10,6 +15,7 @@ import sinon from 'sinon';
 import Pretender from 'pretender';
 import { create } from 'ember-cli-page-object';
 import authForm from '../../pages/components/auth-form';
+import { validate } from 'uuid';
 
 const component = create(authForm);
 
@@ -87,7 +93,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
-    // ARG TODO research and see if adapter errors changed, but null used to be Bad Request
+    // returns null because test does not return details of failed network request. On the app it will return the details of the error instead of null.
     return component.login().then(() => {
       assert.strictEqual(component.errorText, 'Error Authentication failed: null');
       server.shutdown();
@@ -310,6 +316,37 @@ module('Integration | Component | auth form', function (hooks) {
     await component.oidcRole('foo');
     await component.oidcMoreOptions();
     await component.oidcMountPath('foo-oidc');
+    await component.login();
+
+    server.shutdown();
+  });
+
+  test('it should set nonce value as uuid for okta method type', async function (assert) {
+    assert.expect(1);
+
+    const server = new Pretender(function () {
+      this.post('/v1/auth/okta/login/foo', (req) => {
+        const { nonce } = JSON.parse(req.requestBody);
+        assert.true(validate(nonce), 'Nonce value passed as uuid for okta login');
+        return [
+          200,
+          { 'content-type': 'application/json' },
+          JSON.stringify({
+            auth: {
+              client_token: '12345',
+            },
+          }),
+        ];
+      });
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
+    });
+
+    this.set('cluster', EmberObject.create({}));
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+
+    await component.selectMethod('okta');
+    await component.username('foo');
+    await component.password('bar');
     await component.login();
 
     server.shutdown();

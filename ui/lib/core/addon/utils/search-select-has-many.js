@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * Util to add/remove models in a hasMany relationship via the search-select component
  *
  * @example of using the util within an action in a component

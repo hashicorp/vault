@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 set -e
 
-binpath=${vault_install_dir}/vault
+binpath=${VAULT_INSTALL_DIR}/vault
 
 fail() {
   echo "$1" 1>&2

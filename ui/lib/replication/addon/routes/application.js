@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
@@ -8,16 +13,20 @@ export default Route.extend(ClusterRoute, {
   version: service(),
   store: service(),
   auth: service(),
+  router: service(),
 
   beforeModel() {
+    if (this.auth.activeCluster.replicationRedacted) {
+      // disallow replication access if endpoints are redacted
+      return this.router.transitionTo('vault.cluster');
+    }
     return this.version.fetchFeatures().then(() => {
       return this._super(...arguments);
     });
   },
 
   model() {
-    const activeClusterId = this.auth.activeCluster;
-    return this.store.peekRecord('cluster', activeClusterId);
+    return this.auth.activeCluster;
   },
 
   afterModel(model) {

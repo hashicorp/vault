@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import AuthConfigComponent from './config';
 import { inject as service } from '@ember/service';
@@ -26,8 +31,8 @@ export default AuthConfigComponent.extend({
       const data = this.model.config.serialize();
       data.description = this.model.description;
 
-      // token_type should not be tuneable for the token auth method, default is 'default-service'
-      if (this.model.type === 'token') {
+      // token_type should not be tuneable for the token auth method.
+      if (this.model.methodType === 'token') {
         delete data.token_type;
       }
 

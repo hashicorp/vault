@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -15,7 +18,12 @@ import (
 func (b *SystemBackend) pprofPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "pprof/$",
+			Pattern: "pprof/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "index",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -35,6 +43,11 @@ render pages.`,
 		{
 			Pattern: "pprof/cmdline",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "command-line",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofCmdline,
@@ -50,6 +63,11 @@ render pages.`,
 		},
 		{
 			Pattern: "pprof/goroutine",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "goroutines",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -67,6 +85,11 @@ render pages.`,
 		{
 			Pattern: "pprof/heap",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "memory-allocations-live",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofHeap,
@@ -83,6 +106,11 @@ render pages.`,
 		{
 			Pattern: "pprof/allocs",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "memory-allocations",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofAllocs,
@@ -98,6 +126,11 @@ render pages.`,
 		},
 		{
 			Pattern: "pprof/threadcreate",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "thread-creations",
+			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -116,6 +149,11 @@ render pages.`,
 		{
 			Pattern: "pprof/block",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "blocking",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofBlock,
@@ -132,6 +170,11 @@ render pages.`,
 		{
 			Pattern: "pprof/mutex",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "mutexes",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofMutex,
@@ -147,6 +190,11 @@ render pages.`,
 		},
 		{
 			Pattern: "pprof/profile",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "cpu-profile",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"seconds": {
@@ -171,6 +219,11 @@ render pages.`,
 		{
 			Pattern: "pprof/symbol",
 
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "symbols",
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handlePprofSymbol,
@@ -187,6 +240,11 @@ render pages.`,
 
 		{
 			Pattern: "pprof/trace",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "pprof",
+				OperationVerb:   "execution-trace",
+			},
 
 			Fields: map[string]*framework.FieldSchema{
 				"seconds": {

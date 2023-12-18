@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .regex-label-wrapper {
   display: flex;
   align-items: flex-end;
@@ -24,5 +29,5 @@
   }
 }
 .regex-group-value {
-  margin-right: $spacing-m;
+  margin-right: $spacing-16;
 }

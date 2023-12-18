@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.11.x compared to 1.10. Please read it carefully.
 
-## Elasticsearch Database Secrets Engine
+## Elasticsearch database secrets engine
 
 The Elaticsearch Database Secrets Engine now uses the new `/_security` base API
 path instead of `/_xpack/security` when managing Elasticsearch. If users are on
@@ -23,6 +23,25 @@ API path by setting the [bool config option](/vault/api-docs/secret/databases/el
 
 @include 'pgx-params.mdx'
 
-## Known Issues
+## Known issues
 
 @include 'raft-retry-join-failure.mdx'
+
+@include 'tokenization-rotation-persistence.mdx'
+
+### LDAP pagination issue
+
+There was a regression introduced in 1.11.10 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with an instance that has an existing LDAP Auth configuration.
+
+As a workaround, disable paged searching using the following:
+```shell-session
+vault write auth/ldap/config max_page_size=-1
+```
+
+#### Impacted versions
+
+Affects Vault 1.11.10.
+
+@include 'pki-double-migration-bug.mdx'

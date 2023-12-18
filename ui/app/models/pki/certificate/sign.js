@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import PkiCertificateBaseModel from './base';
@@ -21,7 +26,7 @@ export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/sign/example?help=1`;
   }
-  @attr('string') role;
+  @attr('string') role; // role name to create certificate against for request URL
 
   @attr('string', {
     label: 'CSR',
@@ -29,17 +34,8 @@ export default class PkiCertificateSignModel extends PkiCertificateBaseModel {
   })
   csr;
 
-  @attr({
-    label: 'Not valid after',
-    detailsLabel: 'Issued certificates expire after',
-    subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
-    editType: 'yield',
-  })
-  customTtl;
-
   @attr('boolean', {
-    subText: 'When checked, the CA chain will not include self-signed CA certificates',
+    subText: 'When checked, the CA chain will not include self-signed CA certificates.',
   })
   removeRootsFromChain;
 }

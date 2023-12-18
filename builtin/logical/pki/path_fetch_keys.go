@@ -1,19 +1,32 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 )
 
 func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "keys",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -52,7 +65,7 @@ their identifier and their name (if set).`
 )
 
 func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not list keys until migration has completed"), nil
 	}
 
@@ -88,12 +101,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 func pathKey(b *backend) *framework.Path {
 	pattern := "key/" + framework.GenericNameRegex(keyRefParam)
-	return buildPathKey(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "key",
+	}
+
+	return buildPathKey(b, pattern, displayAttrs)
 }
 
-func buildPathKey(b *backend, pattern string) *framework.Path {
+func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Fields: map[string]*framework.FieldSchema{
 			keyRefParam: {
@@ -128,6 +148,11 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 								Type:        framework.TypeString,
 								Description: `Key Type`,
 								Required:    true,
+							},
+							"subject_key_id": {
+								Type:        framework.TypeString,
+								Description: `RFC 5280 Subject Key Identifier of the public counterpart`,
+								Required:    false,
 							},
 							"managed_key_id": {
 								Type:        framework.TypeString,
@@ -203,7 +228,7 @@ the certificate.
 )
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get keys until migration has completed"), nil
 	}
 
@@ -232,23 +257,40 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		keyTypeParam: string(key.PrivateKeyType),
 	}
 
-	if key.isManagedPrivateKey() {
-		managedKeyUUID, err := key.getManagedKeyUUID()
+	var pkForSkid crypto.PublicKey
+	if key.IsManagedPrivateKey() {
+		managedKeyUUID, err := issuing.GetManagedKeyUUID(key)
 		if err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		keyInfo, err := getManagedKeyInfo(ctx, b, managedKeyUUID)
+		keyInfo, err := managed_key.GetManagedKeyInfo(ctx, b, managedKeyUUID)
 		if err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
+		pkForSkid, err = managed_key.GetManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		if err != nil {
+			return nil, err
+		}
+
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
-		respData[keyTypeParam] = string(keyInfo.keyType)
-		respData[managedKeyIdArg] = string(keyInfo.uuid)
-		respData[managedKeyNameArg] = string(keyInfo.name)
+		respData[keyTypeParam] = string(keyInfo.KeyType)
+		respData[managedKeyIdArg] = string(keyInfo.Uuid)
+		respData[managedKeyNameArg] = string(keyInfo.Name)
+	} else {
+		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
 	return &logical.Response{Data: respData}, nil
 }
@@ -259,7 +301,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not update keys until migration has completed"), nil
 	}
 
@@ -317,7 +359,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not delete keys until migration has completed"), nil
 	}
 
@@ -329,7 +371,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	sc := b.makeStorageContext(ctx, req.Storage)
 	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
-		if keyId == KeyRefNotFound {
+		if keyId == issuing.KeyRefNotFound {
 			// We failed to lookup the key, we should ignore any error here and reply as if it was deleted.
 			return nil, nil
 		}

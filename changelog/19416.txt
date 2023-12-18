@@ -1,0 +1,3 @@
+```release-note:bug
+auth/token: Fix cubbyhole and revocation for legacy service tokens
+```

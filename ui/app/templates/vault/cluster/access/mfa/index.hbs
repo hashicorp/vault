@@ -1,12 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Multi-factor authentication
+      Multi-Factor Authentication
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<div class="box is-fullwidth is-sideless is-flex-between is-box-shadowless is-marginless">
+<div class="box is-fullwidth is-sideless is-flex-between is-shadowless is-marginless">
   <p>
     Configure and enforce multi-factor authentication (MFA) for users logging into Vault, for any
     <br />
@@ -15,14 +20,7 @@
       Learn more
     </DocLink>
   </p>
-  <button
-    type="submit"
-    class="button is-primary"
-    {{on "click" (transition-to "vault.cluster.access.mfa.methods.create")}}
-    data-test-mfa-configure
-  >
-    Configure MFA
-  </button>
+  <Hds::Button @text="Configure MFA" @route="vault.cluster.access.mfa.methods.create" data-test-mfa-configure />
 </div>
 <div class="box is-fullwidth is-shadowless">
   <p>

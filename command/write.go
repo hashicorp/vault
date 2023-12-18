@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -6,8 +9,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -152,7 +155,8 @@ func handleWriteSecretOutput(c *BaseCommand, path string, secret *api.Secret, er
 	}
 	if secret == nil {
 		// Don't output anything unless using the "table" format
-		if Format(c.UI) == "table" {
+		// and even then, don't output anything if a specific field was requested
+		if c.flagField == "" && Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
 		return 0

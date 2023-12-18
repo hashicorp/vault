@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="has-bottom-margin-m" ...attributes>
   {{#if @hideToggle}}
     <fieldset class="field is-grouped is-marginless is-borderless">
@@ -64,8 +69,6 @@
   {{else}}
     <Toggle
       @name={{this.label}}
-      @status="success"
-      @size="small"
       @onChange={{action "toggleEnabled"}}
       @checked={{this.enableTTL}}
       @hideLabel={{true}}

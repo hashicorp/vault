@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { text, create, collection, clickable, visitable } from 'ember-cli-page-object';
 export default create({
   visit: visitable('/vault/policies/:type'),
@@ -11,10 +16,6 @@ export default create({
   findPolicyByName(name) {
     return this.policies.filterBy('name', name)[0];
   },
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
-    testContainer: '#ember-testing',
-  }),
+  delete: clickable('[data-test-confirm-action-trigger]'),
+  confirmDelete: clickable('[data-test-confirm-button]'),
 });

@@ -1,0 +1,3 @@
+```release-note:deprecation
+secrets/ad: Marks the Active Directory (AD) secrets engine as deprecated.
+```

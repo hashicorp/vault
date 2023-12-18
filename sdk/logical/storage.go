@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -88,6 +91,40 @@ func ScanView(ctx context.Context, view ClearableView, cb func(path string)) err
 				frontier = append(frontier, fullPath)
 			} else {
 				cb(fullPath)
+			}
+		}
+	}
+	return nil
+}
+
+// AbortableScanView is used to scan all the keys in a view iteratively,
+// but will abort the scan if cb returns false
+func AbortableScanView(ctx context.Context, view ClearableView, cb func(path string) (cont bool)) error {
+	frontier := []string{""}
+	for len(frontier) > 0 {
+		n := len(frontier)
+		current := frontier[n-1]
+		frontier = frontier[:n-1]
+
+		// List the contents
+		contents, err := view.List(ctx, current)
+		if err != nil {
+			return errwrap.Wrapf(fmt.Sprintf("list failed at path %q: {{err}}", current), err)
+		}
+
+		// Handle the contents in the directory
+		for _, c := range contents {
+			// Exit if the context has been canceled
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			fullPath := current + c
+			if strings.HasSuffix(c, "/") {
+				frontier = append(frontier, fullPath)
+			} else {
+				if !cb(fullPath) {
+					return nil
+				}
 			}
 		}
 	}

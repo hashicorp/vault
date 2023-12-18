@@ -1,19 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .global-flash {
   bottom: 0;
-  left: $spacing-s;
+  left: $spacing-12;
   margin: 10px;
   max-width: $drawer-width;
   position: fixed;
   width: 95%;
   z-index: 300;
-
-  .message {
-    box-shadow: $box-shadow-high;
-    .message-body {
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-      word-break: break-word;
-      display: inline-flex;
-    }
-  }
 }

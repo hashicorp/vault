@@ -1,6 +1,11 @@
-import Mixin from '@ember/object/mixin';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-// this mixin relies on `unload-model-route` also being used
+import Mixin from '@ember/object/mixin';
+import Ember from 'ember';
+
 export default Mixin.create({
   actions: {
     willTransition(transition) {
@@ -10,11 +15,12 @@ export default Mixin.create({
       }
       if (model.hasDirtyAttributes) {
         if (
+          Ember.testing ||
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
         ) {
-          this.unloadModel();
+          model.rollbackAttributes();
           return true;
         } else {
           transition.abort();

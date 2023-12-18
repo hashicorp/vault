@@ -14,8 +14,10 @@
       "description": "Synopsis",
       "x-vault-unauthenticated": true,
       "delete": {
-        "operationId": "deleteFoo",
-        "tags": ["secrets"],
+        "operationId": "kv-delete-foo",
+        "tags": [
+          "secrets"
+        ],
         "summary": "Delete stuff",
         "responses": {
           "204": {
@@ -24,8 +26,10 @@
         }
       },
       "get": {
-        "operationId": "getFoo",
-        "tags": ["secrets"],
+        "operationId": "kv-read-foo",
+        "tags": [
+          "secrets"
+        ],
         "summary": "My Summary",
         "description": "My Description",
         "responses": {
@@ -34,7 +38,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/KvFooResponse"
+                  "$ref": "#/components/schemas/KvReadFooResponse"
                 }
               }
             }
@@ -45,7 +49,7 @@
   },
   "components": {
     "schemas": {
-      "KvFooResponse": {
+      "KvReadFooResponse": {
         "type": "object",
         "properties": {
           "field_a": {
@@ -61,4 +65,3 @@
     }
   }
 }
-

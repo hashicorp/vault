@@ -12,13 +12,7 @@ import (
 	"fmt"
 	"math/big"
 	"time"
-
-	"github.com/hashicorp/vault/internal"
 )
-
-func init() {
-	internal.PatchSha1()
-}
 
 // SignedData is an opaque data structure for creating signed data payloads
 type SignedData struct {

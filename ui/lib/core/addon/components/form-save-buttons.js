@@ -1,15 +1,21 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/form-save-buttons';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
 
 /**
  * @module FormSaveButtons
  * `FormSaveButtons` displays a button save and a cancel button at the bottom of a form.
+ * To show an overall inline error message, use the :error yielded block like shown below.
  *
  * @example
  * ```js
  * <FormSaveButtons @saveButtonText="Save" @isSaving={{isSaving}} @cancelLinkParams={{array
- * "foo.route"}} />
+ * "foo.route"}}>
+ *   <:error>This is an error</:error>
+ * </FormSaveButtons>
  * ```
  *
  * @param [saveButtonText="Save" {String}] - The text that will be rendered on the Save button.
@@ -21,13 +27,11 @@ import layout from '../templates/components/form-save-buttons';
  *
  */
 
-export default Component.extend({
-  layout,
-  tagName: '',
-
-  cancelLink: computed('cancelLinkParams.[]', function () {
-    if (!Array.isArray(this.cancelLinkParams) || !this.cancelLinkParams.length) return;
-    const [route, ...models] = this.cancelLinkParams;
+export default class FormSaveButtons extends Component {
+  get cancelLink() {
+    const { cancelLinkParams } = this.args;
+    if (!Array.isArray(cancelLinkParams) || !cancelLinkParams.length) return null;
+    const [route, ...models] = cancelLinkParams;
     return { route, models };
-  }),
-});
+  }
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package policy
 
 import (
@@ -5,10 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestPolicyTemplating(t *testing.T) {
@@ -43,19 +43,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 }
 `
 
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": credUserpass.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	resp, err := client.Logical().Write("identity/entity", map[string]interface{}{

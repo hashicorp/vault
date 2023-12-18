@@ -1,0 +1,6 @@
+```release-note:improvement
+core (enterprise): support reloading configuration for automated reporting via SIGHUP
+```
+```release-note:improvement
+core (enterprise): license updates trigger a reload of reporting and the activity log 
+```

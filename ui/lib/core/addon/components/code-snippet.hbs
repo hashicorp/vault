@@ -1,0 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div
+  class="has-padding-s has-background-gray-900 border-radius-4 is-flex-between is-flex-center"
+  data-test-code-snippet
+  ...attributes
+>
+  <code class="has-text-white is-size-7">{{@codeBlock}}</code>
+  <Hds::Copy::Button
+    class="has-text-grey-light transparent icon-grey-300"
+    @text="Copy"
+    @textToCopy={{or @clipboardCode @codeBlock}}
+    @isIconOnly={{@isIconOnly}}
+    @container={{@container}}
+    data-test-copy-button={{or @clipboardCode @codeBlock}}
+  />
+</div>

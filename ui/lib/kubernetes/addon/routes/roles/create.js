@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -6,7 +11,7 @@ export default class KubernetesRolesCreateRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const backend = this.secretMountPath.get();
+    const backend = this.secretMountPath.currentPath;
     return this.store.createRecord('kubernetes/role', { backend });
   }
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -23,6 +26,13 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "entity-alias$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "create",
+				OperationSuffix: "alias",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -60,6 +70,12 @@ This field is deprecated, use canonical_id.`,
 		},
 		{
 			Pattern: "entity-alias/id/" + framework.GenericNameRegex("id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "alias-by-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -88,10 +104,26 @@ This field is deprecated, use canonical_id.`,
 					Description: "User provided key-value pairs",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleAliasCreateUpdate(),
-				logical.ReadOperation:   i.pathAliasIDRead(),
-				logical.DeleteOperation: i.pathAliasIDDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleAliasCreateUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -99,6 +131,13 @@ This field is deprecated, use canonical_id.`,
 		},
 		{
 			Pattern: "entity-alias/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "list",
+				OperationSuffix: "aliases-by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathAliasIDList(),
 			},
@@ -172,8 +211,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				}
 				switch {
 				case mountAccessor == "" && name == "":
-					// Just a canonical ID update, maybe
-					if canonicalID == "" {
+					// Check if the canonicalID or the customMetadata are being
+					// updated
+					if canonicalID == "" && !customMetadataExists {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}

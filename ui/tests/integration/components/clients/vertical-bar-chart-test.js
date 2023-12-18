@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, findAll, find, triggerEvent } from '@ember/test-helpers';
@@ -19,11 +24,11 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     ];
     this.set('barChartData', barChartData);
 
-    await render(hbs`   
+    await render(hbs`
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart 
-        @dataset={{this.barChartData}} 
-        @chartLegend={{this.chartLegend}} 
+      <Clients::VerticalBarChart
+        @dataset={{this.barChartData}}
+        @chartLegend={{this.chartLegend}}
       />
     </div>
     `);
@@ -57,11 +62,11 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     ];
     this.set('barChartData', barChartData);
 
-    await render(hbs`   
+    await render(hbs`
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart 
-        @dataset={{this.barChartData}} 
-        @chartLegend={{this.chartLegend}} 
+      <Clients::VerticalBarChart
+        @dataset={{this.barChartData}}
+        @chartLegend={{this.chartLegend}}
       />
     </div>
     `);

@@ -1,12 +1,32 @@
-<button type="button" class="button is-ghost console-close-button" {{action "closeConsole"}}>
-  <Icon @name="x" aria-label="Close console" />
-</button>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="console-close-button">
+  <Hds::Button
+    class="hds-side-nav__icon-button"
+    {{on "click" (action "closeConsole")}}
+    data-test-console-panel-close
+    @text="Close console"
+    @icon="x"
+    @isIconOnly={{true}}
+  />
+</div>
 <div class="console-ui-panel-content">
-  <div class="content">
-    <p class="has-text-grey is-font-mono">
-      The Vault Browser CLI provides an easy way to execute the most common CLI commands, such as write, read, delete, and
-      list.
+  <div class="content has-bottom-margin-l">
+    <p class="has-text-grey is-font-mono has-bottom-margin-s">
+      The Vault Browser CLI provides an easy way to execute common Vault CLI commands, such as write, read, delete, and list.
+      It does not include kv v2 write or put commands. For guidance, type `help`.
     </p>
+    <p class="has-text-grey is-font-mono has-bottom-margin-s">Examples:</p>
+    <p class="has-text-grey is-font-mono">→ Write secrets to kv v1: write &lt;mount&gt;/my-secret foo=bar</p>
+    <p class="has-text-grey is-font-mono">→ List kv v1 secret keys: list &lt;mount&gt;/</p>
+    <p class="has-text-grey is-font-mono">→ Read a kv v1 secret: read &lt;mount&gt;/my-secret</p>
+    <p class="has-text-grey is-font-mono">→ Mount a kv v2 secret engine: write sys/mounts/&lt;mount&gt; type=kv
+      options=version=2</p>
+    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret: kv-get &lt;mount&gt;/secret-path</p>
+    <p class="has-text-grey is-font-mono">→ Read a kv v2 secret's metadata: kv-get &lt;mount&gt;/secret-path -metadata</p>
   </div>
   <Console::OutputLog @outputLog={{this.cliLog}} />
   <Console::CommandInput

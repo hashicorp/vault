@@ -1,0 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package seal;
+
+import "github.com.hashicorp.go.kms.wrapping.v2.types.proto";
+
+option go_package = "github.com/hashicorp/vault/vault/seal";
+
+// MultiWrapValue can be used to keep track of different encryptions of a value.
+message MultiWrapValue {
+  // Generation is used to keep track of when the MultiWrapValue was generated.
+  uint64 generation = 1;
+
+  // Slots has a BlobInfo for each key used to encrypt the value.
+  repeated github.com.hashicorp.go.kms.wrapping.v2.types.BlobInfo slots = 2;
+}

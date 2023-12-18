@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package radius
 
 import (
@@ -20,6 +23,13 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login" + framework.OptionalParamRegex("urlusername"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			OperationVerb:   "login",
+			OperationSuffix: "|with-username",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"urlusername": {
 				Type:        framework.TypeString,

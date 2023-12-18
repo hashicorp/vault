@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { belongsTo } from '@ember-data/model';
 import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';

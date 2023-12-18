@@ -4,14 +4,39 @@ page_title: Audit Devices
 description: Audit devices are mountable devices that log requests and responses in Vault.
 ---
 
-# Audit Devices
+# Audit devices
 
 Audit devices are the components in Vault that collectively keep a detailed log of all
-requests and response to Vault. Because every operation with Vault is an API
-request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
-Vault, including errors.
+requests to Vault, and their responses. Because every operation with Vault is an API
+request/response, when using a single audit device, the audit log contains _every_ interaction with
+the Vault API, including errors - except for a few paths which do not go via the audit system.
 
-## Enabling Multiple Devices
+The non-audited paths are:
+
+    sys/init
+    sys/seal-status
+    sys/seal
+    sys/step-down
+    sys/unseal
+    sys/leader
+    sys/health
+    sys/rekey/init
+    sys/rekey/update
+    sys/rekey/verify
+    sys/rekey-recovery-key/init
+    sys/rekey-recovery-key/update
+    sys/rekey-recovery-key/verify
+    sys/storage/raft/bootstrap
+    sys/storage/raft/join
+    sys/internal/ui/feature-flags
+
+and also, if the relevant listener configuration settings allow unauthenticated access:
+
+    sys/metrics
+    sys/pprof/*
+    sys/in-flight-req
+
+## Enabling multiple devices
 
 When multiple audit devices are enabled, Vault will attempt to send the audit
 logs to all of them. This allows you to not only have redundant copies, but also
@@ -36,7 +61,7 @@ The line contains all of the information for any given request and response. By
 default, all the sensitive information is first hashed before logging in the
 audit logs.
 
-## Sensitive Information
+## Sensitive information
 
 The audit logs contain the full request and response objects for every
 interaction with Vault. The request and response can be matched utilizing a
@@ -59,7 +84,7 @@ While most strings are hashed, Vault does make some exceptions, such as auth and
 
 [auth tune](/vault/docs/commands/auth/tune)
 
-## Enabling/Disabling Audit Devices
+## Enabling/Disabling audit devices
 
 When a Vault server is first initialized, no auditing is enabled. Audit
 devices must be enabled by a root user using `vault audit enable`.
@@ -85,7 +110,11 @@ An audit device can be limited to only within the node's cluster with the [`loca
 When an audit device is disabled, it will stop receiving logs immediately.
 The existing logs that it did store are untouched.
 
-## Blocked Audit Devices
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
+
+## Blocked audit devices
 
 Audit device logs are critically important and ignoring auditing failures opens an avenue for attack. Vault will not respond to requests when no enabled audit devices can record them.
 

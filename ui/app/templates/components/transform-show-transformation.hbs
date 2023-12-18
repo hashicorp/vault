@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{#each this.model.transformFieldAttrs as |attr|}}
     {{#if (eq attr.type "object")}}
@@ -37,15 +42,7 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/encode/" this.cliCommand) as |copyEncodeCommand|}}
-        <code>vault write {{this.model.backend}}/encode/{{this.cliCommand}}</code>
-        <CopyButton
-          class="button is-transparent level-right"
-          @clipboardText={{copyEncodeCommand}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Command copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        <CodeSnippet @codeBlock={{copyEncodeCommand}} @isIconOnly={{true}} />
       {{/let}}
     </div>
   </div>
@@ -59,15 +56,7 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/decode/" this.cliCommand) as |copyDecodeCommand|}}
-        <code>vault write {{this.model.backend}}/decode/{{this.cliCommand}}</code>
-        <CopyButton
-          class="button is-transparent level-right"
-          @clipboardText={{copyDecodeCommand}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Command copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        <CodeSnippet @codeBlock={{copyDecodeCommand}} @isIconOnly={{true}} />
       {{/let}}
     </div>
   </div>

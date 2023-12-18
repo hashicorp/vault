@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="chart-wrapper single-chart-grid" data-test-monthly-usage>
   <div class="chart-header has-bottom-margin-xl">
     <h2 class="chart-title">Vault usage</h2>
@@ -40,8 +45,8 @@
 
   {{#if @verticalBarChartData}}
     <div data-test-monthly-usage-legend class="legend-right">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
     </div>
   {{/if}}
 </div>
