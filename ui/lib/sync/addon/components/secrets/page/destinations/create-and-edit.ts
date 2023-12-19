@@ -55,6 +55,12 @@ export default class DestinationsCreateForm extends Component<Args> {
         };
   }
 
+  willDestroy() {
+    const method = this.args.destination.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.destination[method]();
+    super.willDestroy();
+  }
+
   @task
   @waitFor
   *save(event: Event) {
@@ -96,8 +102,6 @@ export default class DestinationsCreateForm extends Component<Args> {
   @action
   cancel() {
     const { isNew } = this.args.destination;
-    const method = isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.destination[method]();
     this.router.transitionTo(`vault.cluster.sync.secrets.destinations.${isNew ? 'create' : 'destination'}`);
   }
 }
