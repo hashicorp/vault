@@ -24,7 +24,7 @@
     </div>
     <div class="column has-text-right">
       <PopupMenu @name="role-aws-nav" @contentClass="is-wide">
-        <nav class="menu">
+        <nav class="menu" aria-label="navigation for managing A-W-S role {{@item.id}}">
           <ul class="menu-list">
             {{#if @item.generatePath.isPending}}
               <li class="action">

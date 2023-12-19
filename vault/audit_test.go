@@ -530,16 +530,13 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		OuterErr: respErr,
 	}
 	err = b.LogResponse(ctx, logInput, headersConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
 	err = b.LogResponse(ctx, logInput, headersConf)
-	if !strings.Contains(err.Error(), "event not processed by enough 'sink' nodes") {
-		t.Fatalf("err: %v", err)
-	}
+	require.Error(t, err)
+	require.ErrorContains(t, err, "event not processed by enough 'sink' nodes")
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {

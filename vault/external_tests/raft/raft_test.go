@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -54,9 +53,6 @@ type RaftClusterOpts struct {
 }
 
 func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
-	// TODO remove global
-	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
-
 	if ropts == nil {
 		ropts = &RaftClusterOpts{
 			InmemCluster: true,
