@@ -710,6 +710,8 @@ type Core struct {
 	echoDuration                  *uberAtomic.Duration
 	activeNodeClockSkewMillis     *uberAtomic.Int64
 	periodicLeaderRefreshInterval time.Duration
+
+	clusterAddrBridge *raft.ClusterAddrBridge
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -886,6 +888,8 @@ type CoreConfig struct {
 	NumRollbackWorkers int
 
 	PeriodicLeaderRefreshInterval time.Duration
+
+	ClusterAddrBridge *raft.ClusterAddrBridge
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1308,6 +1312,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.events = events
 	c.events.Start()
+
+	c.clusterAddrBridge = conf.ClusterAddrBridge
 
 	return c, nil
 }
@@ -2390,7 +2396,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	// Mark the active time. We do this first so it can be correlated to the logs
 	// for the active startup.
-	c.activeTime = time.Now().UTC()
 
 	if err := postUnsealPhysical(c); err != nil {
 		return err
@@ -2766,7 +2771,6 @@ func (c *Core) preSeal() error {
 	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
-	c.activeTime = time.Time{}
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
