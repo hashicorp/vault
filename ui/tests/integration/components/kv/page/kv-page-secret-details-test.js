@@ -106,7 +106,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
         req.queryParams,
         {
           mount: this.backend,
-          secret_name: this.secret,
+          secret_name: this.path,
         },
         'query params include mount and secret name'
       );
@@ -241,7 +241,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders sync status page alert', async function (assert) {
-    assert.expect(3); // assert count important because confirms request made to fetch sync status twice
+    assert.expect(5); // assert count important because confirms request made to fetch sync status twice
     const destinationName = 'my-destination';
     this.server.create('sync-association', {
       type: 'aws-sm',
@@ -249,9 +249,17 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       mount: this.backend,
       secret_name: this.path,
     });
-    this.server.get('sys/sync/associations/:mount/*name', (schema, req) => {
+    this.server.get(`sys/sync/associations/destinations`, (schema, req) => {
       // this assertion should be hit twice, once on init and again when the 'Refresh' button is clicked
       assert.ok(true, 'request made to fetch sync status');
+      assert.propEqual(
+        req.queryParams,
+        {
+          mount: this.backend,
+          secret_name: this.path,
+        },
+        'query params include mount and secret name'
+      );
       return syncStatusResponse(schema, req);
     });
 
