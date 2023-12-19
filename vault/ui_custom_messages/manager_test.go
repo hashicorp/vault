@@ -180,14 +180,17 @@ func TestManagerPutEntry(t *testing.T) {
 
 	// Check that when an entry is put successfully, the entry is stored with
 	// correct key.
+	now := time.Now()
+	later := now.Add(time.Hour)
+
 	testEntry.Messages["test"] = Message{
 		ID:            "test",
 		Title:         "title",
 		Message:       "message",
 		Authenticated: true,
 		Type:          ModalMessageType,
-		StartTime:     time.Now(),
-		EndTime:       time.Now().Add(time.Hour),
+		StartTime:     now,
+		EndTime:       &later,
 	}
 
 	storage := &logical.InmemStorage{}
@@ -292,15 +295,18 @@ func TestManagerCreateMessage(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
+		now   = time.Now()
+		later = now.Add(time.Hour)
+
 		validMessageTpl = Message{
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(time.Hour),
+			StartTime: now,
+			EndTime:   &later,
 			Message:   "created message",
 			Type:      BannerMessageType,
 		}
 		invalidMessageTpl = Message{
-			StartTime: time.Now().Add(time.Hour),
-			EndTime:   time.Now(),
+			StartTime: later,
+			EndTime:   &now,
 		}
 
 		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
@@ -421,6 +427,10 @@ func TestManagerUpdateMessage(t *testing.T) {
 	var (
 		testManager = NewManager(nil)
 
+		now     = time.Now()
+		later   = now.Add(time.Hour)
+		earlier = now.Add(-1 * time.Hour)
+
 		nsCtx = namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 	)
 
@@ -442,8 +452,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(time.Hour),
-				EndTime:   time.Now().Add(-1 * time.Hour),
+				StartTime: later,
+				EndTime:   &now,
 			},
 			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
@@ -453,8 +463,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: &logical.InmemStorage{},
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(-1 * time.Hour),
-				EndTime:   time.Now().Add(3 * time.Hour),
+				StartTime: earlier,
+				EndTime:   &later,
 			},
 			errorAssertion:   assert.Error,
 			messageAssertion: assert.Nil,
@@ -464,8 +474,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: &testingStorage{putFails: true, getResponseValue: `{"messages":{"abc":{"id":"abc"}}}`},
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now().Add(-5 * time.Hour),
-				EndTime:   time.Now().Add(time.Hour),
+				StartTime: earlier,
+				EndTime:   &later,
 				Type:      BannerMessageType,
 			},
 			errorAssertion:   assert.Error,
@@ -476,8 +486,8 @@ func TestManagerUpdateMessage(t *testing.T) {
 			storage: buildStorageWithEntry(t, "sys/config/ui/custom-messages", `{"messages":{"abc":{"id":"abc"}}}`),
 			message: Message{
 				ID:        "abc",
-				StartTime: time.Now(),
-				EndTime:   time.Now().Add(time.Hour),
+				StartTime: now,
+				EndTime:   &later,
 				Message:   "updated value",
 				Type:      BannerMessageType,
 			},
