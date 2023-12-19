@@ -37,6 +37,7 @@ demo $ kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration 
 * Copy/paste this JSON object into your favourite JWKS->PEM convertor and use this PEM file as the
 PEM file in your `jwt_validation_pubkeys` field when [configuring](/vault/api-docs/auth/jwt#configure) the JWT Auth Method in Vault.
 
+Should the JWT Signing Key used by Kubernetes be rotated, the process should be repeated with the new Key.
 
 ## Using VaultStaticSecrets for imagePullSecrets
 
