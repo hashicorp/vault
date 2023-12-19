@@ -99,9 +99,17 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
-    assert.expect(8);
-    this.server.get(`sys/sync/associations/:mount/*name`, (schema, req) => {
+    assert.expect(9);
+    this.server.get(`sys/sync/associations/destinations`, (schema, req) => {
       assert.ok(true, 'request made to fetch sync status');
+      assert.propEqual(
+        req.queryParams,
+        {
+          mount: this.backend,
+          secret_name: this.secret,
+        },
+        'query params include mount and secret name'
+      );
       // no records so response returns 404
       return syncStatusResponse(schema, req);
     });
