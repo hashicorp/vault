@@ -20,20 +20,19 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
     return `${super.buildURL()}/destinations/${destinationType}/${destinationName}/associations${uri}`;
   }
 
-  query(store, { modelName }, query = {}) {
+  query(store, { modelName }, query) {
+    // endpoint doesn't accept the typical list query param and we don't want to pass options from lazyPaginatedQuery
     const url = this.buildURL(modelName, null, null, 'query', query);
-    return this.ajax(url, 'GET', query);
+    return this.ajax(url, 'GET');
   }
 
   // typically associations are queried for a specific destination which is what the standard query method does
   // in specific cases we can query all associations to access total_associations and total_secrets values
   queryAll() {
-    return this.query(this.store, { modelName: 'sync/association' }, { data: { list: true } }).then(
-      (response) => {
-        const { total_associations, total_secrets } = response.data;
-        return { total_associations, total_secrets };
-      }
-    );
+    return this.query(this.store, { modelName: 'sync/association' }).then((response) => {
+      const { total_associations, total_secrets } = response.data;
+      return { total_associations, total_secrets };
+    });
   }
 
   // fetch associations for many destinations
@@ -50,7 +49,7 @@ export default class SyncAssociationAdapter extends ApplicationAdapter {
 
   // array of association data for each destination a secret is synced to
   fetchSyncStatus({ mount, secretName }) {
-    const url = `${this.buildURL()}/destinations?mount=${mount}&secret_name=${secretName}`;
+    const url = `${this.buildURL()}/${mount}/${secretName}`;
     return this.ajax(url, 'GET').then((resp) => {
       const { associated_destinations } = resp.data;
       const syncData = [];
