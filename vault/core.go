@@ -2711,6 +2711,10 @@ func (c *Core) preSeal() error {
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
+
+	if err := c.stopRotation(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error stopping rotation: %w", err))
+	}
 	c.stopActivityLog()
 	// Clean up the censusAgent on seal
 	if err := c.teardownCensusAgent(); err != nil {
