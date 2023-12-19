@@ -185,16 +185,50 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 
 	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
-	require.EqualError(t, err, "last node must be a sink")
+	require.EqualError(t, err, "last node must be a filter or sink")
 }
 
-// TestProcessManual ensures that the manual processing of a test message works
-// as expected with proper inputs.
-func TestProcessManual(t *testing.T) {
+// TestProcessManualEndWithSink ensures that the manual processing of a test
+// message works as expected with proper inputs, which mean processing ends with
+// sink node.
+func TestProcessManualEndWithSink(t *testing.T) {
 	t.Parallel()
 
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Formatter node
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
+
+	// Sink node
+	sinkId, sinkNode := newSinkNode(t)
+	ids = append(ids, sinkId)
+	nodes[sinkId] = sinkNode
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.NoError(t, err)
+}
+
+// TestProcessManual_EndWithFilter ensures that the manual processing of a test
+// message works as expected with proper inputs, which mean processing ends with
+// sink node.
+func TestProcessManual_EndWithFilter(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
 
 	// Formatter node
 	formatterId, formatterNode := newFormatterNode(t)
@@ -226,6 +260,25 @@ func newSinkNode(t *testing.T) (eventlogger.NodeID, *event.NoopSink) {
 	return sinkId, sinkNode
 }
 
+// TestFilter is a trivial implementation of eventlogger.Node used as a placeholder
+// for Filter nodes in tests.
+type TestFilter struct{}
+
+// Process trivially filters the event preventing it from being processed by subsequent nodes.
+func (f *TestFilter) Process(_ context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	return nil, nil
+}
+
+// Reopen does nothing.
+func (f *TestFilter) Reopen() error {
+	return nil
+}
+
+// Type returns the eventlogger.NodeTypeFormatter type.
+func (f *TestFilter) Type() eventlogger.NodeType {
+	return eventlogger.NodeTypeFilter
+}
+
 // TestFormatter is a trivial implementation of the eventlogger.Node interface
 // used as a place-holder for Formatter nodes in tests.
 type TestFormatter struct{}
@@ -246,6 +299,15 @@ func (f *TestFormatter) Reopen() error {
 // Type returns the eventlogger.NodeTypeFormatter type.
 func (f *TestFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
+}
+
+// newFilterNode creates a new TestFormatter (filter node).
+func newFilterNode(t *testing.T) (eventlogger.NodeID, *TestFilter) {
+	nodeId, err := event.GenerateNodeID()
+	require.NoError(t, err)
+	node := &TestFilter{}
+
+	return nodeId, node
 }
 
 // newFormatterNode creates a new TestFormatter (formatter node).

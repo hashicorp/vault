@@ -72,7 +72,26 @@ type transitContainerConfig struct {
 	KeyNames   []string
 }
 
-func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
+func createBuildContextWithBinary(vaultBinary string) (dockhelper.BuildContext, error) {
+	f, err := os.Open(vaultBinary)
+	if err != nil {
+		return nil, fmt.Errorf("error opening vault binary file: %w", err)
+	}
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("error reading vault binary file: %w", err)
+	}
+
+	bCtx := dockhelper.NewBuildContext()
+	bCtx["vault"] = &dockhelper.FileContents{
+		Data: data,
+		Mode: 0o755,
+	}
+
+	return bCtx, nil
+}
+
+func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelper.BuildContext) error {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ContainerName: "vault",
 		ImageRepo:     imageRepo,
@@ -82,29 +101,10 @@ func createDockerImage(imageRepo, imageTag, vaultBinary string) error {
 		return fmt.Errorf("error creating runner: %w", err)
 	}
 
-	f, err := os.Open(vaultBinary)
-	if err != nil {
-		return fmt.Errorf("error opening vault binary file: %w", err)
-	}
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return fmt.Errorf("error reading vault binary file: %w", err)
-	}
-	bCtx := dockhelper.NewBuildContext()
-	bCtx["vault"] = &dockhelper.FileContents{
-		Data: data,
-		Mode: 0o755,
-	}
-
-	containerFile := fmt.Sprintf(`
-FROM %s:latest
-COPY vault /bin/vault
-`, imageRepo)
-
 	_, err = runner.BuildImage(context.Background(), containerFile, bCtx,
 		dockhelper.BuildRemove(true), dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
-		dockhelper.BuildTags([]string{fmt.Sprintf("hashicorp/vault:%s", imageTag)}))
+		dockhelper.BuildTags([]string{fmt.Sprintf("%s:%s", imageRepo, imageTag)}))
 	if err != nil {
 		return fmt.Errorf("error building docker image: %w", err)
 	}
@@ -112,6 +112,8 @@ COPY vault /bin/vault
 	return nil
 }
 
+// This passes the config in an environment variable, so any changes to local.json
+// on the container will be overwritten if the container restarts
 func createContainerWithConfig(config string, imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ContainerName: "vault",
@@ -136,6 +138,10 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 	}
 
 	return svc, runner, nil
+}
+
+func createContainerFromImage(imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
+	return createContainerWithConfig("", imageRepo, imageTag, logConsumer)
 }
 
 func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockhelper.Service, *transitContainerConfig, error) {
@@ -292,13 +298,7 @@ func initializeVault(client *api.Client, sealType string) ([]string, string, err
 	return keys, token, nil
 }
 
-func copyConfigToContainer(config, containerID string, runner *dockhelper.Runner) error {
-	bCtx := dockhelper.NewBuildContext()
-	bCtx["local.json"] = &dockhelper.FileContents{
-		Data: []byte(config),
-		Mode: 0o644,
-	}
-
+func copyConfigToContainer(containerID string, bCtx dockhelper.BuildContext, runner *dockhelper.Runner) error {
 	tar, err := bCtx.ToTarball()
 	if err != nil {
 		return fmt.Errorf("error creating config tarball: %w", err)

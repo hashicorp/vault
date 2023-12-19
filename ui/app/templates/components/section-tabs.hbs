@@ -6,7 +6,7 @@
 {{#let (tabs-for-auth-section this.model this.tabType this.paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-      <nav class="tabs">
+      <nav class="tabs" aria-label="navigation to manage {{this.model.type}}">
         <ul>
           {{#each tabs as |tab|}}
             <li>
