@@ -531,7 +531,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		!disableEventLogger,
 		c.auditedHeaders)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
