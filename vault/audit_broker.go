@@ -353,8 +353,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 				status, err = a.fallbackBroker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 				if err != nil {
-					myErr := fmt.Errorf("fallback audit failed: %w", err)
-					retErr = multierror.Append(retErr, multierror.Append(myErr, status.Warnings...))
+					retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 				}
 			}
 		}
@@ -472,8 +471,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 				status, err = a.fallbackBroker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 				if err != nil {
-					myErr := fmt.Errorf("fallback audit failed: %w", err)
-					retErr = multierror.Append(retErr, multierror.Append(myErr, status.Warnings...))
+					retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
 				}
 			}
 		}
