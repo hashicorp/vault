@@ -2040,8 +2040,8 @@ func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 }
 
 // countByType returns the count of clients of the given type.
-// The non entity count includes any Tokens, as well as the count of ACME
-// clients
+// The non-entity count includes non-entity clients, Tokens, and the count of
+// ACME clients
 func (p *processCounts) countByType(typ string) int {
 	switch typ {
 	case nonEntityTokenActivityType:
