@@ -61,22 +61,13 @@ func NewAuditBroker(log hclog.Logger, useEventLogger bool) (*AuditBroker, error)
 	// we initialize the broker (and fallback broker), which are left nil otherwise.
 	// In 1.16.x this check should go away and the env var removed.
 	if useEventLogger {
-		// For all brokers, we prevent the overwriting of nodes that are already registered.
-		// However, we allow pipelines to be overwritten as they do not use unique IDs,
-		// instead they use the name (path) of the audit device as their eventlogger.PipelineID.
-		// This means if we run into errors during registration, we want to be able to retry.
-		// We really don't expect to run into issues halfway through registration, but the
-		// risk might be that some nodes are registered with the eventlogger.Broker
-		// and never used (so they would stick around until seal/unseal).
-		opt := []eventlogger.Option{eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)}
-
-		eventBroker, err = eventlogger.NewBroker(opt...)
+		eventBroker, err = eventlogger.NewBroker()
 		if err != nil {
 			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
 		}
 
 		// Set up the broker that will support a single fallback device.
-		fallbackBroker, err = eventlogger.NewBroker(opt...)
+		fallbackBroker, err = eventlogger.NewBroker()
 		if err != nil {
 			return nil, fmt.Errorf("error creating event fallback broker for audit event: %w", err)
 		}
@@ -177,7 +168,7 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		}
 
 		for id, node := range b.Nodes() {
-			err := a.broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite))
+			err := a.broker.RegisterNode(id, node)
 			if err != nil {
 				return fmt.Errorf("%s: unable to register nodes for %q: %w", op, name, err)
 			}
@@ -189,7 +180,7 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 			NodeIDs:    b.NodeIDs(),
 		}
 
-		err := a.broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+		err := a.broker.RegisterPipeline(pipeline)
 		if err != nil {
 			return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, name, err)
 		}
@@ -562,7 +553,7 @@ func registerNodesAndPipeline(broker *eventlogger.Broker, b audit.Backend) error
 	const op = "vault.registerNodesAndPipeline"
 
 	for id, node := range b.Nodes() {
-		err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite))
+		err := broker.RegisterNode(id, node)
 		if err != nil {
 			return fmt.Errorf("%s: unable to register nodes for %q: %w", op, b.Name(), err)
 		}
@@ -574,7 +565,7 @@ func registerNodesAndPipeline(broker *eventlogger.Broker, b audit.Backend) error
 		NodeIDs:    b.NodeIDs(),
 	}
 
-	err := broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+	err := broker.RegisterPipeline(pipeline)
 	if err != nil {
 		return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, b.Name(), err)
 	}
