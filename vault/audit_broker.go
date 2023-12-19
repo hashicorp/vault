@@ -98,10 +98,10 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	if b.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 		existing, err := a.existingFallbackName()
 		if err != nil {
-			return fmt.Errorf("%s: unable to register fallback device for %q: %w", op, name, err)
+			return fmt.Errorf("%s: existing fallback device already registered: %w", op, err)
 		}
 
-		return fmt.Errorf("%s: unable to register fallback device for %q, existing device %q", op, name, existing)
+		return fmt.Errorf("%s: existing fallback device already registered: %q", op, existing)
 	}
 
 	// The reason for this check is due to 1.15.x supporting the env var:
@@ -114,46 +114,17 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 			return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, b.Name())
 		}
 
-		if b.IsFallback() {
-			err := registerNodesAndPipeline(a.fallbackBroker, b)
+		switch {
+		case b.IsFallback():
+			err := a.registerFallback(name, b)
 			if err != nil {
-				return fmt.Errorf("%s: fallback device pipeline registration error: %w", op, err)
+				return fmt.Errorf("%s: unable to register fallback device for %q: %w", op, name, err)
 			}
-
-			// Store the name of the fallback device so that we can check when
-			// deregistering if the device is the single fallback one.
-			a.fallbackName = b.Name()
-
-			// We need to turn on the threshold for the fallback broker, so we can
-			// guarantee it ends up somewhere
-			err = a.fallbackBroker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
+		default:
+			err := a.register(name, b)
 			if err != nil {
-				return fmt.Errorf("%s: unable to configure fallback sink success threshold (1) for %q: %w", op, name, err)
+				return fmt.Errorf("%s: unable to register device for %q: %w", op, name, err)
 			}
-
-			return nil
-		}
-
-		err := registerNodesAndPipeline(a.broker, b)
-		if err != nil {
-			return fmt.Errorf("%s: audit pipeline registration error: %w", op, err)
-		}
-
-		// Establish if we ONLY have pipelines that include filter nodes.
-		// Otherwise, we can rely on the eventlogger broker guarantee.
-		// Check the backend we're working with first, then query the backends
-		// that are already registered.
-		threshold := 0
-		if !b.HasFiltering() {
-			threshold = 1
-		} else {
-			threshold = a.requiredSuccessThresholdSinks()
-		}
-
-		// Update the success threshold now that the pipeline is registered.
-		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
-		if err != nil {
-			return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
 		}
 	}
 
@@ -550,4 +521,58 @@ func (a *AuditBroker) existingFallbackName() (string, error) {
 	}
 
 	return "", fmt.Errorf("%s: existing fallback device name is missing", op)
+}
+
+// registerFallback can be used to register a fallback device, it will also
+// configure the success threshold required for sinks.
+func (a *AuditBroker) registerFallback(name string, backend audit.Backend) error {
+	const op = "vault.(AuditBroker).registerFallback"
+
+	err := registerNodesAndPipeline(a.fallbackBroker, backend)
+	if err != nil {
+		return fmt.Errorf("%s: fallback device pipeline registration error: %w", op, err)
+	}
+
+	// Store the name of the fallback audit device so that we can check when
+	// deregistering if the device is the single fallback one.
+	a.fallbackName = backend.Name()
+
+	// We need to turn on the threshold for the fallback broker, so we can
+	// guarantee it ends up somewhere
+	err = a.fallbackBroker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
+	if err != nil {
+		return fmt.Errorf("%s: unable to configure fallback sink success threshold (1) for %q: %w", op, name, err)
+	}
+
+	return nil
+}
+
+// register can be used to register a normal audit device, it will also
+// calculate and configure the success threshold required for sinks.
+func (a *AuditBroker) register(name string, backend audit.Backend) error {
+	const op = "vault.(AuditBroker).register"
+
+	err := registerNodesAndPipeline(a.broker, backend)
+	if err != nil {
+		return fmt.Errorf("%s: audit pipeline registration error: %w", op, err)
+	}
+
+	// Establish if we ONLY have pipelines that include filter nodes.
+	// Otherwise, we can rely on the eventlogger broker guarantee.
+	// Check the backend we're working with first, then query the backends
+	// that are already registered.
+	threshold := 0
+	if !backend.HasFiltering() {
+		threshold = 1
+	} else {
+		threshold = a.requiredSuccessThresholdSinks()
+	}
+
+	// Update the success threshold now that the pipeline is registered.
+	err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
+	if err != nil {
+		return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
+	}
+
+	return nil
 }
