@@ -10,8 +10,10 @@ import (
 	metrics "github.com/hashicorp/go-metrics"
 )
 
+var _ eventlogger.Node = (*SinkWrapper)(nil)
+
 // SinkWrapper is a wrapper for any kind of Sink Node that processes events
-// containing an auditEvent payload.
+// containing an AuditEvent payload.
 type SinkWrapper struct {
 	Name string
 	Sink eventlogger.Node
@@ -22,7 +24,7 @@ type SinkWrapper struct {
 // once this method returns.
 func (s *SinkWrapper) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	defer func() {
-		auditEvent, ok := e.Payload.(*auditEvent)
+		auditEvent, ok := e.Payload.(*AuditEvent)
 		if ok {
 			metrics.MeasureSince([]string{"audit", s.Name, auditEvent.Subtype.MetricTag()}, e.CreatedAt)
 		}

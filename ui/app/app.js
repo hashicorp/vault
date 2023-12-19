@@ -83,6 +83,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
+          syncDestination: 'vault.cluster.sync.secrets.destinations.destination',
         },
       },
     },
@@ -103,6 +104,15 @@ export default class App extends Application {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
+        },
+      },
+    },
+    sync: {
+      dependencies: {
+        services: ['flash-messages', 'router', 'store', 'version'],
+        externalRoutes: {
+          kvSecretDetails: 'vault.cluster.secrets.backend.kv.secret.details',
+          clientCountDashboard: 'vault.cluster.clients.dashboard',
         },
       },
     },

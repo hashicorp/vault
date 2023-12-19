@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"math"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -46,7 +45,6 @@ type JobManager struct {
 	// track queues by index for round robin worker assignment
 	queuesIndex       []string
 	lastQueueAccessed int
-	stopped           atomic.Bool
 }
 
 // NewJobManager creates a job manager, with an optional name
@@ -99,12 +97,7 @@ func (j *JobManager) Stop() {
 		j.logger.Trace("terminating job manager...")
 		close(j.quit)
 		j.workerPool.stop()
-		j.stopped.Store(true)
 	})
-}
-
-func (j *JobManager) Stopped() bool {
-	return j.stopped.Load()
 }
 
 // AddJob adds a job to the given queue, creating the queue if it doesn't exist

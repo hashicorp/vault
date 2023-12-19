@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -694,24 +695,27 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		oldKey bool
 		err    error
 	}
+
 	resultCh := make(chan *result)
-	stopCh := make(chan struct{})
+	var resultWg sync.WaitGroup
 	defer func() {
-		close(stopCh)
+		// Consume all the discarded results
+		go func() {
+			for range resultCh {
+			}
+		}()
+		resultWg.Wait()
 		close(resultCh)
 	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
-		select {
-		case <-stopCh:
-		default:
-			resultCh <- &result{
-				name:   name,
-				pt:     plaintext,
-				oldKey: oldKey,
-				err:    err,
-			}
+		resultCh <- &result{
+			name:   name,
+			pt:     plaintext,
+			oldKey: oldKey,
+			err:    err,
 		}
+		resultWg.Done()
 	}
 
 	decrypt := func(sealWrapper *SealWrapper) {
@@ -729,6 +733,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			for _, sealWrapper := range wrappersByPriority {
 				keyId, err := sealWrapper.Wrapper.KeyId(ctx)
 				if err != nil {
+					resultWg.Add(1)
 					go reportResult(sealWrapper.Name, nil, false, err)
 					continue
 				}
@@ -740,11 +745,13 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		}
 	}
 
+	resultWg.Add(1)
 	go decrypt(first)
 	for _, sealWrapper := range wrappersByPriority {
 		sealWrapper := sealWrapper
 		if sealWrapper != first {
 			timer := time.AfterFunc(wrapperDecryptHighPriorityHeadStart, func() {
+				resultWg.Add(1)
 				decrypt(sealWrapper)
 			})
 			defer timer.Stop()

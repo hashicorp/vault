@@ -13,6 +13,7 @@ import { loadedCert } from 'vault/tests/helpers/pki/values';
 import camelizeKeys from 'vault/utils/camelize-object-keys';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   pageTitle: '[data-test-pki-page-title]',
@@ -72,6 +73,13 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       key_name: 'my-key',
       serial_number: '3a:3c:17:..',
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {

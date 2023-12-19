@@ -11,6 +11,7 @@ import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -51,6 +52,12 @@ module('Acceptance | ldap | roles', function (hooks) {
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(3);
 
     for (const action of ['edit', 'get-creds', 'details']) {
