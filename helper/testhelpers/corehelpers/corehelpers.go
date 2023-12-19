@@ -19,6 +19,8 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/mitchellh/go-testing-interface"
+
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/internal/observability/event"
@@ -27,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/go-testing-interface"
 )
 
 var (
@@ -561,6 +562,11 @@ func NewTestLogger(t testing.T) *TestLogger {
 	var logPath string
 	output := os.Stderr
 
+	logLevel := hclog.Trace
+	logLevelRaw := os.Getenv("VAULT_TEST_LOG_LEVEL")
+	if logLevelRaw != "" {
+		logLevel = hclog.LevelFromString(logLevelRaw)
+	}
 	logDir := os.Getenv("VAULT_TEST_LOG_DIR")
 	if logDir != "" {
 		logPath = filepath.Join(logDir, t.Name()+".log")
@@ -586,7 +592,7 @@ func NewTestLogger(t testing.T) *TestLogger {
 	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
-		Level:             hclog.Trace,
+		Level:             logLevel,
 		IndependentLevels: true,
 	})
 	logger.RegisterSink(sink)
