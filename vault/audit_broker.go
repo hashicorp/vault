@@ -326,6 +326,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			e, err := audit.NewEvent(audit.RequestType)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
+				return retErr.ErrorOrNil()
 			}
 
 			e.Data = in
@@ -428,7 +429,8 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 		if len(a.backends) > 0 {
 			e, err := audit.NewEvent(audit.ResponseType)
 			if err != nil {
-				return multierror.Append(retErr, err)
+				retErr = multierror.Append(retErr, err)
+				return retErr.ErrorOrNil()
 			}
 
 			e.Data = in
