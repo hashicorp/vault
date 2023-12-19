@@ -4,32 +4,35 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/logical"
 
 	log "github.com/hashicorp/go-hclog"
 
-	"github.com/robfig/cron/v3"
-
 	"github.com/hashicorp/vault/sdk/queue"
 )
 
-const parseOptions = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
-
-var parser = cron.NewParser(parseOptions)
+const (
+	fairshareRotationWorkersOverrideVar = "VAULT_CREDENTIAL_ROTATION_WORKERS"
+)
 
 type RotationManager struct {
 	core   *Core
 	logger log.Logger
 	mu     sync.Mutex
 
-	queue *queue.PriorityQueue
-	done  chan struct{}
+	jobManager  *fairshare.JobManager
+	queue       *queue.PriorityQueue
+	done        chan struct{}
+	quitContext context.Context
 
 	router   *Router
 	backends func() *[]MountEntry // list of logical and auth backends, remember to call RUnlock
@@ -71,6 +74,20 @@ func (rm *RotationManager) Start() error {
 	return nil
 }
 
+// Stop is used to prevent further automatic rotations.
+func (rm *RotationManager) Stop() error {
+	// Stop all the pending rotation timers
+	rm.logger.Debug("stop triggered")
+	defer rm.logger.Debug("finished stopping")
+
+	rm.jobManager.Stop()
+
+	// close done channel
+	close(rm.done)
+
+	return nil
+}
+
 func (rm *RotationManager) CheckQueue() error {
 	// loop runs forever, so break whenever you get to the first credential that doesn't need updating
 	for {
@@ -92,7 +109,6 @@ func (rm *RotationManager) CheckQueue() error {
 			break // this item is not ripe yet, which means all later items are also unripe, so exit the check loop
 		}
 
-		rm.logger.Debug("Item ready for rotation; making rotation request to sdk/backend")
 		var re *rotationEntry
 		entry, ok := i.Value.(*rotationEntry)
 		if !ok {
@@ -113,21 +129,23 @@ func (rm *RotationManager) CheckQueue() error {
 			}
 			break
 		}
-
+		rm.logger.Debug("Item ready for rotation; making rotation request to sdk/backend")
 		// do rotation
 		req := &logical.Request{
 			Operation: logical.RotationOperation,
-			Path:      "path",
+			Path:      re.Path,
 		}
-		_, err = rm.router.Route(context.Background(), req)
+		// TODO figure out how to get namespace with context here
+		// ctx := namespace.ContextWithNamespace(rm.quitContext, n)
+		_, err = rm.router.Route(rm.quitContext, req)
 		if errors.Is(err, logical.ErrUnsupportedOperation) {
 			rm.logger.Info("unsupported")
 			continue
 		} else if err != nil {
 			// requeue with backoff
 			rm.logger.Info("other rotate error", "err", err)
-			// TODO: We can either check the window here, or let the priority check above handle it
-			i.Priority = i.Priority + 10
+			// TODO figure out rollback procedure here, for now, pushing back into queue
+			// one idea is to create a new rotation entry with updated priority and try later
 		}
 
 		// success
@@ -171,19 +189,11 @@ func (rm *RotationManager) CheckQueue() error {
 	return nil
 }
 
-// Rotate is used to rotate a credential named by the given rotationID
-func (r *RotationManager) Rotate(ctx context.Context, rotationID string) error {
-	r.logger.Debug("RotationManager.Rotate called")
-	// TODO: rotate
-
-	return nil
-}
-
 // Register takes a request and response with an associated StaticSecret. The
 // secret gets assigned a RotationID and the management of the rotation is
 // assumed by the rotation manager.
-func (r *RotationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
-	r.logger.Debug("Starting registration")
+func (rm *RotationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
+	rm.logger.Debug("Starting registration")
 
 	// Ignore if there is no root cred
 	if resp == nil || resp.RootCredential == nil {
@@ -194,7 +204,7 @@ func (r *RotationManager) Register(ctx context.Context, req *logical.Request, re
 
 	// Create a rotation entry. We use TokenLength because that is what is used
 	// by ExpirationManager
-	r.logger.Debug("Generating random rotation ID")
+	rm.logger.Debug("Generating random rotation ID")
 	rotationRand, err := base62.Random(TokenLength)
 	if err != nil {
 		return "", err
@@ -222,13 +232,12 @@ func (r *RotationManager) Register(ctx context.Context, req *logical.Request, re
 		ExpireTime: resp.RootCredential.Schedule.Schedule.Next(issueTime),
 		namespace:  ns,
 	}
-	r.logger.Debug("Created rotation entry")
 
 	// lock and populate the queue
 	// @TODO figure out why locking is leading to infinite loop
 	// r.core.stateLock.Lock()
 
-	r.logger.Debug("Creating queue item")
+	rm.logger.Debug("Creating queue item")
 
 	// @TODO for different cases, update rotation entry if it is already in queue
 	// for now, assuming it is a fresh root credential and the schedule is not being updated
@@ -238,11 +247,11 @@ func (r *RotationManager) Register(ctx context.Context, req *logical.Request, re
 		Priority: re.ExpireTime.Unix(),
 	}
 
-	r.logger.Debug("Pushing item into credential queue")
+	rm.logger.Debug("Pushing item into credential queue")
 
-	if err := r.queue.Push(item); err != nil {
+	if err := rm.queue.Push(item); err != nil {
 		// TODO handle error
-		r.logger.Debug("Error pushing item into credential queue")
+		rm.logger.Debug("Error pushing item into credential queue")
 		return "", err
 	}
 
@@ -250,18 +259,58 @@ func (r *RotationManager) Register(ctx context.Context, req *logical.Request, re
 	return re.RotationID, nil
 }
 
+func getNumRotationWorkers(c *Core, l log.Logger) int {
+	numWorkers := c.numExpirationWorkers
+
+	workerOverride := os.Getenv(fairshareRotationWorkersOverrideVar)
+	if workerOverride != "" {
+		i, err := strconv.Atoi(workerOverride)
+		if err != nil {
+			l.Warn("vault rotation workers override must be an integer", "value", workerOverride)
+		} else if i < 1 || i > 10000 {
+			l.Warn("vault rotation workers override out of range", "value", i)
+		} else {
+			numWorkers = i
+		}
+	}
+
+	return numWorkers
+}
+
 func (c *Core) startRotation() error {
-	logger := c.baseLogger.Named("rotation")
+	logger := c.baseLogger.Named("rotation-job-manager")
+
+	jobManager := fairshare.NewJobManager("rotate", getNumRotationWorkers(c, logger), logger, c.metricSink)
+	jobManager.Start()
+
 	c.AddLogger(logger)
 	c.rotationManager = &RotationManager{
 		core:   c,
 		logger: logger,
-		queue:  queue.New(),
-		done:   make(chan struct{}),
+		// TODO figure out how to populate this if credentials already exist after unseal
+		queue:       queue.New(),
+		done:        make(chan struct{}),
+		jobManager:  jobManager,
+		quitContext: c.activeContext,
+		router:      c.router,
 	}
 	err := c.rotationManager.Start()
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// stopRotation is used to stop the rotation manager before
+// sealing Vault.
+func (c *Core) stopRotation() error {
+	if c.rotationManager != nil {
+		if err := c.rotationManager.Stop(); err != nil {
+			return err
+		}
+		c.metricsMutex.Lock()
+		defer c.metricsMutex.Unlock()
+		c.rotationManager = nil
 	}
 	return nil
 }
