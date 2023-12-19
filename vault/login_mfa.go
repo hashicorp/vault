@@ -2011,7 +2011,10 @@ func (c *Core) validateOkta(ctx context.Context, mfaFactors *MFAFactor, mConfig 
 		filterField = "profile.email"
 	}
 	filterQuery := fmt.Sprintf("%s eq %q", filterField, username)
-	filter := query.NewQueryParams(query.WithFilter(filterQuery))
+	// Use WithSearch instead of WithFilter: unlike 'search', 'filter' is case-sensitive.
+	// Also, Okta says to use 'search' for best performance:
+	// https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/#tag/User/operation/listUsers
+	filter := query.NewQueryParams(query.WithSearch(filterQuery))
 
 	users, _, err := oktaClient.User.ListUsers(ctx, filter)
 	if err != nil {
