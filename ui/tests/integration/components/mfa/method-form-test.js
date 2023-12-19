@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn, click, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -41,6 +42,12 @@ module('Integration | Component | mfa-method-form', function (hooks) {
 
   test('it should edit a mfa method', async function (assert) {
     assert.expect(3);
+    this.set(
+      'onSave',
+      sinon.spy(() => {
+        assert.ok(true, 'onSave callback triggered');
+      })
+    );
 
     this.server.post('/identity/mfa/method/totp/some-id', () => {
       assert.ok(true, 'edit request sent to server');
@@ -51,15 +58,16 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       <Mfa::MethodForm
         @hasActions="true"
         @model={{this.model}}
-        @onSave={{fn (mut this.didSave) true}}
+        @onSave={{this.onSave}}
       />
           `);
 
     await fillIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
+    await waitFor('[data-test-confirm-button="Edit totp configuration?"]:not([disabled])');
     await click('[data-test-confirm-button="Edit totp configuration?"]');
-    assert.true(this.didSave, 'onSave callback triggered');
+
     assert.strictEqual(this.model.issuer, 'Vault', 'Issuer property set on model');
   });
 
