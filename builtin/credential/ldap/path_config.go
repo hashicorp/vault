@@ -54,6 +54,16 @@ func pathConfig(b *backend) *framework.Path {
 		Description: "Password policy to use to rotate the root password",
 	}
 
+	p.Fields["rotation_schedule"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "Schedule, cron format",
+	}
+
+	p.Fields["rotation_window"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Description: "window",
+	}
+
 	return p
 }
 
@@ -218,6 +228,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
+	if schedule, ok := d.GetOk("rotation_schedule"); ok {
+		cfg.RotationSchedule = schedule.(string)
+	}
+	if window, ok := d.GetOk("rotation_window"); ok {
+		cfg.RotationWindow = window.(int)
+	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
@@ -233,12 +249,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}, nil
 	}
 
-	// get rotation-specific fields
-	rotationSchedule := cfg.RotationSchedule
-	rotationWindow := cfg.RotationWindow
+	b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule)
 
-	rc, err := logical.GetRootCredential(rotationSchedule, "ldap/config",
-		"ldap-root-creds", rotationWindow)
+	rc, err := logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
+		"ldap-root-creds", cfg.RotationWindow)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -273,8 +287,8 @@ type ldapConfigEntry struct {
 	*ldaputil.ConfigEntry
 
 	PasswordPolicy   string `json:"password_policy"`
-	RotationSchedule string
-	RotationWindow   int
+	RotationSchedule string `json:"rotation_schedule"`
+	RotationWindow   int    `json:"rotation_window"`
 }
 
 const pathConfigHelpSyn = `

@@ -137,53 +137,11 @@ func (rm *RotationManager) CheckQueue() error {
 		}
 		// TODO figure out how to get namespace with context here
 		// ctx := namespace.ContextWithNamespace(rm.quitContext, n)
-		_, err = rm.router.Route(rm.quitContext, req)
-		if errors.Is(err, logical.ErrUnsupportedOperation) {
-			rm.logger.Info("unsupported")
-			continue
-		} else if err != nil {
-			// requeue with backoff
-			rm.logger.Info("other rotate error", "err", err)
-			// TODO figure out rollback procedure here, for now, pushing back into queue
-			// one idea is to create a new rotation entry with updated priority and try later
-		}
-
-		// success
-		rm.logger.Debug("Successfully called rotate root code for backend")
-		issueTime := time.Now()
-		newEntry := &rotationEntry{
-			RotationID:     re.RotationID,
-			Path:           re.Path,
-			Data:           re.Data,
-			RootCredential: re.RootCredential,
-			IssueTime:      issueTime,
-			// expires the next time the schedule is activated from the issue time
-			ExpireTime: re.RootCredential.Schedule.Schedule.Next(issueTime),
-			namespace:  re.namespace,
-		}
-
-		// lock and populate the queue
-		rm.core.stateLock.Lock()
-
-		item := &queue.Item{
-			// will preserve same rotation ID, only updating Value, Priority with new rotation time
-			Key:      newEntry.RotationID,
-			Value:    newEntry,
-			Priority: newEntry.ExpireTime.Unix(),
-		}
-
-		rm.logger.Debug("Pushing item into credential queue")
-
-		if err := rm.queue.Push(item); err != nil {
-			// TODO handle error
-			rm.logger.Debug("Error pushing item into credential queue")
-			return err
-		}
-		rm.core.stateLock.Unlock()
-		if err != nil {
-			// again, this is bad because we can't really fix the item, but it also shouldn't happen because the item was good before
-			return err
-		}
+		rm.jobManager.AddJob(&rotationJob{
+			rm:    rm,
+			req:   req,
+			entry: re,
+		}, "best-queue-ever")
 	}
 
 	return nil
@@ -313,4 +271,85 @@ func (c *Core) stopRotation() error {
 		c.rotationManager = nil
 	}
 	return nil
+}
+
+// rotationJob implements fairshare.Job
+//
+// if you do queue management here you _must_ lock
+type rotationJob struct {
+	rm    *RotationManager
+	req   *logical.Request
+	entry *rotationEntry
+}
+
+// Execute is an implementation of fairshare.Job.Execute and in this case handles requesting rotation from
+// the backend. It will return an error both in the case of a direct error, and in the case of certain kinds
+// of error-shaped logical.Response returns.
+func (j *rotationJob) Execute() error {
+	j.rm.logger.Info("in execute")
+	_, err := j.rm.router.Route(j.rm.quitContext, j.req)
+
+	// TODO: clean up this branch
+	if errors.Is(err, logical.ErrUnsupportedOperation) {
+		j.rm.logger.Info("unsupported")
+		return err
+	} else if err != nil {
+		// requeue with backoff
+		j.rm.logger.Info("other rotate error", "err", err)
+		return err
+	}
+
+	// TODO: inspect logical.Response for other error-y things (there may not be any)
+
+	// success
+	j.rm.logger.Debug("Successfully called rotate root code for backend")
+	issueTime := time.Now()
+	newEntry := &rotationEntry{
+		RotationID:     j.entry.RotationID,
+		Path:           j.entry.Path,
+		Data:           j.entry.Data,
+		RootCredential: j.entry.RootCredential,
+		IssueTime:      issueTime,
+		// expires the next time the schedule is activated from the issue time
+		ExpireTime: j.entry.RootCredential.Schedule.Schedule.Next(issueTime),
+		namespace:  j.entry.namespace,
+	}
+	j.entry.RootCredential.Schedule.NextVaultRotation = newEntry.ExpireTime
+
+	// lock and populate the queue
+	j.rm.mu.Lock()
+
+	item := &queue.Item{
+		// will preserve same rotation ID, only updating Value, Priority with new rotation time
+		Key:      newEntry.RotationID,
+		Value:    newEntry,
+		Priority: newEntry.ExpireTime.Unix(),
+	}
+
+	j.rm.logger.Debug("Pushing item into credential queue")
+	j.rm.logger.Debug("will rotate at", "time", newEntry.ExpireTime.Format(time.RFC3339))
+
+	if err := j.rm.queue.Push(item); err != nil {
+		// TODO handle error
+		j.rm.logger.Debug("Error pushing item into credential queue")
+		return err
+	}
+	j.rm.mu.Unlock()
+
+	return nil
+}
+
+// OnFailure implements the OnFailure interface method and requeues with a backoff when it happens
+func (j *rotationJob) OnFailure(err error) {
+	j.rm.logger.Info("rotation failed, requeuing", "error", err)
+
+	err = j.rm.queue.Push(&queue.Item{
+		Key:      j.entry.RotationID,
+		Value:    j.entry,
+		Priority: time.Now().Add(10 * time.Second).Unix(), // TODO: Configure this
+	})
+	// an error here is really bad because we can't really fix it and will lose the rotation entry as a result.
+	if err != nil {
+		j.rm.logger.Error("can't requeue an item", "id", j.entry.RotationID)
+	}
 }

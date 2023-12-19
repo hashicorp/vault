@@ -130,6 +130,8 @@ func Backend() *backend {
 				return err
 			}
 
+			b.Logger().Info("updates", "old", p, "new", newPassword)
+
 			// update config with new password
 			cfg.BindPassword = newPassword
 			entry, err := logical.StorageEntryJSON("config", cfg)
