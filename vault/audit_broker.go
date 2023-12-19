@@ -162,40 +162,6 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		local:   local,
 	}
 
-	if a.broker != nil {
-		if name != b.Name() {
-			return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, b.Name())
-		}
-
-		for id, node := range b.Nodes() {
-			err := a.broker.RegisterNode(id, node)
-			if err != nil {
-				return fmt.Errorf("%s: unable to register nodes for %q: %w", op, name, err)
-			}
-		}
-
-		pipeline := eventlogger.Pipeline{
-			PipelineID: eventlogger.PipelineID(b.Name()),
-			EventType:  b.EventType(),
-			NodeIDs:    b.NodeIDs(),
-		}
-
-		err := a.broker.RegisterPipeline(pipeline)
-		if err != nil {
-			return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, name, err)
-		}
-
-		// Establish if we ONLY have pipelines that include filter nodes.
-		// Otherwise, we can rely on the eventlogger broker guarantee.
-		threshold := a.requiredSuccessThresholdSinks()
-
-		// Update the success threshold now that the pipeline is registered.
-		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
-		if err != nil {
-			return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
-		}
-	}
-
 	return nil
 }
 
