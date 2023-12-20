@@ -9,18 +9,18 @@ import ApplicationSerializer from '../application';
 export default class MessageSerializer extends ApplicationSerializer {
   primaryKey = 'id';
 
-  normalizeResponse(store, primaryModelClass, payload) {
-    if (payload.data.data && payload.data.data?.message) {
-      payload.data.data.message = decodeString(payload.data.data.message);
-      payload.data = {
-        id: payload.data.id,
-        linkTitle: payload.data.data.link?.title,
-        linkHref: payload.data.data.link?.href,
-        ...payload.data.data,
+  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    if (requestType === 'queryRecord') {
+      const transformed = {
+        ...payload.data,
+        message: decodeString(payload.data.message),
+        link_title: payload.data.link.title,
+        link_href: payload.data.link.href,
       };
-      delete payload.data.data;
+      delete transformed.link;
+      return super.normalizeResponse(store, primaryModelClass, transformed, id, requestType);
     }
-    return super.normalizeResponse(...arguments);
+    return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
   }
 
   serialize() {
