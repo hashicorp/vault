@@ -382,7 +382,7 @@ jobs:
           VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs-${{ matrix.id }}"
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
-          export VAULT_TEST_LOG_LEVEL=info
+          export VAULT_TEST_LOG_LEVEL=off
           
           
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
