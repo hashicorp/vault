@@ -59,7 +59,13 @@
 
     <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
       {{! TODO: VAULT-21533 preview modal }}
-      <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
+      <Hds::Button
+        @text="Preview"
+        @color="tertiary"
+        @icon="eye"
+        disabled={{(and (not @message.title @message.message))}}
+        {{on "click" (fn (mut this.showTemplateModal) true)}}
+      />
 
       <Hds::Button
         @text="{{if @message.isNew 'Create' 'Edit'}} message"
@@ -77,3 +83,41 @@
     </Hds::ButtonSet>
   </div>
 </form>
+
+{{#if this.showTemplateModal}}
+  {{#if (eq @message.type "modal")}}
+    <Hds::Modal id="message-modal" @size="large" @color="warning" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
+      <M.Header data-test-modal-title>
+        {{@message.title}}
+      </M.Header>
+      <M.Body>
+        {{@message.message}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-close-button />
+      </M.Footer>
+    </Hds::Modal>
+  {{else}}
+    <Hds::Modal id="message-modal" class="is-fullwidth" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
+      <M.Body class="is-paddingless">
+        <Hds::Alert
+          @type="page"
+          @color="warning"
+          class="has-bottom-margin-s"
+          @onDismiss={{fn (mut this.showTemplateModal) false}}
+          as |A|
+        >
+          <A.Title>{{@message.title}}</A.Title>
+          <A.Description>{{@message.message}}</A.Description>
+        </Hds::Alert>
+        <img
+          src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
+          alt={{if @message.authenticated "dashboard page preview" "login page preview"}}
+        />
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-close-button />
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
+{{/if}}
