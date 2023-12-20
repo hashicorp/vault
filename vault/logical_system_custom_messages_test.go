@@ -28,7 +28,7 @@ func TestHandleListCustomMessages(t *testing.T) {
 
 	storageEntry := &logical.StorageEntry{
 		Key:   "sys/config/ui/custom-messages",
-		Value: []byte(fmt.Sprintf(`{"messages":{"000":{"id":"000","title":"title","message":"message","type":"banner","authenticated":true,"start_time":"%s","end_time":"%s"}}}`, startTime, endTime)),
+		Value: []byte(fmt.Sprintf(`{"messages":{"000":{"id":"000","title":"title","message":"message","type":"%s","authenticated":true,"start_time":"%s","end_time":"%s"}}}`, uicustommessages.BannerMessageType, startTime, endTime)),
 	}
 
 	storage := &logical.InmemStorage{}
@@ -193,19 +193,24 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 
 	fieldSchemas := map[string]*framework.FieldSchema{
 		"title": {
-			Type: framework.TypeString,
+			Type:     framework.TypeString,
+			Required: true,
 		},
 		"message": {
-			Type: framework.TypeString,
+			Type:     framework.TypeString,
+			Required: true,
 		},
 		"authenticated": {
-			Type: framework.TypeBool,
+			Type:    framework.TypeBool,
+			Default: true,
 		},
 		"type": {
-			Type: framework.TypeString,
+			Type:    framework.TypeString,
+			Default: uicustommessages.BannerMessageType,
 		},
 		"start_time": {
-			Type: framework.TypeTime,
+			Type:     framework.TypeTime,
+			Required: true,
 		},
 		"end_time": {
 			Type: framework.TypeTime,
@@ -222,101 +227,105 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 	// with valid values. The test cases will make a copy of this map and modify
 	// it to test different conditions.
 	fieldRaw := map[string]any{
-		"title":         "title",
-		"message":       "message",
-		"authenticated": "true",
-		"type":          uicustommessages.BannerMessageType,
-		"start_time":    "2023-01-01T00:00:00Z",
-		"end_time":      "2100-01-01T00:00:00Z",
-		"options":       map[string]any{},
-		"link": map[string]any{
-			"title": "link title",
-			"href":  "https://link.ref",
-		},
+		"title":      "title",
+		"message":    "message",
+		"start_time": "2023-01-01T00:00:00Z",
 	}
 
 	testcases := []struct {
-		name string
-		// The logic in the testing code below works reliably when only
-		// a single element in the fieldRawDelete or fieldRawUpdate is
-		// specified. The logic also works if no elements are specified.
+		name           string
 		fieldRawDelete []string
 		fieldRawUpdate map[string]any
+		errorExpected  bool
 	}{
 		{
 			name:           "title-parameter-missing",
 			fieldRawDelete: []string{"title"},
+			errorExpected:  true,
 		},
 		{
 			name: "title-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"title": []bool{},
 			},
-		},
-		{
-			name:           "authenticated-parameter-missing",
-			fieldRawDelete: []string{"authenticated"},
+			errorExpected: true,
 		},
 		{
 			name: "authenticated-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"authenticated": "abc",
 			},
-		},
-		{
-			name:           "type-parameter-missing",
-			fieldRawDelete: []string{"type"},
+			errorExpected: true,
 		},
 		{
 			name: "type-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"type": []int{},
 			},
+			errorExpected: true,
 		},
 		{
 			name:           "message-parameter-missing",
 			fieldRawDelete: []string{"message"},
+			errorExpected:  true,
 		},
 		{
 			name: "message-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"message": map[int]string{},
 			},
+			errorExpected: true,
 		},
 		{
 			name:           "start_time-parameter-missing",
 			fieldRawDelete: []string{"start_time"},
+			errorExpected:  true,
 		},
 		{
 			name: "start_time-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"start_time": "friday",
 			},
-		},
-		{
-			name:           "end_time-parameter-missing",
-			fieldRawDelete: []string{"end_time"},
+			errorExpected: true,
 		},
 		{
 			name: "end_time-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"end_time": []int{},
 			},
+			errorExpected: true,
 		},
 		{
 			name: "link-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"link": "not-a-map",
 			},
+			errorExpected: true,
 		},
 		{
 			name: "options-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"options": "not-a-map",
 			},
+			errorExpected: true,
 		},
 		{
-			name: "happy-path",
+			name: "happy-path with defaults",
+		},
+		{
+			name: "happy-path with non-defaults",
+			fieldRawUpdate: map[string]any{
+				"authenticated": false,
+				"type":          uicustommessages.ModalMessageType,
+				"end_time":      "2100-01-01T00:00:00Z",
+				"options": map[string]any{
+					"color": "red",
+				},
+				"link": map[string]any{
+					"title": "Details",
+					"href":  "https://server.com/details",
+				},
+			},
 		},
 	}
 
@@ -342,27 +351,37 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 		assert.NotNil(t, resp, testcase.name)
 		assert.NotNil(t, resp.Data, testcase.name)
 
-		if len(testcase.fieldRawDelete) > 0 {
+		if testcase.errorExpected {
 			assert.Contains(t, resp.Data, "error", testcase.name)
-			assert.Contains(t, resp.Data["error"], "missing", testcase.name)
-			assert.Contains(t, resp.Data["error"], testcase.fieldRawDelete[0], testcase.name)
-		}
 
-		if len(testcase.fieldRawUpdate) > 0 {
-			var keyName string
-			for k := range testcase.fieldRawUpdate {
-				keyName = k
-				break
+			if len(testcase.fieldRawDelete) > 0 {
+				assert.Contains(t, resp.Data["error"], "missing", testcase.name)
+				assert.Contains(t, resp.Data["error"], testcase.fieldRawDelete[0], testcase.name)
 			}
-			assert.Contains(t, resp.Data, "error", testcase.name)
-			assert.Contains(t, resp.Data["error"], "invalid", testcase.name)
-			assert.Contains(t, resp.Data["error"], keyName, testcase.name)
-		}
 
-		if len(testcase.fieldRawDelete)+len(testcase.fieldRawUpdate) == 0 {
-			assert.Contains(t, resp.Data, "data", testcase.name)
-			assert.Contains(t, resp.Data["data"], "active", testcase.name)
+			if len(testcase.fieldRawUpdate) > 0 {
+				assert.Contains(t, resp.Data["error"], "invalid", testcase.name)
+
+				for k := range testcase.fieldRawUpdate {
+					assert.Contains(t, resp.Data["error"], k, testcase.name)
+				}
+			}
+		} else {
+			assert.Contains(t, resp.Data, "active", testcase.name)
+			assert.Contains(t, resp.Data, "authenticated", testcase.name)
+			assert.Contains(t, resp.Data, "type", testcase.name)
+			assert.Contains(t, resp.Data, "start_time", testcase.name)
+			assert.Contains(t, resp.Data, "end_time", testcase.name)
 			assert.Contains(t, resp.Data, "id", testcase.name)
+			if _, ok := testcase.fieldRawUpdate["authenticated"]; !ok {
+				assert.True(t, resp.Data["authenticated"].(bool), testcase.name)
+			}
+			if _, ok := testcase.fieldRawUpdate["type"]; !ok {
+				assert.Equal(t, resp.Data["type"], uicustommessages.BannerMessageType, testcase.name)
+			}
+			if _, ok := testcase.fieldRawUpdate["end_time"]; !ok {
+				assert.Nil(t, resp.Data["end_time"], testcase.name)
+			}
 		}
 	}
 
@@ -397,13 +416,17 @@ func TestHandleReadCustomMessage(t *testing.T) {
 
 	nsCtx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 
+	now := time.Now()
+	later := now.Add(time.Hour)
+	earlier := now.Add(-1 * time.Hour)
+
 	message := &uicustommessages.Message{
 		Title:         "title",
 		Message:       "message",
 		Authenticated: false,
 		Type:          uicustommessages.ModalMessageType,
-		StartTime:     time.Now().Add(-1 * time.Hour),
-		EndTime:       time.Now().Add(time.Hour),
+		StartTime:     earlier,
+		EndTime:       &later,
 		Options:       make(map[string]any),
 		Link:          nil,
 	}
@@ -430,9 +453,27 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp.Data)
 	assert.Contains(t, resp.Data, "id")
 	assert.Equal(t, resp.Data["id"], message.ID)
-	assert.Contains(t, resp.Data, "data")
-	assert.Contains(t, resp.Data["data"], "active")
-	assert.Equal(t, resp.Data["data"].(map[string]any)["active"], true)
+	assert.Contains(t, resp.Data, "active")
+	assert.Equal(t, resp.Data["active"], true)
+	assert.Contains(t, resp.Data, "end_time")
+	assert.NotNil(t, resp.Data["end_time"])
+
+	// Change the message so that it doesn't have an end time.
+	message.EndTime = nil
+	message, err = backend.Core.customMessageManager.UpdateMessage(nsCtx, *message)
+	require.NoError(t, err)
+	require.NotNil(t, message)
+
+	resp, err = backend.handleReadCustomMessage(nsCtx, &logical.Request{}, fieldData)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Data)
+	assert.Contains(t, resp.Data, "id")
+	assert.Equal(t, resp.Data["id"], message.ID)
+	assert.Contains(t, resp.Data, "active")
+	assert.Equal(t, resp.Data["active"], true)
+	assert.Contains(t, resp.Data, "end_time")
+	assert.Nil(t, resp.Data["end_time"])
 
 	// Check that there's an error when trying to read a non-existant custom
 	// message.
@@ -476,7 +517,6 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
 	assert.NotContains(t, resp.Data, "id")
-	assert.NotContains(t, resp.Data, "data")
 	assert.Contains(t, resp.Data, "error")
 	assert.Contains(t, resp.Data["error"], "failed")
 }
@@ -493,10 +533,12 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 		},
 	}
 
-	startTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
-	endTime := time.Now().Add(time.Hour).Format(time.RFC3339Nano)
+	now := time.Now()
+	startTime := now.Add(-1 * time.Hour).Format(time.RFC3339Nano)
+	endTime := now.Add(time.Hour).Format(time.RFC3339Nano)
+	startTime2 := now.UTC().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
-	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"modal","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, startTime, endTime)
+	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"%s","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, uicustommessages.ModalMessageType, startTime, endTime)
 
 	storageEntry := &logical.StorageEntry{
 		Key:   "sys/config/ui/custom-messages",
@@ -511,22 +553,28 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	fieldData := &framework.FieldData{
 		Schema: map[string]*framework.FieldSchema{
 			"id": {
-				Type: framework.TypeString,
+				Type:     framework.TypeString,
+				Required: true,
 			},
 			"title": {
-				Type: framework.TypeString,
+				Type:     framework.TypeString,
+				Required: true,
 			},
 			"message": {
-				Type: framework.TypeString,
+				Type:     framework.TypeString,
+				Required: true,
 			},
 			"authenticated": {
-				Type: framework.TypeBool,
+				Type:    framework.TypeBool,
+				Default: true,
 			},
 			"type": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: uicustommessages.BannerMessageType,
 			},
 			"start_time": {
-				Type: framework.TypeTime,
+				Type:     framework.TypeTime,
+				Required: true,
 			},
 			"end_time": {
 				Type: framework.TypeTime,
@@ -562,14 +610,27 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 
 	// Try to update an existing custom message
 	fieldData.Raw["id"] = "xyz"
-	fieldData.Raw["type"] = uicustommessages.BannerMessageType
+	fieldData.Raw["start_time"] = startTime2
 
 	resp, err = backend.handleUpdateCustomMessage(nsCtx, &logical.Request{}, fieldData)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
-	assert.Contains(t, resp.Data, "data")
-	assert.Equal(t, uicustommessages.BannerMessageType, resp.Data["data"].(map[string]any)["type"])
+	assert.Equal(t, startTime2, resp.Data["start_time"].(string))
+
+	// Update existing custom message with request containing only required
+	// parameters
+	delete(fieldData.Raw, "authenticated")
+	delete(fieldData.Raw, "type")
+	delete(fieldData.Raw, "end_time")
+
+	resp, err = backend.handleUpdateCustomMessage(nsCtx, &logical.Request{}, fieldData)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, resp.Data)
+	assert.True(t, resp.Data["authenticated"].(bool))
+	assert.Equal(t, uicustommessages.BannerMessageType, resp.Data["type"])
+	assert.Nil(t, resp.Data["end_time"])
 
 	testcases := []struct {
 		name string
@@ -610,18 +671,10 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			},
 		},
 		{
-			name:           "authenticated-parameter-missing",
-			fieldRawDelete: []string{"authenticated"},
-		},
-		{
 			name: "authenticated-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"authenticated": "fred",
 			},
-		},
-		{
-			name:           "type-parameter-missing",
-			fieldRawDelete: []string{"type"},
 		},
 		{
 			name: "type-parameter-invalid",
@@ -638,10 +691,6 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			fieldRawUpdate: map[string]any{
 				"start_time": "tomorrow",
 			},
-		},
-		{
-			name:           "end_time-parameter-missing",
-			fieldRawDelete: []string{"end_time"},
 		},
 		{
 			name: "end_time-parameter-invalid",
@@ -703,8 +752,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 		}
 
 		if len(testcase.fieldRawDelete)+len(testcase.fieldRawUpdate) == 0 {
-			assert.Contains(t, resp.Data, "data", testcase.name)
-			assert.Contains(t, resp.Data["data"], "active", testcase.name)
+			assert.Contains(t, resp.Data, "active", testcase.name)
 			assert.Contains(t, resp.Data, "id", testcase.name)
 		}
 	}
@@ -741,7 +789,7 @@ func TestHandleDeleteCustomMessage(t *testing.T) {
 	startTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
 	endTime := time.Now().Add(time.Hour).Format(time.RFC3339Nano)
 
-	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"modal","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, startTime, endTime)
+	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"%s","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, uicustommessages.ModalMessageType, startTime, endTime)
 	storageEntry := &logical.StorageEntry{
 		Key:   "root",
 		Value: []byte(storageEntryValue),

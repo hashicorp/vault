@@ -120,6 +120,7 @@
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
     "dompurify": "^3.0.2",
+    "ember-a11y-testing": "^5.2.1",
     "ember-auto-import": "2.6.3",
     "ember-basic-dropdown": "6.0.1",
     "ember-cli": "~4.12.1",
@@ -153,7 +154,7 @@
     "ember-page-title": "^7.0.0",
     "ember-power-select": "6.0.1",
     "ember-qrcode-shim": "^0.4.0",
-    "ember-qunit": "6.0.0",
+    "ember-qunit": "^6.0.2",
     "ember-resolver": "^10.0.0",
     "ember-responsive": "5.0.0",
     "ember-router-helpers": "^0.4.0",
@@ -243,7 +244,8 @@
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",
-      "lib/service-worker-authenticated-download"
+      "lib/service-worker-authenticated-download",
+      "lib/sync"
     ]
   },
   "dependencies": {

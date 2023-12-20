@@ -37,7 +37,7 @@
     <div class="column has-text-right">
       {{#if (eq @backendType "ssh")}}
         <PopupMenu @name="role-ssh-nav">
-          <nav class="menu">
+          <nav class="menu" aria-label="navigation for managing SSH role {{@item.id}}">
             <ul class="menu-list">
               {{#if (eq @item.keyType "otp")}}
                 {{#if @item.generatePath.isPending}}

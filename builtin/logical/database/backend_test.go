@@ -626,6 +626,23 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	// Configure a second connection to confirm below it doesn't get restarted.
+	data = map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test-hana",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
 	// Create a role
 	data = map[string]interface{}{
 		"db_name":               "plugin-test",
@@ -717,17 +734,49 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Reset Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "reset/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	// Test endpoints for reloading plugins.
+	for _, reloadPath := range []string{
+		"reset/plugin-test",
+		"reload/postgresql-database-plugin",
+	} {
+		getConnectionID := func(name string) string {
+			t.Helper()
+			dbBackend, ok := b.(*databaseBackend)
+			if !ok {
+				t.Fatal("could not convert logical.Backend to databaseBackend")
+			}
+			dbi := dbBackend.connections.Get(name)
+			if dbi == nil {
+				t.Fatal("no plugin-test dbi")
+			}
+			return dbi.ID()
+		}
+		initialID := getConnectionID("plugin-test")
+		hanaID := getConnectionID("plugin-test-hana")
+		req = &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      reloadPath,
+			Storage:   config.StorageView,
+			Data:      map[string]interface{}{},
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+		if initialID == getConnectionID("plugin-test") {
+			t.Fatal("ID unchanged after connection reset")
+		}
+		if hanaID != getConnectionID("plugin-test-hana") {
+			t.Fatal("hana plugin got restarted but shouldn't have been")
+		}
+		if strings.HasPrefix(reloadPath, "reload/") {
+			if expected := 1; expected != resp.Data["count"] {
+				t.Fatalf("expected %d but got %d", expected, resp.Data["count"])
+			}
+			if expected := []string{"plugin-test"}; !reflect.DeepEqual(expected, resp.Data["connections"]) {
+				t.Fatalf("expected %v but got %v", expected, resp.Data["connections"])
+			}
+		}
 	}
 
 	// Get creds
