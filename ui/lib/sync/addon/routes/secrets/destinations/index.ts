@@ -19,6 +19,18 @@ interface SyncSecretsDestinationsIndexRouteParams {
 export default class SyncSecretsDestinationsIndexRoute extends Route {
   @service declare readonly store: StoreService;
 
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+    name: {
+      refreshModel: true,
+    },
+    type: {
+      refreshModel: true,
+    },
+  };
+
   filterData(dataset: Array<SyncDestinationModel>, name: string, type: string): Array<SyncDestinationModel> {
     let filteredDataset = dataset;
     const filter = (key: keyof SyncDestinationModel, value: string) => {
