@@ -268,24 +268,22 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 // i.e. we can stand up a raft cluster with the verifier enabled, do a bunch of raft things, let the verifier
 // do its thing, and nothing blows up.
 func TestRaft_VerifierEnabled(t *testing.T) {
-	conf := map[string]string{
-		"trailing_logs":             "100",
-		raftWalConfigKey:            "true",
-		"raft_log_verifier_enabled": "true",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":             "100",
+			raftWalConfigKey:            useRaftWal,
+			"raft_log_verifier_enabled": "true",
+		}
 
-	b, _ := GetRaftWithConfig(t, true, true, conf)
+		b, _ := GetRaftWithConfig(t, true, true, conf)
+		physical.ExerciseBackend(t, b)
 
-	physical.ExerciseBackend(t, b)
-
-	err := b.applyVerifierCheckpoint()
-	if err != nil {
-		t.Fatal(err)
-	}
-	physical.ExerciseBackend(t, b)
-
-	// TODO: check the metrics at this point to see if the verifier has reported something.
-	//  It's possible that this is racy because go-metrics reports things in blocks of 10 seconds.
+		err := b.applyVerifierCheckpoint()
+		if err != nil {
+			t.Fatal(err)
+		}
+		physical.ExerciseBackend(t, b)
+	})
 }
 
 func TestRaft_ParseRaftWalBackend(t *testing.T) {
