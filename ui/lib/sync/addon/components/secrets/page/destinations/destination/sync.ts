@@ -82,6 +82,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
 
   setAssociation = task({}, async (event: Event) => {
     event.preventDefault();
+    this.error = ''; // reset error
     try {
       this.syncedSecret = '';
       const { name: destinationName, type: destinationType } = this.args.destination;
