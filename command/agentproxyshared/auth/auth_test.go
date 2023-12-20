@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -75,7 +74,7 @@ func TestAuthHandler(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	ah := NewAuthHandler(&AuthHandlerConfig{
-		Logger: logging.NewVaultLogger(hclog.Trace).Named("auth.handler"),
+		Logger: corehelpers.Logger.Named("auth.handler"),
 		Client: client,
 	})
 

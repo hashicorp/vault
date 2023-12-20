@@ -6,16 +6,15 @@ package sealmigrationext
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault/external_tests/sealmigration"
 )
 
 func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
 	defer cleanup()
@@ -25,7 +24,7 @@ func TestSealMigration_ShamirToTransit_Pre14(t *testing.T) {
 
 func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
 	defer cleanup()
@@ -35,7 +34,7 @@ func TestSealMigration_TransitToShamir_Pre14(t *testing.T) {
 
 func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
 	defer cleanup()
@@ -45,7 +44,7 @@ func TestSealMigration_ShamirToTransit_Post14(t *testing.T) {
 
 func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
 	defer cleanup()
@@ -55,7 +54,7 @@ func TestSealMigration_TransitToShamir_Post14(t *testing.T) {
 
 func TestSealMigration_TransitToTransit_Post14(t *testing.T) {
 	t.Parallel()
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 	storage, cleanup := teststorage.MakeReusableStorage(t, logger,
 		consul.MakeConsulBackend(t, logger))
 	defer cleanup()

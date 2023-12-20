@@ -7,15 +7,14 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 func TestConfig_Enabled(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +33,7 @@ func TestConfig_Enabled(t *testing.T) {
 }
 
 func TestConfig_Headers(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +133,7 @@ func TestConfig_Headers(t *testing.T) {
 }
 
 func TestConfig_DefaultHeaders(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	phys, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)

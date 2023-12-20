@@ -12,14 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -36,7 +35,7 @@ func TestAPIProxy(t *testing.T) {
 
 	proxier, err := NewAPIProxy(&APIProxyConfig{
 		Client:                  client,
-		Logger:                  logging.NewVaultLogger(hclog.Trace),
+		Logger:                  corehelpers.Logger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
 		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
@@ -74,7 +73,7 @@ func TestAPIProxyNoCache(t *testing.T) {
 
 	proxier, err := NewAPIProxy(&APIProxyConfig{
 		Client:                  client,
-		Logger:                  logging.NewVaultLogger(hclog.Trace),
+		Logger:                  corehelpers.Logger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
 		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})
@@ -114,7 +113,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 
 	proxier, err := NewAPIProxy(&APIProxyConfig{
 		Client:                  client,
-		Logger:                  logging.NewVaultLogger(hclog.Trace),
+		Logger:                  corehelpers.Logger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
 		UserAgentString:         useragent.ProxyAPIProxyString(),
 	})

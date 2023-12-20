@@ -8,11 +8,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -54,7 +54,7 @@ func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
 
 	ctx := context.Background()
 	config := &logical.BackendConfig{
-		Logger: logging.NewVaultLogger(hclog.Trace),
+		Logger: corehelpers.Logger,
 		System: sysView,
 		Config: map[string]string{
 			"plugin_name": "test-plugin",
@@ -144,7 +144,7 @@ func (b *testBackend) SpecialPaths() *logical.Paths {
 }
 
 func (b *testBackend) Logger() hclog.Logger {
-	return logging.NewVaultLogger(hclog.Trace)
+	return corehelpers.Logger
 }
 
 func (b *testBackend) HandleRequest(context.Context, *logical.Request) (*logical.Response, error) {

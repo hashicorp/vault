@@ -22,8 +22,9 @@ import (
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
+
 	"github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -252,7 +253,7 @@ func TestExecServer_Run(t *testing.T) {
 			}
 
 			execServer, err := NewServer(&ServerConfig{
-				Logger: logging.NewVaultLogger(hclog.Trace),
+				Logger: corehelpers.Logger,
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
 						Address: fakeVault.URL,
@@ -271,7 +272,7 @@ func TestExecServer_Run(t *testing.T) {
 						StaticSecretRenderInt: testCase.staticSecretRenderInterval,
 					},
 				},
-				LogLevel:  hclog.Trace,
+				LogLevel:  corehelpers.TestLogLevel,
 				LogWriter: hclog.DefaultOutput,
 			})
 			if err != nil {
@@ -449,7 +450,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 			}
 
 			execServer, err := NewServer(&ServerConfig{
-				Logger: logging.NewVaultLogger(hclog.Trace),
+				Logger: corehelpers.Logger,
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
 						Address: fakeVault.URL,
@@ -467,7 +468,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 						StaticSecretRenderInt: 5 * time.Second,
 					},
 				},
-				LogLevel:  hclog.Trace,
+				LogLevel:  corehelpers.TestLogLevel,
 				LogWriter: hclog.DefaultOutput,
 			})
 			if err != nil {

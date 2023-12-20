@@ -21,18 +21,19 @@ import (
 	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func testProxyCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *ProxyCommand) {
@@ -64,7 +65,7 @@ func TestProxy_ExitAfterAuth(t *testing.T) {
 }
 
 func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"jwt": vaultjwt.Factory,
@@ -246,7 +247,7 @@ auto_auth {
 // Uses the custom handler userAgentHandler (defined above) so
 // that Vault validates the User-Agent on requests sent by Proxy.
 func TestProxy_AutoAuth_UserAgent(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -406,7 +407,7 @@ api_proxy {
 // userAgentHandler struct defined in this test package, so that Vault validates the
 // User-Agent on requests sent by Proxy.
 func TestProxy_APIProxyWithoutCache_UserAgent(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	userAgentForProxiedClient := "proxied-client"
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -493,7 +494,7 @@ vault {
 // userAgentHandler struct defined in this test package, so that Vault validates the
 // User-Agent on requests sent by Proxy.
 func TestProxy_APIProxyWithCache_UserAgent(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	userAgentForProxiedClient := "proxied-client"
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
@@ -582,7 +583,7 @@ vault {
 // TestProxy_Cache_DynamicSecret tests that the cache successfully caches a dynamic secret
 // going through the Proxy, and that a subsequent request will be served from the cache.
 func TestProxy_Cache_DynamicSecret(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -689,7 +690,7 @@ vault {
 // TestProxy_Cache_DisableDynamicSecretCaching tests that the cache will not cache a dynamic secret
 // if disabled in the options.
 func TestProxy_Cache_DisableDynamicSecretCaching(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -813,7 +814,7 @@ vault {
 // TestProxy_Cache_StaticSecret Tests that the cache successfully caches a static secret
 // going through the Proxy,
 func TestProxy_Cache_StaticSecret(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -949,7 +950,7 @@ log_level = "trace"
 // going through the Proxy, and then the cache gets updated on a POST to the KVV1 secret due to an
 // event.
 func TestProxy_Cache_EventSystemUpdatesCacheKVV1(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.Factory,
@@ -1116,7 +1117,7 @@ log_level = "trace"
 // going through the Proxy for a KVV2 secret, and then the cache gets updated on a POST to the secret due to an
 // event.
 func TestProxy_Cache_EventSystemUpdatesCacheKVV2(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.VersionedKVFactory,
@@ -1295,7 +1296,7 @@ log_level = "trace"
 // going through the Proxy for a KVV2 secret, and that the cache works as expected with the
 // use_auto_auth_token=force option.
 func TestProxy_Cache_EventSystemUpdatesCacheUseAutoAuthToken(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.VersionedKVFactory,
@@ -1485,7 +1486,7 @@ log_level = "trace"
 // before it updates the secret, meaning that the event system should update it from the pre-event stream
 // update as opposed to receiving the event.
 func TestProxy_Cache_EventSystemPreEventStreamUpdateWorks(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.VersionedKVFactory,
@@ -1633,7 +1634,7 @@ log_level = "trace"
 // going through the Proxy for a KVV2 secret, and then the calling client loses permissions to the secret,
 // so it can no longer access the cache.
 func TestProxy_Cache_StaticSecretPermissionsLost(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": logicalKv.VersionedKVFactory,
@@ -1806,7 +1807,7 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 	//----------------------------------------------------
 	// Start the server and proxy
 	//----------------------------------------------------
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1956,7 +1957,7 @@ vault {
 // TestProxy_Metrics tests that metrics are being properly reported.
 func TestProxy_Metrics(t *testing.T) {
 	// Start a vault server
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil,
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
@@ -2284,7 +2285,7 @@ func TestProxy_Config_ReloadTls(t *testing.T) {
 	configFile := populateTempFile(t, "proxy-config.hcl", replacedHcl)
 
 	// Set up Proxy
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	ui, cmd := testProxyCommand(t, logger)
 
 	var output string

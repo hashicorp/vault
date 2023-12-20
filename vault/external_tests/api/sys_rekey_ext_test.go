@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
@@ -59,7 +57,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 			})
 		}
 	}
-	inm, err := inmem.NewInmemHA(nil, logging.NewVaultLogger(hclog.Debug))
+	inm, err := inmem.NewInmemHA(nil, corehelpers.Logger)
 	if err != nil {
 		t.Fatal(err)
 	}

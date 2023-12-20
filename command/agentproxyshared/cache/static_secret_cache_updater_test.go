@@ -10,20 +10,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
+	"nhooyr.io/websocket"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/atomic"
-	"nhooyr.io/websocket"
 )
 
 // Avoiding a circular dependency in the test.
@@ -60,7 +60,7 @@ func testNewStaticSecretCacheUpdater(t *testing.T, client *api.Client) *StaticSe
 	updater, err := NewStaticSecretCacheUpdater(&StaticSecretCacheUpdaterConfig{
 		Client:     client,
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.updater"),
+		Logger:     corehelpers.Logger.Named("cache.updater"),
 		TokenSink:  tokenSink,
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 
 	lc := testNewLeaseCache(t, []*SendResponse{})
 	config := api.DefaultConfig()
-	logger := logging.NewVaultLogger(hclog.Trace).Named("cache.updater")
+	logger := corehelpers.Logger.Named("cache.updater")
 	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +114,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 	updater, err = NewStaticSecretCacheUpdater(&StaticSecretCacheUpdaterConfig{
 		Client:     client,
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.updater"),
+		Logger:     corehelpers.Logger.Named("cache.updater"),
 		TokenSink:  nil,
 	})
 	require.Error(t, err)
@@ -124,7 +124,7 @@ func TestNewStaticSecretCacheUpdater(t *testing.T) {
 	updater, err = NewStaticSecretCacheUpdater(&StaticSecretCacheUpdaterConfig{
 		Client:     client,
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.updater"),
+		Logger:     corehelpers.Logger.Named("cache.updater"),
 		TokenSink:  tokenSink,
 	})
 	if err != nil {

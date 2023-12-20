@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/stretchr/testify/require"
 )
 
 // testNewStaticSecretCapabilityManager returns a new StaticSecretCapabilityManager
@@ -24,7 +24,7 @@ func testNewStaticSecretCapabilityManager(t *testing.T, client *api.Client) *Sta
 
 	updater, err := NewStaticSecretCapabilityManager(&StaticSecretCapabilityManagerConfig{
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.capabilitiesmanager"),
+		Logger:     corehelpers.Logger.Named("cache.capabilitiesmanager"),
 		Client:     client,
 		StaticSecretTokenCapabilityRefreshInterval: 250 * time.Millisecond,
 	})
@@ -41,7 +41,7 @@ func TestNewStaticSecretCapabilityManager(t *testing.T) {
 	t.Parallel()
 
 	lc := testNewLeaseCache(t, []*SendResponse{})
-	logger := logging.NewVaultLogger(hclog.Trace).Named("cache.capabilitiesmanager")
+	logger := corehelpers.Logger.Named("cache.capabilitiesmanager")
 	client, err := api.NewClient(api.DefaultConfig())
 	require.Nil(t, err)
 
@@ -73,7 +73,7 @@ func TestNewStaticSecretCapabilityManager(t *testing.T) {
 	// Don't expect an error if the arguments are as expected
 	updater, err = NewStaticSecretCapabilityManager(&StaticSecretCapabilityManagerConfig{
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.capabilitiesmanager"),
+		Logger:     corehelpers.Logger.Named("cache.capabilitiesmanager"),
 		Client:     client,
 	})
 	if err != nil {
@@ -90,7 +90,7 @@ func TestNewStaticSecretCapabilityManager(t *testing.T) {
 	// Lastly, double check that the refresh interval can be properly set
 	updater, err = NewStaticSecretCapabilityManager(&StaticSecretCapabilityManagerConfig{
 		LeaseCache: lc,
-		Logger:     logging.NewVaultLogger(hclog.Trace).Named("cache.capabilitiesmanager"),
+		Logger:     corehelpers.Logger.Named("cache.capabilitiesmanager"),
 		Client:     client,
 		StaticSecretTokenCapabilityRefreshInterval: time.Hour,
 	})

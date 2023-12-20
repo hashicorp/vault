@@ -10,16 +10,15 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func NewTestQueryStore(t *testing.T) *PrecomputedQueryStore {
 	t.Helper()
 
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	view := &logical.InmemStorage{}
 	return NewPrecomputedQueryStore(logger, view, 12)
 }

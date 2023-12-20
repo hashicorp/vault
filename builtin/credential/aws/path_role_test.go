@@ -11,11 +11,11 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -1011,7 +1011,7 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 	}
 
 	// Ensure aws credentials are available locally for testing.
-	logger := logging.NewVaultLogger(hclog.Debug)
+	logger := corehelpers.Logger
 	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {

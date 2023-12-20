@@ -17,35 +17,37 @@ import (
 	"github.com/hashicorp/vault/command/server"
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
 	"github.com/hashicorp/vault/builtin/plugin"
 
 	"github.com/hashicorp/vault/builtin/audit/syslog"
 
-	"github.com/hashicorp/vault/builtin/audit/file"
-	"github.com/hashicorp/vault/builtin/audit/socket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/builtin/audit/file"
+	"github.com/hashicorp/vault/builtin/audit/socket"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/sasha-s/go-deadlock"
+
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/sasha-s/go-deadlock"
 )
 
 // invalidKey is used to test Unseal
@@ -343,7 +345,7 @@ func TestNewCore_configureListeners(t *testing.T) {
 }
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
@@ -1852,7 +1854,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_Standby_Seal(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -1964,7 +1966,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
+	logger = corehelpers.Logger.Named(t.Name())
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2158,7 +2160,7 @@ func TestCore_StepDown(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2321,7 +2323,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2332,7 +2334,7 @@ func TestCore_Standby(t *testing.T) {
 }
 
 func TestCore_Standby_SeparateHA(t *testing.T) {
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inmha, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -2931,7 +2933,7 @@ func TestCore_HandleRequest_MountPointType(t *testing.T) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
@@ -3249,7 +3251,7 @@ func TestCore_ServiceRegistration(t *testing.T) {
 	sr := &mockServiceRegistration{}
 
 	// Create the core
-	logger = logging.NewVaultLogger(log.Trace)
+	logger = corehelpers.Logger
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {
 		t.Fatal(err)

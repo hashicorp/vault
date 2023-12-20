@@ -11,15 +11,15 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers"
-	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/okta/okta-sdk-golang/v2/okta/query"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // To run this test, set the following env variables:
@@ -51,7 +51,7 @@ func TestBackend_Config(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
+		Logger: corehelpers.Logger,
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,
 			MaxLeaseTTLVal:     maxLeaseTTLVal,

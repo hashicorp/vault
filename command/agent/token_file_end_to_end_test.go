@@ -10,18 +10,17 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestTokenFileEndToEnd(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})

@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	vaultoci "github.com/hashicorp/vault-plugin-auth-oci"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentoci "github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -57,7 +57,7 @@ func TestOCIEndToEnd(t *testing.T) {
 	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"oci": vaultoci.Factory,

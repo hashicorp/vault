@@ -15,12 +15,13 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func TestSinkServer(t *testing.T) {
-	log := logging.NewVaultLogger(hclog.Trace)
+	log := corehelpers.Logger
 
 	fs1, path1 := testFileSink(t, log)
 	defer os.RemoveAll(path1)
@@ -90,7 +91,7 @@ func (b *badSink) WriteToken(token string) error {
 }
 
 func TestSinkServerRetry(t *testing.T) {
-	log := logging.NewVaultLogger(hclog.Trace)
+	log := corehelpers.Logger
 
 	b1 := &badSink{logger: log.Named("b1")}
 	b2 := &badSink{logger: log.Named("b2")}

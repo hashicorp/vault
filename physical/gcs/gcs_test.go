@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/googleapi"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func testCleanup(t testing.TB, client *storage.Client, bucket string) {
@@ -56,7 +56,7 @@ func TestBackend(t *testing.T) {
 	backend, err := NewBackend(map[string]string{
 		"bucket":     bucket,
 		"ha_enabled": "false",
-	}, logging.NewVaultLogger(log.Trace))
+	}, corehelpers.Logger)
 	if err != nil {
 		t.Fatal(err)
 	}

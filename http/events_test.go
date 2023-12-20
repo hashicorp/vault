@@ -17,6 +17,9 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/stretchr/testify/assert"
+	"nhooyr.io/websocket"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -25,8 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/stretchr/testify/assert"
-	"nhooyr.io/websocket"
 )
 
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
@@ -320,7 +321,7 @@ func TestCanForwardEventConnections(t *testing.T) {
 	// Run again with in-memory network
 	inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
 		Mutex: &sync.Mutex{},
-		Level: hclog.Trace,
+		Level: corehelpers.TestLogLevel,
 		Name:  "inmem-cluster",
 	}))
 	if err != nil {

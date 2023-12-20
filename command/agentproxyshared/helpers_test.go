@@ -8,10 +8,9 @@ import (
 	"os"
 	"testing"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func testNewLeaseCache(t *testing.T, responses []*cache.SendResponse) *cache.LeaseCache {
@@ -25,7 +24,7 @@ func testNewLeaseCache(t *testing.T, responses []*cache.SendResponse) *cache.Lea
 		Client:              client,
 		BaseContext:         context.Background(),
 		Proxier:             cache.NewMockProxier(responses),
-		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:              corehelpers.Logger.Named("cache.leasecache"),
 		CacheDynamicSecrets: true,
 		UserAgentToUse:      "test",
 	})
@@ -75,7 +74,7 @@ func Test_AddPersistentStorageToLeaseCache(t *testing.T) {
 		t.Fatal("persistent storage was available before ours was added")
 	}
 
-	deferFunc, token, err := AddPersistentStorageToLeaseCache(context.Background(), leaseCache, persistConfig, logging.NewVaultLogger(hclog.Info))
+	deferFunc, token, err := AddPersistentStorageToLeaseCache(context.Background(), leaseCache, persistConfig, corehelpers.Logger)
 	if err != nil {
 		t.Fatal(err)
 	}

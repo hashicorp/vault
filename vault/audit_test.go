@@ -17,14 +17,13 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/mitchellh/copystructure"
+
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/copystructure"
 )
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
@@ -341,7 +340,7 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 }
 
 func TestAuditBroker_LogRequest(t *testing.T) {
-	l := logging.NewVaultLogger(log.Trace)
+	l := corehelpers.Logger
 	b, err := NewAuditBroker(l, true)
 	if err != nil {
 		t.Fatal(err)
@@ -433,7 +432,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 }
 
 func TestAuditBroker_LogResponse(t *testing.T) {
-	l := logging.NewVaultLogger(log.Trace)
+	l := corehelpers.Logger
 	b, err := NewAuditBroker(l, true)
 	if err != nil {
 		t.Fatal(err)
@@ -540,7 +539,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 
 	b, err := NewAuditBroker(logger, true)
 	if err != nil {

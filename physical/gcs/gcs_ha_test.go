@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -40,7 +40,7 @@ func TestHABackend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	config := map[string]string{
 		"bucket":     bucket,
 		"ha_enabled": "true",

@@ -8,8 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
@@ -24,7 +23,7 @@ func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 }
 
 func testCore_NewTestCoreLicensing(t *testing.T, seal Seal, licensingConfig *LicensingConfig) (*Core, *CoreConfig) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {

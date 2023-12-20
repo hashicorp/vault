@@ -11,16 +11,15 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/stretchr/testify/require"
 )
 
-var logger = logging.NewVaultLogger(log.Trace)
+var logger = corehelpers.Logger
 
 // mockBarrier returns a physical backend, security barrier, and master key
 func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {

@@ -10,9 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/seal"
@@ -407,7 +405,7 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 
 func TestCore_Rekey_Standby(t *testing.T) {
 	// Create the first core and initialize it
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 
 	inm, err := inmem.NewInmemHA(nil, logger)
 	if err != nil {

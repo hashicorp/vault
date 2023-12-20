@@ -11,8 +11,7 @@ import (
 
 	"github.com/go-test/deep"
 
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -94,7 +93,7 @@ func getBackend(t *testing.T) (logical.Backend, logical.Storage) {
 	maxLeaseTTLVal := time.Hour * 24
 
 	config := &logical.BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
+		Logger: corehelpers.Logger,
 
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: defaultLeaseTTLVal,

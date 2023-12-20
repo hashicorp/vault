@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -36,7 +37,11 @@ var (
 	_ eventlogger.Node = (*noopWrapper)(nil)
 )
 
-var externalPlugins = []string{"transform", "kmip", "keymgmt"}
+var (
+	TestLogLevel    = hclog.LevelFromString(os.Getenv("VAULT_TEST_LOG_LEVEL"))
+	Logger          = logging.NewVaultLogger(TestLogLevel)
+	externalPlugins = []string{"transform", "kmip", "keymgmt"}
+)
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.

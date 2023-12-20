@@ -6,13 +6,12 @@ package raftha
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	consulstorage "github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -127,7 +126,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		NumCores:           vault.DefaultNumCores,
 		KeepStandbysSealed: true,
 	}
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := corehelpers.Logger
 
 	physBundle := teststorage.MakeInmemBackend(t, logger)
 	physBundle.HABackend = nil

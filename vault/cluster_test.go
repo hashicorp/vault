@@ -14,9 +14,9 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -44,8 +44,6 @@ func TestClusterFetching(t *testing.T) {
 }
 
 func TestClusterHAFetching(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
-
 	redirect := "http://127.0.0.1:8200"
 
 	inm, err := inmem.NewInmemHA(nil, logger)

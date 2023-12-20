@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/errwrap"
-	hclog "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func TestKubernetesAuth_basic(t *testing.T) {
@@ -41,7 +41,7 @@ func TestKubernetesAuth_basic(t *testing.T) {
 	for k, tc := range testCases {
 		t.Run(k, func(t *testing.T) {
 			authCfg := auth.AuthConfig{
-				Logger:    logging.NewVaultLogger(hclog.Trace),
+				Logger:    corehelpers.Logger,
 				MountPath: "kubernetes",
 				Config: map[string]interface{}{
 					"role": "plugin-test",

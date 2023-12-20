@@ -12,8 +12,9 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 const (
@@ -45,7 +46,7 @@ func testFileSink(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string) {
 }
 
 func TestFileSink(t *testing.T) {
-	log := logging.NewVaultLogger(hclog.Trace)
+	log := corehelpers.Logger
 
 	fs, tmpDir := testFileSink(t, log)
 	defer os.RemoveAll(tmpDir)
@@ -110,7 +111,7 @@ func testFileSinkMode(t *testing.T, log hclog.Logger) (*sink.SinkConfig, string)
 }
 
 func TestFileSinkMode(t *testing.T) {
-	log := logging.NewVaultLogger(hclog.Trace)
+	log := corehelpers.Logger
 
 	fs, tmpDir := testFileSinkMode(t, log)
 	defer os.RemoveAll(tmpDir)

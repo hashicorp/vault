@@ -16,16 +16,18 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
 	"github.com/hashicorp/vault/command/agentproxyshared"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 func newRunnerConfig(s *ServerConfig, configs ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
@@ -363,7 +365,7 @@ func TestServerRun(t *testing.T) {
 
 			ctx, _ := context.WithTimeout(context.Background(), 20*time.Second)
 			sc := ServerConfig{
-				Logger: logging.NewVaultLogger(hclog.Trace),
+				Logger: corehelpers.Logger,
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
 						Address: ts.URL,
@@ -375,7 +377,7 @@ func TestServerRun(t *testing.T) {
 						ExitOnRetryFailure: tc.exitOnRetryFailure,
 					},
 				},
-				LogLevel:      hclog.Trace,
+				LogLevel:      corehelpers.TestLogLevel,
 				LogWriter:     hclog.DefaultOutput,
 				ExitAfterAuth: true,
 			}

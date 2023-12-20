@@ -5,13 +5,13 @@ import (
 	"os"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/oracle/oci-go-sdk/common"
 	"github.com/oracle/oci-go-sdk/objectstorage"
 	"golang.org/x/net/context"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func TestOCIBackend(t *testing.T) {
@@ -77,7 +77,7 @@ func createBackend(bucketName string, namespaceName string, haEnabledStr string,
 		"namespace_name":    namespaceName,
 		"ha_enabled":        haEnabledStr,
 		"lock_bucket_name":  lockBucketName,
-	}, logging.NewVaultLogger(log.Trace))
+	}, corehelpers.Logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}

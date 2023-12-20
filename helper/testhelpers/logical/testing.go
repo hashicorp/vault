@@ -13,12 +13,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -158,7 +157,7 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Create an in-memory Vault core
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 
 	phys, err := inmem.NewInmem(nil, logger)
 	if err != nil {

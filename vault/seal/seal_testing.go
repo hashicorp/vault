@@ -10,10 +10,10 @@ import (
 
 	UUID "github.com/hashicorp/go-uuid"
 
-	"github.com/hashicorp/vault/sdk/helper/logging"
-
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 type TestSealOpts struct {
@@ -33,7 +33,7 @@ func NewTestSealOpts(opts *TestSealOpts) *TestSealOpts {
 		opts.WrapperCount = 1
 	}
 	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(hclog.Debug)
+		opts.Logger = corehelpers.Logger
 	}
 	if opts.Generation == 0 {
 		// we might at some point need to allow Generation == 0

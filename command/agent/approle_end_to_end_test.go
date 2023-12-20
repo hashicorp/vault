@@ -13,15 +13,14 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -68,7 +67,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 
 func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID bool, secretIDLess bool, expectToken bool) {
 	var err error
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
@@ -471,7 +470,7 @@ func TestAppRoleWithWrapping(t *testing.T) {
 
 func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool, expectToken bool) {
 	var err error
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,

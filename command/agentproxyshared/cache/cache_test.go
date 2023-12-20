@@ -16,15 +16,15 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/mock"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -69,7 +69,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	cacheLogger := corehelpers.Logger.Named("cache")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -158,7 +158,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	cacheLogger := corehelpers.Logger.Named("cache")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)

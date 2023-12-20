@@ -15,7 +15,9 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -92,7 +94,7 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	const redirectAddr = "http://127.0.0.1:8200"
 
 	// Create a ServiceRegistration that points to our consul instance
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	sd, err := NewServiceRegistration(map[string]string{
 		"address": config.Address(),
 		"token":   config.Token,
@@ -595,7 +597,7 @@ func TestConsul_NewServiceRegistration_serviceTags(t *testing.T) {
 			t.Parallel()
 
 			cfg := map[string]string{"service_tags": tc.Tags}
-			logger := logging.NewVaultLogger(log.Trace)
+			logger := corehelpers.Logger
 			be, err := NewServiceRegistration(cfg, logger, sr.State{})
 			require.NoError(t, err)
 			require.NotNil(t, be)

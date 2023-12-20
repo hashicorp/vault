@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -154,7 +153,7 @@ func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
 }
 
 func TestSystemBackend_HAStatus(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	inm, err := inmem.NewTransactionalInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)

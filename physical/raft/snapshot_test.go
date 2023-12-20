@@ -20,10 +20,16 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
+
+var logger = hclog.New(&hclog.LoggerOptions{
+	Name:  "raft",
+	Level: hclog.LevelFromString(os.Getenv("VAULT_TEST_LOG_LEVEL")),
+})
 
 type idAddr struct {
 	id string
@@ -544,11 +550,6 @@ func TestBoltSnapshotStore_CreateSnapshotMissingParentDir(t *testing.T) {
 		t.Fatalf("err: %v ", err)
 	}
 
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
-
 	snap, err := NewBoltSnapshotStore(dir, logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -586,11 +587,6 @@ func TestBoltSnapshotStore_Listing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
 
 	fsm, err := NewFSM(parent, "", logger)
 	if err != nil {
@@ -651,11 +647,6 @@ func TestBoltSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v ", err)
 	}
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
 
 	fsm, err := NewFSM(parent, "", logger)
 	if err != nil {
@@ -829,11 +820,6 @@ func TestBoltSnapshotStore_CancelSnapshot(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
-
 	snap, err := NewBoltSnapshotStore(dir, logger, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -899,11 +885,6 @@ func TestBoltSnapshotStore_BadPerm(t *testing.T) {
 	}
 	defer os.Chmod(dir2, 777) // Set perms back for delete
 
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
-
 	_, err = NewBoltSnapshotStore(dir2, logger, nil)
 	if err == nil {
 		t.Fatalf("should fail to use dir with bad perms")
@@ -917,11 +898,6 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 		t.Fatalf("err: %v ", err)
 	}
 	defer os.RemoveAll(dir)
-
-	logger := hclog.New(&hclog.LoggerOptions{
-		Name:  "raft",
-		Level: hclog.Trace,
-	})
 
 	snap, err := NewBoltSnapshotStore(dir, logger, nil)
 	if err != nil {

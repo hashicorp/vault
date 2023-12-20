@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/api"
 	vaultaws "github.com/hashicorp/vault/builtin/credential/aws"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -23,8 +23,8 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -59,7 +59,7 @@ func TestAWSEndToEnd(t *testing.T) {
 	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"aws": vaultaws.Factory,

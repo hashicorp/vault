@@ -9,6 +9,8 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 type testJob struct {
@@ -52,10 +54,8 @@ func newTestLogger(name string) log.Logger {
 	if err != nil {
 		guid = "no-guid"
 	}
-	return log.New(&log.LoggerOptions{
-		Name:  fmt.Sprintf("%s-%s", name, guid),
-		Level: log.LevelFromString("TRACE"),
-	})
+	logName := fmt.Sprintf("%s-%s", name, guid)
+	return corehelpers.Logger.Named(logName)
 }
 
 func GetNumWorkers(j *JobManager) int {

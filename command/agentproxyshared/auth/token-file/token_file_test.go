@@ -8,13 +8,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func TestNewTokenFileAuthMethodEmptyConfig(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	_, err := NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{},
@@ -25,7 +24,7 @@ func TestNewTokenFileAuthMethodEmptyConfig(t *testing.T) {
 }
 
 func TestNewTokenFileEmptyFilePath(t *testing.T) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	_, err := NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{
@@ -48,7 +47,7 @@ func TestNewTokenFileAuthenticate(t *testing.T) {
 	os.WriteFile(tokenFileName, []byte(tokenFileContents), 0o666)
 	defer os.Remove(tokenFileName)
 
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	am, err := NewTokenFileAuthMethod(&auth.AuthConfig{
 		Logger: logger.Named("auth.method"),
 		Config: map[string]interface{}{

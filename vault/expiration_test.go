@@ -20,12 +20,13 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -690,7 +691,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 */
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		b.Fatal(err)
@@ -762,7 +763,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 }
 
 func BenchmarkExpiration_Create_Leases(b *testing.B) {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	inm, err := inmem.NewInmem(nil, logger)
 	if err != nil {
 		b.Fatal(err)

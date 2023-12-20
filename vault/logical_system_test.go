@@ -24,6 +24,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/experiments"
@@ -37,7 +40,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -45,8 +47,6 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/mitchellh/mapstructure"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSystemConfigCORS(t *testing.T) {
@@ -5694,7 +5694,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			t.Parallel()
 
 			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
-				Logger: logging.NewVaultLogger(hclog.Trace),
+				Logger: corehelpers.Logger,
 			})
 			b := core.systemBackend
 

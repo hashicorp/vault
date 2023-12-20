@@ -10,23 +10,23 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	"github.com/hashicorp/vault-plugin-auth-cf/testing/certificates"
 	cfAPI "github.com/hashicorp/vault-plugin-auth-cf/testing/cf"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentcf "github.com/hashicorp/vault/command/agentproxyshared/auth/cf"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestCFEndToEnd(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
+	logger := corehelpers.Logger
 
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{

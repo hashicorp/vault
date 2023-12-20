@@ -21,18 +21,19 @@ import (
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/atomic"
 )
 
 func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
@@ -46,7 +47,7 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		Client:              client,
 		BaseContext:         context.Background(),
 		Proxier:             NewMockProxier(responses),
-		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:              corehelpers.Logger.Named("cache.leasecache"),
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,
 		UserAgentToUse:      "test",
@@ -69,7 +70,7 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 		Client:              client,
 		BaseContext:         context.Background(),
 		Proxier:             &mockDelayProxier{cacheable, delay},
-		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:              corehelpers.Logger.Named("cache.leasecache"),
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,
 		UserAgentToUse:      "test",
@@ -91,7 +92,7 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 		Client:              client,
 		BaseContext:         context.Background(),
 		Proxier:             NewMockProxier(responses),
-		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Logger:              corehelpers.Logger.Named("cache.leasecache"),
 		Storage:             storage,
 		CacheStaticSecrets:  true,
 		CacheDynamicSecrets: true,

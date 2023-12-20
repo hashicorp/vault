@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -40,7 +41,7 @@ import (
 
 func testPluginCatalog(t *testing.T) *PluginCatalog {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Level: hclog.Trace,
+		Level: corehelpers.TestLogLevel,
 	})
 	storage, err := inmem.NewInmem(nil, logger)
 	if err != nil {

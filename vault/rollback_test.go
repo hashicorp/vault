@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/stretchr/testify/require"
 )
 
 // mockRollback returns a mock rollback manager
@@ -51,7 +51,7 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		return mounts.Entries
 	}
 
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 
 	rb := NewRollbackManager(context.Background(), logger, mountsFunc, router, core)
 	rb.period = 10 * time.Millisecond

@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -22,10 +20,10 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink/inmem"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -42,7 +40,7 @@ path "/auth/token/create" {
 
 func TestCache_UsingAutoAuthToken(t *testing.T) {
 	var err error
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.Logger
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
@@ -159,7 +157,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		"remove_secret_id_file_after_reading": true,
 	}
 
-	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+	cacheLogger := corehelpers.Logger.Named("cache")
 
 	// Create the API proxier
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
