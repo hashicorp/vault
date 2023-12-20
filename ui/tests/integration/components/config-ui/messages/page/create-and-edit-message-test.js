@@ -112,6 +112,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       message: 'Blah blah blah. Some super long message.',
       start_time: '2023-12-12T08:00:00.000Z',
       end_time: '2023-12-21T08:00:00.000Z',
+      linkTitle: 'learn more',
+      linkHref: 'www.example.com',
     });
     this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {

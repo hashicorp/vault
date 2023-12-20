@@ -1,0 +1,9 @@
+.preview-image-modal {
+  width: 66%;
+  height: 75%;
+
+  @media screen and (max-width: 768px) {
+    width: 66%;
+    height: 50%;
+  }
+}

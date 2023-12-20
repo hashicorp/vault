@@ -1,0 +1,26 @@
+<Hds::Modal
+  id="message-alert-preview"
+  class="preview-image-modal"
+  @onClose={{fn (mut @showMessagePreviewModal) false}}
+  as |M|
+>
+  <M.Body class="is-paddingless is-overflow-hidden">
+    <Hds::Alert
+      @type="page"
+      @color="warning"
+      class="has-bottom-margin-s"
+      @onDismiss={{fn (mut @showMessagePreviewModal) false}}
+      as |A|
+    >
+      <A.Title>{{@message.title}}</A.Title>
+      <A.Description>{{@message.message}}</A.Description>
+    </Hds::Alert>
+    <img
+      src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
+      alt={{if @message.authenticated "dashboard page preview" "login page preview"}}
+    />
+  </M.Body>
+  <M.Footer as |F|>
+    <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-close-button />
+  </M.Footer>
+</Hds::Modal>
