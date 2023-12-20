@@ -1245,6 +1245,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			DerefAliases:             "never",
 			MaximumPageSize:          1000,
 		},
+		RotationSchedule: "",
 	}
 
 	configEntry, err := b.Config(ctx, configReq)
