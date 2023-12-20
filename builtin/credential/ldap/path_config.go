@@ -228,11 +228,24 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
 	}
-	if schedule, ok := d.GetOk("rotation_schedule"); ok {
-		cfg.RotationSchedule = schedule.(string)
-	}
-	if window, ok := d.GetOk("rotation_window"); ok {
-		cfg.RotationWindow = window.(int)
+	sched, sok := d.GetOk("rotation_schedule")
+	wind, wok := d.GetOk("rotation_window")
+
+	var rc *logical.RootCredential
+	if sok && !wok || wok && !sok {
+		return logical.ErrorResponse("must include both schedule and window"), nil
+	} else if sok && wok {
+		cfg.RotationSchedule = sched.(string)
+		cfg.RotationWindow = wind.(int)
+
+		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule)
+
+		rc, err = logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
+			"ldap-root-creds", cfg.RotationWindow)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+
 	}
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
@@ -249,17 +262,13 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		}, nil
 	}
 
-	b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule)
-
-	rc, err := logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
-		"ldap-root-creds", cfg.RotationWindow)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if rc != nil {
+		return &logical.Response{
+			RootCredential: rc,
+		}, nil
+	} else {
+		return nil, nil
 	}
-
-	return &logical.Response{
-		RootCredential: rc,
-	}, nil
 }
 
 /*
