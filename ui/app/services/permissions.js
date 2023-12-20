@@ -4,6 +4,7 @@
  */
 
 import Service, { inject as service } from '@ember/service';
+import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { task } from 'ember-concurrency';
 
 const API_PATHS = {
@@ -65,6 +66,7 @@ export default Service.extend({
   globPaths: null,
   canViewAll: null,
   readFailed: false,
+  chrootNamespace: null,
   store: service(),
   auth: service(),
   namespace: service(),
@@ -89,6 +91,7 @@ export default Service.extend({
     this.set('exactPaths', resp.data.exact_paths);
     this.set('globPaths', resp.data.glob_paths);
     this.set('canViewAll', resp.data.root);
+    this.set('chrootNamespace', resp.data.chroot_namespace);
     this.set('readFailed', false);
   },
 
@@ -97,6 +100,7 @@ export default Service.extend({
     this.set('globPaths', null);
     this.set('canViewAll', null);
     this.set('readFailed', false);
+    this.set('chrootNamespace', null);
   },
 
   hasNavPermission(navItem, routeParams, requireAll) {
@@ -124,20 +128,21 @@ export default Service.extend({
   },
 
   pathNameWithNamespace(pathName) {
-    const namespace = this.namespace.path;
+    const namespace = this.chrootNamespace
+      ? `${sanitizePath(this.chrootNamespace)}/${sanitizePath(this.namespace.path)}`
+      : sanitizePath(this.namespace.path);
     if (namespace) {
-      return `${namespace}/${pathName}`;
+      return `${sanitizePath(namespace)}/${sanitizeStart(pathName)}`;
     } else {
       return pathName;
     }
   },
 
   hasPermission(pathName, capabilities = [null]) {
-    const path = this.pathNameWithNamespace(pathName);
-
     if (this.canViewAll) {
       return true;
     }
+    const path = this.pathNameWithNamespace(pathName);
 
     return capabilities.every(
       (capability) =>

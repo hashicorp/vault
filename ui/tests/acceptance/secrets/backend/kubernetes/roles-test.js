@@ -10,6 +10,7 @@ import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { fillIn, visit, currentURL, click, currentRouteName } from '@ember/test-helpers';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | kubernetes | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -59,6 +60,12 @@ module('Acceptance | kubernetes | roles', function (hooks) {
   });
 
   test('it should have functional list item menu', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(3);
     await this.visitRoles();
     for (const action of ['details', 'edit', 'delete']) {

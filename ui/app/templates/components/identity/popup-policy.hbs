@@ -4,7 +4,7 @@
 ~}}
 
 <PopupMenu @name="policy-menu">
-  <nav class="menu">
+  <nav class="menu" aria-label="navigation for managing identity policies">
     <ul class="menu-list">
       <li class="action">
         <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" this.policyName}}>

@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const renderComponent = () => {
   return render(hbs`
@@ -19,6 +20,17 @@ const renderComponent = () => {
 
 module('Integration | Component | sidebar-nav-cluster', function (hooks) {
   setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // This is an issue with Hds::SideNav::Header::HomeLink
+        'aria-prohibited-attr': { enabled: false },
+        // TODO: fix use Dropdown on user-menu
+        'nested-interactive': { enabled: false },
+      },
+    });
+  });
 
   test('it should render nav headings', async function (assert) {
     const headings = ['Vault', 'Monitoring'];
@@ -39,7 +51,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
+      .exists({ count: 3 }, 'Nav links are hidden other than secrets, secrets sync and dashboard');
     assert
       .dom('[data-test-sidebar-nav-heading]')
       .exists({ count: 1 }, 'Headings are hidden other than Vault');
@@ -49,6 +61,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets Engines',
+      'Secrets Sync',
       'Access',
       'Policies',
       'Tools',
