@@ -120,13 +120,14 @@ func (b *backend) Config(ctx context.Context, req *logical.Request) (*ldapConfig
 		persistNeeded = true
 	}
 
-	if result.RotationSchedule == "" {
-		result.RotationSchedule = "0 0 0 0 0"
-	}
+	// leave these blank if unset, which would mean no rotation at all
+	//if result.RotationSchedule == "" {
+	//	result.RotationSchedule = "0 0 0 0 0"
+	//}
 
-	if result.RotationWindow == 0 {
-		// default rotation windoe
-	}
+	//if result.RotationWindow == 0 {
+	//	// default rotation windoe
+	//}
 
 	if persistNeeded && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		entry, err := logical.StorageEntryJSON("config", result)
