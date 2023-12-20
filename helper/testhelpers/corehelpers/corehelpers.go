@@ -571,7 +571,6 @@ func NewTestLogger(t testing.T) *TestLogger {
 	logLevelRaw := os.Getenv("VAULT_TEST_LOG_LEVEL")
 	if logLevelRaw != "" {
 		logLevel = hclog.LevelFromString(logLevelRaw)
-		t.Logf("RAYMOND TESTING: logLevelRaw: %v\n", logLevel.String())
 	}
 	logDir := os.Getenv("VAULT_TEST_LOG_DIR")
 	if logDir != "" {

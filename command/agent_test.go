@@ -2510,7 +2510,7 @@ vault {
 			wg.Add(1)
 			var code int
 			go func() {
-				code = cmd.Run([]string{"-config", configPath})
+				code = cmd.Run([]string{"-config", configPath, "-log-level", "error"})
 				close(cmdRunDoneCh)
 				wg.Done()
 			}()

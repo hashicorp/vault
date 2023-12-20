@@ -7,8 +7,8 @@ import (
 	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"os"
 	"os/exec"
@@ -44,7 +44,6 @@ func TestSign(t *testing.T) {
 					t.Fatalf("test %s/%s/%s: cannot generate signer cert: %s", sigalgroot, sigalginter, sigalgsigner, err)
 				}
 				for _, testDetach := range []bool{false, true} {
-					log.Printf("test %s/%s/%s detached %t\n", sigalgroot, sigalginter, sigalgsigner, testDetach)
 					toBeSigned, err := NewSignedData(content)
 					if err != nil {
 						t.Fatalf("test %s/%s/%s: cannot initialize signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
@@ -64,7 +63,7 @@ func TestSign(t *testing.T) {
 					if err != nil {
 						t.Fatalf("test %s/%s/%s: cannot finish signing data: %s", sigalgroot, sigalginter, sigalgsigner, err)
 					}
-					pem.Encode(os.Stdout, &pem.Block{Type: "PKCS7", Bytes: signed})
+					pem.Encode(io.Discard, &pem.Block{Type: "PKCS7", Bytes: signed})
 					p7, err := Parse(signed)
 					if err != nil {
 						t.Fatalf("test %s/%s/%s: cannot parse signed data: %s", sigalgroot, sigalginter, sigalgsigner, err)
@@ -207,7 +206,7 @@ func ExampleSignedData() {
 	if err != nil {
 		fmt.Printf("Cannot finish signing data: %s", err)
 	}
-	pem.Encode(os.Stdout, &pem.Block{Type: "PKCS7", Bytes: detachedSignature})
+	pem.Encode(io.Discard, &pem.Block{Type: "PKCS7", Bytes: detachedSignature})
 }
 
 func TestUnmarshalSignedAttribute(t *testing.T) {
@@ -255,7 +254,7 @@ func TestDegenerateCertificate(t *testing.T) {
 		t.Fatal(err)
 	}
 	testOpenSSLParse(t, deg)
-	pem.Encode(os.Stdout, &pem.Block{Type: "PKCS7", Bytes: deg})
+	pem.Encode(io.Discard, &pem.Block{Type: "PKCS7", Bytes: deg})
 }
 
 // writes the cert to a temporary file and tests that openssl can read it.
