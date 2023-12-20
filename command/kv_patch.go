@@ -216,7 +216,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	if !v2 {
-		c.UI.Error("K/V engine mount must be version 2 for patch support")
+		c.UI.Error("KV engine mount must be version 2 for patch support")
 		return 2
 	}
 

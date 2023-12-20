@@ -10,7 +10,7 @@
     </h3>
 
     {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
-      <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
+      <LinkTo @route="vault.cluster.replication.index">
         Details
       </LinkTo>
     {{/if}}

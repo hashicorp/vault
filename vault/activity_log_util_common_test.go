@@ -99,8 +99,10 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	nonEntitiesStruct["client_26"] = struct{}{}
 
 	counts := &processCounts{
-		Entities:    entitiesStruct,
-		NonEntities: nonEntitiesStruct,
+		ClientsByType: map[string]clientIDSet{
+			entityActivityType:         entitiesStruct,
+			nonEntityTokenActivityType: nonEntitiesStruct,
+		},
 	}
 
 	currentMonthClientsMap := make(map[int64]*processMonth, 1)
