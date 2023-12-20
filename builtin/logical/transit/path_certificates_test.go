@@ -14,12 +14,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_Certs_CreateCsr(t *testing.T) {
@@ -179,7 +180,6 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 		Type:  "CERTIFICATE REQUEST",
 		Bytes: reqCsrBytes,
 	})
-	t.Logf("csr: %v", string(pemTemplateCsr))
 
 	// Create CSR from template CSR fields and key in transit
 	resp, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/csr", keyName), map[string]interface{}{
@@ -231,8 +231,6 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NoError(t, err)
 
 	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
-	t.Logf("root: %v", rootCertPEM)
-	t.Logf("leaf: %v", leafCertPEM)
 
 	certificateChain := strings.Join([]string{leafCertPEM, rootCertPEM}, "\n")
 	// Import certificate chain to transit key version

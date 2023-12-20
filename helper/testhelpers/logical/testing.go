@@ -166,6 +166,7 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	config := &vault.CoreConfig{
+		Logger:          logger,
 		Physical:        phys,
 		DisableMlock:    true,
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
