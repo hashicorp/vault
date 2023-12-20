@@ -5,12 +5,14 @@ package logical
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"time"
 
 	testing "github.com/mitchellh/go-testing-interface"
 
 	log "github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
@@ -81,8 +83,9 @@ func TestSystemView() *StaticSystemView {
 }
 
 func TestBackendConfig() *BackendConfig {
+	level := log.LevelFromString(os.Getenv("VAULT_TEST_LOG_LEVEL"))
 	bc := &BackendConfig{
-		Logger: logging.NewVaultLogger(log.Trace),
+		Logger: logging.NewVaultLogger(level),
 		System: TestSystemView(),
 		Config: make(map[string]string),
 	}
