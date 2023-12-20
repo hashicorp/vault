@@ -91,6 +91,7 @@ func testAgentCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *AgentCo
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
 		logger:     logger,
+		logWriter:  io.Discard,
 		startedCh:  make(chan struct{}, 5),
 		reloadedCh: make(chan struct{}, 5),
 	}

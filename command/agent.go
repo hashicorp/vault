@@ -26,6 +26,13 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/kr/pretty"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/api"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/exec"
@@ -45,12 +52,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
-	"github.com/kr/pretty"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -181,7 +182,9 @@ func (c *AgentCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
-	c.logWriter = c.logGate
+	if c.logWriter == nil {
+		c.logWriter = c.logGate
+	}
 
 	if c.logFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
@@ -206,21 +209,23 @@ func (c *AgentCommand) Run(args []string) int {
 	c.applyConfigOverrides(f, config) // This only needs to happen on start-up to aggregate config from flags and env vars
 	c.config = config
 
-	l, err := c.newLogger()
-	if err != nil {
-		c.outputErrors(err)
-		return 1
-	}
+	if c.logger == nil {
+		l, err := c.newLogger()
+		if err != nil {
+			c.outputErrors(err)
+			return 1
+		}
 
-	// Update the logger and then base the log writer on that logger.
-	// Log writer is supplied to consul-template runners for templates and execs.
-	// We want to ensure that consul-template will honor the settings, for example
-	// if the -log-format is JSON we want JSON, not a mix of JSON and non-JSON messages.
-	c.logger = l
-	c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{
-		InferLevels:              true,
-		InferLevelsWithTimestamp: true,
-	})
+		// Update the logger and then base the log writer on that logger.
+		// Log writer is supplied to consul-template runners for templates and execs.
+		// We want to ensure that consul-template will honor the settings, for example
+		// if the -log-format is JSON we want JSON, not a mix of JSON and non-JSON messages.
+		c.logger = l
+		c.logWriter = l.StandardWriter(&hclog.StandardLoggerOptions{
+			InferLevels:              true,
+			InferLevelsWithTimestamp: true,
+		})
+	}
 
 	// release log gate if the disable-gated-logs flag is set
 	if c.logFlags.flagDisableGatedLogs {
