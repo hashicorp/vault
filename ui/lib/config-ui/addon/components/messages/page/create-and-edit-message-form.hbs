@@ -64,7 +64,7 @@
         @color="tertiary"
         @icon="eye"
         disabled={{(and (not @message.title @message.message))}}
-        {{on "click" (fn (mut this.showTemplateModal) true)}}
+        {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
       />
 
       <Hds::Button
@@ -84,9 +84,15 @@
   </div>
 </form>
 
-{{#if this.showTemplateModal}}
+{{#if this.showMessagePreviewModal}}
   {{#if (eq @message.type "modal")}}
-    <Hds::Modal id="message-modal" @size="large" @color="warning" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
+    <Hds::Modal
+      id="message-modal-preview"
+      @size="large"
+      @color="warning"
+      @onClose={{fn (mut this.showMessagePreviewModal) false}}
+      as |M|
+    >
       <M.Header data-test-modal-title>
         {{@message.title}}
       </M.Header>
@@ -98,13 +104,18 @@
       </M.Footer>
     </Hds::Modal>
   {{else}}
-    <Hds::Modal id="message-modal" class="is-fullwidth" @onClose={{fn (mut this.showTemplateModal) false}} as |M|>
-      <M.Body class="is-paddingless">
+    <Hds::Modal
+      id="message-alert-preview"
+      class="is-two-thirds-width is-three-fourths-height"
+      @onClose={{fn (mut this.showMessagePreviewModal) false}}
+      as |M|
+    >
+      <M.Body class="is-paddingless is-overflow-hidden">
         <Hds::Alert
           @type="page"
           @color="warning"
           class="has-bottom-margin-s"
-          @onDismiss={{fn (mut this.showTemplateModal) false}}
+          @onDismiss={{fn (mut this.showMessagePreviewModal) false}}
           as |A|
         >
           <A.Title>{{@message.title}}</A.Title>
