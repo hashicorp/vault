@@ -41,7 +41,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       await association.save({ adapterOptions: { action: operation } });
       const action: string = operation === 'set' ? 'Sync' : 'Unsync';
       this.flashMessages.success(`${action} operation initiated.`);
-      // refresh route to update list of secrets, clearing dataset does not reload UI
+      // refresh route to update displayed secrets
       this.store.clearDataset('sync/association');
       this.router.transitionTo(
         'vault.cluster.sync.secrets.destinations.destination.secrets',
