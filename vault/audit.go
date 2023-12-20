@@ -88,6 +88,9 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
 		switch {
+		// Check if any of the existing backends is a fallback device (only one is allowed)
+		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
+			return fmt.Errorf("a fallback device already exists: %q", ent.Path)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
