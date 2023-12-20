@@ -19,6 +19,12 @@ const PAGE = {
   button: (buttonName) => `[data-test-button="${buttonName}"]`,
   inlineErrorMessage: `[data-test-inline-error-message]`,
   fieldVaildation: (fieldName) => `[data-test-field-validation="${fieldName}"]`,
+  modal: (name) => `[data-test-modal="${name}"]`,
+  modalTitle: (title) => `[data-test-modal-title="${title}"]`,
+  modalBody: '[data-test-modal-body]',
+  modalButton: (name) => `[data-test-modal-button="${name}"]`,
+  alertTitle: (name) => `[data-test-alert-title="${name}"]`,
+  alertDescription: (name) => `[data-test-alert-description="${name}"]`,
 };
 
 module('Integration | Component | messages/page/create-and-edit-message', function (hooks) {
@@ -112,8 +118,8 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
       message: 'Blah blah blah. Some super long message.',
       start_time: '2023-12-12T08:00:00.000Z',
       end_time: '2023-12-21T08:00:00.000Z',
-      linkTitle: 'learn more',
-      linkHref: 'www.example.com',
+      link_title: 'Learn more',
+      link_href: 'www.learnmore.com',
     });
     this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
     await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
@@ -131,7 +137,9 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.input('title')).hasValue('Hello world');
     assert.dom(PAGE.input('message')).hasValue('Blah blah blah. Some super long message.');
     assert.dom(PAGE.input('linkTitle')).exists();
+    assert.dom(PAGE.input('linkTitle')).hasValue('Learn more');
     assert.dom(PAGE.input('linkHref')).exists();
+    assert.dom(PAGE.input('linkHref')).hasValue('www.learnmore.com');
     await click('#specificDate');
     assert
       .dom(PAGE.input('startTime'))
@@ -139,5 +147,44 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert
       .dom(PAGE.input('endTime'))
       .hasValue(format(new Date(this.message.endTime), datetimeLocalStringFormat));
+  });
+
+  test('it should show a preview image modal when preview is clicked', async function (assert) {
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
+    await fillIn(PAGE.input('title'), 'Awesome custom message title');
+    await fillIn(
+      PAGE.input('message'),
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+    );
+    await click(PAGE.button('preview'));
+    assert.dom(PAGE.modal('preview modal')).doesNotExist();
+    assert.dom(PAGE.modal('preview image')).exists();
+    assert.dom(PAGE.alertTitle('Awesome custom message title')).hasText('Awesome custom message title');
+    assert
+      .dom(PAGE.alertDescription('Awesome custom message title'))
+      .hasText(
+        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      );
+    assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-dashboard.png');
+    await click(PAGE.modalButton('Close'));
+    await click('#unauthenticated');
+    await click(PAGE.button('preview'));
+    assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-login.png');
+  });
+
+  test('it should show a preview modal when preview is clicked', async function (assert) {
+    await render(hbs`<Messages::Page::CreateAndEditMessageForm @message={{this.message}} />`, {
+      owner: this.engine,
+    });
+    await click(PAGE.radio('modal'));
+    await fillIn(PAGE.input('title'), 'Preview modal title');
+    await fillIn(PAGE.input('message'), 'Some preview modal message thats super long.');
+    await click(PAGE.button('preview'));
+    assert.dom(PAGE.modal('preview modal')).exists();
+    assert.dom(PAGE.modal('preview image')).doesNotExist();
+    assert.dom(PAGE.modalTitle('Preview modal title')).hasText('Preview modal title');
+    assert.dom(PAGE.modalBody).hasText('Some preview modal message thats super long.');
   });
 });

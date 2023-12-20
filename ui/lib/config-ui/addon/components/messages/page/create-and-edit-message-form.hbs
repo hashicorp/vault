@@ -65,6 +65,7 @@
         @icon="eye"
         disabled={{(and (not @message.title @message.message))}}
         {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
+        data-test-button="preview"
       />
 
       <Hds::Button
@@ -91,6 +92,7 @@
       @size="large"
       @color="warning"
       @onClose={{fn (mut this.showMessagePreviewModal) false}}
+      data-test-modal="preview modal"
       as |M|
     >
       <M.Header data-test-modal-title={{@message.title}}>
