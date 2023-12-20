@@ -14,4 +14,13 @@ export default class MessagesMessageEditRoute extends Route {
 
     return this.store.queryRecord('config-ui/message', id);
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'Messages', route: 'messages', query: { authenticated: resolvedModel.authenticated } },
+      { label: 'Edit Message' },
+    ];
+  }
 }

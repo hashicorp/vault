@@ -5,7 +5,7 @@
 <Messages::TabPageHeader
   @authenticated={{@message.authenticated}}
   @pageTitle="{{if @message.isNew 'Create' 'Edit'}} message"
-  @breadcrumbs={{this.breadcrumbs}}
+  @breadcrumbs={{@breadcrumbs}}
 />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
@@ -93,10 +93,10 @@
       @onClose={{fn (mut this.showMessagePreviewModal) false}}
       as |M|
     >
-      <M.Header data-test-modal-title>
+      <M.Header data-test-modal-title={{@message.title}}>
         {{@message.title}}
       </M.Header>
-      <M.Body>
+      <M.Body data-test-modal-body>
         {{@message.message}}
       </M.Body>
       <M.Footer as |F|>

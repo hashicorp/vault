@@ -37,15 +37,6 @@ export default class MessagesList extends Component {
     }
   }
 
-  get breadcrumbs() {
-    const authenticated =
-      this.args.message?.authenticated === undefined ? true : this.args.message?.authenticated;
-    return [
-      { label: 'Messages', route: 'messages.index', query: { authenticated } },
-      { label: `${this.args.message.isNew ? 'Create' : 'Edit'} Message` },
-    ];
-  }
-
   @task
   *save(event) {
     event.preventDefault();
@@ -64,9 +55,9 @@ export default class MessagesList extends Component {
           this.args.message.startTime = new Date(this.args.message.startTime);
         if (typeof this.args.message.endTime === 'string')
           this.args.message.endTime = new Date(this.args.message.endTime);
-        this.store.clearDataset('config-ui/message');
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
+        this.store.clearDataset('config-ui/message');
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {

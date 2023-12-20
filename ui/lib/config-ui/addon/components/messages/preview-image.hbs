@@ -1,19 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::Modal
+  @onClose={{fn (mut @showMessagePreviewModal) false}}
   id="message-alert-preview"
   class="preview-image-modal"
-  @onClose={{fn (mut @showMessagePreviewModal) false}}
   as |M|
 >
   <M.Body class="is-paddingless is-overflow-hidden">
     <Hds::Alert
       @type="page"
       @color="warning"
-      class="has-bottom-margin-s"
       @onDismiss={{fn (mut @showMessagePreviewModal) false}}
+      class="has-bottom-margin-s"
+      data-test-alert={{@message.title}}
       as |A|
     >
-      <A.Title>{{@message.title}}</A.Title>
-      <A.Description>{{@message.message}}</A.Description>
+      <A.Title data-test-alert-title={{@message.title}}>{{@message.title}}</A.Title>
+      <A.Description data-test-alert-description={{@message.title}}>{{@message.message}}</A.Description>
     </Hds::Alert>
     <img
       src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
@@ -21,6 +27,6 @@
     />
   </M.Body>
   <M.Footer as |F|>
-    <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-close-button />
+    <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-button="Close" />
   </M.Footer>
 </Hds::Modal>
