@@ -25,6 +25,13 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/kr/pretty"
+	"github.com/oklog/run"
+	"github.com/posener/complete"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"google.golang.org/grpc/test/bufconn"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
@@ -42,12 +49,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
-	"github.com/kr/pretty"
-	"github.com/oklog/run"
-	"github.com/posener/complete"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-	"google.golang.org/grpc/test/bufconn"
 )
 
 var (
@@ -178,7 +179,9 @@ func (c *ProxyCommand) Run(args []string) int {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
-	c.logWriter = c.logGate
+	if c.logWriter == nil {
+		c.logWriter = c.logGate
+	}
 
 	if c.logFlags.flagCombineLogs {
 		c.logWriter = os.Stdout
@@ -203,12 +206,14 @@ func (c *ProxyCommand) Run(args []string) int {
 	c.applyConfigOverrides(f, config) // This only needs to happen on start-up to aggregate config from flags and env vars
 	c.config = config
 
-	l, err := c.newLogger()
-	if err != nil {
-		c.outputErrors(err)
-		return 1
+	if c.logger == nil {
+		l, err := c.newLogger()
+		if err != nil {
+			c.outputErrors(err)
+			return 1
+		}
+		c.logger = l
 	}
-	c.logger = l
 
 	// release log gate if the disable-gated-logs flag is set
 	if c.logFlags.flagDisableGatedLogs {

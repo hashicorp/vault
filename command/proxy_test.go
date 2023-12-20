@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,6 +45,7 @@ func testProxyCommand(tb testing.TB, logger hclog.Logger) (*cli.MockUi, *ProxyCo
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
+		logWriter:  io.Discard,
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
 		logger:     logger,
@@ -693,6 +695,7 @@ func TestProxy_Cache_DisableDynamicSecretCaching(t *testing.T) {
 	logger := corehelpers.Logger
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		Logger:      logger,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()

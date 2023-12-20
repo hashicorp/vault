@@ -152,8 +152,6 @@ func execPKIVerifyNonJson(t *testing.T, client *api.Client, expectErrorOut bool,
 		t.Fatalf("running command `%v` unsuccessful (ret %v)\nerr: %v", strings.Join(callArgs, " "), code, stderr.String())
 	}
 
-	t.Log(stdout.String() + stderr.String())
-
 	return stdout.String(), stderr.String()
 }
 

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -155,6 +156,7 @@ func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
+		Logger:             defaultVaultLogger,
 		Seal:               seal,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
@@ -234,6 +236,7 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 	core, err := vault.NewCore(&vault.CoreConfig{
 		DisableMlock:       true,
 		Physical:           inm,
+		Logger:             defaultVaultLogger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -246,6 +249,7 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 	ln, addr := vaulthttp.TestServer(tb, core)
 
 	client, err := api.NewClient(&api.Config{
+		Logger:  defaultVaultLogger,
 		Address: addr,
 	})
 	if err != nil {

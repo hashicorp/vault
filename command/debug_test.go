@@ -17,8 +17,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver/v3"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
@@ -29,6 +31,7 @@ func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
 		BaseCommand: &BaseCommand{
 			UI: ui,
 		},
+		logger: corehelpers.Logger,
 	}
 }
 

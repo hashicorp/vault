@@ -129,8 +129,7 @@ func TestTransitImport(t *testing.T) {
 		},
 	}
 
-	for index, tc := range tests {
-		t.Logf("Running test case %d: %v", index, tc)
+	for _, tc := range tests {
 		execTransitImport(t, client, tc.variant, tc.path, tc.key, tc.args, tc.shouldFail)
 	}
 }

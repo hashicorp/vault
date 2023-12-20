@@ -310,8 +310,6 @@ func execPKIHC(t *testing.T, client *api.Client, ok bool) (int, string, map[stri
 		}
 	}
 
-	t.Log(combined)
-
 	return code, combined, results
 }
 

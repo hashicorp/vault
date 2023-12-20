@@ -21,19 +21,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
@@ -1069,7 +1070,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(namespace.RootContext(nil), corehelpers.Logger, c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1109,7 +1110,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	deepEqualTokenEntries(t, out, ent)
 
 	// New store should share the salt
-	ts2, err := NewTokenStore(namespace.RootContext(nil), hclog.New(&hclog.LoggerOptions{}), c, getBackendConfig(c))
+	ts2, err := NewTokenStore(namespace.RootContext(nil), corehelpers.Logger, c, getBackendConfig(c))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
