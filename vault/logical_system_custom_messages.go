@@ -475,17 +475,15 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 
 	return &logical.Response{
 		Data: map[string]any{
-			"id": message.ID,
-			"data": map[string]any{
-				"authenticated": message.Authenticated,
-				"type":          message.Type,
-				"message":       message.Message,
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      endTimeResponse,
-				"link":          message.Link,
-				"options":       message.Options,
-				"active":        message.Active(),
-			},
+			"id":            message.ID,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"message":       message.Message,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"link":          message.Link,
+			"options":       message.Options,
+			"active":        message.Active(),
 		},
 	}, nil
 }
@@ -513,18 +511,16 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 
 	return &logical.Response{
 		Data: map[string]any{
-			"id": id,
-			"data": map[string]any{
-				"authenticated": message.Authenticated,
-				"type":          message.Type,
-				"message":       message.Message,
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      endTimeResponse,
-				"link":          message.Link,
-				"options":       message.Options,
-				"active":        message.Active(),
-				"title":         message.Title,
-			},
+			"id":            id,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"message":       message.Message,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"link":          message.Link,
+			"options":       message.Options,
+			"active":        message.Active(),
+			"title":         message.Title,
 		},
 	}, nil
 }
@@ -634,14 +630,12 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 
 	return &logical.Response{
 		Data: map[string]any{
-			"id": message.ID,
-			"data": map[string]any{
-				"active":        message.Active(),
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      endTimeResponse,
-				"type":          message.Type,
-				"authenticated": message.Authenticated,
-			},
+			"id":            message.ID,
+			"active":        message.Active(),
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"type":          message.Type,
+			"authenticated": message.Authenticated,
 		},
 	}, nil
 }
