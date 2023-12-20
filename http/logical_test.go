@@ -570,7 +570,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	// Create a noop audit backend
-	noop := corehelpers.TestNoopAudit(t, "noop", nil)
+	noop := corehelpers.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
 			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {

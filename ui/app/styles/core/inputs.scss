@@ -81,5 +81,5 @@
 .input-hint {
   padding: 0 $spacing-10;
   font-size: $size-8;
-  color: $grey;
+  color: var(--token-color-foreground-faint);
 }

@@ -118,6 +118,8 @@ func createDockerImage(imageRepo, imageTag, containerFile string, bCtx dockhelpe
 	return nil
 }
 
+// This passes the config in an environment variable, so any changes to local.json
+// on the container will be overwritten if the container restarts
 func createContainerWithConfig(config string, imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
 	runner, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ContainerName: "vault",
@@ -143,6 +145,10 @@ func createContainerWithConfig(config string, imageRepo, imageTag string, logCon
 	}
 
 	return svc, runner, nil
+}
+
+func createContainerFromImage(imageRepo, imageTag string, logConsumer func(s string)) (*dockhelper.Service, *dockhelper.Runner, error) {
+	return createContainerWithConfig("", imageRepo, imageTag, logConsumer)
 }
 
 func createTransitTestContainer(imageRepo, imageTag string, numKeys int) (*dockhelper.Service, *transitContainerConfig, error) {
