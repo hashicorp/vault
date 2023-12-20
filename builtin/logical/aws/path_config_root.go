@@ -161,15 +161,23 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 	b.iamClient = nil
 	b.stsClient = nil
 
-	rc, err := logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	var rc *logical.RootCredential
+
+	if rotationSchedule != "" && rotationWindow != 0 {
+		rc, err = logical.GetRootCredential(rotationSchedule, "aws/config/root", "aws-root-creds", rotationWindow)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
-	b.Logger().Debug("Injecting Root Credential into system backend")
-	return &logical.Response{
-		RootCredential: rc,
-	}, nil
+	if rc != nil {
+		b.Logger().Debug("Injecting Root Credential into system backend")
+		return &logical.Response{
+			RootCredential: rc,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 type rootConfig struct {
