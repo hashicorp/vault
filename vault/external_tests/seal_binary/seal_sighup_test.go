@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 func TestSealReloadSIGHUP(t *testing.T) {
@@ -148,8 +150,13 @@ COPY vault /bin/vault
 				}
 
 				vaultConfig = fmt.Sprintf(containerConfig, sealList)
+				configCtx := dockhelper.NewBuildContext()
+				configCtx["local.json"] = &dockhelper.FileContents{
+					Data: []byte(vaultConfig),
+					Mode: 0o644,
+				}
 
-				err = copyConfigToContainer(vaultConfig, svc.Container.ID, runner)
+				err = copyConfigToContainer(svc.Container.ID, bCtx, runner)
 				if err != nil {
 					t.Fatalf("error copying over config file: %s", err)
 				}
