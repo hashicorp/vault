@@ -1607,6 +1607,10 @@
                 "path": "auth/jwt/oidc-providers"
               },
               {
+                "title": "ADFS",
+                "path": "auth/jwt/oidc-providers/adfs"
+              },
+              {
                 "title": "Auth0",
                 "path": "auth/jwt/oidc-providers/auth0"
               },
@@ -1754,27 +1758,13 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized plugins",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "plugins/containerized-plugins",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          },
-          {
-            "title": "Add a containerized plugin",
-            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
-            "badge": {
-              "text": "BETA",
-              "type": "outlined",
-              "color": "highlight"
-            }
-          }
-        ]
+        "title": "Containerized Plugins",
+        "path": "plugins/containerized-plugins",
+        "badge": {
+          "text": "BETA",
+          "type": "outlined",
+          "color": "highlight"
+        }
       },
       {
         "title": "Integrations Library",
