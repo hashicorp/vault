@@ -6491,3 +6491,60 @@ func TestPathInternalUIAuthenticatedMessages(t *testing.T) {
 
 	assert.ElementsMatch(t, testingCMM.findFilters, []uicustommessages.FindFilter{expectedFilter})
 }
+
+// TestPathInternalUICustomMessagesCommon verifies the correct behaviour of the
+// (*SystemBackend).pathInternalUICustomMessagesCommon method.
+func TestPathInternalUICustomMessagesCommon(t *testing.T) {
+	var storage logical.Storage = &testingStorage{getFails: true}
+	testingCMM := uicustommessages.NewManager(storage)
+	backend := &SystemBackend{
+		Core: &Core{
+			customMessageManager: testingCMM,
+		},
+	}
+
+	// First, check that when an error occurs in the FindMessages method, it's
+	// handled correctly.
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+
+	resp, err := backend.pathInternalUICustomMessagesCommon(context.Background(), filter)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data, "error")
+	assert.Contains(t, resp.Data["error"], "failed to retrieve custom messages")
+
+	// Next, check that when no error occur and messages are returned by
+	// FindMessages that they are correctly translated.
+	storage = &logical.InmemStorage{}
+	backend.Core.customMessageManager = uicustommessages.NewManager(storage)
+
+	// Load some messages for the root namespace and a testNS namespace.
+	startTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
+	endTime := time.Now().Add(time.Hour).Format(time.RFC3339Nano)
+
+	messagesTemplate := `{"messages":{"%[1]d01":{"id":"%[1]d01","title":"Title-%[1]d01","message":"Message of Title-%[1]d01","authenticated":false,"type":"banner","start_time":"%[2]s"},"%[1]d02":{"id":"%[1]d02","title":"Title-%[1]d02","message":"Message of Title-%[1]d02","authenticated":false,"type":"modal","start_time":"%[2]s","end_time":"%[3]s"},"%[1]d03":{"id":"%[1]d03","title":"Title-%[1]d03","message":"Message of Title-%[1]d03","authenticated":false,"type":"banner","start_time":"%[2]s","link":{"Link":"www.example.com"}}}}`
+
+	cmStorageEntry := &logical.StorageEntry{
+		Key:   "sys/config/ui/custom-messages",
+		Value: []byte(fmt.Sprintf(messagesTemplate, 0, startTime, endTime)),
+	}
+	storage.Put(context.Background(), cmStorageEntry)
+
+	cmStorageEntry = &logical.StorageEntry{
+		Key:   "namespaces/testNS/sys/config/ui/custom-messages",
+		Value: []byte(fmt.Sprintf(messagesTemplate, 1, startTime, endTime)),
+	}
+	storage.Put(context.Background(), cmStorageEntry)
+
+	resp, err = backend.pathInternalUICustomMessagesCommon(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), filter)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data, "keys")
+	assert.Equal(t, 3, len(resp.Data["keys"].([]string)))
+	assert.Contains(t, resp.Data, "key_info")
+	assert.Equal(t, 3, len(resp.Data["key_info"].(map[string]any)))
+}

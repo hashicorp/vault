@@ -426,24 +426,16 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 	if linkMap != nil {
 		link = &uicustommessages.MessageLink{}
 
-		linkTitle, ok := linkMap["title"]
-		if !ok {
-			return logical.ErrorResponse("missing title in link parameter value"), nil
-		}
+		for k, v := range linkMap {
+			href, ok := v.(string)
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("invalid url for %q key in link parameter value", k)), nil
+			}
 
-		link.Title, ok = linkTitle.(string)
-		if !ok {
-			return logical.ErrorResponse("invalid title value in link parameter value"), nil
-		}
+			link.Title = k
+			link.Href = href
 
-		linkHref, ok := linkMap["href"]
-		if !ok {
-			return logical.ErrorResponse("missing href in link parameter value"), nil
-		}
-
-		link.Href, ok = linkHref.(string)
-		if !ok {
-			return logical.ErrorResponse("invalid href value in link parameter value"), nil
+			break
 		}
 	}
 
@@ -509,6 +501,13 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 		endTimeResponse = message.EndTime.Format(time.RFC3339Nano)
 	}
 
+	var linkResponse map[string]string = nil
+	if message.Link != nil {
+		linkResponse = make(map[string]string)
+
+		linkResponse[message.Link.Title] = message.Link.Href
+	}
+
 	return &logical.Response{
 		Data: map[string]any{
 			"id":            id,
@@ -517,7 +516,7 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 			"message":       message.Message,
 			"start_time":    message.StartTime.Format(time.RFC3339Nano),
 			"end_time":      endTimeResponse,
-			"link":          message.Link,
+			"link":          linkResponse,
 			"options":       message.Options,
 			"active":        message.Active(),
 			"title":         message.Title,
@@ -562,24 +561,16 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	if linkMap != nil {
 		link = &uicustommessages.MessageLink{}
 
-		linkTitle, ok := linkMap["title"]
-		if !ok {
-			return logical.ErrorResponse("missing title in link parameter value"), nil
-		}
+		for k, v := range linkMap {
+			href, ok := v.(string)
+			if !ok {
+				return logical.ErrorResponse("invalid url for %q key link parameter value", k), nil
+			}
 
-		link.Title, ok = linkTitle.(string)
-		if !ok {
-			return logical.ErrorResponse("invalid title value in link parameter value"), nil
-		}
+			link.Title = k
+			link.Href = href
 
-		linkHref, ok := linkMap["href"]
-		if !ok {
-			return logical.ErrorResponse("missing href in link parameter value"), nil
-		}
-
-		link.Href, ok = linkHref.(string)
-		if !ok {
-			return logical.ErrorResponse("invalid href value in link parameter value"), nil
+			break
 		}
 	}
 

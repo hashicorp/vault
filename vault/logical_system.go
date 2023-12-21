@@ -4487,11 +4487,12 @@ func (b *SystemBackend) pathInternalUICustomMessagesCommon(ctx context.Context, 
 			endTimeFormatted = message.EndTime.Format(time.RFC3339Nano)
 		}
 
-		linkFormatted := map[string]any{}
+		var linkFormatted map[string]string = nil
 
 		if message.Link != nil {
-			linkFormatted["title"] = message.Link.Title
-			linkFormatted["href"] = message.Link.Href
+			linkFormatted = make(map[string]string)
+
+			linkFormatted[message.Link.Title] = message.Link.Href
 		}
 
 		keyInfo[message.ID] = map[string]any{
