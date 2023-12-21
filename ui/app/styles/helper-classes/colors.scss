@@ -60,15 +60,11 @@ select.has-error-border,
 }
 
 .has-text-grey-light {
-  color: $ui-gray-300 !important;
-}
-
-.has-text-grey-400 {
-  color: $ui-gray-400;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey {
-  color: $ui-gray-500 !important;
+  color: var(--token-color-foreground-faint) !important;
 }
 
 .has-text-grey-dark {
@@ -92,7 +88,7 @@ select.has-error-border,
 }
 
 .has-text-success {
-  color: $green-500 !important;
+  color: var(--token-color-foreground-success) !important;
 }
 
 .has-text-highlight {
