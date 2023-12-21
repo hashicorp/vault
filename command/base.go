@@ -277,7 +277,9 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.
 	var passcode string
 	var err error
 	if methodInfo.usePasscode {
-		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
+		// Write prompt to stderr to match behavior in login.go. Convenient when capturing stdout in a script or shell.
+		fmt.Fprintf(os.Stderr, "Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType)
+		passcode, err = c.UI.AskSecret("")
 		if err != nil {
 			return nil, fmt.Errorf("failed to read passphrase: %w. please validate the login by sending a request to sys/mfa/validate", err)
 		}
