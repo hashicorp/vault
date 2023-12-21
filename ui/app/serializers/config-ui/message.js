@@ -33,6 +33,8 @@ export default class MessageSerializer extends ApplicationSerializer {
       title: json?.link_title || '',
       href: json?.link_href || '',
     };
+    // using the snapshot startTime and endTime since the json start and end times are null when
+    // it gets to the serialize function.
     json.start_time = snapshot.record.startTime;
     json.end_time = snapshot.record.endTime;
     delete json?.link_title;
