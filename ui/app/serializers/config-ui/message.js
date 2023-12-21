@@ -26,13 +26,15 @@ export default class MessageSerializer extends ApplicationSerializer {
     return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
   }
 
-  serialize() {
+  serialize(snapshot) {
     const json = super.serialize(...arguments);
     json.message = encodeString(json.message);
     json.link = {
       title: json?.link_title || '',
       href: json?.link_href || '',
     };
+    json.start_time = snapshot.record.startTime;
+    json.end_time = snapshot.record.endTime;
     delete json?.link_title;
     delete json?.link_href;
     return json;
