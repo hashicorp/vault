@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
-import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
@@ -44,7 +44,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       req.passthrough();
     });
     // select from dropdown or click auth path tab
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
+    await waitFor('[data-test-select="auth-method"]');
     await fillIn('[data-test-select="auth-method"]', 'saml');
     await click('[data-test-auth-submit]');
   });
@@ -84,8 +84,8 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       req.passthrough();
     });
 
+    await waitFor('[data-test-auth-method="test-path"]', { timeout: 5000 });
     // click auth path tab
-    await waitUntil(() => find('[data-test-auth-method="test-path"]'));
     await click('[data-test-auth-method="test-path"]');
     await click('[data-test-auth-submit]');
   });
@@ -127,7 +127,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     });
 
     // select saml auth type
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
+    await waitFor('[data-test-select="auth-method"]');
     await fillIn('[data-test-select="auth-method"]', 'saml');
     await fillIn('[data-test-auth-form-ns-input]', 'some-ns');
     await click('[data-test-auth-submit]');
@@ -148,10 +148,10 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   test('it should populate saml auth method on logout', async function (assert) {
     authPage.logout();
     // select from dropdown
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
+    await waitFor('[data-test-select="auth-method"]');
     await fillIn('[data-test-select="auth-method"]', 'saml');
     await click('[data-test-auth-submit]');
-    await waitUntil(() => find('[data-test-user-menu-trigger]'));
+    await waitFor('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-trigger]');
     await click('#logout');
     assert
