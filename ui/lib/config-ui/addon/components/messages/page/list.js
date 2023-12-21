@@ -44,7 +44,7 @@ export default class MessagesList extends Component {
           })}`;
           badgeDisplay.color = 'highlight';
         } else {
-          badgeDisplay.text = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplay.text = `Inactive: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
           badgeDisplay.color = 'neutral';

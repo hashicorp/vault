@@ -100,6 +100,11 @@
       </M.Header>
       <M.Body data-test-modal-body>
         {{@message.message}}
+        {{#if @message.linkHref}}
+          <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
+            {{@message.linkTitle}}
+          </Hds::Link::Inline>
+        {{/if}}
       </M.Body>
       <M.Footer as |F|>
         <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button="Close" />

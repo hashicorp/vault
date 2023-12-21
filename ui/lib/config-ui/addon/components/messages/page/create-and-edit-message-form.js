@@ -27,6 +27,7 @@ export default class MessagesList extends Component {
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
+  @tracked showMessagePreviewModal = false;
 
   willDestroy() {
     super.willDestroy();

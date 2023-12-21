@@ -7,7 +7,10 @@ import { decodeString, encodeString } from 'core/utils/b64';
 import ApplicationSerializer from '../application';
 
 export default class MessageSerializer extends ApplicationSerializer {
-  primaryKey = 'id';
+  attrs = {
+    link: { serialize: false },
+    active: { serialize: false },
+  };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'queryRecord') {
@@ -30,11 +33,8 @@ export default class MessageSerializer extends ApplicationSerializer {
       title: json?.link_title || '',
       href: json?.link_href || '',
     };
-
-    delete json.link_title;
-    delete json.link_href;
-    delete json.active;
-
+    delete json?.link_title;
+    delete json?.link_href;
     return json;
   }
 
