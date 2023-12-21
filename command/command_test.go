@@ -156,7 +156,6 @@ func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
-		Logger:             defaultVaultLogger,
 		Seal:               seal,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
