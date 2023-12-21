@@ -51,15 +51,15 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get noResultsMessage() {
-    const { nameFilter, typeFilter } = this.args;
-    if (nameFilter && typeFilter) {
-      return `There are no ${typeFilter} destinations matching "${nameFilter}".`;
+    const { nameFilter } = this.args;
+    if (nameFilter && this.typeFilter) {
+      return `There are no ${this.typeFilter} destinations matching "${nameFilter}".`;
     }
     if (nameFilter) {
       return `There are no destinations matching "${nameFilter}".`;
     }
-    if (typeFilter) {
-      return `There are no ${typeFilter} destinations.`;
+    if (this.typeFilter) {
+      return `There are no ${this.typeFilter} destinations.`;
     }
     return '';
   }
