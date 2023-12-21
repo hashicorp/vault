@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { settled, waitUntil, click } from '@ember/test-helpers';
+import { settled, waitUntil, click, waitFor } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
@@ -65,22 +65,46 @@ module('Acceptance | console', function (hooks) {
     await settled();
     await consoleComponent.runCommands('read -field=policies /auth/token/lookup-self');
     await settled();
-    const consoleOut = document.querySelector('.console-ui-output>pre');
+
     // wait for the CSS transition to finish
-    await waitUntil(() => consoleOut.innerText);
-    assert.notOk(consoleOut.innerText.includes('function(){'));
-    assert.strictEqual(consoleOut.innerText, '["root"]');
+    await waitFor('[data-test-component="console/log-text"]');
+    assert.dom('[data-test-component="console/log-text"]').doesNotIncludeText('function(){');
+    assert.dom('[data-test-component="console/log-text"]').hasText('["root"]');
   });
 
   test('number output is correctly formatted', async function (assert) {
+    // this.owner.lookup('service:console').reopen({
+    //   read() {
+    //     console.log('stubbed');
+    //     return {
+    //       data: {
+    //         accessor: 'xOfCa2QIQg3M3jNmZqluiBiD',
+    //         creation_time: 1703193455,
+    //         creation_ttl: 0,
+    //         display_name: 'token',
+    //         entity_id: '',
+    //         expire_time: null,
+    //         explicit_max_ttl: 0,
+    //         id: 'root',
+    //         issue_time: '2023-12-21T15:17:35.742929-06:00',
+    //         meta: null,
+    //         num_uses: 0,
+    //         orphan: true,
+    //         path: 'auth/token/create',
+    //         policies: ['root'],
+    //         renewable: false,
+    //         ttl: 0,
+    //         type: 'service',
+    //       },
+    //     };
+    //   },
+    // });
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
-    await settled();
-    const consoleOut = document.querySelector('.console-ui-output>pre');
-    // wait for the CSS transition to finish
-    await waitUntil(() => consoleOut.innerText);
-    assert.strictEqual(consoleOut.innerText.match(/^\d+$/).length, 1);
+
+    await waitFor('[data-test-component="console/log-text"]');
+    assert.dom('[data-test-component="console/log-text"]').hasText('1703193455');
   });
 
   test('boolean output is correctly formatted', async function (assert) {
