@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/stretchr/testify/require"
-
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQuotas_MountPathOverwrite(t *testing.T) {
-	qm, err := NewManager(corehelpers.Logger, nil, metricsutil.BlackholeSink(), true)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	view := &logical.InmemStorage{}
@@ -47,7 +47,7 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 }
 
 func TestQuotas_Precedence(t *testing.T) {
-	qm, err := NewManager(corehelpers.Logger, nil, metricsutil.BlackholeSink(), true)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath, pathSuffix, role string, inheritable bool) Quota {
@@ -149,7 +149,7 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	leaseWalkFunc := func(context.Context, func(request *Request) bool) error {
 		return nil
 	}
-	qm, err := NewManager(corehelpers.Logger, leaseWalkFunc, metricsutil.BlackholeSink(), true)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	view := &logical.InmemStorage{}

@@ -11,12 +11,13 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/goleak"
 
 	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -38,7 +39,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.rlq.initialize(corehelpers.Logger, metricsutil.BlackholeSink())
+			err := tc.rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink())
 			require.Equal(t, tc.expectErr, err != nil, err)
 			if err == nil {
 				require.Nil(t, tc.rlq.close(context.Background()))
@@ -49,7 +50,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 
 func TestRateLimitQuota_Close(t *testing.T) {
 	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", false, time.Second, time.Minute, 16.7)
-	require.NoError(t, rlq.initialize(corehelpers.Logger, metricsutil.BlackholeSink()))
+	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	require.NoError(t, rlq.close(context.Background()))
 
 	time.Sleep(time.Second) // allow enough time for purgeClientsLoop to receive on closeCh
@@ -69,7 +70,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 		staleAge:      10 * time.Second,
 	}
 
-	require.NoError(t, rlq.initialize(corehelpers.Logger, metricsutil.BlackholeSink()))
+	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	defer rlq.close(context.Background())
 
 	var wg sync.WaitGroup
@@ -146,7 +147,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		staleAge:      10 * time.Second,
 	}
 
-	require.NoError(t, rlq.initialize(corehelpers.Logger, metricsutil.BlackholeSink()))
+	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	defer rlq.close(context.Background())
 	require.True(t, rlq.getPurgeBlocked())
 
@@ -219,7 +220,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 func TestRateLimitQuota_Update(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	qm, err := NewManager(corehelpers.Logger, nil, metricsutil.BlackholeSink(), true)
+	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
 
 	view := &logical.InmemStorage{}
