@@ -54,8 +54,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/token/lookup-self', 'auth:token url OK');
     assert.strictEqual(method, 'GET', 'auth:token method OK');
     assert.deepEqual(
-      { headers: { 'X-Vault-Token': 'token' }, unauthenticated: true },
       options,
+      { headers: { 'X-Vault-Token': 'token' }, unauthenticated: true },
       'auth:token options OK'
     );
 
@@ -63,8 +63,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/github/login', 'auth:github url OK');
     assert.strictEqual(method, 'POST', 'auth:github method OK');
     assert.deepEqual(
-      { data: { password: 'password', token: 'token' }, unauthenticated: true },
       options,
+      { data: { password: 'password', token: 'token' }, unauthenticated: true },
       'auth:github options OK'
     );
 
@@ -73,8 +73,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/jwt/login', 'auth:jwt url OK');
     assert.strictEqual(method, 'POST', 'auth:jwt method OK');
     assert.deepEqual(
-      { data: { jwt: 'token', role: 'test' }, unauthenticated: true },
       options,
+      { data: { jwt: 'token', role: 'test' }, unauthenticated: true },
       'auth:jwt options OK'
     );
 
@@ -96,8 +96,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/userpass/login/username', 'auth:userpass url OK');
     assert.strictEqual(method, 'POST', 'auth:userpass method OK');
     assert.deepEqual(
-      { data: { password: 'password' }, unauthenticated: true },
       options,
+      { data: { password: 'password' }, unauthenticated: true },
       'auth:userpass options OK'
     );
 
@@ -105,8 +105,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/radius/login/username', 'auth:RADIUS url OK');
     assert.strictEqual(method, 'POST', 'auth:RADIUS method OK');
     assert.deepEqual(
-      { data: { password: 'password' }, unauthenticated: true },
       options,
+      { data: { password: 'password' }, unauthenticated: true },
       'auth:RADIUS options OK'
     );
 
@@ -114,8 +114,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/ldap/login/username', 'ldap:userpass url OK');
     assert.strictEqual(method, 'POST', 'ldap:userpass method OK');
     assert.deepEqual(
-      { data: { password: 'password' }, unauthenticated: true },
       options,
+      { data: { password: 'password' }, unauthenticated: true },
       'ldap:userpass options OK'
     );
 
@@ -124,8 +124,8 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(url, '/v1/auth/okta/login/username', 'okta:userpass url OK');
     assert.strictEqual(method, 'POST', 'ldap:userpass method OK');
     assert.deepEqual(
-      { data: { password: 'password', nonce: 'uuid' }, unauthenticated: true },
       options,
+      { data: { password: 'password', nonce: 'uuid' }, unauthenticated: true },
       'okta:userpass options OK'
     );
 

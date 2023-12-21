@@ -187,7 +187,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
       await fillIn('[data-test-mfa-passcode]', code);
-      later(() => cancelTimers(), 50);
+      later(() => cancelTimers(), 500);
       await click('[data-test-mfa-validate]');
       const expectedTime = code === 'used' ? '45' : '15';
       assert
