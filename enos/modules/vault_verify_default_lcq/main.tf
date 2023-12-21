@@ -60,7 +60,7 @@ resource "enos_remote_exec" "smoke_verify_default_lcq" {
     RETRY_INTERVAL          = var.retry_interval
     TIMEOUT_SECONDS         = var.timeout
     VAULT_ADDR              = "http://localhost:8200"
-    VAULT_LOCAL_BINARY_PATH = "${var.vault_install_dir}/vault"
+    VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN             = var.vault_root_token
     DEFAULT_LCQ             = var.vault_autopilot_default_max_leases
   }
