@@ -13,7 +13,7 @@ import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { visit, settled, currentURL } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -146,6 +146,8 @@ module('Acceptance | oidc provider', function (hooks) {
     await visit(url);
 
     assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
+
+    await waitFor('[data-test-auth-form]', { timeout: 5000 });
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'

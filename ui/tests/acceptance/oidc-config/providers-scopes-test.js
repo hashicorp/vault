@@ -278,6 +278,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     await fillIn('.ember-power-select-search input', 'test-app');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.providerSaveButton);
+    await flashMessage.waitForFlash();
     assert.strictEqual(
       flashMessage.latestMessage,
       'Successfully updated the OIDC provider test-provider.',
