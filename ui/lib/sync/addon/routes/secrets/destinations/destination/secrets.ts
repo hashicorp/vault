@@ -17,6 +17,12 @@ interface SyncDestinationSecretsRouteParams {
 export default class SyncDestinationSecretsRoute extends Route {
   @service declare readonly store: StoreService;
 
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
+
   model(params: SyncDestinationSecretsRouteParams) {
     const destination = this.modelFor('secrets.destinations.destination') as SyncDestinationModel;
     return hash({
