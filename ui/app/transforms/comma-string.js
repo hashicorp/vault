@@ -6,14 +6,22 @@
 import Transform from '@ember-data/serializer/transform';
 
 /**
- * transforms API arrays to a comma separated string so changedAttributes() tracks changes for PATCH requests
+ * transforms array types from the server to a comma separated string
+ * useful when using changedAttributes() in the serializer to track attribute changes for PATCH requests
+ * because arrays are not trackable and strings are!
  */
 export default class CommaString extends Transform {
   deserialize(serialized) {
-    return serialized.join(',');
+    if (Array.isArray(serialized)) {
+      return serialized.join(',');
+    }
+    return serialized;
   }
 
   serialize(deserialized) {
-    return deserialized.split(',');
+    if (typeof deserialized === 'string') {
+      return deserialized.split(',');
+    }
+    return deserialized;
   }
 }
