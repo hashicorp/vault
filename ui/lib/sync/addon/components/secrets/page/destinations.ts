@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
-import { findDestination } from 'core/helpers/sync-destinations';
+import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
 
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
@@ -38,14 +38,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get destinationTypes() {
-    return this.args.destinations.reduce((types: Array<{ id: string; name: string }>, destination) => {
-      const { typeDisplayName } = destination;
-      const isUnique = !types.find((type) => type.id === typeDisplayName);
-      if (isUnique) {
-        types.push({ id: typeDisplayName, name: destination.type });
-      }
-      return types;
-    }, []);
+    return syncDestinations().map((d) => ({ id: d.name, name: d.type }));
   }
 
   get mountPoint(): string {
