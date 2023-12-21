@@ -5,12 +5,11 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, waitFor, waitUntil } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fakeWindow, buildMessage } from '../helpers/oidc-window-stub';
 import sinon from 'sinon';
-import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { Response } from 'miragejs';
 
 module('Acceptance | oidc auth method', function (hooks) {
@@ -40,6 +39,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     // select method from dropdown or click auth path tab
     this.selectMethod = async (method, useLink) => {
+      await waitFor('[data-test-auth-form]');
       const methodSelector = useLink
         ? `[data-test-auth-method-link="${method}"]`
         : '[data-test-select="auth-method"]';
@@ -66,10 +66,11 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks(assert);
 
     await this.selectMethod('oidc');
-    later(() => {
+
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-      cancelTimers();
-    }, 50);
+    }, 200);
+
     await click('[data-test-auth-submit]');
   });
 
@@ -94,10 +95,10 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
 
     await this.selectMethod('oidc', true);
-    later(() => {
+
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-      cancelTimers();
-    }, 50);
+    }, 200);
     await click('[data-test-auth-submit]');
   });
 
@@ -105,10 +106,9 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it should populate oidc auth method on logout', async function (assert) {
     this.setupMocks();
     await this.selectMethod('oidc');
-    later(() => {
+    setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-      cancelTimers();
-    }, 50);
+    }, 200);
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-user-menu-trigger]'));
     await click('[data-test-user-menu-trigger]');
