@@ -12,17 +12,14 @@ export default class SyncDestinationSerializer extends ApplicationSerializer {
   };
 
   serialize(snapshot) {
-    // special serialization only for PATCH requests
-    if (snapshot.isNew) return super.serialize(snapshot);
+    const data = super.serialize(snapshot);
 
-    // only send changed values
-    const data = {};
-    for (const attr in snapshot.changedAttributes()) {
-      // first array element is the old value
-      const [, newValue] = snapshot.changedAttributes()[attr];
-      data[decamelize(attr)] = newValue;
-    }
-    return data;
+    if (snapshot.isNew) return data;
+    // only send changed parameters for PATCH requests
+    const patchData = {};
+    const changedKeys = Object.keys(snapshot.changedAttributes()).map((key) => decamelize(key));
+    changedKeys.forEach((key) => (patchData[key] = data[key]));
+    return patchData;
   }
 
   // interrupt application's normalizeItems, which is called in normalizeResponse by application serializer
