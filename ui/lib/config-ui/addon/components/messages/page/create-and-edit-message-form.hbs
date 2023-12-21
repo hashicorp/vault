@@ -58,12 +58,11 @@
     {{/each}}
 
     <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
-      {{! TODO: VAULT-21533 preview modal }}
       <Hds::Button
         @text="Preview"
         @color="tertiary"
         @icon="eye"
-        disabled={{(and (not @message.title @message.message))}}
+        disabled={{and (not @message.title @message.message)}}
         {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
         data-test-button="preview"
       />

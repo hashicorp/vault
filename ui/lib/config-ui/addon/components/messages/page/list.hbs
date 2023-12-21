@@ -38,13 +38,13 @@
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
               <Hds::Badge
-                @text={{message.badgeDisplay.text}}
-                @color={{message.badgeDisplay.color}}
+                @text={{message.badgeDisplayText}}
+                @color={{if message.active "highlight" "neutral"}}
                 data-test-badge={{concat "active:" message.active}}
               />
               <Hds::Badge
                 @text={{(capitalize message.type)}}
-                @color={{message.badgeDisplay.color}}
+                @color={{if message.active "highlight" "neutral"}}
                 data-test-badge={{message.type}}
               />
             </div>

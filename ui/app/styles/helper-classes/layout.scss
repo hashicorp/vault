@@ -64,6 +64,10 @@
   width: 75%;
 }
 
+.is-two-thirds-width {
+  width: 66%;
+}
+
 .is-auto-width {
   width: auto;
 }
@@ -78,6 +82,10 @@
 
 .is-medium-height {
   height: 125px;
+}
+
+.is-calc-large-height {
+  height: calc($desktop * 0.66);
 }
 
 // float

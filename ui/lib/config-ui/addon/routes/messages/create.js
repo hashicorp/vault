@@ -26,9 +26,8 @@ export default class MessagesCreateRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
-    const authenticated = resolvedModel.authenticated === undefined ? true : resolvedModel.authenticated;
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated } },
+      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
       { label: 'Create Message' },
     ];
   }
