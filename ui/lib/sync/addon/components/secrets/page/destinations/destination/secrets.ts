@@ -41,6 +41,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       await association.save({ adapterOptions: { action: operation } });
       const action: string = operation === 'set' ? 'Sync' : 'Unsync';
       this.flashMessages.success(`${action} operation initiated.`);
+    } catch (error) {
+      this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
+    } finally {
       // refresh route to update displayed secrets
       this.store.clearDataset('sync/association');
       this.router.transitionTo(
@@ -48,8 +51,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
         this.args.destination.type,
         this.args.destination.name
       );
-    } catch (error) {
-      this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
     }
   }
 }
