@@ -21,11 +21,13 @@ import { inject as service } from '@ember/service';
 
 export default class MessagesList extends Component {
   @service router;
+  @service store;
   @service flashMessages;
 
   @tracked errorBanner = '';
   @tracked modelValidations;
   @tracked invalidFormMessage;
+  @tracked showMessagePreviewModal = false;
 
   willDestroy() {
     super.willDestroy();
@@ -34,15 +36,6 @@ export default class MessagesList extends Component {
     if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
-  }
-
-  get breadcrumbs() {
-    const authenticated =
-      this.args.message.authenticated === undefined ? true : this.args.message.authenticated;
-    return [
-      { label: 'Messages', route: 'messages.index', query: { authenticated } },
-      { label: 'Create Message' },
-    ];
   }
 
   @task
@@ -55,17 +48,9 @@ export default class MessagesList extends Component {
 
       if (isValid) {
         const { isNew } = this.args.message;
-
-        // We do these checks here since there could be a scenario where startTime and endTime are strings.
-        // The model expects these attrs to be a date object, so we will need to update these attrs to be in
-        // date object format.
-        if (typeof this.args.message.startTime === 'string')
-          this.args.message.startTime = new Date(this.args.message.startTime);
-        if (typeof this.args.message.endTime === 'string')
-          this.args.message.endTime = new Date(this.args.message.endTime);
-
-        const { id } = yield this.args.message.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the message.`);
+        const { id, title } = yield this.args.message.save();
+        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
+        this.store.clearDataset('config-ui/message');
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {

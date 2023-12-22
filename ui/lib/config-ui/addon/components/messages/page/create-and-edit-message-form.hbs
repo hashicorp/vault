@@ -5,7 +5,7 @@
 <Messages::TabPageHeader
   @authenticated={{@message.authenticated}}
   @pageTitle="{{if @message.isNew 'Create' 'Edit'}} message"
-  @breadcrumbs={{this.breadcrumbs}}
+  @breadcrumbs={{@breadcrumbs}}
 />
 
 <form id="message-create-edit-form" {{on "submit" (perform this.save)}} data-test-form="create-and-edit">
@@ -58,8 +58,14 @@
     {{/each}}
 
     <Hds::ButtonSet class="has-top-margin-s has-bottom-margin-m has-top-margin-xl">
-      {{! TODO: VAULT-21533 preview modal }}
-      <Hds::Button @text="Preview" @color="tertiary" @icon="eye" />
+      <Hds::Button
+        @text="Preview"
+        @color="tertiary"
+        @icon="eye"
+        disabled={{and (not @message.title @message.message)}}
+        {{on "click" (fn (mut this.showMessagePreviewModal) true)}}
+        data-test-button="preview"
+      />
 
       <Hds::Button
         @text="{{if @message.isNew 'Create' 'Edit'}} message"
@@ -77,3 +83,33 @@
     </Hds::ButtonSet>
   </div>
 </form>
+
+{{#if this.showMessagePreviewModal}}
+  {{#if (eq @message.type "modal")}}
+    <Hds::Modal
+      id="message-modal-preview"
+      @size="large"
+      @color="warning"
+      @onClose={{fn (mut this.showMessagePreviewModal) false}}
+      data-test-modal="preview modal"
+      as |M|
+    >
+      <M.Header data-test-modal-title={{@message.title}}>
+        {{@message.title}}
+      </M.Header>
+      <M.Body data-test-modal-body>
+        {{@message.message}}
+        {{#if @message.linkHref}}
+          <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
+            {{@message.linkTitle}}
+          </Hds::Link::Inline>
+        {{/if}}
+      </M.Body>
+      <M.Footer as |F|>
+        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button="Close" />
+      </M.Footer>
+    </Hds::Modal>
+  {{else}}
+    <Messages::PreviewImage @message={{@message}} @showMessagePreviewModal={{this.showMessagePreviewModal}} />
+  {{/if}}
+{{/if}}

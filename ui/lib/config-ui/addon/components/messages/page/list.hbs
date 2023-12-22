@@ -22,7 +22,7 @@
 </Messages::TabPageHeader>
 
 {{#if @messages.length}}
-  {{#each this.getMessages as |message|}}
+  {{#each this.formattedMessages as |message|}}
     <LinkedBlock
       data-test-list-item={{message.id}}
       class="list-item-row"

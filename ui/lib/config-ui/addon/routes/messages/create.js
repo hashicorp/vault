@@ -22,4 +22,13 @@ export default class MessagesCreateRoute extends Route {
       authenticated,
     });
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    controller.breadcrumbs = [
+      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
+      { label: 'Create Message' },
+    ];
+  }
 }

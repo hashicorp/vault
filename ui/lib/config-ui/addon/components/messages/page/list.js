@@ -20,11 +20,12 @@ import { dateFormat } from 'core/helpers/date-format';
 
 export default class MessagesList extends Component {
   @service store;
+  @service router;
+  @service flashMessages;
 
-  get getMessages() {
+  get formattedMessages() {
     return this.args.messages.map((message) => {
       let badgeDisplayText = '';
-
       if (message.active) {
         if (message.endTime) {
           badgeDisplayText = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
@@ -68,5 +69,7 @@ export default class MessagesList extends Component {
   *deleteMessage(message) {
     this.store.clearDataset('config-ui/message');
     yield message.destroyRecord(message.id);
+    this.router.transitionTo('vault.cluster.config-ui.messages');
+    this.flashMessages.success(`Successfully deleted ${message.title}.`);
   }
 }

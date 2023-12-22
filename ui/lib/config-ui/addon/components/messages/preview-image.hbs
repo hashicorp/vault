@@ -1,0 +1,40 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Modal
+  @onClose={{fn (mut @showMessagePreviewModal) false}}
+  id="message-alert-preview"
+  class="is-calc-large-height is-two-thirds-width"
+  data-test-modal="preview image"
+  as |M|
+>
+  <M.Body class="is-paddingless is-overflow-hidden">
+    <Hds::Alert
+      @type="page"
+      @color="warning"
+      @onDismiss={{fn (mut @showMessagePreviewModal) false}}
+      class="has-bottom-margin-s"
+      data-test-alert={{@message.title}}
+      as |A|
+    >
+      <A.Title data-test-alert-title={{@message.title}}>{{@message.title}}</A.Title>
+      <A.Description data-test-alert-description={{@message.title}}>
+        {{@message.message}}
+        {{#if @message.linkHref}}
+          <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>
+            {{@message.linkTitle}}
+          </Hds::Link::Inline>
+        {{/if}}
+      </A.Description>
+    </Hds::Alert>
+    <img
+      src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
+      alt={{if @message.authenticated "dashboard page preview" "login page preview"}}
+    />
+  </M.Body>
+  <M.Footer as |F|>
+    <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-modal-button="Close" />
+  </M.Footer>
+</Hds::Modal>
