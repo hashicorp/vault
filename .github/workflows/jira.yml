@@ -15,6 +15,7 @@ on:
     types: [created]
 jobs:
   action-output-test:
+    runs-on: ubuntu-latest
     steps:
       - name: "Output"
         run: |
