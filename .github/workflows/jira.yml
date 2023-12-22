@@ -17,7 +17,7 @@ jobs:
   action-output-test:
     steps:
       -run: |
-        echo "Evant action: ${{ github.event.action }}"
+        echo "Event action: ${{ github.event.action }}"
         echo "Team label: ${{ inputs.team-label }}"
 #  sync:
 #    uses: hashicorp/vault-workflows-common/.github/workflows/jira.yaml@main
