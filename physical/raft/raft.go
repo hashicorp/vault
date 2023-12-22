@@ -904,9 +904,6 @@ type SetupOpts struct {
 	// RecoveryModeConfig is the configuration for the raft cluster in recovery
 	// mode.
 	RecoveryModeConfig *raft.Configuration
-
-	// overrideMsgpackUseNewTimeFormat is used for testing backwards compatability
-	overrideMsgpackUseNewTimeFormat *bool
 }
 
 func (b *RaftBackend) StartRecoveryCluster(ctx context.Context, peer Peer) error {
@@ -1007,9 +1004,6 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			ServerAddressProvider:   b.serverAddressProvider,
 			Logger:                  b.logger.Named("raft-net"),
 			MsgpackUseNewTimeFormat: true,
-		}
-		if opts.overrideMsgpackUseNewTimeFormat != nil {
-			transConfig.MsgpackUseNewTimeFormat = *opts.overrideMsgpackUseNewTimeFormat
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
