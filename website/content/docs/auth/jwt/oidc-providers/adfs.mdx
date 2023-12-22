@@ -197,7 +197,7 @@ plugin where:
 
 
 ```shell-session
-$ vault write auth/adfs/config \
+$ vault write auth/<YOUR_OIDC_MOUNT_PATH>/config \
   oidc_discovery_url="<ADFS_URL>" \
   oidc_client_id="<ADFS_APPLICATION_GROUP_CLIENT_ID>" \
   oidc_client_secret="<ADFS_APPLICATION_GROUP_SECRET>" \
