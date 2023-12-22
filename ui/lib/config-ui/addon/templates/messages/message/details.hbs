@@ -3,5 +3,37 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-Message Details
-{{outlet}}
+<Messages::TabPageHeader
+  @authenticated={{this.model.authenticated}}
+  @pageTitle={{this.model.title}}
+  @breadcrumbs={{this.breadcrumbs}}
+/>
+
+<Toolbar>
+  <ToolbarActions>
+    {{!-- {{#if @role.canDelete}}
+      <ConfirmAction
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{this.deleteMessage}}
+        @confirmTitle="Delete message"
+        @buttonText="Delete"
+        data-test-confirm-action="Delete message"
+      />
+      <div class="toolbar-separator"></div>
+    {{/if}} --}}
+    {{#if @model.canEditCustomMessages}}
+      <LinkTo class="toolbar-link" @route="messages.message.edit" @model={{this.model.id}} data-test-link="edit">
+        Edit message
+        <Icon @name="chevron-right" />
+      </LinkTo>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#each @model.formFields as |attr|}}
+  <InfoTableRow
+    @label={{capitalize (humanize (dasherize attr.name))}}
+    @value={{if (and (eq attr.name "endTime") (eq (get @model attr.name) "")) "Never" (get @model attr.name)}}
+  />
+{{/each}}
