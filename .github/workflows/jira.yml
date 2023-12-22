@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: "Output"
         run: |
-          echo "Event action: ${{ github.event.action }}"
+          echo "Event action: ${{ github.event_name }}"
           echo "Event: ${{ github.event }}"
           echo "Team label: ${{ inputs.team-labels }}"
 #  sync:
