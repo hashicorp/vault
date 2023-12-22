@@ -13,6 +13,7 @@ import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | clients/running-total', function (hooks) {
   setupRenderingTest(hooks);
@@ -1430,6 +1431,12 @@ module('Integration | Component | clients/running-total', function (hooks) {
       { label: 'entity clients', key: 'entity_clients' },
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
   hooks.after(function () {
     timestamp.now.restore();

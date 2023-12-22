@@ -10,6 +10,7 @@ import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
+import { capitalize } from '@ember/string';
 
 const DEFAULTS = {
   token: null,
@@ -30,6 +31,7 @@ const DEFAULTS = {
 const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Component.extend(DEFAULTS, {
+  flashMessages: service(),
   store: service(),
   // putting these attrs here so they don't get reset when you click back
   //random
@@ -97,6 +99,7 @@ export default Component.extend(DEFAULTS, {
       props = assign({}, props, { [keyName]: resp.wrap_info.token });
     }
     setProperties(this, props);
+    this.flashMessages.success(`${capitalize(action)} was successful.`);
   },
 
   getData() {
