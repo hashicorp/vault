@@ -1,0 +1,29 @@
+name: JIRA Sync
+on:
+  # We only
+  workflow_dispatch:
+    inputs:
+      team-labels:
+        description: 'Team label to use. Wrapped in [], e.g. ["core"]'
+        required: true
+        type: string
+  issues:
+    types: [closed, deleted, reopened]
+  pull_request_target:
+    types: [closed, reopened]
+  issue_comment: # Also triggers when commenting on a PR from the conversation view
+    types: [created]
+jobs:
+  action-output-test:
+    steps:
+      -run: |
+        echo "Evant action: ${{ github.event.action }}"
+        echo "Team label: ${{ inputs.team-label }}"
+#  sync:
+#    uses: hashicorp/vault-workflows-common/.github/workflows/jira.yaml@main
+#    secrets:
+#      JIRA_SYNC_BASE_URL: ${{ steps.secrets.outputs.JIRA_SYNC_BASE_URL }}
+#      JIRA_SYNC_USER_EMAIL: ${{ steps.secrets.outputs.JIRA_SYNC_USER_EMAIL }}
+#      JIRA_SYNC_API_TOKEN: ${{ steps.secrets.outputs.JIRA_SYNC_API_TOKEN }}
+#    with:
+#      teams-array: ${{ inputs.team-label }}
