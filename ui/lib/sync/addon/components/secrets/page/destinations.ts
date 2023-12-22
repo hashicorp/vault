@@ -28,8 +28,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @service declare readonly store: StoreService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  // typeFilter arg comes in as destination type but we need to pass the name of the type into the SearchSelect
-  get typeFilter() {
+  // typeFilter arg comes in as destination type but we need to pass the destination display name into the SearchSelect
+  get typeFilterName() {
     return findDestination(this.args.typeFilter)?.name;
   }
 
@@ -51,15 +51,15 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   get noResultsMessage() {
-    const { nameFilter } = this.args;
-    if (nameFilter && this.typeFilter) {
-      return `There are no ${this.typeFilter} destinations matching "${nameFilter}".`;
+    const { nameFilter, typeFilter } = this.args;
+    if (nameFilter && typeFilter) {
+      return `There are no ${this.typeFilterName || typeFilter} destinations matching "${nameFilter}".`;
     }
     if (nameFilter) {
       return `There are no destinations matching "${nameFilter}".`;
     }
-    if (this.typeFilter) {
-      return `There are no ${this.typeFilter} destinations.`;
+    if (typeFilter) {
+      return `There are no ${this.typeFilterName || typeFilter} destinations.`;
     }
     return '';
   }

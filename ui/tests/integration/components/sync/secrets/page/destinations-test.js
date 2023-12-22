@@ -87,17 +87,23 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       .includesText('AWS Secrets Manager', 'Filter is populated for correct initial value');
     await click(searchSelect.removeSelected);
 
-    for (const filterType of ['type', 'name']) {
-      await click(`${filter(filterType)} .ember-basic-dropdown-trigger`);
-      await click(searchSelect.option(0));
+    // TYPE FILTER
+    await click(`${filter('type')} .ember-basic-dropdown-trigger`);
+    await click(searchSelect.option(searchSelect.optionIndex('AWS Secrets Manager')));
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { type: 'aws-sm' } }],
+      'type filter triggered transition with correct query params'
+    );
 
-      const value = filterType === 'type' ? 'aws-sm' : 'destination-aws';
-      assert.deepEqual(
-        this.transitionStub.lastCall.args,
-        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filterType]: value } }],
-        `${filterType} filter triggered transition with correct query params`
-      );
-    }
+    // NAME FILTER
+    await click(`${filter('name')} .ember-basic-dropdown-trigger`);
+    await click(searchSelect.option(searchSelect.optionIndex('destination-aws')));
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { name: 'destination-aws' } }],
+      'name filter triggered transition with correct query params'
+    );
   });
 
   test('it should render empty state when there are no filtered results', async function (assert) {
