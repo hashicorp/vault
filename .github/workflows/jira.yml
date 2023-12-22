@@ -20,7 +20,8 @@ jobs:
       - name: "Output"
         run: |
           echo "Event action: ${{ github.event.action }}"
-          echo "Team label: ${{ inputs.team-label }}"
+          echo "Event: ${{ github.event }}"
+          echo "Team label: ${{ inputs.team-labels }}"
 #  sync:
 #    uses: hashicorp/vault-workflows-common/.github/workflows/jira.yaml@main
 #    secrets:
