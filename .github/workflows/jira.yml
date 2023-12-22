@@ -16,9 +16,10 @@ on:
 jobs:
   action-output-test:
     steps:
-      -run: |
-        echo "Event action: ${{ github.event.action }}"
-        echo "Team label: ${{ inputs.team-label }}"
+      - name: "Output"
+        run: |
+          echo "Event action: ${{ github.event.action }}"
+          echo "Team label: ${{ inputs.team-label }}"
 #  sync:
 #    uses: hashicorp/vault-workflows-common/.github/workflows/jira.yaml@main
 #    secrets:
