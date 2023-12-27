@@ -35,8 +35,12 @@ export default class MessageSerializer extends ApplicationSerializer {
     };
     // using the snapshot startTime and endTime since the json start and end times are null when
     // it gets to the serialize function.
-    json.start_time = snapshot.record.startTime;
-    json.end_time = snapshot.record.endTime;
+    json.start_time = snapshot.record?.startTime.includes('Z')
+      ? snapshot.record.startTime
+      : new Date(snapshot.record.startTime).toISOString();
+    json.end_time = snapshot.record?.startTime.includes('Z')
+      ? snapshot.record.endTime
+      : new Date(snapshot.record.endTime).toISOString();
     delete json?.link_title;
     delete json?.link_href;
     return json;
