@@ -11,10 +11,7 @@ export default RESTSerializer.extend({
 
   serializeAttribute(snapshot, json, key, attributes) {
     // Don't send values that are undefined
-    if (
-      undefined !== snapshot.attr(key) &&
-      (snapshot.record.get('isNew') || snapshot.changedAttributes()[key])
-    ) {
+    if (undefined !== snapshot.attr(key)) {
       this._super(snapshot, json, key, attributes);
     }
   },
@@ -54,6 +51,7 @@ export default RESTSerializer.extend({
 
   serialize(snapshot, requestType) {
     const data = this._super(snapshot, requestType);
+    // const data = snapshot.attributes();
     if (!data.plugin_name) {
       return data;
     }
