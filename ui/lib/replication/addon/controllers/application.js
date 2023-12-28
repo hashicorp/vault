@@ -7,7 +7,6 @@ import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
-import { copy } from 'ember-copy';
 import { resolve } from 'rsvp';
 import decodeConfigFromJWT from 'replication/utils/decode-config-from-jwt';
 
@@ -24,7 +23,7 @@ const DEFAULTS = {
   },
 };
 
-export default Controller.extend(copy(DEFAULTS, true), {
+export default Controller.extend(structuredClone(DEFAULTS), {
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,

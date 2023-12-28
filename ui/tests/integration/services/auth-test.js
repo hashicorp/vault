@@ -4,7 +4,6 @@
  */
 
 import { run } from '@ember/runloop';
-import { copy } from 'ember-copy';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';
@@ -133,7 +132,7 @@ module('Integration | Service | auth', function (hooks) {
     this.memStore = storage();
     this.server = new Pretender(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = copy(ROOT_TOKEN_RESPONSE, true);
+        const resp = structuredClone(ROOT_TOKEN_RESPONSE);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
