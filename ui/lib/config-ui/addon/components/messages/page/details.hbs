@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Messages::TabPageHeader
   @authenticated={{@message.authenticated}}
   @pageTitle={{@message.title}}
@@ -27,9 +32,7 @@
   </ToolbarActions>
 </Toolbar>
 
-<InfoTableRow @label="Active" @value={{@message.active}} />
-
-{{#each @message.formFields as |attr|}}
+{{#each @message.allFields as |attr|}}
   {{#if (or (eq attr.name "endTime") (eq attr.name "startTime"))}}
     <InfoTableRow
       @label={{capitalize (humanize (dasherize attr.name))}}
