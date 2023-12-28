@@ -4695,68 +4695,87 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/adapter@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/adapter@npm:4.12.5"
+"@ember-data/adapter@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/adapter@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
     ember-cli-test-info: ^1.0.0
   peerDependencies:
-    "@ember-data/store": 4.12.5
+    "@ember-data/store": 4.12.7
     "@ember/string": ^3.0.1
     ember-inflector: ^4.0.2
-  checksum: 224b66b96bd7b5e982d3c60720172b57c817153d97a1b396a36644e18571afaff2257af58ef7821bad7515f6aec37c78ceb82148c526f871cf3d11b2d1b2364b
+  checksum: 38a906ece296ba95a6d4d94f02fe61a92d64f358453b1b7ea7e7ce92772248bd05700905ea5c3d281c66154a0e9a71ff6b7958353b776768b948245b5b82131f
   languageName: node
   linkType: hard
 
-"@ember-data/debug@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/debug@npm:4.12.5"
+"@ember-data/debug@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/debug@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@ember/edition-utils": ^1.2.0
     "@embroider/macros": ^1.10.0
     ember-auto-import: ^2.6.1
     ember-cli-babel: ^7.26.11
   peerDependencies:
-    "@ember-data/store": 4.12.5
+    "@ember-data/store": 4.12.7
     "@ember/string": ^3.0.1
-  checksum: 2fcca256b2f8e0a5636312df4d4f6b4ac05d95552131d64a96eeef482221ea6426ff5164d9ffcab88e2f5e651010c91f1810d777439a6ba35ae3da6f8b6ef737
+  checksum: 58f151db49e1c53b962c7e7bc09ca7032b664b44c43948ae41b6974f920e6bf9a329f16868d4c5f32edf49e2bc8923fc20d571c32052140e23de1fd1110b93c2
   languageName: node
   linkType: hard
 
-"@ember-data/graph@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/graph@npm:4.12.5"
+"@ember-data/graph@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/graph@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@ember/edition-utils": ^1.2.0
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
   peerDependencies:
-    "@ember-data/store": 4.12.5
-  checksum: ed23005e79db2bb68269a168820f69404d60ea11e0c54ac12a8b3b5f156688f4e1d089b932bc8ee4737c4aa6b5dcc00b643ac9bce1ff24847b0f1719cd9bd0d4
+    "@ember-data/store": 4.12.7
+  checksum: b92da923ad3a870a9070a31bdd000a93df6558b7befeff8a58f8c55fdbd18abc524abc5cd63acd2c86c3605ee4865cdfcde2986e541420373322d27c294db212
   languageName: node
   linkType: hard
 
-"@ember-data/json-api@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/json-api@npm:4.12.5"
+"@ember-data/json-api@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/json-api@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@ember/edition-utils": ^1.2.0
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
   peerDependencies:
-    "@ember-data/graph": 4.12.5
-    "@ember-data/store": 4.12.5
-  checksum: 3b8f3d80f37e706edd829376a6d8184c7169fd1816fe4b91e8a67b142354be74ca3850263f7547f4c81cc51f6bef6c4408f5efd30aa07cfdaeec85f4fa12cf96
+    "@ember-data/graph": 4.12.7
+    "@ember-data/store": 4.12.7
+  checksum: 9352b090bcb01f0e365ddb9f3eabfdb2bfa844925d13072a71f11f9715373b0acaee4eec0118e09b146eb9ba3523734d540441ecca51c667cc5167b0dc67ec9c
   languageName: node
   linkType: hard
 
-"@ember-data/legacy-compat@npm:4.12.5, @ember-data/legacy-compat@npm:~4.12.4":
+"@ember-data/legacy-compat@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/legacy-compat@npm:4.12.7"
+  dependencies:
+    "@ember-data/private-build-infra": 4.12.7
+    "@embroider/macros": ^1.10.0
+    ember-cli-babel: ^7.26.11
+  peerDependencies:
+    "@ember-data/graph": 4.12.7
+    "@ember-data/json-api": 4.12.7
+  peerDependenciesMeta:
+    "@ember-data/graph":
+      optional: true
+    "@ember-data/json-api":
+      optional: true
+  checksum: 22a0e272fa9f192b858c3306fbeb89af7e42b35b1121ad752eaae820927556594ddcabc9bf5100f90df07d4c8af11f4e902acbf9fff4fb9ff48aafca74233ffc
+  languageName: node
+  linkType: hard
+
+"@ember-data/legacy-compat@npm:~4.12.4":
   version: 4.12.5
   resolution: "@ember-data/legacy-compat@npm:4.12.5"
   dependencies:
@@ -4775,11 +4794,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/model@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/model@npm:4.12.5"
+"@ember-data/model@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/model@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@ember/edition-utils": ^1.2.0
     "@embroider/macros": ^1.10.0
     ember-cached-decorator-polyfill: ^1.0.1
@@ -4788,12 +4807,12 @@ __metadata:
     ember-cli-test-info: ^1.0.0
     inflection: ~2.0.1
   peerDependencies:
-    "@ember-data/debug": 4.12.5
-    "@ember-data/graph": 4.12.5
-    "@ember-data/json-api": 4.12.5
-    "@ember-data/legacy-compat": 4.12.5
-    "@ember-data/store": 4.12.5
-    "@ember-data/tracking": 4.12.5
+    "@ember-data/debug": 4.12.7
+    "@ember-data/graph": 4.12.7
+    "@ember-data/json-api": 4.12.7
+    "@ember-data/legacy-compat": 4.12.7
+    "@ember-data/store": 4.12.7
+    "@ember-data/tracking": 4.12.7
     "@ember/string": ^3.0.1
     ember-inflector: ^4.0.2
   peerDependenciesMeta:
@@ -4803,7 +4822,7 @@ __metadata:
       optional: true
     "@ember-data/json-api":
       optional: true
-  checksum: 2d17d16a665fac2c755e65ae690f6ade32d5dfd1d936ef0f1fab031b33977a659212dc384b73a4fb98df229ef254eeba9f3319592e0d4ff19150c6ba2ea67fa6
+  checksum: 5db80c08155307ed86e8f843ed388d808c0650fc4a07ce29c1410359722ac72d47d7b9aa222922f58373c5dc732b1245adfa1fdf23c80f8413d9b777150cead8
   languageName: node
   linkType: hard
 
@@ -4840,15 +4859,48 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/request@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/request@npm:4.12.5"
+"@ember-data/private-build-infra@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/private-build-infra@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@babel/core": ^7.21.4
+    "@babel/plugin-transform-block-scoping": ^7.21.0
+    "@babel/runtime": ^7.21.0
+    "@ember/edition-utils": ^1.2.0
+    "@embroider/macros": ^1.10.0
+    babel-import-util: ^1.3.0
+    babel-plugin-debug-macros: ^0.3.4
+    babel-plugin-filter-imports: ^4.0.0
+    babel6-plugin-strip-class-callcheck: ^6.0.0
+    broccoli-debug: ^0.6.5
+    broccoli-file-creator: ^2.1.1
+    broccoli-funnel: ^3.0.8
+    broccoli-merge-trees: ^4.2.0
+    broccoli-rollup: ^5.0.0
+    calculate-cache-key-for-tree: ^2.0.0
+    chalk: ^4.1.2
+    ember-cli-babel: ^7.26.11
+    ember-cli-path-utils: ^1.0.0
+    ember-cli-string-utils: ^1.1.0
+    ember-cli-version-checker: ^5.1.2
+    git-repo-info: ^2.1.1
+    glob: ^9.3.4
+    npm-git-info: ^1.0.3
+    semver: ^7.3.8
+    silent-error: ^1.1.1
+  checksum: 281e013558941f77ae401296655339d71b5660a895df987d62df835b1af3c08a52d09b372cab3ed045dc0a2ce802263ec3fd5579b625f545aa65f6b71dddaf61
+  languageName: node
+  linkType: hard
+
+"@ember-data/request@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/request@npm:4.12.7"
+  dependencies:
+    "@ember-data/private-build-infra": 4.12.7
     "@ember/test-waiters": ^3.0.2
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
-  checksum: e812e7a7bef347dcbb7f885ee848f8f47b61ecb6c4f8fc6aee0683da1207e195a04320d34b9766fdac7b9e96b139ab71d18d9200ec07d6bd6703d7d7e11c3fb3
+  checksum: 56e9f0aaf5485bf699ae1885827f83c6f7301f052a3bcfa3923fb78a33f2083aa2fe31865639197016e10310ade4963a37f6146925d3df96764d22e5a7df6e70
   languageName: node
   linkType: hard
 
@@ -4859,36 +4911,36 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember-data/serializer@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/serializer@npm:4.12.5"
+"@ember-data/serializer@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/serializer@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
     ember-cli-test-info: ^1.0.0
   peerDependencies:
-    "@ember-data/store": 4.12.5
+    "@ember-data/store": 4.12.7
     "@ember/string": ^3.0.1
     ember-inflector: ^4.0.2
-  checksum: ea866f07844987c97e2982e6be9e772182c656ba305562813084618d9eba8d7fd4920b239875aeb9a7473032ccfc8ee8393f1f17de664cd60b1d110f77628d09
+  checksum: 71ddbac32e4c070a6b3cbb631a483a809849da4ebd1eecea1b4d8233f4b343e7e4d97d48c4286bff61e7cf8b87314cbf006d77837e3034d87ab226546e53039d
   languageName: node
   linkType: hard
 
-"@ember-data/store@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/store@npm:4.12.5"
+"@ember-data/store@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/store@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@embroider/macros": ^1.10.0
     ember-cached-decorator-polyfill: ^1.0.1
     ember-cli-babel: ^7.26.11
   peerDependencies:
-    "@ember-data/graph": 4.12.5
-    "@ember-data/json-api": 4.12.5
-    "@ember-data/legacy-compat": 4.12.5
-    "@ember-data/model": 4.12.5
-    "@ember-data/tracking": 4.12.5
+    "@ember-data/graph": 4.12.7
+    "@ember-data/json-api": 4.12.7
+    "@ember-data/legacy-compat": 4.12.7
+    "@ember-data/model": 4.12.7
+    "@ember-data/tracking": 4.12.7
     "@ember/string": ^3.0.1
     "@glimmer/tracking": ^1.1.2
   peerDependenciesMeta:
@@ -4900,18 +4952,18 @@ __metadata:
       optional: true
     "@ember-data/model":
       optional: true
-  checksum: 3309d4c8960055915d7f8de0ae83cd9dc1d2b6db0e97d2a069a36f8ae99cd2a024a9a577bc86e63267c230b2ba1efba5aa7dfb54d6901f1b2c63dc2f08ebfb54
+  checksum: 5700ff167eba1871998bb6ce3435c09baa2b111920f1eaa85df93d5dff4fa17e4157a98391e0d9026b778ead7cbc6761b6276249a1e429fa5c6d8271c620238c
   languageName: node
   linkType: hard
 
-"@ember-data/tracking@npm:4.12.5":
-  version: 4.12.5
-  resolution: "@ember-data/tracking@npm:4.12.5"
+"@ember-data/tracking@npm:4.12.7":
+  version: 4.12.7
+  resolution: "@ember-data/tracking@npm:4.12.7"
   dependencies:
-    "@ember-data/private-build-infra": 4.12.5
+    "@ember-data/private-build-infra": 4.12.7
     "@embroider/macros": ^1.10.0
     ember-cli-babel: ^7.26.11
-  checksum: be07b307f9915b63369d7edb298cb1585f1eed57bb6c9fa45767f1c37ee563605240296cfeea815f87fd5c6957d6aaaa081bc3cd1c37958e0ca216b80465ba64
+  checksum: a91284aec0ee8d5f5be14807268816a9c6f598fb29ee8a5342cefca678a26146fdde883e6e6ceca1309872cb05f5e61202720e61c7bb7a0052b1708ed0848b9d
   languageName: node
   linkType: hard
 
@@ -10723,13 +10775,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commander@npm:2, commander@npm:^2.15.1, commander@npm:^2.20.0, commander@npm:^2.6.0":
-  version: 2.20.3
-  resolution: "commander@npm:2.20.3"
-  checksum: ab8c07884e42c3a8dbc5dd9592c606176c7eb5c1ca5ff274bcf907039b2c41de3626f684ea75ccf4d361ba004bbaff1f577d5384c155f3871e456bdf27becf9e
-  languageName: node
-  linkType: hard
-
 "commander@npm:2.8.x":
   version: 2.8.1
   resolution: "commander@npm:2.8.1"
@@ -10743,6 +10788,13 @@ __metadata:
   version: 7.2.0
   resolution: "commander@npm:7.2.0"
   checksum: 53501cbeee61d5157546c0bef0fedb6cdfc763a882136284bed9a07225f09a14b82d2a84e7637edfd1a679fb35ed9502fd58ef1d091e6287f60d790147f68ddc
+  languageName: node
+  linkType: hard
+
+"commander@npm:^2.15.1, commander@npm:^2.20.0, commander@npm:^2.6.0":
+  version: 2.20.3
+  resolution: "commander@npm:2.20.3"
+  checksum: ab8c07884e42c3a8dbc5dd9592c606176c7eb5c1ca5ff274bcf907039b2c41de3626f684ea75ccf4d361ba004bbaff1f577d5384c155f3871e456bdf27becf9e
   languageName: node
   linkType: hard
 
@@ -11278,13 +11330,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-array@npm:1, d3-array@npm:^1.1.1, d3-array@npm:^1.2.0":
-  version: 1.2.4
-  resolution: "d3-array@npm:1.2.4"
-  checksum: d0be1fa7d72dbfac8a3bcffbb669d42bcb9128d8818d84d2b1df0c60bbe4c8e54a798be0457c55a219b399e2c2fabcbd581cbb130eb638b5436b0618d7e56000
-  languageName: node
-  linkType: hard
-
 "d3-array@npm:2 - 3, d3-array@npm:2.10.0 - 3, d3-array@npm:^3.2.0":
   version: 3.2.4
   resolution: "d3-array@npm:3.2.4"
@@ -11294,33 +11339,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-axis@npm:1, d3-axis@npm:^1.0.8":
+"d3-array@npm:^1.2.0":
+  version: 1.2.4
+  resolution: "d3-array@npm:1.2.4"
+  checksum: d0be1fa7d72dbfac8a3bcffbb669d42bcb9128d8818d84d2b1df0c60bbe4c8e54a798be0457c55a219b399e2c2fabcbd581cbb130eb638b5436b0618d7e56000
+  languageName: node
+  linkType: hard
+
+"d3-axis@npm:^1.0.8":
   version: 1.0.12
   resolution: "d3-axis@npm:1.0.12"
   checksum: b1cf820fb6e95cc3371b340353b05272dba16ce6ad4fe9a0992d075ab48a08810f87f5e6c7cbb6c63fca1ee1e9b7c822307a1590187daa7627f45728a747c746
-  languageName: node
-  linkType: hard
-
-"d3-brush@npm:1":
-  version: 1.1.6
-  resolution: "d3-brush@npm:1.1.6"
-  dependencies:
-    d3-dispatch: 1
-    d3-drag: 1
-    d3-interpolate: 1
-    d3-selection: 1
-    d3-transition: 1
-  checksum: ffa23a5543699cc1199f45ac87d4e1293167c4bab0833657d77172d84d910448893569393290dba3689af1e5a1fc77503d94a2dec3976de8a7bc68ed0e32413a
-  languageName: node
-  linkType: hard
-
-"d3-chord@npm:1":
-  version: 1.0.6
-  resolution: "d3-chord@npm:1.0.6"
-  dependencies:
-    d3-array: 1
-    d3-path: 1
-  checksum: e4ca95ffff089f0eccf796d16a5574121e0ecbe658dcd9d5fa760af3573c3349264ce325c0adf1f32bcad67038d3938edd109712166cfb5b3bbe068e27c012e9
   languageName: node
   linkType: hard
 
@@ -11345,15 +11374,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-contour@npm:1":
-  version: 1.3.2
-  resolution: "d3-contour@npm:1.3.2"
-  dependencies:
-    d3-array: ^1.1.1
-  checksum: c18a099a7f4af2adf788e96d07bfc7236661a6e40c017ef8e172fe0142561f3722f71263075c565a17b72e6cd6a2a05de3868fcc5420eb77b00d3a0179a69a0d
-  languageName: node
-  linkType: hard
-
 "d3-dispatch@npm:1":
   version: 1.0.6
   resolution: "d3-dispatch@npm:1.0.6"
@@ -11361,62 +11381,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-drag@npm:1":
-  version: 1.2.5
-  resolution: "d3-drag@npm:1.2.5"
-  dependencies:
-    d3-dispatch: 1
-    d3-selection: 1
-  checksum: 6e86e89aa8d511979eea1b5326709c05c2a3c2d43a93a82ed6b6f98528b2ab03b2f58f5e4f66582f2f1c0ae44f9c19f6f4f857249eb66aabc46e4942295fa0a7
-  languageName: node
-  linkType: hard
-
-"d3-dsv@npm:1":
-  version: 1.2.0
-  resolution: "d3-dsv@npm:1.2.0"
-  dependencies:
-    commander: 2
-    iconv-lite: 0.4
-    rw: 1
-  bin:
-    csv2json: bin/dsv2json
-    csv2tsv: bin/dsv2dsv
-    dsv2dsv: bin/dsv2dsv
-    dsv2json: bin/dsv2json
-    json2csv: bin/json2dsv
-    json2dsv: bin/json2dsv
-    json2tsv: bin/json2dsv
-    tsv2csv: bin/dsv2dsv
-    tsv2json: bin/dsv2json
-  checksum: 96c6e3d5ca1566624ca613b5941bc6fa916082cbe4b2b71cb6c5978c471db58c489b17206e3e31fbe30719dbd75e9c8ed8ab12a9d353cff90a35102690de7823
-  languageName: node
-  linkType: hard
-
 "d3-ease@npm:1, d3-ease@npm:^1.0.5":
   version: 1.0.7
   resolution: "d3-ease@npm:1.0.7"
   checksum: 117811d51dfc4a126e8d23d249252df792fbbe30a93615e1d67158c482eff69b900e45a4cc92746fe65b1143287455406a89aae04eb4ca1ba5b1dc2a42af5b85
-  languageName: node
-  linkType: hard
-
-"d3-fetch@npm:1":
-  version: 1.2.0
-  resolution: "d3-fetch@npm:1.2.0"
-  dependencies:
-    d3-dsv: 1
-  checksum: 00f091945bff4afbd06e6ce9ad762f0e91b7aac912c1ae7fe0efdbcce3a997d4fa2a93c254a3ba9b3f53f2134d606b20fb13791adbf5c6ed5c0be329a775945f
-  languageName: node
-  linkType: hard
-
-"d3-force@npm:1":
-  version: 1.2.1
-  resolution: "d3-force@npm:1.2.1"
-  dependencies:
-    d3-collection: 1
-    d3-dispatch: 1
-    d3-quadtree: 1
-    d3-timer: 1
-  checksum: b73fe29d6c9a9c432ae65166d71238d14578a3a9537df095bebff87b7814161cd2822aff54a38d2400edb98b7f6d9221a810dcad7a53c6e8ddff0973f44ab3fa
   languageName: node
   linkType: hard
 
@@ -11431,22 +11399,6 @@ __metadata:
   version: 3.1.0
   resolution: "d3-format@npm:3.1.0"
   checksum: f345ec3b8ad3cab19bff5dead395bd9f5590628eb97a389b1dd89f0b204c7c4fc1d9520f13231c2c7cf14b7c9a8cf10f8ef15bde2befbab41454a569bd706ca2
-  languageName: node
-  linkType: hard
-
-"d3-geo@npm:1":
-  version: 1.12.1
-  resolution: "d3-geo@npm:1.12.1"
-  dependencies:
-    d3-array: 1
-  checksum: 8ede498e5fce65c127403646f5cc6181a858a1e401e23e2856ce50ad27e6fdf8b49aeb88d2fad02696879d5825a45420ca1b5db9fa9c935ee413fe15b5bc37c4
-  languageName: node
-  linkType: hard
-
-"d3-hierarchy@npm:1":
-  version: 1.1.9
-  resolution: "d3-hierarchy@npm:1.1.9"
-  checksum: 5fd8761c302252cb9abe9ce2a0934fc97104dd0df8d1b5de6472532903416f40e13b4b58d03ce215a0b816d7129c4ed4503bd4fdbc00a130fdcf46a63d734a52
   languageName: node
   linkType: hard
 
@@ -11468,62 +11420,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-path@npm:1":
-  version: 1.0.9
-  resolution: "d3-path@npm:1.0.9"
-  checksum: d4382573baf9509a143f40944baeff9fead136926aed6872f7ead5b3555d68925f8a37935841dd51f1d70b65a294fe35c065b0906fb6e42109295f6598fc16d0
-  languageName: node
-  linkType: hard
-
 "d3-path@npm:^3.1.0":
   version: 3.1.0
   resolution: "d3-path@npm:3.1.0"
   checksum: 2306f1bd9191e1eac895ec13e3064f732a85f243d6e627d242a313f9777756838a2215ea11562f0c7630c7c3b16a19ec1fe0948b1c82f3317fac55882f6ee5d8
-  languageName: node
-  linkType: hard
-
-"d3-polygon@npm:1":
-  version: 1.0.6
-  resolution: "d3-polygon@npm:1.0.6"
-  checksum: 4a9764c2064d15e9f4fc9018c975f127540f6e701c18442e2a2e9339e743726f40e017d5213982d983cac3c23802321c257f2a10e686c803ec5533c6ff42bb7a
-  languageName: node
-  linkType: hard
-
-"d3-quadtree@npm:1":
-  version: 1.0.7
-  resolution: "d3-quadtree@npm:1.0.7"
-  checksum: 32181f578cbd69eed6b240073fed7f977f8039a121a3b9fc58ea1eea0c3c14d1237ef48cb4f80abb833063f8b0e7b885ef6de734e7bcc4e5b37e53ec444830f8
-  languageName: node
-  linkType: hard
-
-"d3-random@npm:1":
-  version: 1.1.2
-  resolution: "d3-random@npm:1.1.2"
-  checksum: a27326319fa61d59b6ce8d5ce7547cc823dee1bc6dda35e9c233d709f43f76488c09353862463c9c5da99081482b0f7ea4177d78721b67bb677bb12354bffe42
-  languageName: node
-  linkType: hard
-
-"d3-scale-chromatic@npm:1":
-  version: 1.5.0
-  resolution: "d3-scale-chromatic@npm:1.5.0"
-  dependencies:
-    d3-color: 1
-    d3-interpolate: 1
-  checksum: 3bff7717f6e6b309b3347d48d6532e2295037a280bc5174f908ce5fc0e17a9470f6b202e49499b01a17a1f28cb76a61aae870a6c13c57195a362847f33747501
-  languageName: node
-  linkType: hard
-
-"d3-scale@npm:2":
-  version: 2.2.2
-  resolution: "d3-scale@npm:2.2.2"
-  dependencies:
-    d3-array: ^1.2.0
-    d3-collection: 1
-    d3-format: 1
-    d3-interpolate: 1
-    d3-time: 1
-    d3-time-format: 2
-  checksum: 42086d4b9db9f8492a99dbbdacf546983faef1bb6260fe875c0c1884f1ca9cf5fd233de3702c2f9e24145b1c5383945e929c8682d80fa57ab515ef2c4f2c61f6
   languageName: node
   linkType: hard
 
@@ -11555,29 +11455,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-selection-multi@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "d3-selection-multi@npm:1.0.1"
-  dependencies:
-    d3-selection: 1
-    d3-transition: 1
-  checksum: 16d94d1dc5fc9a86302c613ad4f4e008beaae92bb22d6d1cee066c02efa35ba9795f9544c7465e129467e34611417fc3a082d5d7cc6ab1fd7c8404b83378555e
-  languageName: node
-  linkType: hard
-
-"d3-selection@npm:1, d3-selection@npm:^1.1.0, d3-selection@npm:^1.3.0":
+"d3-selection@npm:^1.1.0, d3-selection@npm:^1.3.0":
   version: 1.4.2
   resolution: "d3-selection@npm:1.4.2"
   checksum: 2484b392259b087a98f546f2610e6a11c90f38dae6b6b20a3fc85171038fcab4c72e702788b1960a4fece88bed2e36f268096358b5b48d3c7f0d35cfbe305da6
-  languageName: node
-  linkType: hard
-
-"d3-shape@npm:1":
-  version: 1.3.7
-  resolution: "d3-shape@npm:1.3.7"
-  dependencies:
-    d3-path: 1
-  checksum: 46566a3ab64a25023653bf59d64e81e9e6c987e95be985d81c5cedabae5838bd55f4a201a6b69069ca862eb63594cd263cac9034afc2b0e5664dfe286c866129
   languageName: node
   linkType: hard
 
@@ -11641,7 +11522,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-transition@npm:1, d3-transition@npm:^1.2.0":
+"d3-transition@npm:^1.2.0":
   version: 1.3.2
   resolution: "d3-transition@npm:1.3.2"
   dependencies:
@@ -11652,65 +11533,6 @@ __metadata:
     d3-selection: ^1.1.0
     d3-timer: 1
   checksum: 1b4a0cfa7aeb4033ab20e26a310488cfac989de44c6c2bf10e9f0808af915a33add6dca23fbafcefe8c08613fd0d6a933e48b4de24c0779163c2852a1c7c16f4
-  languageName: node
-  linkType: hard
-
-"d3-voronoi@npm:1":
-  version: 1.1.4
-  resolution: "d3-voronoi@npm:1.1.4"
-  checksum: d28a74bc62f2b936b0d3b51d5be8d2366afca4fd7026d7ee8f655600650bf0c985da38a8c3ae46bfa315b5f524f3ca1c5211437cf1c8c737cc1da681e015baee
-  languageName: node
-  linkType: hard
-
-"d3-zoom@npm:1":
-  version: 1.8.3
-  resolution: "d3-zoom@npm:1.8.3"
-  dependencies:
-    d3-dispatch: 1
-    d3-drag: 1
-    d3-interpolate: 1
-    d3-selection: 1
-    d3-transition: 1
-  checksum: de408e5dc6df1481ef6854a3d495f8e963dbf5b0de41bcbd35def0602abda55b3f2c1fa751c75c2f0a9bafd3b278f30795c27503fe609b3dbe06a0720d01d5be
-  languageName: node
-  linkType: hard
-
-"d3@npm:^5.0.0":
-  version: 5.16.0
-  resolution: "d3@npm:5.16.0"
-  dependencies:
-    d3-array: 1
-    d3-axis: 1
-    d3-brush: 1
-    d3-chord: 1
-    d3-collection: 1
-    d3-color: 1
-    d3-contour: 1
-    d3-dispatch: 1
-    d3-drag: 1
-    d3-dsv: 1
-    d3-ease: 1
-    d3-fetch: 1
-    d3-force: 1
-    d3-format: 1
-    d3-geo: 1
-    d3-hierarchy: 1
-    d3-interpolate: 1
-    d3-path: 1
-    d3-polygon: 1
-    d3-quadtree: 1
-    d3-random: 1
-    d3-scale: 2
-    d3-scale-chromatic: 1
-    d3-selection: 1
-    d3-shape: 1
-    d3-time: 1
-    d3-time-format: 2
-    d3-timer: 1
-    d3-transition: 1
-    d3-voronoi: 1
-    d3-zoom: 1
-  checksum: 1462789c421c3ea3930a18b91be6c02c7b976fa4d714200ee2a042c62cbfb349448c79f1ae3dbaf186f79edb734b7aa7b734ee6ad61d81ab4305e6663623ab8e
   languageName: node
   linkType: hard
 
@@ -13407,43 +13229,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-copy@npm:2.0.1":
-  version: 2.0.1
-  resolution: "ember-copy@npm:2.0.1"
-  dependencies:
-    ember-cli-babel: ^7.22.1
-  checksum: addeba5ce864c1dcea4ec475bab51c4996dcd575adab28fb3a5fb082fa1db1f8530236ccfbb2c66fd594d8b11410f17eece6651957bd6b0804eaa870915e84ba
-  languageName: node
-  linkType: hard
-
-"ember-d3@npm:^0.5.1":
-  version: 0.5.1
-  resolution: "ember-d3@npm:0.5.1"
-  dependencies:
-    broccoli-funnel: ^2.0.0
-    broccoli-merge-trees: ^3.0.0
-    d3: ^5.0.0
-    d3-selection-multi: ^1.0.1
-    ember-cli-babel: ^7.1.2
-  checksum: 81256d9a3f7647c5b9689a2e9973fdbcc29fe03ff795a66a3fc6202fd978c6207d1655b44f9a1379f8d4c997283813f25acaf310a1005cc90b74344bf5ef04b5
-  languageName: node
-  linkType: hard
-
 "ember-data@npm:~4.12.4":
-  version: 4.12.5
-  resolution: "ember-data@npm:4.12.5"
+  version: 4.12.7
+  resolution: "ember-data@npm:4.12.7"
   dependencies:
-    "@ember-data/adapter": 4.12.5
-    "@ember-data/debug": 4.12.5
-    "@ember-data/graph": 4.12.5
-    "@ember-data/json-api": 4.12.5
-    "@ember-data/legacy-compat": 4.12.5
-    "@ember-data/model": 4.12.5
-    "@ember-data/private-build-infra": 4.12.5
-    "@ember-data/request": 4.12.5
-    "@ember-data/serializer": 4.12.5
-    "@ember-data/store": 4.12.5
-    "@ember-data/tracking": 4.12.5
+    "@ember-data/adapter": 4.12.7
+    "@ember-data/debug": 4.12.7
+    "@ember-data/graph": 4.12.7
+    "@ember-data/json-api": 4.12.7
+    "@ember-data/legacy-compat": 4.12.7
+    "@ember-data/model": 4.12.7
+    "@ember-data/private-build-infra": 4.12.7
+    "@ember-data/request": 4.12.7
+    "@ember-data/serializer": 4.12.7
+    "@ember-data/store": 4.12.7
+    "@ember-data/tracking": 4.12.7
     "@ember/edition-utils": ^1.2.0
     "@embroider/macros": ^1.10.0
     "@glimmer/env": ^0.1.7
@@ -13453,7 +13253,7 @@ __metadata:
     ember-inflector: ^4.0.2
   peerDependencies:
     "@ember/string": ^3.0.1
-  checksum: c8649d42c534b8038a43bc3fd72bbfc390e39b9fd50f2903ac5aaed2d36cff86a48d6ab418c8055591e9a170cf310fae3cba8ab4d57e7d46bddf45b14b104e67
+  checksum: c36172fc27594694b3291bc548228bc2d23090e6b8406d0f29e2b5a1bfa812ee886f824750e2a20910260ef4ac452e018276930e34bfab375075ada99fadd94f
   languageName: node
   linkType: hard
 
@@ -17004,7 +16804,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"iconv-lite@npm:0.4, iconv-lite@npm:0.4.24, iconv-lite@npm:^0.4.24":
+"iconv-lite@npm:0.4.24, iconv-lite@npm:^0.4.24":
   version: 0.4.24
   resolution: "iconv-lite@npm:0.4.24"
   dependencies:
@@ -22253,13 +22053,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rw@npm:1":
-  version: 1.3.3
-  resolution: "rw@npm:1.3.3"
-  checksum: c20d82421f5a71c86a13f76121b751553a99cd4a70ea27db86f9b23f33db941f3f06019c30f60d50c356d0bd674c8e74764ac146ea55e217c091bde6fba82aa3
-  languageName: node
-  linkType: hard
-
 "rxjs@npm:^6.4.0, rxjs@npm:^6.6.0, rxjs@npm:^6.6.7":
   version: 6.6.7
   resolution: "rxjs@npm:6.6.7"
@@ -24849,8 +24642,6 @@ __metadata:
     ember-cli-typescript: ^5.2.1
     ember-composable-helpers: 5.0.0
     ember-concurrency: ^3.1.1
-    ember-copy: 2.0.1
-    ember-d3: ^0.5.1
     ember-data: ~4.12.4
     ember-engines: 0.8.23
     ember-exam: ^9.0.0
