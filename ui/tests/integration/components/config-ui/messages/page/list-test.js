@@ -14,11 +14,10 @@ import { hbs } from 'ember-cli-htmlbars';
 
 const META = {
   currentPage: 1,
-  lastPage: 2,
-  nextPage: 2,
+  lastPage: 1,
+  nextPage: 1,
   prevPage: 1,
-  total: 16,
-  filteredTotal: 16,
+  total: 3,
   pageSize: 15,
 };
 
@@ -88,7 +87,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
   test('it should show the list of custom messages', async function (assert) {
     this.messages = this.store.peekAll('config-ui/message', {});
     this.messages.meta = META;
-
     await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
       owner: this.engine,
     });
@@ -96,7 +94,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
     for (const message of this.messages) {
       assert.dom(`[data-test-list-item="${message.id}"]`).exists();
       assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
-      // TODO: add tests for active/inactive badges
     }
   });
 });
