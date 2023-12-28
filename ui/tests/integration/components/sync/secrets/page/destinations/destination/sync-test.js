@@ -88,7 +88,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(submit);
     assert
       .dom(successMessage)
-      .includesText('Sync operation successfully initiated for "my-secret".', 'Success banner renders');
+      .includesText('Sync operation successfully initiated for my-secret.', 'Success banner renders');
   });
 
   test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {
