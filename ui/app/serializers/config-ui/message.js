@@ -14,16 +14,18 @@ export default class MessageSerializer extends ApplicationSerializer {
     end_time: { serialize: false },
   };
 
-  getISODateFormat(date, jsonTime) {
-    if (typeof date === 'object') {
-      return jsonTime;
+  getISODateFormat(snapshotDateTime, jsonDateTime) {
+    if (typeof snapshotDateTime === 'object') {
+      return jsonDateTime;
     }
 
-    if (typeof date === 'string' && !date.includes('Z')) {
-      return new Date(date).toISOString();
+    // if the snapshot date is in local date time format ("yyyy-MM-dd'T'HH:mm"), we want to ensure
+    // it gets converted to an ISOString
+    if (typeof snapshotDateTime === 'string' && !snapshotDateTime.includes('Z')) {
+      return new Date(snapshotDateTime).toISOString();
     }
 
-    return date;
+    return snapshotDateTime;
   }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
@@ -47,11 +49,11 @@ export default class MessageSerializer extends ApplicationSerializer {
       title: json?.link_title || '',
       href: json?.link_href || '',
     };
-    // using the snapshot startTime and endTime since the json start and end times are null when
-    // it gets to the serialize function. we need to check to see if it's in iso format. if it's not
-    // we need to convert it to an ISOString. when the date from the snapshot is an object, it's in a date
-    // object format and will need to converted to ISOString. When the date is a string and is not in ISO
-    // format, it will need to be converted to an ISOString.
+    // When editing a message with pre-populated dates, this returns a date object. In this case, we would want to use
+    // the json date from the serializer. When selecting a date from the datetime-local input date picker, the dates gets
+    // set as a date time local string in the model - we would want to convert this local string to an ISOString. Lastly,
+    // if this date is not an object and isn’t a local date string, then return the snapshot date, which is set by default
+    // values defined on the model.
     json.start_time = this.getISODateFormat(snapshot.record.startTime, json.start_time);
     json.end_time = this.getISODateFormat(snapshot.record.endTime, json.end_time);
     delete json?.link_title;

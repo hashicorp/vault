@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
+import { action } from '@ember/object';
 
 /**
  * @module Page::MessageDetails
@@ -22,10 +22,10 @@ export default class MessageDetails extends Component {
   @service router;
   @service flashMessages;
 
-  @task
-  *deleteMessage() {
+  @action
+  async deleteMessage() {
     this.store.clearDataset('config-ui/message');
-    yield this.args.message.destroyRecord(this.args.message.id);
+    await this.args.message.destroyRecord(this.args.message.id);
     this.router.transitionTo('vault.cluster.config-ui.messages');
     this.flashMessages.success(`Successfully deleted ${this.args.message.title}.`);
   }
