@@ -14,8 +14,9 @@ https://docs.ember-cli-typescript.com/cookbook/working-with-route-models
 export type Resolved<P> = P extends Promise<infer T> ? T : P;
 
 /* 
-Get the resolved model value from a route.
+Get the resolved model value from a route. 
 Example use:
+
 import type { ModelFrom } from 'vault/vault/router';
 export default class MyRoute extends Route {
   redirect(model: ModelFrom<MyRoute>) {}
