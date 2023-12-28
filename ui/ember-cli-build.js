@@ -96,10 +96,10 @@ module.exports = function (defaults) {
   //return app.toTree();
   const { Webpack } = require('@embroider/webpack');
   return require('@embroider/compat').compatBuild(app, Webpack, {
-     staticAddonTestSupportTrees: true,
-     staticAddonTrees: true,
-     staticModifiers: true,
-     //staticHelpers: true,
+    staticAddonTestSupportTrees: true,
+    staticAddonTrees: true,
+    staticModifiers: true,
+    //staticHelpers: true,
     // staticComponents: true,
     // staticEmberSource: true,
     // splitAtRoutes: ['route.name'], // can also be a RegExp
