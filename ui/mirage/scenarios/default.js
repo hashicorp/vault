@@ -5,7 +5,7 @@
 
 import ENV from 'vault/config/environment';
 const { handler } = ENV['ember-cli-mirage'];
-import scenarios from './index';
+import * as scenarios from './index';
 
 export default function (server) {
   server.create('clients/config');
