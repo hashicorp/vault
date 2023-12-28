@@ -1969,11 +1969,11 @@ __metadata:
   linkType: hard
 
 "@embroider/macros@npm:^1.15.0":
-  version: 1.15.0
-  resolution: "@embroider/macros@npm:1.15.0"
+  version: 1.15.1
+  resolution: "@embroider/macros@npm:1.15.1"
   dependencies:
     "@babel/core": ^7.24.0
-    "@embroider/shared-internals": 2.5.2
+    "@embroider/shared-internals": 2.6.0
     assert-never: ^1.2.1
     babel-import-util: ^2.0.0
     ember-cli-babel: ^8.2.0
@@ -1986,13 +1986,13 @@ __metadata:
   peerDependenciesMeta:
     "@glint/template":
       optional: true
-  checksum: ac78c4e0d8a553a6d45476acf9248b6ccfb6499e0eb1ddc7e953e1e52cc7a491ce72d4a28defcbe29aff69ed4c32fac5a7311445400836f6427281ef378f1f83
+  checksum: 2a0c059adb292a3c67581984f8635c9da3cc2b689158430321feed7710277c22def84752648b2ff102903de423ff101ffeaf3ebe6bfe7bb6eef436b9d5d34c7c
   languageName: node
   linkType: hard
 
-"@embroider/shared-internals@npm:2.5.2, @embroider/shared-internals@npm:^2.0.0, @embroider/shared-internals@npm:^2.5.1":
-  version: 2.5.2
-  resolution: "@embroider/shared-internals@npm:2.5.2"
+"@embroider/shared-internals@npm:2.6.0, @embroider/shared-internals@npm:^2.0.0, @embroider/shared-internals@npm:^2.5.1":
+  version: 2.6.0
+  resolution: "@embroider/shared-internals@npm:2.6.0"
   dependencies:
     babel-import-util: ^2.0.0
     debug: ^4.3.2
@@ -2000,10 +2000,11 @@ __metadata:
     fs-extra: ^9.1.0
     js-string-escape: ^1.0.1
     lodash: ^4.17.21
+    minimatch: ^3.0.4
     resolve-package-path: ^4.0.1
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
-  checksum: ffa48bc708498f57482d7c1ebca44fccf46543d705a2dab698581ef5dee5f0981a9a67d7df3164940f8de1b7412f20cfd4d6204b13c2945f461660089908fe53
+  checksum: f268764bd9cb031ab078af677865e8ce08cc2159bb8bce22125b452279a05c054061a3513616231612ce73fcf92c0737d2c9f517b169d5208bf9e36c89e3ccdd
   languageName: node
   linkType: hard
 
@@ -3020,12 +3021,12 @@ __metadata:
   linkType: hard
 
 "@types/eslint@npm:*, @types/eslint@npm:^8.4.2, @types/eslint@npm:^8.4.9":
-  version: 8.56.7
-  resolution: "@types/eslint@npm:8.56.7"
+  version: 8.56.9
+  resolution: "@types/eslint@npm:8.56.9"
   dependencies:
     "@types/estree": "*"
     "@types/json-schema": "*"
-  checksum: 26b036e27e369981843585248591b15068f1ba3ac44a01c09c34717f0b57cbb422a7ed2b497b51093b0ead97739e187dde65bbd5893ec901672dac39f41c8038
+  checksum: c0c033fc724774b791bf97465cfe246814eda1f82460aff2daa64dfce1b1a01626c75f4281d2ab10dcd9176446df0b4bf57e8ac542da6476902e28683e89137d
   languageName: node
   linkType: hard
 
@@ -6499,9 +6500,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30000792, caniuse-lite@npm:^1.0.30000805, caniuse-lite@npm:^1.0.30000844, caniuse-lite@npm:^1.0.30001304, caniuse-lite@npm:^1.0.30001587":
-  version: 1.0.30001608
-  resolution: "caniuse-lite@npm:1.0.30001608"
-  checksum: 7ae62689ca358cd3bdb89b2db9b4841812299f8a0b3ab94b52e4548778bd5740814617c0e0b2504b6bfaf47acc2472e1730393bd2027d646acbe8dc8206ad9e7
+  version: 1.0.30001609
+  resolution: "caniuse-lite@npm:1.0.30001609"
+  checksum: 462f38b5c33ce544dcfa65cc3940fca7fe2d3d916ec2d9c9905ea7becf6930c540774a1278f901fe44d3b85f7d7a2f05523d27602c6ce93bb2b3806e9f3e9989
   languageName: node
   linkType: hard
 
@@ -8064,9 +8065,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.3.30, electron-to-chromium@npm:^1.3.47, electron-to-chromium@npm:^1.4.668":
-  version: 1.4.731
-  resolution: "electron-to-chromium@npm:1.4.731"
-  checksum: f5ec068ae0616e2c3b68d66ce253a673de65b22ab3bea7e70dc16db7b7c683ca65f7d5c3b7276dd1f837a9c513ef435a53475b69a5df5eb581736d69b713ba3e
+  version: 1.4.736
+  resolution: "electron-to-chromium@npm:1.4.736"
+  checksum: dcba6d43ffbc40e5d3decb3a0de67b9721a257fefde4eceac0d75202029c62ace7b377d217f49d1ba9cfbad61f89a14514e85a4de77b7205cee336f2e1f0baee
   languageName: node
   linkType: hard
 
@@ -8966,15 +8967,6 @@ __metadata:
   peerDependencies:
     ember-source: ^3.28.0 || ^4.0.0 || >=5.0.0
   checksum: f9dd7581cb5dcae2cecb9d61f5088aa26e4849e4778e532168fd02b08cbe6ac758f76c668524358087936ecf7d135278df44bc4388b0bbe9a68b7ae0ed21169b
-  languageName: node
-  linkType: hard
-
-"ember-copy@npm:2.0.1":
-  version: 2.0.1
-  resolution: "ember-copy@npm:2.0.1"
-  dependencies:
-    ember-cli-babel: ^7.22.1
-  checksum: addeba5ce864c1dcea4ec475bab51c4996dcd575adab28fb3a5fb082fa1db1f8530236ccfbb2c66fd594d8b11410f17eece6651957bd6b0804eaa870915e84ba
   languageName: node
   linkType: hard
 
@@ -16222,11 +16214,11 @@ __metadata:
   linkType: hard
 
 "qs@npm:^6.4.0":
-  version: 6.12.0
-  resolution: "qs@npm:6.12.0"
+  version: 6.12.1
+  resolution: "qs@npm:6.12.1"
   dependencies:
     side-channel: ^1.0.6
-  checksum: ba007fb2488880b9c6c3df356fe6888b9c1f4c5127552edac214486cfe83a332de09a5c40d490d79bb27bef977ba1085a8497512ff52eaac72e26564f77ce908
+  checksum: aa761d99e65b6936ba2dd2187f2d9976afbcda38deb3ff1b3fe331d09b0c578ed79ca2abdde1271164b5be619c521ec7db9b34c23f49a074e5921372d16242d5
   languageName: node
   linkType: hard
 
@@ -17125,15 +17117,15 @@ __metadata:
   linkType: hard
 
 "sass@npm:^1.58.3, sass@npm:^1.69.5":
-  version: 1.74.1
-  resolution: "sass@npm:1.74.1"
+  version: 1.75.0
+  resolution: "sass@npm:1.75.0"
   dependencies:
     chokidar: ">=3.0.0 <4.0.0"
     immutable: ^4.0.0
     source-map-js: ">=0.6.2 <2.0.0"
   bin:
     sass: sass.js
-  checksum: 3cbcd73d91e65607f7987656b7f6b0c6143724304544768079ecbe95505f1ce71036916e0e02dcc9923551c3779863bcdd522732a8f4409e89205271966a36f4
+  checksum: bfb9f5ddb6a2e1fe0c1ba6191cdb17afa7b40c1eb892c7152f6a29ff2b06dc7a510bdb648f8cca0179dcb3965920ebeb8894f0710b0b450a99db563831345033
   languageName: node
   linkType: hard
 
@@ -18263,9 +18255,9 @@ __metadata:
   linkType: hard
 
 "swagger-ui-dist@npm:^5.9.0":
-  version: 5.15.0
-  resolution: "swagger-ui-dist@npm:5.15.0"
-  checksum: 4f887ff3ab2bdba4579687e12109171dbb3c1ef1fee52814f82a885d46e9efa3b383ff3b3f30c2210d971d7cc9b17aaee315087658855d04e302598805337ef1
+  version: 5.15.1
+  resolution: "swagger-ui-dist@npm:5.15.1"
+  checksum: 3fda9cf68f6454d3d2d5bfc7e463864d409695401684b7733f25ef0868987b27d6975770f5437b940270c406bf602ca16c2b1d9d8359b852ff4c07c48365e2ed
   languageName: node
   linkType: hard
 
@@ -18416,8 +18408,8 @@ __metadata:
   linkType: hard
 
 "testem@npm:^3.10.1":
-  version: 3.12.0
-  resolution: "testem@npm:3.12.0"
+  version: 3.13.0
+  resolution: "testem@npm:3.13.0"
   dependencies:
     "@xmldom/xmldom": ^0.8.0
     backbone: ^1.1.2
@@ -18450,7 +18442,7 @@ __metadata:
     tmp: 0.0.33
   bin:
     testem: testem.js
-  checksum: 580b7f6dde540ff69f383ee90b3e27846e7f28b51b3e768dad926cfd7c2c64f4b27102080baba5663567542163c6f1fbdc8cf132605752102925ba59856ac2b5
+  checksum: a85af54d98f40a9b7f0264e8e24435ea6371d7a9fdfcc29943f582605f64ce295232ac6048587570cdb9148f94ad34908fcf5476a13a25ff7123154aa1c4dfee
   languageName: node
   linkType: hard
 
@@ -19384,7 +19376,6 @@ __metadata:
     ember-cli-typescript: ^5.2.1
     ember-composable-helpers: 5.0.0
     ember-concurrency: ^3.1.1
-    ember-copy: 2.0.1
     ember-data: ~4.12.4
     ember-engines: 0.8.23
     ember-exam: ^9.0.0
