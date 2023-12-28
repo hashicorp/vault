@@ -96,15 +96,26 @@ module.exports = function (defaults) {
   //return app.toTree();
   const { Webpack } = require('@embroider/webpack');
   return require('@embroider/compat').compatBuild(app, Webpack, {
-    // staticAddonTestSupportTrees: true,
-    // staticAddonTrees: true,
-    // staticHelpers: true,
-    // staticModifiers: true,
+     staticAddonTestSupportTrees: true,
+     staticAddonTrees: true,
+     staticModifiers: true,
+     //staticHelpers: true,
     // staticComponents: true,
     // staticEmberSource: true,
     // splitAtRoutes: ['route.name'], // can also be a RegExp
-    // packagerOptions: {
-    //    webpackConfig: { }
-    // }
+
+    packagerOptions: {
+      webpackConfig: {
+        devtool: 'source-map',
+        module: {
+          rules: [
+            {
+              test: /\.(png|svg|jpg|jpeg|gif)$/i,
+              type: 'asset/resource',
+            },
+          ],
+        },
+      },
+    },
   });
 };
