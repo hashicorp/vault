@@ -90,10 +90,21 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
-  app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
   app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
   app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
 
-  return app.toTree();
+  //return app.toTree();
+  const { Webpack } = require('@embroider/webpack');
+  return require('@embroider/compat').compatBuild(app, Webpack, {
+    // staticAddonTestSupportTrees: true,
+    // staticAddonTrees: true,
+    // staticHelpers: true,
+    // staticModifiers: true,
+    // staticComponents: true,
+    // staticEmberSource: true,
+    // splitAtRoutes: ['route.name'], // can also be a RegExp
+    // packagerOptions: {
+    //    webpackConfig: { }
+    // }
+  });
 };
