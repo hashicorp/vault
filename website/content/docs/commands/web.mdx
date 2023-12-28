@@ -16,7 +16,7 @@ The Vault web user interface (UI) includes an advanced mode that mimics some bas
 ## Command history
 The Web REPL will keep a history of all of the commands you've entered in your current session. If you refresh the browser or use the `clearall` command, this history will be reset.
 
-To cycle through the command history, you can use the up and down arrows when the REPL input has focus. If you reach either end of the history, it will cycle back to the the other side and continue looping through them.
+To cycle through the command history, you can use the up and down arrows when the REPL input has focus. If you reach either beginning of the history by pressing up, it will cycle back to the most recent command. Pressing the down arrow will stop at an empty prompt after the most recent command.
 
 ## Commands
 The Vault Web REPL implements the Create/Read/Update/Delete/List (CRUDL) commands from the Vault CLI. With these basic commands, a user can interact with most of the Vault API even if there aren't explicit screens for it in Vault's Web UI.
