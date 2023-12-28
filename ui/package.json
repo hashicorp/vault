@@ -189,8 +189,7 @@
     "pvutils": "^1.0.17",
     "qunit": "^2.19.4",
     "qunit-dom": "^2.0.0",
-    "sass": "^1.58.3",
-    "sass-svg-uri": "^1.0.0",
+    "sass": "^1.66.3",
     "shell-quote": "^1.8.1",
     "string.prototype.endswith": "^0.2.0",
     "string.prototype.startswith": "^0.2.0",
@@ -235,7 +234,6 @@
     "paths": [
       "lib/config-ui",
       "lib/core",
-      "lib/css",
       "lib/keep-gitkeep",
       "lib/kmip",
       "lib/kubernetes",

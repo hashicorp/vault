@@ -17109,14 +17109,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sass-svg-uri@npm:^1.0.0":
-  version: 1.0.2
-  resolution: "sass-svg-uri@npm:1.0.2"
-  checksum: 528227f76b56966bbde03b9c08b3dd337a2194bd0e76520d8405a576d5ac499fd412265373279c3b901b5e786f76f9eecdf5ba4ab38cdcb3370598bf43e652bd
-  languageName: node
-  linkType: hard
-
-"sass@npm:^1.58.3, sass@npm:^1.69.5":
+"sass@npm:^1.66.3, sass@npm:^1.69.5":
   version: 1.75.0
   resolution: "sass@npm:1.75.0"
   dependencies:
@@ -19428,8 +19421,7 @@ __metadata:
     pvutils: ^1.0.17
     qunit: ^2.19.4
     qunit-dom: ^2.0.0
-    sass: ^1.58.3
-    sass-svg-uri: ^1.0.0
+    sass: ^1.66.3
     shell-quote: ^1.8.1
     string.prototype.endswith: ^0.2.0
     string.prototype.startswith: ^0.2.0
