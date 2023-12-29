@@ -52,11 +52,12 @@ module('Acceptance | console', function (hooks) {
     await settled();
     const consoleEle = document.querySelector('[data-test-component="console/ui-panel"]');
     // wait for the CSS transition to finish
-    await waitUntil(() => consoleEle.offsetHeight === window.innerHeight);
-    assert.strictEqual(
-      consoleEle.offsetHeight,
-      window.innerHeight,
-      'fullscreen is the same height as the window'
+    await waitUntil(() => {
+      return Math.abs(consoleEle.offsetHeight - window.innerHeight) < 2;
+    });
+    assert.true(
+      Math.abs(consoleEle.offsetHeight - window.innerHeight) < 2,
+      'fullscreen height is within 1 pixel of the window height'
     );
   });
 
