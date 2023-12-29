@@ -52,7 +52,7 @@ export default Controller.extend(structuredClone(DEFAULTS), {
   },
 
   reset() {
-    this.setProperties(copy(DEFAULTS, true));
+    this.setProperties(structuredClone(DEFAULTS));
   },
 
   submitSuccess(resp, action) {

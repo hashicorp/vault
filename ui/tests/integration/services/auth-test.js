@@ -139,13 +139,13 @@ module('Integration | Service | auth', function (hooks) {
       });
       this.post('/v1/auth/userpass/login/:username', function (request) {
         const { username } = request.params;
-        const resp = copy(USERPASS_RESPONSE, true);
+        const resp = structuredClone(USERPASS_RESPONSE);
         resp.auth.metadata.username = username;
         return [200, {}, resp];
       });
 
       this.post('/v1/auth/github/login', function () {
-        const resp = copy(GITHUB_RESPONSE, true);
+        const resp = structuredClone(GITHUB_RESPONSE);
         return [200, {}, resp];
       });
     });
@@ -319,7 +319,7 @@ module('Integration | Service | auth', function (hooks) {
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = copy(tokenResp, true);
+        const resp = structuredClone(tokenResp);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
