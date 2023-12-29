@@ -4984,7 +4984,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3.0.0, @ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^2.4.3 || ^3.0.0, @ember/test-waiters@npm:^3.0.0, @ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -5017,7 +5017,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.8.0":
+"@embroider/addon-shim@npm:^1.6.0, @embroider/addon-shim@npm:^1.8.0, @embroider/addon-shim@npm:^1.8.7":
   version: 1.8.7
   resolution: "@embroider/addon-shim@npm:1.8.7"
   dependencies:
@@ -5164,6 +5164,21 @@ __metadata:
     "@glint/template":
       optional: true
   checksum: 0a5a3795953f4ce0ece4decef6c3612f842708af861de4f56b5114b822a0bb4d06886fc4e895c54d0f3c871f805bb4325916450f2e1771e6c17f09dc3baa379d
+  languageName: node
+  linkType: hard
+
+"@embroider/router@npm:^2.1.6":
+  version: 2.1.6
+  resolution: "@embroider/router@npm:2.1.6"
+  dependencies:
+    "@ember/test-waiters": ^3.0.2
+    "@embroider/addon-shim": ^1.8.7
+  peerDependencies:
+    "@embroider/core": ^2.0.0||^3.0.0
+  peerDependenciesMeta:
+    "@embroider/core":
+      optional: true
+  checksum: 3e105ec28cdd97c2c71cd88564234d0d51c2c8477e39390f2f5b1a4902dc84f81aeb2bb4f44b67a20753ab5d4ae8266328ac288148b2c8b5f49e6ffff420586d
   languageName: node
   linkType: hard
 
@@ -6014,43 +6029,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sinonjs/commons@npm:^1, @sinonjs/commons@npm:^1.3.0, @sinonjs/commons@npm:^1.4.0, @sinonjs/commons@npm:^1.7.0":
-  version: 1.8.3
-  resolution: "@sinonjs/commons@npm:1.8.3"
-  dependencies:
-    type-detect: 4.0.8
-  checksum: 6159726db5ce6bf9f2297f8427f7ca5b3dff45b31e5cee23496f1fa6ef0bb4eab878b23fb2c5e6446381f6a66aba4968ef2fc255c1180d753d4b8c271636a2e5
-  languageName: node
-  linkType: hard
-
-"@sinonjs/formatio@npm:^3.2.1":
-  version: 3.2.2
-  resolution: "@sinonjs/formatio@npm:3.2.2"
-  dependencies:
-    "@sinonjs/commons": ^1
-    "@sinonjs/samsam": ^3.1.0
-  checksum: ddc30698df9b0aa59204da93ca94fd04bc5672ac03c798c0a487c35d514d7d8e0ce0e4c72386fc80e29f59cb1cc54eeea3b7f804281b3c4e3dd2394de56c6e4a
-  languageName: node
-  linkType: hard
-
-"@sinonjs/samsam@npm:^3.1.0, @sinonjs/samsam@npm:^3.3.3":
-  version: 3.3.3
-  resolution: "@sinonjs/samsam@npm:3.3.3"
-  dependencies:
-    "@sinonjs/commons": ^1.3.0
-    array-from: ^2.1.1
-    lodash: ^4.17.15
-  checksum: 340f2f62dec3fa1e5e9300a75996bd12ab9d2da4f6b453fa5d1ee101cc5e58eb218af2e2584b496d41ba31c3c0854d47a691fd9a0d8b9092f3cb6a5c7a080856
-  languageName: node
-  linkType: hard
-
-"@sinonjs/text-encoding@npm:^0.7.1":
-  version: 0.7.1
-  resolution: "@sinonjs/text-encoding@npm:0.7.1"
-  checksum: 130de0bb568c5f8a611ec21d1a4e3f80ab0c5ec333010f49cfc1adc5cba6d8808699c8a587a46b0f0b016a1f4c1389bc96141e773e8460fcbb441875b2e91ba7
-  languageName: node
-  linkType: hard
-
 "@socket.io/component-emitter@npm:~3.1.0":
   version: 3.1.0
   resolution: "@socket.io/component-emitter@npm:3.1.0"
@@ -6779,13 +6757,6 @@ __metadata:
   version: 1.2.0
   resolution: "@types/symlink-or-copy@npm:1.2.0"
   checksum: 18fb73094b2cf6c84544939bd6344d7a8cd1ccf8496a1cfb1320f38491c8dfbea3248bb6e91495322a51a493e04a767582a214d5261f5c5b007aa6ef65fc8b50
-  languageName: node
-  linkType: hard
-
-"@types/tmp@npm:^0.0.33":
-  version: 0.0.33
-  resolution: "@types/tmp@npm:0.0.33"
-  checksum: b6963af74092bd56a1a9a7936a1a6de45ddbd5e774f9fc904f16b7e2ada79da8a769e0c5b9df083064b8080bb260c4973ba4307640b7b7a75ed1c47bda8c4110
   languageName: node
   linkType: hard
 
@@ -7902,13 +7873,6 @@ __metadata:
   version: 1.1.1
   resolution: "array-flatten@npm:1.1.1"
   checksum: a9925bf3512d9dce202112965de90c222cd59a4fbfce68a0951d25d965cf44642931f40aac72309c41f12df19afa010ecadceb07cfff9ccc1621e99d89ab5f3b
-  languageName: node
-  linkType: hard
-
-"array-from@npm:^2.1.1":
-  version: 2.1.1
-  resolution: "array-from@npm:2.1.1"
-  checksum: 4cd5fa27aa6133b99a57c2881d2a8a66ec59b8e17a0c900f7e8ac9a0a2fae450ed682b67435467bfa71ac9328d025a760c5c46a95586a352180c5a79fc13015d
   languageName: node
   linkType: hard
 
@@ -9786,7 +9750,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-merge-trees@npm:^3.0.0, broccoli-merge-trees@npm:^3.0.1, broccoli-merge-trees@npm:^3.0.2":
+"broccoli-merge-trees@npm:^3.0.1, broccoli-merge-trees@npm:^3.0.2":
   version: 3.0.2
   resolution: "broccoli-merge-trees@npm:3.0.2"
   dependencies:
@@ -9825,7 +9789,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-node-info@npm:1.1.0, broccoli-node-info@npm:^1.1.0":
+"broccoli-node-info@npm:^1.1.0":
   version: 1.1.0
   resolution: "broccoli-node-info@npm:1.1.0"
   checksum: f3e552f3e2ba05d9bb73f5d9ba0e27961851744e3a1a70de3f712598746e6214a7b8b8a7ceafc8235f81973a2e9dca58e022a9f150b4c5963aed5bf90d496b96
@@ -10097,13 +10061,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-source@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "broccoli-source@npm:1.1.0"
-  checksum: 6c9421e44033df4ebd5ad7a3329599e40377f1b36629637d904ca7593ab721c99e6e4cc46b774bf4c2c6b24bcec0a0a3b327c7af42e768c1855378589ac3d796
-  languageName: node
-  linkType: hard
-
 "broccoli-source@npm:^2.1.2":
   version: 2.1.2
   resolution: "broccoli-source@npm:2.1.2"
@@ -10207,20 +10164,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-test-helper@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "broccoli-test-helper@npm:2.0.0"
-  dependencies:
-    "@types/tmp": ^0.0.33
-    broccoli: ^2.0.0
-    fixturify: ^0.3.2
-    fs-tree-diff: ^0.5.9
-    tmp: ^0.0.33
-    walk-sync: ^0.3.3
-  checksum: 1f3806c458f653b09936e901405b1393497f6112c0a1b5e8d150c810edfc75a8aa46ba463ec68a70033d225e497b1dbfe8f4b26d948276c9a1f12304fea99571
-  languageName: node
-  linkType: hard
-
 "broccoli-uglify-sourcemap@npm:^3.2.0":
   version: 3.2.0
   resolution: "broccoli-uglify-sourcemap@npm:3.2.0"
@@ -10237,33 +10180,6 @@ __metadata:
     walk-sync: ^1.1.3
     workerpool: ^5.0.1
   checksum: be2c06a4ee14a78c8fbb0afea00ede69c63933b34d38c855454e27b344fa02b03888cb5e2a15ddd344d3dec420145cfec94ddab3d4a3c957d6f67e5ebee8577d
-  languageName: node
-  linkType: hard
-
-"broccoli@npm:^2.0.0":
-  version: 2.3.0
-  resolution: "broccoli@npm:2.3.0"
-  dependencies:
-    broccoli-node-info: 1.1.0
-    broccoli-slow-trees: ^3.0.1
-    broccoli-source: ^1.1.0
-    commander: ^2.15.1
-    connect: ^3.6.6
-    esm: ^3.2.4
-    findup-sync: ^2.0.0
-    handlebars: ^4.0.11
-    heimdalljs: ^0.2.6
-    heimdalljs-logger: ^0.1.9
-    mime-types: ^2.1.19
-    promise.prototype.finally: ^3.1.0
-    resolve-path: ^1.4.0
-    rimraf: ^2.6.2
-    sane: ^4.0.0
-    tmp: 0.0.33
-    tree-sync: ^1.2.2
-    underscore.string: ^3.2.2
-    watch-detector: ^0.1.0
-  checksum: 34117904ae15bacd9780960b972f3549bad821aca9dc649cbc8e98bf3a89073d55c39f24d27a00303ce0be0e834315113667d7e117315a473b2fee4449b35634
   languageName: node
   linkType: hard
 
@@ -11269,7 +11185,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commander@npm:^2.15.1, commander@npm:^2.20.0, commander@npm:^2.6.0":
+"commander@npm:^2.20.0, commander@npm:^2.6.0":
   version: 2.20.3
   resolution: "commander@npm:2.20.3"
   checksum: ab8c07884e42c3a8dbc5dd9592c606176c7eb5c1ca5ff274bcf907039b2c41de3626f684ea75ccf4d361ba004bbaff1f577d5384c155f3871e456bdf27becf9e
@@ -12331,17 +12247,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"define-properties@npm:^1.2.1":
-  version: 1.2.1
-  resolution: "define-properties@npm:1.2.1"
-  dependencies:
-    define-data-property: ^1.0.1
-    has-property-descriptors: ^1.0.0
-    object-keys: ^1.1.1
-  checksum: b4ccd00597dd46cb2d4a379398f5b19fca84a16f3374e2249201992f36b30f6835949a9429669ee6b41b6e837205a163eadd745e472069e70dfc10f03e5fcc12
-  languageName: node
-  linkType: hard
-
 "define-property@npm:^0.2.5":
   version: 0.2.5
   resolution: "define-property@npm:0.2.5"
@@ -12463,13 +12368,6 @@ __metadata:
   version: 1.0.5
   resolution: "diff-match-patch@npm:1.0.5"
   checksum: 841522d01b09cccbc4e4402cf61514a81b906349a7d97b67222390f2d35cf5df277cb23959eeed212d5e46afb5629cebab41b87918672c5a05c11c73688630e3
-  languageName: node
-  linkType: hard
-
-"diff@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "diff@npm:3.5.0"
-  checksum: 00842950a6551e26ce495bdbce11047e31667deea546527902661f25cc2e73358967ebc78cf86b1a9736ec3e14286433225f9970678155753a6291c3bca5227b
   languageName: node
   linkType: hard
 
@@ -12806,18 +12704,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-asset-loader@npm:^0.6.1":
-  version: 0.6.1
-  resolution: "ember-asset-loader@npm:0.6.1"
+"ember-asset-loader@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "ember-asset-loader@npm:1.0.0"
   dependencies:
     broccoli-caching-writer: ^3.0.3
-    broccoli-funnel: ^2.0.2
-    broccoli-merge-trees: ^3.0.2
-    ember-cli-babel: ^7.5.0
-    fs-extra: ^7.0.1
-    object-assign: ^4.1.0
-    walk-sync: ^1.1.3
-  checksum: 1854fb6499e52f59752e8636c21c92105beb2d77b332c30ce310b5f9d51c9239e79f77959fd61aeea53d04c02334cd1d00806ee2d7c3bd27b37a8e6fcff667fc
+    broccoli-funnel: ^3.0.8
+    broccoli-merge-trees: ^4.2.0
+    ember-cli-babel: ^7.26.11
+    fs-extra: ^10.1.0
+    walk-sync: ^3.0.0
+  checksum: 58eeac812fe86e8dc4091490a6d3b460e832592d4661f31913282f3fabb9d074139627f12f91438eea285fb2d3d1e63a28d2f532527db6c84bf9614f49849956
   languageName: node
   linkType: hard
 
@@ -13112,7 +13009,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.0.0, ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.13.2, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.19.0, ember-cli-babel@npm:^7.21.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.23.1, ember-cli-babel@npm:^7.26.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.0.0, ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.1.3, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.13.2, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.19.0, ember-cli-babel@npm:^7.21.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.23.1, ember-cli-babel@npm:^7.26.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.26.8, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -13992,9 +13889,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-engines@npm:0.8.23":
-  version: 0.8.23
-  resolution: "ember-engines@npm:0.8.23"
+"ember-engines@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "ember-engines@npm:0.9.0"
   dependencies:
     "@embroider/macros": ^1.3.0
     amd-name-resolver: 1.3.1
@@ -14004,11 +13901,10 @@ __metadata:
     broccoli-debug: ^0.6.5
     broccoli-dependency-funnel: ^2.1.2
     broccoli-file-creator: ^2.1.1
-    broccoli-funnel: ^2.0.2
-    broccoli-merge-trees: ^3.0.2
-    broccoli-test-helper: ^2.0.0
+    broccoli-funnel: ^3.0.8
+    broccoli-merge-trees: ^4.2.0
     calculate-cache-key-for-tree: ^2.0.0
-    ember-asset-loader: ^0.6.1
+    ember-asset-loader: ^1.0.0
     ember-cli-babel: ^7.18.0
     ember-cli-preprocess-registry: ^3.3.0
     ember-cli-string-utils: ^1.1.0
@@ -14016,8 +13912,11 @@ __metadata:
     lodash: ^4.17.11
   peerDependencies:
     "@ember/legacy-built-in-components": "*"
-    ember-source: ^3.12 || 4
-  checksum: 167b8101b1254c8bc5d5c88623f3d34e95284003674dccefadf006db4a3c42172a2512b198489a7b50be233b09b3617e67bfde3c6f2daf56acbd2ceda416808e
+    ember-source: ^3.24.1 || 4
+  peerDependenciesMeta:
+    "@ember/legacy-built-in-components":
+      optional: true
+  checksum: 83128e4bace6d66ab8aba58dba72b274c91102bd4c487cd476b6497548c0d81372cbb12d7ae2868e7e8afbd87ed9fbc12967fe4ca74df3cab4df84a715b9ce9b
   languageName: node
   linkType: hard
 
@@ -14336,18 +14235,6 @@ __metadata:
     glob: ^7.1.6
     hash-for-dep: ^1.5.1
   checksum: 17e2f2a03cdf0ae9c5f4b0bd25a1b631849392b31e7bc4d376253511d1d6bc7338253fb36a4d7323ceb6b0eb319399a7e964a50ad9df381e64c4ac0d5b07a0b6
-  languageName: node
-  linkType: hard
-
-"ember-sinon@npm:^4.0.0":
-  version: 4.1.1
-  resolution: "ember-sinon@npm:4.1.1"
-  dependencies:
-    broccoli-funnel: ^2.0.0
-    broccoli-merge-trees: ^3.0.0
-    ember-cli-babel: ^7.7.3
-    sinon: ^7.4.2
-  checksum: 8781e420e1495728264599a770d786290a46eceb841ea6a0b86cf196efd9155e78931ea3c88bfd546bd4b9c1627c0bd0edb6cdd957abbe6faa71247de8184443
   languageName: node
   linkType: hard
 
@@ -16117,18 +16004,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"findup-sync@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "findup-sync@npm:2.0.0"
-  dependencies:
-    detect-file: ^1.0.0
-    is-glob: ^3.1.0
-    micromatch: ^3.0.4
-    resolve-dir: ^1.0.1
-  checksum: af2849f4006208c7c0940ab87a5f816187becf30c430a735377f6163cff8e95f405db504f5435728663099878f2e8002da1bf1976132458c23f5d73f540b1fcc
-  languageName: node
-  linkType: hard
-
 "findup-sync@npm:^4.0.0":
   version: 4.0.0
   resolution: "findup-sync@npm:4.0.0"
@@ -16172,16 +16047,6 @@ __metadata:
     tmp: ^0.0.33
     type-fest: ^0.11.0
   checksum: 60a435eeba234fa1332f8eb9d6384229a37883b6a175153b8ee0c723a17fad3577cd72777aac21085dd94b6d264ff3e2a77c33675dc75b3dd65c5ea7ec31867f
-  languageName: node
-  linkType: hard
-
-"fixturify@npm:^0.3.2":
-  version: 0.3.4
-  resolution: "fixturify@npm:0.3.4"
-  dependencies:
-    fs-extra: ^0.30.0
-    matcher-collection: ^1.0.4
-  checksum: ba73d10c82fc7686904ccab45a0d1fd4b0f184a9f877c8789f3dc7cdc176ee58283cc89b43f398f21bff8b449fb4b9ac6c6b1e4b05fab2603db6430c9ac8de64
   languageName: node
   linkType: hard
 
@@ -16353,20 +16218,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fs-extra@npm:^0.30.0":
-  version: 0.30.0
-  resolution: "fs-extra@npm:0.30.0"
-  dependencies:
-    graceful-fs: ^4.1.2
-    jsonfile: ^2.1.0
-    klaw: ^1.0.0
-    path-is-absolute: ^1.0.0
-    rimraf: ^2.2.8
-  checksum: 6edfd65fc813baa27f1603778c0f5ec11f8c5006a20b920437813ee2023eba18aeec8bef1c89b2e6c84f9fc90fdc7c916f4a700466c8c69d22a35d018f2570f0
-  languageName: node
-  linkType: hard
-
-"fs-extra@npm:^10.0.0":
+"fs-extra@npm:^10.0.0, fs-extra@npm:^10.1.0":
   version: 10.1.0
   resolution: "fs-extra@npm:10.1.0"
   dependencies:
@@ -17061,7 +16913,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graceful-fs@npm:^4.1.11, graceful-fs@npm:^4.1.15, graceful-fs@npm:^4.1.9, graceful-fs@npm:^4.2.6":
+"graceful-fs@npm:^4.1.11, graceful-fs@npm:^4.1.15, graceful-fs@npm:^4.2.6":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: ac85f94da92d8eb6b7f5a8b20ce65e43d66761c55ce85ac96df6865308390da45a8d3f0296dd3a663de65d30ba497bd46c696cc1e248c72b13d6d567138a4fc7
@@ -17135,7 +16987,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"handlebars@npm:^4.0.11, handlebars@npm:^4.7.7":
+"handlebars@npm:^4.7.7":
   version: 4.7.8
   resolution: "handlebars@npm:4.7.8"
   dependencies:
@@ -18949,29 +18801,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"just-extend@npm:^4.0.2":
-  version: 4.2.1
-  resolution: "just-extend@npm:4.2.1"
-  checksum: ff9fdede240fad313efeeeb68a660b942e5586d99c0058064c78884894a2690dc09bba44c994ad4e077e45d913fef01a9240c14a72c657b53687ac58de53b39c
-  languageName: node
-  linkType: hard
-
 "kind-of@npm:^6.0.3":
   version: 6.0.3
   resolution: "kind-of@npm:6.0.3"
   checksum: 3ab01e7b1d440b22fe4c31f23d8d38b4d9b91d9f291df683476576493d5dfd2e03848a8b05813dd0c3f0e835bc63f433007ddeceb71f05cb25c45ae1b19c6d3b
-  languageName: node
-  linkType: hard
-
-"klaw@npm:^1.0.0":
-  version: 1.3.1
-  resolution: "klaw@npm:1.3.1"
-  dependencies:
-    graceful-fs: ^4.1.9
-  dependenciesMeta:
-    graceful-fs:
-      optional: true
-  checksum: 8f69e4797c26e7c3f2426bfa85f38a3da3c2cb1b4c6bd850d2377aed440d41ce9d806f2885c2e2e224372c56af4b1d43b8a499adecf9a05e7373dc6b8b7c52e4
   languageName: node
   linkType: hard
 
@@ -19542,22 +19375,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lolex@npm:^4.2.0":
-  version: 4.2.0
-  resolution: "lolex@npm:4.2.0"
-  checksum: 0a83bfe1748fc745515dff9b3f722422918f5f6975104d7e576fc32c06b5398ee0c58525684068d4de49cdd49874e00b5e2b2d72ce8c5d829dab86c8c08ca31f
-  languageName: node
-  linkType: hard
-
-"lolex@npm:^5.0.1":
-  version: 5.1.2
-  resolution: "lolex@npm:5.1.2"
-  dependencies:
-    "@sinonjs/commons": ^1.7.0
-  checksum: 7eb468d4ef4746c024d23cb2b75f679f79449a9d5cbe11abadf2f3b147c1d7ffe28816438bedfb8a75c58357a625c2f9ba197b050c226d2b3f0c4a956cf556fb
-  languageName: node
-  linkType: hard
-
 "longest-streak@npm:^2.0.0":
   version: 2.0.4
   resolution: "longest-streak@npm:2.0.4"
@@ -19773,7 +19590,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"matcher-collection@npm:^1.0.0, matcher-collection@npm:^1.0.4, matcher-collection@npm:^1.1.1":
+"matcher-collection@npm:^1.0.0, matcher-collection@npm:^1.1.1":
   version: 1.1.2
   resolution: "matcher-collection@npm:1.1.2"
   dependencies:
@@ -20165,7 +19982,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromatch@npm:^3.0.4, micromatch@npm:^3.1.10, micromatch@npm:^3.1.4":
+"micromatch@npm:^3.1.10, micromatch@npm:^3.1.4":
   version: 3.1.10
   resolution: "micromatch@npm:3.1.10"
   dependencies:
@@ -20241,7 +20058,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mime-types@npm:^2.1.19, mime-types@npm:^2.1.27, mime-types@npm:~2.1.34":
+"mime-types@npm:^2.1.27, mime-types@npm:~2.1.34":
   version: 2.1.35
   resolution: "mime-types@npm:2.1.35"
   dependencies:
@@ -20710,19 +20527,6 @@ __metadata:
   version: 1.0.5
   resolution: "nice-try@npm:1.0.5"
   checksum: 0b4af3b5bb5d86c289f7a026303d192a7eb4417231fe47245c460baeabae7277bcd8fd9c728fb6bd62c30b3e15cd6620373e2cf33353b095d8b403d3e8a15aff
-  languageName: node
-  linkType: hard
-
-"nise@npm:^1.5.2":
-  version: 1.5.3
-  resolution: "nise@npm:1.5.3"
-  dependencies:
-    "@sinonjs/formatio": ^3.2.1
-    "@sinonjs/text-encoding": ^0.7.1
-    just-extend: ^4.0.2
-    lolex: ^5.0.1
-    path-to-regexp: ^1.7.0
-  checksum: ec3af21345dcaf34650a6f5420a11e0fd21a836ac5960f5e8523c301ee98465abf88b958f7b3084ecc6e0a7133e5cf7963f4df176b90b423c4da4984f1ebd75e
   languageName: node
   linkType: hard
 
@@ -21740,15 +21544,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"path-to-regexp@npm:^1.7.0":
-  version: 1.8.0
-  resolution: "path-to-regexp@npm:1.8.0"
-  dependencies:
-    isarray: 0.0.1
-  checksum: 709f6f083c0552514ef4780cb2e7e4cf49b0cc89a97439f2b7cc69a608982b7690fb5d1720a7473a59806508fc2dae0be751ba49f495ecf89fd8fbc62abccbcd
-  languageName: node
-  linkType: hard
-
 "path-type@npm:^3.0.0":
   version: 3.0.0
   resolution: "path-type@npm:3.0.0"
@@ -22249,19 +22044,6 @@ __metadata:
   version: 1.0.8
   resolution: "promise.hash.helper@npm:1.0.8"
   checksum: 88844dd1dd9d95a3d3b9c27f092dee938da02f9c9f3bd62a6b7b20e16c51c64a0db33edf09d25615055a1cb7ad96b5edcc837680cde88de09a12c466adfaf435
-  languageName: node
-  linkType: hard
-
-"promise.prototype.finally@npm:^3.1.0":
-  version: 3.1.7
-  resolution: "promise.prototype.finally@npm:3.1.7"
-  dependencies:
-    call-bind: ^1.0.2
-    define-properties: ^1.2.1
-    es-abstract: ^1.22.1
-    get-intrinsic: ^1.2.1
-    set-function-name: ^2.0.1
-  checksum: ff753cf2e2085bd42022aefad1c00b3fc1f0b8ce95389b22e053a9d072f68c7a137d457c2155408b9592cecf2d9aba8a83765603d0f05570b0a6cd4d710faef3
   languageName: node
   linkType: hard
 
@@ -23833,7 +23615,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"set-function-name@npm:^2.0.0, set-function-name@npm:^2.0.1":
+"set-function-name@npm:^2.0.0":
   version: 2.0.1
   resolution: "set-function-name@npm:2.0.1"
   dependencies:
@@ -23981,7 +23763,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"silent-error@npm:^1.0.0, silent-error@npm:^1.0.1, silent-error@npm:^1.1.0, silent-error@npm:^1.1.1":
+"silent-error@npm:^1.0.0, silent-error@npm:^1.0.1, silent-error@npm:^1.1.1":
   version: 1.1.1
   resolution: "silent-error@npm:1.1.1"
   dependencies:
@@ -23994,21 +23776,6 @@ __metadata:
   version: 0.5.11
   resolution: "simple-html-tokenizer@npm:0.5.11"
   checksum: f834a5a0b169ffe10f74bd479a071a7161e0186669e28a1cd662efacdaedd27667469e2b965d5a8538d9d8e7373cb741ea8d748259221f40fa3e4bda2efbdbfc
-  languageName: node
-  linkType: hard
-
-"sinon@npm:^7.4.2":
-  version: 7.5.0
-  resolution: "sinon@npm:7.5.0"
-  dependencies:
-    "@sinonjs/commons": ^1.4.0
-    "@sinonjs/formatio": ^3.2.1
-    "@sinonjs/samsam": ^3.3.3
-    diff: ^3.5.0
-    lolex: ^4.2.0
-    nise: ^1.5.2
-    supports-color: ^5.5.0
-  checksum: e8cf6b3dd16e9c1ed1a2b9560c396a2d6205a4f32293b1762cb6ebb8f88cfa47db6aba45b0c1709ec396efb41d171d88c9b1ab8f32f35512eb9e5d0d0d15d307
   languageName: node
   linkType: hard
 
@@ -24947,7 +24714,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"supports-color@npm:^5.3.0, supports-color@npm:^5.4.0, supports-color@npm:^5.5.0":
+"supports-color@npm:^5.3.0, supports-color@npm:^5.4.0":
   version: 5.5.0
   resolution: "supports-color@npm:5.5.0"
   dependencies:
@@ -25676,13 +25443,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"type-detect@npm:4.0.8":
-  version: 4.0.8
-  resolution: "type-detect@npm:4.0.8"
-  checksum: 62b5628bff67c0eb0b66afa371bd73e230399a8d2ad30d852716efcc4656a7516904570cd8631a49a3ce57c10225adf5d0cbdcb47f6b0255fe6557c453925a15
-  languageName: node
-  linkType: hard
-
 "type-fest@npm:^0.11.0":
   version: 0.11.0
   resolution: "type-fest@npm:0.11.0"
@@ -26269,6 +26029,7 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@embroider/compat": ^3.4.3
     "@embroider/core": ^3.4.3
+    "@embroider/router": ^2.1.6
     "@embroider/webpack": ^3.2.1
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
@@ -26331,6 +26092,7 @@ __metadata:
     doctoc: ^2.2.0
     dompurify: ^3.0.2
     ember-a11y-testing: ^5.2.1
+    ember-asset-loader: ^1.0.0
     ember-auto-import: 2.7.2
     ember-basic-dropdown: 6.0.1
     ember-cli: ~4.12.1
@@ -26351,7 +26113,7 @@ __metadata:
     ember-composable-helpers: 5.0.0
     ember-concurrency: ^3.1.1
     ember-data: ~4.11.3
-    ember-engines: 0.8.23
+    ember-engines: ^0.9.0
     ember-fetch: ^8.1.2
     ember-inflector: 4.0.2
     ember-load-initializers: ^2.1.2
@@ -26365,7 +26127,6 @@ __metadata:
     ember-responsive: 5.0.0
     ember-router-helpers: ^1.0.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
-    ember-sinon: ^4.0.0
     ember-source: ~4.12.0
     ember-svg-jar: 2.4.0
     ember-template-lint: 5.7.2
@@ -26543,19 +26304,6 @@ __metadata:
   dependencies:
     makeerror: 1.0.12
   checksum: ad7a257ea1e662e57ef2e018f97b3c02a7240ad5093c392186ce0bcf1f1a60bbadd520d073b9beb921ed99f64f065efb63dfc8eec689a80e569f93c1c5d5e16c
-  languageName: node
-  linkType: hard
-
-"watch-detector@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "watch-detector@npm:0.1.0"
-  dependencies:
-    heimdalljs-logger: ^0.1.9
-    quick-temp: ^0.1.8
-    rsvp: ^4.7.0
-    semver: ^5.4.1
-    silent-error: ^1.1.0
-  checksum: 024a8eeeeca18fcd8e907f6687508773304b47feb751ac97fa5a4068f6213e7d4cdb8207ee8b688055c20f794fa047d4adba884a3fcf32a965e0ed2cbac0fa18
   languageName: node
   linkType: hard
 
