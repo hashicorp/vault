@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
+import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 module('Integration | Component | dashboard/replication-state-text', function (hooks) {
   setupRenderingTest(hooks);
@@ -31,9 +31,9 @@ module('Integration | Component | dashboard/replication-state-text', function (h
   @clusterStates={{this.clusterStates}}
 />`
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
+    assert.dom(SELECTORS.title('DR primary')).hasText('DR primary');
+    assert.dom(SELECTORS.tooltipTitle('DR primary')).hasText('running');
+    assert.dom(SELECTORS.tooltipIcon('dr-perf', 'DR Primary', 'check-circle')).exists();
 
     this.name = 'DR Primary';
     this.clusterState = {
@@ -48,13 +48,14 @@ module('Integration | Component | dashboard/replication-state-text', function (h
   @clusterStates={{this.clusterStates}}
 />`
     );
+    assert.dom(SELECTORS.title('Performance primary')).hasText('Performance primary');
+
+    assert.dom(SELECTORS.tooltipTitle('Performance primary')).hasText('running');
+
+    assert.dom(SELECTORS.tooltipIcon('dr-perf', 'Performance Primary', 'x-circle')).exists();
+
     assert
-      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
-      .hasText('Performance primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
-    assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
+      .dom(SELECTORS.tooltipIcon('dr-perf', 'Performance Primary', 'x-circle'))
       .hasClass('has-text-danger');
   });
 });
