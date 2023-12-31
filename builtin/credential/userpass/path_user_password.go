@@ -81,7 +81,7 @@ func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldDat
 	}
 
 	if password == "" && prehashedPassword == "" {
-		return fmt.Errorf("missing password"), nil
+		return fmt.Errorf("missing password or password_hash"), nil
 	}
 
 	var hash []byte

@@ -225,15 +225,7 @@ func (b *backend) userCreateUpdate(ctx context.Context, req *logical.Request, d 
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	var passwordWasGiven = false
-	if _, ok := d.GetOk("password"); ok {
-		passwordWasGiven = true
-	}
-	if _, ok := d.GetOk("password_hash"); ok {
-		passwordWasGiven = true
-	}
-
-	if passwordWasGiven {
+	if d.Get("password").(string) != "" || d.Get("password_hash").(string) != "" {
 		userErr, intErr := b.updateUserPassword(req, d, userEntry)
 		if intErr != nil {
 			return nil, intErr
@@ -274,7 +266,7 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	if req.Operation == logical.CreateOperation && password == "" && prehashedPassword == "" {
-		return logical.ErrorResponse("missing password"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("missing password or password_hash"), logical.ErrInvalidRequest
 	}
 	return b.userCreateUpdate(ctx, req, d)
 }
