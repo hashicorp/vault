@@ -5,6 +5,9 @@ package event
 
 import (
 	"context"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/backoff"
 )
 
 type EventSubscriptionPlugin interface {
@@ -23,4 +26,44 @@ type SubscribeRequest struct {
 	SubscriptionID   string
 	Config           map[string]interface{}
 	VerifyConnection bool
+}
+
+// SubscribeConfigDefaults defines configuration map keys for common default options.
+// Embed this in your own config struct to pick up these default options.
+type SubscribeConfigDefaults struct {
+	Retries         *int           `mapstructure:"retries"`
+	RetryMinBackoff *time.Duration `mapstructure:"retry_min_backoff"`
+	RetryMaxBackoff *time.Duration `mapstructure:"retry_max_backoff"`
+}
+
+// default values for common configuration keys
+const (
+	DefaultRetries         = 3
+	DefaultRetryMinBackoff = 100 * time.Millisecond
+	DefaultRetryMaxBackoff = 5 * time.Second
+)
+
+func (c *SubscribeConfigDefaults) GetRetries() int {
+	if c.Retries == nil {
+		return DefaultRetries
+	}
+	return *c.Retries
+}
+
+func (c *SubscribeConfigDefaults) GetRetryMinBackoff() time.Duration {
+	if c.RetryMinBackoff == nil {
+		return DefaultRetryMinBackoff
+	}
+	return *c.RetryMinBackoff
+}
+
+func (c *SubscribeConfigDefaults) GetRetryMaxBackoff() time.Duration {
+	if c.RetryMaxBackoff == nil {
+		return DefaultRetryMaxBackoff
+	}
+	return *c.RetryMaxBackoff
+}
+
+func (c *SubscribeConfigDefaults) NewRetryBackoff() *backoff.Backoff {
+	return backoff.NewBackoff(c.GetRetries(), c.GetRetryMinBackoff(), c.GetRetryMaxBackoff())
 }
