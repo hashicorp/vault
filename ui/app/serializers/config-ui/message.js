@@ -61,21 +61,27 @@ export default class MessageSerializer extends ApplicationSerializer {
     return json;
   }
 
-  extractLazyPaginatedData(payload) {
+  mapPayload(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
         return payload.data.keys.map((key) => {
-          return {
+          const data = {
             id: key,
             linkTitle: payload.data.key_info.link?.title,
             linkHref: payload.data.key_info.link?.href,
             ...payload.data.key_info[key],
           };
+          if (data.message) data.message = decodeString(data.message);
+          return data;
         });
       }
       Object.assign(payload, payload.data);
       delete payload.data;
     }
     return payload;
+  }
+
+  extractLazyPaginatedData(payload) {
+    return this.mapPayload(payload);
   }
 }
