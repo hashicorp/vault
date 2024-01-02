@@ -19,15 +19,17 @@ import (
 )
 
 type NamespaceRecord struct {
-	NamespaceID     string         `json:"namespace_id"`
-	Entities        uint64         `json:"entities"`
-	NonEntityTokens uint64         `json:"non_entity_tokens"`
-	Mounts          []*MountRecord `json:"mounts"`
+	NamespaceID            string         `json:"namespace_id"`
+	Entities               uint64         `json:"entities"`
+	NonEntityTokens        uint64         `json:"non_entity_tokens"`
+	SecretSyncAssociations uint64         `json:"secret_sync_associations"`
+	Mounts                 []*MountRecord `json:"mounts"`
 }
 
 type CountsRecord struct {
-	EntityClients    int `json:"entity_clients"`
-	NonEntityClients int `json:"non_entity_clients"`
+	EntityClients          int `json:"entity_clients"`
+	NonEntityClients       int `json:"non_entity_clients"`
+	SecretSyncAssociations int `json:"secret_sync_associations"`
 }
 
 type NewClientRecord struct {
