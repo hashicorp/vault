@@ -30,6 +30,7 @@ export default Service.extend({
   currentCluster: service(),
   router: service(),
   namespaceService: service('namespace'),
+  customMessages: service(),
 
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
@@ -128,6 +129,7 @@ export default Service.extend({
 
   init() {
     this._super(...arguments);
+    this.customMessages.fetchMessages();
     this.checkForRootToken();
   },
 

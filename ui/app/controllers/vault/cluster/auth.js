@@ -17,6 +17,7 @@ export default Controller.extend({
   version: service(),
   auth: service(),
   router: service(),
+  customMessages: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
@@ -52,6 +53,7 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
+    this.customMessage.fetchMessages(ns);
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 

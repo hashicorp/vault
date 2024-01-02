@@ -17,6 +17,26 @@
     </EmptyState>
   </div>
 {{else}}
+  {{#if this.customMessages.bannerMessages.length}}
+    {{#each this.customMessages.bannerMessages as |bannerMessage|}}
+      <Hds::Alert @type="inline" @color="warning" data-test-banner={{bannerMessage.title}} as |A|>
+        <A.Title>{{bannerMessage.title}}</A.Title>
+        <A.Description>
+          {{bannerMessage.message}}
+        </A.Description>
+        <A.Description class="has-top-margin-xs">
+          {{#if bannerMessage.link.title}}
+            <Hds::Link::Standalone
+              @icon="external-link"
+              @text={{bannerMessage.link.title}}
+              @href={{bannerMessage.link.href}}
+            />
+          {{/if}}
+        </A.Description>
+      </Hds::Alert>
+    {{/each}}
+  {{/if}}
+
   <SplashPage>
     <:header>
       {{#if this.oidcProvider}}
