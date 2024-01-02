@@ -12,8 +12,9 @@ import { start } from 'ember-qunit';
 import './helpers/flash-message';
 import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-support';
 
-setup(QUnit.assert);
 setApplication(Application.create(config.APP));
+
+setup(QUnit.assert);
 setupGlobalA11yHooks(() => true, {
   helpers: ['render'],
 });

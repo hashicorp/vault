@@ -104,6 +104,14 @@ module.exports = function (defaults) {
     // staticEmberSource: true,
     // splitAtRoutes: ['route.name'], // can also be a RegExp
 
+    skipBabel: [
+      {
+        package: 'qunit',
+      },
+      {
+        package: 'sinon',
+      },
+    ],
     packagerOptions: {
       webpackConfig: {
         devtool: 'source-map',
