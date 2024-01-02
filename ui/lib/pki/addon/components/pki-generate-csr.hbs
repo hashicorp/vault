@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
   <h2 class="title is-size-5 has-border-bottom-light page-header">

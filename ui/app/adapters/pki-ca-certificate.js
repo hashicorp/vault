@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { parsePkiCert } from 'vault/utils/parse-pki-cert';
 import ApplicationAdapter from './application';
 

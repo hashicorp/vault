@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc } from 'date-fns';
 

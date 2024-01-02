@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint qunit/no-conditional-assertions: "warn" */
 import {
   click,

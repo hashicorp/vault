@@ -319,3 +319,11 @@ ci-get-version-package:
 .PHONY: ci-prepare-legal
 ci-prepare-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
+
+.PHONY: ci-copywriteheaders
+ci-copywriteheaders:
+	copywrite headers --plan
+	# Special case for MPL headers in /api, /sdk, and /shamir
+	cd api && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
+	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh

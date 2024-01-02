@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { get } from '@ember/object';
 import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';

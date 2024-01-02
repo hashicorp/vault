@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export default (test) => {
   test('it should make request to correct endpoint on save', async function (assert) {
     assert.expect(1);

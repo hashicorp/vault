@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { clickable, collection, fillable, text, selectable, isPresent } from 'ember-cli-page-object';
 
 import fields from '../form-field';

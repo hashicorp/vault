@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';

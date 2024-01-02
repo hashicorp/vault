@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package experiments
 
 const VaultExperimentEventsAlpha1 = "events.alpha1"

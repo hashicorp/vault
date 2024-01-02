@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module Chevron
  * `Chevron` components render `Icon` with one of the `chevron-` glyphs.
  *

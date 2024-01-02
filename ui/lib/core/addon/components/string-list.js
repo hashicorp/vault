@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@glimmer/component';
 import autosize from 'autosize';

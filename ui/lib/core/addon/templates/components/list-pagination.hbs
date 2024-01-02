@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <nav class="pagination is-centered" aria-label="pagination">
   {{#if this.hasPrevious}}
     <LinkTo @route={{this.link}} @models={{this.models}} @query={{hash page=(dec this.page)}} class="pagination-previous">

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Mixin from '@ember/object/mixin';
 
 // this mixin relies on `unload-model-route` also being used

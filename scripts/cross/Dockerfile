@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 FROM debian:buster
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \

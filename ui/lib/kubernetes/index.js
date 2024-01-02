@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /* eslint-disable node/no-extraneous-require */
 'use strict';

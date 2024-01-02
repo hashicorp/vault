@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';

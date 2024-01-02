@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 'use strict';
 /* eslint-disable node/no-extraneous-require */
 /* eslint-disable ember/no-string-prototype-extensions */

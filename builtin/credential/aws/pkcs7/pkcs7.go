@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 // Package pkcs7 implements parsing and generation of some PKCS#7 structures.
 package pkcs7
 

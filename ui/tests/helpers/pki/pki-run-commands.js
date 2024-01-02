@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { create } from 'ember-cli-page-object';
 

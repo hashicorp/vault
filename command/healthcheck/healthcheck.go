@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 /*
  * The healthcheck package attempts to allow generic checks of arbitrary
  * engines, while providing a common framework with some performance
