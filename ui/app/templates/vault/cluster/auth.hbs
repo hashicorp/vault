@@ -25,15 +25,38 @@
           {{bannerMessage.message}}
         </A.Description>
         <A.Description class="has-top-margin-xs">
-          {{#if bannerMessage.link.title}}
+          {{! TODO: links when api is updated to { link: { 'learn': 'www.learn.com'} } }}
+          {{!-- {{#if bannerMessage.link.title}}
             <Hds::Link::Standalone
               @icon="external-link"
               @text={{bannerMessage.link.title}}
               @href={{bannerMessage.link.href}}
             />
-          {{/if}}
+          {{/if}} --}}
         </A.Description>
       </Hds::Alert>
+    {{/each}}
+  {{/if}}
+  {{#if (and this.customMessages.modalMessages.length this.customMessages.showMessageModal)}}
+    {{#each this.customMessages.modalMessages as |modalMessage|}}
+      <Hds::Modal
+        id={{modalMessage.id}}
+        @size="large"
+        @color="warning"
+        @onClose={{fn (mut this.customMessages.showMessageModal) false}}
+        data-test-modal={{modalMessage.id}}
+        as |M|
+      >
+        <M.Header data-test-modal-title>
+          {{modalMessage.title}}
+        </M.Header>
+        <M.Body>
+          {{modalMessage.message}}
+        </M.Body>
+        <M.Footer as |F|>
+          <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-close-button />
+        </M.Footer>
+      </Hds::Modal>
     {{/each}}
   {{/if}}
 

@@ -6,6 +6,7 @@ import { decodeString } from 'core/utils/b64';
 export default class VersionService extends Service {
   @service store;
   @tracked messages = [];
+  @tracked showMessageModal = true;
 
   get bannerMessages() {
     return this.messages.filter((message) => message.type === 'banner');
