@@ -522,6 +522,10 @@
         "path": "commands"
       },
       {
+        "title": "Web REPL",
+        "path": "commands/web"
+      },
+      {
         "title": "<code>agent</code>",
         "path": "commands/agent"
       },
