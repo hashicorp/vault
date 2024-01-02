@@ -45,6 +45,10 @@ module('Acceptance | policies (old)', function (hooks) {
     assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
     await click('[data-test-policy-list-link] a');
+
+    assert.strictEqual(currentURL(), `/vault/policies/acl`, 'navigates to policy list from breadcrumb');
+    // List of policies can get long quickly -- filter for the policy to make the test more robust
+    await fillIn('[data-test-component="navigate-input"]', policyLower);
     assert
       .dom(`[data-test-policy-link="${policyLower}"]`)
       .exists({ count: 1 }, 'new policy shown in the list');

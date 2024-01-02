@@ -214,6 +214,7 @@ module('Acceptance | oidc provider', function (hooks) {
       currentURL().startsWith('/vault/auth'),
       'Does not redirect to auth because user is already logged in'
     );
+    await waitFor('[data-test-consent-form]');
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
 
     //* clean up test state

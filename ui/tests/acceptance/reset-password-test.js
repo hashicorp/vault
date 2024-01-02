@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { currentURL, click, fillIn, settled } from '@ember/test-helpers';
+import { currentURL, click, fillIn, waitFor } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { createPolicyCmd, mountAuthCmd, runCmd } from '../helpers/commands';
@@ -22,7 +22,7 @@ module('Acceptance | reset password', function (hooks) {
 
   test('does not allow password reset for non-userpass users', async function (assert) {
     await authPage.login();
-    await settled();
+    waitFor('[data-test-user-menu-trigger]');
 
     await click('[data-test-user-menu-trigger]');
     assert.dom('[data-test-user-menu-item="reset-password"]').doesNotExist();
@@ -34,7 +34,7 @@ module('Acceptance | reset password', function (hooks) {
     await runCmd(createPolicyCmd('userpass', resetPolicy), false);
     await runCmd('write auth/userpass/users/reset-me password=password token_policies=userpass', false);
     await authPage.loginUsername('reset-me', 'password');
-
+    waitFor('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="reset-password"]');
 

@@ -10,7 +10,7 @@
     @actionText="View issuers"
     @actionTo="issuers"
   >
-    <Hds::Text::Display @tag="h2" @size="500">
+    <Hds::Text::Display @tag="h2" @size="500" data-test-overview-issuers-count>
       {{format-number (if (eq @issuers 404) 0 @issuers.length)}}
     </Hds::Text::Display>
   </OverviewCard>

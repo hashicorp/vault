@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, click, fillIn, find } from '@ember/test-helpers';
+import { visit, click, fillIn, find, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -49,6 +49,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click('[data-test-save]');
     const csr = find(SELECTORS.copyButton('CSR')).getAttribute('data-test-copy-button');
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.sign');
     await fillIn(SELECTORS.inputByName('csr'), csr);
     await fillIn(SELECTORS.inputByName('format'), 'pem_bundle');
     await click('[data-test-pki-sign-intermediate-save]');

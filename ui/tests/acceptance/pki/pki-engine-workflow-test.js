@@ -346,9 +346,10 @@ module('Acceptance | pki workflow', function (hooks) {
       await logout.visit();
     });
     test('lists the correct issuer metadata info', async function (assert) {
-      assert.expect(6);
+      assert.expect(7);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.dom('[data-test-overview-issuers-count]').hasText('1', 'Shows 1 issuer on overview card');
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
       await click(SELECTORS.issuersTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);

@@ -100,7 +100,6 @@ module('Acceptance | pki configuration test', function (hooks) {
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
-      await settled();
       await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
       assert
         .dom(SELECTORS.configuration.deleteAllIssuerModal)
@@ -153,6 +152,7 @@ module('Acceptance | pki configuration test', function (hooks) {
 
     test('it shows the correct empty state message if roles and certificates exists after delete all issuers', async function (assert) {
       await authPage.login(this.pkiAdminToken);
+      // Configure PKI
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.configureButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration/create`);
@@ -162,6 +162,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(SELECTORS.configuration.generateRootIssuerNameField, 'issuer-0');
       await click(SELECTORS.configuration.generateRootSave);
       await click(SELECTORS.configuration.doneButton);
+      // Create role and root CA"
       await runCommands([
         `write ${this.mountPath}/roles/some-role \
         issuer_ref="default" \
@@ -178,7 +179,8 @@ module('Acceptance | pki configuration test', function (hooks) {
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
-      await settled();
+
+      await waitUntil(() => !find(SELECTORS.configuration.deleteAllIssuerModal));
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).doesNotExist();
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await settled();
