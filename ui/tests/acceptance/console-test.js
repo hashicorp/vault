@@ -73,32 +73,15 @@ module('Acceptance | console', function (hooks) {
   });
 
   test('number output is correctly formatted', async function (assert) {
-    // this.owner.lookup('service:console').reopen({
-    //   read() {
-    //     console.log('stubbed');
-    //     return {
-    //       data: {
-    //         accessor: 'xOfCa2QIQg3M3jNmZqluiBiD',
-    //         creation_time: 1703193455,
-    //         creation_ttl: 0,
-    //         display_name: 'token',
-    //         entity_id: '',
-    //         expire_time: null,
-    //         explicit_max_ttl: 0,
-    //         id: 'root',
-    //         issue_time: '2023-12-21T15:17:35.742929-06:00',
-    //         meta: null,
-    //         num_uses: 0,
-    //         orphan: true,
-    //         path: 'auth/token/create',
-    //         policies: ['root'],
-    //         renewable: false,
-    //         ttl: 0,
-    //         type: 'service',
-    //       },
-    //     };
-    //   },
-    // });
+    this.owner.lookup('service:console').reopen({
+      read() {
+        return {
+          data: {
+            creation_time: 1703193455,
+          },
+        };
+      },
+    });
     await consoleComponent.toggle();
     await settled();
     await consoleComponent.runCommands('read -field=creation_time /auth/token/lookup-self');
