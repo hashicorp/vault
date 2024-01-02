@@ -51,7 +51,6 @@ export default RESTSerializer.extend({
 
   serialize(snapshot, requestType) {
     const data = this._super(snapshot, requestType);
-    // const data = snapshot.attributes();
     if (!data.plugin_name) {
       return data;
     }
