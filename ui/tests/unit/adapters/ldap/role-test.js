@@ -117,30 +117,50 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     assert.strictEqual(this.model.name, 'test-role', 'Name value is set on records returned from query');
   });
 
-  test('it should make request to correct endpoints when creating new record', async function (assert) {
-    assert.expect(2);
+  test('it should make request to correct endpoints when creating new dynamic role record', async function (assert) {
+    assert.expect(1);
 
-    this.server.post('/ldap-test/:path/test-role', (schema, req) => {
+    this.server.post('/ldap-test/:path/:name', (schema, req) => {
       assert.strictEqual(
         req.params.path,
         this.path,
-        'POST request made to correct endpoint when creating new record'
+        'POST request made to correct endpoint when creating new record for a dynamic role'
       );
     });
 
-    const getModel = (type) => {
+    const getModel = (type, name) => {
       return this.store.createRecord('ldap/role', {
         backend: 'ldap-test',
-        name: 'test-role',
+        name,
         type,
       });
     };
 
-    for (const type of ['dynamic', 'static']) {
-      const model = getModel(type);
-      await model.save();
-      this.path = 'static-role';
-    }
+    const model = getModel('dynamic-role', 'dynamic-role-name');
+    await model.save();
+  });
+
+  test('it should make request to correct endpoints when creating new static role record', async function (assert) {
+    assert.expect(1);
+
+    this.server.post('/ldap-test/:path/:name', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'POST request made to correct endpoint when creating new record for a static role'
+      );
+    });
+
+    const getModel = (type, name) => {
+      return this.store.createRecord('ldap/role', {
+        backend: 'ldap-test',
+        name,
+        type,
+      });
+    };
+
+    const model = getModel('static-role', 'static-role-name');
+    await model.save();
   });
 
   test('it should make request to correct endpoints when updating record', async function (assert) {
