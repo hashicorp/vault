@@ -53,7 +53,7 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
-    this.customMessage.fetchMessages(ns);
+    this.customMessages.fetchMessages(ns);
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 

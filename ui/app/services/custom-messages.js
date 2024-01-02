@@ -5,8 +5,14 @@ import { decodeString } from 'core/utils/b64';
 
 export default class VersionService extends Service {
   @service store;
+  @service namespace;
   @tracked messages = [];
   @tracked showMessageModal = true;
+
+  constructor() {
+    super(...arguments);
+    this.fetchMessages(this.namespace.path);
+  }
 
   get bannerMessages() {
     return this.messages.filter((message) => message.type === 'banner');
@@ -22,6 +28,7 @@ export default class VersionService extends Service {
       const url = '/v1/sys/internal/ui/unauthenticated-messages';
       const opts = {
         method: 'GET',
+        headers: {},
       };
       if (ns) {
         opts.headers['X-Vault-Namespace'] = ns;
