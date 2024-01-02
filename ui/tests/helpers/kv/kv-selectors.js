@@ -8,7 +8,7 @@ export const PAGE = {
   title: '[data-test-header-title]',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
-  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
@@ -49,6 +49,7 @@ export const PAGE = {
     deleteOption: 'input#delete-version',
     deleteOptionLatest: 'input#delete-latest-version',
     deleteConfirm: '[data-test-delete-modal-confirm]',
+    syncAlert: (name) => (name ? `[data-test-sync-alert="${name}"]` : '[data-test-sync-alert]'),
   },
   edit: {
     toggleDiff: '[data-test-toggle-input="Show diff"',
@@ -58,6 +59,8 @@ export const PAGE = {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     filter: `[data-test-kv-list-filter]`,
+    listMenuDelete: `[data-test-popup-metadata-delete]`,
+    listMenuCreate: `[data-test-popup-create-new-version]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
     overviewButton: '[data-test-get-secret-detail]',
@@ -83,8 +86,8 @@ export const PAGE = {
   },
   paths: {
     copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
-    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
-    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
+    codeSnippet: (section) => `[data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-commands="${section}"] button`,
   },
 };
 

@@ -9,6 +9,7 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS, OIDC_BASE_URL, overrideCapabilities } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -16,6 +17,12 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    setRunOptions({
+      rules: {
+        // TODO: fix JSONEditor/CodeMirror
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new scope', async function (assert) {
@@ -177,7 +184,11 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert.dom(MODAL('text')).hasText('Example of a JSON template for scopes:', 'Modal text renders');
     assert
       .dom('#scope-template-modal [data-test-copy-button]')
-      .hasAttribute('data-clipboard-text', exampleTemplate, 'Modal copy button copies the example template');
+      .hasAttribute(
+        'data-test-copy-button',
+        exampleTemplate,
+        'Modal copy button copies the example template'
+      );
     assert.dom('.cm-string').hasText('"username"', 'Example template json renders');
     await click('[data-test-close-modal]');
     assert.dom('.hds#scope-template-modal').doesNotExist('Modal is hidden');

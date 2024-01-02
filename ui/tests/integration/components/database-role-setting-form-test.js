@@ -8,6 +8,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const testCases = [
   {
@@ -101,6 +102,12 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
   });
 
   test('it shows empty states when no roleType passed in', async function (assert) {
+    setRunOptions({
+      rules: {
+        // Fails on #ember-testing-container
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
     await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
     assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
   });
