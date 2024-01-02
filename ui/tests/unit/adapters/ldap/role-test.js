@@ -64,7 +64,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   });
 
   test('it should throw error for query when requests to both endpoints fail', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
 
     this.server.get('/ldap-test/:path', (schema, req) => {
       const errors = {
@@ -78,12 +78,14 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       await this.store.query('ldap/role', { backend: 'ldap-test' });
     } catch (error) {
       assert.deepEqual(
-        error,
-        {
-          message: 'Error fetching roles:',
-          errors: ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
-        },
-        'Error is thrown with correct payload from query'
+        error.errors,
+        ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
+        'Error messages is thrown with correct payload from query.'
+      );
+      assert.strictEqual(
+        error.message,
+        'Error fetching roles:',
+        'Error message is thrown with correct payload from query.'
       );
     }
   });
