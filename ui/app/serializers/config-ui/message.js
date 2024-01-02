@@ -10,7 +10,23 @@ export default class MessageSerializer extends ApplicationSerializer {
   attrs = {
     link: { serialize: false },
     active: { serialize: false },
+    start_time: { serialize: false },
+    end_time: { serialize: false },
   };
+
+  getISODateFormat(snapshotDateTime, jsonDateTime) {
+    if (typeof snapshotDateTime === 'object') {
+      return jsonDateTime;
+    }
+
+    // if the snapshot date is in local date time format ("yyyy-MM-dd'T'HH:mm"), we want to ensure
+    // it gets converted to an ISOString
+    if (typeof snapshotDateTime === 'string' && !snapshotDateTime.includes('Z')) {
+      return new Date(snapshotDateTime).toISOString();
+    }
+
+    return snapshotDateTime;
+  }
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'queryRecord') {
@@ -33,10 +49,13 @@ export default class MessageSerializer extends ApplicationSerializer {
       title: json?.link_title || '',
       href: json?.link_href || '',
     };
-    // using the snapshot startTime and endTime since the json start and end times are null when
-    // it gets to the serialize function.
-    json.start_time = snapshot.record.startTime;
-    json.end_time = snapshot.record.endTime;
+    // When editing a message with pre-populated dates, this returns a date object. In this case, we would want to use
+    // the json date from the serializer. When selecting a date from the datetime-local input date picker, the dates gets
+    // set as a date time local string in the model - we would want to convert this local string to an ISOString. Lastly,
+    // if this date is not an object and isn’t a local date string, then return the snapshot date, which is set by default
+    // values defined on the model.
+    json.start_time = this.getISODateFormat(snapshot.record.startTime, json.start_time);
+    json.end_time = this.getISODateFormat(snapshot.record.endTime, json.end_time);
     delete json?.link_title;
     delete json?.link_href;
     return json;
