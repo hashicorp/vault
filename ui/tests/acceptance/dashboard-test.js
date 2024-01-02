@@ -48,10 +48,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await authPage.login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
-    const versionName = version.version;
-    const versionText = version.isEnterprise
-      ? `Vault v${versionName.slice(0, versionName.indexOf('+'))} root`
-      : `Vault v${versionName}`;
+    // Since we're using mirage, version is mocked static value
+    const versionText = version.isEnterprise ? `Vault v1.9.0 root` : `Vault v1.9.0`;
 
     assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
