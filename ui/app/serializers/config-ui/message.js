@@ -55,7 +55,9 @@ export default class MessageSerializer extends ApplicationSerializer {
     // if this date is not an object and isn’t a local date string, then return the snapshot date, which is set by default
     // values defined on the model.
     json.start_time = this.getISODateFormat(snapshot.record.startTime, json.start_time);
-    json.end_time = this.getISODateFormat(snapshot.record.endTime, json.end_time);
+    json.end_time = snapshot.record.endTime
+      ? this.getISODateFormat(snapshot.record.endTime, json.end_time)
+      : '';
     delete json?.link_title;
     delete json?.link_href;
     return json;
