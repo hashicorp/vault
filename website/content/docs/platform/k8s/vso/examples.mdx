@@ -16,27 +16,8 @@ The Operator project provides the following examples:
 Vault Secrets Operator supports using the [JWT auth method](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt).
 In the default JWT configuration this involves an API call from the Vault server back to the Kubernetes API server to [verify](/vault/docs/auth/jwt#jwt-verification) the JWT.
 It is possible to configure Vault to use [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) fields of the JWT auth configuration
-to work in the Kubernetes environment and avoid the API call back to Kubernetes, improving performance of login requests,
-and removing the necessity to expose the Kubernetes API server externally.
-
-### Configure the JWT Auth method in Vault to use the JWKS keys from Kubernetes:
-
-* Fetch the JWKS key from Kubernetes using `kubectl`
-
-```shell-session
-kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')" | jq  '.keys | .[0]'
-{
-  "use": "sig",
-  "kty": "RSA",
-  "kid": "o2Tjqi7n9ye3VW6L8....",
-  "alg": "RS256",
-  "n": "2SixHcuzdYrj.....",
-  "e": "AQAB"
-}
-````
-
-* Copy/paste this JSON object into your favourite JWKS->PEM convertor and use this PEM file as the
-PEM file in your `jwt_validation_pubkeys` field when [configuring](/vault/api-docs/auth/jwt#configure) the JWT Auth Method in Vault.
+to work in the Kubernetes environment and avoid the API call back to Kubernetes, removing the necessity to expose the Kubernetes API server externally.
+To configure this please follow the steps outlined for [Using JWT validation public keys](/vault/docs/auth/jwt/oidc-providers/kubernetes#using-jwt-validation-public-keys)
 
   <Note title="Rotation of the JWT Signing Key in Kubernetes">
     Should the JWT Signing Key used by Kubernetes be rotated,
