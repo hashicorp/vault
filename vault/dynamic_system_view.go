@@ -457,7 +457,7 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req plugin
 		return pluginutil.IdentityTokenResponse{}, err
 	}
 	return pluginutil.IdentityTokenResponse{
-		Token: token,
+		Token: pluginutil.IdentityToken(token),
 		TTL:   ttl,
 	}, nil
 }

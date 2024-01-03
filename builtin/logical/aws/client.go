@@ -164,5 +164,5 @@ func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) 
 			"requested", f.ttl.Seconds(), "actual", resp.TTL)
 	}
 
-	return []byte(resp.Token), nil
+	return []byte(resp.Token.Token()), nil
 }

@@ -1013,7 +1013,7 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 	now := time.Now()
 	claims := map[string]any{
 		"iss": config.effectiveIssuer,
-		"sub": fmt.Sprintf("plugin:%s:%s", me.namespace.Path, strings.Trim(me.Path, "/")),
+		"sub": fmt.Sprintf("vault:plugin-identity:%s:%s:%s", me.namespace.Path, me.Table, strings.Trim(me.Path, "/")),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
