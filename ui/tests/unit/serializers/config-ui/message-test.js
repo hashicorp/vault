@@ -24,7 +24,7 @@ module('Unit | Serializer | config-ui/message', function (hooks) {
     });
     const expectedResult = {
       authenticated: true,
-      end_time: '',
+      end_time: null,
       link: {
         href: '',
         title: '',
@@ -55,7 +55,7 @@ module('Unit | Serializer | config-ui/message', function (hooks) {
     });
     const expectedResult = {
       authenticated: true,
-      end_time: '',
+      end_time: null,
       link: {
         href: '',
         title: '',
