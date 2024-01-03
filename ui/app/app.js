@@ -18,7 +18,7 @@ export default class App extends Application {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'store', 'version', 'customMessages'],
       },
     },
-    openApiExplorer: {
+    'open-api-explorer': {
       dependencies: {
         services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
       },
