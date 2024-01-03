@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -15,7 +16,7 @@ import (
 const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
 
 func pathConfigRoot(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "config/root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
@@ -54,37 +55,9 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Template to generate custom IAM usernames",
 			},
-			"identity_token_audience": {
-				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
-			"identity_token_key": {
-				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
 			"role_arn": {
 				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
-			"identity_token_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-				Default: 3600,
+				Description: "Role ARN to assume for plugin identity token federation",
 			},
 		},
 
@@ -107,6 +80,9 @@ func pathConfigRoot(b *backend) *framework.Path {
 		HelpSynopsis:    pathConfigRootHelpSyn,
 		HelpDescription: pathConfigRootHelpDesc,
 	}
+	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+
+	return p
 }
 
 func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

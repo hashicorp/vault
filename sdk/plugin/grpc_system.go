@@ -222,7 +222,7 @@ func (s gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req plu
 	}
 
 	return pluginutil.IdentityTokenResponse{
-		Token: resp.Token,
+		Token: pluginutil.IdentityToken(resp.Token),
 		TTL:   time.Duration(resp.TTL) * time.Second,
 	}, nil
 }
