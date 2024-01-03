@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,12 +15,14 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy';
+import { arbitraryWait, clearPkiRecords } from 'vault/tests/helpers/pki';
 
 module('Acceptance | pki tidy', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
@@ -29,7 +31,9 @@ module('Acceptance | pki tidy', function (hooks) {
     await runCommands([
       `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
     ]);
+    await arbitraryWait();
     await logout.visit();
+    clearPkiRecords(this.store);
   });
 
   hooks.afterEach(async function () {
@@ -146,7 +150,6 @@ module('Acceptance | pki tidy', function (hooks) {
     await authPage.login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
 
-    await waitFor(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
     assert.dom(SELECTORS.tidyConfigureModal.tidyModalAutoButton).exists('Configure auto tidy button exists');

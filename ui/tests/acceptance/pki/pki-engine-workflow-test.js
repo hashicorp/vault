@@ -15,39 +15,13 @@ import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
+import { arbitraryWait, clearPkiRecords } from 'vault/tests/helpers/pki';
 
 /**
  * This test module should test the PKI workflow, including:
  * - link between pages and confirm that the url is as expected
  * - log in as user with a policy and ensure expected UI elements are shown/hidden
  */
-
-function arbitraryWait() {
-  // this is a temporary fix to resolve an issue where about 50% of the tests
-  // returned a 404 of the issuers list endpoint even after configuring the mount
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 1000);
-  });
-}
-
-function clearRecords(store) {
-  // Clears pki-related data and capabilities so that admin
-  // capabilities from setup don't rollover
-  store.unloadAll('pki/issuer');
-  store.unloadAll('pki/action');
-  store.unloadAll('pki/config/acme');
-  store.unloadAll('pki/certificate/generate');
-  store.unloadAll('pki/certificate/sign');
-  store.unloadAll('pki/config/cluster');
-  store.unloadAll('pki/key');
-  store.unloadAll('pki/role');
-  store.unloadAll('pki/sign-intermediate');
-  store.unloadAll('pki/tidy');
-  store.unloadAll('pki/config/urls');
-  store.unloadAll('capabilities');
-}
 
 module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
@@ -60,7 +34,7 @@ module('Acceptance | pki workflow', function (hooks) {
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
-    clearRecords(this.store);
+    clearPkiRecords(this.store);
   });
 
   hooks.afterEach(async function () {
