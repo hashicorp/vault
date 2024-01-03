@@ -38,10 +38,10 @@ Usage: vault kv get [options] KEY
 
       $ vault kv get -mount=secret foo
 
-  The deprecated path-like syntax can also be used, but this should be avoided 
-  for KV v2, as the fact that it is not actually the full API path to 
-  the secret (secret/data/foo) can cause confusion: 
-  
+  The deprecated path-like syntax can also be used, but this should be avoided
+  for KV v2, as the fact that it is not actually the full API path to
+  the secret (secret/data/foo) can cause confusion:
+
       $ vault kv get secret/foo
 
   To view the given key name at a specific version in time, specify the "-version"
@@ -56,7 +56,7 @@ Usage: vault kv get [options] KEY
 }
 
 func (c *KVGetCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetKVCommon)
 
 	// Common Options
 	f := set.NewFlagSet("Common Options")
@@ -72,10 +72,10 @@ func (c *KVGetCommand) Flags() *FlagSets {
 		Name:    "mount",
 		Target:  &c.flagMount,
 		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
-		Usage: `Specifies the path where the KV backend is mounted. If specified, 
-		the next argument will be interpreted as the secret path. If this flag is 
-		not specified, the next argument will be interpreted as the combined mount 
-		path and secret path, with /data/ automatically appended between KV 
+		Usage: `Specifies the path where the KV backend is mounted. If specified,
+		the next argument will be interpreted as the secret path. If this flag is
+		not specified, the next argument will be interpreted as the combined mount
+		path and secret path, with /data/ automatically appended between KV
 		v2 secrets.`,
 	})
 
@@ -129,7 +129,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -141,7 +141,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		mountPath, v2, err = isKVv2(partialPath, client)
+		mountPath, v2, err = isKVv2(partialPath, client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -168,6 +168,7 @@ func (c *KVGetCommand) Run(args []string) int {
 		}
 	}
 
+	// Print current date with ms precision
 	secret, err := kvReadRequest(client, fullPath, versionParam)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))

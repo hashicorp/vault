@@ -30,14 +30,14 @@ func (c *KVMetadataDeleteCommand) Help() string {
 	helpText := `
 Usage: vault kv metadata delete [options] PATH
 
-  Deletes all versions and metadata for the provided key. 
+  Deletes all versions and metadata for the provided key.
 
       $ vault kv metadata delete -mount=secret foo
 
-  The deprecated path-like syntax can also be used, but this should be avoided 
-  for KV v2, as the fact that it is not actually the full API path to 
-  the secret (secret/metadata/foo) can cause confusion: 
-  
+  The deprecated path-like syntax can also be used, but this should be avoided
+  for KV v2, as the fact that it is not actually the full API path to
+  the secret (secret/metadata/foo) can cause confusion:
+
       $ vault kv metadata delete secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -57,10 +57,10 @@ func (c *KVMetadataDeleteCommand) Flags() *FlagSets {
 		Name:    "mount",
 		Target:  &c.flagMount,
 		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
-		Usage: `Specifies the path where the KV backend is mounted. If specified, 
-		the next argument will be interpreted as the secret path. If this flag is 
-		not specified, the next argument will be interpreted as the combined mount 
-		path and secret path, with /metadata/ automatically appended between KV 
+		Usage: `Specifies the path where the KV backend is mounted. If specified,
+		the next argument will be interpreted as the secret path. If this flag is
+		not specified, the next argument will be interpreted as the combined mount
+		path and secret path, with /metadata/ automatically appended between KV
 		v2 secrets.`,
 	})
 
@@ -113,7 +113,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -126,7 +126,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
 		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
+		mountPath, v2, err = isKVv2(partialPath, client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2

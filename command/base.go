@@ -69,6 +69,8 @@ type BaseCommand struct {
 
 	flagHeader map[string]string
 
+	flagKVVersion int
+
 	tokenHelper token.TokenHelper
 
 	client *api.Client
@@ -307,6 +309,7 @@ const (
 	FlagSetOutputField
 	FlagSetOutputFormat
 	FlagSetOutputDetailed
+	FlagSetKVCommon
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -548,6 +551,19 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Usage:   "Enables additional metadata during some operations",
 				})
 			}
+		}
+
+		// FlagSetKVCommon
+		if bit&FlagSetKVCommon != 0 {
+			kvCommonSet := set.NewFlagSet("KV Common Options")
+
+			kvCommonSet.IntVar(&IntVar{
+				Name:    "kv-version",
+				Target:  &c.flagKVVersion,
+				Default: 0,
+				Usage:   `Specifies the version of the KV backend to use. If not set it will be detected.`,
+			})
+
 		}
 
 		c.flags = set

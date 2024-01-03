@@ -130,7 +130,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
 		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		_, v2, err = isKVv2(mountPath, client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
@@ -147,7 +147,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
 		partialPath = sanitizePath(args[0])
-		mountPath, v2, err = isKVv2(partialPath, client)
+		mountPath, v2, err = isKVv2(partialPath, client, c.flagKVVersion)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2

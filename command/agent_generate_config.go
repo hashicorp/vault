@@ -249,7 +249,7 @@ func constructTemplates(ctx context.Context, client *api.Client, paths []string)
 	for _, path := range paths {
 		path = sanitizePath(path)
 
-		mountPath, v2, err := isKVv2(path, client)
+		mountPath, v2, err := isKVv2(path, client, 0)
 		if err != nil {
 			return nil, fmt.Errorf("could not validate secret path %q: %w", path, err)
 		}

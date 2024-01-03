@@ -78,10 +78,10 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 				// we provide a more helpful error for the user,
 				// who may not understand why the flag isn't working.
 				err = fmt.Errorf(
-					`This output flag requires the success of a preflight request 
-to determine the version of a KV secrets engine. Please 
-re-run this command with a token with read access to %s. 
-Note that if the path you are trying to reach is a KV v2 path, your token's policy must 
+					`This output flag requires the success of a preflight request
+to determine the version of a KV secrets engine. Please
+re-run this command with a token with read access to %s.
+Note that if the path you are trying to reach is a KV v2 path, your token's policy must
 allow read access to that path in the format 'mount-path/data/foo', not just 'mount-path/foo'.`, path)
 			}
 		}
@@ -119,7 +119,11 @@ allow read access to that path in the format 'mount-path/data/foo', not just 'mo
 	return mountPath, 1, nil
 }
 
-func isKVv2(path string, client *api.Client) (string, bool, error) {
+func isKVv2(path string, client *api.Client, kvVersion int) (string, bool, error) {
+	if kvVersion != 0 {
+		return strings.SplitN(path, "/", 2)[0], kvVersion == 2, nil
+	}
+
 	mountPath, version, err := kvPreflightVersionRequest(client, path)
 	if err != nil {
 		return "", false, err
