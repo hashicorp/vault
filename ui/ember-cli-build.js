@@ -111,6 +111,9 @@ module.exports = function (defaults) {
       {
         package: 'sinon',
       },
+      {
+        package: 'axe-core',
+      },
     ],
     packagerOptions: {
       webpackConfig: {
