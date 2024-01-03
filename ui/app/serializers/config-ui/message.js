@@ -57,7 +57,7 @@ export default class MessageSerializer extends ApplicationSerializer {
     json.start_time = this.getISODateFormat(snapshot.record.startTime, json.start_time);
     json.end_time = snapshot.record.endTime
       ? this.getISODateFormat(snapshot.record.endTime, json.end_time)
-      : '';
+      : null;
     delete json?.link_title;
     delete json?.link_href;
     return json;
