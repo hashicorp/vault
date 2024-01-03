@@ -1,6 +1,6 @@
 import Service, { inject as service } from '@ember/service';
-import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
+
 export default class CustomMessageService extends Service {
   @service store;
   @service namespace;
@@ -13,17 +13,14 @@ export default class CustomMessageService extends Service {
   }
 
   get bannerMessages() {
-    if (this.messages?.errors) return [];
     return this.messages?.filter((message) => message.type === 'banner');
   }
 
   get modalMessages() {
-    if (this.messages?.errors) return [];
     return this.messages?.filter((message) => message.type === 'modal');
   }
 
-  @task
-  *getMessages(ns) {
+  async fetchMessages(ns) {
     try {
       const url = '/v1/sys/internal/ui/unauthenticated-messages';
       const opts = {
@@ -33,16 +30,13 @@ export default class CustomMessageService extends Service {
       if (ns) {
         opts.headers['X-Vault-Namespace'] = ns;
       }
-      const result = yield fetch(url, opts);
-      const body = yield result.json();
+      const result = await fetch(url, opts);
+      const body = await result.json();
+      if (body.errors) return;
       const serializer = this.store.serializerFor('config-ui/message');
       this.messages = serializer.mapPayload(body);
     } catch (e) {
       return e;
     }
-  }
-
-  fetchMessages(ns) {
-    return this.getMessages.perform(ns);
   }
 }
