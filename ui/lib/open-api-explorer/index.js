@@ -24,6 +24,12 @@ module.exports = EngineAddon.extend({
     // (this is likely a bug) - to get around that we lazy-load via dynamic `import()` in the swagger-ui.js
     // component
     this.import('node_modules/swagger-ui-dist/swagger-ui.css');
+
+    // this is disabled in test because ember-asset-manifest doesn't work in embroider
+    // to make sure engine code is loaded in the host app, we have to
+    // disable lazyLoading
+    // see https://github.com/embroider-build/embroider/issues/996
+    this.options.lazyLoading.enabled = process.env.EMBER_ENV !== 'test';
   },
 
   lazyLoading: {
