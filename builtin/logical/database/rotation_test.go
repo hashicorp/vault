@@ -28,6 +28,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -996,6 +997,34 @@ func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 		"private_key": privKey,
 		"public_key":  pubKey,
 	})
+}
+
+// TestQueueTickIntervalKeyConfig tests the configuration of queueTickIntervalKey
+// does not break on invalid values.
+func TestQueueTickIntervalKeyConfig(t *testing.T) {
+	t.Parallel()
+	cluster, sys := getClusterPostgresDB(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+	config.Config[queueTickIntervalKey] = "1"
+
+	// Rotation ticker starts running in Factory call
+	b, err := Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "0"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
+
+	config.Config[queueTickIntervalKey] = "-1"
+	b, err = Factory(context.Background(), config)
+	require.Nil(t, err)
+	b.Cleanup(context.Background())
 }
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
