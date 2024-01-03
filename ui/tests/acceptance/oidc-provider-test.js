@@ -139,7 +139,10 @@ module('Acceptance | oidc provider', function (hooks) {
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
-
+    await visit('/vault/access/oidc');
+    assert
+      .dom('[data-test-oidc-client-linked-block="my-webapp"]')
+      .exists({ count: 1 }, 'shows webapp in oidc provider list');
     await logout.visit();
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId);
