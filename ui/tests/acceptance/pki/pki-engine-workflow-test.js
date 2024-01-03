@@ -30,9 +30,8 @@ module('Acceptance | pki workflow', function (hooks) {
     this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${uuidv4()}`;
-    await enablePage.enable('pki', mountPath);
-    this.mountPath = mountPath;
+    this.mountPath = `pki-workflow-${uuidv4()}`;
+    await enablePage.enable('pki', this.mountPath);
     await logout.visit();
     clearPkiRecords(this.store);
   });
@@ -100,6 +99,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
       this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
       await logout.visit();
+      clearPkiRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {

@@ -128,6 +128,10 @@ const setupOidc = async function (uid) {
   };
 };
 
+const deleteProvider = function (providerName) {
+  return consoleComponent.runCommands([`/identity/oidc/provider/${providerName}`]);
+};
+
 module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -153,7 +157,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await waitFor('[data-test-auth-form]', { timeout: 5000 });
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
-      'encodes url for the query param'
+      `encodes url for the query param in: ${currentURL()}`
     );
     assert.dom('[data-test-auth-logo]').exists('Vault logo exists on auth page');
     assert
@@ -176,6 +180,8 @@ module('Acceptance | oidc provider', function (hooks) {
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
     await clearRecord(this.store, 'oidc/provider', 'my-provider');
+    await authPage.login();
+    await deleteProvider();
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -201,6 +207,8 @@ module('Acceptance | oidc provider', function (hooks) {
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
     await clearRecord(this.store, 'oidc/provider', 'my-provider');
+    await authPage.login();
+    await deleteProvider();
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
@@ -223,5 +231,7 @@ module('Acceptance | oidc provider', function (hooks) {
     //* clean up test state
     await clearRecord(this.store, 'oidc/client', 'my-webapp');
     await clearRecord(this.store, 'oidc/provider', 'my-provider');
+    await authPage.login();
+    await deleteProvider();
   });
 });
