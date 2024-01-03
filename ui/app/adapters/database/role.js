@@ -164,7 +164,7 @@ export default ApplicationAdapter.extend({
         db: db[0],
       });
     } catch (e) {
-      throw new Error('Could not update allowed roles for selected database. Check Vault logs for details');
+      this.checkError(e)
     }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
@@ -199,4 +199,14 @@ export default ApplicationAdapter.extend({
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
   },
+
+  checkError(e) {
+    if (e.httpStatus === 403) {
+      // The user does not have the permission to update the connection. This
+      // can happen if there permissions are limited to the role. In that case
+      // we ignore the error and continue updating the role.
+      return
+    }
+    throw new Error(`Could not update allowed roles for selected database: ${e.errors.join(' ')}`);
+  }
 });
