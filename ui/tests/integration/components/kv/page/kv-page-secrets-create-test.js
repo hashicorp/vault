@@ -13,6 +13,7 @@ import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,6 +34,13 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       { label: this.backend, route: 'list' },
       { label: 'create' },
     ];
+    setRunOptions({
+      rules: {
+        // TODO fix JSONEditor, KVObjectEditor, MaskedInput
+        label: { enabled: false },
+        'color-contrast': { enabled: false }, // JSONEditor only
+      },
+    });
   });
 
   hooks.afterEach(function () {

@@ -234,7 +234,7 @@ require (
 	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
-	mvdan.cc/gofumpt v0.3.1
+	mvdan.cc/gofumpt v0.5.0
 	nhooyr.io/websocket v1.8.7
 )
 
