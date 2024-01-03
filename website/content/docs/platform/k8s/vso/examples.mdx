@@ -11,7 +11,7 @@ The Operator project provides the following examples:
 - Sample use-cases are documented [here](https://github.com/hashicorp/vault-secrets-operator#samples)
 - A Terraform based demo can be found [here](https://github.com/hashicorp/vault-secrets-operator/tree/main/demo)
 
-## Configuring the JWT auth method to avoid API calls to the Kubernetes API Server
+## JWT auth for Kubernetes clusters in private networks
 
 Vault Secrets Operator supports using the [JWT auth method](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt).
 In the default JWT configuration this involves an API call from the Vault server back to the Kubernetes API server to [verify](/vault/docs/auth/jwt#jwt-verification) the JWT.
