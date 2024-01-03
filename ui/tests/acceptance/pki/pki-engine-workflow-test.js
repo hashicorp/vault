@@ -391,7 +391,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom('[data-test-common-name="0"]').exists({ count: 1 }, 'displays cert common name tag');
     });
     test('lists the correct issuer metadata info when user has only read permission', async function (assert) {
-      assert.expect(3);
+      assert.expect(4);
       await authPage.login();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.emptyState).doesNotExist('does not show not configured message');
@@ -419,7 +419,7 @@ module('Acceptance | pki workflow', function (hooks) {
     });
 
     test('details view renders correct number of info items', async function (assert) {
-      assert.expect(14);
+      assert.expect(15);
       await authPage.login(this.pkiAdminToken);
       await settled();
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
