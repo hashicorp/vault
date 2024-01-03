@@ -114,6 +114,9 @@ module.exports = function (defaults) {
       {
         package: 'axe-core',
       },
+      {
+        package: 'swagger-ui-dist',
+      },
     ],
     packagerOptions: {
       webpackConfig: {
