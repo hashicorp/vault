@@ -34,8 +34,9 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  babel: {
-    plugins: [['inline-json-import', {}]],
+  'ember-cli-babel': {
+    enableTypeScriptTransform: true,
+    throwUnlessParallelizable: true,
   },
   hinting: isTest,
   tests: isTest,
@@ -89,10 +90,46 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
-  app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
   app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
   app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
 
-  return app.toTree();
+  //return app.toTree();
+  const { Webpack } = require('@embroider/webpack');
+  return require('@embroider/compat').compatBuild(app, Webpack, {
+    staticAddonTestSupportTrees: true,
+    staticAddonTrees: true,
+    staticModifiers: true,
+    //staticHelpers: true,
+    // staticComponents: true,
+    // staticEmberSource: true,
+    // splitAtRoutes: ['route.name'], // can also be a RegExp
+
+    skipBabel: [
+      {
+        package: 'qunit',
+      },
+      {
+        package: 'sinon',
+      },
+      {
+        package: 'axe-core',
+      },
+      {
+        package: 'swagger-ui-dist',
+      },
+    ],
+    packagerOptions: {
+      webpackConfig: {
+        devtool: 'source-map',
+        module: {
+          rules: [
+            {
+              test: /\.(png|svg|jpg|jpeg|gif)$/i,
+              type: 'asset/resource',
+            },
+          ],
+        },
+      },
+    },
+  });
 };

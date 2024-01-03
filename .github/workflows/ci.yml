@@ -5,7 +5,7 @@ on:
     # This is insufficient for our needs, since we're skipping stuff on PRs in
     # draft mode.  By adding the ready_for_review type, when a draft pr is marked
     # ready, we run everything, including the stuff we'd have skipped up until now.
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches:
       - main

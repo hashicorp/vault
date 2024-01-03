@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { Factory, trait } from 'ember-cli-mirage';
+import { Factory, trait } from 'miragejs';
 
 export default Factory.extend({
   name: (i) => `role-${i}`,

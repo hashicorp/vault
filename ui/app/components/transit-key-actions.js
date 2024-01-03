@@ -4,7 +4,6 @@
  */
 
 import { assign } from '@ember/polyfills';
-import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -125,7 +124,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   resetParams(oldAction, action) {
-    const params = copy(TRANSIT_PARAMS);
+    const params = { ...TRANSIT_PARAMS };
     let paramsToKeep;
     const clearWithoutCheck =
       !oldAction ||

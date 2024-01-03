@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import EmberRouter from '@ember/routing/router';
+import EmberRouter from '@embroider/router';
 import config from 'vault/config/environment';
 
 export default class Router extends EmberRouter {

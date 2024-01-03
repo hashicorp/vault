@@ -4,11 +4,25 @@
  */
 
 import ENV from 'vault/config/environment';
-import handlers from './handlers';
-
 // remember to export handler name from mirage/handlers/index.js file
+import * as handlers from './handlers/index';
+import { discoverEmberDataModels } from 'ember-cli-mirage';
+import { createServer } from 'miragejs';
 
-export default function () {
+export default function (config) {
+  const finalConfig = {
+    ...config,
+    models: {
+      ...discoverEmberDataModels(config.store),
+      ...config.models,
+    },
+    routes,
+  };
+
+  return createServer(finalConfig);
+}
+
+function routes() {
   this.namespace = 'v1';
 
   // start ember in development running mirage -> yarn start:mirage handlerName

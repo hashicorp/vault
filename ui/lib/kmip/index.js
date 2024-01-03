@@ -17,6 +17,16 @@ module.exports = EngineAddon.extend({
     enabled: true,
   },
 
+  included: function (/* app */) {
+    this._super.included.apply(this, arguments);
+
+    // this is disabled in test because ember-asset-manifest doesn't work in embroider
+    // to make sure engine code is loaded in the host app, we have to
+    // disable lazyLoading
+    // see https://github.com/embroider-build/embroider/issues/996
+    this.options.lazyLoading.enabled = process.env.EMBER_ENV !== 'test';
+  },
+
   isDevelopingAddon() {
     return true;
   },

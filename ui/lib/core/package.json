@@ -4,10 +4,14 @@
     "ember-addon"
   ],
   "dependencies": {
-    "autosize": "*",
-    "date-fns": "*",
+    "@hashicorp/design-system-components": "*",
+    "@hashicorp/ember-flight-icons": "*",
+    "@hashicorp/flight-icons": "*",
     "@icholy/duration": "*",
+    "autosize": "*",
     "base64-js": "*",
+    "codemirror": "*",
+    "date-fns": "*",
     "dompurify": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
@@ -19,16 +23,12 @@
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
-    "ember/render-modifiers": "*",
+    "ember-modifier": "*",
     "ember-power-select": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
     "ember-truth-helpers": "*",
-    "escape-string-regexp": "*",
-    "@hashicorp/ember-flight-icons": "*",
-    "@hashicorp/flight-icons": "*",
-    "@hashicorp/design-system-components": "*",
-    "codemirror": "*",
-    "ember-modifier": "*"
+    "ember/render-modifiers": "*",
+    "escape-string-regexp": "*"
   }
 }
