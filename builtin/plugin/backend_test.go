@@ -12,6 +12,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -115,7 +116,11 @@ func TestBackend_PluginMain_Multiplexed(t *testing.T) {
 }
 
 func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func()) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
@@ -137,7 +142,7 @@ func testConfig(t *testing.T, pluginCmd string) (*logical.BackendConfig, func())
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", pluginCmd, []string{}, "")
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", pluginCmd, []string{})
 
 	return config, func() {
 		cluster.Cleanup()

@@ -61,7 +61,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
     await this.renderComponent('static');
 
-    assert.dom('[data-test-delete] button').hasText('Delete role', 'Delete action renders');
+    assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
     assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Get credentials action renders');
     assert.dom('[data-test-rotate-credentials]').exists('Rotate credentials action renders for static role');
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
@@ -78,7 +78,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       .dom('[data-test-rotate-credentials]')
       .doesNotExist('Rotate credentials action is hidden for dynamic role');
 
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles'),

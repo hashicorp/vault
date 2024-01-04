@@ -3,31 +3,18 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<nav class="key-value-header breadcrumb">
-  <ul>
-    <li>
-      <span class="sep">&#x0002f;</span>
-      <LinkToExternal @route="secrets">Secrets</LinkToExternal>
-    </li>
-    {{#if this.shouldShowPath}}
-      <li>
-        <span class="sep">&#x0002f;</span>
-        <LinkTo @route="scopes.index">
-          {{this.secretMountPath.currentPath}}
-        </LinkTo>
-      </li>
-    {{/if}}
-    {{#if @scope}}
-      <li>
-        <span class="sep">&#x0002f;</span>
-        <LinkTo @route="scope.roles" @model={{@scope}}>{{@scope}}</LinkTo>
-      </li>
-    {{/if}}
-    {{#if @role}}
-      <li>
-        <span class="sep">&#x0002f;</span>
-        <LinkTo @route="credentials.index" @models={{array @scope @role}}>{{@role}}</LinkTo>
-      </li>
-    {{/if}}
-  </ul>
-</nav>
+<Hds::Breadcrumb>
+  <Hds::Breadcrumb::Item @text="Secrets" @route="secrets" @isRouteExternal={{true}} />
+  {{#if this.shouldShowPath}}
+    <Hds::Breadcrumb::Item @text={{this.secretMountPath.currentPath}} @route="scopes.index" />
+  {{/if}}
+  {{#if @scope}}
+    <Hds::Breadcrumb::Item @text={{@scope}} @route="scope.roles" @model={{@scope}} />
+  {{/if}}
+  {{#if @role}}
+    <Hds::Breadcrumb::Item @text={{@role}} @route="credentials.index" @models={{array @scope @role}} />
+  {{/if}}
+  {{#if @currentRoute}}
+    <Hds::Breadcrumb::Item @text={{@currentRoute}} @current={{true}} />
+  {{/if}}
+</Hds::Breadcrumb>

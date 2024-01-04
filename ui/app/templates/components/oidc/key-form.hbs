@@ -5,22 +5,14 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          {{#if @model.isNew}}
-            <LinkTo @route="vault.cluster.access.oidc.keys">
-              Keys
-            </LinkTo>
-          {{else}}
-            <LinkTo @route="vault.cluster.access.oidc.keys.key.details" @model={{@model.name}}>
-              Details
-            </LinkTo>
-          {{/if}}
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      {{#if @model.isNew}}
+        <Hds::Breadcrumb::Item @text="Keys" @route="vault.cluster.access.oidc.keys" />
+      {{else}}
+        <Hds::Breadcrumb::Item @text="Details" @route="vault.cluster.access.oidc.keys.key.details" @model={{@model.name}} />
+      {{/if}}
+      <Hds::Breadcrumb::Item @text="{{if @model.isNew 'Create' 'Edit'}} Key" @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-key-title>
@@ -39,7 +31,7 @@
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
-    <h4 class="title is-4">Allowed applications</h4>
+    <Hds::Text::Display @tag="h2" @size="400">Allowed applications</Hds::Text::Display>
     <div class="is-flex-row">
       <RadioCard
         data-test-oidc-radio="allow-all"
@@ -98,7 +90,7 @@
     </div>
     {{#if this.invalidFormAlert}}
       <div class="control">
-        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
       </div>
     {{/if}}
   </div>

@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
@@ -35,11 +36,14 @@ import (
 )
 
 func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -52,17 +56,20 @@ func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView)
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{})
 
 	return cluster, sys
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -619,6 +626,23 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	// Configure a second connection to confirm below it doesn't get restarted.
+	data = map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test-hana",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
 	// Create a role
 	data = map[string]interface{}{
 		"db_name":               "plugin-test",
@@ -710,17 +734,49 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Reset Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "reset/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	// Test endpoints for reloading plugins.
+	for _, reloadPath := range []string{
+		"reset/plugin-test",
+		"reload/postgresql-database-plugin",
+	} {
+		getConnectionID := func(name string) string {
+			t.Helper()
+			dbBackend, ok := b.(*databaseBackend)
+			if !ok {
+				t.Fatal("could not convert logical.Backend to databaseBackend")
+			}
+			dbi := dbBackend.connections.Get(name)
+			if dbi == nil {
+				t.Fatal("no plugin-test dbi")
+			}
+			return dbi.ID()
+		}
+		initialID := getConnectionID("plugin-test")
+		hanaID := getConnectionID("plugin-test-hana")
+		req = &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      reloadPath,
+			Storage:   config.StorageView,
+			Data:      map[string]interface{}{},
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+		if initialID == getConnectionID("plugin-test") {
+			t.Fatal("ID unchanged after connection reset")
+		}
+		if hanaID != getConnectionID("plugin-test-hana") {
+			t.Fatal("hana plugin got restarted but shouldn't have been")
+		}
+		if strings.HasPrefix(reloadPath, "reload/") {
+			if expected := 1; expected != resp.Data["count"] {
+				t.Fatalf("expected %d but got %d", expected, resp.Data["count"])
+			}
+			if expected := []string{"plugin-test"}; !reflect.DeepEqual(expected, resp.Data["connections"]) {
+				t.Fatalf("expected %v but got %v", expected, resp.Data["connections"])
+			}
+		}
 	}
 
 	// Get creds
@@ -1473,7 +1529,7 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{})
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
