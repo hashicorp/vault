@@ -26,13 +26,21 @@ type PluginIdentityTokenParams struct {
 func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(req *logical.Request, d *framework.FieldData) error {
 	if tokenKeyRaw, ok := d.GetOk("identity_token_key"); ok {
 		p.IdentityTokenKey = tokenKeyRaw.(string)
+	} else if req.Operation == logical.CreateOperation {
+		p.IdentityTokenKey = d.GetDefaultOrZero("identity_token_key").(string)
 	}
+
 	if tokenTTLRaw, ok := d.GetOk("identity_token_ttl_seconds"); ok {
 		p.IdentityTokenTTLSeconds = time.Duration(tokenTTLRaw.(int)) * time.Second
+	} else if req.Operation == logical.CreateOperation {
+		p.IdentityTokenTTLSeconds = time.Duration(
+			d.GetDefaultOrZero("identity_token_ttl_seconds").(int)) * time.Second
 	}
+
 	if tokenAudienceRaw, ok := d.GetOk("identity_token_audience"); ok {
 		p.IdentityTokenAudience = tokenAudienceRaw.(string)
 	}
+	// TODO: required? default?
 
 	return nil
 }

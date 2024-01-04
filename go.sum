@@ -779,15 +779,6 @@ github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0 h1:d81/ng9rET2YqdVkVwkb6EX
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0/go.mod h1:s4kgfzA0covAXNicZHDMN58jExvcng2mC/DepXiF1EI=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.1.1 h1:6A4M8smF+y8nM/DYsLNQz9n7n2ZGaEVqfz8ZWQirQkI=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.1.1/go.mod h1:WqyxV5S0VtXD2+2d6oPqOvyhGubCvzLCKSAKgQ004Uk=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 h1:UPeCRD+XY7QlaGQte2EVI2iOcWvUYA2XY8w5T/8v0NQ=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1/go.mod h1:oGV6NlB0cvi1ZbYRR2UN44QHxWFyGk+iylgD0qaMXjA=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/internal v1.1.2 h1:mLY+pNLjCUeKhgnAJWAKhEUQM+RJQo2H1fuGSw1Ky1E=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/managementgroups/armmanagementgroups v1.0.0 h1:pPvTJ1dY0sA35JOeFq6TsY2xj6Z85Yo23Pj4wCCvu4o=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.1.0 h1:Q707jfTFqfunSnh73YkCBDXR3GQJKno3chPRxXw//ho=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.1.0/go.mod h1:vjoxsjVnPwhjHZw4PuuhpgYlcxWl5tyNedLHUl0ulFA=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork v1.0.0 h1:nBy98uKOIfun5z6wx6jwWLrULcM0+cjBalBFZlEZ7CA=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1 h1:7CBQ+Ei8SP2c6ydQTGCCrS35bDxgTMfoP2miAwK++OU=
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1/go.mod h1:c/wcGeGx5FUPbM/JltUYHZcKmigwyVLJlDq+4HdtXaw=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 h1:u/LLAOFgsMv7HmNL4Qufg58y+qElGOt5qv0z1mURkRY=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0/go.mod h1:2e8rMJtl2+2j+HXbTBwnyGpm5Nou7KhvSfxOq8JpTag=
 github.com/Azure/azure-storage-blob-go v0.15.0 h1:rXtgp8tN1p29GvpGgfJetavIG0V7OgcSXPpwp3tx6qk=
@@ -1278,8 +1269,6 @@ github.com/coreos/go-iptables v0.4.5/go.mod h1:/mVI274lEDI2ns62jHCDnCyBF9Iwsmeka
 github.com/coreos/go-iptables v0.5.0/go.mod h1:/mVI274lEDI2ns62jHCDnCyBF9Iwsmekav8Dbxlm1MU=
 github.com/coreos/go-iptables v0.6.0/go.mod h1:Qe8Bv2Xik5FyTXwgIbLAnv2sWSBmvWdFETJConOQ//Q=
 github.com/coreos/go-oidc v2.1.0+incompatible/go.mod h1:CgnwVTmzoESiwO9qyAFEMiHoZ1nMCKZlZ9V6mm3/LKc=
-github.com/coreos/go-oidc v2.2.1+incompatible h1:mh48q/BqXqgjVHpy2ZY7WnWAbenxRjsz9N1i1YxjHAk=
-github.com/coreos/go-oidc v2.2.1+incompatible/go.mod h1:CgnwVTmzoESiwO9qyAFEMiHoZ1nMCKZlZ9V6mm3/LKc=
 github.com/coreos/go-oidc/v3 v3.5.0 h1:VxKtbccHZxs8juq7RdJntSqtXFtde9YpNpGn0yqgEHw=
 github.com/coreos/go-oidc/v3 v3.5.0/go.mod h1:ecXRtV4romGPeO6ieExAsUK9cb/3fp9hXNz1tlv8PIM=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
@@ -2126,8 +2115,6 @@ github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0 h1:DgJ9v3sWQlvyvpmCU/YAFdmGgLi6t8PHQ+O9UeYIuCg=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0/go.mod h1:UQa534XDQsSwwR4MYhOGnkF2gEao9zVABySBTfjAq08=
-github.com/hashicorp/vault-plugin-auth-azure v0.16.2 h1:ikzhUkiZ6QZ/mhoKNBVTJCzeaC9mEhXCqZ/7Z1Zoajg=
-github.com/hashicorp/vault-plugin-auth-azure v0.16.2/go.mod h1:W0Z5JnhQII42Ip22RFZ0pL01WCwIgrNroheUg4FCzxI=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1 h1:6StAr5tltpySNgyUwWC8czm9ZqkO7NIZfcRmxxtFwQ8=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1/go.mod h1:xXs4I5yLxbQ5VHcpvSxkRhShCTXd8Zyrni8qnFrfQ4Y=
 github.com/hashicorp/vault-plugin-auth-cf v0.15.1 h1:gtHOfVU4KDs1URlSCbIoio4eNXbSC+TXgtm/QWVBCU8=
@@ -2138,8 +2125,6 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.17.0 h1:ZfgyFjZfquIn9qk1bytkaqUfG8
 github.com/hashicorp/vault-plugin-auth-jwt v0.17.0/go.mod h1:R5ZtloCRWHnElOm+MXJadj2jkGMwF9Ybk3sn2kV3L48=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1 h1:nXni7zfOyhOWJBC42iWqIEZA+aYCo3diyVrr1mHs5yo=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1/go.mod h1:S0XEzmbUO+iuC44a8wqnL869l6WH0DUMVqxTIEkITys=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.17.1 h1:MVGosnlKQcgr6z9xrehCi5taYJyRw67JIJMNHaMXSAc=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.17.1/go.mod h1:KE7jUeiD2KE88CeC3YINWZ6A9B2VXPpzkX4bQgsl2lI=
 github.com/hashicorp/vault-plugin-auth-oci v0.14.2 h1:NcTn5LPRL6lVusPjqGkav+C8LRsy46QKdEk9HElQ5B0=
 github.com/hashicorp/vault-plugin-auth-oci v0.14.2/go.mod h1:FaLJvP+AUbeo4yop49aVit4JW/I9GfajFqI8wpX+b0w=
 github.com/hashicorp/vault-plugin-database-couchbase v0.9.4 h1:MaKlz3Guy9eVRJvTM4zUqlBzhEVE8LdlvsQSAURaVDo=
@@ -2764,7 +2749,6 @@ github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSg
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c h1:ncq/mPwQF4JjgDlrVEn3C11VoGHZN7m8qihwgMEtzYw=
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
 github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=
-github.com/pquerna/cachecontrol v0.1.0 h1:yJMy84ti9h/+OEWa752kBTKv4XC30OtVVHYv/8cTqKc=
 github.com/pquerna/cachecontrol v0.1.0/go.mod h1:NrUG3Z7Rdu85UNR3vm7SOsl1nFIeSiQnrHV5K9mBcUI=
 github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d h1:PinQItctnaL2LtkaSM678+ZLLy5TajwOeXzWvYC7tII=
 github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
