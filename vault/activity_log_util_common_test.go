@@ -60,6 +60,9 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		return nil, fmt.Errorf("bad start time")
 	}
 
+	// Below we register the entity, non-entity, and secret sync clients that
+	// are seen in the current month
+
 	// Let's add 2 entities exclusive to month 1 (clients 0,1),
 	// 2 entities shared by month 1 and 2 (clients 10,11),
 	// 2 entities shared by month 2 and 3 (clients 20,21), and
