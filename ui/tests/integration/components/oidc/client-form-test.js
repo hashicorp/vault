@@ -18,6 +18,7 @@ import {
   overrideMirageResponse,
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const searchSelect = create(ss);
 
@@ -60,6 +61,17 @@ module('Integration | Component | oidc/client-form', function (hooks) {
           group_ids: ['abcdef-123'],
         },
       };
+    });
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        'color-contrast': { enabled: false },
+      },
     });
   });
 

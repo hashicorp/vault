@@ -286,14 +286,37 @@ jobs:
               "runsc": {
                 "path": "/usr/local/bin/runsc",
                 "runtimeArgs": [
-                  "--host-uds=all",
-                  "--host-fifo=open"
+                  "--host-uds=create"
                 ]
               }
             }
           }
           EOF
           sudo systemctl reload docker
+      - name: Install rootless Docker
+        # Enterprise repo runners do not allow sudo, so can't system packages there yet.
+        if: ${{ !inputs.enterprise }}
+        run: |
+          sudo apt-get install -y uidmap dbus-user-session
+          export FORCE_ROOTLESS_INSTALL=1
+          curl -fsSL https://get.docker.com/rootless | sh
+          mkdir -p ~/.config/docker/
+          tee ~/.config/docker/daemon.json  <<EOF
+          {
+            "runtimes": {
+              "runsc": {
+                "path": "/usr/local/bin/runsc",
+                "runtimeArgs": [
+                  "--host-uds=create",
+                  "--ignore-cgroups"
+                ]
+              }
+            }
+          }
+          EOF
+          systemctl --user restart docker
+          # Ensure the original rootful Docker install is still the default.
+          docker context use default
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -334,9 +357,15 @@ jobs:
             #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
+          # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
+          # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
+          package_parallelism=""
+          
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
+          
+            package_parallelism="-p 2"
           fi
 
           # On a release branch, add a flag to rerun failed tests
@@ -350,8 +379,10 @@ jobs:
             fi
           fi
 
-          export VAULT_TEST_LOG_DIR=$(pwd)/test-results/go-test/logs-${{ matrix.id }}
-          mkdir -p $VAULT_TEST_LOG_DIR
+          VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs-${{ matrix.id }}"
+          export VAULT_TEST_LOG_DIR
+          mkdir -p "$VAULT_TEST_LOG_DIR"
+          
           
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
@@ -362,6 +393,7 @@ jobs:
               $RERUN_FAILS \
               --packages "$packages" \
               -- \
+              $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \

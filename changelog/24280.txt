@@ -1,0 +1,3 @@
+```release-note:improvement
+command/server: display logs on startup immediately if disable-gated-logs flag is set
+```

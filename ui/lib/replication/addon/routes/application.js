@@ -13,8 +13,13 @@ export default Route.extend(ClusterRoute, {
   version: service(),
   store: service(),
   auth: service(),
+  router: service(),
 
   beforeModel() {
+    if (this.auth.activeCluster.replicationRedacted) {
+      // disallow replication access if endpoints are redacted
+      return this.router.transitionTo('vault.cluster');
+    }
     return this.version.fetchFeatures().then(() => {
       return this._super(...arguments);
     });

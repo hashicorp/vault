@@ -44,8 +44,7 @@ module('Acceptance | policies (old)', function (hooks) {
     );
     assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
-    await click('[data-test-policy-list-link]');
-
+    await click('[data-test-policy-list-link] a');
     assert
       .dom(`[data-test-policy-link="${policyLower}"]`)
       .exists({ count: 1 }, 'new policy shown in the list');
@@ -55,7 +54,7 @@ module('Acceptance | policies (old)', function (hooks) {
 
     await click('[data-test-policy-edit-toggle]');
 
-    await click('[data-test-policy-delete] button');
+    await click('[data-test-confirm-action-trigger]');
 
     await click('[data-test-confirm-button]');
     await waitUntil(() => currentURL() === `/vault/policies/acl`);

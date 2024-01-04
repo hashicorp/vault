@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 
 	"github.com/hashicorp/errwrap"
@@ -340,14 +342,16 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l, false)
+	b, err := NewAuditBroker(l, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a1 := corehelpers.TestNoopAudit(t, nil)
-	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
+	err = b.Register("foo", a1, false)
+	require.NoError(t, err)
+	err = b.Register("bar", a2, false)
+	require.NoError(t, err)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -423,21 +427,23 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(ctx, logInput, headersConf); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if err := b.LogRequest(ctx, logInput, headersConf); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(l, false)
+	b, err := NewAuditBroker(l, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a1 := corehelpers.TestNoopAudit(t, nil)
-	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil)
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil)
+	err = b.Register("foo", a1, false)
+	require.NoError(t, err)
+	err = b.Register("bar", a2, false)
+	require.NoError(t, err)
 
 	auth := &logical.Auth{
 		NumUses:     10,
@@ -524,30 +530,40 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		OuterErr: respErr,
 	}
 	err = b.LogResponse(ctx, logInput, headersConf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
 	err = b.LogResponse(ctx, logInput, headersConf)
-	if !strings.Contains(err.Error(), "no audit backend succeeded in logging the response") {
-		t.Fatalf("err: %v", err)
-	}
+	require.Error(t, err)
+	require.ErrorContains(t, err, "event not processed by enough 'sink' nodes")
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	b, err := NewAuditBroker(logger, false)
+
+	b, err := NewAuditBroker(logger, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
-	a1 := corehelpers.TestNoopAudit(t, nil)
-	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+
+	headersConf := &AuditedHeadersConfig{
+		view: view,
+	}
+	err = headersConf.add(context.Background(), "X-Test-Header", false)
+	require.NoError(t, err)
+	err = headersConf.add(context.Background(), "X-Vault-Header", false)
+	require.NoError(t, err)
+
+	a1 := corehelpers.TestNoopAudit(t, "foo", nil, audit.WithHeaderFormatter(headersConf))
+	a2 := corehelpers.TestNoopAudit(t, "bar", nil, audit.WithHeaderFormatter(headersConf))
+
+	err = b.Register("foo", a1, false)
+	require.NoError(t, err)
+	err = b.Register("bar", a2, false)
+	require.NoError(t, err)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -575,19 +591,13 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 	reqCopy := reqCopyRaw.(*logical.Request)
 
-	headersConf := &AuditedHeadersConfig{
-		view: view,
-	}
-	headersConf.add(context.Background(), "X-Test-Header", false)
-	headersConf.add(context.Background(), "X-Vault-Header", false)
-
 	logInput := &logical.LogInput{
 		Auth:     auth,
 		Request:  reqCopy,
 		OuterErr: respErr,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput, nil)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -599,7 +609,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 
 	for _, a := range []*corehelpers.NoopAudit{a1, a2} {
 		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
-			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
+			t.Fatalf("Bad audited headers: %#v", a.ReqHeaders[0])
 		}
 	}
 
@@ -618,7 +628,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
 	err = b.LogRequest(ctx, logInput, headersConf)
-	if !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }

@@ -42,8 +42,8 @@
 /ui/app/routes/vault/cluster/oidc-*.js @hashicorp/vault-ecosystem-applications
 
 # Release config; service account is required for automation tooling.
-/.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
-/.github/workflows/build.yml  @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.release/                     @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/quality-team
 
 # Quality engineering
 /.github/  @hashicorp/quality-team
