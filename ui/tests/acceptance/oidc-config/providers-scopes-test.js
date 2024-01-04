@@ -114,7 +114,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
@@ -224,7 +224,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       .hasText('this is an edit test', 'has correct edited description');
 
     // create a provider using test-scope
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-tab="providers"]');
     assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
@@ -368,7 +368,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-providers"]');
+    await click('[data-test-breadcrumb-link="oidc-providers"] a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.index',
@@ -376,7 +376,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-provider-linked-block="default"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-provider-menu-link="details"]');
-    assert.dom(SELECTORS.providerDeleteButton).isDisabled('delete button is disabled for default provider');
+    assert.dom(SELECTORS.providerDeleteButton).doesNotExist('delete button hidden for default provider');
   });
 
   // PROVIDER DELETE + EDIT PERMISSIONS

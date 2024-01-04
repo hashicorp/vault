@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 // TestACME_ValidateIdentifiersAgainstRole Verify the ACME order creation
@@ -20,13 +22,13 @@ func TestACME_ValidateIdentifiersAgainstRole(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		role        *roleEntry
+		role        *issuing.RoleEntry
 		identifiers []*ACMEIdentifier
 		expectErr   bool
 	}{
 		{
 			name:        "verbatim-role-allows-dns-ip",
-			role:        buildSignVerbatimRoleWithNoData(nil),
+			role:        issuing.SignVerbatimRole(),
 			identifiers: _buildACMEIdentifiers("test.com", "127.0.0.1"),
 			expectErr:   false,
 		},
@@ -119,7 +121,7 @@ func _buildACMEIdentifier(val string) *ACMEIdentifier {
 // Easily allow tests to create valid roles with proper defaults, since we don't have an easy
 // way to generate roles with proper defaults, go through the createRole handler with the handlers
 // field data so we pickup all the defaults specified there.
-func buildTestRole(t *testing.T, config map[string]interface{}) *roleEntry {
+func buildTestRole(t *testing.T, config map[string]interface{}) *issuing.RoleEntry {
 	b, s := CreateBackendWithStorage(t)
 
 	path := pathRoles(b)
@@ -135,7 +137,7 @@ func buildTestRole(t *testing.T, config map[string]interface{}) *roleEntry {
 	_, err := b.pathRoleCreate(ctx, &logical.Request{Storage: s}, &framework.FieldData{Raw: config, Schema: fields})
 	require.NoError(t, err, "failed generating role with config %v", config)
 
-	role, err := b.getRole(ctx, s, config["name"].(string))
+	role, err := b.GetRole(ctx, s, config["name"].(string))
 	require.NoError(t, err, "failed loading stored role")
 
 	return role

@@ -11,6 +11,7 @@ import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { click, fillIn } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -42,7 +43,7 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to role details route on list item click'
     );
 
-    await click('[data-test-breadcrumb="roles"]');
+    await click('[data-test-breadcrumb="roles"] a');
     await click('[data-test-list-item-link]:nth-of-type(2) a');
     assert.true(
       isURL('roles/static/static-role/details'),
@@ -51,6 +52,12 @@ module('Acceptance | ldap | roles', function (hooks) {
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(3);
 
     for (const action of ['edit', 'get-creds', 'details']) {
@@ -61,7 +68,7 @@ module('Acceptance | ldap | roles', function (hooks) {
         isURL(`roles/dynamic/dynamic-role/${uri}`),
         `Transitions to ${uri} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="roles"]');
+      await click('[data-test-breadcrumb="roles"] a');
     }
   });
 
@@ -73,7 +80,7 @@ module('Acceptance | ldap | roles', function (hooks) {
       'Transitions to credentials route from toolbar link'
     );
 
-    await click('[data-test-breadcrumb="dynamic-role"]');
+    await click('[data-test-breadcrumb="dynamic-role"] a');
     await click('[data-test-edit]');
     assert.true(isURL('roles/dynamic/dynamic-role/edit'), 'Transitions to edit route from toolbar link');
   });

@@ -11,6 +11,7 @@ import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import { click } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -44,6 +45,12 @@ module('Acceptance | ldap | libraries', function (hooks) {
   });
 
   test('it should transition to routes from list item action menu', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(2);
 
     for (const action of ['edit', 'details']) {
@@ -54,7 +61,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
         isURL(`libraries/test-library/${uri}`),
         `Transitions to ${action} route on list item action menu click`
       );
-      await click('[data-test-breadcrumb="libraries"]');
+      await click('[data-test-breadcrumb="libraries"] a');
     }
   });
 

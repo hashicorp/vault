@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/eventlogger"
 )
@@ -21,10 +22,17 @@ type StdoutSink struct {
 
 // NewStdoutSinkNode creates a new StdoutSink that will persist the events
 // it processes using the specified expected format.
-func NewStdoutSinkNode(format string) *StdoutSink {
+func NewStdoutSinkNode(format string) (*StdoutSink, error) {
+	const op = "event.NewStdoutSinkNode"
+
+	format = strings.TrimSpace(format)
+	if format == "" {
+		return nil, fmt.Errorf("%s: format is required: %w", op, ErrInvalidParameter)
+	}
+
 	return &StdoutSink{
 		requiredFormat: format,
-	}
+	}, nil
 }
 
 // Process persists the provided eventlogger.Event to the standard output stream.

@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   rowLabel: (attr) => `[data-test-row-label="${attr}"]`,
@@ -45,6 +46,12 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       crossClusterRevocation: true,
       unifiedCrl: true,
       unifiedCrlOnExistingPaths: true,
+    });
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
     });
   });
 
@@ -151,7 +158,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('it renders enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
     await render(
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
@@ -166,7 +173,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
 
   test('it does not render enterprise params in crl section', async function (assert) {
     this.version = this.owner.lookup('service:version');
-    this.version.version = '1.13.1';
+    this.version.type = 'community';
     await render(
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }

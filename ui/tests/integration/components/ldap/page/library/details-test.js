@@ -65,11 +65,11 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
     assert.dom('[data-test-tab="accounts"]').hasText('Accounts', 'Accounts tab renders');
     assert.dom('[data-test-tab="config"]').hasText('Configuration', 'Configuration tab renders');
 
-    assert.dom('[data-test-delete] button').hasText('Delete library', 'Delete action renders');
+    assert.dom('[data-test-delete]').hasText('Delete library', 'Delete action renders');
     assert.dom('[data-test-edit]').hasText('Edit library', 'Edit action renders');
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    await click('[data-test-delete] button');
+    await click('[data-test-delete]');
     await click('[data-test-confirm-button]');
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.libraries'),
