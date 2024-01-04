@@ -15,6 +15,8 @@ import (
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
+// uiCustomMessagePaths returns a slice of *framework.Path elements that are
+// added to the receiver SystemBackend.
 func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -63,11 +65,13 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 				},
 				"type": {
 					Type:     framework.TypeString,
-					Required: true,
+					Required: false,
+					Default:  uicustommessages.BannerMessageType,
 				},
 				"authenticated": {
 					Type:     framework.TypeBool,
-					Required: true,
+					Required: false,
+					Default:  true,
 				},
 				"message": {
 					Type:     framework.TypeString,
@@ -79,7 +83,7 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 				},
 				"end_time": {
 					Type:     framework.TypeTime,
-					Required: true,
+					Required: false,
 				},
 				"link": {
 					Type:     framework.TypeMap,
@@ -120,11 +124,13 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 				},
 				"type": {
 					Type:     framework.TypeString,
-					Required: true,
+					Required: false,
+					Default:  uicustommessages.BannerMessageType,
 				},
 				"authenticated": {
 					Type:     framework.TypeBool,
-					Required: true,
+					Required: false,
+					Default:  true,
 				},
 				"message": {
 					Type:     framework.TypeString,
@@ -136,7 +142,7 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 				},
 				"end_time": {
 					Type:     framework.TypeTime,
-					Required: true,
+					Required: false,
 				},
 				"link": {
 					Type:     framework.TypeMap,
@@ -303,7 +309,8 @@ func (b *SystemBackend) handleListCustomMessages(ctx context.Context, req *logic
 // parameterValidateAndUse is a helper that retrieves a parameter from the
 // provided framework.FieldData if it exists and is valid then calls the
 // provided setter method (filterSetter) using that parameter value as the
-// argument.
+// argument. If the parameter contains an invalid value, an error is returned.
+// If the parameter does not have a value, nothing happens.
 func parameterValidateAndUse[T bool | string](parameterName string, filterSetter func(T) error, d *framework.FieldData) error {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
@@ -317,6 +324,10 @@ func parameterValidateAndUse[T bool | string](parameterName string, filterSetter
 	return nil
 }
 
+// parameterValidateOrReportMissing is a helper that retrieves a parameter from
+// the provided framework.FieldData if it exists and is valid. If the parameter
+// contains an invalid value, an error is returned. If the parameter does not
+// have a value, an error is returned.
 func parameterValidateOrReportMissing[T string | bool | time.Time](parameterName string, d *framework.FieldData) (T, error) {
 	var empty T
 
@@ -332,6 +343,29 @@ func parameterValidateOrReportMissing[T string | bool | time.Time](parameterName
 	return value.(T), nil
 }
 
+// parameterValidateOrUseDefault is a helper that retrieves a parameter from
+// the provided framework.FieldData if it exists and is valid. If the parameter
+// contains an invalid value, an error is returned. If the parameter does not
+// have a value, its default value is returned.
+func parameterValidateOrUseDefault[T string | bool](parameterName string, d *framework.FieldData) (T, error) {
+	var empty T
+
+	value, ok, err := d.GetOkErr(parameterName)
+	if err != nil {
+		return empty, fmt.Errorf("invalid %s parameter value: %s", parameterName, err)
+	}
+
+	if !ok {
+		value = d.GetDefaultOrZero(parameterName)
+	}
+
+	return value.(T), nil
+}
+
+// parameterValidateMap is a helper that retrieves a parameter from the provided
+// framework.FieldData if it exists and is valid. If the parameter contains an
+// invalid value, an error is returned. If the parameter does not have a value,
+// nothing happens.
 func parameterValidateMap(parameterName string, d *framework.FieldData) (map[string]any, error) {
 	value, ok, err := d.GetOkErr(parameterName)
 	if err != nil {
@@ -353,12 +387,12 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	authenticated, err := parameterValidateOrReportMissing[bool]("authenticated", d)
+	authenticated, err := parameterValidateOrUseDefault[bool]("authenticated", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	messageType, err := parameterValidateOrReportMissing[string]("type", d)
+	messageType, err := parameterValidateOrUseDefault[string]("type", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -373,9 +407,14 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	endTime, err := parameterValidateOrReportMissing[time.Time]("end_time", d)
+	var endTime *time.Time
+	endTimeValue, ok, err := d.GetOkErr("end_time")
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse("invalid end_time parameter value: %s", err), nil
+	}
+	if ok {
+		value := endTimeValue.(time.Time)
+		endTime = &value
 	}
 
 	linkMap, err := parameterValidateMap("link", d)
@@ -429,23 +468,28 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse("failed to create custom message: %s", err), nil
 	}
 
+	var endTimeResponse any
+	if message.EndTime != nil {
+		endTimeResponse = message.EndTime.Format(time.RFC3339Nano)
+	}
+
 	return &logical.Response{
 		Data: map[string]any{
-			"id": message.ID,
-			"data": map[string]any{
-				"authenticated": message.Authenticated,
-				"type":          message.Type,
-				"message":       message.Message,
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      message.EndTime.Format(time.RFC3339Nano),
-				"link":          message.Link,
-				"options":       message.Options,
-				"active":        message.Active(),
-			},
+			"id":            message.ID,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"message":       message.Message,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"link":          message.Link,
+			"options":       message.Options,
+			"active":        message.Active(),
 		},
 	}, nil
 }
 
+// handleReadCustomMessage is the operation callback for the READ operation of
+// the custom messages endpoint.
 func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	id, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -460,24 +504,29 @@ func (b *SystemBackend) handleReadCustomMessage(ctx context.Context, req *logica
 		return logical.ErrorResponse("failed to retrieve custom message: %s", err), nil
 	}
 
+	var endTimeResponse any
+	if message.EndTime != nil {
+		endTimeResponse = message.EndTime.Format(time.RFC3339Nano)
+	}
+
 	return &logical.Response{
 		Data: map[string]any{
-			"id": id,
-			"data": map[string]any{
-				"authenticated": message.Authenticated,
-				"type":          message.Type,
-				"message":       message.Message,
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      message.EndTime.Format(time.RFC3339Nano),
-				"link":          message.Link,
-				"options":       message.Options,
-				"active":        message.Active(),
-				"title":         message.Title,
-			},
+			"id":            id,
+			"authenticated": message.Authenticated,
+			"type":          message.Type,
+			"message":       message.Message,
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"link":          message.Link,
+			"options":       message.Options,
+			"active":        message.Active(),
+			"title":         message.Title,
 		},
 	}, nil
 }
 
+// handleUpdateCustomMessage is the operation callback for the UPDATE operation
+// of the custom messages endpoint.
 func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	messageID, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -489,12 +538,12 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	authenticated, err := parameterValidateOrReportMissing[bool]("authenticated", d)
+	authenticated, err := parameterValidateOrUseDefault[bool]("authenticated", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	messageType, err := parameterValidateOrReportMissing[string]("type", d)
+	messageType, err := parameterValidateOrUseDefault[string]("type", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -544,9 +593,14 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	endTime, err := parameterValidateOrReportMissing[time.Time]("end_time", d)
+	var endTime *time.Time
+	endTimeValue, ok, err := d.GetOkErr("end_time")
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse("invalid end_time parameter value: %s", err), nil
+	}
+	if ok {
+		value := endTimeValue.(time.Time)
+		endTime = &value
 	}
 
 	message := &uicustommessages.Message{
@@ -569,20 +623,25 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 		return logical.ErrorResponse("failed to update custom message: %s", err), nil
 	}
 
+	var endTimeResponse any
+	if message.EndTime != nil {
+		endTimeResponse = message.EndTime.Format(time.RFC3339Nano)
+	}
+
 	return &logical.Response{
 		Data: map[string]any{
-			"id": message.ID,
-			"data": map[string]any{
-				"active":        message.Active(),
-				"start_time":    message.StartTime.Format(time.RFC3339Nano),
-				"end_time":      message.EndTime.Format(time.RFC3339Nano),
-				"type":          message.Type,
-				"authenticated": message.Authenticated,
-			},
+			"id":            message.ID,
+			"active":        message.Active(),
+			"start_time":    message.StartTime.Format(time.RFC3339Nano),
+			"end_time":      endTimeResponse,
+			"type":          message.Type,
+			"authenticated": message.Authenticated,
 		},
 	}, nil
 }
 
+// handleDeleteCustomMessage is the operation callback for the DELETE operation
+// of the custom messages endpoint.
 func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	id, err := parameterValidateOrReportMissing[string]("id", d)
 	if err != nil {
@@ -596,6 +655,8 @@ func (b *SystemBackend) handleDeleteCustomMessage(ctx context.Context, req *logi
 	return nil, nil
 }
 
+// handleCustomMessageExistenceCheck is the function that fills the
+// framework.Path ExistenceCheck role for custom messages.
 func (b *SystemBackend) handleCustomMessageExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	_, ok := d.Schema["id"]
 	return ok, nil

@@ -56,6 +56,8 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(kvSuggestion.input);
     assert.dom(searchSelect.option()).hasText('my-path/', 'Nested secret path renders');
     assert.dom(searchSelect.option(1)).hasText('my-secret', 'Secret renders');
+    await click(searchSelect.removeSelected);
+    assert.dom(kvSuggestion.input).hasValue('', 'secret path value is cleared when mount is unset');
   });
 
   test('it should render secret suggestions for nested paths', async function (assert) {

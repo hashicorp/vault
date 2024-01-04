@@ -522,6 +522,10 @@
         "path": "commands"
       },
       {
+        "title": "Web REPL",
+        "path": "commands/web"
+      },
+      {
         "title": "<code>agent</code>",
         "path": "commands/agent"
       },
@@ -1754,13 +1758,27 @@
         "path": "plugins/plugin-management"
       },
       {
-        "title": "Containerized Plugins",
-        "path": "plugins/containerized-plugins",
-        "badge": {
-          "text": "BETA",
-          "type": "outlined",
-          "color": "highlight"
-        }
+        "title": "Containerized plugins",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "plugins/containerized-plugins",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          },
+          {
+            "title": "Add a containerized plugin",
+            "path": "plugins/containerized-plugins/add-a-containerized-plugin",
+            "badge": {
+              "text": "BETA",
+              "type": "outlined",
+              "color": "highlight"
+            }
+          }
+        ]
       },
       {
         "title": "Integrations Library",
