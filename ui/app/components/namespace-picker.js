@@ -47,7 +47,7 @@ export default Component.extend({
       this.set('canList', true);
     } catch (e) {
       // If error out on findRecord call it's because you don't have permissions
-      // and therefor don't have permission to manage namespaces
+      // and therefore don't have permission to manage namespaces
       this.set('canList', false);
     }
   }),
