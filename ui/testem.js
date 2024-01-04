@@ -28,7 +28,7 @@ module.exports = {
   },
   proxies: {
     '/v1': {
-      target: 'http://localhost:9200',
+      target: 'http://127.0.0.1:9200',
     },
   },
   parallel: process.env.EMBER_EXAM_SPLIT_COUNT || 1,
