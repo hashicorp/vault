@@ -37,6 +37,10 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return pathConfigRotateRootInternal(b, ctx, req)
+}
+
+func pathConfigRotateRootInternal(b *backend, ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// have to get the client config first because that takes out a read lock
 	client, err := b.clientIAM(ctx, req.Storage)
 	if err != nil {

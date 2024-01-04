@@ -5,7 +5,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -65,9 +64,13 @@ func Backend(_ *logical.BackendConfig) *backend {
 		},
 
 		// placeholder
+		//RotatePassword: func(ctx context.Context, request *logical.Request) error {
+		//	fmt.Print("aws.RotatePassword called\n")
+		//	return nil
+		//},
 		RotatePassword: func(ctx context.Context, request *logical.Request) error {
-			fmt.Print("aws.RotatePassword called\n")
-			return nil
+			_, err := pathConfigRotateRootInternal(&b, ctx, request)
+			return err
 		},
 
 		Invalidate:        b.invalidate,
