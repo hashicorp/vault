@@ -9,7 +9,7 @@ import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
 import type RouterService from '@ember/routing/router-service';
-import type { ModelFrom } from 'vault/vault/router';
+import type { ModelFrom } from 'vault/vault/route';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
 interface SyncSecretsDestinationsIndexRouteParams {
