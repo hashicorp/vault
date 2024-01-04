@@ -62,7 +62,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 				key:      config.IdentityTokenKey,
 				audience: config.IdentityTokenAudience,
 				ns:       ns,
-				ttl:      time.Duration(config.IdentityTokenTTLSeconds) * time.Second,
+				ttl:      time.Duration(config.IdentityTokenTTL) * time.Second,
 			}
 
 			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
