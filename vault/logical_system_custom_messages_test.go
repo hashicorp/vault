@@ -312,6 +312,16 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 			errorExpected: true,
 		},
 		{
+			name: "link-parameter-multiple-links",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"click here":   "http://example.org",
+					"click here 2": "http://ping.net",
+				},
+			},
+			errorExpected: true,
+		},
+		{
 			name: "options-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"options": "not-a-map",
@@ -734,6 +744,15 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			fieldRawUpdate: map[string]any{
 				"link": map[string]any{
 					"my-link": []int{},
+				},
+			},
+		},
+		{
+			name: "link-parameter-multiple-links",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"click here":   "http://example.org",
+					"click here 2": "http://ping.net",
 				},
 			},
 		},

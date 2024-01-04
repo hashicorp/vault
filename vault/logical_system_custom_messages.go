@@ -422,6 +422,10 @@ func (b *SystemBackend) handleCreateCustomMessages(ctx context.Context, req *log
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	if len(linkMap) > 1 {
+		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
+	}
+
 	var link *uicustommessages.MessageLink
 	if linkMap != nil {
 		link = &uicustommessages.MessageLink{}
@@ -555,6 +559,10 @@ func (b *SystemBackend) handleUpdateCustomMessage(ctx context.Context, req *logi
 	linkMap, err := parameterValidateMap("link", d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if len(linkMap) > 1 {
+		return logical.ErrorResponse("invalid number of elements in link parameter value; only a single element can be provided"), nil
 	}
 
 	var link *uicustommessages.MessageLink
