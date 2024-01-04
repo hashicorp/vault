@@ -91,6 +91,7 @@ type Vault struct {
 	ClientCert       string      `hcl:"client_cert"`
 	ClientKey        string      `hcl:"client_key"`
 	TLSServerName    string      `hcl:"tls_server_name"`
+	Namespace        string      `hcl:"namespace"`
 	Retry            *Retry      `hcl:"retry"`
 }
 
