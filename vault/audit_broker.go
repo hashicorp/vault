@@ -467,7 +467,7 @@ func (a *AuditBroker) requiredSuccessThresholdSinks() int {
 	// We might need to check over all the existing backends to discover if any
 	// don't use filtering.
 	for _, be := range a.backends {
-		if !be.backend.HasFiltering() {
+		if !be.backend.HasFiltering() && !be.backend.IsFallback() {
 			threshold = 1
 			break
 		}
