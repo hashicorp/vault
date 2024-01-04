@@ -262,7 +262,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		}
 
 		if ah.wrapTTL > 0 {
-			wrapClient, err := clientToUse.Clone()
+			wrapClient, err := clientToUse.CloneWithHeaders()
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
@@ -289,7 +289,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			isTokenFileMethod = path == "auth/token/lookup-self"
 			if isTokenFileMethod {
 				token, _ := data["token"].(string)
-				lookupSelfClient, err := clientToUse.Clone()
+				lookupSelfClient, err := clientToUse.CloneWithHeaders()
 				if err != nil {
 					ah.logger.Error("failed to clone client to perform token lookup")
 					return err
