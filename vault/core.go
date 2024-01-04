@@ -963,7 +963,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	clusterHeartbeatInterval := conf.ClusterHeartbeatInterval
-	if clusterHeartbeatInterval == 0 {
+	if clusterHeartbeatInterval <= 0 {
 		clusterHeartbeatInterval = 5 * time.Second
 	}
 
@@ -1210,7 +1210,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	conf.ReloadFuncs = &c.reloadFuncs
 
 	c.rollbackPeriod = conf.RollbackPeriod
-	if c.rollbackPeriod == 0 {
+	if c.rollbackPeriod <= 0 {
 		// Default to 1 minute
 		c.rollbackPeriod = 1 * time.Minute
 	}
