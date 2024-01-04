@@ -586,10 +586,10 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		queueTickerInterval := defaultQueueTickSeconds * time.Second
 		if strVal, ok := conf.Config[queueTickIntervalKey]; ok {
 			newVal, err := strconv.Atoi(strVal)
-			if err == nil {
+			if err == nil && newVal > 0 {
 				queueTickerInterval = time.Duration(newVal) * time.Second
 			} else {
-				b.Logger().Error("bad value for %q option: %q", queueTickIntervalKey, strVal)
+				b.Logger().Error("bad value for %q option: %q, default value of %d being used instead", queueTickIntervalKey, strVal, defaultQueueTickSeconds)
 			}
 		}
 		go b.runTicker(ctx, queueTickerInterval, conf.StorageView)
