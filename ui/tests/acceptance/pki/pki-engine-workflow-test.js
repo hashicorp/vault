@@ -14,8 +14,8 @@ import { click, currentURL, fillIn, find, settled, visit, waitFor } from '@ember
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
-import { clearPkiRecords } from 'vault/tests/helpers/pki';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { clearPkiRecords, configureEngine } from 'vault/tests/helpers/pki/pki-run-commands';
 
 /**
  * This test module should test the PKI workflow, including:
@@ -89,8 +89,8 @@ module('Acceptance | pki workflow', function (hooks) {
       allowed_domains="example.com" \
       allow_subdomains=true \
       max_ttl="720h"`,
-        `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`,
       ]);
+      await configureEngine(this.mountPath);
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
@@ -227,7 +227,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       // base config pki so empty state doesn't show
-      await runCmd(`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`);
+      await configureEngine(this.mountPath);
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
@@ -350,9 +350,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       // Configure engine with a default issuer
-      await runCmd(
-        `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" issuer_name="hashicorp_test"`
-      );
+      await configureEngine(this.mountPath, 'common_name="Hashicorp Test" issuer_name="hashicorp_test"');
       await logout.visit();
     });
     test('lists the correct issuer metadata info', async function (assert) {
@@ -470,9 +468,7 @@ module('Acceptance | pki workflow', function (hooks) {
   module('rotate', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
-      await runCmd(
-        `write -field=issuer_name ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`
-      );
+      await configureEngine(this.mountPath, 'issuer_name="existing-issuer"');
       await logout.visit();
     });
     test('it renders a warning banner when parent issuer has unsupported OIDs', async function (assert) {
@@ -506,7 +502,7 @@ module('Acceptance | pki workflow', function (hooks) {
   module('config', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
-      await runCmd(`write ${this.mountPath}/root/generate/internal issuer_name="existing-issuer"`);
+      await configureEngine(this.mountPath, 'issuer_name="existing-issuer"');
       const mixed_config_policy = `
       ${adminPolicy(this.mountPath)}
       ${readerPolicy(this.mountPath, 'config/cluster')}

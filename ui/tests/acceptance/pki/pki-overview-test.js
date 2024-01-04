@@ -10,7 +10,7 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/overview';
-import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { tokenWithPolicy, runCommands, configureEngine } from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -21,7 +21,7 @@ module('Acceptance | pki overview', function (hooks) {
     const mountPath = `pki`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
-    await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
+    await configureEngine(this.mountPath);
     const pki_admin_policy = `
     path "${this.mountPath}/*" {
       capabilities = ["create", "read", "update", "delete", "list"]

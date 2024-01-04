@@ -13,8 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy';
-import { clearPkiRecords } from 'vault/tests/helpers/pki';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { clearPkiRecords, configureEngine } from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | pki tidy', function (hooks) {
   setupApplicationTest(hooks);
@@ -25,10 +25,8 @@ module('Acceptance | pki tidy', function (hooks) {
     await authPage.login();
     // Setup PKI engine
     this.mountPath = `pki-workflow-${uuidv4()}`;
-    await runCmd([
-      mountEngineCmd('pki', this.mountPath),
-      `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
-    ]);
+    await runCmd([mountEngineCmd('pki', this.mountPath)]);
+    await configureEngine(this.mountPath);
     await logout.visit();
     clearPkiRecords(this.store);
   });
