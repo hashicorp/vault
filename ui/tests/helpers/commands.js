@@ -1,5 +1,6 @@
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { create } from 'ember-cli-page-object';
+import { settled } from '@ember/test-helpers';
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -46,6 +47,8 @@ export async function runCmd(commands, throwErrors = true) {
     commands = [commands];
   }
   await cc.runCommands(commands);
+
+  await settled();
   const lastOutput = cc.lastLogOutput;
   if (throwErrors && lastOutput.includes('Error')) {
     throw new Error(`Error occurred while running commands: "${commands.join('; ')}" - ${lastOutput}`);
