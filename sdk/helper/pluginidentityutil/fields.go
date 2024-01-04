@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // PluginIdentityTokenParams contains a set of common parameters that plugins
@@ -16,31 +15,32 @@ import (
 type PluginIdentityTokenParams struct {
 	// IdentityTokenKey is the named key used to sign tokens
 	IdentityTokenKey string `json:"identity_token_key"`
-	// IdentityTokenTTLSeconds is the duration that tokens will be valid for
-	IdentityTokenTTLSeconds time.Duration `json:"identity_token_ttl_seconds"`
+	// IdentityTokenTTL is the duration that tokens will be valid for
+	IdentityTokenTTL time.Duration `json:"identity_token_ttl"`
 	// IdentityTokenAudience identifies the recipient of the token
 	IdentityTokenAudience string `json:"identity_token_audience"`
 }
 
 // ParsePluginIdentityTokenFields provides common field parsing to embedding structs.
-func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(req *logical.Request, d *framework.FieldData) error {
+func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(d *framework.FieldData) error {
 	if tokenKeyRaw, ok := d.GetOk("identity_token_key"); ok {
 		p.IdentityTokenKey = tokenKeyRaw.(string)
-	} else if req.Operation == logical.CreateOperation {
-		p.IdentityTokenKey = d.GetDefaultOrZero("identity_token_key").(string)
+	}
+	if p.IdentityTokenKey == "" {
+		p.IdentityTokenKey = "default"
 	}
 
-	if tokenTTLRaw, ok := d.GetOk("identity_token_ttl_seconds"); ok {
-		p.IdentityTokenTTLSeconds = time.Duration(tokenTTLRaw.(int)) * time.Second
-	} else if req.Operation == logical.CreateOperation {
-		p.IdentityTokenTTLSeconds = time.Duration(
-			d.GetDefaultOrZero("identity_token_ttl_seconds").(int)) * time.Second
+	if tokenTTLRaw, ok := d.GetOk("identity_token_ttl"); ok {
+		p.IdentityTokenTTL = time.Duration(tokenTTLRaw.(int)) * time.Second
+	}
+	if p.IdentityTokenTTL == 0 {
+		p.IdentityTokenTTL = time.Duration(3600) * time.Second
 	}
 
 	if tokenAudienceRaw, ok := d.GetOk("identity_token_audience"); ok {
 		p.IdentityTokenAudience = tokenAudienceRaw.(string)
 	}
-	// TODO: required? default?
+	// TODO: audience required? default?
 
 	return nil
 }
@@ -48,7 +48,7 @@ func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(req *logical.
 // PopulatePluginIdentityTokenData adds PluginIdentityTokenParams info into the given map.
 func (p *PluginIdentityTokenParams) PopulatePluginIdentityTokenData(m map[string]interface{}) {
 	m["identity_token_key"] = p.IdentityTokenKey
-	m["identity_token_ttl_seconds"] = int64(p.IdentityTokenTTLSeconds.Seconds())
+	m["identity_token_ttl"] = int64(p.IdentityTokenTTL.Seconds())
 	m["identity_token_audience"] = p.IdentityTokenAudience
 }
 
@@ -58,27 +58,18 @@ func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 	fields := map[string]*framework.FieldSchema{
 		"identity_token_audience": {
 			Type:        framework.TypeString,
-			Description: "",
+			Description: "Audience of plugin identity tokens",
 			Default:     "",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Audience of plugin identity tokens",
-			},
 		},
 		"identity_token_key": {
 			Type:        framework.TypeString,
-			Description: "",
+			Description: "Key used to sign plugin identity tokens",
 			Default:     "default",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Key used to sign plugin identity tokens",
-			},
 		},
 		"identity_token_ttl": {
 			Type:        framework.TypeDurationSecond,
-			Description: "",
-			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "Time-to-live of plugin identity tokens",
-			},
-			Default: 3600,
+			Description: "Time-to-live of plugin identity tokens",
+			Default:     3600,
 		},
 	}
 

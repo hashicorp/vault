@@ -142,7 +142,7 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 		UsernameTemplate: usernameTemplate,
 		RoleARN:          roleARN,
 	}
-	if err := rc.ParsePluginIdentityTokenFields(req, data); err != nil {
+	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
