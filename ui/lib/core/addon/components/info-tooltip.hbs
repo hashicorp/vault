@@ -17,8 +17,9 @@
       class="tool-tip-trigger button is-ghost is-compact"
       data-test-tool-tip-trigger={{true}}
       {{on "click" this.preventSubmit}}
+      aria-label="help"
     >
-      <Icon @name="info" class="auto-width" aria-label="help" />
+      <Icon @name="info" class="auto-width" />
     </d.Trigger>
     <d.Content @defaultClass="tool-tip">
       <div class="box" data-test-info-tooltip-content>

@@ -11,14 +11,18 @@
   </p.levelLeft>
 </PageHeader>
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs">
+  <nav class="tabs" aria-label="navigation for entities">
     <ul>
-      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
-        {{capitalize (pluralize this.identityType)}}
-      </LinkTo>
-      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
-        Aliases
-      </LinkTo>
+      <li>
+        <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
+          {{capitalize (pluralize this.identityType)}}
+        </LinkTo>
+      </li>
+      <li>
+        <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
+          Aliases
+        </LinkTo>
+      </li>
     </ul>
   </nav>
 </div>

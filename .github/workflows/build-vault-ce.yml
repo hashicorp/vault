@@ -21,6 +21,9 @@ on:
       goarch:
         required: true
         type: string
+      goarm:
+        required: false
+        type: string
       go-tags:
         type: string
       package-name:
@@ -55,6 +58,7 @@ jobs:
           GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
           GOARCH: ${{ inputs.goarch }}
+          GOARM: ${{ inputs.goarm }}
           GOOS: ${{ inputs.goos }}
           VERSION: ${{ inputs.vault-version }}
         run:

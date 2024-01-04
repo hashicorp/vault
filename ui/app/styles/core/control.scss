@@ -51,14 +51,15 @@
       padding-right: 10em;
     }
   }
-
-  &.is-align-end {
-    display: flex;
-    align-self: end;
-  }
 }
 
-.control.is-expanded {
-  flex-grow: 1;
-  flex-shrink: 1;
+.control {
+  &.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  &.is-narrow {
+    flex: none;
+    width: 6%;
+  }
 }

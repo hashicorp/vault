@@ -22,6 +22,10 @@ const CREDENTIAL_TYPES = [
     value: 'federation_token',
     displayName: 'Federation Token',
   },
+  {
+    value: 'session_token',
+    displayName: 'Session Token',
+  },
 ];
 export default Model.extend({
   backend: attr('string', {
@@ -62,6 +66,7 @@ export default Model.extend({
       iam_user: ['name', 'credentialType', 'policyArns', 'policyDocument'],
       assumed_role: ['name', 'credentialType', 'roleArns', 'policyDocument'],
       federation_token: ['name', 'credentialType', 'policyDocument'],
+      session_token: [],
     };
 
     return expandAttributeMeta(this, keysForType[credentialType]);

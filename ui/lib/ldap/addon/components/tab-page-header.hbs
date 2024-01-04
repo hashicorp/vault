@@ -18,19 +18,19 @@
 <div class="tabs-container box is-bottomless is-marginless is-paddingless">
   <nav class="tabs" aria-label="ldap tabs">
     <ul>
-      <LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo>
-      <LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo>
-      <LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo>
-      <LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
+      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
     </ul>
   </nav>
 </div>
 
-<Toolbar>
-  <ToolbarFilters>
+<Toolbar aria-label="nav for managing LDAP">
+  <ToolbarFilters aria-label="filter for LDAP items">
     {{yield to="toolbarFilters"}}
   </ToolbarFilters>
-  <ToolbarActions>
+  <ToolbarActions aria-label="actions for LDAP items">
     {{yield to="toolbarActions"}}
   </ToolbarActions>
 </Toolbar>

@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
 	"github.com/hashicorp/vault/helper/useragent"
@@ -117,9 +119,10 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
-	// before we check for events, update all of our cached
-	// kv secrets, in case we missed any events
-	// TODO: to be implemented in a future PR
+	err = updater.preEventStreamUpdate(ctx)
+	if err != nil {
+		return fmt.Errorf("error when performing pre-event stream secret update: %w", err)
+	}
 
 	for {
 		select {
@@ -171,6 +174,35 @@ func (updater *StaticSecretCacheUpdater) streamStaticSecretEvents(ctx context.Co
 	}
 
 	return nil
+}
+
+// preEventStreamUpdate is called after successful connection to the event system but before
+// we process any events, to ensure we don't miss any updates.
+// In some cases, this will result in multiple processing of the same updates, but
+// this ensures that we don't lose any updates to secrets that might have been sent
+// while the connection is forming.
+func (updater *StaticSecretCacheUpdater) preEventStreamUpdate(ctx context.Context) error {
+	indexes, err := updater.leaseCache.db.GetByPrefix(cachememdb.IndexNameID)
+	if err != nil {
+		return err
+	}
+
+	updater.logger.Debug("starting pre-event stream update of static secrets")
+
+	var errs *multierror.Error
+	for _, index := range indexes {
+		if index.Type != cacheboltdb.StaticSecretType {
+			continue
+		}
+		err = updater.updateStaticSecret(ctx, index.RequestPath)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	updater.logger.Debug("finished pre-event stream update of static secrets")
+
+	return errs.ErrorOrNil()
 }
 
 // updateStaticSecret checks for updates for a static secret on the path given,
@@ -252,7 +284,7 @@ func (updater *StaticSecretCacheUpdater) updateStaticSecret(ctx context.Context,
 		index.LastRenewed = time.Now().UTC()
 
 		// Lastly, store the secret
-		updater.logger.Debug("storing response into the cache due to event update", "path", path)
+		updater.logger.Debug("storing response into the cache due to update", "path", path)
 		err = updater.leaseCache.db.Set(index)
 		if err != nil {
 			return err

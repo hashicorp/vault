@@ -48,7 +48,7 @@ func patternAcmeAuthorization(b *backend, pattern string, opts acmeWrapperOpts) 
 
 func (b *backend) acmeAuthorizationHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
-	authz, err := b.acmeState.LoadAuthorization(acmeCtx, userCtx, authId)
+	authz, err := b.GetAcmeState().LoadAuthorization(acmeCtx, userCtx, authId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load authorization: %w", err)
 	}
@@ -90,7 +90,7 @@ func (b *backend) acmeAuthorizationDeactivateHandler(acmeCtx *acmeContext, r *lo
 		challenge.Status = ACMEChallengeInvalid
 	}
 
-	if err := b.acmeState.SaveAuthorization(acmeCtx, authz); err != nil {
+	if err := b.GetAcmeState().SaveAuthorization(acmeCtx, authz); err != nil {
 		return nil, fmt.Errorf("error saving deactivated authorization: %w", err)
 	}
 

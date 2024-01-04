@@ -4,19 +4,16 @@
 ~}}
 
 {{#if @hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
+  <Toolbar aria-label="PKI configuration">
+    <ToolbarActions aria-label="actions for PKI configuration">
       {{#if @canDeleteAllIssuers}}
-        <button
-          type="button"
-          class="toolbar-link"
+        <Hds::Button
+          @text="Delete all issuers"
+          @color="secondary"
+          class="toolbar-button"
           {{on "click" (fn (mut this.showDeleteAllIssuers) true)}}
           data-test-delete-all-issuers-link
-        >
-          Delete all issuers
-          <Icon @name="chevron-right" />
-
-        </button>
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       <ToolbarLink @route="configuration.edit">
