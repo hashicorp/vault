@@ -27,6 +27,9 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 )
 
 func pathGenerateRoot(b *backend) *framework.Path {
@@ -78,7 +81,7 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	defer b.issuersLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	if !b.useLegacyBundleCaStorage() {
+	if !b.UseLegacyBundleCaStorage() {
 		issuers, err := sc.listIssuers()
 		if err != nil {
 			return nil, err
@@ -132,7 +135,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	var err error
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
@@ -285,19 +288,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+		return nil, err
 	}
-	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	// Build a fresh CRL
-	warnings, err = b.crlBuilder.rebuild(sc, true)
+	warnings, err = b.CrlBuilder().rebuild(sc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +324,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -337,7 +334,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
-	role := &roleEntry{
+	role := &issuing.RoleEntry{
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
@@ -369,7 +366,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -419,16 +416,10 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	key := "certs/" + normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+		return nil, err
 	}
-	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 
 	return resp, nil
 }
@@ -512,19 +503,13 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 }
 
 func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
-
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	certPem := data.Get("certificate").(string)
-	block, _ := pem.Decode([]byte(certPem))
-	if block == nil || len(block.Bytes) == 0 {
-		return logical.ErrorResponse("certificate could not be PEM-decoded"), nil
-	}
-	certs, err := x509.ParseCertificates(block.Bytes)
+	certs, err := parsing.ParseCertificatesFromString(certPem)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing certificate: %s", err)), nil
 	}
@@ -540,9 +525,8 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("given certificate is not self-issued"), nil
 	}
 
-	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

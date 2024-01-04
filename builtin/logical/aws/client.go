@@ -62,7 +62,7 @@ func (b *backend) getRootConfig(ctx context.Context, s logical.Storage, clientTy
 				key:      config.IdentityTokenKey,
 				audience: config.IdentityTokenAudience,
 				ns:       ns,
-				ttl:      time.Duration(config.IdentityTokenTTLSeconds) * time.Second,
+				ttl:      config.IdentityTokenTTL * time.Second,
 			}
 
 			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -164,5 +164,5 @@ func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) 
 			"requested", f.ttl.Seconds(), "actual", resp.TTL)
 	}
 
-	return []byte(resp.Token), nil
+	return []byte(resp.Token.Token()), nil
 }

@@ -33,7 +33,8 @@ h6 {
 
 a:hover,
 body,
-pre,
+// default set here is too dark for HDS codeblock
+pre:not(.hds-code-block__code),
 strong,
 table th {
   color: $ui-gray-900;
@@ -80,7 +81,7 @@ object {
 
 html {
   background-color: $white;
-  font-size: 14px;
+  font-size: $base-font-size; // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   min-width: 300px;
@@ -193,4 +194,9 @@ label {
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// TODO remove when HDS has released fix
+.hds-form-masked-input .hds-form-masked-input__toggle-button {
+  margin-right: $spacing-12;
 }

@@ -83,6 +83,11 @@ export interface EngineOwner extends Owner {
   mountPoint: string;
 }
 
+export interface SearchSelectOption {
+  name: string;
+  id: string;
+}
+
 // Generic interfaces
 export interface StringMap {
   [key: string]: string;

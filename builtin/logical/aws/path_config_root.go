@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -15,7 +16,7 @@ import (
 const defaultUserNameTemplate = `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
 
 func pathConfigRoot(b *backend) *framework.Path {
-	return &framework.Path{
+	p := &framework.Path{
 		Pattern: "config/root",
 
 		DisplayAttrs: &framework.DisplayAttributes{
@@ -54,37 +55,9 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Template to generate custom IAM usernames",
 			},
-			"identity_token_audience": {
-				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
-			"identity_token_key": {
-				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
 			"role_arn": {
 				Type:        framework.TypeString,
-				Description: "",
-				Default:     "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-			},
-			"identity_token_ttl": {
-				Type:        framework.TypeDurationSecond,
-				Description: "",
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "",
-				},
-				Default: 3600,
+				Description: "Role ARN to assume for plugin identity token federation",
 			},
 		},
 
@@ -107,6 +80,9 @@ func pathConfigRoot(b *backend) *framework.Path {
 		HelpSynopsis:    pathConfigRootHelpSyn,
 		HelpDescription: pathConfigRootHelpDesc,
 	}
+	pluginidentityutil.AddPluginIdentityTokenFields(p.Fields)
+
+	return p
 }
 
 func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -135,6 +111,8 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 		"max_retries":       config.MaxRetries,
 		"username_template": config.UsernameTemplate,
 	}
+	config.PopulatePluginIdentityTokenData(configData)
+
 	return &logical.Response{
 		Data: configData,
 	}, nil
@@ -142,35 +120,33 @@ func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, 
 
 func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
-	iamendpoint := data.Get("iam_endpoint").(string)
-	stsendpoint := data.Get("sts_endpoint").(string)
-	maxretries := data.Get("max_retries").(int)
+	IAMEndpoint := data.Get("iam_endpoint").(string)
+	STSEndpoint := data.Get("sts_endpoint").(string)
+	maxRetries := data.Get("max_retries").(int)
+	roleARN := data.Get("role_arn").(string)
 	usernameTemplate := data.Get("username_template").(string)
 	if usernameTemplate == "" {
 		usernameTemplate = defaultUserNameTemplate
 	}
 
-	identityTokenAudience := data.Get("identity_token_audience").(string)
-	identityTokenKey := data.Get("identity_token_key").(string)
-	identityTokenTTL := data.Get("identity_token_ttl").(int)
-	roleARN := data.Get("role_arn").(string)
-
 	b.clientMutex.Lock()
 	defer b.clientMutex.Unlock()
 
-	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
-		AccessKey:               data.Get("access_key").(string),
-		SecretKey:               data.Get("secret_key").(string),
-		IAMEndpoint:             iamendpoint,
-		STSEndpoint:             stsendpoint,
-		Region:                  region,
-		MaxRetries:              maxretries,
-		UsernameTemplate:        usernameTemplate,
-		RoleARN:                 roleARN,
-		IdentityTokenAudience:   identityTokenAudience,
-		IdentityTokenKey:        identityTokenKey,
-		IdentityTokenTTLSeconds: identityTokenTTL,
-	})
+	rc := rootConfig{
+		AccessKey:        data.Get("access_key").(string),
+		SecretKey:        data.Get("secret_key").(string),
+		IAMEndpoint:      IAMEndpoint,
+		STSEndpoint:      STSEndpoint,
+		Region:           region,
+		MaxRetries:       maxRetries,
+		UsernameTemplate: usernameTemplate,
+		RoleARN:          roleARN,
+	}
+	if err := rc.ParsePluginIdentityTokenFields(data); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	entry, err := logical.StorageEntryJSON("config/root", rc)
 	if err != nil {
 		return nil, err
 	}
@@ -188,17 +164,16 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 }
 
 type rootConfig struct {
-	AccessKey               string `json:"access_key"`
-	SecretKey               string `json:"secret_key"`
-	IAMEndpoint             string `json:"iam_endpoint"`
-	STSEndpoint             string `json:"sts_endpoint"`
-	Region                  string `json:"region"`
-	MaxRetries              int    `json:"max_retries"`
-	UsernameTemplate        string `json:"username_template"`
-	IdentityTokenKey        string `json:"identity_token_key"`
-	IdentityTokenTTLSeconds int    `json:"identity_token_ttl_seconds"`
-	IdentityTokenAudience   string `json:"identity_token_audience"`
-	RoleARN                 string `json:"role_arn"`
+	pluginidentityutil.PluginIdentityTokenParams
+
+	AccessKey        string `json:"access_key"`
+	SecretKey        string `json:"secret_key"`
+	IAMEndpoint      string `json:"iam_endpoint"`
+	STSEndpoint      string `json:"sts_endpoint"`
+	Region           string `json:"region"`
+	MaxRetries       int    `json:"max_retries"`
+	UsernameTemplate string `json:"username_template"`
+	RoleARN          string `json:"role_arn"`
 }
 
 const pathConfigRootHelpSyn = `

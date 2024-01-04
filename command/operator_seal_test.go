@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testOperatorSealCommand(tb testing.TB) (*cli.MockUi, *OperatorSealCommand) {

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -30,12 +30,13 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
   model() {
     const clusterModel = this.modelFor('vault.cluster');
     const hasChroot = clusterModel?.hasChrootNamespace;
-    const replication = hasChroot
-      ? null
-      : {
-          dr: clusterModel.dr,
-          performance: clusterModel.performance,
-        };
+    const replication =
+      hasChroot || clusterModel.replicationRedacted
+        ? null
+        : {
+            dr: clusterModel.dr,
+            performance: clusterModel.performance,
+          };
     return hash({
       replication,
       secretsEngines: this.store.query('secret-engine', {}),

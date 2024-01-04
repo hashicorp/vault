@@ -108,6 +108,7 @@ var errNilNamespace = errors.New("nil namespace in oidc cache request")
 const (
 	issuerPath           = "identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
+	namedKeyCachePrefix  = "namedKeys/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
 	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
@@ -1013,7 +1014,7 @@ func (i *IdentityStore) generatePluginToken(ctx context.Context, storage logical
 	now := time.Now()
 	claims := map[string]any{
 		"iss": config.effectiveIssuer,
-		"sub": fmt.Sprintf("plugin:%s:%s", me.namespace.Path, strings.Trim(me.Path, "/")),
+		"sub": fmt.Sprintf("vault:plugin-identity:%s:%s:%s", me.namespace.Path, me.Table, strings.Trim(me.Path, "/")),
 		"aud": []string{audience},
 		"nbf": now.Unix(),
 		"iat": now.Unix(),
@@ -1052,7 +1053,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Attempt to get the key from the cache
-	keyRaw, found, err := i.oidcCache.Get(ns, "namedKeys/"+name)
+	keyRaw, found, err := i.oidcCache.Get(ns, namedKeyCachePrefix+name)
 	if err != nil {
 		return nil, err
 	}
@@ -1074,7 +1075,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Cache the key
-	if err := i.oidcCache.SetDefault(ns, "namedKeys/"+name, &key); err != nil {
+	if err := i.oidcCache.SetDefault(ns, namedKeyCachePrefix+name, &key); err != nil {
 		i.logger.Warn("failed to cache key", "error", err)
 	}
 
@@ -1243,6 +1244,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	if role.Key == "" {
 		return logical.ErrorResponse("the key parameter is required"), nil
+	}
+
+	if role.Key == defaultKeyName {
+		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	if template, ok := d.GetOk("template"); ok {

@@ -24,7 +24,7 @@ module('Integration | Component | link-status', function (hooks) {
 
   // this can be removed once feature is released for OSS
   hooks.beforeEach(function () {
-    this.owner.lookup('service:version').set('version', '1.13.0+ent');
+    this.owner.lookup('service:version').set('type', 'enterprise');
     this.statuses = statuses;
   });
 
@@ -37,7 +37,7 @@ module('Integration | Component | link-status', function (hooks) {
   });
 
   test('it does not render banner in oss version', async function (assert) {
-    this.owner.lookup('service:version').set('version', '1.13.0');
+    this.owner.lookup('service:version').set('type', 'community');
 
     await render(hbs`
       <LinkStatus @status={{get this.statuses 0}} />
@@ -50,7 +50,6 @@ module('Integration | Component | link-status', function (hooks) {
     await render(hbs`
       <LinkStatus @status={{get this.statuses 0}} />
     `);
-
     assert.dom(SELECTORS.bannerConnected).exists('Success banner renders for connected state');
     assert
       .dom('[data-test-link-status]')
