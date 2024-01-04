@@ -69,7 +69,7 @@ async function processLines(input, eachLine = () => {}) {
       }
     });
     try {
-      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
+      await testHelper.run('ember', ['exam', ...process.argv.slice(2)]);
     } catch (error) {
       console.log(error);
       process.exit(1);
