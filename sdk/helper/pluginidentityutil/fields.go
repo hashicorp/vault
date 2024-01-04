@@ -9,18 +9,21 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
-func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
-	f := PluginIdentityTokenFields()
-	for k, v := range f {
-		if _, ok := m[k]; ok {
-			panic(fmt.Sprintf("adding field %q would overwrite existing field", k))
-		}
-		m[k] = v
-	}
+// PluginIdentityTokenParams contains a set of common parameters that plugins
+// can use for setting plugin identity token behavior
+type PluginIdentityTokenParams struct {
+	// IdentityTokenKey is the named key used to sign tokens
+	IdentityTokenKey string `json:"identity_token_key"`
+	// IdentityTokenTTLSeconds is the duration that tokens will be valid for
+	IdentityTokenTTLSeconds int `json:"identity_token_ttl_seconds"`
+	// IdentityTokenAudience identifies the recipient of the token
+	IdentityTokenAudience string `json:"identity_token_audience"`
 }
 
-func PluginIdentityTokenFields() map[string]*framework.FieldSchema {
-	return map[string]*framework.FieldSchema{
+// AddPluginIdentityTokenFields adds plugin identity token fields to the given
+// field schema map.
+func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
+	fields := map[string]*framework.FieldSchema{
 		"identity_token_audience": {
 			Type:        framework.TypeString,
 			Description: "",
@@ -45,5 +48,12 @@ func PluginIdentityTokenFields() map[string]*framework.FieldSchema {
 			},
 			Default: 3600,
 		},
+	}
+
+	for name, schema := range fields {
+		if _, ok := m[name]; ok {
+			panic(fmt.Sprintf("adding field %q would overwrite existing field", name))
+		}
+		m[name] = schema
 	}
 }
