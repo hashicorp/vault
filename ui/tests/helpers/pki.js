@@ -38,13 +38,3 @@ export const clearPkiRecords = (store) => {
   store.unloadAll('pki/config/urls');
   store.unloadAll('capabilities');
 };
-
-export function arbitraryWait() {
-  // this is a temporary fix to resolve an issue where about 50% of the tests
-  // returned a 404 of the issuers list endpoint even after configuring the mount
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 1000);
-  });
-}

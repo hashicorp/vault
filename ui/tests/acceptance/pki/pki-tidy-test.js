@@ -12,10 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-tidy';
-import { arbitraryWait, clearPkiRecords } from 'vault/tests/helpers/pki';
+import { clearPkiRecords } from 'vault/tests/helpers/pki';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | pki tidy', function (hooks) {
   setupApplicationTest(hooks);
@@ -25,13 +24,11 @@ module('Acceptance | pki tidy', function (hooks) {
     this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki-workflow-${uuidv4()}`;
-    await enablePage.enable('pki', mountPath);
-    this.mountPath = mountPath;
-    await runCommands([
+    this.mountPath = `pki-workflow-${uuidv4()}`;
+    await runCmd([
+      mountEngineCmd('pki', this.mountPath),
       `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
     ]);
-    await arbitraryWait();
     await logout.visit();
     clearPkiRecords(this.store);
   });
@@ -40,7 +37,7 @@ module('Acceptance | pki tidy', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
+    await runCmd(deleteEngineCmd(this.mountPath));
   });
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
