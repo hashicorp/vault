@@ -8,7 +8,7 @@
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
     <p.levelLeft>
-      <h1 class="title is-3">
+      <h1 class="title is-3" data-test-replication-title>
         {{#if this.initialReplicationMode}}
           {{#if (eq this.initialReplicationMode "dr")}}
             Enable Disaster Recovery Replication
@@ -36,6 +36,7 @@
         replicationMode=this.replicationMode
       )
     }}
+    data-test-replication-enable-form
   >
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errors={{this.errors}} />
@@ -278,11 +279,12 @@
       )
     }}
       <div class="field is-grouped box is-fullwidth is-bottomless">
-        <div class="control">
-          <button type="submit" class="button is-primary" disabled={{this.disallowEnable}} data-test-replication-enable>
-            Enable Replication
-          </button>
-        </div>
+        <Hds::Button
+          @text="Enable Replication"
+          type="submit"
+          disabled={{this.disallowEnable}}
+          data-test-replication-enable
+        />
       </div>
     {{/if}}
   </form>
@@ -290,7 +292,7 @@
   {{#if (not (and this.cluster.dr.replicationEnabled this.cluster.performance.replicationEnabled))}}
     <PageHeader as |p|>
       <p.levelLeft>
-        <h1 class="title is-3">
+        <h1 class="title is-3" data-test-replication-title>
           Replication
         </h1>
       </p.levelLeft>
@@ -315,9 +317,7 @@
         {{#if this.submit.isRunning}}
           <LayoutLoading />
         {{else}}
-          <LinkTo @route="mode.index" @model="dr" class="link-plain">
-            <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="span" />
-          </LinkTo>
+          <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="span" />
         {{/if}}
       {{else}}
         <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="div" />
@@ -329,9 +329,7 @@
           <Icon @size="24" @name="replication-perf" />
           Performance
         </h3>
-        <LinkTo @route="mode.index" @model="performance" class="link-plain">
-          <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
-        </LinkTo>
+        <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
       </div>
     {{/if}}
   {{/if}}

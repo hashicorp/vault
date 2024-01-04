@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,12 +26,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
 	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
@@ -864,6 +867,52 @@ func (n *DockerClusterNode) Pause(ctx context.Context) error {
 	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
 }
 
+func (n *DockerClusterNode) Restart(ctx context.Context) error {
+	timeout := 5
+	err := n.DockerAPI.ContainerRestart(ctx, n.Container.ID, container.StopOptions{Timeout: &timeout})
+	if err != nil {
+		return err
+	}
+
+	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID)
+	if err != nil {
+		return fmt.Errorf("error inspecting container after restart: %s", err)
+	}
+
+	var port int
+	if len(resp.NetworkSettings.Ports) > 0 {
+		for key, binding := range resp.NetworkSettings.Ports {
+			if len(binding) < 1 {
+				continue
+			}
+
+			if key == "8200/tcp" {
+				port, err = strconv.Atoi(binding[0].HostPort)
+			}
+		}
+	}
+
+	if port == 0 {
+		return fmt.Errorf("failed to find container port after restart")
+	}
+
+	hostPieces := strings.Split(n.HostPort, ":")
+	if len(hostPieces) < 2 {
+		return errors.New("could not parse node hostname")
+	}
+
+	n.HostPort = fmt.Sprintf("%s:%d", hostPieces[0], port)
+
+	client, err := n.newAPIClient()
+	if err != nil {
+		return err
+	}
+	client.SetToken(n.Cluster.rootToken)
+	n.client = client
+
+	return nil
+}
+
 func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
 	ip := net.ParseIP(targetIP)
 	if ip == nil {
@@ -1071,7 +1120,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		}
 		if i == 0 {
 			if err := dc.setupNode0(ctx); err != nil {
-				return nil
+				return err
 			}
 		} else {
 			if err := dc.joinNode(ctx, i, 0); err != nil {

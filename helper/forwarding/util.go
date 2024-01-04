@@ -7,9 +7,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,7 +15,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type bufCloser struct {
@@ -64,18 +61,7 @@ func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request
 
 func GenerateForwardedRequest(req *http.Request) (*Request, error) {
 	var reader io.Reader = req.Body
-	ctx := req.Context()
-	if logical.ContextContainsMaxRequestSize(ctx) {
-		max, ok := logical.ContextMaxRequestSizeValue(ctx)
-		if !ok {
-			return nil, errors.New("could not parse max request size from request context")
-		}
-		if max > 0 {
-			reader = io.LimitReader(req.Body, max)
-		}
-	}
-
-	body, err := ioutil.ReadAll(reader)
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

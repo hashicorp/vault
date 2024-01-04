@@ -6,12 +6,12 @@
 .shamir-progress {
   .shamir-progress-progress {
     display: inline-block;
-    margin-top: $size-10;
-    margin-right: $size-8;
+    margin-top: $spacing-8;
+    margin-right: $spacing-12;
   }
   .progress {
     box-shadow: 0 0 0 4px $ui-gray-050;
-    margin-top: $size-10;
+    margin-top: $spacing-8;
     min-width: 90px;
   }
 }

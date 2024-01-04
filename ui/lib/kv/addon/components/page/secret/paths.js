@@ -62,12 +62,10 @@ export default class KvSecretPaths extends Component {
 
     return {
       cli: `vault kv get ${cliPath}`,
-      /* eslint-disable-next-line no-useless-escape */
-      apiCopy: `curl \ --header "X-Vault-Token: ..." \ --request GET \ ${url}`,
-      apiDisplay: `curl \\
-        --header "X-Vault-Token: ..." \\
-        --request GET \\
-      ${url}`,
+      api: `curl \\
+  --header "X-Vault-Token: ..." \\
+  --request GET \\
+  ${url}`,
     };
   }
 }

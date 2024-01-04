@@ -48,6 +48,10 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Session name to use when assuming role. Max chars: 64",
 				Query:       true,
 			},
+			"mfa_code": {
+				Type:        framework.TypeString,
+				Description: "MFA code to provide for session tokens",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -107,6 +111,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 
 	roleArn := d.Get("role_arn").(string)
 	roleSessionName := d.Get("role_session_name").(string)
+	mfaCode := d.Get("mfa_code").(string)
 
 	var credentialType string
 	switch {
@@ -155,6 +160,8 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		return b.assumeRole(ctx, req.Storage, req.DisplayName, roleName, roleArn, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl, roleSessionName)
 	case federationTokenCred:
 		return b.getFederationToken(ctx, req.Storage, req.DisplayName, roleName, role.PolicyDocument, role.PolicyArns, role.IAMGroups, ttl)
+	case sessionTokenCred:
+		return b.getSessionToken(ctx, req.Storage, role.SerialNumber, mfaCode, ttl)
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown credential_type: %q", credentialType)), nil
 	}

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -90,12 +90,16 @@ func (c *PluginReloadCommand) Run(args []string) int {
 		return 1
 	}
 
+	positionalArgs := len(f.Args())
 	switch {
+	case positionalArgs != 0:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 0, got %d)", positionalArgs))
+		return 1
 	case c.plugin == "" && len(c.mounts) == 0:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, got %d)", len(args)))
+		c.UI.Error("No plugins specified, must specify exactly one of -plugin or -mounts")
 		return 1
 	case c.plugin != "" && len(c.mounts) > 0:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, got %d)", len(args)))
+		c.UI.Error("Must specify exactly one of -plugin or -mounts")
 		return 1
 	case c.scope != "" && c.scope != "global":
 		c.UI.Error(fmt.Sprintf("Invalid reload scope: %s", c.scope))

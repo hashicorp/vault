@@ -9,7 +9,7 @@ PROTOC_CMD=${PROTOC_CMD:-protoc}
 PROTOC_VERSION_EXACT="$1"
 echo "==> Checking that protoc is at version $1..."
 
-PROTOC_VERSION=$($PROTOC_CMD --version | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+PROTOC_VERSION=$($PROTOC_CMD --version | grep -o '[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?')
 
 if [ "$PROTOC_VERSION" == "$PROTOC_VERSION_EXACT" ]; then
   echo "Using protoc version $PROTOC_VERSION"

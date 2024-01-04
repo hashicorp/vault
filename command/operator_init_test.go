@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
 )
 
 func testOperatorInitCommand(tb testing.TB) (*cli.MockUi, *OperatorInitCommand) {

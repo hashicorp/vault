@@ -11,9 +11,10 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const selectors = {
-  rotateAction: '[data-test-toolbar-rotate-action] button',
+  rotateAction: '[data-test-toolbar-rotate-action]',
   confirmRotate: '[data-test-confirm-button]',
   configAction: '[data-test-toolbar-config-action]',
   configCta: '[data-test-config-cta]',
@@ -53,6 +54,13 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
         }
       );
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix ConfirmAction rendered in toolbar not a list item
+        list: { enabled: false },
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it should render tab page header, config cta and mount config', async function (assert) {

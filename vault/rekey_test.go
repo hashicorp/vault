@@ -151,6 +151,10 @@ func TestCore_Rekey_Update(t *testing.T) {
 }
 
 func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root string, recovery bool) {
+	testCore_Rekey_Update_Common_Error(t, c, keys, root, recovery, false)
+}
+
+func testCore_Rekey_Update_Common_Error(t *testing.T, c *Core, keys [][]byte, root string, recovery bool, wantRekeyUpdateError bool) {
 	var err error
 	// Start a rekey
 	var expType string
@@ -184,11 +188,18 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	for _, key := range keys {
 		result, err = c.RekeyUpdate(context.Background(), key, rkconf.Nonce, recovery)
 		if err != nil {
-			t.Fatalf("err: %v", err)
+			if !wantRekeyUpdateError {
+				t.Fatalf("err: %v", err)
+			} else {
+				return
+			}
 		}
 		if result != nil {
 			break
 		}
+	}
+	if wantRekeyUpdateError {
+		t.Fatal("expected and error during RekeyUpdate")
 	}
 	if result == nil {
 		t.Fatal("nil result after update")

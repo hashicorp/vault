@@ -17,6 +17,7 @@ export default Route.extend(ModelBoundaryRoute, {
   permissions: service(),
   namespaceService: service('namespace'),
   router: service(),
+  version: service(),
 
   modelTypes: computed(function () {
     return ['secret', 'secret-engine'];
@@ -32,6 +33,7 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
+    this.version.version = null;
 
     queryParams.with = authType;
     if (ns) {
