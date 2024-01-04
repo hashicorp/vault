@@ -55,23 +55,16 @@
     <div class="level is-mobile">
       <div class="level-left">
         <div>
-          <ToolTip @horizontalPosition="left" as |T|>
-            <T.Trigger>
-              <Icon
-                @name={{if
-                  (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
-                  method.methodType
-                  "auth"
-                }}
-                class="has-text-grey-light"
-              />
-            </T.Trigger>
-            <T.Content @defaultClass="tool-tip">
-              <div class="box">
-                {{method.methodType}}
-              </div>
-            </T.Content>
-          </ToolTip>
+          <Hds::TooltipButton @text={{method.methodType}} aria-label="Type of auth mount">
+            <Icon
+              @name={{if
+                (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
+                method.methodType
+                "auth"
+              }}
+              class="has-text-grey-light"
+            />
+          </Hds::TooltipButton>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
             {{method.path}}
           </span>
@@ -84,7 +77,7 @@
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
           <PopupMenu @name="auth-backend-nav">
-            <nav class="menu">
+            <nav class="menu" aria-label="navigation for managing access method {{method.id}}">
               <ul class="menu-list">
                 <li>
                   <LinkTo @route="vault.cluster.access.method.section" @models={{array method.id "configuration"}}>

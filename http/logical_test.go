@@ -323,7 +323,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err := buildLogicalRequest(core, nil, req)
+	lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +358,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	lreq, _, status, err = buildLogicalRequest(core, nil, req)
+	lreq, _, status, err = buildLogicalRequest(core, nil, req, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -517,7 +517,7 @@ func TestLogical_ListWithQueryParameters(t *testing.T) {
 			req = req.WithContext(namespace.RootContext(nil))
 			req.Header.Add(consts.AuthHeaderName, rootToken)
 
-			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -569,10 +569,8 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
-	noop := corehelpers.TestNoopAudit(t, nil)
+	noop := corehelpers.TestNoopAudit(t, "noop/", nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
 			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
@@ -584,7 +582,6 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	defer ln.Close()
 
 	// Enable the audit backend
-
 	resp := testHttpPost(t, root, addr+"/v1/sys/audit/noop", map[string]interface{}{
 		"type": "noop",
 	})
