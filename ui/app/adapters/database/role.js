@@ -180,12 +180,16 @@ export default ApplicationAdapter.extend({
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
     const db = snapshot.attr('database');
-    await this._updateAllowedRoles(store, {
-      role: id,
-      backend,
-      db: db[0],
-      type: 'remove',
-    });
+    try {
+      await this._updateAllowedRoles(store, {
+        role: id,
+        backend,
+        db: db[0],
+        type: 'remove',
+      });
+    } catch (e) {
+      this.checkError(e)
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'DELETE');
   },
