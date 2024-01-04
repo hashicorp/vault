@@ -1114,13 +1114,12 @@ type TestClusterOptions struct {
 
 	CoreMetricSinkProvider func(clusterName string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper)
 
-	PhysicalFactoryConfig map[string]interface{}
-	LicensePublicKey      ed25519.PublicKey
-	LicensePrivateKey     ed25519.PrivateKey
+	PhysicalFactoryConfig        map[string]interface{}
+	PerNodePhysicalFactoryConfig map[int]map[string]interface{}
 
-	// this stores the vault version that should be used for each core config
-	VersionMap             map[int]string
-	RedundancyZoneMap      map[int]string
+	LicensePublicKey  ed25519.PublicKey
+	LicensePrivateKey ed25519.PrivateKey
+
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
 
@@ -1509,6 +1508,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
+		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1831,11 +1831,10 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 		if pfc == nil {
 			pfc = make(map[string]interface{})
 		}
-		if len(opts.VersionMap) > 0 {
-			pfc["autopilot_upgrade_version"] = opts.VersionMap[idx]
-		}
-		if len(opts.RedundancyZoneMap) > 0 {
-			pfc["autopilot_redundancy_zone"] = opts.RedundancyZoneMap[idx]
+		if opts.PerNodePhysicalFactoryConfig != nil {
+			for k, v := range opts.PerNodePhysicalFactoryConfig[idx] {
+				pfc[k] = v
+			}
 		}
 		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
 		switch {
@@ -1870,6 +1869,9 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
 		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+	}
+	if opts != nil && opts.BaseClusterListenPort != 0 {
+		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {

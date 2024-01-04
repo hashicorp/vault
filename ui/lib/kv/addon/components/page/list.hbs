@@ -5,8 +5,8 @@
 
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
-    <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
-    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+    <li><LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo></li>
+    <li><LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo></li>
   </:tabLinks>
 
   <:toolbarFilters>
@@ -72,7 +72,7 @@
           <div class="level-right is-flex is-paddingless is-marginless">
             <div class="level-item">
               <PopupMenu>
-                <nav class="menu">
+                <nav class="menu" aria-label="menu items for managing {{metadata.path}}">
                   <ul class="menu-list">
                     {{#if metadata.pathIsDirectory}}
                       <li>

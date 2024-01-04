@@ -6,14 +6,14 @@
 <div ...attributes>
   {{#if this.getShowToolbar}}
     <div data-test-component="json-editor-toolbar">
-      <Toolbar>
-        <label class="has-text-weight-bold" data-test-component="json-editor-title">
+      <Toolbar aria-label="items for managing JSON editor for {{@title}}">
+        <label id="json-editor-title" class="has-text-weight-bold" data-test-component="json-editor-title">
           {{@title}}
           {{#if @subTitle}}
-            <span class="is-size-9 is-lowercase has-text-grey">({{@subTitle}})</span>
+            <span class="is-size-9 is-lowercase has-text-grey-light">({{@subTitle}})</span>
           {{/if}}
         </label>
-        <ToolbarActions>
+        <ToolbarActions aria-label="actions for {{@title}} JSON editor">
           {{yield}}
           {{#if @example}}
             <Hds::Button

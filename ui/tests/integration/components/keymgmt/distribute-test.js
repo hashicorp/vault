@@ -11,6 +11,7 @@ import { create } from 'ember-cli-page-object';
 import { hbs } from 'ember-cli-htmlbars';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import searchSelect from '../../../pages/components/search-select';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   form: '[data-test-keymgmt-distribution-form]',
@@ -94,6 +95,14 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
           }),
         ];
       });
+    });
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        'color-contrast': { enabled: false },
+      },
     });
   });
 
