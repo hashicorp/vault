@@ -5,19 +5,43 @@ package pluginidentityutil
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // PluginIdentityTokenParams contains a set of common parameters that plugins
-// can use for setting plugin identity token behavior
+// can use for setting plugin identity token behavior.
 type PluginIdentityTokenParams struct {
 	// IdentityTokenKey is the named key used to sign tokens
 	IdentityTokenKey string `json:"identity_token_key"`
 	// IdentityTokenTTLSeconds is the duration that tokens will be valid for
-	IdentityTokenTTLSeconds int `json:"identity_token_ttl_seconds"`
+	IdentityTokenTTLSeconds time.Duration `json:"identity_token_ttl_seconds"`
 	// IdentityTokenAudience identifies the recipient of the token
 	IdentityTokenAudience string `json:"identity_token_audience"`
+}
+
+// ParsePluginIdentityTokenFields provides common field parsing to embedding structs.
+func (p *PluginIdentityTokenParams) ParsePluginIdentityTokenFields(req *logical.Request, d *framework.FieldData) error {
+	if tokenKeyRaw, ok := d.GetOk("identity_token_key"); ok {
+		p.IdentityTokenKey = tokenKeyRaw.(string)
+	}
+	if tokenTTLRaw, ok := d.GetOk("identity_token_ttl_seconds"); ok {
+		p.IdentityTokenTTLSeconds = time.Duration(tokenTTLRaw.(int)) * time.Second
+	}
+	if tokenAudienceRaw, ok := d.GetOk("identity_token_audience"); ok {
+		p.IdentityTokenAudience = tokenAudienceRaw.(string)
+	}
+
+	return nil
+}
+
+// PopulatePluginIdentityTokenData adds PluginIdentityTokenParams info into the given map.
+func (p *PluginIdentityTokenParams) PopulatePluginIdentityTokenData(m map[string]interface{}) {
+	m["identity_token_key"] = p.IdentityTokenKey
+	m["identity_token_ttl_seconds"] = int64(p.IdentityTokenTTLSeconds.Seconds())
+	m["identity_token_audience"] = p.IdentityTokenAudience
 }
 
 // AddPluginIdentityTokenFields adds plugin identity token fields to the given
@@ -35,7 +59,7 @@ func AddPluginIdentityTokenFields(m map[string]*framework.FieldSchema) {
 		"identity_token_key": {
 			Type:        framework.TypeString,
 			Description: "",
-			Default:     "",
+			Default:     "default",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "Key used to sign plugin identity tokens",
 			},
