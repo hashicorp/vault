@@ -14,9 +14,8 @@ The Operator project provides the following examples:
 ## JWT auth for Kubernetes clusters in private networks
 
 Vault Secrets Operator supports using the [JWT auth method](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt).
-In the default JWT configuration this involves an API call from the Vault server back to the Kubernetes API server to [verify](/vault/docs/auth/jwt#jwt-verification) the JWT.
-It is possible to configure Vault to use [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys) fields of the JWT auth configuration
-to work in the Kubernetes environment and avoid the API call back to Kubernetes, removing the necessity to expose the Kubernetes API server externally.
+JWT auth [verifies tokens](/vault/docs/auth/jwt#jwt-verification) using the issuer's public signing key.
+Vault supports fetching this public key from the Kubernetes API, but if users can't expose the Kubernetes API to Vault, the public key can be provided directly using [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys).
 To configure this please follow the steps outlined for [Using JWT validation public keys](/vault/docs/auth/jwt/oidc-providers/kubernetes#using-jwt-validation-public-keys)
 
   <Note title="Rotation of the JWT Signing Key in Kubernetes">
