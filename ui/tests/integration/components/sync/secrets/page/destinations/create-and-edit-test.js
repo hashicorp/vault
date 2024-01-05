@@ -257,10 +257,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         for (const attr of this.model.formFields) {
           // Enable inputs with sensitive values
-          if (maskedParams.includes(attr.name)) {
-            await click(PAGE.form.enableInput(attr.name));
-          }
           if (editable.includes(attr.name)) {
+            if (maskedParams.includes(attr.name)) {
+              await click(PAGE.form.enableInput(attr.name));
+            }
             await PAGE.form.fillInByAttr(attr.name, `new-${decamelize(attr.name)}-value`);
           } else {
             assert.dom(PAGE.inputByAttr(attr.name)).isDisabled(`${attr.name} is disabled`);
