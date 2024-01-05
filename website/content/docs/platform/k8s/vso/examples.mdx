@@ -18,11 +18,6 @@ JWT auth [verifies tokens](/vault/docs/auth/jwt#jwt-verification) using the issu
 Vault supports fetching this public key from the Kubernetes API, but if users can't expose the Kubernetes API to Vault, the public key can be provided directly using [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys).
 To configure this please follow the steps outlined for [Using JWT validation public keys](/vault/docs/auth/jwt/oidc-providers/kubernetes#using-jwt-validation-public-keys)
 
-  <Note title="Rotation of the JWT Signing Key in Kubernetes">
-    Should the JWT Signing Key used by Kubernetes be rotated,
-    the process should be repeated with the new key.
-  </Note>
-
 ## Using VaultStaticSecrets for imagePullSecrets
 
 Vault Secret Operator supports Kubernetes' templating of Secrets based on their

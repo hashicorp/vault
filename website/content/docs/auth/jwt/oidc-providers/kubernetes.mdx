@@ -81,6 +81,11 @@ This method can be useful if Kubernetes' API is not reachable from Vault or if
 you would like a single JWT auth mount to service multiple Kubernetes clusters
 by chaining their public signing keys.
 
+<Note title="Rotation of the JWT Signing Key in Kubernetes">
+  Should the JWT Signing Key used by Kubernetes be rotated,
+  this process should be repeated with the new key.
+</Note>
+
 Kubernetes cluster requirements:
 
 * [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
