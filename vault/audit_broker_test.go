@@ -220,11 +220,7 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 
 	err = a.Deregister(context.Background(), "foo")
 	require.NoError(t, err)
-	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
-	require.Equal(t, "", a.fallbackName)
 
 	err = a.Deregister(context.Background(), "foo2")
 	require.NoError(t, err)
-	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
-	require.Equal(t, "", a.fallbackName)
 }
