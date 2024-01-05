@@ -256,9 +256,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         assert.dom(PAGE.title).hasTextContaining(`Edit ${this.model.name}`);
 
         for (const attr of this.model.formFields) {
-          // Enable inputs with sensitive values
           if (editable.includes(attr.name)) {
             if (maskedParams.includes(attr.name)) {
+              // Enable inputs with sensitive values
               await click(PAGE.form.enableInput(attr.name));
             }
             await PAGE.form.fillInByAttr(attr.name, `new-${decamelize(attr.name)}-value`);
