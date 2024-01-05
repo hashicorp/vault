@@ -240,7 +240,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       .exists('renders current version icon');
   });
 
-  test('it renders sync status page alert', async function (assert) {
+  test('it renders sync status page alert and refreshes', async function (assert) {
     assert.expect(5); // assert count important because confirms request made to fetch sync status twice
     const destinationName = 'my-destination';
     this.server.create('sync-association', {
@@ -281,8 +281,56 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
         'Synced my-destination - last updated September',
         'renders sync status alert banner'
       );
-
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .hasTextContaining(
+        'This secret has been synced from Vault to the destination below. Updates to this secret will automatically sync to its destination.',
+        'renders alert header referring to singular destination'
+      );
     // sync status refresh button
     await click(`${PAGE.detail.syncAlert()} button`);
+  });
+
+  test('it renders sync status page alert for multiple destinations', async function (assert) {
+    assert.expect(2); // assert count important because confirms request made to fetch sync status twice
+    this.server.create('sync-association', {
+      type: 'aws-sm',
+      name: 'aws-dest',
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.create('sync-association', {
+      type: 'gh',
+      name: 'gh-dest',
+      mount: this.backend,
+      secret_name: this.path,
+    });
+    this.server.get(`sys/sync/associations/destinations`, (schema, req) => {
+      return syncStatusResponse(schema, req);
+    });
+
+    await render(
+      hbs`
+       <Page::Secret::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
+    );
+    assert
+      .dom(PAGE.detail.syncAlert('aws-dest'))
+      .hasTextContaining('Synced aws-dest - last updated September', 'renders status for aws destination');
+    assert
+      .dom(PAGE.detail.syncAlert('gh-dest'))
+      .hasTextContaining('Syncing gh-dest - last updated September', 'renders status for gh destination');
+    assert
+      .dom(PAGE.detail.syncAlert())
+      .hasTextContaining(
+        'This secret has been synced from Vault to the destinations below. Updates to this secret will automatically sync to its destinations.',
+        'renders alert title referring to plural destinations'
+      );
   });
 });
