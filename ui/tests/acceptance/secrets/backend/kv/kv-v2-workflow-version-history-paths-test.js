@@ -253,7 +253,7 @@ path "${this.backend}/*" {
   capabilities = ["list"]
 }
 `;
-      const { userToken } = await setupControlGroup({ userPolicy });
+      const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);
@@ -269,6 +269,7 @@ path "${this.backend}/*" {
         apiPath: `${this.backend}/metadata/${this.secretPath}`,
         originUrl: `/vault/secrets/${this.urlPath}/details`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       assert.strictEqual(
         currentURL(),

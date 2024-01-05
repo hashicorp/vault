@@ -469,7 +469,7 @@ path "sys/control-group/request" {
 }
 `;
 
-      const { userToken } = await setupControlGroup({ userPolicy });
+      const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);

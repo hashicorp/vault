@@ -1055,7 +1055,11 @@ path "${this.backend}/metadata/*" {
   capabilities = ["list", "read"]
 }
 `;
-      const { userToken } = await setupControlGroup({ userPolicy });
+
+      const { userToken } = await setupControlGroup({
+        userPolicy,
+        backend: this.backend,
+      });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);
@@ -1096,11 +1100,12 @@ path "${this.backend}/metadata/*" {
           'shows control group error'
         );
       await grantAccessForWrite({
-        accessor: tokenToUnwrap.accessor,
         token: tokenToUnwrap.token,
+        accessor: tokenToUnwrap.accessor,
         creation_path: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/create`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       // In a real scenario the user would stay on page, but in the test
       // we fill in the same info and try again
@@ -1168,6 +1173,7 @@ path "${this.backend}/metadata/*" {
         creation_path: `${backend}/data/${secretPath}`,
         originUrl: `/vault/secrets/${backend}/kv/${secretPath}/details/edit`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       // Remark for unwrap as if we never left the page.
       this.controlGroup.markTokenForUnwrap(tokenToUnwrap.accessor);

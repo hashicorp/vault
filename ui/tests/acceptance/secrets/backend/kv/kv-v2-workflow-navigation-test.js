@@ -1163,7 +1163,7 @@ path "${this.backend}/*" {
   capabilities = ["list"]
 }
 `;
-      const { userToken } = await setupControlGroup({ userPolicy });
+      const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
       await authPage.login(userToken);
       clearRecords(this.store);
@@ -1204,6 +1204,7 @@ path "${this.backend}/*" {
         apiPath: `${backend}/data/app/nested/secret`,
         originUrl: `/vault/secrets/${backend}/kv/list/app/nested/`,
         userToken: this.userToken,
+        backend: this.backend,
       });
       assert.strictEqual(
         currentURL(),
@@ -1254,11 +1255,11 @@ path "${this.backend}/*" {
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
-
       await grantAccess({
         apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
         originUrl: `/vault/secrets/${backend}/kv/list`,
         userToken: this.userToken,
+        backend: this.backend,
       });
 
       assert.strictEqual(
