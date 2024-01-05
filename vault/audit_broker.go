@@ -561,6 +561,9 @@ func (a *AuditBroker) deregisterFallback(ctx context.Context, name string) error
 		return fmt.Errorf("%s: unable to deregister fallback device %q: %w", op, name, err)
 	}
 
+	// Clear the fallback device name now we've deregistered.
+	a.fallbackName = ""
+
 	return nil
 }
 

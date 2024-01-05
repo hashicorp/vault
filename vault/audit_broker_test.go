@@ -184,3 +184,26 @@ func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
 	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, path1, a.fallbackName)
 }
+
+// TestAuditBroker_Deregister_Fallback ensures that we can deregister a fallback
+// device successfully.
+func TestAuditBroker_Deregister_Fallback(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "juan/"
+	fallbackBackend := testAuditBackend(t, path, map[string]string{"fallback": "true"})
+	err = a.Register(path, fallbackBackend, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path, a.fallbackName)
+
+	err = a.Deregister(context.Background(), path)
+	require.NoError(t, err)
+	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, "", a.fallbackName)
+}
