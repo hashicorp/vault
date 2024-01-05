@@ -284,10 +284,21 @@ func (c *ProxyCommand) Run(args []string) int {
 	}
 	c.metricsHelper = metricsutil.NewMetricsHelper(inmemMetrics, prometheusEnabled)
 
+	// This indicates whether the namespace for the client has been set by environment variable.
+	// If it has, we don't touch it
+	namespaceSetByEnvironmentVariable := client.Namespace() != ""
+
+	if !namespaceSetByEnvironmentVariable && config.Vault != nil && config.Vault.Namespace != "" {
+		client.SetNamespace(config.Vault.Namespace)
+	}
+
 	var method auth.AuthMethod
 	var sinks []*sink.SinkConfig
 	if config.AutoAuth != nil {
-		if client.Headers().Get(consts.NamespaceHeaderName) == "" && config.AutoAuth.Method.Namespace != "" {
+		// Note: This will only set namespace header to the value in config.AutoAuth.Method.Namespace
+		// only if it hasn't been set by config.Vault.Namespace above. In that case, the config value
+		// present at config.AutoAuth.Method.Namespace will still be used for auto-auth.
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 
@@ -421,12 +432,13 @@ func (c *ProxyCommand) Run(args []string) int {
 
 	// The API proxy to be used, if listeners are configured
 	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-		Client:                  proxyClient,
-		Logger:                  apiProxyLogger,
-		EnforceConsistency:      enforceConsistency,
-		WhenInconsistentAction:  whenInconsistent,
-		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
-		UserAgentString:         useragent.ProxyAPIProxyString(),
+		Client:                     proxyClient,
+		Logger:                     apiProxyLogger,
+		EnforceConsistency:         enforceConsistency,
+		WhenInconsistentAction:     whenInconsistent,
+		UserAgentStringFunction:    useragent.ProxyStringWithProxiedUserAgent,
+		UserAgentString:            useragent.ProxyAPIProxyString(),
+		PrependConfiguredNamespace: config.APIProxy != nil && config.APIProxy.PrependConfiguredNamespace,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
@@ -684,6 +696,11 @@ func (c *ProxyCommand) Run(args []string) int {
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
 			return 1
+		}
+
+		// Override the set namespace with the auto-auth specific namespace
+		if !namespaceSetByEnvironmentVariable && config.AutoAuth.Method.Namespace != "" {
+			ahClient.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 
 		if config.DisableIdleConnsAutoAuth {

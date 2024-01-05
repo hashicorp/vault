@@ -224,6 +224,7 @@ func generateConfiguration(ctx context.Context, client *api.Client, flagExec str
 		TemplateConfig: generatedConfigTemplateConfig{
 			StaticSecretRenderInterval: "5m",
 			ExitOnRetryFailure:         true,
+			MaxConnectionsPerHost:      10,
 		},
 		Vault: generatedConfigVault{
 			Address: client.Address(),
@@ -410,6 +411,7 @@ type generatedConfig struct {
 type generatedConfigTemplateConfig struct {
 	StaticSecretRenderInterval string `hcl:"static_secret_render_interval"`
 	ExitOnRetryFailure         bool   `hcl:"exit_on_retry_failure"`
+	MaxConnectionsPerHost      int    `hcl:"max_connections_per_host"`
 }
 
 type generatedConfigExec struct {

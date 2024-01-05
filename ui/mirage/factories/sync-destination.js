@@ -21,6 +21,7 @@ export default Factory.extend({
     tenant_id: 'tenant-id',
     client_id: 'azure-client-id',
     client_secret: '*****',
+    cloud: 'Azure Public Cloud',
   }),
   ['gcp-sm']: trait({
     type: 'gcp-sm',
@@ -41,6 +42,6 @@ export default Factory.extend({
     access_token: '*****',
     project_id: 'prj_12345',
     team_id: 'team_12345',
-    deployment_environments: 'development,preview', // 'production' is also an option, but left out for testing to assert form changes value
+    deployment_environments: ['development', 'preview'], // 'production' is also an option, but left out for testing to assert form changes value
   }),
 });
