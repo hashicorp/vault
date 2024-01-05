@@ -72,14 +72,14 @@ export default class MessageModel extends Model {
     editType: 'textarea',
   })
   message;
-  @attr('dateTimeLocal', {
+  @attr('date', {
     editType: 'dateTimeLocal',
     label: 'Message starts',
     subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
     defaultValue: addDays(startOfDay(new Date() || this.startTime), 1).toISOString(),
   })
   startTime;
-  @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
+  @attr('date', { editType: 'yield', label: 'Message expires' }) endTime;
 
   // the api returns link as an object with title and href as keys, but we separate the link key/values into
   // different attributes to easily show link title and href fields on the create form. In our serializer,
