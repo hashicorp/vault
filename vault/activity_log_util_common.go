@@ -182,11 +182,11 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 	for nsID, ns := range nsData {
 
 		nsRecord := activity.NamespaceRecord{
-			NamespaceID:            nsID,
-			Entities:               uint64(ns.Counts.countByType(entityActivityType)),
-			NonEntityTokens:        uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
-			SecretSyncAssociations: uint64(ns.Counts.countByType(secretSyncAssociationActivityType)),
-			Mounts:                 a.transformActivityLogMounts(ns.Mounts),
+			NamespaceID:     nsID,
+			Entities:        uint64(ns.Counts.countByType(entityActivityType)),
+			NonEntityTokens: uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
+			SecretSyncs:     uint64(ns.Counts.countByType(secretSyncActivityType)),
+			Mounts:          a.transformActivityLogMounts(ns.Mounts),
 		}
 		byNamespace = append(byNamespace, &nsRecord)
 	}
