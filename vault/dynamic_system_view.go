@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/version"
 )
 
@@ -283,7 +284,7 @@ func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string,
 		if version != "" {
 			errContext += fmt.Sprintf(", version=%s", version)
 		}
-		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+		return nil, fmt.Errorf("%w: %s", plugincatalog.ErrPluginNotFound, errContext)
 	}
 
 	return r, nil

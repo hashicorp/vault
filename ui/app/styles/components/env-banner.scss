@@ -4,7 +4,7 @@
  */
 
 .env-banner {
-  align-self: center;
+  font-size: 0.8rem;
   border-radius: 3rem;
   background: linear-gradient(
     135deg,
@@ -13,8 +13,6 @@
   ); // only use case for purple in the app. define here instead of utils/color_var
   animation: env-banner-color-rotate 8s infinite linear alternate;
   color: $white;
-  margin-top: -20px;
-  margin-bottom: 6px;
 
   .hs-icon {
     margin: 0;
@@ -22,7 +20,7 @@
 
   .notification {
     background-color: transparent;
-    line-height: 1.66;
+    line-height: 2;
     padding: 0 $spacing-12;
   }
 }

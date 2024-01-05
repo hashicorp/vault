@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/builtin/audit/socket"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
@@ -41,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/sasha-s/go-deadlock"
 )
@@ -1461,16 +1464,13 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Enable the audit backend
@@ -1527,16 +1527,13 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a noop audit backend
 	var noop *corehelpers.NoopAudit
 	c, _, root := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Specify some keys to not HMAC
@@ -1633,10 +1630,8 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 }
 
 func TestCore_HandleLogin_AuditTrail(t *testing.T) {
-	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
-
 	// Create a badass credential backend that always logs in as armon
-	noop := &corehelpers.NoopAudit{}
+	var noop *corehelpers.NoopAudit
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1656,11 +1651,10 @@ func TestCore_HandleLogin_AuditTrail(t *testing.T) {
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
 	}
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
-		noop = &corehelpers.NoopAudit{
-			Config: config,
-		}
-		return noop, nil
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, headerFormatter audit.HeaderFormatter) (audit.Backend, error) {
+		var err error
+		noop, err = corehelpers.NewNoopAudit(config, audit.WithHeaderFormatter(headerFormatter))
+		return noop, err
 	}
 
 	// Enable the credential backend
@@ -3362,6 +3356,47 @@ func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
 	}
 }
 
+func TestSetSeals(t *testing.T) {
+	oldSeal := NewTestSeal(t, &seal.TestSealOpts{
+		StoredKeys:   seal.StoredKeysSupportedGeneric,
+		Name:         "old-seal",
+		WrapperCount: 1,
+		Generation:   1,
+	})
+	testCore := TestCoreWithSeal(t, oldSeal, false)
+	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore, nil)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(testCore, key); err != nil {
+			t.Fatalf("error unsealing core: %s", err)
+		}
+	}
+
+	if testCore.Sealed() {
+		t.Fatal("expected core to be unsealed, but it is sealed")
+	}
+
+	newSeal := NewTestSeal(t, &seal.TestSealOpts{
+		StoredKeys:   seal.StoredKeysSupportedGeneric,
+		Name:         "new-seal",
+		WrapperCount: 1,
+		Generation:   2,
+	})
+
+	err := testCore.SetSeals(newSeal, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wrappers := testCore.seal.GetAccess().GetAllSealWrappersByPriority()
+	if len(wrappers) != 1 {
+		t.Fatalf("expected 1 wrapper in seal access, got %d", len(wrappers))
+	}
+
+	if wrappers[0].Name != "new-seal-1" {
+		t.Fatalf("unexpected seal name: got %s, expected new-seal-1", wrappers[0].Name)
+	}
+}
+
 func TestExpiration_DeadlockDetection(t *testing.T) {
 	testCore := TestCore(t)
 	testCoreUnsealed(t, testCore)
@@ -3407,5 +3442,87 @@ func TestStatelock_DeadlockDetection(t *testing.T) {
 
 	if !testCore.DetectStateLockDeadlocks() {
 		t.Fatal("statelock doesn't have deadlock detection enabled, it should")
+	}
+}
+
+// TestRunUnsealSetupFunctions verifies the correct behaviour of the
+// runUnsealSetupFunctions function. This function's job is to run each of the
+// function elements it is given with the context.Context that it's provided
+// as the sole argument.
+func TestRunUnsealSetupFunctions(t *testing.T) {
+	// First, check that the context.Context provided to runUnsealSetupFunctions
+	// is actually used to call the function elements, by running a method that
+	// records the context.Context used each time it's called.
+	checker := contextChecker{}
+	setupFunctions := []func(context.Context) error{
+		checker.setupFunction,
+		checker.setupFunction,
+		checker.setupFunction,
+	}
+
+	testContext := context.WithValue(context.Background(), "test", "pass")
+	assert.NoError(t, runUnsealSetupFunctions(testContext, setupFunctions))
+	for _, v := range checker.values {
+		assert.Equal(t, "pass", v.(string))
+	}
+
+	// Finally, check that when an error is returned by a function element, the
+	// runUnsealSetupFunctions function immediately returns it, by using the
+	// same test as above but the second function element is one that returns
+	// an error, so the checker.values slice should only contain 1 element.
+	setupFunctions[1] = func(_ context.Context) error {
+		return errors.New("error")
+	}
+	checker = contextChecker{}
+
+	assert.Error(t, runUnsealSetupFunctions(testContext, setupFunctions))
+	assert.NotNil(t, checker.values)
+	assert.Equal(t, 1, len(checker.values))
+}
+
+// contextChecker is testing struct used to verify that the correct
+// context.Context is passed to the setupFunctions by the
+// runUnsealSetupFunctions function.
+type contextChecker struct {
+	values []any
+}
+
+func (c *contextChecker) setupFunction(ctx context.Context) error {
+	value := ctx.Value("test")
+	c.values = append(c.values, value)
+
+	return nil
+}
+
+// TestBuildUnsealSetupFunctionSlice verifies that the
+// buildUnsealSetupFunctionSlice function returns the correct slice of functions
+// for the provided Core instance.
+func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
+	uint32Ptr := func(value uint32) *uint32 {
+		return &value
+	}
+
+	for _, testcase := range []struct {
+		name           string
+		core           *Core
+		expectedLength int
+	}{
+		{
+			name: "primary core",
+			core: &Core{
+				replicationState: uint32Ptr(uint32(0)),
+			},
+			expectedLength: 25,
+		},
+		{
+			name: "dr secondary core",
+			core: &Core{
+				replicationState: uint32Ptr(uint32(consts.ReplicationDRSecondary)),
+			},
+			expectedLength: 14,
+		},
+	} {
+		funcs := buildUnsealSetupFunctionSlice(testcase.core)
+		assert.Equal(t, testcase.expectedLength, len(funcs), testcase.name)
 	}
 }

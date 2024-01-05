@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 

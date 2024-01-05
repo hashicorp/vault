@@ -45,7 +45,7 @@ export default create({
     await this.usernameInput(username);
     return this.passwordInput(password).submit();
   },
-  loginNs: async function (ns) {
+  loginNs: async function (ns, token = rootToken) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
@@ -55,7 +55,7 @@ export default create({
     await settled();
     await this.namespaceInput(ns);
     await settled();
-    await this.tokenInput(rootToken).submit();
+    await this.tokenInput(token).submit();
     return;
   },
   clickLogout: async function (clearNamespace = false) {

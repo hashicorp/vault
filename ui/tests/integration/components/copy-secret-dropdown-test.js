@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',
   copyButton: '[data-test-copy-button]',
-  clipboard: 'data-clipboard-text',
+  clipboard: 'data-test-copy-button',
   wrapButton: '[data-test-wrap-button]',
   masked: '[data-test-masked-input]',
 };
@@ -44,7 +44,7 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     assert.dom(SELECTORS.wrapButton).hasText('Wrap secret');
     assert
       .dom(SELECTORS.copyButton)
-      .hasAttribute('data-clipboard-text', `${this.data}`, 'it renders copyable data');
+      .hasAttribute('data-test-copy-button', `${this.data}`, 'it renders copyable data');
 
     await click(SELECTORS.wrapButton);
     await click(SELECTORS.dropdown);
@@ -88,6 +88,6 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     await click(SELECTORS.dropdown);
     assert
       .dom(`${SELECTORS.masked} ${SELECTORS.copyButton}`)
-      .hasAttribute('data-clipboard-text', this.wrappedData, 'it renders wrapped data');
+      .hasAttribute('data-test-copy-button', this.wrappedData, 'it renders wrapped data');
   });
 });

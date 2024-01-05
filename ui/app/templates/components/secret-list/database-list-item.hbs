@@ -27,7 +27,7 @@
     </div>
     <div class="column has-text-right">
       <PopupMenu name="secret-menu">
-        <nav class="menu">
+        <nav class="menu" aria-label="navigation for managing database {{@item.id}}">
           <ul class="menu-list">
             {{#if @item.canEdit}}
               <li class="action">
