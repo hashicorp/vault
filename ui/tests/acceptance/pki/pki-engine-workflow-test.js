@@ -13,7 +13,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, fillIn, find, isSettled, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/workflow';
 import { adminPolicy, readerPolicy, updatePolicy } from 'vault/tests/helpers/policy-generator/pki';
-import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 import { unsupportedPem } from 'vault/tests/helpers/pki/values';
 
 /**
@@ -25,12 +25,14 @@ module('Acceptance | pki workflow', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await logout.visit();
+    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
@@ -95,6 +97,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
       this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
       await logout.visit();
+      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -226,6 +229,7 @@ module('Acceptance | pki workflow', function (hooks) {
       this.pkiKeyEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
       this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
       await logout.visit();
+      clearRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -339,11 +343,14 @@ module('Acceptance | pki workflow', function (hooks) {
   module('issuers', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath);
+      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
       // Configure engine with a default issuer
       await runCommands([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
       ]);
       await logout.visit();
+      clearRecords(this.store);
     });
     test('lists the correct issuer metadata info', async function (assert) {
       assert.expect(6);
