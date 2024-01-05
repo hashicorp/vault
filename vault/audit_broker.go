@@ -95,40 +95,6 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		local:   local,
 	}
 
-	if a.broker != nil {
-		if name != b.Name() {
-			return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, b.Name())
-		}
-
-		for id, node := range b.Nodes() {
-			err := a.broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite))
-			if err != nil {
-				return fmt.Errorf("%s: unable to register nodes for %q: %w", op, name, err)
-			}
-		}
-
-		pipeline := eventlogger.Pipeline{
-			PipelineID: eventlogger.PipelineID(b.Name()),
-			EventType:  b.EventType(),
-			NodeIDs:    b.NodeIDs(),
-		}
-
-		err := a.broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
-		if err != nil {
-			return fmt.Errorf("%s: unable to register pipeline for %q: %w", op, name, err)
-		}
-
-		// Establish if we ONLY have pipelines that include filter nodes.
-		// Otherwise, we can rely on the eventlogger broker guarantee.
-		threshold := a.requiredSuccessThresholdSinks()
-
-		// Update the success threshold now that the pipeline is registered.
-		err = a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
-		if err != nil {
-			return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
-		}
-	}
-
 	return nil
 }
 
@@ -155,27 +121,9 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	// we initialize the broker, which are left nil otherwise.
 	// In 1.16.x this check should go away and the env var removed.
 	if a.broker != nil {
-		// Establish if we ONLY have pipelines that include filter nodes.
-		// Otherwise, we can rely on the eventlogger broker guarantee.
-		threshold := a.requiredSuccessThresholdSinks()
-
-		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), threshold)
+		err := a.deregister(ctx, name)
 		if err != nil {
-			return fmt.Errorf("%s: unable to configure sink success threshold (%d) for %q: %w", op, threshold, name, err)
-		}
-
-		// The first return value, a bool, indicates whether
-		// RemovePipelineAndNodes encountered the error while evaluating
-		// pre-conditions (false) or once it started removing the pipeline and
-		// the nodes (true). This code doesn't care either way.
-		_, err = a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType(event.AuditType.String()), eventlogger.PipelineID(name))
-		if err != nil {
-			return fmt.Errorf("%s: unable to remove pipeline and nodes for %q: %w", op, name, err)
-			//=======
-			//		err := a.deregister(ctx, name)
-			//		if err != nil {
-			//			return fmt.Errorf("%s: deregistration failed for audit device %q: %w", op, name, err)
-			//>>>>>>> origin/main
+			return fmt.Errorf("%s: deregistration failed for audit device %q: %w", op, name, err)
 		}
 	}
 
