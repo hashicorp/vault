@@ -1,4 +1,0 @@
-```release-note:feature
-core/audit: add a boolean parameter `fallback` when enabling an audit device to enable a special device that logs all
-the audit entries that did not get written to other (filtered) audit devices
-```
