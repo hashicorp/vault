@@ -8,6 +8,8 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 
 import type StoreService from 'vault/services/store';
+import type RouterService from '@ember/routing/router-service';
+import type { ModelFrom } from 'vault/vault/route';
 import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 
 interface SyncSecretsDestinationsIndexRouteParams {
@@ -18,6 +20,25 @@ interface SyncSecretsDestinationsIndexRouteParams {
 
 export default class SyncSecretsDestinationsIndexRoute extends Route {
   @service declare readonly store: StoreService;
+  @service declare readonly router: RouterService;
+
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+    name: {
+      refreshModel: true,
+    },
+    type: {
+      refreshModel: true,
+    },
+  };
+
+  redirect(model: ModelFrom<SyncSecretsDestinationsIndexRoute>) {
+    if (model.destinations.length === 0) {
+      this.router.transitionTo('vault.cluster.sync.secrets.overview');
+    }
+  }
 
   filterData(dataset: Array<SyncDestinationModel>, name: string, type: string): Array<SyncDestinationModel> {
     let filteredDataset = dataset;

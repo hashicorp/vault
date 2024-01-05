@@ -212,6 +212,16 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     gh: ['accessToken'],
     'vercel-project': ['accessToken', 'teamId', 'deploymentEnvironments'],
   };
+  const EXPECTED_VALUE = (key) => {
+    switch (key) {
+      case 'deployment_environments':
+        return ['production'];
+      default:
+        // for all string type parameters
+        return `new-${key}-value`;
+    }
+  };
+
   for (const destination of SYNC_DESTINATIONS) {
     const { type, maskedParams } = destination;
     module(`edit destination: ${type}`, function (hooks) {
@@ -237,9 +247,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           const expectedKeys = editable.map((k) => decamelize(k));
           assert.propEqual(payloadKeys, expectedKeys, `${type} payload only contains editable attrs`);
           expectedKeys.forEach((key) => {
-            // deploymentEnvironment field fixed possible options
-            const expectedValue = key === 'deployment_environments' ? 'production' : `new-${key}-value`;
-            assert.strictEqual(payload[key], expectedValue, `destination: ${type} updates key: ${key}`);
+            assert.deepEqual(payload[key], EXPECTED_VALUE(key), `destination: ${type} updates key: ${key}`);
           });
           return { payload };
         });
