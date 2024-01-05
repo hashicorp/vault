@@ -25,7 +25,7 @@ const pluginType = "sqs"
 var ErrQueueRequired = errors.New("queue_name or queue_url must be specified")
 
 // New returns a new instance of the SQS plugin backend.
-func New() *sqsBackend {
+func New() event.EventSubscriptionPlugin {
 	return &sqsBackend{
 		connections: map[string]*sqsConnection{},
 	}
@@ -153,21 +153,13 @@ func (s *sqsBackend) SendSubscriptionEvent(subscriptionID string, eventJson stri
 		return err
 	}
 	backoff := conn.config.NewRetryBackoff()
-	for {
+	err = backoff.Retry(func() error {
 		_, err = conn.client.SendMessage(context.Background(), &sqs.SendMessageInput{
 			MessageBody: &eventJson,
 			QueueUrl:    &conn.queueURL,
 		})
-		if err == nil {
-			return nil
-		} else {
-			err2 := backoff.NextSleep()
-			if err2 != nil {
-				err = errors.Join(err2, err)
-				break
-			}
-		}
-	}
+		return err
+	})
 	if err != nil {
 		s.killConnection(subscriptionID)
 		return err

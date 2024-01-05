@@ -88,3 +88,21 @@ func jitter(t time.Duration) time.Duration {
 	f := float64(t) * (1.0 - maxJitter*rand.Float64())
 	return time.Duration(math.Floor(f))
 }
+
+// Retry calls the given function until it does not return an error, at least once and up to max_retries + 1 times.
+// If the number of retries is exceeded, Retry() will return the last error seen joined with ErrMaxRetry.
+func (b *Backoff) Retry(f func() error) error {
+	for {
+		err := f()
+		if err == nil {
+			return nil
+		} else {
+			err2 := b.NextSleep()
+			if err2 != nil {
+				err = errors.Join(err2, err)
+				break
+			}
+		}
+	}
+	return nil // unreachable
+}

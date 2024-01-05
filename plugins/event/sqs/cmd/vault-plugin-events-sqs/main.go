@@ -19,7 +19,7 @@ func main() {
 	}
 }
 
-// Run instantiates a MSSQL object, and runs the RPC server for the plugin
+// Run instantiates an SQS plugin, and runs the RPC server for the plugin.
 func Run() error {
 	event.Serve(sqs.New())
 	return nil
