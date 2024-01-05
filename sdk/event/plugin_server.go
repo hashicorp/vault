@@ -4,14 +4,12 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
 // Serve is called from within a plugin and wraps the provided
-// Database implementation in a databasePluginRPCServer object and starts a
+// Database implementation in a databasePluginRPCServer object and starts an
 // RPC server.
 func Serve(ev EventSubscriptionPlugin) {
 	plugin.Serve(ServeConfig(ev))
@@ -20,8 +18,7 @@ func Serve(ev EventSubscriptionPlugin) {
 func ServeConfig(ev EventSubscriptionPlugin) *plugin.ServeConfig {
 	err := pluginutil.OptionallyEnableMlock()
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		panic(err)
 	}
 
 	// pluginSets is the map of plugins we can dispense.
