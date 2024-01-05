@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { findAll } from '@ember/test-helpers';
+
 export const SELECTORS = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
@@ -27,6 +29,7 @@ export const SELECTORS = {
   messageError: '[data-test-message-error]',
   searchSelect: {
     options: '.ember-power-select-option',
+    optionIndex: (text) => findAll('.ember-power-select-options li').findIndex((e) => e.innerText === text),
     option: (index = 0) => `.ember-power-select-option:nth-child(${index + 1})`,
     selectedOption: (index = 0) => `[data-test-selected-option="${index}"]`,
     noMatch: '.ember-power-select-option--no-matches-message',
