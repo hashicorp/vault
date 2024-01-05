@@ -18,13 +18,11 @@ export default class CustomMessageService extends Service {
   }
 
   get bannerMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message.type === 'banner') || [];
+    return this.messages?.filter((message) => message?.type === 'banner');
   }
 
   get modalMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message.type === 'modal') || [];
+    return this.messages?.filter((message) => message?.type === 'modal');
   }
 
   async fetchMessages(ns) {
@@ -39,7 +37,7 @@ export default class CustomMessageService extends Service {
       }
       const result = await fetch(url, opts);
       const body = await result.json();
-      if (body.errors) return;
+      if (body.errors) return (this.messages = []);
       const serializer = this.store.serializerFor('config-ui/message');
       this.messages = serializer.mapPayload(body);
     } catch (e) {
