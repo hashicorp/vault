@@ -30,9 +30,9 @@
     "start:mirage": "start () { MIRAGE_DEV_HANDLER=$1 yarn run start; }; start",
     "test": "npm-run-all --print-name lint:js:quiet lint:hbs:quiet && node scripts/start-vault.js",
     "test:enos": "npm-run-all lint:js:quiet lint:hbs:quiet && node scripts/enos-test-ember.js",
-    "test:oss": "yarn run test -f='!enterprise' --split=8 --parallel",
-    "test:quick": "node scripts/start-vault.js --split=8 --parallel",
-    "test:quick-oss": "yarn test:quick -f='!enterprise' --split=8 --parallel",
+    "test:oss": "yarn run test -f='!enterprise' --split=8 --preserve-test-name --parallel",
+    "test:quick": "node scripts/start-vault.js --split=8 --preserve-test-name --parallel",
+    "test:quick-oss": "yarn test:quick -f='!enterprise' --split=8 --preserve-test-name --parallel",
     "types:declare": "declare () { yarn tsc $1 --declaration --allowJs --emitDeclarationOnly --experimentalDecorators --outDir $2; }; declare",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
