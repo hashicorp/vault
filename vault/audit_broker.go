@@ -140,7 +140,8 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	const op = "vault.(AuditBroker).Deregister"
 
-	// Check if the device is registered before acquiring the lock (to prevent errors)
+	// If the backend isn't actually registered, then there's nothing to do.
+	// We don't return any error so that Deregister can be idempotent.
 	if !a.IsRegistered(name) {
 		return nil
 	}
