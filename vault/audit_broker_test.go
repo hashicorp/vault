@@ -224,3 +224,24 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 	err = a.Deregister(context.Background(), "foo2")
 	require.NoError(t, err)
 }
+
+// TestAuditBroker_Register_MultipleFails checks for failure when we try to
+// re-register an audit backend.
+func TestAuditBroker_Register_MultipleFails(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "b2-no-filter"
+	noFilterBackend := testAuditBackend(t, path, map[string]string{})
+
+	err = a.Register(path, noFilterBackend, false)
+	require.NoError(t, err)
+
+	err = a.Register(path, noFilterBackend, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
+}

@@ -94,6 +94,11 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
 	}
 
+	// If the backend is already registered, we cannot re-register it.
+	if a.isRegistered(name) {
+		return fmt.Errorf("%s: backend already registered '%s'", op, name)
+	}
+
 	// Fallback devices are singleton instances, we cannot register more than one or overwrite the existing one.
 	if b.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 		existing, err := a.existingFallbackName()
@@ -140,6 +145,9 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	const op = "vault.(AuditBroker).Deregister"
 
+	a.Lock()
+	defer a.Unlock()
+
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
@@ -147,12 +155,9 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 
 	// If the backend isn't actually registered, then there's nothing to do.
 	// We don't return any error so that Deregister can be idempotent.
-	if !a.IsRegistered(name) {
+	if !a.isRegistered(name) {
 		return nil
 	}
-
-	a.Lock()
-	defer a.Unlock()
 
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -187,11 +192,17 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	return nil
 }
 
-// IsRegistered is used to check if a given audit backend is registered
+// IsRegistered is used to check if a given audit backend is registered.
 func (a *AuditBroker) IsRegistered(name string) bool {
 	a.RLock()
 	defer a.RUnlock()
 
+	return a.isRegistered(name)
+}
+
+// isRegistered is used to check if a given audit backend is registered.
+// This method should be used within the AuditBroker to prevent locking issues.
+func (a *AuditBroker) isRegistered(name string) bool {
 	_, ok := a.backends[name]
 	return ok
 }
