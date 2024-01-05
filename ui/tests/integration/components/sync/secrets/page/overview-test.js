@@ -33,7 +33,8 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    this.owner.lookup('service:version').type = 'enterprise';
+    this.version = this.owner.lookup('service:version');
+    this.version.type = 'enterprise';
     syncScenario(this.server);
     syncHandlers(this.server);
 
@@ -48,7 +49,15 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     );
   });
 
-  test('it should render landing cta component', async function (assert) {
+  test('it should render landing cta component for community', async function (assert) {
+    this.version.type = 'community';
+    this.set('destinations', []);
+    await settled();
+    assert.dom(title).hasText('Secrets Sync Enterprise feature', 'Page title renders');
+    assert.dom(cta.button).doesNotExist('Create first destination button does not render');
+  });
+
+  test('it should render landing cta component for enterprise', async function (assert) {
     this.set('destinations', []);
     await settled();
     assert.dom(title).hasText('Secrets Sync', 'Page title renders');

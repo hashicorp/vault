@@ -367,21 +367,20 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 				}
 			}
 		} else {
-			assert.Contains(t, resp.Data, "data", testcase.name)
-			assert.Contains(t, resp.Data["data"], "active", testcase.name)
-			assert.Contains(t, resp.Data["data"], "authenticated", testcase.name)
-			assert.Contains(t, resp.Data["data"], "type", testcase.name)
-			assert.Contains(t, resp.Data["data"], "start_time", testcase.name)
-			assert.Contains(t, resp.Data["data"], "end_time", testcase.name)
+			assert.Contains(t, resp.Data, "active", testcase.name)
+			assert.Contains(t, resp.Data, "authenticated", testcase.name)
+			assert.Contains(t, resp.Data, "type", testcase.name)
+			assert.Contains(t, resp.Data, "start_time", testcase.name)
+			assert.Contains(t, resp.Data, "end_time", testcase.name)
 			assert.Contains(t, resp.Data, "id", testcase.name)
 			if _, ok := testcase.fieldRawUpdate["authenticated"]; !ok {
-				assert.True(t, resp.Data["data"].(map[string]any)["authenticated"].(bool), testcase.name)
+				assert.True(t, resp.Data["authenticated"].(bool), testcase.name)
 			}
 			if _, ok := testcase.fieldRawUpdate["type"]; !ok {
-				assert.Equal(t, resp.Data["data"].(map[string]any)["type"], uicustommessages.BannerMessageType, testcase.name)
+				assert.Equal(t, resp.Data["type"], uicustommessages.BannerMessageType, testcase.name)
 			}
 			if _, ok := testcase.fieldRawUpdate["end_time"]; !ok {
-				assert.Nil(t, resp.Data["data"].(map[string]any)["end_time"], testcase.name)
+				assert.Nil(t, resp.Data["end_time"], testcase.name)
 			}
 		}
 	}
@@ -454,11 +453,10 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp.Data)
 	assert.Contains(t, resp.Data, "id")
 	assert.Equal(t, resp.Data["id"], message.ID)
-	assert.Contains(t, resp.Data, "data")
-	assert.Contains(t, resp.Data["data"], "active")
-	assert.Equal(t, resp.Data["data"].(map[string]any)["active"], true)
-	assert.Contains(t, resp.Data["data"], "end_time")
-	assert.NotNil(t, resp.Data["data"].(map[string]any)["end_time"])
+	assert.Contains(t, resp.Data, "active")
+	assert.Equal(t, resp.Data["active"], true)
+	assert.Contains(t, resp.Data, "end_time")
+	assert.NotNil(t, resp.Data["end_time"])
 
 	// Change the message so that it doesn't have an end time.
 	message.EndTime = nil
@@ -472,11 +470,10 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp.Data)
 	assert.Contains(t, resp.Data, "id")
 	assert.Equal(t, resp.Data["id"], message.ID)
-	assert.Contains(t, resp.Data, "data")
-	assert.Contains(t, resp.Data["data"], "active")
-	assert.Equal(t, resp.Data["data"].(map[string]any)["active"], true)
-	assert.Contains(t, resp.Data["data"], "end_time")
-	assert.Nil(t, resp.Data["data"].(map[string]any)["end_time"])
+	assert.Contains(t, resp.Data, "active")
+	assert.Equal(t, resp.Data["active"], true)
+	assert.Contains(t, resp.Data, "end_time")
+	assert.Nil(t, resp.Data["end_time"])
 
 	// Check that there's an error when trying to read a non-existant custom
 	// message.
@@ -520,7 +517,6 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
 	assert.NotContains(t, resp.Data, "id")
-	assert.NotContains(t, resp.Data, "data")
 	assert.Contains(t, resp.Data, "error")
 	assert.Contains(t, resp.Data["error"], "failed")
 }
@@ -620,8 +616,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
-	assert.Contains(t, resp.Data, "data")
-	assert.Equal(t, startTime2, resp.Data["data"].(map[string]any)["start_time"].(string))
+	assert.Equal(t, startTime2, resp.Data["start_time"].(string))
 
 	// Update existing custom message with request containing only required
 	// parameters
@@ -633,10 +628,9 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotNil(t, resp.Data)
-	assert.Contains(t, resp.Data, "data")
-	assert.True(t, resp.Data["data"].(map[string]any)["authenticated"].(bool))
-	assert.Equal(t, uicustommessages.BannerMessageType, resp.Data["data"].(map[string]any)["type"])
-	assert.Nil(t, resp.Data["data"].(map[string]any)["end_time"])
+	assert.True(t, resp.Data["authenticated"].(bool))
+	assert.Equal(t, uicustommessages.BannerMessageType, resp.Data["type"])
+	assert.Nil(t, resp.Data["end_time"])
 
 	testcases := []struct {
 		name string
@@ -758,8 +752,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 		}
 
 		if len(testcase.fieldRawDelete)+len(testcase.fieldRawUpdate) == 0 {
-			assert.Contains(t, resp.Data, "data", testcase.name)
-			assert.Contains(t, resp.Data["data"], "active", testcase.name)
+			assert.Contains(t, resp.Data, "active", testcase.name)
 			assert.Contains(t, resp.Data, "id", testcase.name)
 		}
 	}

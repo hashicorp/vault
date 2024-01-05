@@ -4295,7 +4295,7 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 
 		byNS := newClients.Namespaces
 		counts := newClients.Counts
-		for _, typ := range []string{nonEntityTokenActivityType, secretSyncAssociationActivityType, entityActivityType, ACMEActivityType} {
+		for _, typ := range []string{nonEntityTokenActivityType, secretSyncActivityType, entityActivityType, ACMEActivityType} {
 			require.NotContains(t, counts.clientsByType(typ), clientID)
 			require.NotContains(t, byNS[namespace].Mounts[mount].Counts.clientsByType(typ), clientID)
 			require.NotContains(t, byNS[namespace].Counts.clientsByType(typ), clientID)
@@ -4308,7 +4308,7 @@ func TestActivityLog_processNewClients_delete(t *testing.T) {
 		run(t, nonEntityTokenActivityType)
 	})
 	t.Run("secret sync", func(t *testing.T) {
-		run(t, secretSyncAssociationActivityType)
+		run(t, secretSyncActivityType)
 	})
 	t.Run("acme", func(t *testing.T) {
 		run(t, ACMEActivityType)
@@ -4342,7 +4342,7 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 		require.Equal(t, byMonth[monthIndex].Namespaces, byNS)
 		require.Equal(t, byMonth[monthIndex].NewClients.Namespaces, byNS)
 
-		for _, typ := range []string{nonEntityTokenActivityType, secretSyncAssociationActivityType, entityActivityType} {
+		for _, typ := range []string{nonEntityTokenActivityType, secretSyncActivityType, entityActivityType} {
 			if clientType == typ || (clientType == ACMEActivityType && typ == nonEntityTokenActivityType) {
 				require.Contains(t, byMonth[monthIndex].Counts.clientsByType(typ), clientID)
 				require.Contains(t, byMonth[monthIndex].NewClients.Counts.clientsByType(typ), clientID)
@@ -4364,7 +4364,7 @@ func TestActivityLog_processClientRecord(t *testing.T) {
 		run(t, entityActivityType)
 	})
 	t.Run("secret sync", func(t *testing.T) {
-		run(t, secretSyncAssociationActivityType)
+		run(t, secretSyncActivityType)
 	})
 	t.Run("acme", func(t *testing.T) {
 		run(t, ACMEActivityType)
@@ -4651,7 +4651,7 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 		ClientID:      "id-3",
 		NamespaceID:   "ns-3",
 		MountAccessor: "mnt-3",
-		ClientType:    secretSyncAssociationActivityType,
+		ClientType:    secretSyncActivityType,
 	}
 
 	now := time.Now()
@@ -4690,13 +4690,13 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 
 	require.Equal(t, ns1.Entities, uint64(1))
 	require.Equal(t, ns1.NonEntityTokens, uint64(0))
-	require.Equal(t, ns1.SecretSyncAssociations, uint64(0))
+	require.Equal(t, ns1.SecretSyncs, uint64(0))
 	require.Equal(t, ns2.Entities, uint64(0))
 	require.Equal(t, ns2.NonEntityTokens, uint64(1))
-	require.Equal(t, ns2.SecretSyncAssociations, uint64(0))
+	require.Equal(t, ns2.SecretSyncs, uint64(0))
 	require.Equal(t, ns3.Entities, uint64(0))
 	require.Equal(t, ns3.NonEntityTokens, uint64(0))
-	require.Equal(t, ns3.SecretSyncAssociations, uint64(1))
+	require.Equal(t, ns3.SecretSyncs, uint64(1))
 
 	require.Len(t, ns1.Mounts, 1)
 	require.Len(t, ns2.Mounts, 1)
@@ -4711,29 +4711,29 @@ func TestActivityLog_writePrecomputedQuery(t *testing.T) {
 	// ns1 only has an entity client
 	require.Equal(t, 1, ns1.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 0, ns1.Mounts[0].Counts.NonEntityClients)
-	require.Equal(t, 0, ns1.Mounts[0].Counts.SecretSyncAssociations)
+	require.Equal(t, 0, ns1.Mounts[0].Counts.SecretSyncs)
 
 	// ns2 only has a non entity client
 	require.Equal(t, 0, ns2.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 1, ns2.Mounts[0].Counts.NonEntityClients)
-	require.Equal(t, 0, ns2.Mounts[0].Counts.SecretSyncAssociations)
+	require.Equal(t, 0, ns2.Mounts[0].Counts.SecretSyncs)
 
 	// ns3 only has a secret sync association
 	require.Equal(t, 0, ns3.Mounts[0].Counts.EntityClients)
 	require.Equal(t, 0, ns3.Mounts[0].Counts.NonEntityClients)
-	require.Equal(t, 1, ns3.Mounts[0].Counts.SecretSyncAssociations)
+	require.Equal(t, 1, ns3.Mounts[0].Counts.SecretSyncs)
 
 	monthRecord := val.Months[0]
 	// there should only be one month present, since the clients were added with the same timestamp
 	require.Equal(t, monthRecord.Timestamp, timeutil.StartOfMonth(now).UTC().Unix())
 	require.Equal(t, 1, monthRecord.Counts.NonEntityClients)
 	require.Equal(t, 1, monthRecord.Counts.EntityClients)
-	require.Equal(t, 1, monthRecord.Counts.SecretSyncAssociations)
+	require.Equal(t, 1, monthRecord.Counts.SecretSyncs)
 	require.Len(t, monthRecord.Namespaces, 3)
 	require.Len(t, monthRecord.NewClients.Namespaces, 3)
 	require.Equal(t, 1, monthRecord.NewClients.Counts.EntityClients)
 	require.Equal(t, 1, monthRecord.NewClients.Counts.NonEntityClients)
-	require.Equal(t, 1, monthRecord.NewClients.Counts.SecretSyncAssociations)
+	require.Equal(t, 1, monthRecord.NewClients.Counts.SecretSyncs)
 }
 
 type mockTimeNowClock struct {

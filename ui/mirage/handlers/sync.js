@@ -29,7 +29,7 @@ export const associationsResponse = (schema, req) => {
 };
 
 export const syncStatusResponse = (schema, req) => {
-  const { mount, name: secret_name } = req.params;
+  const { mount, secret_name } = req.queryParams;
   const records = schema.db.syncAssociations.where({ mount, secret_name });
   if (!records.length) {
     return new Response(404, {}, { errors: [] });
