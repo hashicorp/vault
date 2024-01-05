@@ -998,12 +998,14 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			TemplateConfig{
 				ExitOnRetryFailure:    true,
 				StaticSecretRenderInt: 1 * time.Minute,
+				MaxConnectionsPerHost: 100,
 			},
 		},
 		"empty": {
 			"./test-fixtures/config-template_config-empty.hcl",
 			TemplateConfig{
-				ExitOnRetryFailure: false,
+				ExitOnRetryFailure:    false,
+				MaxConnectionsPerHost: 10,
 			},
 		},
 	}
