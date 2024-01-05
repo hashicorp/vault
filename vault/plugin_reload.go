@@ -18,18 +18,18 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
+const (
+	pluginReloadPluginsType = "plugins"
+	pluginReloadMountsType  = "mounts"
+)
+
 // reloadMatchingPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
-func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
+func (c *Core) reloadMatchingPluginMounts(ctx context.Context, ns *namespace.Namespace, mounts []string) error {
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return err
-	}
 
 	var errors error
 	for _, mount := range mounts {
@@ -73,8 +73,21 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 // reloadPlugin reloads all mounted backends that are of
 // plugin pluginName (name of the plugin as registered in
 // the plugin catalog).
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int, error) {
+func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace, pluginType consts.PluginType, pluginName string) (int, error) {
 	var reloaded int
+	var secrets, auth, database bool
+	switch pluginType {
+	case consts.PluginTypeSecrets:
+		secrets = true
+	case consts.PluginTypeCredential:
+		auth = true
+	case consts.PluginTypeDatabase:
+		database = true
+	case consts.PluginTypeUnknown:
+		secrets = true
+		auth = true
+		database = true
+	}
 	typeExists := map[consts.PluginType]bool{
 		consts.PluginTypeCredential: false,
 		consts.PluginTypeDatabase:   false,
@@ -92,25 +105,24 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int
 			}
 		}
 	}
+	secrets = secrets && typeExists[consts.PluginTypeSecrets]
+	auth = auth && typeExists[consts.PluginTypeCredential]
+	database = database && typeExists[consts.PluginTypeDatabase]
 
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return reloaded, err
-	}
-
-	// The combined database plugin itself is a secrets plugin, so we need to check
-	// the secrets mount table for database plugins.
-	if typeExists[consts.PluginTypeSecrets] || typeExists[consts.PluginTypeDatabase] {
+	if secrets || database {
 		c.mountsLock.RLock()
 		defer c.mountsLock.RUnlock()
 
 		for _, entry := range c.mounts.Entries {
 			// We dont reload mounts that are not in the same namespace
-			if ns.ID != entry.Namespace().ID {
+			if ns != nil && ns.ID != entry.Namespace().ID {
 				continue
 			}
 
 			if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
+				if !secrets {
+					continue
+				}
 				err := c.reloadBackendCommon(ctx, entry, false)
 				if err != nil {
 					return reloaded, err
@@ -120,14 +132,15 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int
 			}
 
 			// Knowledge of whether a database plugin is in use within a particular
-			// database mount is internal to the database plugin, so we delegate
-			// the reload request with an internally routed request
-			if typeExists[consts.PluginTypeDatabase] && entry.Type == "database" {
+			// database mount is internal to the mount, so we delegate the reload
+			// request with an internally routed request.
+			if database && entry.Type == "database" {
+				reqCtx := namespace.ContextWithNamespace(ctx, entry.namespace)
 				req := &logical.Request{
 					Operation: logical.UpdateOperation,
 					Path:      entry.Path + "reload/" + pluginName,
 				}
-				resp, err := c.router.Route(ctx, req)
+				resp, err := c.router.Route(reqCtx, req)
 				if err != nil {
 					return reloaded, err
 				}
@@ -146,13 +159,13 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int
 		}
 	}
 
-	if typeExists[consts.PluginTypeCredential] {
+	if auth {
 		c.authLock.RLock()
 		defer c.authLock.RUnlock()
 
 		for _, entry := range c.auth.Entries {
 			// We dont reload mounts that are not in the same namespace
-			if ns.ID != entry.Namespace().ID {
+			if ns != nil && ns.ID != entry.Namespace().ID {
 				continue
 			}
 
@@ -162,7 +175,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int
 					return reloaded, err
 				}
 				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
+				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.Version)
 			}
 		}
 	}

@@ -7,7 +7,10 @@ package consts
 // https://github.com/hashicorp/vault/blob/main/api/plugin_types.go
 // Any changes made should be made to both files at the same time.
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 var PluginTypes = []PluginType{
 	PluginTypeUnknown,
@@ -17,6 +20,12 @@ var PluginTypes = []PluginType{
 }
 
 type PluginType uint32
+
+var (
+	_ json.Marshaler   = PluginType(0)
+	_ json.Marshaler   = (*PluginType)(nil)
+	_ json.Unmarshaler = (*PluginType)(nil)
+)
 
 // This is a list of PluginTypes used by Vault.
 // If we need to add any in the future, it would
@@ -63,4 +72,21 @@ func ParsePluginType(pluginType string) (PluginType, error) {
 	default:
 		return PluginTypeUnknown, fmt.Errorf("%q is not a supported plugin type", pluginType)
 	}
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *PluginType) UnmarshalJSON(data []byte) error {
+	var asString string
+	err := json.Unmarshal(data, &asString)
+	if err != nil {
+		return err
+	}
+
+	*p, err = ParsePluginType(asString)
+	return err
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p PluginType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
 }

@@ -305,7 +305,3 @@ func (b *backendGRPCPluginClient) PluginVersion() logical.PluginVersion {
 		Version: reply.GetPluginVersion(),
 	}
 }
-
-func (b *backendGRPCPluginClient) IsExternal() bool {
-	return true
-}

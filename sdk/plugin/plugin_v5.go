@@ -44,10 +44,6 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 	b.client.Reload()
 }
 
-func (b *BackendPluginClientV5) IsExternal() bool {
-	return true
-}
-
 func (b *BackendPluginClientV5) PluginVersion() logical.PluginVersion {
 	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
 		return versioner.PluginVersion()

@@ -160,11 +160,3 @@ func (b *backend) InvalidateKey(ctx context.Context, key string) {
 	defer b.mu.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
 }
-
-func (b *backend) IsExternal() bool {
-	switch b.Backend.(type) {
-	case *plugin.BackendPluginClientV5:
-		return true
-	}
-	return false
-}
