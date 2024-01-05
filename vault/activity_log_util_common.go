@@ -115,7 +115,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
 
-	activityTypes := []string{entityActivityType, nonEntityTokenActivityType, secretSyncAssociationActivityType}
+	activityTypes := []string{entityActivityType, nonEntityTokenActivityType, secretSyncActivityType}
 
 	// Now we will add the clients for the current month to a copy of the billing period's hll to
 	// see how the cardinality grows.
@@ -156,14 +156,14 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	return &activity.MonthRecord{
 		Timestamp: timeutil.StartOfMonth(endTime).UTC().Unix(),
 		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{
-			EntityClients:          currentMonthNewByType[entityActivityType],
-			NonEntityClients:       currentMonthNewByType[nonEntityTokenActivityType],
-			SecretSyncAssociations: currentMonthNewByType[secretSyncAssociationActivityType],
+			EntityClients:    currentMonthNewByType[entityActivityType],
+			NonEntityClients: currentMonthNewByType[nonEntityTokenActivityType],
+			SecretSyncs:      currentMonthNewByType[secretSyncActivityType],
 		}},
 		Counts: &activity.CountsRecord{
-			EntityClients:          totalByType[entityActivityType],
-			NonEntityClients:       totalByType[nonEntityTokenActivityType],
-			SecretSyncAssociations: totalByType[secretSyncAssociationActivityType],
+			EntityClients:    totalByType[entityActivityType],
+			NonEntityClients: totalByType[nonEntityTokenActivityType],
+			SecretSyncs:      totalByType[secretSyncActivityType],
 		},
 	}, nil
 }

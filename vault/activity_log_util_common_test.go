@@ -111,7 +111,7 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	// 1 shared by months 2 and 3 (25)
 	// 2 exclusive to month 3 (35,36)
 	// and 2 new clients (47,48)
-	secretSyncAssociationStruct := map[string]struct{}{
+	secretSyncStruct := map[string]struct{}{
 		"client_5":  {},
 		"client_15": {},
 		"client_25": {},
@@ -123,9 +123,9 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 
 	counts := &processCounts{
 		ClientsByType: map[string]clientIDSet{
-			entityActivityType:                entitiesStruct,
-			nonEntityTokenActivityType:        nonEntitiesStruct,
-			secretSyncAssociationActivityType: secretSyncAssociationStruct,
+			entityActivityType:         entitiesStruct,
+			nonEntityTokenActivityType: nonEntitiesStruct,
+			secretSyncActivityType:     secretSyncStruct,
 		},
 	}
 
@@ -149,15 +149,15 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	require.NoError(t, err)
 
 	require.Equal(t, &activity.CountsRecord{
-		EntityClients:          11,
-		NonEntityClients:       16,
-		SecretSyncAssociations: 7,
+		EntityClients:    11,
+		NonEntityClients: 16,
+		SecretSyncs:      7,
 	}, monthRecord.Counts)
 
 	require.Equal(t, &activity.CountsRecord{
-		EntityClients:          3,
-		NonEntityClients:       4,
-		SecretSyncAssociations: 2,
+		EntityClients:    3,
+		NonEntityClients: 4,
+		SecretSyncs:      2,
 	}, monthRecord.NewClients.Counts)
 
 	// Attempt to compute current month when no records exist
