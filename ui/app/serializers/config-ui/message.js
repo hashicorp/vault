@@ -14,6 +14,19 @@ export default class MessageSerializer extends ApplicationSerializer {
     end_time: { serialize: false },
   };
 
+  getISODateFormat(snapshotDateTime, jsonDateTime) {
+    if (typeof snapshotDateTime === 'object') {
+      return jsonDateTime;
+    }
+
+    // if the snapshot date is in local date time format ("yyyy-MM-dd'T'HH:mm"), we want to ensure
+    // it gets converted to an ISOString
+    if (typeof snapshotDateTime === 'string' && !snapshotDateTime.includes('Z')) {
+      return new Date(snapshotDateTime).toISOString();
+    }
+
+    return snapshotDateTime;
+  }
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'queryRecord') {
       const transformed = {
