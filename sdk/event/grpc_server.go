@@ -21,15 +21,6 @@ type gRPCServer struct {
 	instance EventSubscriptionPlugin
 }
 
-func (g *gRPCServer) Initialize(ctx context.Context, _ *eventplugin.InitializeRequest) (*eventplugin.InitializeResponse, error) {
-	err := g.instance.Initialize(ctx)
-	if err != nil {
-		return &eventplugin.InitializeResponse{}, status.Errorf(codes.Internal, "failed to initialize: %s", err)
-	}
-
-	return &eventplugin.InitializeResponse{}, nil
-}
-
 func (g *gRPCServer) Subscribe(ctx context.Context, request *eventplugin.SubscribeRequest) (*eventplugin.SubscribeResponse, error) {
 	err := g.instance.Subscribe(ctx, &SubscribeRequest{
 		SubscriptionID:   request.SubscriptionId,
@@ -72,11 +63,12 @@ func (g *gRPCServer) Unsubscribe(ctx context.Context, request *eventplugin.Unsub
 	return &eventplugin.UnsubscribeResponse{}, nil
 }
 
-func (g *gRPCServer) Type(_ context.Context, _ *eventplugin.TypeRequest) (*eventplugin.TypeResponse, error) {
-	name, version := g.instance.Type()
-	return &eventplugin.TypeResponse{
-		PluginType:    name,
-		PluginVersion: version,
+func (g *gRPCServer) Type(_ context.Context, _ *eventplugin.PluginVersionRequest) (*eventplugin.PluginVersionResponse, error) {
+	name := g.instance.PluginName()
+	version := g.instance.PluginVersion()
+	return &eventplugin.PluginVersionResponse{
+		PluginName:    name,
+		PluginVersion: version.Version,
 	}, nil
 }
 

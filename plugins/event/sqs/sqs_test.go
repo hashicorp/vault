@@ -11,9 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/hashicorp/go-uuid"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hashicorp/vault/sdk/event"
+	"github.com/stretchr/testify/assert"
 )
 
 func getTestClient(t *testing.T) *sqs.Client {
@@ -80,8 +79,6 @@ func TestSQS_SendOneMessage(t *testing.T) {
 
 	backend := New()
 	ctx := context.Background()
-	err = backend.Initialize(ctx)
-	assert.Nil(t, err)
 
 	subID, err := uuid.GenerateUUID()
 	assert.Nil(t, err)

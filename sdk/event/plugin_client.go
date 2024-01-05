@@ -21,11 +21,10 @@ type EventSubscriptionPluginClient struct {
 }
 
 func (ec *EventSubscriptionPluginClient) PluginVersion() logical.PluginVersion {
-	_, version := ec.Type()
-	return logical.PluginVersion{Version: version}
+	return ec.PluginVersion()
 }
 
-// This wraps the Close call and ensures we both close the backend connection
+// Close wraps the inner Close() call and ensures we both close the backend connection
 // and kill the plugin.
 func (ec *EventSubscriptionPluginClient) Close(ctx context.Context) error {
 	err := ec.EventSubscriptionPlugin.Close(ctx)

@@ -12,13 +12,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/event"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
 
 var _ event.EventSubscriptionPlugin = (*sqsBackend)(nil)
 
-const pluginType = "sqs"
+const pluginName = "sqs"
 
 // ErrQueueRequired is returned if the required queue parameters are not present.
 var ErrQueueRequired = errors.New("queue_name or queue_url must be specified")
@@ -72,10 +73,6 @@ func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
 		return nil, err
 	}
 	return sqs.New(session), nil
-}
-
-func (s *sqsBackend) Initialize(_ context.Context) error {
-	return nil
 }
 
 func (s *sqsBackend) Subscribe(_ context.Context, request *event.SubscribeRequest) error {
@@ -227,8 +224,14 @@ func (s *sqsBackend) Unsubscribe(_ context.Context, subscriptionID string) error
 	return nil
 }
 
-func (s *sqsBackend) Type() (string, string) {
-	return pluginType, version.Version
+func (s *sqsBackend) PluginName() string {
+	return pluginName
+}
+
+func (s *sqsBackend) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{
+		Version: version.GetVersion().Version,
+	}
 }
 
 func (s *sqsBackend) Close(_ context.Context) error {

@@ -18,7 +18,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EventSubscribePluginServiceClient interface {
-	Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*InitializeResponse, error)
 	// Start a new subscription.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error)
 	// Used by Vault to send events to a subscription. Only one stream is allowed per subscription.
@@ -27,7 +26,7 @@ type EventSubscribePluginServiceClient interface {
 	SendSubscriptionEvents(ctx context.Context, opts ...grpc.CallOption) (EventSubscribePluginService_SendSubscriptionEventsClient, error)
 	// Cause the subscription to be deleted and any related information about it cleaned up.
 	Unsubscribe(ctx context.Context, in *UnsubscribeRequest, opts ...grpc.CallOption) (*UnsubscribeResponse, error)
-	Type(ctx context.Context, in *TypeRequest, opts ...grpc.CallOption) (*TypeResponse, error)
+	PluginVersion(ctx context.Context, in *PluginVersionRequest, opts ...grpc.CallOption) (*PluginVersionResponse, error)
 	Close(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*CloseResponse, error)
 }
 
@@ -37,15 +36,6 @@ type eventSubscribePluginServiceClient struct {
 
 func NewEventSubscribePluginServiceClient(cc grpc.ClientConnInterface) EventSubscribePluginServiceClient {
 	return &eventSubscribePluginServiceClient{cc}
-}
-
-func (c *eventSubscribePluginServiceClient) Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*InitializeResponse, error) {
-	out := new(InitializeResponse)
-	err := c.cc.Invoke(ctx, "/eventplugin.v1.EventSubscribePluginService/Initialize", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *eventSubscribePluginServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (*SubscribeResponse, error) {
@@ -100,9 +90,9 @@ func (c *eventSubscribePluginServiceClient) Unsubscribe(ctx context.Context, in 
 	return out, nil
 }
 
-func (c *eventSubscribePluginServiceClient) Type(ctx context.Context, in *TypeRequest, opts ...grpc.CallOption) (*TypeResponse, error) {
-	out := new(TypeResponse)
-	err := c.cc.Invoke(ctx, "/eventplugin.v1.EventSubscribePluginService/Type", in, out, opts...)
+func (c *eventSubscribePluginServiceClient) PluginVersion(ctx context.Context, in *PluginVersionRequest, opts ...grpc.CallOption) (*PluginVersionResponse, error) {
+	out := new(PluginVersionResponse)
+	err := c.cc.Invoke(ctx, "/eventplugin.v1.EventSubscribePluginService/PluginVersion", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +112,6 @@ func (c *eventSubscribePluginServiceClient) Close(ctx context.Context, in *Close
 // All implementations must embed UnimplementedEventSubscribePluginServiceServer
 // for forward compatibility
 type EventSubscribePluginServiceServer interface {
-	Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error)
 	// Start a new subscription.
 	Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error)
 	// Used by Vault to send events to a subscription. Only one stream is allowed per subscription.
@@ -131,7 +120,7 @@ type EventSubscribePluginServiceServer interface {
 	SendSubscriptionEvents(EventSubscribePluginService_SendSubscriptionEventsServer) error
 	// Cause the subscription to be deleted and any related information about it cleaned up.
 	Unsubscribe(context.Context, *UnsubscribeRequest) (*UnsubscribeResponse, error)
-	Type(context.Context, *TypeRequest) (*TypeResponse, error)
+	PluginVersion(context.Context, *PluginVersionRequest) (*PluginVersionResponse, error)
 	Close(context.Context, *CloseRequest) (*CloseResponse, error)
 	mustEmbedUnimplementedEventSubscribePluginServiceServer()
 }
@@ -140,9 +129,6 @@ type EventSubscribePluginServiceServer interface {
 type UnimplementedEventSubscribePluginServiceServer struct {
 }
 
-func (UnimplementedEventSubscribePluginServiceServer) Initialize(context.Context, *InitializeRequest) (*InitializeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Initialize not implemented")
-}
 func (UnimplementedEventSubscribePluginServiceServer) Subscribe(context.Context, *SubscribeRequest) (*SubscribeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
@@ -152,8 +138,8 @@ func (UnimplementedEventSubscribePluginServiceServer) SendSubscriptionEvents(Eve
 func (UnimplementedEventSubscribePluginServiceServer) Unsubscribe(context.Context, *UnsubscribeRequest) (*UnsubscribeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Unsubscribe not implemented")
 }
-func (UnimplementedEventSubscribePluginServiceServer) Type(context.Context, *TypeRequest) (*TypeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
+func (UnimplementedEventSubscribePluginServiceServer) PluginVersion(context.Context, *PluginVersionRequest) (*PluginVersionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PluginVersion not implemented")
 }
 func (UnimplementedEventSubscribePluginServiceServer) Close(context.Context, *CloseRequest) (*CloseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
@@ -170,24 +156,6 @@ type UnsafeEventSubscribePluginServiceServer interface {
 
 func RegisterEventSubscribePluginServiceServer(s grpc.ServiceRegistrar, srv EventSubscribePluginServiceServer) {
 	s.RegisterService(&EventSubscribePluginService_ServiceDesc, srv)
-}
-
-func _EventSubscribePluginService_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InitializeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(EventSubscribePluginServiceServer).Initialize(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/eventplugin.v1.EventSubscribePluginService/Initialize",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EventSubscribePluginServiceServer).Initialize(ctx, req.(*InitializeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _EventSubscribePluginService_Subscribe_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -252,20 +220,20 @@ func _EventSubscribePluginService_Unsubscribe_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _EventSubscribePluginService_Type_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TypeRequest)
+func _EventSubscribePluginService_PluginVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PluginVersionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(EventSubscribePluginServiceServer).Type(ctx, in)
+		return srv.(EventSubscribePluginServiceServer).PluginVersion(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/eventplugin.v1.EventSubscribePluginService/Type",
+		FullMethod: "/eventplugin.v1.EventSubscribePluginService/PluginVersion",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EventSubscribePluginServiceServer).Type(ctx, req.(*TypeRequest))
+		return srv.(EventSubscribePluginServiceServer).PluginVersion(ctx, req.(*PluginVersionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -296,10 +264,6 @@ var EventSubscribePluginService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*EventSubscribePluginServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Initialize",
-			Handler:    _EventSubscribePluginService_Initialize_Handler,
-		},
-		{
 			MethodName: "Subscribe",
 			Handler:    _EventSubscribePluginService_Subscribe_Handler,
 		},
@@ -308,8 +272,8 @@ var EventSubscribePluginService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _EventSubscribePluginService_Unsubscribe_Handler,
 		},
 		{
-			MethodName: "Type",
-			Handler:    _EventSubscribePluginService_Type_Handler,
+			MethodName: "PluginVersion",
+			Handler:    _EventSubscribePluginService_PluginVersion_Handler,
 		},
 		{
 			MethodName: "Close",

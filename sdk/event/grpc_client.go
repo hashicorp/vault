@@ -6,7 +6,6 @@ package event
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/eventplugin"
@@ -25,14 +24,6 @@ type gRPCClient struct {
 
 	eventSenders     map[string]func(string) error
 	eventSendersLock sync.RWMutex
-}
-
-func (c *gRPCClient) Initialize(ctx context.Context) error {
-	_, err := c.client.Initialize(ctx, &eventplugin.InitializeRequest{})
-	if err != nil {
-		return fmt.Errorf("unable to initialize: %s", err.Error())
-	}
-	return nil
 }
 
 // TODO: share this with marhsalling.go
@@ -121,12 +112,12 @@ func (c *gRPCClient) Unsubscribe(ctx context.Context, subscriptionID string) err
 	return err
 }
 
-func (c *gRPCClient) Type() (string, string) {
-	resp, err := c.client.Type(context.Background(), &eventplugin.TypeRequest{})
+func (c *gRPCClient) PluginName() string {
+	resp, err := c.client.PluginVersion(context.Background(), &eventplugin.PluginVersionRequest{})
 	if err != nil {
-		return "", ""
+		return ""
 	}
-	return resp.PluginType, resp.PluginVersion
+	return resp.PluginName
 }
 
 func (c *gRPCClient) Close(ctx context.Context) error {
@@ -135,7 +126,7 @@ func (c *gRPCClient) Close(ctx context.Context) error {
 }
 
 func (c *gRPCClient) PluginVersion() logical.PluginVersion {
-	info, err := c.client.Type(context.Background(), nil)
+	info, err := c.client.PluginVersion(context.Background(), &eventplugin.PluginVersionRequest{})
 	if info == nil || err != nil {
 		return logical.EmptyPluginVersion
 	}
