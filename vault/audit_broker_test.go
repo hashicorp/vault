@@ -180,7 +180,7 @@ func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
 	fallbackBackend2 := testAuditBackend(t, path2, map[string]string{"fallback": "true"})
 	err = a.Register(path1, fallbackBackend2, false)
 	require.Error(t, err)
-	require.EqualError(t, err, "vault.(AuditBroker).Register: existing fallback device already registered: \"juan1/\"")
+	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'juan1/'")
 	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, path1, a.fallbackName)
 }
