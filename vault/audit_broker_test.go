@@ -157,6 +157,9 @@ func TestAuditBroker_Register_Fallback(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, path, a.fallbackName)
+	threshold, found := a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 1, threshold)
 }
 
 // TestAuditBroker_Register_FallbackMultiple tests that trying to register more
@@ -202,10 +205,18 @@ func TestAuditBroker_Deregister_Fallback(t *testing.T) {
 	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, path, a.fallbackName)
 
+	threshold, found := a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 1, threshold)
+
 	err = a.Deregister(context.Background(), path)
 	require.NoError(t, err)
 	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, "", a.fallbackName)
+
+	threshold, found = a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 0, threshold)
 }
 
 // TestAuditBroker_Deregister_Multiple ensures that we can call deregister multiple
