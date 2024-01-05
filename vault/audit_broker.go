@@ -461,13 +461,19 @@ func (a *AuditBroker) Invalidate(ctx context.Context, key string) {
 // guarantee provided by setting the threshold to 1, and must set it to 0.
 // If you are registering an audit device, you should first check if that backend
 // does not have filtering before querying the backends via requiredSuccessThresholdSinks.
+// backends may also contain a fallback device, which should be ignored as it is
+// handled by the fallbackBroker.
 func (a *AuditBroker) requiredSuccessThresholdSinks() int {
 	threshold := 0
 
 	// We might need to check over all the existing backends to discover if any
 	// don't use filtering.
 	for _, be := range a.backends {
-		if !be.backend.HasFiltering() && !be.backend.IsFallback() {
+		switch {
+		case be.backend.IsFallback():
+			// Ignore fallback devices as they're handled by a separate broker.
+			continue
+		case !be.backend.HasFiltering():
 			threshold = 1
 			break
 		}
