@@ -303,6 +303,25 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 			errorExpected: true,
 		},
 		{
+			name: "link-parameter-href-invalid",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"click here": []int{},
+				},
+			},
+			errorExpected: true,
+		},
+		{
+			name: "link-parameter-multiple-links",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"click here":   "http://example.org",
+					"click here 2": "http://ping.net",
+				},
+			},
+			errorExpected: true,
+		},
+		{
 			name: "options-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"options": "not-a-map",
@@ -321,9 +340,8 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 				"options": map[string]any{
 					"color": "red",
 				},
-				"link": map[string]any{
-					"title": "Details",
-					"href":  "https://server.com/details",
+				"link": map[string]string{
+					"Details": "https://server.com/details",
 				},
 			},
 		},
@@ -373,14 +391,24 @@ func TestHandleCreateCustomMessage(t *testing.T) {
 			assert.Contains(t, resp.Data, "start_time", testcase.name)
 			assert.Contains(t, resp.Data, "end_time", testcase.name)
 			assert.Contains(t, resp.Data, "id", testcase.name)
-			if _, ok := testcase.fieldRawUpdate["authenticated"]; !ok {
-				assert.True(t, resp.Data["authenticated"].(bool), testcase.name)
-			}
+			assert.Contains(t, resp.Data, "options", testcase.name)
+			assert.Contains(t, resp.Data, "link", testcase.name)
+			_, ok := testcase.fieldRawUpdate["authenticated"]
+			assert.Equal(t, !ok, resp.Data["authenticated"].(bool), testcase.name)
 			if _, ok := testcase.fieldRawUpdate["type"]; !ok {
 				assert.Equal(t, resp.Data["type"], uicustommessages.BannerMessageType, testcase.name)
+			} else {
+				assert.Equal(t, resp.Data["type"], uicustommessages.ModalMessageType, testcase.name)
 			}
 			if _, ok := testcase.fieldRawUpdate["end_time"]; !ok {
 				assert.Nil(t, resp.Data["end_time"], testcase.name)
+			} else {
+				assert.NotNil(t, resp.Data["end_time"], testcase.name)
+			}
+			if _, ok := testcase.fieldRawUpdate["link"]; !ok {
+				assert.Nil(t, resp.Data["link"], testcase.name)
+			} else {
+				assert.NotNil(t, resp.Data["link"], testcase.name)
 			}
 		}
 	}
@@ -428,7 +456,10 @@ func TestHandleReadCustomMessage(t *testing.T) {
 		StartTime:     earlier,
 		EndTime:       &later,
 		Options:       make(map[string]any),
-		Link:          nil,
+		Link: &uicustommessages.MessageLink{
+			Title: "Click Here",
+			Href:  "www.example.com",
+		},
 	}
 
 	message, err := backend.Core.customMessageManager.AddMessage(nsCtx, *message)
@@ -457,9 +488,12 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.Equal(t, resp.Data["active"], true)
 	assert.Contains(t, resp.Data, "end_time")
 	assert.NotNil(t, resp.Data["end_time"])
+	assert.Contains(t, resp.Data, "link")
+	assert.Equal(t, 1, len(resp.Data["link"].(map[string]string)))
 
 	// Change the message so that it doesn't have an end time.
 	message.EndTime = nil
+	message.Link = nil
 	message, err = backend.Core.customMessageManager.UpdateMessage(nsCtx, *message)
 	require.NoError(t, err)
 	require.NotNil(t, message)
@@ -474,6 +508,8 @@ func TestHandleReadCustomMessage(t *testing.T) {
 	assert.Equal(t, resp.Data["active"], true)
 	assert.Contains(t, resp.Data, "end_time")
 	assert.Nil(t, resp.Data["end_time"])
+	assert.Contains(t, resp.Data, "link")
+	assert.Nil(t, resp.Data["link"])
 
 	// Check that there's an error when trying to read a non-existant custom
 	// message.
@@ -538,7 +574,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 	endTime := now.Add(time.Hour).Format(time.RFC3339Nano)
 	startTime2 := now.UTC().Add(-2 * time.Hour).Format(time.RFC3339Nano)
 
-	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"%s","start_time":"%s","end_time":"%s","link":{},"options":{}}}}`, uicustommessages.ModalMessageType, startTime, endTime)
+	storageEntryValue := fmt.Sprintf(`{"messages":{"xyz":{"id":"xyz","title":"title","message":"message","authenticated":true,"type":"%s","start_time":"%s","end_time":"%s","link":null,"options":null}}}`, uicustommessages.ModalMessageType, startTime, endTime)
 
 	storageEntry := &logical.StorageEntry{
 		Key:   "sys/config/ui/custom-messages",
@@ -595,8 +631,7 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			"start_time":    startTime,
 			"end_time":      endTime,
 			"link": map[string]any{
-				"title": "link-title",
-				"href":  "http://link.url.com",
+				"link-title": "http://link.url.com",
 			},
 			"options": map[string]any{},
 		},
@@ -702,6 +737,23 @@ func TestHandleUpdateCustomMessage(t *testing.T) {
 			name: "link-parameter-invalid",
 			fieldRawUpdate: map[string]any{
 				"link": "link",
+			},
+		},
+		{
+			name: "link-parameter-url-invalid",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"my-link": []int{},
+				},
+			},
+		},
+		{
+			name: "link-parameter-multiple-links",
+			fieldRawUpdate: map[string]any{
+				"link": map[string]any{
+					"click here":   "http://example.org",
+					"click here 2": "http://ping.net",
+				},
 			},
 		},
 		{
