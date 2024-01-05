@@ -49,7 +49,7 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
   };
 
   redirect(model: ModelFrom<SyncSecretsDestinationsIndexRoute>) {
-    if (!model.destinations.length && !model.typeFilter && !model.nameFilter) {
+    if (!model.destinations.meta.total) {
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
     }
   }
