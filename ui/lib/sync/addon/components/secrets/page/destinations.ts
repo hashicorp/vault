@@ -83,8 +83,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
-  onFilterChange(key: string, value: string[] | string | undefined) {
-    const queryValue = Array.isArray(value) ? value[0] : value;
+  onFilterChange(key: string, value: { id: string; name: string }[] | string | undefined) {
+    const queryValue = Array.isArray(value) ? value[0]?.name : value;
     this.router.transitionTo('vault.cluster.sync.secrets.destinations', {
       queryParams: { [key]: queryValue },
     });

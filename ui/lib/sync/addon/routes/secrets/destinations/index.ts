@@ -57,7 +57,7 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
   filterData(dataset: Array<SyncDestinationModel>, name: string, type: string): Array<SyncDestinationModel> {
     let filteredDataset = dataset;
     const filter = (key: keyof SyncDestinationModel, value: string) => {
-      return dataset.filter((model) => {
+      return filteredDataset.filter((model) => {
         return model[key].toLowerCase().includes(value.toLowerCase());
       });
     };
