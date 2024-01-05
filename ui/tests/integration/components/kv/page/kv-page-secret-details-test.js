@@ -329,7 +329,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert
       .dom(PAGE.detail.syncAlert())
       .hasTextContaining(
-        'This secret has been synced from Vault to the destinations below. Updates to this secret will automatically sync to its destinations.',
+        'This secret has been synced from Vault to the 2 destinations below. Updates to this secret will automatically sync to its destinations.',
         'renders alert title referring to plural destinations'
       );
   });
