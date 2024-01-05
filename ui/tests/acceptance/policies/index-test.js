@@ -116,6 +116,7 @@ module('Acceptance | policies/acl', function (hooks) {
       'navigates to policy show on successful save'
     );
     assert.dom(SELECT.policyTitle).hasText(policyLower, 'displays the policy name on the show page');
+    // note: if you have a license that is about to expire this will be true but for the license is-info flash message.
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
     await click(SELECT.listBreadcrumb);
 
