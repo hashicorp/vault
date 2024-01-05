@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, visit } from '@ember/test-helpers';
@@ -48,6 +53,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
   test('it shows the alert banner and modal message', async function (assert) {
+    this.server.get('/sys/internal/ui/mounts', () => ({}));
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       return unauthenticatedMessageResponse;
     });
@@ -65,6 +71,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   test('it shows the multiple modal messages', async function (assert) {
     const modalIdOne = '02180e3f-bd5b-a851-bcc9-6f7983806df0';
     const modalIdTwo = 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c';
+    this.server.get('/sys/internal/ui/mounts', () => ({}));
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       unauthenticatedMessageResponse.data.key_info[modalIdOne].type = 'modal';
@@ -88,6 +95,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   test('it shows the multiple banner messages', async function (assert) {
     const bannerIdOne = '02180e3f-bd5b-a851-bcc9-6f7983806df0';
     const bannerIdTwo = 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c';
+    this.server.get('/sys/internal/ui/mounts', () => ({}));
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       unauthenticatedMessageResponse.data.key_info[bannerIdOne].type = 'banner';
