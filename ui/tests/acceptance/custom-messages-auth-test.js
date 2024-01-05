@@ -52,6 +52,7 @@ const unauthenticatedMessageResponse = {
 module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
+
   test('it shows the alert banner and modal message', async function (assert) {
     this.server.get('/sys/internal/ui/mounts', () => ({}));
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
