@@ -82,9 +82,9 @@ const (
 	// Known types of activity events; there's presently two internal event
 	// types (tokens/clients with and without entities), but we're beginning
 	// to support additional buckets for e.g., ACME requests.
-	nonEntityTokenActivityType        = "non-entity-token"
-	entityActivityType                = "entity"
-	secretSyncAssociationActivityType = "secret-sync-association"
+	nonEntityTokenActivityType = "non-entity-token"
+	entityActivityType         = "entity"
+	secretSyncActivityType     = "secret-sync"
 )
 
 type segmentInfo struct {
@@ -2033,9 +2033,9 @@ func (p *processCounts) contains(client *activity.EntityRecord) bool {
 
 func (p *processCounts) toCountsRecord() *activity.CountsRecord {
 	return &activity.CountsRecord{
-		EntityClients:          p.countByType(entityActivityType),
-		NonEntityClients:       p.countByType(nonEntityTokenActivityType),
-		SecretSyncAssociations: p.countByType(secretSyncAssociationActivityType),
+		EntityClients:    p.countByType(entityActivityType),
+		NonEntityClients: p.countByType(nonEntityTokenActivityType),
+		SecretSyncs:      p.countByType(secretSyncActivityType),
 	}
 }
 
