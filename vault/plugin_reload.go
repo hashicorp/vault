@@ -70,11 +70,10 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 	return errors
 }
 
-// reloadPlugin reloads all mounted backends that are of
-// plugin pluginName (name of the plugin as registered in
-// the plugin catalog).
-func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (int, error) {
-	var reloaded int
+// reloadMatchingPlugin reloads all mounted backends that are named pluginName
+// (name of the plugin as registered in the plugin catalog). It returns the
+// number of plugins that were reloaded and an error if any.
+func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (reloaded int, err error) {
 	typeExists := map[consts.PluginType]bool{
 		consts.PluginTypeCredential: false,
 		consts.PluginTypeDatabase:   false,
