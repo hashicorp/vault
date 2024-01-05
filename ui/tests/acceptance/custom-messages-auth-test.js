@@ -16,7 +16,7 @@ const unauthenticatedMessageResponse = {
   lease_duration: 0,
   data: {
     key_info: {
-      '02180e3f-bd5b-a851-bcc9-6f7983806df0': {
+      'some-awesome-id-2': {
         authenticated: false,
         end_time: null,
         link: {
@@ -28,7 +28,7 @@ const unauthenticatedMessageResponse = {
         title: 'Banner title',
         type: 'banner',
       },
-      'a7d7d9b1-a1ca-800c-17c5-0783be88e29c': {
+      'some-awesome-id-1': {
         authenticated: false,
         end_time: null,
         link: {
@@ -41,7 +41,7 @@ const unauthenticatedMessageResponse = {
         type: 'modal',
       },
     },
-    keys: ['02180e3f-bd5b-a851-bcc9-6f7983806df0', 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c'],
+    keys: ['some-awesome-id-2', 'some-awesome-id-1'],
   },
   wrap_info: null,
   warnings: null,
@@ -53,14 +53,17 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  hooks.beforeEach(function () {
+    return this.server.get('/sys/internal/ui/mounts', () => ({}));
+  });
+
   test('it shows the alert banner and modal message', async function (assert) {
-    this.server.get('/sys/internal/ui/mounts', () => ({}));
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       return unauthenticatedMessageResponse;
     });
     await visit('/vault/auth');
-    const modalId = 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c';
-    const alertId = '02180e3f-bd5b-a851-bcc9-6f7983806df0';
+    const modalId = 'some-awesome-id-1';
+    const alertId = 'some-awesome-id-2';
     assert.dom(PAGE.modal(modalId)).exists();
     assert.dom(PAGE.modalTitle(modalId)).hasText('Modal title');
     assert.dom(PAGE.modalBody(modalId)).exists();
@@ -70,9 +73,8 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     assert.dom(PAGE.alertDescription(alertId)).hasText('hello world hello wolrd');
   });
   test('it shows the multiple modal messages', async function (assert) {
-    const modalIdOne = '02180e3f-bd5b-a851-bcc9-6f7983806df0';
-    const modalIdTwo = 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c';
-    this.server.get('/sys/internal/ui/mounts', () => ({}));
+    const modalIdOne = 'some-awesome-id-2';
+    const modalIdTwo = 'some-awesome-id-1';
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       unauthenticatedMessageResponse.data.key_info[modalIdOne].type = 'modal';
@@ -94,9 +96,8 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     await click(PAGE.modalButton(modalIdTwo));
   });
   test('it shows the multiple banner messages', async function (assert) {
-    const bannerIdOne = '02180e3f-bd5b-a851-bcc9-6f7983806df0';
-    const bannerIdTwo = 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c';
-    this.server.get('/sys/internal/ui/mounts', () => ({}));
+    const bannerIdOne = 'some-awesome-id-2';
+    const bannerIdTwo = 'some-awesome-id-1';
 
     this.server.get('/sys/internal/ui/unauthenticated-messages', function () {
       unauthenticatedMessageResponse.data.key_info[bannerIdOne].type = 'banner';
