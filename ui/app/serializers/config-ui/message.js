@@ -27,7 +27,6 @@ export default class MessageSerializer extends ApplicationSerializer {
 
     return snapshotDateTime;
   }
-
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (requestType === 'queryRecord') {
       const transformed = {
@@ -55,27 +54,35 @@ export default class MessageSerializer extends ApplicationSerializer {
     // if this date is not an object and isn’t a local date string, then return the snapshot date, which is set by default
     // values defined on the model.
     json.start_time = this.getISODateFormat(snapshot.record.startTime, json.start_time);
-    json.end_time = this.getISODateFormat(snapshot.record.endTime, json.end_time);
+    json.end_time = snapshot.record.endTime
+      ? this.getISODateFormat(snapshot.record.endTime, json.end_time)
+      : null;
     delete json?.link_title;
     delete json?.link_href;
     return json;
   }
 
-  extractLazyPaginatedData(payload) {
+  mapPayload(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
         return payload.data.keys.map((key) => {
-          return {
+          const data = {
             id: key,
             linkTitle: payload.data.key_info.link?.title,
             linkHref: payload.data.key_info.link?.href,
             ...payload.data.key_info[key],
           };
+          if (data.message) data.message = decodeString(data.message);
+          return data;
         });
       }
       Object.assign(payload, payload.data);
       delete payload.data;
     }
     return payload;
+  }
+
+  extractLazyPaginatedData(payload) {
+    return this.mapPayload(payload);
   }
 }

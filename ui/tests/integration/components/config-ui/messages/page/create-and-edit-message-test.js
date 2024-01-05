@@ -11,21 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
-
-const PAGE = {
-  radio: (radioName) => `[data-test-radio="${radioName}"]`,
-  field: (fieldName) => `[data-test-field="${fieldName}"]`,
-  input: (input) => `[data-test-input="${input}"]`,
-  button: (buttonName) => `[data-test-button="${buttonName}"]`,
-  inlineErrorMessage: `[data-test-inline-error-message]`,
-  fieldVaildation: (fieldName) => `[data-test-field-validation="${fieldName}"]`,
-  modal: (name) => `[data-test-modal="${name}"]`,
-  modalTitle: (title) => `[data-test-modal-title="${title}"]`,
-  modalBody: '[data-test-modal-body]',
-  modalButton: (name) => `[data-test-modal-button="${name}"]`,
-  alertTitle: (name) => `[data-test-alert-title="${name}"]`,
-  alertDescription: (name) => `[data-test-alert-description="${name}"]`,
-};
+import { PAGE } from 'vault/tests/helpers/config-ui/message-selectors';
 
 module('Integration | Component | messages/page/create-and-edit-message', function (hooks) {
   setupRenderingTest(hooks);
@@ -185,6 +171,6 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     assert.dom(PAGE.modal('preview modal')).exists();
     assert.dom(PAGE.modal('preview image')).doesNotExist();
     assert.dom(PAGE.modalTitle('Preview modal title')).hasText('Preview modal title');
-    assert.dom(PAGE.modalBody).hasText('Some preview modal message thats super long.');
+    assert.dom(PAGE.modalBody('Preview modal title')).hasText('Some preview modal message thats super long.');
   });
 });

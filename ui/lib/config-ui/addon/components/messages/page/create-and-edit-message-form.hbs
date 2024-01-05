@@ -97,7 +97,7 @@
       <M.Header data-test-modal-title={{@message.title}}>
         {{@message.title}}
       </M.Header>
-      <M.Body data-test-modal-body>
+      <M.Body data-test-modal-body={{@message.title}}>
         {{@message.message}}
         {{#if @message.linkHref}}
           <Hds::Link::Inline @icon="external-link" @href={{@message.linkHref}}>

@@ -92,31 +92,43 @@ export default function (server) {
 
   server.get('/sys/internal/ui/unauthenticated-messages', () => {
     return {
+      request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
+      lease_id: '',
+      renewable: false,
+      lease_duration: 0,
       data: {
         key_info: {
-          '01234567-89ab-cdef-0123-456789abcdef': {
-            title: 'Unauthenticated Title One',
-            message:
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
-            type: 'modal',
+          '02180e3f-bd5b-a851-bcc9-6f7983806df0': {
             authenticated: false,
-            start_time: '2023-10-15T02:36:43.986212308Z',
-            end_time: '2024-10-15T02:36:43.986212308Z',
-            options: {},
-          },
-          '76543210-89ab-cdef-0123-456789abcdef': {
-            title: 'Unauthenticated Title Two',
-            message:
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur nulla augue, placerat quis risus blandit, molestie imperdiet massa. Sed blandit rutrum odio quis varius. Fusce purus orci, maximus ac libero.',
+            end_time: null,
+            link: {
+              title: '',
+            },
+            message: 'aGVsbG8gd29ybGQgaGVsbG8gd29scmQ=',
+            options: null,
+            start_time: '2024-01-04T08:00:00Z',
+            title: 'Banner title',
             type: 'banner',
+          },
+          'a7d7d9b1-a1ca-800c-17c5-0783be88e29c': {
             authenticated: false,
-            start_time: '2021-10-15T02:36:43.986212308Z',
-            end_time: '2031-10-15T02:36:43.986212308Z',
-            options: {},
+            end_time: null,
+            link: {
+              title: '',
+            },
+            message: 'aGVyZSBpcyBhIGNvb2wgbWVzc2FnZQ==',
+            options: null,
+            start_time: '2024-01-01T08:00:00Z',
+            title: 'Modal title',
+            type: 'modal',
           },
         },
-        keys: ['01234567-89ab-cdef-0123-456789abcdef', '76543210-89ab-cdef-0123-456789abcdef'],
+        keys: ['02180e3f-bd5b-a851-bcc9-6f7983806df0', 'a7d7d9b1-a1ca-800c-17c5-0783be88e29c'],
       },
+      wrap_info: null,
+      warnings: null,
+      auth: null,
+      mount_type: '',
     };
   });
 
