@@ -41,8 +41,8 @@ import (
 func getClusterPostgresDBWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCluster, logical.SystemView) {
 	t.Helper()
 	cluster, sys := getClusterWithFactory(t, factory)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{})
-
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed",
+		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
 	return cluster, sys
 }
 
@@ -69,8 +69,6 @@ func getClusterWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCl
 	cluster.Start()
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
-
-	t.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
 
