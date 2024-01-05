@@ -207,3 +207,24 @@ func TestAuditBroker_Deregister_Fallback(t *testing.T) {
 	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
 	require.Equal(t, "", a.fallbackName)
 }
+
+// TestAuditBroker_Deregister_Multiple ensures that we can call deregister multiple
+// times without issue if is no matching backend registered.
+func TestAuditBroker_Deregister_Multiple(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	err = a.Deregister(context.Background(), "foo")
+	require.NoError(t, err)
+	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, "", a.fallbackName)
+
+	err = a.Deregister(context.Background(), "foo2")
+	require.NoError(t, err)
+	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, "", a.fallbackName)
+}
