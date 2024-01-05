@@ -78,7 +78,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	// device catches everything, so it cannot be allowed to filter.
 	var fallback bool
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
-		fallback, err = strconv.ParseBool(fallbackRaw)
+		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse 'fallback': %w", op, err)
 		}

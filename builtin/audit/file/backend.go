@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -66,7 +67,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	var fallback bool
 	var err error
 	if fallbackRaw, ok := conf.Config["fallback"]; ok {
-		fallback, err = strconv.ParseBool(fallbackRaw)
+		fallback, err = parseutil.ParseBool(fallbackRaw)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse 'fallback': %w", op, err)
 		}
