@@ -42,40 +42,50 @@ module('Acceptance | pki workflow', function (hooks) {
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
   });
 
-  test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(21);
-    const assertEmptyState = (assert, resource) => {
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
-      assert
-        .dom(SELECTORS.emptyStateTitle)
-        .hasText(
-          'PKI not configured',
-          `${resource} index renders correct empty state title when PKI not configured`
-        );
-      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
-      assert
-        .dom(SELECTORS.emptyStateMessage)
-        .hasText(
-          `This PKI mount hasn't yet been configured with a certificate issuer.`,
-          `${resource} index empty state message correct when PKI not configured`
-        );
-    };
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+  module('not configured', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      await logout.visit();
+      clearRecords(this.store);
+    });
 
-    await click(SELECTORS.rolesTab);
-    assertEmptyState(assert, 'roles');
+    test('empty state messages are correct when PKI not configured', async function (assert) {
+      assert.expect(21);
+      const assertEmptyState = (assert, resource) => {
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
+        assert
+          .dom(SELECTORS.emptyStateTitle)
+          .hasText(
+            'PKI not configured',
+            `${resource} index renders correct empty state title when PKI not configured`
+          );
+        assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
+        assert
+          .dom(SELECTORS.emptyStateMessage)
+          .hasText(
+            `This PKI mount hasn't yet been configured with a certificate issuer.`,
+            `${resource} index empty state message correct when PKI not configured`
+          );
+      };
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    await click(SELECTORS.issuersTab);
-    assertEmptyState(assert, 'issuers');
+      await click(SELECTORS.rolesTab);
+      assertEmptyState(assert, 'roles');
 
-    await click(SELECTORS.certsTab);
-    assertEmptyState(assert, 'certificates');
-    await click(SELECTORS.keysTab);
-    assertEmptyState(assert, 'keys');
-    await click(SELECTORS.tidyTab);
-    assertEmptyState(assert, 'tidy');
+      await click(SELECTORS.issuersTab);
+      assertEmptyState(assert, 'issuers');
+
+      await click(SELECTORS.certsTab);
+      assertEmptyState(assert, 'certificates');
+      await click(SELECTORS.keysTab);
+      assertEmptyState(assert, 'keys');
+      await click(SELECTORS.tidyTab);
+      assertEmptyState(assert, 'tidy');
+    });
   });
 
   module('roles', function (hooks) {
