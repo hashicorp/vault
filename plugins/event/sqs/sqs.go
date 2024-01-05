@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/event"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
@@ -37,7 +36,7 @@ type sqsBackend struct {
 }
 
 type sqsConnection struct {
-	client        *sqs.Client
+	client        *sqs.SQS
 	config        *sqsConfig
 	queueURL      string
 	ctx           context.Context
@@ -49,18 +48,37 @@ type sqsConfig struct {
 	CreateQueue     bool   `mapstructure:"create_queue"`
 	AccessKeyID     string `mapstructure:"access_key_id"`
 	SecretAccessKey string `mapstructure:"secret_access_key"`
-	SessionToken    string `mapstructure:"session_token"`
 	Region          string `mapstructure:"region"`
 	QueueName       string `mapstructure:"queue_name"`
 	QueueURL        string `mapstructure:"queue_url"`
+}
+
+func newClient(sconfig *sqsConfig) (*sqs.SQS, error) {
+	var options []awsutil.Option
+	if sconfig.AccessKeyID != "" && sconfig.SecretAccessKey != "" {
+		options = append(options, awsutil.WithAccessKey(sconfig.AccessKeyID))
+		options = append(options, awsutil.WithSecretKey(sconfig.SecretAccessKey))
+	}
+	if sconfig.Region != "" {
+		options = append(options, awsutil.WithRegion(sconfig.Region))
+	}
+	options = append(options, awsutil.WithEnvironmentCredentials(true))
+	credConfig, err := awsutil.NewCredentialsConfig(options...)
+	if err != nil {
+		return nil, err
+	}
+	session, err := credConfig.GetSession()
+	if err != nil {
+		return nil, err
+	}
+	return sqs.New(session), nil
 }
 
 func (s *sqsBackend) Initialize(_ context.Context) error {
 	return nil
 }
 
-func (s *sqsBackend) Subscribe(ctx context.Context, request *event.SubscribeRequest) error {
-	var options []func(*config.LoadOptions) error
+func (s *sqsBackend) Subscribe(_ context.Context, request *event.SubscribeRequest) error {
 	var sconfig sqsConfig
 	err := mapstructure.Decode(request.Config, &sconfig)
 	if err != nil {
@@ -69,21 +87,13 @@ func (s *sqsBackend) Subscribe(ctx context.Context, request *event.SubscribeRequ
 	if sconfig.QueueName == "" && sconfig.QueueURL == "" {
 		return ErrQueueRequired
 	}
-	if sconfig.AccessKeyID != "" && sconfig.SecretAccessKey != "" {
-		options = append(options, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(sconfig.AccessKeyID, sconfig.SecretAccessKey, sconfig.SessionToken)))
-	}
-	if sconfig.Region != "" {
-		options = append(options, config.WithRegion(sconfig.Region))
-	}
-	awsConfig, err := config.LoadDefaultConfig(ctx, options...)
+	client, err := newClient(&sconfig)
 	if err != nil {
 		return err
 	}
-	client := sqs.NewFromConfig(awsConfig)
-
 	var queueURL string
 	if sconfig.CreateQueue && sconfig.QueueName != "" {
-		resp, err := client.CreateQueue(ctx, &sqs.CreateQueueInput{
+		resp, err := client.CreateQueue(&sqs.CreateQueueInput{
 			QueueName: &sconfig.QueueName,
 		})
 		if err != nil {
@@ -96,7 +106,7 @@ func (s *sqsBackend) Subscribe(ctx context.Context, request *event.SubscribeRequ
 	} else if sconfig.QueueURL != "" {
 		queueURL = sconfig.QueueURL
 	} else {
-		resp, err := client.GetQueueUrl(ctx, &sqs.GetQueueUrlInput{
+		resp, err := client.GetQueueUrl(&sqs.GetQueueUrlInput{
 			QueueName: &sconfig.QueueName,
 		})
 		if err != nil {
@@ -154,13 +164,58 @@ func (s *sqsBackend) SendSubscriptionEvent(subscriptionID string, eventJson stri
 	}
 	backoff := conn.config.NewRetryBackoff()
 	err = backoff.Retry(func() error {
-		_, err = conn.client.SendMessage(context.Background(), &sqs.SendMessageInput{
+		_, err = conn.client.SendMessage(&sqs.SendMessageInput{
 			MessageBody: &eventJson,
 			QueueUrl:    &conn.queueURL,
 		})
 		return err
 	})
 	if err != nil {
+		// refresh client and try again
+		s.killConnection(subscriptionID)
+		return err
+	}
+	return nil
+}
+
+func (s *sqsBackend) refreshClient(subscriptionID string) error {
+	conn, err := s.getConn(subscriptionID)
+	if err != nil {
+		return err
+	}
+	client, err := newClient(conn.config)
+	if err != nil {
+		return err
+	}
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+	conn.client = client
+	// probably not necessary, but just in case
+	s.connections[subscriptionID] = conn
+	return nil
+}
+
+func (s *sqsBackend) sendSubscriptionEventInternal(subscriptionID string, eventJson string, isRetry bool) error {
+	conn, err := s.getConn(subscriptionID)
+	if err != nil {
+		return err
+	}
+	backoff := conn.config.NewRetryBackoff()
+	err = backoff.Retry(func() error {
+		_, err = conn.client.SendMessage(&sqs.SendMessageInput{
+			MessageBody: &eventJson,
+			QueueUrl:    &conn.queueURL,
+		})
+		return err
+	})
+	if err != nil && !isRetry {
+		// refresh client and try again, once
+		err2 := s.refreshClient(subscriptionID)
+		if err2 != nil {
+			return errors.Join(err, err2)
+		}
+		return s.sendSubscriptionEventInternal(subscriptionID, eventJson, true)
+	} else if err != nil && isRetry {
 		s.killConnection(subscriptionID)
 		return err
 	}

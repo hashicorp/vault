@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/stretchr/testify/assert"
@@ -14,11 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/event"
 )
 
-func getClient(t *testing.T, region, accessKey, secretKey, sessionToken string) *sqs.Client {
-	var options []func(*config.LoadOptions) error
-	options = append(options, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, sessionToken)))
-	options = append(options, config.WithRegion(region))
-	awsConfig, err := config.LoadDefaultConfig(context.Background(), options...)
+func getTestClient(t *testing.T) *sqs.Client {
+	awsConfig, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(os.Getenv("AWS_REGION")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,14 +62,11 @@ func receiveMessage(t *testing.T, client *sqs.Client, queueURL string) string {
 
 // TestSQS_SendOneMessage tests that the plugin basic flow of subscribe/sendevent/unsubscribe will send a message to SQS.
 func TestSQS_SendOneMessage(t *testing.T) {
-	region := os.Getenv("SQS_AWS_REGION")
-	accessKey := os.Getenv("SQS_AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("SQS_AWS_SECRET_ACCESS_KEY")
-	sessionToken := os.Getenv("SQS_AWS_SESSION_TOKEN")
-	if accessKey == "" || secretKey == "" {
-		t.Skip("Skipping because SQS_AWS_ACCESS_KEY_ID or SQS_AWS_SECRET_ACCESS_KEY not set")
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		t.Skip("Must set AWS_REGION")
 	}
-	sqsClient := getClient(t, region, accessKey, secretKey, sessionToken)
+	sqsClient := getTestClient(t)
 	temp, err := uuid.GenerateUUID()
 	assert.Nil(t, err)
 	tempQueueName := "event-sqs-test-" + temp
@@ -93,11 +86,8 @@ func TestSQS_SendOneMessage(t *testing.T) {
 	err = backend.Subscribe(ctx, &event.SubscribeRequest{
 		SubscriptionID: subID,
 		Config: map[string]interface{}{
-			"access_key_id":     accessKey,
-			"secret_access_key": secretKey,
-			"session_token":     sessionToken,
-			"region":            region,
-			"queue_name":        tempQueueName,
+			"queue_name": tempQueueName,
+			"region":     os.Getenv("AWS_REGION"),
 		},
 		VerifyConnection: false,
 	})
