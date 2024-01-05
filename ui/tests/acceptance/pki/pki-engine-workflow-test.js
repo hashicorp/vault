@@ -93,9 +93,9 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
       const pki_reader_policy = readerPolicy(this.mountPath, 'roles');
       const pki_editor_policy = updatePolicy(this.mountPath, 'roles');
-      this.pkiRoleReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiRoleEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+      this.pkiRoleReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiRoleEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
       clearRecords(this.store);
     });
@@ -225,9 +225,9 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiKeyReader = await tokenWithPolicy('pki-reader', pki_reader_policy);
-      this.pkiKeyEditor = await tokenWithPolicy('pki-editor', pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+      this.pkiKeyReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiKeyEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
       clearRecords(this.store);
     });
@@ -344,7 +344,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       const pki_admin_policy = adminPolicy(this.mountPath);
-      this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       // Configure engine with a default issuer
       await runCommands([
         `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
@@ -380,7 +380,10 @@ module('Acceptance | pki workflow', function (hooks) {
         capabilities = ["deny"]
       }
       `;
-      this.token = await tokenWithPolicy('pki-issuer-denied-policy', pki_issuer_denied_policy);
+      this.token = await tokenWithPolicy(
+        `pki-issuer-denied-policy-${this.mountPath}`,
+        pki_issuer_denied_policy
+      );
       await logout.visit();
       await authPage.login(this.token);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
@@ -494,7 +497,10 @@ module('Acceptance | pki workflow', function (hooks) {
       ${adminPolicy(this.mountPath)}
       ${readerPolicy(this.mountPath, 'config/cluster')}
       `;
-      this.mixedConfigCapabilities = await tokenWithPolicy('pki-reader', mixed_config_policy);
+      this.mixedConfigCapabilities = await tokenWithPolicy(
+        `pki-reader-${this.mountPath}`,
+        mixed_config_policy
+      );
       await logout.visit();
     });
 
