@@ -10,12 +10,18 @@ import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/overview';
-import { tokenWithPolicy, runCommands, configureEngine } from 'vault/tests/helpers/pki/pki-run-commands';
+import {
+  tokenWithPolicy,
+  runCommands,
+  configureEngine,
+  clearPkiRecords,
+} from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
     const mountPath = `pki`;
@@ -42,6 +48,7 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiIssuersList = await tokenWithPolicy('pki-issuers-list', pki_issuers_list_policy);
     this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
     await logout.visit();
+    clearPkiRecords(this.store);
   });
 
   hooks.afterEach(async function () {

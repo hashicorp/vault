@@ -40,43 +40,53 @@ module('Acceptance | pki workflow', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCmd(`delete sys/mounts/${this.mountPath}`, false);
+    await runCommands([`delete sys/mounts/${this.mountPath}`]);
   });
 
-  test('empty state messages are correct when PKI not configured', async function (assert) {
-    assert.expect(21);
-    const assertEmptyState = (assert, resource) => {
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
-      assert
-        .dom(SELECTORS.emptyStateTitle)
-        .hasText(
-          'PKI not configured',
-          `${resource} index renders correct empty state title when PKI not configured`
-        );
-      assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
-      assert
-        .dom(SELECTORS.emptyStateMessage)
-        .hasText(
-          `This PKI mount hasn't yet been configured with a certificate issuer.`,
-          `${resource} index empty state message correct when PKI not configured`
-        );
-    };
-    await authPage.login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
+  module('not configured', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      await logout.visit();
+      clearPkiRecords(this.store);
+    });
 
-    await click(SELECTORS.rolesTab);
-    assertEmptyState(assert, 'roles');
+    test('empty state messages are correct when PKI not configured', async function (assert) {
+      assert.expect(21);
+      const assertEmptyState = (assert, resource) => {
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/${resource}`);
+        assert
+          .dom(SELECTORS.emptyStateTitle)
+          .hasText(
+            'PKI not configured',
+            `${resource} index renders correct empty state title when PKI not configured`
+          );
+        assert.dom(SELECTORS.emptyStateLink).hasText('Configure PKI');
+        assert
+          .dom(SELECTORS.emptyStateMessage)
+          .hasText(
+            `This PKI mount hasn't yet been configured with a certificate issuer.`,
+            `${resource} index empty state message correct when PKI not configured`
+          );
+      };
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
 
-    await click(SELECTORS.issuersTab);
-    assertEmptyState(assert, 'issuers');
+      await click(SELECTORS.rolesTab);
+      assertEmptyState(assert, 'roles');
 
-    await click(SELECTORS.certsTab);
-    assertEmptyState(assert, 'certificates');
-    await click(SELECTORS.keysTab);
-    assertEmptyState(assert, 'keys');
-    await click(SELECTORS.tidyTab);
-    assertEmptyState(assert, 'tidy');
+      await click(SELECTORS.issuersTab);
+      assertEmptyState(assert, 'issuers');
+
+      await click(SELECTORS.certsTab);
+      assertEmptyState(assert, 'certificates');
+      await click(SELECTORS.keysTab);
+      assertEmptyState(assert, 'keys');
+      await click(SELECTORS.tidyTab);
+      assertEmptyState(assert, 'tidy');
+    });
   });
 
   module('roles', function (hooks) {
@@ -231,10 +241,11 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiKeyReader = await runCmd(tokenWithPolicyCmd('pki-reader', pki_reader_policy));
-      this.pkiKeyEditor = await runCmd(tokenWithPolicyCmd('pki-editor', pki_editor_policy));
-      this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
+      this.pkiKeyReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiKeyEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
+      clearPkiRecords(this.store);
     });
 
     test('shows correct items if user has all permissions', async function (assert) {
@@ -349,9 +360,12 @@ module('Acceptance | pki workflow', function (hooks) {
   module('issuers', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
+      const pki_admin_policy = adminPolicy(this.mountPath);
+      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
       // Configure engine with a default issuer
       await configureEngine(this.mountPath, 'common_name="Hashicorp Test" issuer_name="hashicorp_test"');
       await logout.visit();
+      clearPkiRecords(this.store);
     });
     test('lists the correct issuer metadata info', async function (assert) {
       assert.expect(8);
