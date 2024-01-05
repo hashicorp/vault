@@ -360,10 +360,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
         createPolicyCmd(
-          'data-reader',
+          `data-reader-${this.backend}`,
           personas.dataReader(this.backend) + personas.dataReader(this.emptyBackend)
         ),
-        createTokenCmd('data-reader'),
+        createTokenCmd(`data-reader-${this.backend}`),
       ]);
       await authPage.login(token);
       clearRecords(this.store);
@@ -540,10 +540,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
         createPolicyCmd(
-          'data-reader-list',
+          `data-reader-list-${this.backend}`,
           personas.dataListReader(this.backend) + personas.dataListReader(this.emptyBackend)
         ),
-        createTokenCmd('data-reader-list'),
+        createTokenCmd(`data-reader-list-${this.backend}`),
       ]);
 
       await authPage.login(token);
@@ -727,10 +727,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
         createPolicyCmd(
-          'metadata-maintainer',
+          `metadata-maintainer-${this.backend}`,
           personas.metadataMaintainer(this.backend) + personas.metadataMaintainer(this.emptyBackend)
         ),
-        createTokenCmd('metadata-maintainer'),
+        createTokenCmd(`metadata-maintainer-${this.backend}`),
       ]);
       await authPage.login(token);
       clearRecords(this.store);
@@ -945,10 +945,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd([
         createPolicyCmd(
-          'secret-creator',
+          `secret-creator-${this.backend}`,
           personas.secretCreator(this.backend) + personas.secretCreator(this.emptyBackend)
         ),
-        createTokenCmd('secret-creator'),
+        createTokenCmd(`secret-creator-${this.backend}`),
       ]);
       await authPage.login(token);
       clearRecords(this.store);

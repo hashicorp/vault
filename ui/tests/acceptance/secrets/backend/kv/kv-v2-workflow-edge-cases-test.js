@@ -59,11 +59,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       const backend = this.backend;
       const token = await runCmd([
         createPolicyCmd(
-          'nested-secret-list-reader',
+          `nested-secret-list-reader-${this.backend}`,
           metadataPolicy({ backend, secretPath, capabilities }) +
             dataPolicy({ backend, secretPath, capabilities })
         ),
-        createTokenCmd('nested-secret-list-reader'),
+        createTokenCmd(`nested-secret-list-reader-${this.backend}`),
       ]);
       await authPage.login(token);
     });
@@ -191,14 +191,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // user has different permissions for each secret path
       const token = await runCmd([
         createPolicyCmd(
-          'destruction-no-read',
+          `destruction-no-read-${this.backend}`,
           dataPolicy({ backend, secretPath: 'data-delete-only', capabilities: ['delete'] }) +
             deleteVersionsPolicy({ backend, secretPath: 'delete-version-only' }) +
             destroyVersionsPolicy({ backend, secretPath: 'destroy-version-only' }) +
             metadataPolicy({ backend, secretPath: 'destroy-metadata-only', capabilities: ['delete'] }) +
             metadataListPolicy(backend)
         ),
-        createTokenCmd('destruction-no-read'),
+        createTokenCmd(`destruction-no-read-${this.backend}`),
       ]);
       for (const secret of testSecrets) {
         await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
