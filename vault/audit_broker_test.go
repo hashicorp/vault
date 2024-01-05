@@ -141,3 +141,46 @@ func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, 1, res)
 }
+
+// TestAuditBroker_Register_Fallback ensures we can register a fallback device.
+func TestAuditBroker_Register_Fallback(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "juan/"
+	fallbackBackend := testAuditBackend(t, path, map[string]string{"fallback": "true"})
+	err = a.Register(path, fallbackBackend, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path, a.fallbackName)
+}
+
+// TestAuditBroker_Register_FallbackMultiple tests that trying to register more
+// than a single fallback device results in the correct error.
+func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path1 := "juan1/"
+	fallbackBackend1 := testAuditBackend(t, path1, map[string]string{"fallback": "true"})
+	err = a.Register(path1, fallbackBackend1, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path1, a.fallbackName)
+
+	path2 := "juan2/"
+	fallbackBackend2 := testAuditBackend(t, path2, map[string]string{"fallback": "true"})
+	err = a.Register(path1, fallbackBackend2, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "vault.(AuditBroker).Register: existing fallback device already registered: \"juan1/\"")
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path1, a.fallbackName)
+}
