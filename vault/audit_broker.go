@@ -140,6 +140,11 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	const op = "vault.(AuditBroker).Deregister"
 
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
+	}
+
 	// If the backend isn't actually registered, then there's nothing to do.
 	// We don't return any error so that Deregister can be idempotent.
 	if !a.IsRegistered(name) {
