@@ -1,4 +1,6 @@
 import Transform from '@ember-data/serializer/transform';
+import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
+import { format } from 'date-fns';
 
 export default class DateTimeLocalTransform extends Transform {
   getISODateFormat(deserializedDate) {
@@ -15,7 +17,7 @@ export default class DateTimeLocalTransform extends Transform {
   }
 
   deserialize(serialized) {
-    return serialized;
+    return format(new Date(serialized), datetimeLocalStringFormat);
   }
 
   serialize(deserialized) {
