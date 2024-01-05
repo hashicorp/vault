@@ -42,6 +42,7 @@ module('Acceptance | policies (old)', function (hooks) {
       `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
       'navigates to policy show on successful save'
     );
+    await fillIn('[data-test-component="navigate-input"]', policyLower);
     assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
     await click('[data-test-policy-list-link] a');
@@ -63,6 +64,7 @@ module('Acceptance | policies (old)', function (hooks) {
       `/vault/policies/acl`,
       'navigates to policy list on successful deletion'
     );
+    await fillIn('[data-test-component="navigate-input"]', policyLower);
     assert
       .dom(`[data-test-policy-item="${policyLower}"]`)
       .doesNotExist('deleted policy is not shown in the list');
