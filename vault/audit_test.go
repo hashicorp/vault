@@ -254,7 +254,7 @@ func TestAudit_enableAudit_fallback_invalid(t *testing.T) {
 	core.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 	err := core.enableAudit(context.Background(), entry, false)
 	require.Error(t, err)
-	require.EqualError(t, err, "unable to enable audit device, cannot parse supplied 'fallback' setting for path 'noop/': cannot parse '' as bool: strconv.ParseBool: parsing \"juan\": invalid syntax")
+	require.EqualError(t, err, "unable to enable audit device 'noop/', cannot parse supplied 'fallback' setting: cannot parse '' as bool: strconv.ParseBool: parsing \"juan\": invalid syntax")
 }
 
 // TestAudit_enableAudit_fallback_two ensures trying to enable a second fallback
