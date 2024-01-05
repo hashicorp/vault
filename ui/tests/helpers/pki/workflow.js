@@ -23,6 +23,7 @@ export const SELECTORS = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateLink: '.empty-state-actions a',
   emptyStateMessage: '[data-test-empty-state-message]',
+  overviewIssuerCount: '[data-test-overview-issuers-count]',
   // TABS
   overviewTab: '[data-test-secret-list-tab="Overview"]',
   rolesTab: '[data-test-secret-list-tab="Roles"]',
