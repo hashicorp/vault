@@ -27,9 +27,6 @@ export default class DatabaseRoleEdit extends Component {
 
   get warningMessages() {
     const warnings = {};
-    if (this.args.model.canUpdateDb === false) {
-      warnings.database = `You don’t have permissions to update this database connection, so this role cannot be created.`;
-    }
     if (
       (this.args.model.type === 'dynamic' && this.args.model.canCreateDynamic === false) ||
       (this.args.model.type === 'static' && this.args.model.canCreateStatic === false)
