@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -75,6 +75,11 @@ export default class FormFieldComponent extends Component {
     this.showInput = !!modelValue;
   }
 
+  get hasRadioSubText() {
+    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
+  }
+
   get hideLabel() {
     const { type, options } = this.args.attr;
     if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
@@ -116,6 +121,11 @@ export default class FormFieldComponent extends Component {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
   }
 
   onChange() {
@@ -178,5 +188,13 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
+  }
+
+  @action
+  handleChecklist(event) {
+    const valueArray = this.args.model[this.valuePath];
+    const method = event.target.checked ? 'addObject' : 'removeObject';
+    valueArray[method](event.target.value);
+    this.setAndBroadcast(valueArray);
   }
 }

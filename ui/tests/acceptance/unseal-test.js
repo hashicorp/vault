@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
@@ -8,7 +8,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 const { unsealKeys } = VAULT_KEYS;
@@ -20,17 +19,13 @@ module('Acceptance | unseal', function (hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(function () {
-    return logout.visit();
-  });
-
   test('seal then unseal', async function (assert) {
     await visit('/vault/settings/seal');
 
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal] button');
+    await click('[data-test-seal]');
 
     await click('[data-test-confirm-button]');
 
@@ -40,7 +35,7 @@ module('Acceptance | unseal', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-input]', key);
+      await fillIn('[data-test-shamir-key-input]', key);
 
       await click('button[type="submit"]');
 

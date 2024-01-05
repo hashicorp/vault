@@ -1,12 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 'use strict';
 
 module.exports = {
-  test_page: 'tests/index.html?hidepassed',
+  test_page: 'tests/index.html?hidepassed&enableA11yAudit',
   tap_quiet_logs: true,
   tap_failed_tests_only: true,
   disable_watching: true,

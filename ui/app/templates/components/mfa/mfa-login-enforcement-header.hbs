@@ -1,18 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @isInline}}
   <h3 class="title is-5" data-test-mleh-title>Enforcement</h3>
 {{else}}
   <PageHeader as |p|>
     <p.top>
-      <nav class="breadcrumb">
-        <ul>
-          <li>
-            <span class="sep">&#x0002f;</span>
-            <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
-              Enforcements
-            </LinkTo>
-          </li>
-        </ul>
-      </nav>
+      <Hds::Breadcrumb>
+        <Hds::Breadcrumb::Item @text="Enforcements" @route="vault.cluster.access.mfa.enforcements.index" />
+        <Hds::Breadcrumb::Item @text={{@heading}} @current={{true}} />
+      </Hds::Breadcrumb>
     </p.top>
     <p.levelLeft>
       <h1 class="title is-3" data-test-mleh-title>
@@ -31,7 +30,7 @@
       An enforcement will define which auth types, auth mounts, groups, and/or entities will require this MFA method. Keep in
       mind that only one of these conditions needs to be satisfied. For example, if an authentication method is added here,
       all entities and groups which make use of that authentication method will be subject to an MFA request.
-      <DocLink @path="/docs/auth/login-mfa">Learn more here.</DocLink>
+      <DocLink @path="/vault/docs/auth/login-mfa">Learn more here.</DocLink>
     {{/if}}
   </p>
   {{#if @isInline}}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -21,6 +21,12 @@ type keySpecs struct {
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "issue",
+			OperationSuffix: "certificate",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{

@@ -1,18 +1,22 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -80,9 +84,14 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
+    // Popup menu causes flakiness
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(28);
-    const now = new Date().getTime();
-    const sshPath = `ssh-${now}`;
+    const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
     await settled();
@@ -109,7 +118,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
       await click('[ data-test-secret-create]');
 
       assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH role'),
+        find('[data-test-secret-header]').textContent.includes('SSH Role'),
         `${role.type}: renders the create page`
       );
 

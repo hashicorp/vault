@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -179,7 +179,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 	// core.Logger().Printf("[TRACE] mounting transit")
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
-		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
+		bytes.NewBufferString("{\"type\": \"transit\"}"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 		for _, chosenHost := range hosts {
 			for _, chosenKey := range keys {
 				// Try to write the key to make sure it exists
-				_, err := doReq("POST", chosenHost+"keys/"+fmt.Sprintf("%s-%t", chosenKey, parallel), bytes.NewBuffer([]byte("{}")))
+				_, err := doReq("POST", chosenHost+"keys/"+fmt.Sprintf("%s-%t", chosenKey, parallel), bytes.NewBufferString("{}"))
 				if err != nil {
 					panic(err)
 				}
@@ -283,7 +283,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 			chosenHost = hosts[id%len(hosts)]
 			chosenKey = fmt.Sprintf("key-%t-%d", parallel, id)
 
-			_, err := doReq("POST", chosenHost+"keys/"+chosenKey, bytes.NewBuffer([]byte("{}")))
+			_, err := doReq("POST", chosenHost+"keys/"+chosenKey, bytes.NewBufferString("{}"))
 			if err != nil {
 				panic(err)
 			}
@@ -320,7 +320,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 			// Encrypt our plaintext and store the result
 			case "encrypt":
 				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
-				resp, err := doReq("POST", chosenHost+"encrypt/"+chosenKey, bytes.NewBuffer([]byte(fmt.Sprintf("{\"plaintext\": \"%s\"}", testPlaintextB64))))
+				resp, err := doReq("POST", chosenHost+"encrypt/"+chosenKey, bytes.NewBufferString(fmt.Sprintf("{\"plaintext\": \"%s\"}", testPlaintextB64)))
 				if err != nil {
 					panic(err)
 				}
@@ -347,7 +347,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 				}
 
 				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
-				resp, err := doReq("POST", chosenHost+"decrypt/"+chosenKey, bytes.NewBuffer([]byte(fmt.Sprintf("{\"ciphertext\": \"%s\"}", ct))))
+				resp, err := doReq("POST", chosenHost+"decrypt/"+chosenKey, bytes.NewBufferString(fmt.Sprintf("{\"ciphertext\": \"%s\"}", ct)))
 				if err != nil {
 					panic(err)
 				}
@@ -376,7 +376,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 			// Rotate to a new key version
 			case "rotate":
 				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
-				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/rotate", bytes.NewBuffer([]byte("{}")))
+				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/rotate", bytes.NewBufferString("{}"))
 				if err != nil {
 					panic(err)
 				}
@@ -413,7 +413,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 				// core.Logger().Printf("[TRACE] %s, %s, %d, new min version %d", chosenFunc, chosenKey, id, setVersion)
 
-				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/config", bytes.NewBuffer([]byte(fmt.Sprintf("{\"min_decryption_version\": %d}", setVersion))))
+				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/config", bytes.NewBufferString(fmt.Sprintf("{\"min_decryption_version\": %d}", setVersion)))
 				if err != nil {
 					panic(err)
 				}
@@ -472,7 +472,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/auth/cert", cores[0].Listeners[0].Address.Port),
-		bytes.NewBuffer([]byte("{\"type\": \"cert\"}")))
+		bytes.NewBufferString("{\"type\": \"cert\"}"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,9 +6,11 @@ description: The `/sys/metrics` endpoint is used to get telemetry metrics for Va
 
 # `/sys/metrics`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/metrics` endpoint is used to get telemetry metrics for Vault.
 
-## Read Telemetry Metrics
+## Read telemetry metrics
 
 This endpoint returns the telemetry metrics for Vault. It can be used by metrics
 collections systems like [Prometheus](https://prometheus.io) that use a pull
@@ -24,7 +26,7 @@ model for metrics collection.
   default metrics format is JSON. Setting `format` to `prometheus` will return the
   metrics in [Prometheus format](https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format).
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -32,7 +34,7 @@ $ curl \
     'http://127.0.0.1:8200/v1/sys/metrics?format=prometheus'
 ```
 
-### Sample Response
+### Sample response
 
 This response is only returned for a `GET` request.
 

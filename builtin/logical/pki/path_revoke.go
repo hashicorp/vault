@@ -1,10 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -16,31 +17,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 )
 
 func pathListCertsRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revoked/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "revoked-certs",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: `List of Keys`,
-								Required:    false,
-							},
-						},
-					}},
-				},
 			},
 		},
 
@@ -52,6 +50,11 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 func pathListCertsRevocationQueue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/revocation-queue/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "certs-revocation-queue",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -67,6 +70,12 @@ func pathListCertsRevocationQueue(b *backend) *framework.Path {
 func pathRevoke(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -92,7 +101,7 @@ signed by an issuer in this mount.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -120,6 +129,13 @@ signed by an issuer in this mount.`,
 func pathRevokeWithKey(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `revoke-with-key`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "with-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial_number": {
 				Type: framework.TypeString,
@@ -150,7 +166,7 @@ be in PEM format.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -178,6 +194,12 @@ be in PEM format.`,
 func pathRotateCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "crl",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -210,6 +232,12 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl/rotate-delta`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "rotate",
+			OperationSuffix: "delta-crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRotateDeltaCRLRead,
@@ -240,6 +268,11 @@ func pathRotateDeltaCRL(b *backend) *framework.Path {
 func pathListUnifiedRevoked(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/unified-revoked/?$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "unified-revoked-certs",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -275,7 +308,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	//
 	// We return the parsed serial number, an optionally-nil byte array to
 	// write out to disk, and an error if one occurred.
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		// We require listing all issuers from the 1.11 method. If we're
 		// still using the legacy CA bundle but with the newer certificate
 		// attribute, we err and require the operator to upgrade and migrate
@@ -404,6 +437,28 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 		return fmt.Errorf("failed to parse provided private key: %w", err)
 	}
 
+	return validatePrivateKeyMatchesCert(signer, certReference)
+}
+
+func validatePrivateKeyMatchesCert(signer crypto.Signer, certReference *x509.Certificate) error {
+	public := signer.Public()
+
+	switch certReference.PublicKey.(type) {
+	case *rsa.PublicKey:
+		rsaPriv, ok := signer.(*rsa.PrivateKey)
+		if !ok {
+			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
+		}
+
+		if err := rsaPriv.Validate(); err != nil {
+			return errutil.UserError{Err: fmt.Sprintf("error validating integrity of private key: %v", err)}
+		}
+	}
+
+	return validatePublicKeyMatchesCert(public, certReference)
+}
+
+func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509.Certificate) error {
 	// Finally, verify if the cert and key match. This code has been
 	// cribbed from the Go TLS config code, with minor modifications.
 	//
@@ -411,22 +466,18 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 	// components and ensure we validate exponent and curve information
 	// as well.
 	//
-	//
 	// See: https://github.com/golang/go/blob/c6a2dada0df8c2d75cf3ae599d7caed77d416fa2/src/crypto/tls/tls.go#L304-L331
 	switch certPub := certReference.PublicKey.(type) {
 	case *rsa.PublicKey:
-		privPub, ok := signer.Public().(*rsa.PublicKey)
+		privPub, ok := verifier.(*rsa.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
-		}
-		if err := signer.(*rsa.PrivateKey).Validate(); err != nil {
-			return err
 		}
 		if certPub.N.Cmp(privPub.N) != 0 || certPub.E != privPub.E {
 			return errutil.UserError{Err: "provided private key does not match certificate's public key"}
 		}
 	case *ecdsa.PublicKey:
-		privPub, ok := signer.Public().(*ecdsa.PublicKey)
+		privPub, ok := verifier.(*ecdsa.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
 		}
@@ -434,7 +485,7 @@ func (b *backend) pathRevokeWriteHandleKey(req *logical.Request, certReference *
 			return errutil.UserError{Err: "provided private key does not match certificate's public key"}
 		}
 	case ed25519.PublicKey:
-		privPub, ok := signer.Public().(ed25519.PublicKey)
+		privPub, ok := verifier.(ed25519.PublicKey)
 		if !ok {
 			return errutil.UserError{Err: "provided private key type does not match certificate's public key type"}
 		}
@@ -473,7 +524,7 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig,
 	}
 
 	if err := sc.Storage.Put(sc.Context, reqEntry); err != nil {
-		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w\nThis may occur when the active node of the primary performance replication cluster is unavailable.", err)
+		return nil, fmt.Errorf("error persisting cross-cluster revocation request: %w", err)
 	}
 
 	resp := &logical.Response{
@@ -485,7 +536,7 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *crlConfig,
 	return resp, nil
 }
 
-func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *roleEntry) (*logical.Response, error) {
+func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *issuing.RoleEntry) (*logical.Response, error) {
 	rawSerial, haveSerial := data.GetOk("serial_number")
 	rawCertificate, haveCert := data.GetOk("certificate")
 	sc := b.makeStorageContext(ctx, req.Storage)
@@ -514,7 +565,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 	var cert *x509.Certificate
 	var serial string
 
-	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	config, err := sc.Backend.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
 	}
@@ -591,18 +642,25 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		}
 	}
 
-	b.revokeStorageLock.Lock()
-	defer b.revokeStorageLock.Unlock()
+	// Assumption: this check is cheap. Call this twice, in the cert-import
+	// case, to allow cert verification to get rejected on the standby node,
+	// but we still need it to protect the serial number case.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
+		return nil, logical.ErrReadOnly
+	}
+
+	b.GetRevokeStorageLock().Lock()
+	defer b.GetRevokeStorageLock().Unlock()
 
 	return revokeCert(sc, config, cert)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	b.revokeStorageLock.RLock()
-	defer b.revokeStorageLock.RUnlock()
+	b.GetRevokeStorageLock().RLock()
+	defer b.GetRevokeStorageLock().RUnlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.CrlBuilder().rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -612,24 +670,30 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 		}
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"success": true,
 		},
-	}, nil
+	}
+
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching CRL configuration: %w", err)
 	}
 
 	isEnabled := cfg.EnableDelta
 
-	crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
+	warnings, crlErr := b.CrlBuilder().rebuildDeltaCRLsIfForced(sc, true)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -647,6 +711,9 @@ func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Reque
 
 	if !isEnabled {
 		resp.AddWarning("requested rebuild of delta CRL when delta CRL is not enabled; this is a no-op")
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	return resp, nil

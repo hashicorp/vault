@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -17,12 +17,11 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -36,12 +35,15 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+func getClusterPostgresDB(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -54,27 +56,34 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Postgres", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Mongo", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlas", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{})
 
 	return cluster, sys
 }
 
-func TestBackend_PluginMain_Postgres(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
+func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
+	t.Helper()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"database": Factory,
+		},
+		BuiltinRegistry: builtinplugins.Registry,
+		PluginDirectory: pluginDir,
 	}
 
-	dbType, err := postgresql.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize postgres: %s", err)
-	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
 
-	v5.Serve(dbType.(v5.Database))
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
+
+	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
+
+	return cluster, sys
 }
 
 func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
@@ -83,48 +92,6 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 	}
 
 	v5.ServeMultiplex(postgresql.New)
-}
-
-func TestBackend_PluginMain_Mongo(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodb.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodb: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodb.New)
-}
-
-func TestBackend_PluginMain_MongoAtlas(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	dbType, err := mongodbatlas.New()
-	if err != nil {
-		t.Fatalf("Failed to initialize mongodbatlas: %s", err)
-	}
-
-	v5.Serve(dbType.(v5.Database))
-}
-
-func TestBackend_PluginMain_MongoAtlasMultiplexed(t *testing.T) {
-	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
-		return
-	}
-
-	v5.ServeMultiplex(mongodbatlas.New)
 }
 
 func TestBackend_RoleUpgrade(t *testing.T) {
@@ -183,7 +150,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -370,7 +337,7 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_BadConnectionString(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -419,7 +386,7 @@ func TestBackend_BadConnectionString(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -626,7 +593,7 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_connectionCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -655,6 +622,23 @@ func TestBackend_connectionCrud(t *testing.T) {
 		Data:      data,
 	}
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Configure a second connection to confirm below it doesn't get restarted.
+	data = map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test-hana",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
@@ -750,17 +734,49 @@ func TestBackend_connectionCrud(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	// Reset Connection
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "reset/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	// Test endpoints for reloading plugins.
+	for _, reloadPath := range []string{
+		"reset/plugin-test",
+		"reload/postgresql-database-plugin",
+	} {
+		getConnectionID := func(name string) string {
+			t.Helper()
+			dbBackend, ok := b.(*databaseBackend)
+			if !ok {
+				t.Fatal("could not convert logical.Backend to databaseBackend")
+			}
+			dbi := dbBackend.connections.Get(name)
+			if dbi == nil {
+				t.Fatal("no plugin-test dbi")
+			}
+			return dbi.ID()
+		}
+		initialID := getConnectionID("plugin-test")
+		hanaID := getConnectionID("plugin-test-hana")
+		req = &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      reloadPath,
+			Storage:   config.StorageView,
+			Data:      map[string]interface{}{},
+		}
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+		if initialID == getConnectionID("plugin-test") {
+			t.Fatal("ID unchanged after connection reset")
+		}
+		if hanaID != getConnectionID("plugin-test-hana") {
+			t.Fatal("hana plugin got restarted but shouldn't have been")
+		}
+		if strings.HasPrefix(reloadPath, "reload/") {
+			if expected := 1; expected != resp.Data["count"] {
+				t.Fatalf("expected %d but got %d", expected, resp.Data["count"])
+			}
+			if expected := []string{"plugin-test"}; !reflect.DeepEqual(expected, resp.Data["connections"]) {
+				t.Fatalf("expected %v but got %v", expected, resp.Data["connections"])
+			}
+		}
 	}
 
 	// Get creds
@@ -811,7 +827,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1064,7 +1080,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_allowedRoles(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1261,7 +1277,7 @@ func TestBackend_allowedRoles(t *testing.T) {
 }
 
 func TestBackend_RotateRootCredentials(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -1362,7 +1378,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 }
 
 func TestBackend_ConnectionURL_redacted(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
@@ -1513,7 +1529,7 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{})
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()

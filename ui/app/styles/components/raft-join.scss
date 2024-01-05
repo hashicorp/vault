@@ -1,14 +1,14 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .raft-join .field {
   margin-bottom: 0;
 }
 .raft-join .box.is-fullwidth {
-  padding-top: $spacing-s;
-  padding-bottom: $spacing-s;
+  padding-top: $spacing-12;
+  padding-bottom: $spacing-12;
 }
 .raft-join-unseal {
   color: $orange;

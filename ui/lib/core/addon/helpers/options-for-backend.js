@@ -1,10 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
 import { capitalize } from '@ember/string';
+
+// TODO move all pki related logic to its ember engine
+// then we can remove use of SecretListHeader there, and use self-managed component like TabPageHeader in k8
 
 const DEFAULT_DISPLAY = {
   searchPlaceholder: 'Filter secrets',
@@ -14,36 +17,7 @@ const DEFAULT_DISPLAY = {
   editComponent: 'secret-edit',
   listItemPartial: 'secret-list/item',
 };
-const PKI_ENGINE_BACKEND = {
-  displayName: 'PKI',
-  navigateTree: false,
-  tabs: [
-    {
-      label: 'Overview',
-      link: 'overview',
-    },
-    {
-      label: 'Roles',
-      link: 'roles',
-    },
-    {
-      label: 'Issuers',
-      link: 'issuers',
-    },
-    {
-      label: 'Keys',
-      link: 'keys',
-    },
-    {
-      label: 'Certificates',
-      link: 'certificates',
-    },
-    {
-      label: 'Configuration',
-      link: 'configuration',
-    },
-  ],
-};
+
 const SECRET_BACKENDS = {
   aws: {
     displayName: 'AWS',
@@ -53,33 +27,6 @@ const SECRET_BACKENDS = {
     navigateTree: false,
     editComponent: 'role-aws-edit',
     listItemPartial: 'secret-list/aws-role-item',
-  },
-  pki: {
-    displayName: 'PKI',
-    navigateTree: false,
-    listItemPartial: 'secret-list/pki-role-item',
-    tabs: [
-      {
-        name: 'roles',
-        label: 'Roles',
-        searchPlaceholder: 'Filter roles',
-        item: 'role',
-        create: 'Create role',
-        editComponent: 'pki/role-pki-edit',
-      },
-      {
-        name: 'cert',
-        modelPrefix: 'cert/',
-        label: 'Certificates',
-        searchPlaceholder: 'Filter certificates',
-        item: 'certificate',
-        message: 'Issue a certificate from a role.',
-        create: 'Create role',
-        tab: 'cert',
-        listItemPartial: 'secret-list/pki-cert-item',
-        editComponent: 'pki/pki-cert-show',
-      },
-    ],
   },
   ssh: {
     displayName: 'SSH',
@@ -201,12 +148,8 @@ const SECRET_BACKENDS = {
   },
 };
 
-export function optionsForBackend(backend, tab, isEngine) {
-  let selected = SECRET_BACKENDS[backend];
-  if (backend === 'pki' && isEngine) {
-    selected = PKI_ENGINE_BACKEND;
-  }
-
+export function optionsForBackend(backend, tab) {
+  const selected = SECRET_BACKENDS[backend];
   let backendOptions;
   if (selected && selected.tabs) {
     const tabData =
@@ -220,6 +163,6 @@ export function optionsForBackend(backend, tab, isEngine) {
   return backendOptions;
 }
 
-export default buildHelper(function ([backend, tab, isEngine]) {
-  return optionsForBackend(backend, tab, isEngine);
+export default buildHelper(function ([backend, tab]) {
+  return optionsForBackend(backend, tab);
 });

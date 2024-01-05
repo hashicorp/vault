@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !race && !hsm && !fips_140_3
 
@@ -11,6 +11,7 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -21,9 +22,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -285,6 +293,13 @@ func TestServer(t *testing.T) {
 			0,
 			[]string{"-test-verify-only"},
 		},
+		{
+			"recovery_mode",
+			testBaseHCL(t, "") + inmemHCL,
+			"",
+			0,
+			[]string{"-test-verify-only", "-recovery"},
+		},
 	}
 
 	for _, tc := range cases {
@@ -294,26 +309,142 @@ func TestServer(t *testing.T) {
 			t.Parallel()
 
 			ui, cmd := testServerCommand(t)
-			f, err := ioutil.TempFile("", "")
-			if err != nil {
-				t.Fatalf("error creating temp dir: %v", err)
-			}
-			f.WriteString(tc.contents)
-			f.Close()
-			defer os.Remove(f.Name())
+
+			f, err := os.CreateTemp(t.TempDir(), "")
+			require.NoErrorf(t, err, "error creating temp dir: %v", err)
+
+			_, err = f.WriteString(tc.contents)
+			require.NoErrorf(t, err, "cannot write temp file contents")
+
+			err = f.Close()
+			require.NoErrorf(t, err, "unable to close temp file")
 
 			args := append(tc.args, "-config", f.Name())
-
 			code := cmd.Run(args)
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			require.Equal(t, tc.code, code, "expected %d to be %d: %s", code, tc.code, output)
+			require.Contains(t, output, tc.exp, "expected %q to contain %q", output, tc.exp)
+		})
+	}
+}
 
-			if code != tc.code {
-				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
+// TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
+func TestServer_DevTLS(t *testing.T) {
+	ui, cmd := testServerCommand(t)
+	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+	retCode := cmd.Run(args)
+	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+	require.Equal(t, 0, retCode, output)
+	require.Contains(t, output, `tls: "enabled"`)
+}
+
+// TestConfigureDevTLS verifies the various logic paths that flow through the
+// configureDevTLS function.
+func TestConfigureDevTLS(t *testing.T) {
+	testcases := []struct {
+		ServerCommand   *ServerCommand
+		DeferFuncNotNil bool
+		ConfigNotNil    bool
+		TLSDisable      bool
+		CertPathEmpty   bool
+		ErrNotNil       bool
+		TestDescription string
+	}{
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS: false,
+			},
+			ConfigNotNil:    true,
+			TLSDisable:      true,
+			CertPathEmpty:   true,
+			ErrNotNil:       false,
+			TestDescription: "flagDev is false, nothing will be configured",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "",
+			},
+			DeferFuncNotNil: true,
+			ConfigNotNil:    true,
+			ErrNotNil:       false,
+			TestDescription: "flagDevTLSCertDir is empty",
+		},
+		{
+			ServerCommand: &ServerCommand{
+				flagDevTLS:        true,
+				flagDevTLSCertDir: "@/#",
+			},
+			CertPathEmpty:   true,
+			ErrNotNil:       true,
+			TestDescription: "flagDevTLSCertDir is set to something invalid",
+		},
+	}
+
+	for _, testcase := range testcases {
+		fun, cfg, certPath, err := configureDevTLS(testcase.ServerCommand)
+		if fun != nil {
+			// If a function is returned, call it right away to clean up
+			// files created in the temporary directory before anything else has
+			// a chance to fail this test.
+			fun()
+		}
+
+		t.Run(testcase.TestDescription, func(t *testing.T) {
+			assert.Equal(t, testcase.DeferFuncNotNil, (fun != nil))
+			assert.Equal(t, testcase.ConfigNotNil, cfg != nil)
+			if testcase.ConfigNotNil && cfg != nil {
+				assert.True(t, len(cfg.Listeners) > 0)
+				assert.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable)
 			}
-
-			if !strings.Contains(output, tc.exp) {
-				t.Fatalf("expected %q to contain %q", output, tc.exp)
+			assert.Equal(t, testcase.CertPathEmpty, len(certPath) == 0)
+			if testcase.ErrNotNil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
+	}
+}
+
+func TestConfigureSeals(t *testing.T) {
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+	_, testCommand := testServerCommand(t)
+
+	logger := corehelpers.NewTestLogger(t)
+	backend, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCommand.logger = logger
+
+	setSealResponse, _, err := testCommand.configureSeals(context.Background(), &testConfig, backend, []string{}, map[string]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()) != 1 {
+		t.Fatalf("expected 1 seal, got %d", len(setSealResponse.barrierSeal.GetAccess().GetAllSealWrappersByPriority()))
+	}
+
+	if setSealResponse.barrierSeal.BarrierSealConfigType() != vault.SealConfigTypeShamir {
+		t.Fatalf("expected shamir seal, got seal type %s", setSealResponse.barrierSeal.BarrierSealConfigType())
+	}
+}
+
+func TestReloadSeals(t *testing.T) {
+	testCore := vault.TestCoreWithSeal(t, vault.NewTestSeal(t, &seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot}), false)
+	_, testCommand := testServerCommand(t)
+	testConfig := server.Config{SharedConfig: &configutil.SharedConfig{}}
+
+	_, err := testCommand.reloadSeals(context.Background(), testCore, &testConfig)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	testConfig = server.Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{{Disabled: true}}}}
+	_, err = testCommand.reloadSeals(context.Background(), testCore, &testConfig)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }

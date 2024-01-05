@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package kv
 
@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/kr/pretty"
 )
 
 // Tests the regression in
@@ -75,12 +74,6 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 	}
 	basePath := basePaths[0]
 
-	beforeList, err := core.UnderlyingStorage.List(ctx, "logical/"+kvMount+basePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(pretty.Sprint(beforeList))
-
 	// Delete policy/archive
 	if err = logical.ClearView(ctx, physical.NewView(core.UnderlyingStorage, "logical/"+kvMount+basePath+"policy/")); err != nil {
 		t.Fatal(err)
@@ -88,12 +81,6 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 	if err = logical.ClearView(ctx, physical.NewView(core.UnderlyingStorage, "logical/"+kvMount+basePath+"archive/")); err != nil {
 		t.Fatal(err)
 	}
-
-	afterList, err := core.UnderlyingStorage.List(ctx, "logical/"+kvMount+basePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(pretty.Sprint(afterList))
 
 	testhelpers.EnsureCoresUnsealed(t, cluster)
 

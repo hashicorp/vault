@@ -159,16 +159,15 @@ type Paths struct {
 	// On standby nodes, like all storage write operations, this will trigger
 	// an ErrReadOnly return.
 	WriteForwardedStorage []string
+
+	// Binary paths are those whose request bodies should not be assumed to
+	// be JSON encoded, and for which the backend will decode values for auditing
+	Binary []string
 }
 
 type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
-}
-
-// Externaler allows us to check if a backend is running externally (i.e., over GRPC)
-type Externaler interface {
-	IsExternal() bool
 }
 
 type PluginVersion struct {

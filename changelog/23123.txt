@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes filter and search bug in secrets engines 
+```

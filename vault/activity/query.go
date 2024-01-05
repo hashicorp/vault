@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package activity
 
@@ -22,12 +22,14 @@ type NamespaceRecord struct {
 	NamespaceID     string         `json:"namespace_id"`
 	Entities        uint64         `json:"entities"`
 	NonEntityTokens uint64         `json:"non_entity_tokens"`
+	SecretSyncs     uint64         `json:"secret_syncs"`
 	Mounts          []*MountRecord `json:"mounts"`
 }
 
 type CountsRecord struct {
 	EntityClients    int `json:"entity_clients"`
 	NonEntityClients int `json:"non_entity_clients"`
+	SecretSyncs      int `json:"secret_syncs"`
 }
 
 type NewClientRecord struct {
@@ -248,7 +250,7 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 			s.logger.Trace("updating closest times")
 		}
 	}
-	s.logger.Trace("chose start end end times", "startTime", closestStartTime, "endTime")
+	s.logger.Trace("chose start/end times", "startTime", closestStartTime, "endTime", closestEndTime)
 
 	if closestStartTime.IsZero() || closestEndTime.IsZero() {
 		s.logger.Warn("no start or end time in range", "start time", closestStartTime, "end time", closestEndTime)

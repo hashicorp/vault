@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver/v3"
-	"github.com/mitchellh/cli"
 )
 
 func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {

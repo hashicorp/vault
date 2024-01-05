@@ -6,9 +6,11 @@ description: The `/sys/init` endpoint is used to initialize a new Vault.
 
 # `/sys/init`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/init` endpoint is used to initialize a new Vault.
 
-## Read Initialization Status
+## Read initialization status
 
 This endpoint returns the initialization status of Vault.
 
@@ -16,14 +18,14 @@ This endpoint returns the initialization status of Vault.
 | :----- | :---------- |
 | `GET`  | `/sys/init` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/init
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -31,7 +33,7 @@ $ curl \
 }
 ```
 
-## Start Initialization
+## Start initialization
 
 This endpoint initializes a new Vault. The Vault must not have been previously
 initialized. The recovery options, as well as the stored shares option, are only
@@ -77,7 +79,7 @@ Additionally, the following options are only supported using Auto Unseal:
   must be base64-encoded from their original binary representation. The size of
   this array must be the same as `recovery_shares`. This is only available when using Auto Unseal.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -86,7 +88,7 @@ Additionally, the following options are only supported using Auto Unseal:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -95,7 +97,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/init
 ```
 
-### Sample Response
+### Sample response
 
 A JSON-encoded object including the (possibly encrypted, if `pgp_keys` was
 provided) root keys, base 64 encoded root keys and initial root token:

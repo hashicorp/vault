@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cert
 
@@ -348,6 +348,7 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 				Steps: []logicaltest.TestStep{
 					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
 						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
+					testAccStepReadCertPolicy(t, "web", false, map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
 					loginStep,
 					resolveStep,
 				},

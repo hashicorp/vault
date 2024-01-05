@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -92,7 +93,7 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 
 // ApplyConfig returns a map of approved headers and their values, either
 // hmac'ed or plaintext
-func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, hashFunc func(context.Context, string) (string, error)) (result map[string][]string, retErr error) {
+func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
 	// Grab a read lock
 	a.RLock()
 	defer a.RUnlock()
@@ -114,7 +115,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVal, err := hashFunc(ctx, el)
+					hVal, err := audit.HashString(ctx, salter, el)
 					if err != nil {
 						return nil, err
 					}

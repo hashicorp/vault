@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -28,7 +28,12 @@ import { allFeatures } from 'vault/helpers/all-features';
  */
 export default class LicenseInfoComponent extends Component {
   get featuresInfo() {
-    return allFeatures().map((feature) => {
+    const notIncludedInFeaturesList = this.args.features.filter(
+      (feature) => !allFeatures().includes(feature)
+    );
+    const features = [...allFeatures(), ...notIncludedInFeaturesList];
+
+    return features.map((feature) => {
       const active = this.args.features.includes(feature);
       if (active && feature === 'Performance Standby') {
         const count = this.args.performanceStandbyCount;

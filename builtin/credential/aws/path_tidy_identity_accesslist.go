@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -18,6 +18,13 @@ import (
 func (b *backend) pathTidyIdentityAccessList() *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/identity-accesslist$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "identity-access-list",
+			OperationVerb:   "tidy",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,

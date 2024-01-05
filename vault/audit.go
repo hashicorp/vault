@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -8,7 +8,11 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
@@ -36,6 +40,12 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
+
+	// featureFlagDisableEventLogger contains the feature flag name which can be
+	// used to disable internal eventlogger behavior for the audit system.
+	// NOTE: this is an undocumented and temporary feature flag, it should not
+	// be relied on to remain part of Vault for any subsequent releases.
+	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -155,16 +165,20 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, view, entry.Local)
-	if c.logger.IsInfo() {
-		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
+	err = c.auditBroker.Register(entry.Path, backend, entry.Local)
+	if err != nil {
+		return fmt.Errorf("failed to register %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
 
+	c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	return nil
 }
 
-// disableAudit is used to disable an existing audit backend
+// disableAudit is used to disable an existing audit backend.
+// It returns whether the entry existed, and any errors in disabling it.
 func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool) (bool, error) {
+	var existed bool
+
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -172,7 +186,7 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	// Ensure there is a name
 	if path == "/" {
-		return false, fmt.Errorf("backend path must be specified")
+		return existed, fmt.Errorf("backend path must be specified")
 	}
 
 	// Remove the entry from the mount table
@@ -182,15 +196,18 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	newTable := c.audit.shallowClone()
 	entry, err := newTable.remove(ctx, path)
 	if err != nil {
-		return false, err
+		return existed, err
 	}
 
 	// Ensure there was a match
 	if entry == nil {
-		return false, fmt.Errorf("no matching backend")
+		return existed, fmt.Errorf("no matching backend")
 	}
 
 	c.removeAuditReloadFunc(entry)
+
+	// We're satisfied that the entry exists now.
+	existed = true
 
 	// When unmounting all entries the JSON code will load back up from storage
 	// as a nil slice, which kills tests...just set it nil explicitly
@@ -201,21 +218,24 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 	if updateStorage {
 		// Update the audit table
 		if err := c.persistAudit(ctx, newTable, entry.Local); err != nil {
-			return true, errors.New("failed to update audit table")
+			return existed, errors.New("failed to update audit table")
 		}
 	}
 
 	c.audit = newTable
 
-	// Unmount the backend
-	c.auditBroker.Deregister(path)
-	if c.logger.IsInfo() {
-		c.logger.Info("disabled audit backend", "path", path)
+	// Unmount the backend, any returned error can be ignored since the
+	// Backend will already have been removed from the AuditBroker's map.
+	err = c.auditBroker.Deregister(ctx, path)
+	if err != nil {
+		return existed, fmt.Errorf("failed to deregister %q audit backend %q: %w", entry.Type, entry.Path, err)
 	}
+
+	c.logger.Info("disabled audit backend", "path", path)
 
 	removeAuditPathChecker(c, entry)
 
-	return true, nil
+	return existed, nil
 }
 
 // loadAudits is invoked as part of postUnseal to load the audit table
@@ -377,15 +397,22 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	return nil
 }
 
-// setupAudit is invoked after we've loaded the audit able to
-// initialize the audit backends
+// setupAudits is invoked after we've loaded the audit table to initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
-	brokerLogger := c.baseLogger.Named("audit")
-	c.AddLogger(brokerLogger)
-	broker := NewAuditBroker(brokerLogger)
-
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
+
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	brokerLogger := c.baseLogger.Named("audit")
+
+	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	if err != nil {
+		return err
+	}
 
 	var successCount int
 
@@ -416,7 +443,11 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, view, entry.Local)
+		err = broker.Register(entry.Path, backend, entry.Local)
+		if err != nil {
+			c.logger.Error("failed to setup audit backed", "path", entry.Path, "type", entry.Type, "error", err)
+			continue
+		}
 
 		successCount++
 	}
@@ -426,6 +457,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	}
 
 	c.auditBroker = broker
+	c.AddLogger(brokerLogger)
 	return nil
 }
 
@@ -436,9 +468,16 @@ func (c *Core) teardownAudits() error {
 	defer c.auditLock.Unlock()
 
 	if c.audit != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		for _, entry := range c.audit.Entries {
 			c.removeAuditReloadFunc(entry)
 			removeAuditPathChecker(c, entry)
+			err := c.auditBroker.Deregister(ctx, entry.Path)
+			if err != nil {
+				c.logger.Error("unable to deregister audit during teardown", "path", entry.Path, "type", entry.Type, "error", err)
+			}
 		}
 	}
 
@@ -477,11 +516,20 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		Location: salt.DefaultLocation,
 	}
 
-	be, err := f(ctx, &audit.BackendConfig{
-		SaltView:   view,
-		SaltConfig: saltConfig,
-		Config:     conf,
-	})
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	be, err := f(
+		ctx, &audit.BackendConfig{
+			SaltView:   view,
+			SaltConfig: saltConfig,
+			Config:     conf,
+			MountPath:  entry.Path,
+		},
+		!disableEventLogger,
+		c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -490,7 +538,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	auditLogger := c.baseLogger.Named("audit")
-	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":
@@ -506,27 +553,22 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		}
 
 		c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
-			if auditLogger.IsInfo() {
-				auditLogger.Info("reloading file audit backend", "path", entry.Path)
-			}
+			auditLogger.Info("reloading file audit backend", "path", entry.Path)
 			return be.Reload(ctx)
 		})
 
 		c.reloadFuncsLock.Unlock()
 	case "socket":
-		if auditLogger.IsDebug() {
-			if entry.Options != nil {
-				auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
-			}
+		if auditLogger.IsDebug() && entry.Options != nil {
+			auditLogger.Debug("socket backend options", "path", entry.Path, "address", entry.Options["address"], "socket type", entry.Options["socket_type"])
 		}
 	case "syslog":
-		if auditLogger.IsDebug() {
-			if entry.Options != nil {
-				auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
-			}
+		if auditLogger.IsDebug() && entry.Options != nil {
+			auditLogger.Debug("syslog backend options", "path", entry.Path, "facility", entry.Options["facility"], "tag", entry.Options["tag"])
 		}
 	}
 
+	c.AddLogger(auditLogger)
 	return be, err
 }
 

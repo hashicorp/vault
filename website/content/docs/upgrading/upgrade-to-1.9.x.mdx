@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.9.x compared to 1.8. Please read it carefully.
 
-## OIDC Provider
+## OIDC provider
 
 Vault 1.9.0 introduced the ability for Vault to be an OpenID Connect (OIDC) identity
 provider. To support the feature, Vault's [default policy](/vault/docs/concepts/policies#default-policy)
@@ -25,13 +25,13 @@ ACL rule must be added to the default policy **or** a policy associated with the
 the OIDC flow.
 
 ```hcl
-# Allow a token to make requests to the Authorization Endpoint for OIDC providers.
+# Allow a token to make requests to the authorization endpoint for OIDC providers.
 path "identity/oidc/provider/+/authorize" {
   capabilities = ["read", "update"]
 }
 ```
 
-## Identity Tokens
+## Identity tokens
 
 The Identity secrets engine has changed the procedure for creating Identity
 token roles. When creating a role, the key parameter is required and the key
@@ -42,7 +42,7 @@ All calls to [create or update a role](/vault/api-docs/secret/identity/tokens#cr
 must be checked to ensure that roles are not being created or updated with
 non-existent keys.
 
-## SSH Role Parameter `allowed_extensions` Behavior Change
+## SSH role parameter `allowed_extensions` behavior change
 
 Prior versions of Vault allowed clients to specify any extension when requesting
 SSH certificate [signing requests](/vault/api-docs/secret/ssh#sign-ssh-key)
@@ -60,7 +60,7 @@ specified by clients.
 
 ## Deprecations
 
-### HTTP Request Counter Deprecation
+### HTTP request counter deprecation
 
 In Vault 1.9, the internal HTTP Request count
 [API](/vault/api-docs/v1.8.x/system/internal-counters#http-requests)
@@ -85,7 +85,7 @@ an Etcd v3 cluster prior to upgrading to Vault 1.10. All storage migrations
 should have [backups](/vault/docs/concepts/storage#backing-up-vault-s-persisted-data)
 taken prior to migration.
 
-## TLS Cipher Suites Changes
+## TLS cipher suites changes
 
 In Vault 1.9, due to changes in Go 1.17, the `tls_prefer_server_cipher_suites`
 TCP configuration parameter has been deprecated and its value will be ignored.
@@ -98,11 +98,11 @@ See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information
 @include 'pki-forwarding-bug.mdx'
 
 
-## Known Issues
+## Known issues
 
 @include 'raft-panic-old-tls-key.mdx'
 
-### Identity Token Backend Key Rotations
+### Identity token backend key rotations
 
 Existing Vault installations that use the [Identity Token
 backend](/vault/api-docs/secret/identity/tokens) and have [named
@@ -115,3 +115,13 @@ If a panic is encountered after an upgrade to Vault 1.9.0, the named key will be
 corrupted on storage and become unusable. In this case, the key will need to be
 deleted and re-created. A fix to fully mitigate this panic will be addressed on
 Vault 1.9.3.
+
+### Activity log Non-Entity tokens
+
+When upgrading Vault from 1.8 (or earlier) to 1.9 (or later), client counts of [non-entity tokens](/vault/docs/concepts/client-count#non-entity-tokens) will only include the tokens used after the upgrade.
+
+Starting in Vault 1.9, the activity log records and de-duplicates non-entity tokens by using the namespace and token's policies to generate a unique identifier. Because Vault did not create identifiers for these tokens before 1.9, the activity log cannot know whether this token has been seen pre-1.9. To prevent inaccurate and inflated counts, the activity log will ignore any counts of non-entity tokens that were created before the upgrade and only the non-entity tokens from versions 1.9 and later will be counted.
+
+Before upgrading, you should [query Vault usage metrics](/vault/tutorials/monitoring/usage-metrics#querying-usage-metrics) and report the usage data for billing purposes.
+
+See the client count [overview](/vault/docs/concepts/client-count) and [FAQ](/vault/docs/concepts/client-count/faq) for more information.

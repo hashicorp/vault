@@ -1,0 +1,3 @@
+```release-note:bug
+expiration: Fix fatal error "concurrent map iteration and map write" when collecting metrics from leases.
+```

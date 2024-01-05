@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package postgresql
 
@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/plugins/database/postgresql/scram"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -68,7 +69,8 @@ func new() *PostgreSQL {
 	connProducer.Type = postgreSQLTypeName
 
 	db := &PostgreSQL{
-		SQLConnectionProducer: connProducer,
+		SQLConnectionProducer:  connProducer,
+		passwordAuthentication: passwordAuthenticationPassword,
 	}
 
 	return db
@@ -77,7 +79,8 @@ func new() *PostgreSQL {
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
 
-	usernameProducer template.StringTemplate
+	usernameProducer       template.StringTemplate
+	passwordAuthentication passwordAuthentication
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -103,6 +106,20 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 	_, err = p.usernameProducer.Generate(dbplugin.UsernameMetadata{})
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	passwordAuthenticationRaw, err := strutil.GetString(req.Config, "password_authentication")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve password_authentication: %w", err)
+	}
+
+	if passwordAuthenticationRaw != "" {
+		pwAuthentication, err := parsePasswordAuthentication(passwordAuthenticationRaw)
+		if err != nil {
+			return dbplugin.InitializeResponse{}, err
+		}
+
+		p.passwordAuthentication = pwAuthentication
 	}
 
 	resp := dbplugin.InitializeResponse{
@@ -188,6 +205,15 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
+
+			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+				hashedPassword, err := scram.Hash(password)
+				if err != nil {
+					return fmt.Errorf("unable to scram-sha256 password: %w", err)
+				}
+				m["password"] = hashedPassword
+			}
+
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -272,15 +298,24 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 	defer tx.Rollback()
 
+	m := map[string]string{
+		"name":       username,
+		"username":   username,
+		"password":   req.Password,
+		"expiration": expirationStr,
+	}
+
+	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+		hashedPassword, err := scram.Hash(req.Password)
+		if err != nil {
+			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
+		}
+		m["password"] = hashedPassword
+	}
+
 	for _, stmt := range req.Statements.Commands {
 		if containsMultilineStatement(stmt) {
 			// Execute it as-is.
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
@@ -293,12 +328,6 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				continue
 			}
 
-			m := map[string]string{
-				"name":       username,
-				"username":   username,
-				"password":   req.Password,
-				"expiration": expirationStr,
-			}
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}

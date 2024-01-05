@@ -1,17 +1,17 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import FlashMessageService from 'vault/services/flash-messages';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
-import PkiActionModel from 'vault/models/pki/action';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiActionModel from 'vault/models/pki/action';
 
 /**
  * @module PkiImportPemBundle
@@ -25,7 +25,8 @@ import PkiActionModel from 'vault/models/pki/action';
  *
  * @param {Object} model - certificate model from route
  * @callback onCancel - Callback triggered when cancel button is clicked.
- * @callback onSubmit - Callback triggered on submit success.
+ * @callback onSave - Callback triggered on submit success.
+ * @callback onComplete - Callback triggered on "done" button click.
  */
 
 interface AdapterOptions {
@@ -33,8 +34,9 @@ interface AdapterOptions {
   useIssuer: boolean | undefined;
 }
 interface Args {
-  onSave: CallableFunction;
+  onSave?: CallableFunction;
   onCancel: CallableFunction;
+  onComplete: CallableFunction;
   model: PkiActionModel;
   adapterOptions: AdapterOptions;
 }
@@ -44,14 +46,49 @@ export default class PkiImportPemBundle extends Component<Args> {
 
   @tracked errorBanner = '';
 
+  get importedResponse() {
+    const { mapping, importedIssuers, importedKeys } = this.args.model;
+    // Even if there are no imported items, mapping will be an empty object from API response
+    if (undefined === mapping) return null;
+
+    const importList = (importedIssuers || []).map((issuer: string) => {
+      const key = mapping[issuer];
+      return { issuer, key };
+    });
+
+    // Check each imported key and make sure it's in the list
+    (importedKeys || []).forEach((key) => {
+      const matchIdx = importList.findIndex((item) => item.key === key);
+      // If key isn't accounted for, add it without a matching issuer
+      if (matchIdx === -1) {
+        importList.push({ issuer: '', key });
+      }
+    });
+
+    if (importList.length === 0) {
+      // If no new items were imported but the import call was successful, the UI will show accordingly
+      return [{ issuer: '', key: '' }];
+    }
+    return importList;
+  }
+
   @task
   @waitFor
   *submitForm(event: Event) {
     event.preventDefault();
+    this.errorBanner = '';
+    if (!this.args.model.pemBundle) {
+      this.errorBanner = 'please upload your PEM bundle';
+      return;
+    }
     try {
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
       this.flashMessages.success('Successfully imported data.');
-      this.args.onSave();
+      // This component shows the results, but call `onSave` for any side effects on parent
+      if (this.args.onSave) {
+        this.args.onSave();
+      }
+      window?.scrollTo(0, 0);
     } catch (error) {
       this.errorBanner = errorMessage(error);
     }

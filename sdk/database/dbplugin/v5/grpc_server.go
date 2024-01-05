@@ -152,6 +152,7 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
 		PublicKey:          req.GetPublicKey(),
+		Subject:            req.GetSubject(),
 		Expiration:         expiration,
 		Statements:         getStatementsFromProto(req.GetStatements()),
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),

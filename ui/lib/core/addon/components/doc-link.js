@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ExternalLink from './external-link';
@@ -11,7 +11,7 @@ import ExternalLink from './external-link';
  *
  * @example
  * ```js
-    <DocLink @path="/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
+    <DocLink @path="/vault/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
  * ```
  *
  * @param {string} path="/" - The path to documentation on developer.hashicorp.com that the component should link to.

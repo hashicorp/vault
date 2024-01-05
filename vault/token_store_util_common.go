@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -36,6 +36,8 @@ func (ts *TokenStore) loadSSCTokensGenerationCounter(ctx context.Context) error 
 	if err != nil {
 		return fmt.Errorf("malformed token generation counter found in storage: err %w", err)
 	}
+
+	ts.logger.Debug("loaded ssct generation counter", "generation", sscTokensGenerationCounter.Counter)
 	ts.sscTokensGenerationCounter = sscTokensGenerationCounter
 	return nil
 }
@@ -61,5 +63,7 @@ func (ts *TokenStore) UpdateSSCTokensGenerationCounter(ctx context.Context) erro
 	if err != nil {
 		return err
 	}
+
+	ts.logger.Debug("updated ssct generation counter", "generation", ts.sscTokensGenerationCounter.Counter)
 	return nil
 }

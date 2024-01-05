@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -13,10 +13,10 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	vaultoci "github.com/hashicorp/vault-plugin-auth-oci"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentoci "github.com/hashicorp/vault/command/agent/auth/oci"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentoci "github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -59,7 +59,6 @@ func TestOCIEndToEnd(t *testing.T) {
 
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"oci": vaultoci.Factory,
 		},

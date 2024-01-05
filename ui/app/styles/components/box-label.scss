@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 label.box-label {
@@ -10,7 +10,7 @@ label.box-label {
 .box-label {
   @extend .box;
   @extend .is-centered;
-  @extend .is-gapless;
+
   border-color: $grey-light;
   border-radius: 3px;
   box-shadow: $box-link-shadow;
@@ -63,6 +63,6 @@ label.box-label {
   color: $grey;
 
   .is-selected & {
-    color: $text;
+    color: $grey-darkest;
   }
 }

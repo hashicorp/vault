@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -42,11 +42,13 @@ locals {
 }
 
 resource "enos_remote_exec" "verify_vault_agent_output" {
-  content = templatefile("${path.module}/templates/verify-vault-agent-output.sh", {
-    vault_agent_template_destination = var.vault_agent_template_destination
-    vault_agent_expected_output      = var.vault_agent_expected_output
-    vault_instances                  = jsonencode(local.vault_instances)
-  })
+  environment = {
+    VAULT_AGENT_TEMPLATE_DESTINATION = var.vault_agent_template_destination
+    VAULT_AGENT_EXPECTED_OUTPUT      = var.vault_agent_expected_output
+    VAULT_INSTANCES                  = jsonencode(local.vault_instances)
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-vault-agent-output.sh")]
 
   transport = {
     ssh = {

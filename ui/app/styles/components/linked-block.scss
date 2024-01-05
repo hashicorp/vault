@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .linked-block {
@@ -9,4 +9,17 @@
 
 .linked-block .columns {
   @extend .is-flex-center;
+}
+
+.linked-block-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 50px 35px;
+  gap: 1em 1em;
+}
+
+.linked-block-popup-menu {
+  box-sizing: border-box;
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
 }

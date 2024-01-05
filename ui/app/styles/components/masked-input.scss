@@ -1,10 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-.masked-font {
-  color: $ui-gray-300;
+.masked-font,
+pre.masked-font {
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input {
@@ -13,18 +14,18 @@
 }
 
 .has-label .masked-input {
-  padding-top: $spacing-s;
+  padding-top: $spacing-12;
 }
 
 .has-padding {
-  padding: $size-10 $size-8;
+  padding: $spacing-8 $spacing-12;
 }
 
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: $family-primary;
+  font-family: $family-sans;
   line-height: 2.5;
 }
 
@@ -44,20 +45,15 @@
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
-  padding-left: $spacing-s;
+  padding-left: $spacing-12;
   background-color: transparent;
 }
 
-.button.masked-input-toggle,
-.button.copy-button {
-  min-width: $spacing-xl;
+.button.masked-input-toggle {
+  min-width: $spacing-36;
   border-left: 0;
   color: $grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
-}
-
-.button.copy-button {
-  border-radius: 0;
 }
 
 .button.masked-input-toggle {
@@ -65,12 +61,11 @@
 }
 
 .display-only {
-  .button.masked-input-toggle,
-  .button.copy-button {
+  .button.masked-input-toggle {
     background: transparent;
     height: auto;
     line-height: 1rem;
-    min-width: $spacing-l;
+    min-width: $spacing-24;
     border: 0;
     box-shadow: none;
     color: $grey-light;
@@ -80,7 +75,6 @@
     &:active,
     &.is-active,
     &:focus,
-    &.is-focused,
     &:hover,
     &:focus:not(:active) {
       color: $blue;
@@ -91,7 +85,7 @@
 }
 
 .masked-input.masked .masked-value {
-  color: $grey-light;
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input .input:focus + .masked-input-toggle {
