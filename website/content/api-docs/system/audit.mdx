@@ -72,10 +72,10 @@ single word name or a more complex, nested path.
 - `type` `(string: <required>)` – Specifies the type of the audit device.
   Valid types are `file`, `socket` and `syslog`.
 
-Additionally, the following options are allowed in Vault open-source, but
+Additionally, the following options are allowed in Vault Community Edition, but
 relevant functionality is only supported in Vault Enterprise:
 
-- `local` `(bool: false)` – Specifies if the audit device is local within the cluster only. Local
+- `local` `(bool: false)` – Applies exclusively to performance replication. Specifies if the audit device is local within the cluster only. Local
   audit devices are not replicated nor (if a secondary) removed by replication.
 
 ### Sample payload

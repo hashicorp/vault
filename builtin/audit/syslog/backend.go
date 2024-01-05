@@ -328,6 +328,7 @@ func (b *Backend) configureSinkNode(name string, format string, opts ...event.Op
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
 	b.nodeMap[sinkNodeID] = sinkMetricCounter
+
 	return nil
 }
 

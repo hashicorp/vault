@@ -132,16 +132,16 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		// Note that the following calculations assume that all clients seen are currently in
 		// the NewClients section of byMonth. It is best to explicitly check this, just verify
 		// our assumptions about the passed in byMonth argument.
-		if len(month.Counts.Entities) != len(month.NewClients.Counts.Entities) ||
-			len(month.Counts.NonEntities) != len(month.NewClients.Counts.NonEntities) {
+		if month.Counts.countByType(entityActivityType) != month.NewClients.Counts.countByType(entityActivityType) ||
+			month.Counts.countByType(nonEntityTokenActivityType) != month.NewClients.Counts.countByType(nonEntityTokenActivityType) {
 			return nil, errors.New("current month clients cache assumes billing period")
 		}
 
 		// All the clients for the current month are in the newClients section, initially.
 		// We need to deduplicate these clients across the billing period by adding them
 		// into the billing period hyperloglogs.
-		entities := month.NewClients.Counts.Entities
-		nonEntities := month.NewClients.Counts.NonEntities
+		entities := month.NewClients.Counts.clientsByType(entityActivityType)
+		nonEntities := month.NewClients.Counts.clientsByType(nonEntityTokenActivityType)
 		if entities != nil {
 			for entityID := range entities {
 				billingPeriodHLLWithCurrentMonthEntityClients.Insert([]byte(entityID))
@@ -183,8 +183,9 @@ func (a *ActivityLog) transformALNamespaceBreakdowns(nsData map[string]*processB
 
 		nsRecord := activity.NamespaceRecord{
 			NamespaceID:     nsID,
-			Entities:        uint64(len(ns.Counts.Entities)),
-			NonEntityTokens: uint64(len(ns.Counts.NonEntities) + int(ns.Counts.Tokens)),
+			Entities:        uint64(ns.Counts.countByType(entityActivityType)),
+			NonEntityTokens: uint64(ns.Counts.countByType(nonEntityTokenActivityType)),
+			SecretSyncs:     uint64(ns.Counts.countByType(secretSyncActivityType)),
 			Mounts:          a.transformActivityLogMounts(ns.Mounts),
 		}
 		byNamespace = append(byNamespace, &nsRecord)
@@ -216,10 +217,7 @@ func (a *ActivityLog) transformActivityLogMounts(mts map[string]*processMount) [
 	for mountAccessor, mountCounts := range mts {
 		mount := activity.MountRecord{
 			MountPath: a.mountAccessorToMountPath(mountAccessor),
-			Counts: &activity.CountsRecord{
-				EntityClients:    len(mountCounts.Counts.Entities),
-				NonEntityClients: len(mountCounts.Counts.NonEntities) + int(mountCounts.Counts.Tokens),
-			},
+			Counts:    mountCounts.Counts.toCountsRecord(),
 		}
 		mounts = append(mounts, &mount)
 	}

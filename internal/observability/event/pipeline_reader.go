@@ -5,7 +5,7 @@ package event
 
 import "github.com/hashicorp/eventlogger"
 
-// The PipelineReader interface surfaces information required for pipeline registration.
+// PipelineReader surfaces information required for pipeline registration.
 type PipelineReader interface {
 	// EventType should return the event type to be used for pipeline registration.
 	EventType() eventlogger.EventType

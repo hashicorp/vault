@@ -50,8 +50,9 @@ scenario "autopilot" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    manage_service    = matrix.artifact_type == "bundle"
-    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
+    manage_service                     = matrix.artifact_type == "bundle"
+    vault_install_dir                  = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
+    vault_autopilot_default_max_leases = semverconstraint(matrix.initial_version, ">=1.16.0-0") ? "300000" : ""
   }
 
   step "build_vault" {
@@ -521,6 +522,27 @@ scenario "autopilot" {
       vault_install_dir = local.vault_install_dir
       vault_instances   = step.upgrade_vault_cluster_with_autopilot.target_hosts
       vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
+  # Verify that upgrading from a version <1.16.0 does not introduce Default LCQ
+  step "verify_default_lcq" {
+    module = module.vault_verify_default_lcq
+    depends_on = [
+      step.create_vault_cluster_upgrade_targets,
+      step.remove_old_nodes,
+      step.upgrade_vault_cluster_with_autopilot,
+      step.verify_autopilot_idle_state
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances                    = step.upgrade_vault_cluster_with_autopilot.target_hosts
+      vault_root_token                   = step.create_vault_cluster.root_token
+      vault_autopilot_default_max_leases = local.vault_autopilot_default_max_leases
     }
   }
 

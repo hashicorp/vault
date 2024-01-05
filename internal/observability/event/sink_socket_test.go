@@ -5,6 +5,7 @@ package event
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -57,8 +58,8 @@ func TestNewSocketSink(t *testing.T) {
 			want: &SocketSink{
 				requiredFormat: "json",
 				address:        "wss://foo",
-				socketType:     "tcp",      // defaults to tcp
-				maxDuration:    2000000000, // defaults to 2 secs
+				socketType:     "tcp",           // defaults to tcp
+				maxDuration:    2 * time.Second, // defaults to 2 secs
 			},
 		},
 	}
@@ -67,6 +68,8 @@ func TestNewSocketSink(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := NewSocketSink(tc.address, tc.format, tc.opts...)
 
 			if tc.wantErr {
