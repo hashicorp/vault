@@ -40,14 +40,14 @@ module('Acceptance | pki workflow', function (hooks) {
     await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
+    await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   module('not configured', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       const pki_admin_policy = adminPolicy(this.mountPath, 'roles');
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiAdminToken = await tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
       clearPkiRecords(this.store);
     });
@@ -241,9 +241,9 @@ module('Acceptance | pki workflow', function (hooks) {
       const pki_admin_policy = adminPolicy(this.mountPath);
       const pki_reader_policy = readerPolicy(this.mountPath, 'keys', true);
       const pki_editor_policy = updatePolicy(this.mountPath, 'keys');
-      this.pkiKeyReader = await tokenWithPolicy(`pki-reader-${this.mountPath}`, pki_reader_policy);
-      this.pkiKeyEditor = await tokenWithPolicy(`pki-editor-${this.mountPath}`, pki_editor_policy);
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiKeyReader = await tokenWithPolicyCmd(`pki-reader-${this.mountPath}`, pki_reader_policy);
+      this.pkiKeyEditor = await tokenWithPolicyCmd(`pki-editor-${this.mountPath}`, pki_editor_policy);
+      this.pkiAdminToken = await tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy);
       await logout.visit();
       clearPkiRecords(this.store);
     });
@@ -361,7 +361,7 @@ module('Acceptance | pki workflow', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       const pki_admin_policy = adminPolicy(this.mountPath);
-      this.pkiAdminToken = await tokenWithPolicy(`pki-admin-${this.mountPath}`, pki_admin_policy);
+      this.pkiAdminToken = await tokenWithPolicyCmd(`pki-admin-${this.mountPath}`, pki_admin_policy);
       // Configure engine with a default issuer
       await configureEngine(this.mountPath, 'common_name="Hashicorp Test" issuer_name="hashicorp_test"');
       await logout.visit();

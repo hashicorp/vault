@@ -22,6 +22,7 @@ module('Acceptance | pki overview', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
     const mountPath = `pki`;
