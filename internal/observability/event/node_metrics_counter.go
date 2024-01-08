@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-metrics"
@@ -17,7 +16,6 @@ var _ eventlogger.Node = (*MetricsCounter)(nil)
 
 // MetricsCounter offers a way for nodes to emit metrics which increment a label by 1.
 type MetricsCounter struct {
-	Name    string // TODO: PW: Is this needed?
 	Node    eventlogger.Node
 	labeler Labeler
 }
@@ -30,13 +28,8 @@ type Labeler interface {
 }
 
 // NewMetricsCounter should be used to create the MetricsCounter.
-func NewMetricsCounter(name string, node eventlogger.Node, labeler Labeler) (*MetricsCounter, error) {
+func NewMetricsCounter(node eventlogger.Node, labeler Labeler) (*MetricsCounter, error) {
 	const op = "event.NewMetricsCounter"
-
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, fmt.Errorf("%s: name is required: %w", op, ErrInvalidParameter)
-	}
 
 	if node == nil || reflect.ValueOf(node).IsNil() {
 		return nil, fmt.Errorf("%s: node is required: %w", op, ErrInvalidParameter)
@@ -47,7 +40,6 @@ func NewMetricsCounter(name string, node eventlogger.Node, labeler Labeler) (*Me
 	}
 
 	return &MetricsCounter{
-		Name:    name,
 		Node:    node,
 		labeler: labeler,
 	}, nil

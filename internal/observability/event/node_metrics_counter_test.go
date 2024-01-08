@@ -35,19 +35,12 @@ func TestNewMetricsCounter(t *testing.T) {
 			labeler:         &testMetricsCounter{},
 			isErrorExpected: false,
 		},
-		"no-name": {
-			name:                 "",
-			isErrorExpected:      true,
-			expectedErrorMessage: "event.NewMetricsCounter: name is required: invalid parameter",
-		},
 		"no-node": {
-			name:                 "foo",
 			node:                 nil,
 			isErrorExpected:      true,
 			expectedErrorMessage: "event.NewMetricsCounter: node is required: invalid parameter",
 		},
 		"no-labeler": {
-			name:                 "foo",
 			node:                 &testEventLoggerNode{},
 			labeler:              nil,
 			isErrorExpected:      true,
@@ -59,7 +52,7 @@ func TestNewMetricsCounter(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			m, err := NewMetricsCounter(tc.name, tc.node, tc.labeler)
+			m, err := NewMetricsCounter(tc.node, tc.labeler)
 
 			switch {
 			case tc.isErrorExpected:
