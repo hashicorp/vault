@@ -552,7 +552,7 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 		metricLabeler = &audit.MetricLabelerAuditSink{}
 	}
 
-	sinkMetricCounter, err := event.NewMetricsCounter(sinkMetricTimer, metricLabeler)
+	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, metricLabeler)
 	if err != nil {
 		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, filePath, err)
 	}
