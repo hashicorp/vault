@@ -74,95 +74,69 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 // (name of the plugin as registered in the plugin catalog). It returns the
 // number of plugins that were reloaded and an error if any.
 func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) (reloaded int, err error) {
-	typeExists := map[consts.PluginType]bool{
-		consts.PluginTypeCredential: false,
-		consts.PluginTypeDatabase:   false,
-		consts.PluginTypeSecrets:    false,
-	}
-	for pluginType := range typeExists {
-		plugins, err := c.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
-		if err != nil {
-			return reloaded, err
-		}
-		for _, plugin := range plugins {
-			if plugin.Name == pluginName {
-				typeExists[pluginType] = true
-				break
-			}
-		}
-	}
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return reloaded, err
 	}
 
-	// The combined database plugin itself is a secrets plugin, so we need to check
-	// the secrets mount table for database plugins.
-	if typeExists[consts.PluginTypeSecrets] || typeExists[consts.PluginTypeDatabase] {
-		c.mountsLock.RLock()
-		defer c.mountsLock.RUnlock()
+	for _, entry := range c.mounts.Entries {
+		// We dont reload mounts that are not in the same namespace
+		if ns.ID != entry.Namespace().ID {
+			continue
+		}
 
-		for _, entry := range c.mounts.Entries {
-			// We dont reload mounts that are not in the same namespace
-			if ns.ID != entry.Namespace().ID {
-				continue
+		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
+			err := c.reloadBackendCommon(ctx, entry, false)
+			if err != nil {
+				return reloaded, err
+			}
+			reloaded++
+			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.Version)
+		} else if entry.Type == "database" {
+			// The combined database plugin is itself a secrets engine, but
+			// knowledge of whether a database plugin is in use within a particular
+			// mount is internal to the combined database plugin's storage, so
+			// we delegate the reload request with an internally routed request.
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      entry.Path + "reload/" + pluginName,
+			}
+			resp, err := c.router.Route(ctx, req)
+			if err != nil {
+				return reloaded, err
+			}
+			if resp == nil {
+				return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
+			}
+			if resp.IsError() {
+				return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
 			}
 
-			if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
-				err := c.reloadBackendCommon(ctx, entry, false)
-				if err != nil {
-					return reloaded, err
-				}
-				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.Version)
-			}
-
-			// Knowledge of whether a database plugin is in use within a particular
-			// database mount is internal to the database plugin, so we delegate
-			// the reload request with an internally routed request
-			if typeExists[consts.PluginTypeDatabase] && entry.Type == "database" {
-				req := &logical.Request{
-					Operation: logical.UpdateOperation,
-					Path:      entry.Path + "reload/" + pluginName,
-				}
-				resp, err := c.router.Route(ctx, req)
-				if err != nil {
-					return reloaded, err
-				}
-				if resp == nil {
-					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
-				}
-				if resp.IsError() {
-					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
-				}
-
-				if count, ok := resp.Data["count"].(int); ok && count > 0 {
-					c.logger.Info("successfully reloaded database plugin(s)", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "connections", resp.Data["connections"])
-					reloaded += count
-				}
+			if count, ok := resp.Data["count"].(int); ok && count > 0 {
+				c.logger.Info("successfully reloaded database plugin(s)", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "connections", resp.Data["connections"])
+				reloaded += count
 			}
 		}
 	}
 
-	if typeExists[consts.PluginTypeCredential] {
-		c.authLock.RLock()
-		defer c.authLock.RUnlock()
+	for _, entry := range c.auth.Entries {
+		// We dont reload mounts that are not in the same namespace
+		if ns.ID != entry.Namespace().ID {
+			continue
+		}
 
-		for _, entry := range c.auth.Entries {
-			// We dont reload mounts that are not in the same namespace
-			if ns.ID != entry.Namespace().ID {
-				continue
+		if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
+			err := c.reloadBackendCommon(ctx, entry, true)
+			if err != nil {
+				return reloaded, err
 			}
-
-			if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
-				err := c.reloadBackendCommon(ctx, entry, true)
-				if err != nil {
-					return reloaded, err
-				}
-				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
-			}
+			reloaded++
+			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
 		}
 	}
 
