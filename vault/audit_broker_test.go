@@ -141,3 +141,118 @@ func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, 1, res)
 }
+
+// TestAuditBroker_Register_Fallback ensures we can register a fallback device.
+func TestAuditBroker_Register_Fallback(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "juan/"
+	fallbackBackend := testAuditBackend(t, path, map[string]string{"fallback": "true"})
+	err = a.Register(path, fallbackBackend, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path, a.fallbackName)
+	threshold, found := a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 1, threshold)
+}
+
+// TestAuditBroker_Register_FallbackMultiple tests that trying to register more
+// than a single fallback device results in the correct error.
+func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path1 := "juan1/"
+	fallbackBackend1 := testAuditBackend(t, path1, map[string]string{"fallback": "true"})
+	err = a.Register(path1, fallbackBackend1, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path1, a.fallbackName)
+
+	path2 := "juan2/"
+	fallbackBackend2 := testAuditBackend(t, path2, map[string]string{"fallback": "true"})
+	err = a.Register(path1, fallbackBackend2, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'juan1/'")
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path1, a.fallbackName)
+}
+
+// TestAuditBroker_Deregister_Fallback ensures that we can deregister a fallback
+// device successfully.
+func TestAuditBroker_Deregister_Fallback(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "juan/"
+	fallbackBackend := testAuditBackend(t, path, map[string]string{"fallback": "true"})
+	err = a.Register(path, fallbackBackend, false)
+	require.NoError(t, err)
+	require.True(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, path, a.fallbackName)
+
+	threshold, found := a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 1, threshold)
+
+	err = a.Deregister(context.Background(), path)
+	require.NoError(t, err)
+	require.False(t, a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())))
+	require.Equal(t, "", a.fallbackName)
+
+	threshold, found = a.fallbackBroker.SuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()))
+	require.True(t, found)
+	require.Equal(t, 0, threshold)
+}
+
+// TestAuditBroker_Deregister_Multiple ensures that we can call deregister multiple
+// times without issue if is no matching backend registered.
+func TestAuditBroker_Deregister_Multiple(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	err = a.Deregister(context.Background(), "foo")
+	require.NoError(t, err)
+
+	err = a.Deregister(context.Background(), "foo2")
+	require.NoError(t, err)
+}
+
+// TestAuditBroker_Register_MultipleFails checks for failure when we try to
+// re-register an audit backend.
+func TestAuditBroker_Register_MultipleFails(t *testing.T) {
+	t.Parallel()
+
+	l := corehelpers.NewTestLogger(t)
+	a, err := NewAuditBroker(l, true)
+	require.NoError(t, err)
+	require.NotNil(t, a)
+
+	path := "b2-no-filter"
+	noFilterBackend := testAuditBackend(t, path, map[string]string{})
+
+	err = a.Register(path, noFilterBackend, false)
+	require.NoError(t, err)
+
+	err = a.Register(path, noFilterBackend, false)
+	require.Error(t, err)
+	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
+}
