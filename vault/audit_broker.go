@@ -159,11 +159,6 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 		return nil
 	}
 
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return fmt.Errorf("%s: name is required: %w", op, event.ErrInvalidParameter)
-	}
-
 	// Remove the Backend from the map first, so that if an error occurs while
 	// removing the pipeline and nodes, we can quickly exit this method with
 	// the error.

@@ -80,11 +80,6 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
 	}
 
-	cfg, err = formatterConfig(conf.Config)
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to create formatter config: %w", op, err)
-	}
-
 	// Get the logger
 	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
 	if err != nil {
