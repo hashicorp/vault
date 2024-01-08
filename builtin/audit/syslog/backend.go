@@ -348,9 +348,9 @@ func (b *Backend) configureSinkNode(name string, format string, opts ...event.Op
 	var metricLabeler event.Labeler
 	switch {
 	case b.fallback:
-		metricLabeler = audit.MetricLabelerAuditFallback{}
+		metricLabeler = &audit.MetricLabelerAuditFallback{}
 	default:
-		metricLabeler = audit.MetricLabelerAuditSink{}
+		metricLabeler = &audit.MetricLabelerAuditSink{}
 	}
 
 	sinkMetricCounter, err := event.NewMetricsCounter(sinkMetricTimer, metricLabeler)
