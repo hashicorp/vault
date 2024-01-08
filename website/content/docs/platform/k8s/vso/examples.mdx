@@ -11,6 +11,13 @@ The Operator project provides the following examples:
 - Sample use-cases are documented [here](https://github.com/hashicorp/vault-secrets-operator#samples)
 - A Terraform based demo can be found [here](https://github.com/hashicorp/vault-secrets-operator/tree/main/demo)
 
+## JWT auth for Kubernetes clusters in private networks
+
+Vault Secrets Operator supports using the [JWT auth method](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt).
+JWT auth [verifies tokens](/vault/docs/auth/jwt#jwt-verification) using the issuer's public signing key.
+Vault supports fetching this public key from the Kubernetes API, but if users can't expose the Kubernetes API to Vault, the public key can be provided directly using [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys).
+To configure this please follow the steps outlined for [Using JWT validation public keys](/vault/docs/auth/jwt/oidc-providers/kubernetes#using-jwt-validation-public-keys)
+
 ## Using VaultStaticSecrets for imagePullSecrets
 
 Vault Secret Operator supports Kubernetes' templating of Secrets based on their

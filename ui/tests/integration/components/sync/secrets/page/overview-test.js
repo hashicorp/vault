@@ -105,7 +105,7 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     await click(actionToggle(0));
     assert.dom(action('sync')).hasText('Sync secrets', 'Sync action renders');
-    assert.dom(action('details')).hasText('Details', 'Details action renders');
+    assert.dom(action('details')).hasText('View synced secrets', 'View synced secrets action renders');
   });
 
   test('it should paginate secrets by destination table', async function (assert) {

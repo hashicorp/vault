@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -36,6 +37,7 @@ var _ audit.Backend = (*Backend)(nil)
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
 	f            *os.File
+	fallback     bool
 	fileLock     sync.RWMutex
 	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
@@ -58,6 +60,21 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	}
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("%s: nil salt view", op)
+	}
+
+	// The config options 'fallback' and 'filter' are mutually exclusive, a fallback
+	// device catches everything, so it cannot be allowed to filter.
+	var fallback bool
+	var err error
+	if fallbackRaw, ok := conf.Config["fallback"]; ok {
+		fallback, err = parseutil.ParseBool(fallbackRaw)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to parse 'fallback': %w", op, err)
+		}
+	}
+
+	if _, ok := conf.Config["filter"]; ok && fallback {
+		return nil, fmt.Errorf("%s: cannot configure a fallback device with a filter: %w", op, event.ErrInvalidParameter)
 	}
 
 	// Get file path from config or fall back to the old option name ('path') for compatibility
@@ -106,6 +123,7 @@ func Factory(_ context.Context, conf *audit.BackendConfig, useEventLogger bool, 
 	}
 
 	b := &Backend{
+		fallback:     fallback,
 		filePath:     filePath,
 		formatConfig: cfg,
 		mode:         mode,
@@ -549,4 +567,11 @@ func (b *Backend) EventType() eventlogger.EventType {
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
 func (b *Backend) HasFiltering() bool {
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
+}
+
+// IsFallback can be used to determine if this audit backend device is intended to
+// be used as a fallback to catch all events that are not written when only using
+// filtered pipelines.
+func (b *Backend) IsFallback() bool {
+	return b.fallback
 }
