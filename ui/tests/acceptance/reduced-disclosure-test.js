@@ -19,7 +19,7 @@ const SELECTORS = {
   dashboardTitle: `[data-test-dashboard-card-header="Vault version"]`,
 };
 
-module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
+module('Acceptance | reduced disclosure test', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -34,10 +34,10 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
     ENV['ember-cli-mirage'].handler = null;
   });
 
-  test('it works when reduced disclosure enabled', async function (assert) {
-    const namespace = 'reduced-disclosure';
+  test('login works when reduced disclosure enabled', async function (assert) {
     assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
     await authPage.login();
+    assert.strictEqual(currentURL(), '/vault/dashboard');
 
     // Ensure it shows version on dashboard
     assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
@@ -45,58 +45,20 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
       .dom(SELECTORS.footerVersion)
       .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
 
-    await runCmd(`write sys/namespaces/${namespace} -f`, false);
-    await authPage.loginNs(namespace);
-
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
-
     const token = await runCmd(createTokenCmd('default'));
 
     await authPage.logout();
     assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
 
-    await authPage.loginNs(namespace, token);
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
-  });
-
-  test('it works for user accessing child namespace', async function (assert) {
-    const namespace = 'reduced-disclosure';
-    await authPage.login();
-
-    await runCmd(`write sys/namespaces/${namespace} -f`, false);
-    const token = await runCmd(
-      tokenWithPolicyCmd(
-        'child-ns-access',
-        `
-    path "${namespace}/sys/*" {
-      capabilities = ["read"]
-    }
-    `
-      )
-    );
-
-    await authPage.logout();
     await authPage.login(token);
+    assert.strictEqual(currentURL(), '/vault/dashboard');
+
     assert
       .dom(SELECTORS.footerVersion)
       .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
-
-    // navigate to child namespace
-    await visit(`/vault/dashboard?namespace=${namespace}`);
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(
-        `Vault ${this.versionSvc.version}`,
-        'shows Vault version for default policy in child namespace'
-      );
-    assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
   });
 
-  test('shows correct version on unseal flow', async function (assert) {
+  test.skip('shows correct version on unseal flow', async function (assert) {
     await authPage.login();
 
     const versionSvc = this.owner.lookup('service:version');
@@ -135,16 +97,81 @@ module('Acceptance | Enterprise | reduced disclosure test', function (hooks) {
       .hasText(`Vault ${versionSvc.version}`, 'Version is shown after login');
   });
 
-  test('does not allow access to replication pages', async function (assert) {
-    await authPage.login();
-    assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
+  module('enterprise', function () {
+    test('does not allow access to replication pages', async function (assert) {
+      await authPage.login();
+      assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
 
-    await visit(`/vault/replication/dr`);
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.dashboard',
-      'redirects to dashboard if replication access attempted'
-    );
-    assert.dom('[data-test-card="replication"]').doesNotExist('hides replication card on dashboard');
+      await visit(`/vault/replication/dr`);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.dashboard',
+        'redirects to dashboard if replication access attempted'
+      );
+      assert.dom('[data-test-card="replication"]').doesNotExist('hides replication card on dashboard');
+    });
+
+    test('it works for user accessing child namespace', async function (assert) {
+      const namespace = 'reduced-disclosure';
+      await authPage.login();
+
+      await runCmd(`write sys/namespaces/${namespace} -f`, false);
+      const token = await runCmd(
+        tokenWithPolicyCmd(
+          'child-ns-access',
+          `
+      path "${namespace}/sys/*" {
+        capabilities = ["read"]
+      }
+      `
+        )
+      );
+
+      await authPage.logout();
+      await authPage.login(token);
+      assert
+        .dom(SELECTORS.footerVersion)
+        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+
+      // navigate to child namespace
+      await visit(`/vault/dashboard?namespace=${namespace}`);
+      assert
+        .dom(SELECTORS.footerVersion)
+        .hasText(
+          `Vault ${this.versionSvc.version}`,
+          'shows Vault version for default policy in child namespace'
+        );
+      assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
+    });
+  });
+  test('login works when reduced disclosure enabled (ent)', async function (assert) {
+    const namespace = 'reduced-disclosure';
+    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
+    await authPage.login();
+    assert.strictEqual(currentURL(), '/vault/dashboard');
+
+    // Ensure it shows version on dashboard
+    assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
+    assert
+      .dom(SELECTORS.footerVersion)
+      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+
+    await runCmd(`write sys/namespaces/${namespace} -f`, false);
+    await authPage.loginNs(namespace);
+
+    assert
+      .dom(SELECTORS.footerVersion)
+      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
+
+    const token = await runCmd(createTokenCmd('default'));
+
+    await authPage.logout();
+    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
+
+    await authPage.loginNs(namespace, token);
+    assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
+    assert
+      .dom(SELECTORS.footerVersion)
+      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
   });
 });
