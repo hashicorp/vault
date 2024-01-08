@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 export default class CustomMessageService extends Service {
   @service store;
   @service namespace;
+  @service auth;
   @tracked messages = [];
   @tracked showMessageModal = true;
 
@@ -29,14 +30,15 @@ export default class CustomMessageService extends Service {
 
   async fetchMessages(ns) {
     try {
-      const url = '/v1/sys/internal/ui/unauthenticated-messages';
+      const url = this.auth.currentToken
+        ? '/v1/sys/internal/ui/authenticated-messages'
+        : '/v1/sys/internal/ui/unauthenticated-messages';
       const opts = {
         method: 'GET',
         headers: {},
       };
-      if (ns) {
-        opts.headers['X-Vault-Namespace'] = ns;
-      }
+      if (this.auth.currentToken) opts.headers['X-Vault-Token'] = this.auth.currentToken;
+      if (ns) opts.headers['X-Vault-Namespace'] = ns;
       const result = await fetch(url, opts);
       const body = await result.json();
       if (body.errors) return (this.messages = []);
