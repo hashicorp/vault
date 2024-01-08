@@ -35,7 +35,7 @@ func TestMetricCounterAuditSink_Label(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			m := &MetricCounterAuditSink{}
+			m := &MetricLabelerAuditSink{}
 			result := m.Label(nil, tc.err)
 			assert.Equal(t, tc.expected, result)
 		})

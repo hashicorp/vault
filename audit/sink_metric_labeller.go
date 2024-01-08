@@ -16,22 +16,22 @@ const (
 )
 
 var (
-	_ event.Labeler = (*MetricCounterAuditSink)(nil)
-	_ event.Labeler = (*MetricCounterAuditFallback)(nil)
+	_ event.Labeler = (*MetricLabelerAuditSink)(nil)
+	_ event.Labeler = (*MetricLabelerAuditFallback)(nil)
 )
 
-// MetricCounterAuditSink can be used to provide labels for the success or failure
+// MetricLabelerAuditSink can be used to provide labels for the success or failure
 // of a sink node used for a normal audit device.
-type MetricCounterAuditSink struct{}
+type MetricLabelerAuditSink struct{}
 
-// MetricCounterAuditFallback can be used to provide labels for the success or failure
+// MetricLabelerAuditFallback can be used to provide labels for the success or failure
 // of a sink node used for an audit fallback device.
-type MetricCounterAuditFallback struct{}
+type MetricLabelerAuditFallback struct{}
 
 // Label provides the success and failure labels for an audit sink, based on the error supplied.
 // Success: 'vault.audit.sink.success'
 // Failure: 'vault.audit.sink.failure'
-func (m MetricCounterAuditSink) Label(_ *eventlogger.Event, err error) string {
+func (m MetricLabelerAuditSink) Label(_ *eventlogger.Event, err error) string {
 	if err != nil {
 		return MetricLabelAuditSinkFailure
 	}
@@ -42,7 +42,7 @@ func (m MetricCounterAuditSink) Label(_ *eventlogger.Event, err error) string {
 // Label provides the success and failures labels for an audit fallback sink, based on the error supplied.
 // Success: 'vault.audit.fallback.success'
 // Failure: 'vault.audit.sink.failure'
-func (m MetricCounterAuditFallback) Label(_ *eventlogger.Event, err error) string {
+func (m MetricLabelerAuditFallback) Label(_ *eventlogger.Event, err error) string {
 	if err != nil {
 		return MetricLabelAuditSinkFailure
 	}
