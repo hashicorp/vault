@@ -19,7 +19,7 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
       'URI of an existing Azure Key Vault instance. If empty, Vault will use the KEY_VAULT_URI environment variable if configured.',
     editDisabled: true,
   })
-  keyVaultUri;
+  keyVaultUri; // obfuscated, never returned by API
 
   @attr('string', {
     label: 'Client ID',
@@ -44,7 +44,6 @@ export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationM
 
   @attr('string', {
     subText: 'Specifies a cloud for the client. The default is Azure Public Cloud.',
-    defaultValue: 'cloud',
     editDisabled: true,
   })
   cloud;

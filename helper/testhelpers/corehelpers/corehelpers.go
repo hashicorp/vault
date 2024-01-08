@@ -535,7 +535,7 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 // the audit.Backend interface.
 func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
 	for id, node := range n.nodeMap {
-		if err := broker.RegisterNode(id, node, eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite)); err != nil {
+		if err := broker.RegisterNode(id, node); err != nil {
 			return err
 		}
 	}
@@ -546,7 +546,7 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name st
 		NodeIDs:    n.nodeIDList,
 	}
 
-	return broker.RegisterPipeline(pipeline, eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+	return broker.RegisterPipeline(pipeline)
 }
 
 type TestLogger struct {
@@ -631,4 +631,8 @@ func (n *NoopAudit) Nodes() map[eventlogger.NodeID]eventlogger.Node {
 
 func (n *NoopAudit) NodeIDs() []eventlogger.NodeID {
 	return n.nodeIDList
+}
+
+func (n *NoopAudit) IsFallback() bool {
+	return false
 }

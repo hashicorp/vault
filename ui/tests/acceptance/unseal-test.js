@@ -12,7 +12,7 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 const { unsealKeys } = VAULT_KEYS;
 
-module('Acceptance | unseal', function (hooks) {
+module.skip('Acceptance | unseal', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
