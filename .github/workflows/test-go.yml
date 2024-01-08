@@ -258,7 +258,18 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - id: build-hsm
+        name: Build Vault HSM binary for tests
+        if: inputs.binary-tests && matrix.id == inputs.total-runners && github.repository == 'hashicorp/vault-enterprise'
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          time make ci-bootstrap enthsmdev
+          # The subsequent build of vault will blow away the bin folder
+          mv bin/vault vault-hsm-binary
       - id: build
+        name: Build Vault binary for tests
         if: inputs.binary-tests && matrix.id == inputs.total-runners
         env:
           GOPRIVATE: github.com/hashicorp/*
@@ -361,6 +372,11 @@ jobs:
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
           
+          if [ -f vault-hsm-binary ]; then
+            VAULT_HSM_BINARY="$(pwd)/vault-hsm-binary"
+            export VAULT_HSM_BINARY
+          fi
+
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
