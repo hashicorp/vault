@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	MetricLabelAuditSinkSuccess         = "vault.audit.sink.success"
-	MetricLabelAuditSinkFailure         = "vault.audit.sink.failure"
-	MetricLabelAuditSinkFallbackSuccess = "vault.audit.fallback.success"
-	MetricLabelAuditSinkFallbackMiss    = "vault.audit.fallback.miss"
+	MetricLabelAuditSinkSuccess         = "audit.sink.success"
+	MetricLabelAuditSinkFailure         = "audit.sink.failure"
+	MetricLabelAuditSinkFallbackSuccess = "audit.fallback.success"
+	MetricLabelAuditSinkFallbackMiss    = "audit.fallback.miss"
 )
 
 var (

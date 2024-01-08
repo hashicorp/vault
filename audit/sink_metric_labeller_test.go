@@ -21,11 +21,11 @@ func TestMetricLabelerAuditSink_Label(t *testing.T) {
 	}{
 		"nil": {
 			err:      nil,
-			expected: "vault.audit.sink.success",
+			expected: "audit.sink.success",
 		},
 		"error": {
 			err:      errors.New("I am an error"),
-			expected: "vault.audit.sink.failure",
+			expected: "audit.sink.failure",
 		},
 	}
 
@@ -53,11 +53,11 @@ func TestMetricLabelerAuditFallback_Label(t *testing.T) {
 	}{
 		"nil": {
 			err:      nil,
-			expected: "vault.audit.fallback.success",
+			expected: "audit.fallback.success",
 		},
 		"error": {
 			err:      errors.New("I am an error"),
-			expected: "vault.audit.sink.failure",
+			expected: "audit.sink.failure",
 		},
 	}
 
