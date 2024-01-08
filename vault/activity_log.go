@@ -1582,6 +1582,9 @@ type ResponseCounts struct {
 }
 
 func (existingRecord *ResponseCounts) Add(newRecord *ResponseCounts) {
+	if newRecord == nil {
+		return
+	}
 	existingRecord.EntityClients += newRecord.EntityClients
 	existingRecord.Clients += newRecord.Clients
 	existingRecord.DistinctEntities += newRecord.DistinctEntities
@@ -2658,7 +2661,7 @@ func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth
 	months := make([]*ResponseMonth, 0, len(byMonth))
 	for _, monthsRecord := range byMonth {
 		newClientsResponse := &ResponseNewClients{}
-		if int(monthsRecord.NewClients.Counts.EntityClients+monthsRecord.NewClients.Counts.NonEntityClients) != 0 {
+		if monthsRecord.NewClients.Counts.HasCounts() {
 			newClientsNSResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.NewClients.Namespaces)
 			if err != nil {
 				return nil, err
@@ -2670,7 +2673,7 @@ func (a *ActivityLog) prepareMonthsResponseForQuery(ctx context.Context, byMonth
 		monthResponse := &ResponseMonth{
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
-		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
+		if monthsRecord.Counts.HasCounts() {
 			nsResponse, err := a.prepareNamespaceResponse(ctx, monthsRecord.Namespaces)
 			if err != nil {
 				return nil, err
@@ -2693,7 +2696,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 	}
 	nsResponse := make([]*ResponseNamespace, 0, len(nsRecords))
 	for _, nsRecord := range nsRecords {
-		if int(nsRecord.Counts.EntityClients) == 0 && int(nsRecord.Counts.NonEntityClients) == 0 {
+		if !nsRecord.Counts.HasCounts() {
 			continue
 		}
 
@@ -2704,7 +2707,7 @@ func (a *ActivityLog) prepareNamespaceResponse(ctx context.Context, nsRecords []
 		if a.includeInResponse(queryNS, ns) {
 			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
 			for _, mountRecord := range nsRecord.Mounts {
-				if int(mountRecord.Counts.EntityClients) == 0 && int(mountRecord.Counts.NonEntityClients) == 0 {
+				if !mountRecord.Counts.HasCounts() {
 					continue
 				}
 
