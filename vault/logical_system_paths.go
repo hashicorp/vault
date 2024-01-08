@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -251,7 +251,6 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["config/ui/headers"][0]),
 			HelpSynopsis:    strings.TrimSpace(sysHelp["config/ui/headers"][1]),
 		},
-
 		{
 			Pattern: "generate-root(/attempt)?$",
 
@@ -482,7 +481,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleGenerateRootDecodeTokenUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "decode",
+						OperationVerb:   "decode",
+						OperationSuffix: "token",
 					},
 					Summary: "Decodes the encoded token with the otp.",
 					Responses: map[int][]framework.Response{
@@ -1862,6 +1862,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 			},
+			"oci_image": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+			},
+			"runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+			},
 			"command": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
@@ -1927,6 +1935,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 								Required:    true,
+							},
+							"oci_image": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+							},
+							"runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
 							},
 							"command": {
 								Type:        framework.TypeString,
@@ -2093,6 +2109,173 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 	}
 }
 
+func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "plugins/runtimes/catalog/(?P<type>container)/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "plugins-runtimes-catalog",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_name"][0]),
+			},
+			"type": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+			},
+			"oci_runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
+			},
+			"cgroup_parent": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
+			},
+			"cpu_nanos": {
+				Type:        framework.TypeInt64,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
+			},
+			"memory_bytes": {
+				Type:        framework.TypeInt64,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+			},
+			"rootless": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "register",
+					OperationSuffix: "plugin-runtime|plugin-runtime-with-type|plugin-runtime-with-type-and-name", // TODO
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Register a new plugin runtime, or updates an existing one with the supplied name.",
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "remove",
+					OperationSuffix: "plugin-runtime|plugin-runtime-with-type|plugin-runtime-with-type-and-name", // TODO
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
+				Summary: "Remove the plugin runtime with the given name.",
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handlePluginRuntimeCatalogRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "plugin-runtime-configuration|plugin-runtime-configuration-with-type|plugin-runtime-configuration-with-type-and-name",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"name": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_name"][0]),
+								Required:    true,
+							},
+							"type": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+								Required:    true,
+							},
+							"oci_runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
+								Required:    true,
+							},
+							"cgroup_parent": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
+								Required:    true,
+							},
+							"cpu_nanos": {
+								Type:        framework.TypeInt64,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
+								Required:    true,
+							},
+							"memory_bytes": {
+								Type:        framework.TypeInt64,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
+								Required:    true,
+							},
+							"rootless": {
+								Type:        framework.TypeBool,
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_rootless"][0]),
+								Required:    true,
+							},
+						},
+					}},
+				},
+				Summary: "Return the configuration data for the plugin runtime with the given name.",
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog"][1]),
+	}
+}
+
+func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
+	handler := &framework.PathOperation{
+		Callback: b.handlePluginRuntimeCatalogList,
+		Responses: map[int][]framework.Response{
+			http.StatusOK: {{
+				Description: "OK",
+				Fields: map[string]*framework.FieldSchema{
+					"runtimes": {
+						Type:        framework.TypeSlice,
+						Description: "List of all plugin runtimes in the catalog",
+						Required:    true,
+					},
+				},
+			}},
+		},
+	}
+	return []*framework.Path{
+		{
+			Pattern: "plugins/runtimes/catalog/?$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-runtimes-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-runtimes",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: handler,
+				logical.ListOperation: handler,
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][1]),
+		},
+	}
+}
+
 func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{
 		{
@@ -2225,6 +2408,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				"context": {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
+					Query:       true,
 				},
 				"generic_mount_paths": {
 					Type:        framework.TypeBool,
@@ -2250,6 +2434,37 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 
 			HelpSynopsis: "Generate an OpenAPI 3 document of all mounted paths.",
+		},
+		{
+			Pattern: "internal/ui/authenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "authenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIAuthenticatedMessages,
+					Summary:  "Retrieves Active post-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
 		},
 		{
 			Pattern: "internal/ui/feature-flags",
@@ -2457,6 +2672,10 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 									Type:     framework.TypeMap,
 									Required: false,
 								},
+								"chroot_namespace": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
 							},
 						}},
 					},
@@ -2464,6 +2683,62 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][1]),
+		},
+		{
+			Pattern: "internal/ui/unauthenticated-messages",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "unauthenticated-active-custom-messages",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIUnauthenticatedMessages,
+					Summary:  "Retrieves Active pre-login Custom Messages",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+		},
+		{
+			Pattern: "internal/ui/version",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "version",
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathInternalUIVersion,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"version": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
 		},
 		{
 			Pattern: "internal/counters/requests",
@@ -2696,12 +2971,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 func (b *SystemBackend) leasePaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "leases/lookup/(?P<prefix>.+?)?",
+			Pattern: "leases/lookup/" + framework.MatchAllRegex("prefix"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "leases",
 				OperationVerb:   "look-up",
-				OperationSuffix: "|with-prefix",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -3894,18 +4168,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
-								},
-							},
-						}},
-					},
-					Summary: "List the existing password policies.",
+					Summary:  "List the existing password policies.",
 				},
 			},
 		},
@@ -4082,7 +4345,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
-					Type: framework.TypeString,
+					Type:  framework.TypeString,
+					Query: true,
 				},
 			},
 
@@ -4237,6 +4501,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"delegated_auth_accessors": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["allowed_delegated_auth_accessors"][0]),
+				},
 				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
@@ -4285,6 +4553,11 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								"allowed_managed_keys": {
 									Type:        framework.TypeCommaStringSlice,
 									Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
+									Required:    false,
+								},
+								"delegated_auth_accessors": {
+									Type:        framework.TypeCommaStringSlice,
+									Description: strings.TrimSpace(sysHelp["delegated_auth_accessors"][0]),
 									Required:    false,
 								},
 								"allowed_response_headers": {

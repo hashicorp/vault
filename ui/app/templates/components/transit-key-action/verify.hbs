@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -86,10 +91,10 @@
                       id="prehashed"
                       @type="checkbox"
                       name="prehashed"
-                      class="switch is-rounded is-success is-small"
+                      class="toggle is-success is-small"
                       @checked={{@prehashed}}
                     />
-                    <label for="prehashed">Prehashed</label>
+                    <label for="prehashed" class="has-text-weight-bold is-size-8">Prehashed</label>
                   </div>
                 {{/if}}
               </div>
@@ -138,14 +143,14 @@
         </div>
         <div class="column is-two-thirds is-flex-column">
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
-            <div class="field is-flex-column is-flex-1">
-              <div class="control is-flex-column is-flex-1">
+            <div class="field is-flex-column is-flex-grow-1">
+              <div class="control is-flex-column is-flex-grow-1">
                 <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
-            <div class="field is-flex-column is-flex-1">
-              <div class="control is-flex-column is-flex-1">
+            <div class="field is-flex-column is-flex-grow-1">
+              <div class="control is-flex-column is-flex-grow-1">
                 <JsonEditor
                   @title="Signature"
                   @value={{@signature}}
@@ -181,22 +186,29 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
-        Verify
-      </button>
+      <Hds::Button @text="Verify" @icon={{if @loading "loading"}} type="submit" disabled={{@loading}} />
     </div>
   </div>
 </form>
-<Modal @title="Results" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
-  <section class="modal-card-body">
-    <Hds::Alert @type="inline" @color={{if @valid "success" "critical"}} as |A|>
-      <A.Title>{{if @valid "Valid" "Not Valid"}}</A.Title>
-      <A.Description>
-        The input is
-        {{if @valid "valid" "not valid"}}
-        for the given
-        {{if @signature "signature." "HMAC."}}
-      </A.Description>
-    </Hds::Alert>
-  </section>
-</Modal>
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-verify-modal" @size="small" @onClose={{fn (mut @isModalActive) false}} as |M|>
+    <M.Header>
+      Results
+      <Hds::Badge
+        @text={{if @valid "Valid" "Not Valid"}}
+        @size="large"
+        @color={{if @valid "success" "critical"}}
+        @icon={{if @valid "check-circle" "x-circle"}}
+      />
+    </M.Header>
+    <M.Body>
+      The input is
+      {{if @valid "valid" "not valid"}}
+      for the given
+      {{if @signature "signature." "HMAC."}}
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

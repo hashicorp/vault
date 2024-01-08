@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package activity
 
@@ -22,12 +22,14 @@ type NamespaceRecord struct {
 	NamespaceID     string         `json:"namespace_id"`
 	Entities        uint64         `json:"entities"`
 	NonEntityTokens uint64         `json:"non_entity_tokens"`
+	SecretSyncs     uint64         `json:"secret_syncs"`
 	Mounts          []*MountRecord `json:"mounts"`
 }
 
 type CountsRecord struct {
 	EntityClients    int `json:"entity_clients"`
 	NonEntityClients int `json:"non_entity_clients"`
+	SecretSyncs      int `json:"secret_syncs"`
 }
 
 type NewClientRecord struct {

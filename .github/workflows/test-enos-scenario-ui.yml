@@ -1,6 +1,11 @@
 ---
 name: Vault UI Tests
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_call:
     inputs:
@@ -77,7 +82,7 @@ jobs:
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version-file: './ui/package.json'
       - name: Set Up Terraform
@@ -91,7 +96,7 @@ jobs:
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - name: Set Up Vault Enterprise License
-        if: contains(${{ github.event.repository.name }}, 'ent')
+        if: contains(github.event.repository.name, 'ent')
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Check Chrome Installed
         id: chrome-check

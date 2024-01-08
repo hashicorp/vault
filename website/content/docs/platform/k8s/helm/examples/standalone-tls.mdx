@@ -64,21 +64,22 @@ e is 65537 (0x10001)
       extendedKeyUsage = serverAuth
       subjectAltName = @alt_names
       [alt_names]
-      DNS.1 = ${SERVICE}
-      DNS.2 = ${SERVICE}.${NAMESPACE}
-      DNS.3 = ${SERVICE}.${NAMESPACE}.svc
-      DNS.4 = ${SERVICE}.${NAMESPACE}.svc.cluster.local
+      DNS.1 = *.${SERVICE}
+      DNS.2 = *.${SERVICE}.${NAMESPACE}
+      DNS.3 = *.${SERVICE}.${NAMESPACE}.svc
+      DNS.4 = *.${SERVICE}.${NAMESPACE}.svc.cluster.local
       IP.1 = 127.0.0.1
       EOF
       ```
 
    2. Create a CSR.
 
-      ```shell-session
-      $ openssl req -new -key ${TMPDIR}/vault.key \
-          -subj "/O=system:nodes/CN=system:node:${SERVICE}.${NAMESPACE}.svc" \
-          -out ${TMPDIR}/server.csr \
-          -config ${TMPDIR}/csr.conf
+      ```bash
+      openssl req -new \
+                  -key ${TMPDIR}/vault.key \
+                  -subj "/CN=system:node:${SERVICE}.${NAMESPACE}.svc;/O=system:nodes" \
+                  -out ${TMPDIR}/server.csr \
+                  -config ${TMPDIR}/csr.conf
       ```
 
 3. Create the certificate
@@ -94,9 +95,10 @@ e is 65537 (0x10001)
       metadata:
         name: ${CSR_NAME}
       spec:
+        signerName: kubernetes.io/kubelet-serving
         groups:
         - system:authenticated
-        request: $(cat ${TMPDIR}/server.csr | base64 | tr -d '\r\n')
+        request: $(base64 ${TMPDIR}/server.csr | tr -d '\n')
         signerName: kubernetes.io/kubelet-serving
         usages:
         - digital signature
@@ -148,8 +150,10 @@ e is 65537 (0x10001)
 
 3. Retrieve Kubernetes CA.
 
-   ```shell-session
-   $ kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
+   ```bash
+   kubectl get secret \
+     -o jsonpath="{.items[?(@.type==\"kubernetes.io/service-account-token\")].data['ca\.crt']}" \
+     | base64 --decode > ${TMPDIR}/vault.ca
    ```
 
 4. Create the namespace.

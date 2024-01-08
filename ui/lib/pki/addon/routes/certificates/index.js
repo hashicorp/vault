@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -14,23 +14,35 @@ export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  async fetchCertificates() {
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
+
+  async fetchCertificates(params) {
     try {
-      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+      const page = Number(params.page) || 1;
+      return await this.store.lazyPaginatedQuery('pki/certificate/base', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page,
+        skipCache: page === 1,
+      });
     } catch (e) {
       if (e.httpStatus === 404) {
         return { parentModel: this.modelFor('certificates') };
-      } else {
-        throw e;
       }
+      throw e;
     }
   }
 
-  model() {
+  model(params) {
     return hash({
       hasConfig: this.shouldPromptConfig,
-      certificates: this.fetchCertificates(),
+      certificates: this.fetchCertificates(params),
       parentModel: this.modelFor('certificates'),
+      pageFilter: params.pageFilter,
     });
   }
 
@@ -40,5 +52,11 @@ export default class PkiCertificatesIndexRoute extends Route {
 
     if (certificates?.length) controller.notConfiguredMessage = getCliMessage('certificates');
     else controller.notConfiguredMessage = getCliMessage();
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

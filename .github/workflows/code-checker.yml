@@ -43,6 +43,29 @@ jobs:
         # godoc for the function.
       - run: make ci-vet-codechecker
         name: Check custom linters
+      - run: |
+          make bootstrap
+          make protolint
+        name: Protobuf lint
+
+  generate-delta:
+    name: Protobuf generate delta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Check generate delta
+        run: |
+          make bootstrap
+          # Delete all protobuf files first, in case we removed a protobuf file
+          find . -type f -name '*.pb.go' -delete
+          make proto
+          if ! git diff --exit-code; then
+            echo "Protobuf files need regenerating. Run 'make proto' to fix"
+            exit 1
+          fi
 
   format:
     name: Format
@@ -59,6 +82,15 @@ jobs:
           make fmt
           if ! git diff --exit-code; then
             echo "Code has formatting errors. Run 'make fmt' to fix"
+            exit 1
+          fi
+      - name: Protobuf format
+        run: |
+          make bootstrap
+          echo "Using buf version $(go run github.com/bufbuild/buf/cmd/buf --version)"
+          make protofmt
+          if ! git diff --exit-code; then
+            echo "Protobuf code has formatting errors. Run 'make protofmt' to fix"
             exit 1
           fi
 

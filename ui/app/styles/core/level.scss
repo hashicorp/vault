@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .level {
@@ -45,7 +45,7 @@
 
 .level.is-mobile .level-item:not(:last-child) {
   margin-bottom: 0;
-  margin-right: $size-9;
+  margin-right: $spacing-10;
 }
 
 .level.is-mobile .level-item:not(.is-narrow) {
@@ -92,6 +92,6 @@
 
 @media screen and (max-width: 768px) {
   .level-item:not(:last-child) {
-    margin-bottom: $size-9;
+    margin-bottom: $spacing-10;
   }
 }

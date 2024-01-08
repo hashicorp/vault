@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -14,8 +14,10 @@ import (
 )
 
 // Error prefix; see RFC 8555 Section 6.7. Errors.
-const ErrorPrefix = "urn:ietf:params:acme:error:"
-const ErrorContentType = "application/problem+json"
+const (
+	ErrorPrefix      = "urn:ietf:params:acme:error:"
+	ErrorContentType = "application/problem+json"
+)
 
 // See RFC 8555 Section 6.7. Errors.
 var ErrAccountDoesNotExist = errors.New("The request specified an account that does not exist")

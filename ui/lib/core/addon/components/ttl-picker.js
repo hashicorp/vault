@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -45,7 +45,6 @@ export default class TtlPickerComponent extends Component {
   @tracked recalculateSeconds = false;
   @tracked time = ''; // if defaultValue is NOT set, then do not display a defaultValue.
   @tracked unit = 's';
-  @tracked recalculateSeconds = false;
   @tracked errorMessage = '';
 
   /* Used internally */

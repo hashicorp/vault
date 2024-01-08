@@ -1,14 +1,14 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 syntax = "proto3";
 
-option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/node_status";
-
 package hashicorp.vault.hcp_link.node_status;
 
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/hashicorp/vault/vault/hcp_link/proto/node_status";
 
 message RaftStatus {
   bool IsVoter = 1;

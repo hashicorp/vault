@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .kmip-role-allowed-operations {
@@ -10,5 +10,5 @@
   padding: 0;
 }
 .kmip-role-allowed-operations .field {
-  margin-bottom: $spacing-xxs;
+  margin-bottom: $spacing-4;
 }

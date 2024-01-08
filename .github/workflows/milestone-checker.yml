@@ -15,8 +15,9 @@ on:
 jobs:
   # checks that a milestone entry is present for a PR
   milestone-check:
-    # If there is a `pr/no-milestone` label we ignore this check
-    if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')"
+    # If there is a `pr/no-milestone` label, or this comes from a fork (community contributor) we ignore this check
+    if: ${{ (github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+      && (!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Check milestone

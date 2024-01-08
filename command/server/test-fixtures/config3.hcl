@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 disable_cache = true
 disable_mlock = true
@@ -12,6 +12,7 @@ cluster_addr = "top_level_cluster_addr"
 
 listener "tcp" {
   address = "127.0.0.1:443"
+  chroot_namespace="admin/"
 }
 
 backend "consul" {

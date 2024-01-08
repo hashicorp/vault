@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -37,7 +37,6 @@ module('Acceptance | pki tidy', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
@@ -164,7 +163,6 @@ module('Acceptance | pki tidy', function (hooks) {
       .exists('Configure tidy modal options button exists');
     await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     assert.dom(SELECTORS.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
-    await click(SELECTORS.tidyConfigureModal.tidyOptionsModal);
     await click(SELECTORS.tidyConfigureModal.tidyModalAutoButton);
     await click(SELECTORS.tidyForm.toggleLabel('Automatic tidy disabled'));
     await click(SELECTORS.tidyForm.inputByAttr('tidyCertStore'));

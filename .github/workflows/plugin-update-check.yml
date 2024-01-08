@@ -1,3 +1,6 @@
+name: Plugin update check
+run-name: ${{ inputs.repo }} update check
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,7 +10,7 @@ on:
         required: true
       plugin_branch:
         type: string
-        description: 'The name of the plugin branch'
+        description: 'The name of the plugin branch.'
         required: true
 
 jobs:
@@ -66,7 +69,7 @@ jobs:
             --body "Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
             echo "vault_pr_num=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')" >> "$GITHUB_OUTPUT"
-            echo "vault_pr_url=$(gh pr list --head "$VAULT_BRANCH" --json html_url -q '.[0].html_url')" >> "$GITHUB_OUTPUT"
+            echo "vault_pr_url=$(gh pr list --head "$VAULT_BRANCH" --json url -q '.[0].url')" >> "$GITHUB_OUTPUT"
           else
             echo "Pull request already exists, won't create a new one."
           fi
@@ -77,14 +80,15 @@ jobs:
           # this is a different token to the one we have been using that should
           # allow us to add labels
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        continue-on-error: true
         run: |
-          if [ -z "$vault_pr_num" ]; then
+          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
             echo "error: no vault PR found"
             exit 1
           fi
 
           gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
-            --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
+            --add-label "dependencies,pr/no-changelog,pr/no-milestone" \
             --repo hashicorp/vault
 
       - name: Comment on plugin PR

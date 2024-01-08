@@ -1,0 +1,55 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up gotestsum from Github releases
+description: Set up gotestsum from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the gotestsum binary (default: $HOME/bin/gotestsum)"
+    type: boolean
+    default: "$HOME/bin"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: Latest
+
+outputs:
+  destination:
+    description: Where the installed gotestsum binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed gotestsum binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of gotestsum
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(gh release list -R gotestyourself/gotestsum --exclude-drafts --exclude-pre-releases | grep Latest | cut -f1)
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+        mkdir -p "$HOME/bin"
+        DESTINATION="$(readlink -f "$HOME/bin")"
+        echo "destination=$DESTINATION" >> "GITHUB_OUTPUT"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+        echo "destination-dir=$DESTINATION_DIR" >> "GITHUB_OUTPUT"
+
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="amd64"
+        fi
+
+        gh release download "$VERSION" -p "*${OS}_${ARCH}.tar.gz" -O gotestsum.tgz -R gotestyourself/gotestsum
+        tar -xvf gotestsum.tgz
+        mv gotestsum "${DESTINATION_DIR}/gotestsum"

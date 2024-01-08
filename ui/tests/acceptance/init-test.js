@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -8,6 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 
 import initPage from 'vault/tests/pages/init';
 import Pretender from 'pretender';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const HEALTH_RESPONSE = {
   initialized: false,
@@ -106,6 +107,12 @@ module('Acceptance | init', function (hooks) {
   });
 
   test('cloud seal init', async function (assert) {
+    // continue button is disabled, violating color-contrast
+    setRunOptions({
+      rules: {
+        'color-contrast': { enabled: false },
+      },
+    });
     assert.expect(6);
 
     setInitResponse(this.server, CLOUD_SEAL_RESPONSE);

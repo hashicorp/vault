@@ -1,6 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 output "audit_device_file_path" {
   description = "The file path for the audit device, if enabled"
-  value       = var.enable_file_audit_device ? local.audit_device_file_path : "file audit device not enabled"
+  value       = var.enable_audit_devices ? local.audit_device_file_path : "file audit device not enabled"
 }
 
 output "cluster_name" {
@@ -58,4 +61,12 @@ output "unseal_shares" {
 
 output "unseal_threshold" {
   value = try(enos_vault_init.leader[0].unseal_keys_threshold, -1)
+}
+
+output "keys_base64" {
+  value = try(module.start_vault.keys_base64, null)
+}
+
+output "keys_base64_secondary" {
+  value = try(module.start_vault.keys_base64_secondary, null)
 }

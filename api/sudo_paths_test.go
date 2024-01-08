@@ -55,6 +55,11 @@ func TestIsSudoPath(t *testing.T) {
 			"/sys/plugins/catalog/some-type/some/name/with/slashes",
 			false,
 		},
+		// Testing: sys/plugins/runtimes/catalog/{type}/{name}
+		{
+			"/sys/plugins/runtimes/catalog/some-type/some-name",
+			true,
+		},
 		// Testing: auth/token/accessors (an example of a sudo path that only accepts list operations)
 		// It is matched as sudo without the trailing slash...
 		{

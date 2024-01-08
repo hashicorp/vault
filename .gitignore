@@ -72,6 +72,9 @@ enos/**/kubeconfig
 .idea
 .vscode
 
+# VSCode debugger executable
+__debug_bin*
+
 dist/*
 
 # ignore ctags

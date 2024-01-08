@@ -1,7 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
-    {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @role.isNew "create" "update"}} @noun="PKI role" />
     {{#each @role.formFieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
@@ -11,15 +15,13 @@
             {{#if (and (eq attr.name "issuerRef") @issuers)}}
               <div class="has-top-margin-m {{unless this.showDefaultIssuer 'has-bottom-margin-xs' 'has-bottom-margin-m'}}">
                 <FormFieldLabel
-                  for={{attr.name}}
+                  for="select-{{attr.name}}"
                   @label="Issuer ref"
                   @helpText={{(if this.showHelpText attr.options.helpText)}}
                   @subText={{attr.options.subText}}
                 />
                 <Toggle
                   @name={{concat attr.name "-toggle"}}
-                  @status="success"
-                  @size="small"
                   @checked={{this.showDefaultIssuer}}
                   @onChange={{this.toggleShowDefaultIssuer}}
                 >
@@ -37,6 +39,7 @@
                       @isFullwidth={{true}}
                       @selectedValue={{@role.issuerRef}}
                       @onChange={{action (mut @role.issuerRef)}}
+                      aria-labelledby={{attr.name}}
                     />
                   </div>
                 </div>
@@ -115,31 +118,28 @@
       {{/each-in}}
     {{/each}}
   </div>
-  <div class="has-top-padding-s">
-    <button
+  <Hds::ButtonSet class="has-top-padding-s">
+    <Hds::Button
+      @text={{if @role.isNew "Create" "Update"}}
+      @icon={{if this.save.isRunning "loading"}}
       type="submit"
-      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
       disabled={{this.save.isRunning}}
       data-test-pki-role-save
-    >
-      {{if @role.isNew "Create" "Update"}}
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
       disabled={{this.save.isRunning}}
       {{on "click" @onCancel}}
       data-test-pki-role-cancel
-    >
-      Cancel
-    </button>
-    {{#if this.modelValidations.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
-    {{/if}}
-    {{#if this.invalidFormAlert}}
-      <div class="control">
-        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
-      </div>
-    {{/if}}
-  </div>
+    />
+  </Hds::ButtonSet>
+  {{#if this.modelValidations.targets.errors}}
+    <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} class="has-top-padding-s" />
+  {{/if}}
+  {{#if this.invalidFormAlert}}
+    <div class="control">
+      <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+    </div>
+  {{/if}}
 </form>

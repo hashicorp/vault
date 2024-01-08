@@ -9,6 +9,8 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func ExerciseBackend(t testing.TB, b Backend) {
@@ -330,11 +332,24 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 		t.Errorf("expected value bar: %v", err)
 	}
 
+	// Check if it's fencing that we can register the lock
+	if fba, ok := b.(FencingHABackend); ok {
+		require.NoError(t, fba.RegisterActiveNodeLock(lock))
+	}
+
 	// Second acquisition should fail
 	lock2, err := b2.LockWith("foo", "baz")
 	if err != nil {
 		t.Fatalf("lock 2: %v", err)
 	}
+
+	// Checking the lock from b2 should discover that the lock is held since held
+	// implies only that there is _some_ leader not that b2 is leader (this was
+	// not clear before so we make it explicit with this assertion).
+	held2, val2, err := lock2.Value()
+	require.NoError(t, err)
+	require.Equal(t, "bar", val2)
+	require.True(t, held2)
 
 	// Cancel attempt in 50 msec
 	stopCh := make(chan struct{})
@@ -361,6 +376,11 @@ func ExerciseHABackend(t testing.TB, b HABackend, b2 HABackend) {
 	}
 	if leaderCh2 == nil {
 		t.Errorf("should get leaderCh")
+	}
+
+	// Check if it's fencing that we can register the lock
+	if fba2, ok := b2.(FencingHABackend); ok {
+		require.NoError(t, fba2.RegisterActiveNodeLock(lock))
 	}
 
 	// Check the value

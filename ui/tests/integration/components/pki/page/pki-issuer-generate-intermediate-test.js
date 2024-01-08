@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';

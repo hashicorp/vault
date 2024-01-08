@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -43,6 +43,6 @@ export default class Icon extends Component {
   }
 
   get hsIconClass() {
-    return this.size === '24' ? 'hs-icon-xl' : 'hs-icon-l';
+    return this.size === '24' ? 'hs-icon-xlm' : 'hs-icon-l';
   }
 }

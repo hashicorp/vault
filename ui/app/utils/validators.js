@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { isPresent } from '@ember/utils';
@@ -25,9 +25,17 @@ export const number = (value, { nullable = false } = {}) => {
   return !isNaN(value);
 };
 
+/*
+the following validations return false (invalid) if the condition is met
+*/
 export const containsWhiteSpace = (value) => {
   const validation = new RegExp('\\s', 'g'); // search for whitespace
   return !validation.test(value);
 };
 
-export default { presence, length, number, containsWhiteSpace };
+export const endsInSlash = (value) => {
+  const validation = new RegExp('/$');
+  return !validation.test(value);
+};
+
+export default { presence, length, number, containsWhiteSpace, endsInSlash };

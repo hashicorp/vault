@@ -69,13 +69,15 @@ calculations.
 
 For example:
 
-- Authentication requests from two ACME clients living on different servers that
-  request the same set of certificate identifiers are assigned to the same
-  certificate entity.
-- Multiple requests for the same certificate identifier from a single ACME
-  client are assigned to the same certificate entity.
-- Two authentication requests from a single ACME client for different
-  certificate identifiers are assigned to separate certificate entities.
+- ACME client requests (from the same server or separate servers) for the same
+  certificate identifier (a unique combination of CN,DNS, SANS and IP SANS)
+  are treated as the same entity.
+- If an ACME client makes a request for `a.test.com`, and subsequently makes a new
+  request for `b.test.com` and `*.test.com` then two distinct entities will be created,
+  one for `a.test.com` and another for the combination of `b.test.com` and `*.test.com`.
+- Overlap of certificate identifiers from different ACME clients will be treated
+  as the same entity e.g. if client 1 requests `a.test.com` and client 2 requests
+  `a.test.com` a single entity is created for both requests.
 
 ## Entity assignment with namespaces
 
@@ -153,9 +155,6 @@ entity alias and token role.
   </li>
   <li>
     <a href="/vault/docs/concepts/client-count/faq">Client count FAQ</a>
-  </li>
-  <li>
-    <a href="/vault/docs/secrets/pki/best-practices/cicd-pipelines">Best practices for CI/CD pipelines</a>
   </li>
 </ul>
 </Tab>

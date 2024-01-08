@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package main
 
 import (
@@ -9,11 +12,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-hclog"
 	"golang.org/x/tools/go/packages"
 )
@@ -50,18 +56,21 @@ func main() {
 
 	// Read the file and figure out if we need to do anything.
 	inputFile := os.Getenv("GOFILE")
-	if !strings.HasSuffix(inputFile, "_oss.go") {
-		fatal(fmt.Errorf("stubmaker should only be invoked from files ending in _oss.go"))
+	if !strings.HasSuffix(inputFile, "_stubs_oss.go") {
+		fatal(fmt.Errorf("stubmaker should only be invoked from files ending in _stubs_oss.go"))
 	}
 
-	baseFilename := strings.TrimSuffix(inputFile, "_oss.go")
-	outputFile := baseFilename + "_ent.go"
+	baseFilename := strings.TrimSuffix(inputFile, "_stubs_oss.go")
+	outputFile := baseFilename + "_stubs_ent.go"
 	b, err := os.ReadFile(inputFile)
 	if err != nil {
 		fatal(err)
 	}
 
 	inputLines, err := readLines(bytes.NewBuffer(b))
+	if err != nil {
+		fatal(err)
+	}
 	funcs := getFuncs(inputLines)
 	if needed, err := isStubNeeded(funcs); err != nil {
 		fatal(err)
@@ -219,21 +228,23 @@ func isStubNeeded(funcs []string) (bool, error) {
 	case len(found) == len(funcs):
 		return false, nil
 	case len(found) != 0:
-		return false, fmt.Errorf("funcs partially defined: need=%v, found=%v", funcs, found)
+		sort.Strings(found)
+		sort.Strings(funcs)
+		delta := cmp.Diff(found, funcs)
+		return false, fmt.Errorf("funcs partially defined, delta=%s", delta)
 	}
 
 	return true, nil
 }
 
+var funcRE = regexp.MustCompile("^func *(?:[(][^)]+[)])? *([^(]+)")
+
 func getFuncs(inputLines []string) []string {
 	var funcs []string
 	for _, line := range inputLines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "func ") {
-			i := strings.Index(trimmed, "(")
-			if i != -1 {
-				funcs = append(funcs, trimmed[5:i])
-			}
+		matches := funcRE.FindStringSubmatch(line)
+		if len(matches) > 1 {
+			funcs = append(funcs, matches[1])
 		}
 	}
 	return funcs

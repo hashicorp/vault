@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -45,9 +45,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   // TODO: Add capabilities tests
   test('it renders show view as default', async function (assert) {
     assert.expect(8);
-    await render(
-      hbs`<Keymgmt::KeyEdit @model={{this.model}} @tab={{this.tab}} /><div id="modal-wormhole" />`
-    );
+    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @tab={{this.tab}} />`);
     assert.dom('[data-test-secret-header]').hasText('Unicorns', 'Shows key name');
     assert.dom('[data-test-keymgmt-key-toolbar]').exists('Subnav toolbar exists');
     assert.dom('[data-test-tab="Details"]').exists('Details tab exists');
@@ -71,9 +69,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('mode', 'edit');
     this.set('model', model);
 
-    await render(
-      hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} /><div id="modal-wormhole" />`
-    );
+    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
     assert.dom('[data-test-secret-header]').hasText('Edit Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
@@ -86,9 +82,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('mode', 'create');
     this.set('model', model);
 
-    await render(
-      hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} /><div id="modal-wormhole" />`
-    );
+    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
     assert.dom('[data-test-secret-header]').hasText('Create Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
@@ -100,9 +94,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     const store = this.owner.lookup('service:store');
     this.model = store.createRecord('keymgmt/key');
     this.set('mode', 'create');
-    await render(
-      hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} /><div id="modal-wormhole" />`
-    );
+    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
     assert.dom('[data-test-input="type"]').hasValue('rsa-2048', 'Has type rsa-2048 by default');
   });
 });

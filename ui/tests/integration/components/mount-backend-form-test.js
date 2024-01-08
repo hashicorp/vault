@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
@@ -60,11 +60,9 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('aws');
-      await component.next();
       assert.strictEqual(component.pathValue, 'aws', 'sets the value of the type');
       await component.back();
       await component.selectType('approle');
-      await component.next();
       assert.strictEqual(component.pathValue, 'approle', 'updates the value of the type');
     });
 
@@ -73,7 +71,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('approle');
-      await component.next();
       assert.strictEqual(this.model.type, 'approle', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'approle', 'defaults to approle (first in the list)');
       await component.path('newpath');
@@ -82,7 +79,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'Path is still newPath');
       await component.selectType('aws');
-      await component.next();
       assert.strictEqual(this.model.type, 'aws', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
@@ -92,7 +88,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('github');
-      await component.next();
       await component.toggleOptions();
       assert
         .dom('[data-test-input="config.tokenType"]')
@@ -147,13 +142,11 @@ module('Integration | Component | mount backend form', function (hooks) {
       await render(
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
-      await component.selectType('kv');
-      await component.next();
-      assert.strictEqual(component.pathValue, 'kv', 'sets the value of the type');
+      await component.selectType('azure');
+      assert.strictEqual(component.pathValue, 'azure', 'sets the value of the type');
       await component.back();
-      await component.selectType('ssh');
-      await component.next();
-      assert.strictEqual(component.pathValue, 'ssh', 'updates the value of the type');
+      await component.selectType('nomad');
+      assert.strictEqual(component.pathValue, 'nomad', 'updates the value of the type');
     });
 
     test('it keeps path value if the user has changed it', async function (assert) {
@@ -161,7 +154,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.selectType('kv');
-      await component.next();
       assert.strictEqual(this.model.type, 'kv', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'kv', 'path matches mount type');
       await component.path('newpath');
@@ -170,7 +162,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(this.model.type, '', 'Clears type on back');
       assert.strictEqual(this.model.path, 'newpath', 'path is still newpath');
       await component.selectType('ssh');
-      await component.next();
       assert.strictEqual(this.model.type, 'ssh', 'Updates type on model');
       assert.strictEqual(component.pathValue, 'newpath', 'path stays the same');
     });

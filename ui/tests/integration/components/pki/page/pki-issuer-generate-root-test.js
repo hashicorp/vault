@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -9,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-configure-create';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 /**
  * this test is for the page component only. A separate test is written for the form rendered
@@ -27,6 +33,15 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-component';
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    setRunOptions({
+      rules: {
+        // something strange happening here
+        'link-name': { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it renders correct title before and after submit', async function (assert) {

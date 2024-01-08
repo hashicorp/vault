@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 variable "cluster_name" {
   type        = string
@@ -63,7 +63,7 @@ variable "release" {
   description = "Consul release version and edition to install from releases.hashicorp.com"
   default = {
     version = "1.15.3"
-    edition = "oss"
+    edition = "ce"
   }
 }
 

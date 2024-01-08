@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -26,6 +26,7 @@ const generateHealthResponse = (now, state) => {
       break;
   }
   return {
+    enterprise: true,
     initialized: true,
     sealed: false,
     standby: false,

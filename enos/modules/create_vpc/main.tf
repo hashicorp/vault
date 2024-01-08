@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 data "aws_availability_zones" "available" {
   state = "available"
 
@@ -13,18 +16,6 @@ resource "random_string" "cluster_id" {
   upper   = false
   numeric = false
   special = false
-}
-
-resource "aws_kms_key" "key" {
-  count                   = var.create_kms_key ? 1 : 0
-  description             = "vault-ci-kms-key"
-  deletion_window_in_days = 7 // 7 is the shortest allowed window
-}
-
-resource "aws_kms_alias" "alias" {
-  count         = var.create_kms_key ? 1 : 0
-  name          = "alias/enos_key-${random_string.cluster_id.result}"
-  target_key_id = aws_kms_key.key[0].key_id
 }
 
 resource "aws_vpc" "vpc" {

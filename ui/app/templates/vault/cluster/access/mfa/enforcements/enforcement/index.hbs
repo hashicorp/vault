@@ -1,15 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
-            Enforcements
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Enforcements" @route="vault.cluster.access.mfa.enforcements.index" />
+      <Hds::Breadcrumb::Item @text={{this.model.name}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -40,14 +39,13 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <button
-      class="toolbar-link"
-      onclick={{action (mut this.showDeleteConfirmation) true}}
-      type="button"
+    <Hds::Button
+      @text="Delete"
+      @color="secondary"
+      class="toolbar-button"
+      {{on "click" (action (mut this.showDeleteConfirmation) true)}}
       data-test-enforcement-delete
-    >
-      Delete
-    </button>
+    />
     <div class="toolbar-separator"></div>
     <ToolbarLink
       @route="vault.cluster.access.mfa.enforcements.enforcement.edit"

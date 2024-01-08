@@ -545,7 +545,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 			// be pointing to the protocol used in the application layer and not to
 			// the transport layer. Hence, setting the fields accordingly.
 			u.Scheme = "http"
-			u.Host = socket
+			u.Host = "localhost"
 			u.Path = ""
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
@@ -998,7 +998,9 @@ func (c *Client) Namespace() string {
 func (c *Client) WithNamespace(namespace string) *Client {
 	c2 := *c
 	c2.modifyLock = sync.RWMutex{}
-	c2.headers = c.Headers()
+	c.modifyLock.RLock()
+	c2.headers = c.headersInternal()
+	c.modifyLock.RUnlock()
 	if namespace == "" {
 		c2.ClearNamespace()
 	} else {
@@ -1035,7 +1037,12 @@ func (c *Client) ClearToken() {
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
+	return c.headersInternal()
+}
 
+// headersInternal gets the current set of headers used for requests. Must be called
+// with the read modifyLock held.
+func (c *Client) headersInternal() http.Header {
 	if c.headers == nil {
 		return nil
 	}
@@ -1183,24 +1190,28 @@ func (c *Client) CloneTLSConfig() bool {
 // the api.Config struct, such as policy override and wrapping function
 // behavior, must currently then be set as desired on the new client.
 func (c *Client) Clone() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(c.config.CloneHeaders)
 }
 
 // CloneWithHeaders creates a new client similar to Clone, with the difference
-// being that the  headers are always cloned
+// being that the headers are always cloned
 func (c *Client) CloneWithHeaders() (*Client, error) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 	return c.clone(true)
 }
 
 // clone creates a new client, with the headers being cloned based on the
-// passed in cloneheaders boolean
+// passed in cloneheaders boolean.
+// Must be called with the read lock and config read lock held.
 func (c *Client) clone(cloneHeaders bool) (*Client, error) {
-	c.modifyLock.RLock()
-	defer c.modifyLock.RUnlock()
-
 	config := c.config
-	config.modifyLock.RLock()
-	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
 		Address:        config.Address,
@@ -1230,7 +1241,7 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	}
 
 	if cloneHeaders {
-		client.SetHeaders(c.Headers().Clone())
+		client.SetHeaders(c.headersInternal().Clone())
 	}
 
 	if config.CloneToken {
@@ -1261,6 +1272,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	mfaCreds := c.mfaCreds
 	wrappingLookupFunc := c.wrappingLookupFunc
 	policyOverride := c.policyOverride
+	headers := c.headersInternal()
 	c.modifyLock.RUnlock()
 
 	host := addr.Host
@@ -1305,7 +1317,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
-	req.Headers = c.Headers()
+	req.Headers = headers
 	req.PolicyOverride = policyOverride
 
 	return req

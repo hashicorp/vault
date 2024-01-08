@@ -8,9 +8,11 @@ description: >-
 
 # `/sys/rekey-recovery-key`
 
-~> **Note:** These endpoints are only applicable to seals that support recovery keys.
+@include 'alerts/restricted-root.mdx'
 
-The `/sys/rekey-recovery-key` endpoints are used to rekey the recovery keys for Vault.
+The `/sys/rekey-recovery-key` endpoints are used to rekey the recovery keys for
+Vault. Key recovery endpoints are only applicable to seals that support recovery
+keys.
 
 ## Read rekey progress
 

@@ -17,7 +17,7 @@ Some of these enhancements and changes in this release include:
 
 - Ability to view client counts per auth and changes to clients over months, therefore, providing more granular visibility into clients.
 - Extended the `sys/remount` API endpoint to support moving secrets engines and auth method mounts from one location to another, within a namespace or across namespaces.
-- Improved security posture that includes MFA on login for Vault OSS customers.
+- Improved security posture that includes MFA on login for Vault Community Edition customers.
 - Ability to implicitely achieve consistency via tokens.
 - Support of PKCE on Vault’s OIDC auth method with Telemetry support for the Vault Agent.
 - Improvement of key areas and parity to support using Terraform Provider with Vault.
@@ -26,13 +26,13 @@ Some of these enhancements and changes in this release include:
 
 This section describes the new features introduced as part of Vault
 
-### Multi-Factor authentication (MFA) for Vault OSS
+### Multi-Factor authentication (MFA) for Vault Community Edition
 
 Vault has had support for the [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) as part of its Enterprise edition. The Step-up Enterprise MFA allows having an MFA on login, or for step-up access to sensitive resources in Vault.
 
-With Vault 1.10.0, MFA as part of [login](/vault/docs/auth/login-mfa) is now supported for Vault OSS. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
+With Vault 1.10.0, MFA as part of [login](/vault/docs/auth/login-mfa) is now supported for Vault Community Edition. This demonstrates HashiCorp’s thought leadership in security and its continued endeavor to enable all Vault users to employ strong security policies with Vault.
 
-~> **Note:** The Legacy MFA in Vault OSS is a [deprecated](/vault/docs/deprecation) feature and will be removed in Vault 1.11.
+~> **Note:** The Legacy MFA in Vault Community Edition is a [deprecated](/vault/docs/deprecation) feature and will be removed in Vault 1.11.
 
 Refer to the [Login MFA FAQ](/vault/docs/auth/login-mfa/faq) to understand the various MFA workflows that are supported in Vault 1.10.0.
 
@@ -138,7 +138,7 @@ We now support Server Side Consistent Tokens (See [Replication](/vault/docs/conf
 
 For more details, see the [Server Side Consistent Tokens FAQ](/vault/docs/faq/ssct).
 
-Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault OSS users.
+Since service tokens are always created on the leader, as long as the leader is not upgraded before performance standbys, service tokens will be of the old format and still be usable during the upgrade process. However, the usual upgrade process we recommend can't be relied upon to always upgrade the leader last. Due to this known [issue](https://github.com/hashicorp/vault/issues/14153), a Vault cluster using Integrated Storage may result in a leader not being upgraded last, and this can trigger a re-election. This re-election can cause the upgraded node to become the leader, resulting in the newly created tokens on the leader to be unusable on nodes that have not yet been upgraded. Note that this issue does not impact Vault Community Edition users.
 
 We will have a fix for this issue in Vault 1.10.1. Until this issue is fixed, you may be at risk of having performance standbys unable to service requests until all nodes are upgraded. We recommended that you plan for a maintenance window to upgrade.
 

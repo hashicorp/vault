@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -573,6 +573,7 @@ func (i *IdentityStore) initialize(ctx context.Context, req *logical.Initializat
 	}
 
 	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		i.logger.Error("failed to write OIDC default resources to storage", "error", err)
 		return err
 	}
 

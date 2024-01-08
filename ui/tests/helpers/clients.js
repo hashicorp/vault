@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { Response } from 'miragejs';
@@ -14,7 +14,7 @@ import { Response } from 'miragejs';
   Filtering (data without mounts)
   * -- HISTORY ONLY --
   Filtering different date ranges (hist only)
-  Upgrade warning 
+  Upgrade warning
   No permissions for license
   Version
   queries available
@@ -29,8 +29,8 @@ export const SELECTORS = {
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
   rangeDropdown: '[data-test-calendar-widget-trigger]',
-  monthDropdown: '[data-test-popup-menu-trigger="month"]',
-  yearDropdown: '[data-test-popup-menu-trigger="year"]',
+  monthDropdown: '[data-test-toggle-month]',
+  yearDropdown: '[data-test-toggle-year]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
   runningTotalMonthStats: '[data-test-running-total="single-month-stats"]',
   runningTotalMonthlyCharts: '[data-test-running-total="monthly-charts"]',

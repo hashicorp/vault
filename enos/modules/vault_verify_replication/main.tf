@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 terraform {
@@ -22,9 +22,11 @@ locals {
 resource "enos_remote_exec" "smoke-verify-replication" {
   for_each = local.instances
 
-  content = templatefile("${path.module}/templates/smoke-verify-replication.sh", {
-    vault_edition = var.vault_edition
-  })
+  environment = {
+    VAULT_EDITION = var.vault_edition
+  }
+
+  scripts = [abspath("${path.module}/scripts/smoke-verify-replication.sh")]
 
   transport = {
     ssh = {

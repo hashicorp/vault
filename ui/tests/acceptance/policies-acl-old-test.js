@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, find, currentURL, waitUntil } from '@ember/test-helpers';
@@ -44,8 +44,8 @@ module('Acceptance | policies (old)', function (hooks) {
     );
     assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
     assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
-    await click('[data-test-policy-list-link]');
-
+    await click('[data-test-policy-list-link] a');
+    await fillIn('[data-test-component="navigate-input"]', policyLower);
     assert
       .dom(`[data-test-policy-link="${policyLower}"]`)
       .exists({ count: 1 }, 'new policy shown in the list');
@@ -55,7 +55,7 @@ module('Acceptance | policies (old)', function (hooks) {
 
     await click('[data-test-policy-edit-toggle]');
 
-    await click('[data-test-policy-delete] button');
+    await click('[data-test-confirm-action-trigger]');
 
     await click('[data-test-confirm-button]');
     await waitUntil(() => currentURL() === `/vault/policies/acl`);
@@ -64,6 +64,7 @@ module('Acceptance | policies (old)', function (hooks) {
       `/vault/policies/acl`,
       'navigates to policy list on successful deletion'
     );
+    await fillIn('[data-test-component="navigate-input"]', policyLower);
     assert
       .dom(`[data-test-policy-item="${policyLower}"]`)
       .doesNotExist('deleted policy is not shown in the list');

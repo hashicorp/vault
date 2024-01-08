@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -113,7 +113,7 @@ var (
 			return errors.New("nil token entry")
 		}
 
-		storage := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+		storage := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 		if storage == nil {
 			return fmt.Errorf("no cubby mount entry")
 		}
@@ -310,7 +310,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
-					Description: "Token to lookup (POST request body)",
+					Description: "Token to lookup",
+					Query:       true,
 				},
 			},
 
@@ -783,8 +784,8 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"revoke-orphan/*",
-				"accessors*",
+				"revoke-orphan",
+				"accessors/",
 			},
 
 			// Most token store items are local since tokens are local, but a
@@ -1691,8 +1692,14 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, errors.New("expiration manager is nil on tokenstore")
+		switch ts.core.IsDRSecondary() {
+		case true: // Bail if on DR secondary as expiration manager is nil
+			return nil, nil
+		default:
+			return nil, errors.New("expiration manager is nil on tokenstore")
+		}
 	}
+
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch lease times: %w", err)
@@ -2195,7 +2202,7 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 			}
 
 			// List all the cubbyhole storage keys
-			view := ts.core.router.MatchingStorageByAPIPath(ctx, cubbyholeMountPath)
+			view := ts.core.router.MatchingStorageByAPIPath(ctx, mountPathCubbyhole)
 			if view == nil {
 				return fmt.Errorf("no cubby mount entry")
 			}
@@ -3285,22 +3292,14 @@ func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, da
 	return nil, nil
 }
 
-// handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
-// in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
+// handleRevokeOrphan handles the auth/token/revoke-orphan path for revocation of tokens
+// in a way that leaves child tokens orphaned. Normally, using sys/leases/revoke/{lease_id} will revoke
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-	}
-
-	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
-
-	if !isSudo {
-		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
-			logical.ErrInvalidRequest
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either

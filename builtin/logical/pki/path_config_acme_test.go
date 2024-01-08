@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,10 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAcmeConfig(t *testing.T) {
+	t.Parallel()
+
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
@@ -91,7 +94,7 @@ func TestAcmeConfig(t *testing.T) {
 	testCtx := context.Background()
 
 	for _, tc := range cases {
-		deadline := time.Now().Add(time.Second * 10)
+		deadline := time.Now().Add(1 * time.Minute)
 		subTestCtx, _ := context.WithDeadline(testCtx, deadline)
 
 		_, err := client.Logical().WriteWithContext(subTestCtx, "pki/roles/exists", roleConfig)
@@ -125,8 +128,28 @@ func TestAcmeConfig(t *testing.T) {
 			} else {
 				require.Error(t, err, "Acme Configuration should prevent usage")
 			}
+		})
+	}
+}
 
-			t.Logf("Completed case %v", tc.name)
+// TestAcmeExternalPolicyOss make sure setting external-policy on OSS within acme configuration fails
+func TestAcmeExternalPolicyOss(t *testing.T) {
+	if constants.IsEnterprise {
+		t.Skip("this test is only valid on OSS")
+	}
+
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	values := []string{"external-policy", "external-policy:", "external-policy:test"}
+	for _, value := range values {
+		t.Run(value, func(st *testing.T) {
+			_, err := CBWrite(b, s, "config/acme", map[string]interface{}{
+				"enabled":                  true,
+				"default_directory_policy": value,
+			})
+
+			require.Error(st, err, "should have failed setting acme config")
 		})
 	}
 }

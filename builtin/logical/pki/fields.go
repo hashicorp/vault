@@ -1,11 +1,12 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
 import (
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
@@ -324,9 +325,8 @@ is required. Ignored for other types.`,
 		Type:    framework.TypeInt,
 		Default: 0,
 		Description: `The number of bits to use. Allowed values are
-0 (universal default); with rsa key_type: 2048 (default), 3072, or
-4096; with ec key_type: 224, 256 (default), 384, or 521; ignored with
-ed25519.`,
+0 (universal default); with rsa key_type: 2048 (default), 3072, 4096 or 8192;
+with ec key_type: 224, 256 (default), 384, or 521; ignored with ed25519.`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: 0,
 		},
@@ -598,7 +598,7 @@ basic constraints.`,
 func addSignVerbatimRoleFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
 	fields["key_usage"] = &framework.FieldSchema{
 		Type:    framework.TypeCommaStringSlice,
-		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Default: issuing.DefaultRoleKeyUsages,
 		Description: `A comma-separated string or list of key usages (not extended
 key usages). Valid values can be found at
 https://golang.org/pkg/crypto/x509/#KeyUsage
@@ -609,7 +609,7 @@ this value to an empty list.`,
 
 	fields["ext_key_usage"] = &framework.FieldSchema{
 		Type:    framework.TypeCommaStringSlice,
-		Default: []string{},
+		Default: issuing.DefaultRoleEstKeyUsages,
 		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
 https://golang.org/pkg/crypto/x509/#ExtKeyUsage
 -- simply drop the "ExtKeyUsage" part of the name.
@@ -619,24 +619,25 @@ this value to an empty list.`,
 
 	fields["ext_key_usage_oids"] = &framework.FieldSchema{
 		Type:        framework.TypeCommaStringSlice,
+		Default:     issuing.DefaultRoleEstKeyUsageOids,
 		Description: `A comma-separated string or list of extended key usage oids.`,
 	}
 
 	fields["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
-		Default: 0,
+		Default: issuing.DefaultRoleSignatureBits,
 		Description: `The number of bits to use in the signature
 algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
 SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 		DisplayAttrs: &framework.DisplayAttributes{
-			Value: 0,
+			Value: issuing.DefaultRoleSignatureBits,
 		},
 	}
 
 	fields["use_pss"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
-		Default: false,
+		Default: issuing.DefaultRoleUsePss,
 		Description: `Whether or not to use PSS signatures when using a
 RSA key-type issuer. Defaults to false.`,
 	}

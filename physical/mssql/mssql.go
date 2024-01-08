@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mssql
 
@@ -21,8 +21,10 @@ import (
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
-var _ physical.Backend = (*MSSQLBackend)(nil)
-var identifierRegex = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
+var (
+	_               physical.Backend = (*MSSQLBackend)(nil)
+	identifierRegex                  = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
+)
 
 type MSSQLBackend struct {
 	dbTable    string

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package config
 
@@ -998,12 +998,14 @@ func TestLoadConfigFile_TemplateConfig(t *testing.T) {
 			TemplateConfig{
 				ExitOnRetryFailure:    true,
 				StaticSecretRenderInt: 1 * time.Minute,
+				MaxConnectionsPerHost: 100,
 			},
 		},
 		"empty": {
 			"./test-fixtures/config-template_config-empty.hcl",
 			TemplateConfig{
-				ExitOnRetryFailure: false,
+				ExitOnRetryFailure:    false,
+				MaxConnectionsPerHost: 10,
 			},
 		},
 	}

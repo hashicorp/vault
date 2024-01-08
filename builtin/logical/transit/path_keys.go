@@ -1,17 +1,16 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
-	"crypto"
 	"crypto/elliptic"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
@@ -269,9 +268,10 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 
 // Built-in helper type for returning asymmetric keys
 type asymKey struct {
-	Name         string    `json:"name" structs:"name" mapstructure:"name"`
-	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	Name             string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey        string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CertificateChain string    `json:"certificate_chain" structs:"certificate_chain" mapstructure:"certificate_chain"`
+	CreationTime     time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -379,6 +379,18 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 			if key.CreationTime.IsZero() {
 				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
 			}
+			if v.CertificateChain != nil {
+				var pemCerts []string
+				for _, derCertBytes := range v.CertificateChain {
+					pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
+						&pem.Block{
+							Type:  "CERTIFICATE",
+							Bytes: derCertBytes,
+						})))
+					pemCerts = append(pemCerts, pemCert)
+				}
+				key.CertificateChain = strings.Join(pemCerts, "\n")
+			}
 
 			switch p.Type {
 			case keysutil.KeyType_ECDSA_P256:
@@ -415,27 +427,11 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 					key.Name = "rsa-4096"
 				}
 
-				var publicKey crypto.PublicKey
-				publicKey = v.RSAPublicKey
-				if !v.IsPrivateKeyMissing() {
-					publicKey = v.RSAKey.Public()
-				}
-
-				// Encode the RSA public key in PEM format to return over the
-				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+				pubKey, err := encodeRSAPublicKey(&v)
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
+					return nil, err
 				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
-				}
-				key.PublicKey = string(pemBytes)
+				key.PublicKey = pubKey
 			}
 
 			retKeys[k] = structs.New(key).Map()

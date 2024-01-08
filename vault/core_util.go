@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -76,14 +76,19 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 
 func (c *Core) UndoLogsEnabled() bool            { return false }
 func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) EnableUndoLogs()                  {}
 func (c *Core) PersistUndoLogs() error           { return nil }
 
+func (c *Core) ReindexStage() *uint32  { return nil }
+func (c *Core) BuildProgress() *uint32 { return nil }
+func (c *Core) BuildTotal() *uint32    { return nil }
+
 func (c *Core) teardownReplicationResolverHandler() {}
-func createSecondaries(*Core, *CoreConfig)          {}
+func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
+func (c *Core) addExtraLogicalBackends(_ string) {}
 
-func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
+func (c *Core) addExtraCredentialBackends() {}
 
 func preUnsealInternal(context.Context, *Core) error { return nil }
 
