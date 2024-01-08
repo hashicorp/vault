@@ -67,11 +67,6 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   }
 
   @action
-  back() {
-    this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.secrets');
-  }
-
-  @action
   setMount(selected: Array<string>) {
     this.mountPath = selected[0] || '';
     if (this.mountPath === '') {

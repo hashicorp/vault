@@ -21,6 +21,7 @@ export default Factory.extend({
     tenant_id: 'tenant-id',
     client_id: 'azure-client-id',
     client_secret: '*****',
+    cloud: 'Azure Public Cloud',
   }),
   ['gcp-sm']: trait({
     type: 'gcp-sm',

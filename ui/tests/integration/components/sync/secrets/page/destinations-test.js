@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, click } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
@@ -87,17 +87,22 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       .includesText('AWS Secrets Manager', 'Filter is populated for correct initial value');
     await click(searchSelect.removeSelected);
 
-    for (const filterType of ['type', 'name']) {
-      await click(`${filter(filterType)} .ember-basic-dropdown-trigger`);
-      await click(searchSelect.option(0));
+    // TYPE FILTER
+    await click(`${filter('type')} .ember-basic-dropdown-trigger`);
+    await click(searchSelect.option(searchSelect.optionIndex('AWS Secrets Manager')));
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { type: 'aws-sm' } }],
+      'type filter triggered transition with correct query params'
+    );
 
-      const value = filterType === 'type' ? 'aws-sm' : 'destination-aws';
-      assert.deepEqual(
-        this.transitionStub.lastCall.args,
-        ['vault.cluster.sync.secrets.destinations', { queryParams: { [filterType]: value } }],
-        `${filterType} filter triggered transition with correct query params`
-      );
-    }
+    // NAME FILTER
+    await fillIn(filter('name'), 'destination-aws');
+    assert.deepEqual(
+      this.transitionStub.lastCall.args,
+      ['vault.cluster.sync.secrets.destinations', { queryParams: { name: 'destination-aws' } }],
+      'name filter triggered transition with correct query params'
+    );
   });
 
   test('it should render empty state when there are no filtered results', async function (assert) {
