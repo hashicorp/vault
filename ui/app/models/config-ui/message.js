@@ -4,7 +4,7 @@
  */
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { isAfter, addDays, startOfDay } from 'date-fns';
+import { isAfter, addDays, startOfDay, parseISO } from 'date-fns';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -89,7 +89,7 @@ export default class MessageModel extends Model {
 
   // date helpers
   get isStartTimeAfterToday() {
-    return isAfter(this.startTime, new Date());
+    return isAfter(parseISO(this.startTime), new Date());
   }
 
   // capabilities

@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
+import { parseISO } from 'date-fns';
 
 /**
  * @module Page::MessagesList
@@ -28,21 +29,30 @@ export default class MessagesList extends Component {
       let badgeDisplayText = '';
       if (message.active) {
         if (message.endTime) {
-          badgeDisplayText = `Active until ${dateFormat([message.endTime, 'MMM d, yyyy hh:mm aaa'], {
-            withTimeZone: true,
-          })}`;
+          badgeDisplayText = `Active until ${dateFormat(
+            [parseISO(message.endTime), 'MMM d, yyyy hh:mm aaa'],
+            {
+              withTimeZone: true,
+            }
+          )}`;
         } else {
           badgeDisplayText = 'Active';
         }
       } else {
         if (message.isStartTimeAfterToday) {
-          badgeDisplayText = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
-            withTimeZone: true,
-          })}`;
+          badgeDisplayText = `Scheduled: ${dateFormat(
+            [parseISO(message.startTime), 'MMM d, yyyy hh:mm aaa'],
+            {
+              withTimeZone: true,
+            }
+          )}`;
         } else {
-          badgeDisplayText = `Inactive:  ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
-            withTimeZone: true,
-          })}`;
+          badgeDisplayText = `Inactive:  ${dateFormat(
+            [parseISO(message.startTime), 'MMM d, yyyy hh:mm aaa'],
+            {
+              withTimeZone: true,
+            }
+          )}`;
         }
       }
 
