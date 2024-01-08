@@ -19,7 +19,7 @@ module('Unit | Transform | date time local', function (hooks) {
     let serialized = this.transform.serialize('2024-01-31T00:00');
     assert.strictEqual(
       serialized,
-      '2024-01-31T08:00:00.000Z',
+      new Date('2024-01-31T00:00').toISOString(),
       'should serialize a string that is not in ISO format'
     );
     serialized = this.transform.serialize(new Date('2024-03-30T17:11:00Z'));
