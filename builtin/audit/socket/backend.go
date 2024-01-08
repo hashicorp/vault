@@ -428,13 +428,13 @@ func (b *Backend) configureSinkNode(name string, address string, format string, 
 		return fmt.Errorf("%s: error creating socket sink node: %w", op, err)
 	}
 
-	// wrap the sink node with metrics middleware
+	// Wrap the sink node with metrics middleware
 	sinkMetricTimer, err := audit.NewSinkMetricTimer(name, n)
 	if err != nil {
 		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, name, err)
 	}
 
-	// Decide what kind of labels we want and wrap the sink node inside of a metrics counter.
+	// Decide what kind of labels we want and wrap the sink node inside a metrics counter.
 	var metricLabeler event.Labeler
 	switch {
 	case b.fallback:
@@ -443,7 +443,7 @@ func (b *Backend) configureSinkNode(name string, address string, format string, 
 		metricLabeler = audit.MetricLabelerAuditSink{}
 	}
 
-	sinkMetricCounter, err := event.NewMetricsCounter(name, sinkMetricTimer, metricLabeler)
+	sinkMetricCounter, err := event.NewMetricsCounter(sinkMetricTimer, metricLabeler)
 	if err != nil {
 		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, name, err)
 	}
