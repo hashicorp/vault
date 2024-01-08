@@ -4,7 +4,16 @@
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
-import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  settled,
+  visit,
+  triggerKeyEvent,
+  find,
+  waitUntil,
+  currentURL,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
