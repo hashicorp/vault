@@ -9,7 +9,7 @@ description: >-
 
 As your Vault environment scales to meet deployment needs, it is important to avoid over-subscription. A lease explosion can occur when operators reach over-subscription and clients create leases much faster than Vault is set to revoke them. If this continues unchecked, the active node will run out of memory. Once a lease explosion occurs, mitigation is time consuming and resource intensive.
 
-This document shows you how to prevent lease explosions,mitigate when a lease explosion occurs, and clean up your environment after a lease explosion.
+This document shows you how to prevent lease explosions, mitigate when a lease explosion occurs, and clean up your environment after a lease explosion.
 
 Applications and users can overwhelm system resources through consistent and high-volume API requests, resulting in denial-of-service issues in some Vault nodes or even the entire Vault cluster. Review [Vault resource quotas](/vault/docs/concepts/resource-quotas) to learn more.
 
