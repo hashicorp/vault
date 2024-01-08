@@ -4,6 +4,8 @@
 package audit
 
 import (
+	"strings"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/internal/observability/event"
 )
@@ -13,6 +15,7 @@ const (
 	MetricLabelAuditSinkFailure         = "audit.sink.failure"
 	MetricLabelAuditSinkFallbackSuccess = "audit.fallback.success"
 	MetricLabelAuditSinkFallbackMiss    = "audit.fallback.miss"
+	metricLabelSeparator                = "."
 )
 
 var (
@@ -28,24 +31,29 @@ type MetricLabelerAuditSink struct{}
 // of a sink node used for an audit fallback device.
 type MetricLabelerAuditFallback struct{}
 
-// Label provides the success and failure labels for an audit sink, based on the error supplied.
+// Labels provides the success and failure labels for an audit sink, based on the error supplied.
 // Success: 'vault.audit.sink.success'
 // Failure: 'vault.audit.sink.failure'
-func (m MetricLabelerAuditSink) Label(_ *eventlogger.Event, err error) string {
+func (m MetricLabelerAuditSink) Labels(_ *eventlogger.Event, err error) []string {
 	if err != nil {
-		return MetricLabelAuditSinkFailure
+		return splitLabel(MetricLabelAuditSinkFailure)
 	}
 
-	return MetricLabelAuditSinkSuccess
+	return splitLabel(MetricLabelAuditSinkSuccess)
 }
 
-// Label provides the success and failures labels for an audit fallback sink, based on the error supplied.
+// Labels provides the success and failures labels for an audit fallback sink, based on the error supplied.
 // Success: 'vault.audit.fallback.success'
 // Failure: 'vault.audit.sink.failure'
-func (m MetricLabelerAuditFallback) Label(_ *eventlogger.Event, err error) string {
+func (m MetricLabelerAuditFallback) Labels(_ *eventlogger.Event, err error) []string {
 	if err != nil {
-		return MetricLabelAuditSinkFailure
+		return splitLabel(MetricLabelAuditSinkFailure)
 	}
 
-	return MetricLabelAuditSinkFallbackSuccess
+	return splitLabel(MetricLabelAuditSinkFallbackSuccess)
+}
+
+// splitLabel takes a label and splits it using the metricLabelSeparator.
+func splitLabel(metricLabel string) []string {
+	return strings.Split(metricLabel, metricLabelSeparator)
 }

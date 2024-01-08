@@ -20,11 +20,11 @@ type MetricsCounter struct {
 	labeler Labeler
 }
 
-// Labeler provides a way to inject the logic required to determine a label based
+// Labeler provides a way to inject the logic required to determine labels based
 // on the state of the eventlogger.Event being returned and the error resulting
 // from processing the by the underlying eventlogger.Node.
 type Labeler interface {
-	Label(*eventlogger.Event, error) string
+	Labels(*eventlogger.Event, error) []string
 }
 
 // NewMetricsCounter should be used to create the MetricsCounter.
@@ -55,7 +55,7 @@ func (m MetricsCounter) Process(ctx context.Context, e *eventlogger.Event) (*eve
 	e, err = m.Node.Process(ctx, e)
 
 	// Provide the results to the Labeler.
-	metrics.IncrCounter([]string{m.labeler.Label(e, err)}, 1)
+	metrics.IncrCounter(m.labeler.Labels(e, err), 1)
 
 	return e, err
 }

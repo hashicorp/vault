@@ -17,15 +17,15 @@ func TestMetricLabelerAuditSink_Label(t *testing.T) {
 
 	tests := map[string]struct {
 		err      error
-		expected string
+		expected []string
 	}{
 		"nil": {
 			err:      nil,
-			expected: "audit.sink.success",
+			expected: []string{"audit", "sink", "success"},
 		},
 		"error": {
 			err:      errors.New("I am an error"),
-			expected: "audit.sink.failure",
+			expected: []string{"audit", "sink", "failure"},
 		},
 	}
 
@@ -36,7 +36,7 @@ func TestMetricLabelerAuditSink_Label(t *testing.T) {
 			t.Parallel()
 
 			m := &MetricLabelerAuditSink{}
-			result := m.Label(nil, tc.err)
+			result := m.Labels(nil, tc.err)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -49,15 +49,15 @@ func TestMetricLabelerAuditFallback_Label(t *testing.T) {
 
 	tests := map[string]struct {
 		err      error
-		expected string
+		expected []string
 	}{
 		"nil": {
 			err:      nil,
-			expected: "audit.fallback.success",
+			expected: []string{"audit", "fallback", "success"},
 		},
 		"error": {
 			err:      errors.New("I am an error"),
-			expected: "audit.sink.failure",
+			expected: []string{"audit", "sink", "failure"},
 		},
 	}
 
@@ -68,7 +68,7 @@ func TestMetricLabelerAuditFallback_Label(t *testing.T) {
 			t.Parallel()
 
 			m := &MetricLabelerAuditFallback{}
-			result := m.Label(nil, tc.err)
+			result := m.Labels(nil, tc.err)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
