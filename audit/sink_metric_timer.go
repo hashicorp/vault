@@ -24,6 +24,7 @@ type SinkMetricTimer struct {
 }
 
 // NewSinkMetricTimer should be used to create the SinkMetricTimer.
+// It expects that an eventlogger.NodeTypeSink should be supplied as the sink.
 func NewSinkMetricTimer(name string, sink eventlogger.Node) (*SinkMetricTimer, error) {
 	const op = "audit.NewSinkMetricTimer"
 
@@ -47,8 +48,9 @@ func NewSinkMetricTimer(name string, sink eventlogger.Node) (*SinkMetricTimer, e
 }
 
 // Process wraps the Process method of underlying sink (eventlogger.Node).
-// Additionally, it measures the time elapsed since the provided Event was created
-// and emits this as a metric when the method completes.
+// Additionally, when the supplied eventlogger.Event has an AuditEvent as its payload,
+// it measures the elapsed time between the creation of the eventlogger.Event and
+// the completion of processing, emitting this as a metric.
 func (s *SinkMetricTimer) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	defer func() {
 		auditEvent, ok := e.Payload.(*AuditEvent)

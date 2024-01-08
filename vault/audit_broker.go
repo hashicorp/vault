@@ -329,6 +329,9 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 				if err != nil {
 					retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 				}
+			} else {
+				// This audit event won't make it to any devices, we class this as a 'miss' for auditing.
+				metrics.IncrCounter([]string{"vault.audit.fallback.miss"}, 1)
 			}
 		}
 	}
@@ -454,6 +457,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 				if err != nil {
 					retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
 				}
+			} else {
+				// This audit event won't make it to any devices, we class this as a 'miss' for auditing.
+				metrics.IncrCounter([]string{audit.MetricLabelAuditSinkFallbackMiss}, 1)
 			}
 		}
 	}

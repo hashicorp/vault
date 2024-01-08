@@ -24,7 +24,7 @@ type MetricsCounter struct {
 
 // Labeler provides a way to inject the logic required to determine a label based
 // on the state of the eventlogger.Event being returned and the error resulting
-// from processing the underlying eventlogger.Node.
+// from processing the by the underlying eventlogger.Node.
 type Labeler interface {
 	Label(*eventlogger.Event, error) string
 }

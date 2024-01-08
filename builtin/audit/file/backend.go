@@ -543,7 +543,16 @@ func (b *Backend) configureSinkNode(name string, filePath string, mode string, f
 		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, filePath, err)
 	}
 
-	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, audit.MetricCounterAuditSink{})
+	// Decide what kind of labels we want and wrap the sink node inside of a metrics counter.
+	var metricLabeler event.Labeler
+	switch {
+	case b.fallback:
+		metricLabeler = audit.MetricCounterAuditFallback{}
+	default:
+		metricLabeler = audit.MetricCounterAuditSink{}
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(sinkName, sinkMetricTimer, metricLabeler)
 	if err != nil {
 		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, filePath, err)
 	}
