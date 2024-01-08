@@ -31,6 +31,9 @@ import { tracked } from '@glimmer/tracking';
 export default class PolicyFormComponent extends Component {
   @service flashMessages;
 
+  @tracked error;
+  @tracked validationError;
+
   @tracked errorBanner = '';
   @tracked showFileUpload = false;
   @tracked showTemplateModal = false;
@@ -38,6 +41,11 @@ export default class PolicyFormComponent extends Component {
   @task
   *save(event) {
     event.preventDefault();
+    console.log(this.args.model.name);
+    if (!this.args.model.name) {
+      this.error = new Error('Policy path is required.');
+      return;
+    }
     try {
       const { name, policyType, isNew } = this.args.model;
       yield this.args.model.save();
@@ -46,9 +54,13 @@ export default class PolicyFormComponent extends Component {
       );
       this.args.onSave(this.args.model);
     } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorBanner = message;
+      this.error = error;
     }
+  }
+
+  @action handleFormChange(name, val) {
+    console.log({ name, val });
+    // this.args.model[name] = val;
   }
 
   @action

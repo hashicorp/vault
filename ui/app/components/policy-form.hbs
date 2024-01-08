@@ -3,6 +3,21 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<NewForm
+  @onCancel={{this.cancel}}
+  @saving={{this.save.isRunning}}
+  @formError={{this.error}}
+  @validations={{this.validations}}
+  @onSubmit={{perform this.save}}
+  data-test-policy-form
+>
+  <NewFormSection>
+    <NewFormField @label="Path" @name="name" @value={{@model.name}} @onChange={{this.handleFieldChange}} />
+  </NewFormSection>
+</NewForm>
+
+<hr />
+
 <form {{on "submit" (perform this.save)}} data-test-policy-form>
   <div class="box is-shadowless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />

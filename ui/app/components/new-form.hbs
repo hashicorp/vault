@@ -1,0 +1,13 @@
+<form {{on "submit" @onSubmit}} ...attributes>
+  {{#if @formError}}
+    <Hds::Alert @type="inline" @color="critical" class="has-top-margin-s has-bottom-margin-s" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description data-test-message-error-description>{{this.errorMessage}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
+  {{yield}}
+  <Hds::ButtonSet>
+    <Hds::Button @text={{or @buttonText "Save"}} @icon={{if @saving "loading"}} type="submit" data-test-form-save />
+    <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-form-cancel />
+  </Hds::ButtonSet>
+</form>

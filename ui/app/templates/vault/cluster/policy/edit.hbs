@@ -3,49 +3,52 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<PageHeader as |p|>
-  <p.top>
+<Hds::PageHeader as |PH|>
+  <PH.Title>
+    {{this.model.id}}
+  </PH.Title>
+  {{#if this.model.enforcementLevel}}
+    <PH.Badges>
+      <Hds::Badge @text="Enforcement level: {{this.model.enforcementLevel}}" @color="highlight" />
+    </PH.Badges>
+  {{/if}}
+  <PH.Breadcrumb>
     <Hds::Breadcrumb>
       <Hds::Breadcrumb::Item
         @text="{{uppercase this.policyType}} policies"
+        @icon="dashboard"
         @route="vault.cluster.policies"
         @model={{this.policyType}}
         data-test-policy-list-link
       />
-      <Hds::Breadcrumb::Item @text={{this.model.id}} @route="vault.cluster.policy.show" @model={{this.model.id}} />
-      <Hds::Breadcrumb::Item @text="Edit" @current={{true}} />
+      <Hds::Breadcrumb::Item
+        @text={{this.model.id}}
+        @route="vault.cluster.policy.show"
+        @model={{this.model.id}}
+        @icon="file-text"
+      />
+      <Hds::Breadcrumb::Item @text="Edit" @icon="server-cluster" />
     </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{this.model.id}}
-      {{#if this.model.enforcementLevel}}
-        <span class="tag is-medium" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
-          {{this.model.enforcementLevel}}
-        </span>
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
-{{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-  <Toolbar>
-    <ToolbarActions>
-      {{#if (and (not-eq this.model.id "default") this.capabilities.canDelete)}}
-        <ConfirmAction
-          @buttonText="Delete policy"
-          class="toolbar-button"
-          @buttonColor="secondary"
-          @confirmMessage="Deleting this policy may affect access to Vault data."
-          @onConfirmAction={{this.deletePolicy}}
-        />
-        <div class="toolbar-separator"></div>
-      {{/if}}
-      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>
-        Back to policy
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-{{/if}}
+  </PH.Breadcrumb>
+  {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+    <PH.Actions>
+      <ConfirmAction
+        @buttonText="Delete policy"
+        @buttonColor="critical"
+        @confirmMessage="Deleting this policy may affect access to Vault data."
+        @onConfirmAction={{this.deletePolicy}}
+      />
+      <Hds::Button
+        @text="Back to policy"
+        @route="vault.cluster.policy.show"
+        @color="secondary"
+        @model={{this.model.id}}
+        data-test-policy-edit-toggle
+      />
+      {{! <Hds::Button @text="Create" @icon="plus" @iconPosition="leading" @color="primary" /> }}
+    </PH.Actions>
+  {{/if}}
+</Hds::PageHeader>
 
 <PolicyForm
   @model={{this.model}}
