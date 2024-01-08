@@ -431,8 +431,9 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		dbPath := filepath.Join(path, "raft.db")
 		opts := etcdboltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path:        dbPath,
-			BoltOptions: opts,
+			Path:                    dbPath,
+			BoltOptions:             opts,
+			MsgpackUseNewTimeFormat: true,
 		}
 		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
@@ -997,11 +998,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return err
 		}
 		transConfig := &raft.NetworkTransportConfig{
-			Stream:                streamLayer,
-			MaxPool:               3,
-			Timeout:               10 * time.Second,
-			ServerAddressProvider: b.serverAddressProvider,
-			Logger:                b.logger.Named("raft-net"),
+			Stream:                  streamLayer,
+			MaxPool:                 3,
+			Timeout:                 10 * time.Second,
+			ServerAddressProvider:   b.serverAddressProvider,
+			Logger:                  b.logger.Named("raft-net"),
+			MsgpackUseNewTimeFormat: true,
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
