@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,6 +82,17 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return fmt.Errorf("backend path must be specified")
 	}
 
+	if fallbackRaw, ok := entry.Options["fallback"]; ok {
+		fallback, err := parseutil.ParseBool(fallbackRaw)
+		if err != nil {
+			return fmt.Errorf("unable to enable audit device '%s', cannot parse supplied 'fallback' setting: %w", entry.Path, err)
+		}
+
+		// Reassigning the fallback value means we can ensure that the formatting
+		// of it as a string is consistent for future comparisons.
+		entry.Options["fallback"] = strconv.FormatBool(fallback)
+	}
+
 	// Update the audit table
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -88,6 +100,8 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	// Look for matching name
 	for _, ent := range c.audit.Entries {
 		switch {
+		case entry.Options["fallback"] == "true" && ent.Options["fallback"] == "true":
+			return fmt.Errorf("unable to enable audit device '%s', a fallback device already exists '%s'", entry.Path, ent.Path)
 		// Existing is sql/mysql/ new is sql/ or
 		// existing is sql/ and new is sql/mysql/
 		case strings.HasPrefix(ent.Path, entry.Path):
@@ -531,7 +545,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		!disableEventLogger,
 		c.auditedHeaders)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
 	}
 	if be == nil {
 		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)

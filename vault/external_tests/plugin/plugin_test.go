@@ -560,6 +560,9 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 			if resp.Data["reload_id"] == nil {
 				t.Fatal("no reload_id in response")
 			}
+			if len(resp.Warnings) != 0 {
+				t.Fatal(resp.Warnings)
+			}
 
 			for i := 0; i < 2; i++ {
 				// Ensure internal backed value is reset
@@ -573,6 +576,35 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 				if resp.Data["value"].(string) == "baz" {
 					t.Fatal("did not expect backend internal value to be 'baz'")
 				}
+			}
+		})
+	}
+}
+
+func TestSystemBackend_PluginReload_WarningIfNoneReloaded(t *testing.T) {
+	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical, "v5")
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+	client := core.Client
+
+	for _, backendType := range []logical.BackendType{logical.TypeLogical, logical.TypeCredential} {
+		t.Run(backendType.String(), func(t *testing.T) {
+			// Perform plugin reload
+			resp, err := client.Logical().Write("sys/plugins/reload/backend", map[string]any{
+				"plugin": "does-not-exist",
+			})
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp == nil {
+				t.Fatalf("bad: %v", resp)
+			}
+			if resp.Data["reload_id"] == nil {
+				t.Fatal("no reload_id in response")
+			}
+			if len(resp.Warnings) == 0 {
+				t.Fatal("expected warning")
 			}
 		})
 	}

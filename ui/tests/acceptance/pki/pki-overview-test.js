@@ -5,20 +5,23 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { SELECTORS } from 'vault/tests/helpers/pki/overview';
-import { tokenWithPolicy, runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { tokenWithPolicy, runCommands, clearRecords } from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     // Setup PKI engine
-    const mountPath = `pki`;
+    const mountPath = `pki-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
     this.mountPath = mountPath;
     await runCommands([`write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test"`]);
@@ -42,6 +45,7 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiIssuersList = await tokenWithPolicy('pki-issuers-list', pki_issuers_list_policy);
     this.pkiAdminToken = await tokenWithPolicy('pki-admin', pki_admin_policy);
     await logout.visit();
+    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
