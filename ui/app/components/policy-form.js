@@ -41,10 +41,12 @@ export default class PolicyFormComponent extends Component {
   @task
   *save(event) {
     event.preventDefault();
-    console.log(this.args.model.name);
     if (!this.args.model.name) {
       this.error = new Error('Policy path is required.');
       return;
+    }
+    if (!this.args.model.policy) {
+      this.error = new Error('Policy contents are required.');
     }
     try {
       const { name, policyType, isNew } = this.args.model;
@@ -59,8 +61,7 @@ export default class PolicyFormComponent extends Component {
   }
 
   @action handleFormChange(name, val) {
-    console.log({ name, val });
-    // this.args.model[name] = val;
+    this.args.model[name] = val;
   }
 
   @action

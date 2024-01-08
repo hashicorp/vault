@@ -1,3 +1,17 @@
-<Hds::Form::TextInput::Field @value={{@model.name}} readonly={{not @model.isNew}} as |F|>
-  <F.Label>Path</F.Label>
-</Hds::Form::TextInput::Field>
+{{#if (eq this.editType "select")}}
+  <Hds::Form::Select::Field {{on "change" this.onChange}} as |F|>
+    <F.Label>{{this.label}}</F.Label>
+    <F.Options>
+      {{#each @attr.options.possibleValues as |opt|}}
+        {{! TODO: handle non-simple values }}
+        <option value={{opt}} selected={{eq opt @attr.options.defaultValue}}>{{opt}}</option>
+      {{/each}}
+    </F.Options>
+  </Hds::Form::Select::Field>
+{{else if (eq this.editType "text")}}
+  <Hds::Form::TextInput::Field @value={{@model.name}} readonly={{not @model.isNew}} as |F|>
+    <F.Label>Path</F.Label>
+  </Hds::Form::TextInput::Field>
+{{else}}
+  {{this.editType}}
+{{/if}}

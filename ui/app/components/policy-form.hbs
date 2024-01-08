@@ -12,8 +12,60 @@
   data-test-policy-form
 >
   <NewFormSection>
-    <NewFormField @label="Path" @name="name" @value={{@model.name}} @onChange={{this.handleFieldChange}} />
+    <NewField::TextInput
+      @label="Path"
+      @name="name"
+      @value={{@model.name}}
+      @onChange={{this.handleFormChange}}
+      @readonly={{not @model.isNew}}
+      @isRequired={{true}}
+    />
+
+    {{!-- <NewFormField @label="Path" @name="name" @value={{@model.name}} @onChange={{this.handleFieldChange}} /> --}}
+    <Hds::Tabs as |T|>
+      <T.Tab>Code editor</T.Tab>
+      <T.Tab>File upload</T.Tab>
+
+      <T.Panel class="tab-contents">
+        <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
+        <p>You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.</p>
+        <JsonEditor
+          @title="Policy"
+          @showToolbar={{false}}
+          @value={{@model.policy}}
+          @valueUpdated={{action (mut @model.policy)}}
+          @mode="ruby"
+          @extraKeys={{hash Shift-Enter=(perform this.save)}}
+          data-test-policy-editor
+        />
+        <Hds::Button
+          @text="How to write a policy"
+          @icon="bulb"
+          @size="small"
+          @color="tertiary"
+          {{on "click" (fn (mut this.showTemplateModal))}}
+          data-test-policy-example-button
+        />
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@model.policy}}
+          class="transparent"
+          data-test-copy-button
+        />
+      </T.Panel>
+      <T.Panel class="tab-contents">
+        <NewField::Upload @label="Policy" @name="policy" @onChange={{this.handleFormChange}} />
+      </T.Panel>
+    </Hds::Tabs>
   </NewFormSection>
+  {{#if @model.additionalAttrs}}
+    <NewFormSection>
+      {{#each @model.additionalAttrs as |attr|}}
+        <NewFormField @attr={{attr}} @model={{@model}} />
+      {{/each}}
+    </NewFormSection>
+  {{/if}}
 </NewForm>
 
 <hr />

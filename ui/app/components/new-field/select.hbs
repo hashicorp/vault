@@ -1,0 +1,19 @@
+<Hds::Form::Select::Field
+  readonly={{@readonly}}
+  name={{@name}}
+  {{on "change" this.handleChange}}
+  class="new-form-field"
+  ...attributes
+  as |F|
+>
+  <F.Label>{{this.label}}</F.Label>
+  {{#if (has-block "helperText")}}
+    <F.HelperText>{{yield to="helperText"}}</F.HelperText>
+  {{/if}}
+  <F.Options>
+    {{#each @attr.options.possibleValues as |opt|}}
+      {{! TODO: handle non-simple values }}
+      <option value={{opt}} selected={{eq opt @attr.options.defaultValue}}>{{opt}}</option>
+    {{/each}}
+  </F.Options>
+</Hds::Form::Select::Field>
