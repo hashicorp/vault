@@ -510,7 +510,7 @@ jobs:
       - run: |
           rm -rf test-results/go-test/logs
           ls -lhR test-results/go-test
-          find test-results/go-test -mindepth 1 -mtime +3 -delete
+          find test-results/go-test -mindepth 1 -type f -mtime +3 -delete
 
           # Prune invalid timing files
           find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
