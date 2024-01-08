@@ -38,8 +38,8 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       .dom('[data-test-input="max_validation_attempts"]')
       .exists(`Max validation attempts field input renders`);
   });
-
-  test('it should edit a new mfa method', async function (assert) {
+  // You can only edit a mfa method from this form. To create you need to go to the parent create route.
+  test('it should edit a mfa method', async function (assert) {
     assert.expect(3);
 
     this.server.post('/identity/mfa/method/totp/some-id', () => {
