@@ -83,7 +83,7 @@ jobs:
           version: ${{ inputs.vault-version }}
           maintainer: HashiCorp
           homepage: https://github.com/hashicorp/vault
-          license: MPL-2.0
+          license: BUSL-1.1
           binary: dist/${{ inputs.package-name }}
           deb_depends: openssl
           rpm_depends: openssl
