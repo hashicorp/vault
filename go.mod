@@ -24,6 +24,10 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/vault-plugin-secrets-gcp => /Users/vinaygopalan/Desktop/vault-projects/vault-plugin-secrets-gcp
+
+replace github.com/hashicorp/go-gcp-common => /Users/vinaygopalan/go/src/github.com/hashicorp/go-gcp-common
+
 require (
 	cloud.google.com/go/cloudsqlconn v1.4.3
 	cloud.google.com/go/monitoring v1.16.1
@@ -218,8 +222,8 @@ require (
 	go.uber.org/goleak v1.2.1
 	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
-	golang.org/x/net v0.17.0
-	golang.org/x/oauth2 v0.11.0
+	golang.org/x/net v0.19.0
+	golang.org/x/oauth2 v0.15.0
 	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.15.0
 	golang.org/x/term v0.15.0
