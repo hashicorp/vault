@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
 import authPage from 'vault/tests/pages/auth';
-import { click, visit } from '@ember/test-helpers';
+import { click, visit, fillIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 
 const { searchSelect, filter, listItem } = PAGE;
@@ -29,6 +29,11 @@ module('Acceptance | sync | destinations', function (hooks) {
     assert.dom(listItem).exists({ count: 6 }, 'All destinations render');
     await click(`${filter('type')} .ember-basic-dropdown-trigger`);
     await click(searchSelect.option());
-    assert.dom(listItem).exists({ count: 2 }, 'Filtered destinations render');
+    assert.dom(listItem).exists({ count: 2 }, 'Destinations are filtered by type');
+    await fillIn(filter('name'), 'new');
+    assert.dom(listItem).exists({ count: 1 }, 'Destinations are filtered by type and name');
+    await click(searchSelect.removeSelected);
+    await fillIn(filter('name'), 'gcp');
+    assert.dom(listItem).exists({ count: 1 }, 'Destinations are filtered by name');
   });
 });
