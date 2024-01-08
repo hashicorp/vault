@@ -75,8 +75,16 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 }
 
 func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate-root", req.Path, name, true)
+			} else {
+				b.dbEvent(ctx, "rotate-root-fail", req.Path, name, false)
+			}
+		}()
+
 		if name == "" {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
@@ -179,8 +187,15 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 }
 
 func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationFunc {
-	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (_ *logical.Response, err error) {
 		name := data.Get("name").(string)
+		defer func() {
+			if err == nil {
+				b.dbEvent(ctx, "rotate", req.Path, name, true)
+			} else {
+				b.dbEvent(ctx, "rotate-fail", req.Path, name, false)
+			}
+		}()
 		if name == "" {
 			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
