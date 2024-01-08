@@ -331,7 +331,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 				}
 			} else {
 				// This audit event won't make it to any devices, we class this as a 'miss' for auditing.
-				metrics.IncrCounter([]string{"vault.audit.fallback.miss"}, 1)
+				metrics.IncrCounter([]string{audit.MetricLabelAuditSinkFallbackMiss}, 1)
 			}
 		}
 	}
