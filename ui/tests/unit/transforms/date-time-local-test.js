@@ -16,10 +16,10 @@ module('Unit | Transform | date time local', function (hooks) {
 
   test('it serializes correctly for the API', function (assert) {
     assert.ok(this.transform);
-    let serialized = this.transform.serialize('2024-03-30T10:11');
+    let serialized = this.transform.serialize('2024-01-31T00:00');
     assert.strictEqual(
       serialized,
-      '2024-03-30T17:11:00.000Z',
+      '2024-01-31T08:00:00.000Z',
       'should serialize a string that is not in ISO format'
     );
     serialized = this.transform.serialize(new Date('2024-03-30T17:11:00Z'));
