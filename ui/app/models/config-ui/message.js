@@ -4,7 +4,7 @@
  */
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { isAfter, addDays, startOfDay } from 'date-fns';
+import { isAfter, addDays, startOfDay, parseISO } from 'date-fns';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 
@@ -72,14 +72,14 @@ export default class MessageModel extends Model {
     editType: 'textarea',
   })
   message;
-  @attr('date', {
+  @attr('dateTimeLocal', {
     editType: 'dateTimeLocal',
     label: 'Message starts',
     subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
-    defaultValue: addDays(startOfDay(new Date() || this.startTime), 1).toISOString(),
+    defaultValue: addDays(startOfDay(new Date()), 1).toISOString(),
   })
   startTime;
-  @attr('date', { editType: 'yield', label: 'Message expires' }) endTime;
+  @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
 
   // the api returns link as an object with title and href as keys, but we separate the link key/values into
   // different attributes to easily show link title and href fields on the create form. In our serializer,
@@ -89,7 +89,7 @@ export default class MessageModel extends Model {
 
   // date helpers
   get isStartTimeAfterToday() {
-    return isAfter(this.startTime, new Date());
+    return isAfter(parseISO(this.startTime), new Date());
   }
 
   // capabilities
