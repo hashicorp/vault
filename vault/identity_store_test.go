@@ -14,7 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
@@ -259,6 +259,9 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		Metadata: map[string]string{
 			"foo": "a",
 		},
+		CustomMetadata: map[string]string{
+			"bar": "a",
+		},
 	}
 
 	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
@@ -293,6 +296,9 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 	if diff := deep.Equal(entity.Aliases[0].Metadata, map[string]string{"foo": "a"}); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(entity.Aliases[0].CustomMetadata, map[string]string{"bar": "a"}); diff != nil {
 		t.Fatal(diff)
 	}
 

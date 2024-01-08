@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/errwrap"
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -1315,6 +1315,12 @@ func (i *IdentityStore) sanitizeAlias(ctx context.Context, alias *identity.Alias
 	err = validateMetadata(alias.Metadata)
 	if err != nil {
 		return fmt.Errorf("invalid alias metadata: %w", err)
+	}
+
+	// Alias custom metadata should always be map[string]string
+	err = validateMetadata(alias.CustomMetadata)
+	if err != nil {
+		return fmt.Errorf("invalid alias custom metadata: %w", err)
 	}
 
 	// Create an ID if there isn't one already
