@@ -76,7 +76,7 @@ export default class MessageModel extends Model {
     editType: 'dateTimeLocal',
     label: 'Message starts',
     subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
-    defaultValue: addDays(startOfDay(new Date() || this.startTime), 1).toISOString(),
+    defaultValue: addDays(startOfDay(new Date()), 1).toISOString(),
   })
   startTime;
   @attr('dateTimeLocal', { editType: 'yield', label: 'Message expires' }) endTime;
