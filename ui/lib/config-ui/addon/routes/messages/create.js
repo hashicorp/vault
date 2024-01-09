@@ -16,10 +16,10 @@ export default class MessagesCreateRoute extends Route {
     },
   };
 
-  async getMessages(message) {
+  async getMessages(authenticated) {
     try {
       return await this.store.query('config-ui/message', {
-        authenticated: message.authenticated,
+        authenticated,
       });
     } catch {
       return [];
@@ -40,7 +40,7 @@ export default class MessagesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
+      { label: 'Messages', route: 'messages', query: { authenticated: controller.authenticated } },
       { label: 'Create Message' },
     ];
   }
