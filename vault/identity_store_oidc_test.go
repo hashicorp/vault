@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/identity"
@@ -15,8 +20,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	gocache "github.com/patrickmn/go-cache"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 // TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
@@ -1052,10 +1055,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: true,
 			testCases: []testCase{
+				// Each cycle results in a key going in/out of its verification_ttl period
 				{1, 2, 2},
-				{2, 2, 4},
-				{3, 2, 4},
-				{4, 2, 4},
+				{2, 3, 3},
+				{3, 2, 2},
+				{4, 3, 3},
 			},
 		},
 		{
@@ -1064,8 +1068,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: true,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+
+				// key counts jump from 1 to 2 because the next signing key becomes
+				// the signing key, and no key is in its verification_ttl period
+				{2, 2, 2},
 			},
 		},
 		{
@@ -1074,8 +1081,11 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     true,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 1, 2},
-				{2, 2, 4},
+				{1, 1, 1},
+
+				// key counts jump from 1 to 3 because the original signing key is
+				// still published and within its verification_ttl period
+				{2, 3, 3},
 			},
 		},
 		{
@@ -1084,8 +1094,8 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 			setSigningKey:     false,
 			setNextSigningKey: false,
 			testCases: []testCase{
-				{1, 0, 2},
-				{2, 2, 4},
+				{1, 0, 0},
+				{2, 2, 2},
 			},
 		},
 	}
@@ -1151,7 +1161,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				expectedKeyCount := testSet.testCases[i].numKeys
 				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
 				actualKeyRingLen := len(testSet.namedKey.KeyRing)
-				if actualKeyRingLen < expectedKeyCount {
+				if actualKeyRingLen != expectedKeyCount {
 					t.Errorf(
 						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
 						testSet.namedKey.name,
@@ -1162,7 +1172,7 @@ func TestOIDC_PeriodicFunc(t *testing.T) {
 				}
 				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
 				actualPubKeysLen := len(publicKeysSamples[i])
-				if actualPubKeysLen < expectedPublicKeyCount {
+				if actualPubKeysLen != expectedPublicKeyCount {
 					t.Errorf(
 						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
 						testSet.namedKey.name,

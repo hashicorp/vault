@@ -1,0 +1,3 @@
+```release-note:change
+auth/approle: Add maximum length of 4096 for approle role_names, as this value results in HMAC calculation
+```

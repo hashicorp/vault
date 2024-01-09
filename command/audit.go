@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 var _ cli.Command = (*AuditCommand)(nil)
@@ -22,6 +25,10 @@ Usage: vault audit <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's audit devices.
   Users can list, enable, and disable audit devices.
+
+  *NOTE*: Once an audit device has been enabled, failure to audit could prevent
+  Vault from servicing future requests. It is highly recommended that you enable
+  multiple audit devices.
 
   List all enabled audit devices:
 

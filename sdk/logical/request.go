@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -53,6 +57,7 @@ const (
 	NoClientToken ClientTokenSource = iota
 	ClientTokenFromVaultHeader
 	ClientTokenFromAuthzHeader
+	ClientTokenFromInternalAuth
 )
 
 type WALState struct {
@@ -153,6 +158,22 @@ type Request struct {
 	// backends can be tied to the mount it belongs to.
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor" sentinel:""`
 
+	// mountRunningVersion is used internally to propagate the semantic version
+	// of the mounted plugin as reported by its vault.MountEntry to audit logging
+	mountRunningVersion string
+
+	// mountRunningSha256 is used internally to propagate the encoded sha256
+	// of the mounted plugin as reported its vault.MountEntry to audit logging
+	mountRunningSha256 string
+
+	// mountIsExternalPlugin is used internally to propagate whether
+	// the backend of the mounted plugin is running externally (i.e., over GRPC)
+	// to audit logging
+	mountIsExternalPlugin bool
+
+	// mountClass is used internally to propagate the mount class of the mounted plugin to audit logging
+	mountClass string
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info" sentinel:""`
 
@@ -224,6 +245,12 @@ type Request struct {
 	// InboundSSCToken is the token that arrives on an inbound request, supplied
 	// by the vault user.
 	InboundSSCToken string
+
+	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
+	ForwardedFrom string `json:"forwarded_from,omitempty"`
+
+	// Name of the chroot namespace for the listener that the request was made against
+	ChrootNamespace string `json:"chroot_namespace,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure
@@ -278,6 +305,38 @@ func (r *Request) SentinelKeys() []string {
 		"wrapping",
 		"wrap_info",
 	}
+}
+
+func (r *Request) MountRunningVersion() string {
+	return r.mountRunningVersion
+}
+
+func (r *Request) SetMountRunningVersion(mountRunningVersion string) {
+	r.mountRunningVersion = mountRunningVersion
+}
+
+func (r *Request) MountRunningSha256() string {
+	return r.mountRunningSha256
+}
+
+func (r *Request) SetMountRunningSha256(mountRunningSha256 string) {
+	r.mountRunningSha256 = mountRunningSha256
+}
+
+func (r *Request) MountIsExternalPlugin() bool {
+	return r.mountIsExternalPlugin
+}
+
+func (r *Request) SetMountIsExternalPlugin(mountIsExternalPlugin bool) {
+	r.mountIsExternalPlugin = mountIsExternalPlugin
+}
+
+func (r *Request) MountClass() string {
+	return r.mountClass
+}
+
+func (r *Request) SetMountClass(mountClass string) {
+	r.mountClass = mountClass
 }
 
 func (r *Request) LastRemoteWAL() uint64 {
@@ -366,6 +425,7 @@ const (
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
 	ResolveRoleOperation              = "resolve-role"
+	HeaderOperation                   = "header"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
@@ -378,7 +438,6 @@ type MFACreds map[string][]string
 // InitializationRequest stores the parameters and context of an Initialize()
 // call being made to a logical.Backend.
 type InitializationRequest struct {
-
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
 }
@@ -392,4 +451,74 @@ type CtxKeyInFlightRequestID struct{}
 
 func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
+}
+
+type CtxKeyRequestRole struct{}
+
+func (c CtxKeyRequestRole) String() string {
+	return "request-role"
+}
+
+// CtxKeyDisableReplicationStatusEndpoints is a custom type used as a key in
+// context.Context to store the value `true` when the
+// disable_replication_status_endpoints configuration parameter is set to true
+// for the listener through which a request was received.
+type ctxKeyDisableReplicationStatusEndpoints struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyDisableReplicationStatusEndpoints) String() string {
+	return "disable-replication-status-endpoints"
+}
+
+// ContextDisableReplicationStatusEndpointsValue examines the provided
+// context.Context for the disable replication status endpoints value and
+// returns it as a bool value if it's found along with the ok return value set
+// to true; otherwise the ok return value is false.
+func ContextDisableReplicationStatusEndpointsValue(ctx context.Context) (value, ok bool) {
+	value, ok = ctx.Value(ctxKeyDisableReplicationStatusEndpoints{}).(bool)
+
+	return
+}
+
+// CreateContextDisableReplicationStatusEndpoints creates a new context.Context
+// based on the provided parent that also includes the provided value for the
+// ctxKeyDisableReplicationStatusEndpoints key.
+func CreateContextDisableReplicationStatusEndpoints(parent context.Context, value bool) context.Context {
+	return context.WithValue(parent, ctxKeyDisableReplicationStatusEndpoints{}, value)
+}
+
+// CtxKeyOriginalRequestPath is a custom type used as a key in context.Context
+// to store the original request path.
+type ctxKeyOriginalRequestPath struct{}
+
+// String returns a string representation of the receiver type.
+func (c ctxKeyOriginalRequestPath) String() string {
+	return "original_request_path"
+}
+
+// ContextOriginalRequestPathValue examines the provided context.Context for the
+// original request path value and returns it as a string value if it's found
+// along with the ok value set to true; otherwise the ok return value is false.
+func ContextOriginalRequestPathValue(ctx context.Context) (value string, ok bool) {
+	value, ok = ctx.Value(ctxKeyOriginalRequestPath{}).(string)
+
+	return
+}
+
+// CreateContextOriginalRequestPath creates a new context.Context based on the
+// provided parent that also includes the provided original request path value
+// for the ctxKeyOriginalRequestPath key.
+func CreateContextOriginalRequestPath(parent context.Context, value string) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalRequestPath{}, value)
+}
+
+type ctxKeyOriginalBody struct{}
+
+func ContextOriginalBodyValue(ctx context.Context) (io.ReadCloser, bool) {
+	value, ok := ctx.Value(ctxKeyOriginalBody{}).(io.ReadCloser)
+	return value, ok
+}
+
+func CreateContextOriginalBody(parent context.Context, body io.ReadCloser) context.Context {
+	return context.WithValue(parent, ctxKeyOriginalBody{}, body)
 }

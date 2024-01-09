@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -19,4 +22,9 @@ type Connection interface {
 	StartTLS(config *tls.Config) error
 	SetTimeout(timeout time.Duration)
 	UnauthenticatedBind(username string) error
+}
+
+type PagingConnection interface {
+	Connection
+	SearchWithPaging(searchRequest *ldap.SearchRequest, pagingSize uint32) (*ldap.SearchResult, error)
 }

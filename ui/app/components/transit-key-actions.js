@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
@@ -93,7 +98,7 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   keyIsRSA: computed('key.type', function () {
-    let type = this.key.type;
+    const type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
@@ -120,9 +125,9 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   resetParams(oldAction, action) {
-    let params = copy(TRANSIT_PARAMS);
+    const params = copy(TRANSIT_PARAMS);
     let paramsToKeep;
-    let clearWithoutCheck =
+    const clearWithoutCheck =
       !oldAction ||
       // don't save values from datakey
       oldAction === 'datakey' ||
@@ -181,8 +186,8 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   compactData(data) {
-    let type = this.key.type;
-    let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
+    const type = this.key.type;
+    const isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
         return result;
@@ -209,14 +214,11 @@ export default Component.extend(TRANSIT_PARAMS, {
       arr.forEach((param) => this.set(param, null));
     },
 
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
+    doSubmit(data, options = {}, maybeEvent) {
+      const event = options.type === 'submit' ? options : maybeEvent;
+      if (event) {
+        event.preventDefault();
       }
-      this.toggleProperty('isModalActive');
-    },
-
-    doSubmit(data, options = {}) {
       const { backend, id } = this.getModelInfo();
       const action = this.selectedAction;
       const { encodedBase64, ...formData } = data || {};
@@ -228,7 +230,7 @@ export default Component.extend(TRANSIT_PARAMS, {
           formData.input = encodeString(formData.input);
         }
       }
-      let payload = formData ? this.compactData(formData) : null;
+      const payload = formData ? this.compactData(formData) : null;
       this.setProperties({
         errors: null,
         result: null,

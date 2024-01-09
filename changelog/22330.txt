@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/ldap: Fix bug causing schema and password_policy to be overwritten in config. 
+```

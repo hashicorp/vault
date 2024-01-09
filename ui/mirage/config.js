@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ENV from 'vault/config/environment';
 import handlers from './handlers';
+
+// remember to export handler name from mirage/handlers/index.js file
 
 export default function () {
   this.namespace = 'v1';

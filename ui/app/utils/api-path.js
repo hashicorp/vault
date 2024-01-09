@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assert } from '@ember/debug';
 
 // This is a tagged template function that will
@@ -10,8 +15,8 @@ import { assert } from '@ember/debug';
 
 export default function apiPath(strings, ...keys) {
   return function (data) {
-    let dict = data || {};
-    let result = [strings[0]];
+    const dict = data || {};
+    const result = [strings[0]];
     assert(
       `Expected ${keys.length} keys in apiPath context, only recieved ${Object.keys(data).join(',')}`,
       Object.keys(data).length >= keys.length

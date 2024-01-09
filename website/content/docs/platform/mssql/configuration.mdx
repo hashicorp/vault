@@ -4,7 +4,7 @@ page_title: Configure the Vault EKM Provider
 description: Configuration options for the Vault EKM Provider for Microsoft SQL Server.
 ---
 
-# Configuring the Vault EKM Provider
+# Configuring the Vault EKM provider
 
 Configuration is stored in a `config.json` file under ProgramData in a path that
 mirrors the installation folder. This defaults to
@@ -18,7 +18,7 @@ The following options are supported:
 - `vaultApiBaseUrl` `(string: required)` - Address of Vault server, e.g.
     `https://vault.example.com:8200`
 - `enableTrace` `(bool: false)` - Enable trace logging. Logs are viewable from
-    the event viewer. See [troubleshooting](/docs/platform/mssql/troubleshooting)
+    the event viewer. See [troubleshooting](/vault/docs/platform/mssql/troubleshooting)
     for further details.
 - `namespace` `(string: "")` - Set the Vault namespace to use. Applies to both
     AppRole and Transit.

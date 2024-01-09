@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -22,12 +27,12 @@ module('Integration | Component | icon', function (hooks) {
     assert.dom('.al').hasAttribute('aria-label', 'Testing', 'renders aria-label');
 
     await render(hbs`<Icon @name="vault-logo" @size="24"/>`);
-    assert.dom('.hs-icon').hasClass('hs-icon-xl', 'adds the larger size class');
+    assert.dom('.hs-icon').hasClass('hs-icon-xlm', 'adds the larger size class');
 
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`<Icon @name="vault-logo" @size="12"/>`);
-    let err = await promise;
-    assert.equal(
+    const err = await promise;
+    assert.strictEqual(
       err.message,
       'Assertion Failed: Icon component size argument must be either "16" or "24"',
       'Error is thrown when supported size is not provided'
@@ -47,7 +52,7 @@ module('Integration | Component | icon', function (hooks) {
     const promise = waitForError();
     render(hbs`<Icon @name="x" @size="12"/>`);
     const err = await promise;
-    assert.equal(
+    assert.strictEqual(
       err.message,
       'Assertion Failed: Icon component size argument must be either "16" or "24"',
       'Error is thrown when supported size is not provided'

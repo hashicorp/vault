@@ -1,7 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const TITLE = 'Status';
 
@@ -23,11 +29,18 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
   hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('title', TITLE);
+    // TODO: remove Tooltip/ember-basic-dropdown
+    setRunOptions({
+      rules: {
+        'aria-command-name': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it renders', async function (assert) {
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
     );
     assert.dom('[data-test-replication-secondary-card]').exists();
     assert.dom('[data-test-state]').includesText(REPLICATION_DETAILS.state, `shows the correct state value`);
@@ -38,21 +51,21 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
 
   test('it renders the Primary Cluster card when title is not Status', async function (assert) {
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
 
     assert.dom('[data-test-info-table]').exists('it shows the known primary cluster details');
 
-    const url = this.element.querySelector('[data-test-primary-link]').href;
     const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;
-
-    assert.equal(url, expectedUrl, 'it renders a link to the primary cluster UI');
+    assert
+      .dom('[data-test-primary-link]')
+      .hasAttribute('href', expectedUrl, 'it renders a link to the primary cluster UI');
   });
 
   test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function (assert) {
     this.set('replicationDetails', {});
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
 
     assert.dom('[data-test-primary-link]').doesNotExist();
@@ -61,14 +74,14 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
   test('it renders with emptyState if no knownPrimaryClusterAddrs are set', async function (assert) {
     this.set('replicationDetails', []);
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title='Primary cluster'/>`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
-    assert.dom('[data-test-component="empty-state"]').exists();
+    assert.dom('[data-test-empty-state]').exists('shows empty state');
   });
 
   test('it renders tooltip with check-circle-outline when state is stream-wals', async function (assert) {
     await render(
-      hbs`<ReplicationSecondaryCard @replicationDetails={{replicationDetails}} @title={{title}} />`
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title={{this.title}} />`
     );
     assert.dom('[data-test-glyph]').hasClass('has-text-success', `shows success icon`);
   });
@@ -81,7 +94,9 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     };
 
     this.set('stateError', stateError);
-    await render(hbs`<ReplicationSecondaryCard @replicationDetails={{stateError}} @title={{title}} />`);
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.stateError}} @title={{this.title}} />`
+    );
     assert.dom('[data-test-error]').includesText('state', 'show correct error title');
     assert
       .dom('[data-test-inline-error-message]')
@@ -96,7 +111,9 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     };
 
     this.set('connectionError', connectionError);
-    await render(hbs`<ReplicationSecondaryCard @replicationDetails={{connectionError}} @title={{title}} />`);
+    await render(
+      hbs`<ReplicationSecondaryCard @replicationDetails={{this.connectionError}} @title={{this.title}} />`
+    );
     assert.dom('[data-test-error]').includesText('connection_state', 'show correct error title');
     assert
       .dom('[data-test-inline-error-message]')

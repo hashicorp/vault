@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 )
 
 func testKVMetadataPatchCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPatchCommand) {
@@ -118,6 +121,29 @@ func TestKvMetadataPatchCommand_Flags(t *testing.T) {
 				"custom_metadata": map[string]interface{}{
 					"foo": "abc",
 					"bar": "def",
+					"baz": "ghi",
+				},
+			},
+		},
+		{
+			"remove-custom_metadata",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
+					"bar": "def",
+					"baz": "ghi",
+				},
+			},
+		},
+		{
+			"remove-custom_metadata-multiple",
+			[]string{"-custom-metadata=baz=ghi", "-remove-custom-metadata=foo", "-remove-custom-metadata=bar"},
+			"Success!",
+			0,
+			map[string]interface{}{
+				"custom_metadata": map[string]interface{}{
 					"baz": "ghi",
 				},
 			},

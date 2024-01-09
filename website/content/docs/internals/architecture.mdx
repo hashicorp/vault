@@ -10,7 +10,7 @@ Vault is an intricate system with numerous distinct components. This page detail
 
 ~> **Note:** This page covers the technical details of Vault. The descriptions and elements contained within are for users that wish to learn about Vault without having to reference the source code. Although not required, we encourage all users and operators to review the provided information before using Vault due to its significance in an environment.
 
-# High-Level Overview
+# High-Level overview
 
 The diagram below illustrates the intricacies and distinct components of Vault.
 
@@ -32,7 +32,7 @@ which is then used to decrypt the Vault's root key.
 
 ![Unseal keys](/img/vault-shamir-seal.png)
 
-Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for
+Refer to the [Seal/Unseal](/vault/docs/concepts/seal#seal-unseal) documentation for
 further details.
 
 The number of shares and the minimum number of shards required can both be specified.
@@ -43,7 +43,7 @@ Vault loads the configured audit devices, auth methods, and secrets
 engines.
 
 ~> **Note:** The default Vault configuration uses a Shamir seal; however, Vault can be [auto
-unsealed](/docs/concepts/seal#auto-unseal) by a trusted cloud key management
+unsealed](/vault/docs/concepts/seal#auto-unseal) by a trusted cloud key management
 system (KMS) or hardware security module (HSM) to increase security.
 
 The configuration of the audit devices, auth methods, and secrets engines are security sensitive and are stored in Vault. Users with permissions can modify them and cannot be specified outside of the barrier. By storing them in Vault, changes are protected by the ACL system and tracked by audit logs.
@@ -84,4 +84,4 @@ flow, the core performs specific background activities. Lease management is crit
 
 - To learn more about each components and sub-systems within Vault, select a topic from the left-navigation menu.
 - For in depth details, consult the code.
-- To get started with Vault, try out our [Getting Started](https://learn.hashicorp.com/collections/vault/getting-started) tutorial.
+- To get started with Vault, try out our [Getting Started](/vault/tutorials/getting-started) tutorial.

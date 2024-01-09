@@ -1,4 +1,4 @@
-## PKI Certificate Generation Forwarding Regression
+## PKI certificate generation forwarding regression
 
 A bug introduced in Vault 1.8 causes certificate generation requests to the PKI secrets engine made on a performance
 secondary node to be forwarded to the cluster's primary node. The resulting certificates are stored on the primary node, 

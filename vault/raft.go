@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -20,6 +23,7 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -29,14 +33,22 @@ import (
 	"golang.org/x/net/http2"
 )
 
+const (
+	// undoLogMonitorInterval is how often the leader checks to see
+	// if all the cluster members it knows about are new enough to support
+	// undo logs.
+	undoLogMonitorInterval = time.Second
+
+	// undoLogSafeVersion is the minimum version Vault must be at in order
+	// for undo logs to be turned on.
+	undoLogSafeVersion = "1.12.0"
+)
+
 var (
 	raftTLSStoragePath    = "core/raft/tls"
 	raftTLSRotationPeriod = 24 * time.Hour
 
 	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
-
-	// TestingUpdateClusterAddr is used in tests to override the cluster address
-	TestingUpdateClusterAddr uint32
 
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
@@ -55,7 +67,10 @@ func (c *Core) GetRaftNodeID() string {
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+	return c.GetRaftIndexesLocked()
+}
 
+func (c *Core) GetRaftIndexesLocked() (committed uint64, applied uint64) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return 0, 0
@@ -72,72 +87,74 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	// Retrieve the raft TLS information
-	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-	if err != nil {
-		return err
-	}
-
 	var creating bool
 	var raftTLS *raft.TLSKeyring
-	switch raftTLSEntry {
-	case nil:
-		// If this is HA-only and no TLS keyring is found, that means the
-		// cluster has not been bootstrapped or joined. We return early here in
-		// this case. If we return here, the raft object has not been instantiated,
-		// and a bootstrap call should be made.
-		if c.isRaftHAOnly() {
-			c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
-			return nil
-		}
-
-		// If we did not find a TLS keyring we will attempt to create one here.
-		// This happens after a storage migration process. This node is also
-		// marked to start as leader so we can write the new TLS Key. This is an
-		// error condition if there are already multiple nodes in the cluster,
-		// and the below storage write will fail. If the cluster is somehow in
-		// this state the unseal will fail and a cluster recovery will need to
-		// be done.
-		creating = true
-		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+	if !raftBackend.Initialized() {
+		// Retrieve the raft TLS information
+		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
 		if err != nil {
 			return err
 		}
 
-		raftTLS = &raft.TLSKeyring{
-			Keys:        []*raft.TLSKey{raftTLSKey},
-			ActiveKeyID: raftTLSKey.ID,
+		switch raftTLSEntry {
+		case nil:
+			// If this is HA-only and no TLS keyring is found, that means the
+			// cluster has not been bootstrapped or joined. We return early here in
+			// this case. If we return here, the raft object has not been instantiated,
+			// and a bootstrap call should be made.
+			if c.isRaftHAOnly() {
+				c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
+				return nil
+			}
+
+			// If we did not find a TLS keyring we will attempt to create one here.
+			// This happens after a storage migration process. This node is also
+			// marked to start as leader so we can write the new TLS Key. This is an
+			// error condition if there are already multiple nodes in the cluster,
+			// and the below storage write will fail. If the cluster is somehow in
+			// this state the unseal will fail and a cluster recovery will need to
+			// be done.
+			creating = true
+			raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+			if err != nil {
+				return err
+			}
+
+			raftTLS = &raft.TLSKeyring{
+				Keys:        []*raft.TLSKey{raftTLSKey},
+				ActiveKeyID: raftTLSKey.ID,
+			}
+		default:
+			raftTLS = new(raft.TLSKeyring)
+			if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+				return err
+			}
 		}
-	default:
-		raftTLS = new(raft.TLSKeyring)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+
+		hasState, err := raftBackend.HasState()
+		if err != nil {
 			return err
 		}
-	}
 
-	hasState, err := raftBackend.HasState()
-	if err != nil {
-		return err
-	}
+		// This can be hit on follower nodes that got their config updated to use
+		// raft for HA-only before they are joined to the cluster. Since followers
+		// in this case use shared storage, it doesn't return early from the TLS
+		// case above, but there's not raft state yet for the backend to call
+		// raft.SetupCluster.
+		if !hasState {
+			c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
+			return nil
+		}
 
-	// This can be hit on follower nodes that got their config updated to use
-	// raft for HA-only before they are joined to the cluster. Since followers
-	// in this case use shared storage, it doesn't return early from the TLS
-	// case above, but there's not raft state yet for the backend to call
-	// raft.SetupCluster.
-	if !hasState {
-		c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
-		return nil
-	}
+		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
-	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-
-	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
-		TLSKeyring:      raftTLS,
-		ClusterListener: c.getClusterListener(),
-		StartAsLeader:   creating,
-	}); err != nil {
-		return err
+		if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
+			TLSKeyring:      raftTLS,
+			ClusterListener: c.getClusterListener(),
+			StartAsLeader:   creating,
+		}); err != nil {
+			return err
+		}
 	}
 
 	defer func() {
@@ -168,6 +185,123 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 	return nil
 }
 
+func (c *Core) monitorUndoLogs() error {
+	logger := c.logger.Named("undo-log-watcher")
+	logger.Debug("starting undo log watcher")
+	ctx := c.activeContext
+	raftBackend := c.getRaftBackend()
+
+	// First check storage and bail early if we already know undo logs are safe
+	persisted, err := c.UndoLogsPersisted()
+	if err != nil {
+		return fmt.Errorf("error checking for undo logs persistence: %w", err)
+	}
+
+	if persisted {
+		c.EnableUndoLogs()
+		logger.Debug("undo logs are safe, no need to check any more")
+		return nil
+	}
+
+	// If undo logs have been explicitly enabled, likely via VAULT_REPLICATION_USE_UNDO_LOGS, then exit, as presumably
+	// we don't want to be checking for safety if we already know it's safe.
+	if c.UndoLogsEnabled() {
+		logger.Debug("undo logs have been explicitly enabled. exiting monitor.")
+		return nil
+	}
+
+	minimumVersion, err := goversion.NewSemver(undoLogSafeVersion)
+	if err != nil {
+		return fmt.Errorf("minimum undo log version (%q) won't parse: %w", undoLogSafeVersion, err)
+	}
+
+	go func() {
+		ticker := time.NewTicker(undoLogMonitorInterval)
+		defer ticker.Stop()
+
+		logger.Debug("undo logs have not been enabled yet, possibly due to a recent upgrade. starting a periodic check")
+
+		for {
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				return
+			}
+
+			// Check the raft configuration for expected servers
+			config, err := raftBackend.GetConfiguration(ctx)
+			if err != nil {
+				logger.Error("couldn't read raft config", "error", err)
+				continue
+			}
+
+			// This tracks which servers we expect to find in the cluster, from the raft config.
+			expectedServers := make(map[string]struct{})
+			for _, server := range config.Servers {
+				expectedServers[server.Address] = struct{}{}
+			}
+
+			// Retrieve all the nodes in our cluster
+			nodes, err := c.getHAMembers()
+			if err != nil {
+				logger.Error("error getting HA members", "error", err)
+				continue
+			}
+
+			// Check the versions of all of the cluster members. If they're all >= 1.12, undo logs are safe to enable.
+			// If any are < 1.12, undo logs should remain off, regardless of how it was initially configured.
+			enable := true
+			for _, node := range nodes {
+				nodeVersion, err := goversion.NewSemver(node.Version)
+				if err != nil {
+					logger.Error("error parsing node version", "node version", node.Version, "node", node.ClusterAddress, "error", err)
+					break
+				}
+
+				if nodeVersion.LessThan(minimumVersion) {
+					logger.Debug("node version is less than the minimum, disabling undo logs", "node", node.ClusterAddress, "version", node.Version)
+					enable = false
+					break
+				} else {
+					// Raft nodes have their address listed without a scheme, e.g. 127.0.0.1:8201. HA nodes that we get from
+					// getHAMembers() have their address listed with a scheme, e.g. https://127.0.0.1:8201. So we need to
+					// parse the HA node address and reconstruct it ourselves to get a matching hash key.
+					clusterAddr, err := url.Parse(node.ClusterAddress)
+					if err != nil {
+						logger.Error("error parsing node cluster address", "node", node.ClusterAddress, "error", err)
+						break
+					}
+
+					// Deleting from expectedServers means the node in question is running a Vault version greater than
+					// or equal to the minimum.
+					delete(expectedServers, clusterAddr.Host)
+				}
+			}
+
+			// If expectedServers still has nodes in it, that means either we broke from the above loop because some
+			// node's version was too low or because some member of the cluster hasn't sent an echo yet. Either way,
+			// it means we can't enable undo logs.
+			if len(expectedServers) != 0 {
+				enable = false
+			}
+
+			if enable {
+				logger.Debug("undo logs can be safely enabled now")
+				err := c.PersistUndoLogs()
+				if err != nil {
+					logger.Error("error persisting undo logs safety", "error", err)
+					continue
+				}
+
+				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker.")
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
 func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
@@ -175,14 +309,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	}
 
 	c.logger.Info("starting raft active node")
-
-	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-	disableAutopilot := c.disableAutopilot
-
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
 	c.pendingRaftPeers = &sync.Map{}
 
@@ -191,7 +318,23 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
-	return c.startPeriodicRaftTLSRotate(ctx)
+	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
+	// will monitor for safety until they are enabled.
+	if err := c.monitorUndoLogs(); err != nil {
+		return err
+	}
+
+	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
+		return err
+	}
+
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+	}
+	disableAutopilot := c.disableAutopilot
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	return nil
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -297,8 +440,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -310,6 +454,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}
@@ -631,7 +776,9 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 
 		if grabLock {
 			// Grab statelock
-			if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, c.standbyStopCh.Load().(chan struct{})); stopped {
+			l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, c.standbyStopCh.Load().(chan struct{}))
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				c.logger.Error("did not apply snapshot; vault is shutting down")
 				return errors.New("did not apply snapshot; vault is shutting down")
 			}
@@ -659,8 +806,8 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		if err != nil {
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
-			switch c.seal.BarrierType() {
-			case wrapping.WrapperTypeShamir:
+			switch c.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -722,7 +869,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 
 	c.logger.Info("raft retry join initiated")
 
-	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, raftBackend.NonVoter()); err != nil {
 		return err
 	}
 
@@ -804,8 +951,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType().String() {
-		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+	if sealConfig.Type != c.seal.BarrierSealConfigType().String() {
+		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
 
 	challengeB64, ok := secret.Data["challenge"]
@@ -913,7 +1060,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !c.isRaftHAOnly() {
 			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
@@ -936,7 +1083,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !isRaftHAOnly {
 			// Reset the state
 			c.raftInfo.Store((*raftInformation)(nil))
 
@@ -1096,6 +1243,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 	return ret, nil
 }
 
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
+}
+
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
 // in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
@@ -1120,7 +1272,7 @@ func (c *Core) isRaftHAOnly() bool {
 	return isRaftHA && !isRaftStorage
 }
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
@@ -1134,7 +1286,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
+	multiWrapValue := &seal.MultiWrapValue{
+		Generation: sealAccess.Generation(),
+		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
+	}
+	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
@@ -1144,7 +1300,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	if c.clusterAddrBridge != nil && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error
@@ -1177,7 +1333,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {

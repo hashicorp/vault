@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! CBS TODO do not let click if !canRead }}
 {{#if (eq @options.item "transformation")}}
   <LinkedBlock
@@ -12,7 +17,7 @@
         <SecretLink
           @mode="show"
           @secret={{@item.id}}
-          @queryParams={{if (eq @backendModel.type "transform") (query-params tab="actions") ""}}
+          @queryParams={{if (eq @backendModel.type "transform") (hash tab="actions") ""}}
           class="has-text-black has-text-weight-semibold"
         >
           <Icon @name="file" class="has-text-grey-light" />
@@ -21,14 +26,12 @@
       </div>
       <div class="column has-text-right">
         {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
-          <PopupMenu name="secret-menu">
+          <PopupMenu name="secret-menu" aria-label={{concat "navigation for managing transformation " @item.id}}>
             <nav class="menu">
               <ul class="menu-list">
                 {{#if (or @item.versionPath.isLoading @item.secretPath.isLoading)}}
                   <li class="action">
-                    <button disabled type="button" class="link button is-loading is-transparent">
-                      loading
-                    </button>
+                    <LoadingDropdownOption />
                   </li>
                 {{else}}
                   {{#if @item.updatePath.canRead}}

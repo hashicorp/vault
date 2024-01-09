@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -8,8 +13,8 @@ export default ApplicationAdapter.extend({
   },
 
   _url(modelType, meta = {}, id) {
-    let { backend, scope, role } = meta;
-    let type = this.pathForType(modelType);
+    const { backend, scope, role } = meta;
+    const type = this.pathForType(modelType);
     let base;
     switch (type) {
       case 'scope':
@@ -33,7 +38,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForQuery(query, modelType) {
-    let base = this._url(modelType, query);
+    const base = this._url(modelType, query);
     return base + '?list=true';
   },
 
@@ -47,7 +52,7 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(store, type, query) {
-    let id = query.id;
+    const id = query.id;
     delete query.id;
     return this.ajax(this._url(type.modelName, query, id), 'GET').then((resp) => {
       resp.id = id;

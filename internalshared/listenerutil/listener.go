@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package listenerutil
 
 import (
@@ -10,12 +13,12 @@ import (
 	osuser "os/user"
 	"strconv"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/jefferai/isbadcipher"
-	"github.com/mitchellh/cli"
 )
 
 type Listener struct {
@@ -75,7 +78,8 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 func TLSConfig(
 	l *configutil.Listener,
 	props map[string]string,
-	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
+	ui cli.Ui,
+) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if l.TLSDisable {

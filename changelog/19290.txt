@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Remove `default` and add `default-service` and `default-batch` to UI token_type for auth mount and tuning. 
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn } from '@ember/test-helpers';
@@ -11,6 +16,7 @@ module('Acceptance | jwt auth method', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    localStorage.clear(); // ensure that a token isn't stored otherwise visit('/vault/auth') will redirect to secrets
     this.stub = sinon.stub();
     this.server.post(
       '/auth/:path/oidc/auth_url',
@@ -31,8 +37,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after submit');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, undefined, 'role is not sent in body when not filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, undefined, 'role is not sent in body when not filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
@@ -41,7 +47,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
   test('it works correctly with default name and a role', async function (assert) {
@@ -49,8 +55,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after login');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, 'some-role', 'role is sent in the body when filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, 'some-role', 'role is sent in the body when filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
@@ -61,7 +67,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
   test('it works correctly with custom endpoint and a role', async function (assert) {
@@ -76,8 +82,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/test-jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/custom-jwt-login after login');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, 'some-role', 'role is sent in body when filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, 'some-role', 'role is sent in body when filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
@@ -87,6 +93,6 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn('[data-test-role]', 'some-role');
     await fillIn('[data-test-jwt]', 'my-test-jwt-token');
     await click('[data-test-auth-submit]');
-    assert.dom('[data-test-error]').exists('Failed login');
+    assert.dom('[data-test-message-error]').exists('Failed login');
   });
 });

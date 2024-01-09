@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -7,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/constants"
 
 	"golang.org/x/crypto/ed25519"
 
@@ -23,6 +28,7 @@ type signOutcome struct {
 	requestOk bool
 	valid     bool
 	keyValid  bool
+	reference string
 }
 
 func TestTransit_SignVerify_ECDSA(t *testing.T) {
@@ -152,7 +158,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		req.Path = "sign/foo" + postpath
 		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
-			t.Fatal(err)
+			t.Fatalf("request: %v\nerror: %v", req, err)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
@@ -481,6 +487,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			}
 			for i, v := range sig {
 				batchRequestItems[i]["signature"] = v
+				batchRequestItems[i]["reference"] = outcome[i].reference
 			}
 		} else if attachSig {
 			req.Data["signature"] = sig[0]
@@ -532,6 +539,9 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 				}
 				if pubKeyRaw, ok := req.Data["public_key"]; ok {
 					validatePublicKey(t, batchRequestItems[i]["input"], sig[i], pubKeyRaw.([]byte), outcome[i].keyValid, postpath, b)
+				}
+				if v.Reference != outcome[i].reference {
+					t.Fatalf("verification failed, mismatched references %s vs %s", v.Reference, outcome[i].reference)
 				}
 			}
 			return
@@ -632,15 +642,18 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 
 	// Test Batch Signing
 	batchInput := []batchRequestSignItem{
-		{"context": "abcd", "input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"context": "efgh", "input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		{"context": "abcd", "input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "uno"},
+		{"context": "efgh", "input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "dos"},
 	}
 
 	req.Data = map[string]interface{}{
 		"batch_input": batchInput,
 	}
 
-	outcome = []signOutcome{{requestOk: true, valid: true, keyValid: true}, {requestOk: true, valid: true, keyValid: true}}
+	outcome = []signOutcome{
+		{requestOk: true, valid: true, keyValid: true, reference: "uno"},
+		{requestOk: true, valid: true, keyValid: true, reference: "dos"},
+	}
 
 	sig = signRequest(req, false, "foo")
 	verifyRequest(req, false, outcome, "foo", sig, true)
@@ -832,7 +845,7 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 	validSaltLengths := append(autoSaltLengths, nonAutoSaltLengths...)
 	t.Log("validSaltLengths:", validSaltLengths)
 
-	testCombinatorics := func(hashAlgorithm string, marshalingName string) {
+	testCombinatorics := func(t *testing.T, hashAlgorithm string, marshalingName string) {
 		t.Log("\t\t", "valid", "/", "invalid salt lengths")
 		for _, validSaltLength := range validSaltLengths {
 			for _, invalidSaltLength := range invalidSaltLengths {
@@ -906,7 +919,7 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 		}
 	}
 
-	testAutoSignAndVerify := func(hashAlgorithm string, marshalingName string) {
+	testAutoSignAndVerify := func(t *testing.T, hashAlgorithm string, marshalingName string) {
 		t.Log("\t\t", "Make a signature with an implicit, automatic salt length")
 		req.Data = newReqData(hashAlgorithm, marshalingName)
 		t.Log("\t\t\t", "sign req data:", req.Data)
@@ -948,10 +961,21 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 
 	for hashAlgorithm := range keysutil.HashTypeMap {
 		t.Log("Hash algorithm:", hashAlgorithm)
+		if hashAlgorithm == "none" {
+			continue
+		}
+
 		for marshalingName := range keysutil.MarshalingTypeMap {
 			t.Log("\t", "Marshaling type:", marshalingName)
-			testCombinatorics(hashAlgorithm, marshalingName)
-			testAutoSignAndVerify(hashAlgorithm, marshalingName)
+			testName := fmt.Sprintf("%s-%s", hashAlgorithm, marshalingName)
+			t.Run(testName, func(t *testing.T) {
+				if constants.IsFIPS() && strings.HasPrefix(hashAlgorithm, "sha3-") {
+					t.Skip("\t", "Skipping hashing algo on fips:", hashAlgorithm)
+				}
+
+				testCombinatorics(t, hashAlgorithm, marshalingName)
+				testAutoSignAndVerify(t, hashAlgorithm, marshalingName)
+			})
 		}
 	}
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +25,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/fairshare"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -86,6 +91,7 @@ type pendingInfo struct {
 	cachedLeaseInfo  *leaseEntry
 	timer            *time.Timer
 	revokesAttempted uint8
+	loginRole        string
 }
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -109,7 +115,7 @@ type ExpirationManager struct {
 	pending     sync.Map
 	nonexpiring sync.Map
 	leaseCount  int
-	pendingLock sync.RWMutex
+	pendingLock locking.RWMutex
 
 	// A sync.Lock for every active leaseID
 	lockPerLease sync.Map
@@ -137,19 +143,20 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *DeadlockRWMutex
+	coreStateLock     locking.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
 	logLeaseExpirations bool
-	expireFunc          ExpireLeaseStrategy
+	expireFunc          atomic.Pointer[ExpireLeaseStrategy]
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
 	// request. This value should only be set by tests.
 	testRegisterAuthFailure uberAtomic.Bool
 
-	jobManager *fairshare.JobManager
+	jobManager      *fairshare.JobManager
+	revokeRetryBase time.Duration
 }
 
 type ExpireLeaseStrategy func(context.Context, *ExpirationManager, string, *namespace.Namespace)
@@ -232,11 +239,10 @@ func (r *revocationJob) Execute() error {
 
 func (r *revocationJob) OnFailure(err error) {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
-	r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err)
 
 	r.m.pendingLock.Lock()
-	defer r.m.pendingLock.Unlock()
 	pendingRaw, ok := r.m.pending.Load(r.leaseID)
+	r.m.pendingLock.Unlock()
 	if !ok {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
@@ -244,12 +250,15 @@ func (r *revocationJob) OnFailure(err error) {
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
+	newTimer := r.revokeExponentialBackoff(pending.revokesAttempted)
+
 	if pending.revokesAttempted >= maxRevokeAttempts || errIsUnrecoverable(err) {
-		r.m.logger.Trace("marking lease as irrevocable", "lease_id", r.leaseID, "error", err)
+		reason := "unrecoverable error"
 		if pending.revokesAttempted >= maxRevokeAttempts {
-			r.m.logger.Trace("lease has consumed all retry attempts", "lease_id", r.leaseID)
+			reason = "lease has consumed all retry attempts"
 			err = fmt.Errorf("%v: %w", outOfRetriesMessage, err)
 		}
+		r.m.logger.Trace("failed to revoke lease, marking lease as irrevocable", "lease_id", r.leaseID, "error", err, "reason", reason)
 
 		le, loadErr := r.m.loadEntry(r.nsCtx, r.leaseID)
 		if loadErr != nil {
@@ -261,12 +270,19 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
+		r.m.pendingLock.Lock()
 		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
+		r.m.pendingLock.Unlock()
 		return
+	} else {
+		r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err,
+			"attempts", pending.revokesAttempted, "next_attempt", newTimer)
 	}
 
-	pending.timer.Reset(revokeExponentialBackoff(pending.revokesAttempted))
+	pending.timer.Reset(newTimer)
+	r.m.pendingLock.Lock()
 	r.m.pending.Store(r.leaseID, pending)
+	r.m.pendingLock.Unlock()
 }
 
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
@@ -283,8 +299,8 @@ func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, l
 	m.jobManager.AddJob(job, mountAccessor)
 }
 
-func revokeExponentialBackoff(attempt uint8) time.Duration {
-	exp := (1 << attempt) * revokeRetryBase
+func (r *revocationJob) revokeExponentialBackoff(attempt uint8) time.Duration {
+	exp := (1 << attempt) * r.m.revokeRetryBase
 	randomDelta := 0.5 * float64(exp)
 
 	// Allow backoff time to be a random value between exp +/- (0.5*exp)
@@ -312,7 +328,7 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
+func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger, detectDeadlocks bool) *ExpirationManager {
 	managerLogger := logger.Named("job-manager")
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
@@ -327,6 +343,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		tokenStore:  c.tokenStore,
 		logger:      logger,
 		pending:     sync.Map{},
+		pendingLock: &locking.SyncRWMutex{},
 		nonexpiring: sync.Map{},
 		leaseCount:  0,
 		tidyLock:    new(int32),
@@ -342,20 +359,29 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
-		expireFunc:          e,
 
-		jobManager: jobManager,
+		jobManager:      jobManager,
+		revokeRetryBase: c.expirationRevokeRetryBase,
+	}
+	exp.expireFunc.Store(&e)
+	if exp.revokeRetryBase == 0 {
+		exp.revokeRetryBase = revokeRetryBase
 	}
 	*exp.restoreMode = 1
 
 	if exp.logger == nil {
 		opts := log.LoggerOptions{Name: "expiration_manager"}
 		exp.logger = log.New(&opts)
+	}
+
+	if detectDeadlocks {
+		managerLogger.Debug("enabling deadlock detection")
+		exp.pendingLock = &locking.DeadlockRWMutex{}
 	}
 
 	go exp.uniquePoliciesGc()
@@ -374,7 +400,9 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
 	c.AddLogger(expLogger)
-	mgr := NewExpirationManager(c, view, e, expLogger)
+
+	detectDeadlocks := slices.Contains(c.detectDeadlocks, "expiration")
+	mgr := NewExpirationManager(c, view, e, expLogger, detectDeadlocks)
 	c.expiration = mgr
 
 	// Link the token store to this
@@ -493,16 +521,14 @@ func (m *ExpirationManager) invalidate(key string) {
 				m.nonexpiring.Delete(leaseID)
 
 				if info, ok := m.irrevocable.Load(leaseID); ok {
-					irrevocable := info.(pendingInfo)
+					ile := info.(*leaseEntry)
 					m.irrevocable.Delete(leaseID)
 					m.irrevocableLeaseCount--
 
 					m.leaseCount--
-					// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
-					// accurately update quota lease information.
-					// Note that cachedLeaseInfo should never be nil under normal operation.
-					if irrevocable.cachedLeaseInfo != nil {
-						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
+					// Note that the leaseEntry should never be nil under normal operation.
+					if ile != nil {
+						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: ile.LoginRole}
 						if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 							m.logger.Error("failed to update quota on lease invalidation", "error", err)
 							return
@@ -833,6 +859,8 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	return nil
 }
 
+func expireNoop(ctx context.Context, manager *ExpirationManager, s string, n *namespace.Namespace) {}
+
 // Stop is used to prevent further automatic revocations.
 // This must be called before sealing the view.
 func (m *ExpirationManager) Stop() error {
@@ -847,26 +875,23 @@ func (m *ExpirationManager) Stop() error {
 	close(m.quitCh)
 
 	m.pendingLock.Lock()
-	// Replacing the entire map would cause a race with
-	// a simultaneous WalkTokens, which doesn't hold pendingLock.
-	m.pending.Range(func(key, value interface{}) bool {
-		info := value.(pendingInfo)
-		info.timer.Stop()
-		m.pending.Delete(key)
-		return true
-	})
+	// We don't want any lease timers that fire to do anything; they can wait
+	// for the next ExpirationManager to handle them.
+	newStrategy := ExpireLeaseStrategy(expireNoop)
+	m.expireFunc.Store(&newStrategy)
+	oldPending := &m.pending
+	m.pending, m.nonexpiring, m.irrevocable = sync.Map{}, sync.Map{}, sync.Map{}
 	m.leaseCount = 0
-	m.nonexpiring.Range(func(key, value interface{}) bool {
-		m.nonexpiring.Delete(key)
-		return true
-	})
 	m.uniquePolicies = make(map[string][]string)
-	m.irrevocable.Range(func(key, _ interface{}) bool {
-		m.irrevocable.Delete(key)
-		return true
-	})
 	m.irrevocableLeaseCount = 0
 	m.pendingLock.Unlock()
+
+	go oldPending.Range(func(key, value interface{}) bool {
+		info := value.(pendingInfo)
+		// We need to stop the timers to prevent memory leaks.
+		info.timer.Stop()
+		return true
+	})
 
 	if m.inRestoreMode() {
 		for {
@@ -1775,10 +1800,10 @@ func (m *ExpirationManager) uniquePoliciesGc() {
 // Acquiring a lock from a leaseEntry is a bad idea because it could change
 // between loading and acquiring the lock. So we only provide an ID-based map, and the
 // locking discipline should be:
-//    1. Lock lease
-//    2. Load, or attempt to load, leaseEntry
-//    3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
-//    4. Unlock lease
+//  1. Lock lease
+//  2. Load, or attempt to load, leaseEntry
+//  3. Modify leaseEntry and pendingMap (atomic wrt operations on this lease)
+//  4. Unlock lease
 //
 // The lock must be removed from the map when the lease is deleted, or is
 // found to not exist in storage. loadEntry does this whenever it returns
@@ -1868,7 +1893,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseID, namespace := le.LeaseID, le.namespace
 			// Extend the timer by the lease total
 			timer := time.AfterFunc(leaseTotal, func() {
-				m.expireFunc(m.quitContext, m, leaseID, namespace)
+				expFn := *m.expireFunc.Load() // Load and deref the pointer
+				expFn(m.quitContext, m, leaseID, namespace)
 			})
 			pending = pendingInfo{
 				timer: timer,
@@ -1877,6 +1903,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			leaseCreated = true
 		}
 
+		pending.loginRole = le.LoginRole
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.pending.Store(le.LeaseID, pending)
 	}
@@ -2457,8 +2484,13 @@ func (m *ExpirationManager) WalkTokens(walkFn ExpirationWalkFunction) error {
 		return true
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2481,8 +2513,13 @@ func (m *ExpirationManager) walkLeases(walkFn leaseWalkFunction) error {
 		return walkFn(key.(string), expireTime)
 	}
 
-	m.pending.Range(callback)
-	m.nonexpiring.Range(callback)
+	m.pendingLock.RLock()
+	toWalk := []*sync.Map{&m.pending, &m.nonexpiring}
+	m.pendingLock.RUnlock()
+
+	for _, m := range toWalk {
+		m.Range(callback)
+	}
 
 	return nil
 }
@@ -2796,4 +2833,11 @@ func (le *leaseEntry) isIncorrectlyNonExpiring() bool {
 func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
 	return out, jsonutil.DecodeJSON(buf, out)
+}
+
+func (e *ExpirationManager) DetectDeadlocks() bool {
+	if _, ok := e.pendingLock.(*locking.DeadlockRWMutex); ok {
+		return true
+	}
+	return false
 }

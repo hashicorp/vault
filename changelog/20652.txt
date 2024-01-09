@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Respond to writes with updated key policy, cache configuration.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -29,7 +32,7 @@ func (g *generateRecoveryToken) authenticate(ctx context.Context, c *Core, combi
 
 	// Use the retrieved root key to unseal the barrier
 	if err := c.barrier.Unseal(ctx, key); err != nil {
-		return fmt.Errorf("recovery operation token generation failed, cannot unseal barrier: %w", err)
+		return fmt.Errorf("recovery token generation failed, cannot unseal barrier: %w", err)
 	}
 
 	for _, v := range c.postRecoveryUnsealFuncs {

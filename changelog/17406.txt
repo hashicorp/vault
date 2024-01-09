@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv: new KVv2 mounts and KVv1 mounts without any keys will upgrade synchronously, allowing for instant use
+```

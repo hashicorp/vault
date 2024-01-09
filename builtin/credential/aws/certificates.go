@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -26,7 +29,9 @@ func init() {
 
 // These certificates are for verifying PKCS#7 DSA signatures.
 // Copied from:
-//   curl https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-pkcs7.html | pcregrep -M -o -e '(?s)-----BEGIN CERTIFICATE-----[^>]*-----END CERTIFICATE-----'
+//
+//	curl https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-pkcs7.html | pcregrep -M -o -e '(?s)-----BEGIN CERTIFICATE-----[^>]*-----END CERTIFICATE-----'
+//
 // Last updated: 2022-05-31
 const pkcs7RawCerts = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw

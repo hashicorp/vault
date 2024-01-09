@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -16,7 +21,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}
@@ -44,7 +49,7 @@
       </ToolbarFilters>
     {{/if}}
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.policies.create"}} data-test-policy-create-link={{true}}>
+      <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
         Create
         {{uppercase this.policyType}}
         policy
@@ -87,57 +92,50 @@
             </div>
             <div class="column has-text-right">
               <PopupMenu name="policy-nav">
-                <Confirm as |c|>
-                  <nav class="menu">
-                    <ul class="menu-list">
-                      {{#if item.updatePath.isPending}}
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if item.updatePath.isPending}}
+                      <li class="action">
+                        <LoadingDropdownOption />
+                      </li>
+                      <li class="action">
+                        <LoadingDropdownOption />
+                      </li>
+                    {{else}}
+                      {{#if item.canRead}}
                         <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
+                          <LinkTo
+                            @route="vault.cluster.policy.show"
+                            @models={{array this.policyType item.id}}
+                            data-test-policy-link="show"
+                          >
+                            Details
+                          </LinkTo>
                         </li>
-                        <li class="action">
-                          <button disabled type="button" class="link button is-loading is-transparent">
-                            loading
-                          </button>
-                        </li>
-                      {{else}}
-                        {{#if item.canRead}}
-                          <li class="action">
-                            <LinkTo
-                              @route="vault.cluster.policy.show"
-                              @models={{array this.policyType item.id}}
-                              data-test-policy-link="show"
-                            >
-                              Details
-                            </LinkTo>
-                          </li>
-                        {{/if}}
-                        {{#if item.canEdit}}
-                          <li class="action">
-                            <LinkTo
-                              @route="vault.cluster.policy.edit"
-                              @models={{array this.policyType item.id}}
-                              data-test-policy-link="edit"
-                            >
-                              Edit
-                            </LinkTo>
-                          </li>
-                        {{/if}}
-                        {{#if item.canDelete}}
-                          <li class="action">
-                            <c.Message
-                              @id={{item.id}}
-                              @confirmMessage="This will permanently delete this policy and may affect access to some data"
-                              @onConfirm={{action "deletePolicy" item}}
-                              data-test-policy-delete={{item.id}}
-                            />
-                          </li>
-                        {{/if}}
                       {{/if}}
-                    </ul>
-                  </nav>
-                </Confirm>
+                      {{#if item.canEdit}}
+                        <li class="action">
+                          <LinkTo
+                            @route="vault.cluster.policy.edit"
+                            @models={{array this.policyType item.id}}
+                            data-test-policy-link="edit"
+                          >
+                            Edit
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if item.canDelete}}
+                        <ConfirmAction
+                          @isInDropdown={{true}}
+                          @buttonText="Delete"
+                          @confirmTitle="Delete this policy?"
+                          @confirmMessage="This will permanently delete this policy and may affect access to some data"
+                          @onConfirmAction={{action "deletePolicy" item}}
+                        />
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
               </PopupMenu>
             </div>
           </div>
@@ -146,13 +144,16 @@
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
     {{/each}}
-    {{#if (gt this.model.meta.lastPage 1)}}
-      <ListPagination
-        @page={{this.model.meta.currentPage}}
-        @lastPage={{this.model.meta.lastPage}}
-        @link="vault.cluster.policies.index"
+    {{#unless this.pageFilter}}
+      <Hds::Pagination::Numbered
+        @currentPage={{this.model.meta.currentPage}}
+        @currentPageSize={{this.model.meta.pageSize}}
+        @route="vault.cluster.policies.index"
+        @showSizeSelector={{false}}
+        @totalItems={{this.model.meta.total}}
+        @queryFunction={{this.paginationQueryParams}}
       />
-    {{/if}}
+    {{/unless}}
   {{else}}
     <EmptyState
       @title="No {{uppercase this.policyType}} policies yet"
@@ -166,10 +167,10 @@
         policy
         <Chevron />
       </LinkTo>
-      <LearnLink @path="/vault/getting-started/policies">
+      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
         Learn more
         <Chevron />
-      </LearnLink>
+      </DocLink>
     </EmptyState>
   {{/if}}
 {{else}}

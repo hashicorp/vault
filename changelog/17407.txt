@@ -1,0 +1,3 @@
+```release-note:bug
+ui/keymgmt: Sets the defaultValue for type when creating a key.
+```

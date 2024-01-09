@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -8,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
@@ -36,7 +39,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "rabbitmq",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/rabbitmq",
 		ImageTag:      "3-management",
 		ContainerName: "rabbitmq",
 		Ports:         []string{"15672/tcp"},

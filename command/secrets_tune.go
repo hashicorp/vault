@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -30,7 +33,9 @@ type SecretsTuneCommand struct {
 	flagAllowedResponseHeaders    []string
 	flagOptions                   map[string]string
 	flagVersion                   int
+	flagPluginVersion             string
 	flagAllowedManagedKeys        []string
+	flagDelegatedAuthAccessors    []string
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -146,6 +151,22 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"each time with 1 key.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
+			"the plugin catalog, and will not start running until the plugin is reloaded.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameDelegatedAuthAccessors,
+		Target: &c.flagDelegatedAuthAccessors,
+		Usage: "A list of permitted authentication accessors this backend can delegate authentication to. " +
+			"Note that multiple values may be specified by providing this option multiple times, " +
+			"each time with 1 accessor.",
+	})
+
 	return set
 }
 
@@ -225,6 +246,14 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedManagedKeys {
 			mountConfigInput.AllowedManagedKeys = c.flagAllowedManagedKeys
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameDelegatedAuthAccessors {
+			mountConfigInput.DelegatedAuthAccessors = c.flagDelegatedAuthAccessors
 		}
 	})
 

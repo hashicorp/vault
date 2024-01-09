@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes logout route wrapped_token bug
+``

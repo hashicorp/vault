@@ -1,0 +1,19 @@
+name: Autoremove Labels
+
+on:
+  issues:
+    types: [closed]
+  pull_request_target:
+    types: [closed]
+
+jobs:
+
+  RemoveWaitingLabelFromClosedIssueOrPR:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove triaging labels from closed issues and PRs
+        uses: actions-ecosystem/action-remove-labels@2ce5d41b4b6aa8503e285553f75ed56e0a40bae0 # v1.3.0
+        with:
+          labels: |
+            waiting-for-response

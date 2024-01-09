@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: consistently use UTC for CA's notAfter exceeded error message
+```

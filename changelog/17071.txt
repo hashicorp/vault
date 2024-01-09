@@ -1,0 +1,2 @@
+```release-note:feature
+**UI OIDC Provider Config**: Adds configuration of Vault as an OIDC identity provider, and offer Vault’s various authentication methods and source of identity to any client applications.

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -13,7 +18,7 @@ export default Route.extend({
     return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
   },
   model() {
-    let model = this.store.createRecord('kmip/role', {
+    const model = this.store.createRecord('kmip/role', {
       backend: this.secretMountPath.currentPath,
       scope: this.scope(),
     });

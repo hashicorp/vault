@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Agent listeners can now be to be the `metrics_only` role, serving only metrics, as part of the listener's new top level `role` option.
+```

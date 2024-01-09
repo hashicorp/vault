@@ -1,0 +1,4 @@
+```release-note:improvement
+core: Added sys/locked-users endpoint to list locked users. Changed api endpoint from
+sys/lockedusers/[mount_accessor]/unlock/[alias_identifier] to sys/locked-users/[mount_accessor]/unlock/[alias_identifier]. 
+```

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /*
   This service is used to pull an OpenAPI document describing the
   shape of data at a specific path to hydrate a model with attrs it
@@ -12,30 +17,39 @@ import { expandOpenApiProps, combineAttributes } from 'vault/utils/openapi-to-at
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
-import { dasherize, capitalize } from '@ember/string';
+import { capitalize } from '@ember/string';
 import { computed } from '@ember/object'; // eslint-disable-line
-import { singularize } from 'ember-inflector';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
-export function sanitizePath(path) {
-  // remove whitespace + remove trailing and leading slashes
-  return path.trim().replace(/^\/+|\/+$/g, '');
-}
+import { sanitizePath } from 'core/utils/sanitize-path';
+import {
+  filterPathsByItemType,
+  pathToHelpUrlSegment,
+  reducePathsByPathName,
+} from 'vault/utils/openapi-helpers';
 
 export default Service.extend({
   attrs: null,
   dynamicApiPath: '',
   ajax(url, options = {}) {
-    let appAdapter = getOwner(this).lookup(`adapter:application`);
-    let { data } = options;
+    const appAdapter = getOwner(this).lookup(`adapter:application`);
+    const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
   },
 
+  /**
+   * getNewModel instantiates models which use OpenAPI fully or partially
+   * @param {string} modelType
+   * @param {string} backend
+   * @param {string} apiPath (optional) if passed, this method will call getPaths and build submodels for item types
+   * @param {*} itemType (optional) used in getPaths for additional models
+   * @returns void - as side effect, registers model via registerNewModelWithProps
+   */
   getNewModel(modelType, backend, apiPath, itemType) {
-    let owner = getOwner(this);
+    const owner = getOwner(this);
     const modelName = `model:${modelType}`;
 
     const modelFactory = owner.factoryFor(modelName);
@@ -74,12 +88,10 @@ export default Service.extend({
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let path, paths;
         // if we have an item we want the create info for that itemType
-        paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+        const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
-        path = createPath.path;
-        path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
+        const path = pathToHelpUrlSegment(createPath.path);
         if (!path) {
           // TODO: we don't know if path will ever be falsey
           // if it is never falsey we can remove this.
@@ -93,79 +105,30 @@ export default Service.extend({
       })
       .catch((err) => {
         // TODO: we should handle the error better here
-        console.error(err);
+        console.error(err); // eslint-disable-line
       });
   },
 
-  reducePathsByPathName(pathInfo, currentPath) {
-    const pathName = currentPath[0];
-    const pathDetails = currentPath[1];
-    const displayAttrs = pathDetails['x-vault-displayAttrs'];
-
-    if (!displayAttrs) {
-      return pathInfo;
-    }
-
-    let itemType, itemName;
-    if (displayAttrs.itemType) {
-      itemType = displayAttrs.itemType;
-      let items = itemType.split(':');
-      itemName = items[items.length - 1];
-      items = items.map((item) => dasherize(singularize(item.toLowerCase())));
-      itemType = items.join('~*');
-    }
-
-    if (itemType && !pathInfo.itemTypes.includes(itemType)) {
-      pathInfo.itemTypes.push(itemType);
-    }
-
-    const operations = [];
-    if (pathDetails.get) {
-      operations.push('get');
-    }
-    if (pathDetails.post) {
-      operations.push('post');
-    }
-    if (pathDetails.delete) {
-      operations.push('delete');
-    }
-    if (pathDetails.get && pathDetails.get.parameters && pathDetails.get.parameters[0].name === 'list') {
-      operations.push('list');
-    }
-
-    pathInfo.paths.push({
-      path: pathName,
-      itemType: itemType || displayAttrs.itemType,
-      itemName: itemName || pathInfo.itemType || displayAttrs.itemType,
-      operations,
-      action: displayAttrs.action,
-      navigation: displayAttrs.navigation === true,
-      param: pathName.includes('{') ? pathName.split('{')[1].split('}')[0] : false,
-    });
-
-    return pathInfo;
-  },
-
-  filterPathsByItemType(pathInfo, itemType) {
-    if (!itemType) {
-      return pathInfo.paths;
-    }
-    return pathInfo.paths.filter((path) => {
-      return itemType === path.itemType;
-    });
-  },
-
+  /**
+   * getPaths is used to fetch all the openAPI paths available for an auth method,
+   * to populate the tab navigation in each specific method page
+   * @param {string} apiPath path of openApi
+   * @param {string} backend backend name, mostly for debug purposes
+   * @param {string} itemType optional
+   * @param {string} itemID optional - ID of specific item being fetched
+   * @returns PathsInfo
+   */
   getPaths(apiPath, backend, itemType, itemID) {
-    let debugString =
+    const debugString =
       itemID && itemType
         ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
         : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
     debug(debugString);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then((help) => {
       const pathInfo = help.openapi.paths;
-      let paths = Object.entries(pathInfo);
+      const paths = Object.entries(pathInfo);
 
-      return paths.reduce(this.reducePathsByPathName, {
+      return paths.reduce(reducePathsByPathName, {
         apiPath,
         itemType,
         itemTypes: [],
@@ -188,12 +151,12 @@ export default Service.extend({
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
-      let paramProp = {};
+      const paramProp = {};
 
       // include url params
       if (params) {
         const { name, schema, description } = params[0];
-        let label = capitalize(name.split('_').join(' '));
+        const label = capitalize(name.split('_').join(' '));
 
         paramProp[name] = {
           'x-vault-displayAttrs': {
@@ -211,7 +174,7 @@ export default Service.extend({
       if (schema.$ref) {
         // $ref will be shaped like `#/components/schemas/MyResponseType
         // which maps to the location of the item within the openApi response
-        let loc = schema.$ref.replace('#/', '').split('/');
+        const loc = schema.$ref.replace('#/', '').split('/');
         props = loc.reduce((prev, curr) => {
           return prev[curr] || {};
         }, help.openapi).properties;
@@ -227,7 +190,7 @@ export default Service.extend({
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
-    let paths = this.filterPathsByItemType(pathInfo, itemType);
+    const paths = filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
@@ -239,7 +202,7 @@ export default Service.extend({
 
     return generatedItemAdapter.extend({
       urlForItem(id, isList, dynamicApiPath) {
-        const itemType = getPath.path.slice(1);
+        const itemType = sanitizePath(getPath.path);
         let url;
         id = encodePath(id);
         // the apiPath changes when you switch between routes but the apiPath variable does not unless the model is reloaded
@@ -297,7 +260,7 @@ export default Service.extend({
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-      let owner = getOwner(this);
+      const owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
       // if our newModel doesn't have fieldGroups already
       // we need to create them
@@ -346,10 +309,10 @@ export default Service.extend({
     });
   },
   getFieldGroups(newModel) {
-    let groups = {
+    const groups = {
       default: [],
     };
-    let fieldGroups = [];
+    const fieldGroups = [];
     newModel.attributes.forEach((attr) => {
       // if the attr comes in with a fieldGroup from OpenAPI,
       // add it to that group
@@ -364,7 +327,7 @@ export default Service.extend({
         groups.default.push(attr.name);
       }
     });
-    for (let group in groups) {
+    for (const group in groups) {
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);

@@ -8,14 +8,15 @@ description: |-
 
 # operator step-down
 
-The `operator step-down` forces the active Vault node within an [HA cluster](/docs/concepts/ha)
+The `operator step-down` forces the active Vault node within an [HA cluster](/vault/docs/concepts/ha)
 to step down from active duty. When executed against a non-active node, i.e. a 
-standby or [performance standby](/docs/enterprise/performance-standby) node, 
+standby or [performance standby](/vault/docs/enterprise/performance-standby) node, 
 the request will be forwarded to the active node.  While the 
 affected node will have a delay before attempting to acquire 
 the leader lock again, if no other Vault nodes acquire the
 lock beforehand, it is possible for the same node to re-acquire
-the lock and become active again.
+the lock and become active again. Due to the locking architecture, there may be a period of time
+before another node grabs the lock and finishes transitioning to active operation where the cluster has no active node. During the period where none of the nodes are active, forwarding of requests to the leader node will fail.
 
 ## Examples
 
@@ -28,5 +29,5 @@ Success! Stepped down: http://127.0.0.1:8200
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/docs/commands)
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
 included on all commands.

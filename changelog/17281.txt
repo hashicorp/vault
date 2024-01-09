@@ -1,0 +1,3 @@
+```release-note:bug
+core/quotas: Fix goroutine leak caused by the seal process not fully cleaning up Rate Limit Quotas.
+```

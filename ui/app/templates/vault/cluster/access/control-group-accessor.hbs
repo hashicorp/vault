@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (has-feature "Control Groups")}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -9,7 +14,7 @@
   {{#if this.model.canConfigure}}
     <Toolbar>
       <ToolbarActions>
-        <ToolbarLink @params={{array "vault.cluster.access.control-groups-configure"}}>
+        <ToolbarLink @route="vault.cluster.access.control-groups-configure">
           Configure
         </ToolbarLink>
       </ToolbarActions>

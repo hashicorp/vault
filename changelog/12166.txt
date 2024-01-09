@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: add additional raft metrics relating to applied index and heartbeating; also ensure OSS standbys emit periodic metrics.
+```

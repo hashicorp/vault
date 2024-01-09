@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import utils from 'vault/lib/key-utils';
+import { ancestorKeysForKey, keyPartsForKey, keyWithoutParentKey } from 'core/utils/key-utils';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
@@ -22,6 +27,7 @@ export default class KeyValueHeader extends Component {
   get showCurrent() {
     return this.args.showCurrent || true;
   }
+
   get linkToPaths() {
     return this.args.linkToPaths || true;
   }
@@ -38,7 +44,7 @@ export default class KeyValueHeader extends Component {
   }
 
   get secretPath() {
-    let crumbs = [];
+    const crumbs = [];
     const root = this.args.root;
     const baseKey = this.args.baseKey?.display || this.args.baseKey?.id;
     const baseKeyModel = encodePath(this.args.baseKey?.id);
@@ -54,8 +60,8 @@ export default class KeyValueHeader extends Component {
     const path = this.args.path;
     const currentPath = this.currentPath;
     const showCurrent = this.showCurrent;
-    const ancestors = utils.ancestorKeysForKey(baseKey);
-    const parts = utils.keyPartsForKey(baseKey);
+    const ancestors = ancestorKeysForKey(baseKey);
+    const parts = keyPartsForKey(baseKey);
     if (ancestors.length === 0) {
       crumbs.push({
         label: baseKey,
@@ -76,13 +82,13 @@ export default class KeyValueHeader extends Component {
         label: parts[index],
         text: this.stripTrailingSlash(parts[index]),
         path: path,
-        model: ancestor,
+        model: encodePath(ancestor),
       });
     });
 
     crumbs.push({
-      label: utils.keyWithoutParentKey(baseKey),
-      text: this.stripTrailingSlash(utils.keyWithoutParentKey(baseKey)),
+      label: keyWithoutParentKey(baseKey),
+      text: this.stripTrailingSlash(keyWithoutParentKey(baseKey)),
       path: currentPath,
       model: baseKeyModel,
     });

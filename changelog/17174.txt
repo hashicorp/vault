@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/gcp: Updates dependencies: `google.golang.org/api@v0.83.0`, `github.com/hashicorp/go-gcp-common@v0.8.0`.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -15,24 +19,32 @@ var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
+
+	// Create an empty key, issuer for testing.
+	key := issuing.KeyEntry{ID: genKeyId()}
+	err := sc.writeKey(key)
+	require.NoError(t, err)
+	issuer := &issuing.IssuerEntry{ID: genIssuerId()}
+	err = sc.writeIssuer(issuer)
+	require.NoError(t, err)
 
 	// Verify we handle nothing stored properly
 	keyConfigEmpty, err := sc.getKeysConfig()
 	require.NoError(t, err)
-	require.Equal(t, &keyConfigEntry{}, keyConfigEmpty)
+	require.Equal(t, &issuing.KeyConfigEntry{}, keyConfigEmpty)
 
 	issuerConfigEmpty, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, &issuerConfigEntry{}, issuerConfigEmpty)
+	require.Equal(t, &issuing.IssuerConfigEntry{}, issuerConfigEmpty)
 
 	// Now attempt to store and reload properly
-	origKeyConfig := &keyConfigEntry{
-		DefaultKeyId: genKeyId(),
+	origKeyConfig := &issuing.KeyConfigEntry{
+		DefaultKeyId: key.ID,
 	}
-	origIssuerConfig := &issuerConfigEntry{
-		DefaultIssuerId: genIssuerId(),
+	origIssuerConfig := &issuing.IssuerConfigEntry{
+		DefaultIssuerId: issuer.ID,
 	}
 
 	err = sc.setKeysConfig(origKeyConfig)
@@ -46,12 +58,12 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 	issuerConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, origIssuerConfig, issuerConfig)
+	require.Equal(t, origIssuerConfig.DefaultIssuerId, issuerConfig.DefaultIssuerId)
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
@@ -87,17 +99,17 @@ func Test_IssuerRoundTrip(t *testing.T) {
 	keys, err := sc.listKeys()
 	require.NoError(t, err)
 
-	require.ElementsMatch(t, []keyID{key1.ID, key2.ID}, keys)
+	require.ElementsMatch(t, []issuing.KeyID{key1.ID, key2.ID}, keys)
 
 	issuers, err := sc.listIssuers()
 	require.NoError(t, err)
 
-	require.ElementsMatch(t, []issuerID{issuer1.ID, issuer2.ID}, issuers)
+	require.ElementsMatch(t, []issuing.IssuerID{issuer1.ID, issuer2.ID}, issuers)
 }
 
 func Test_KeysIssuerImport(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	issuer1, key1 := genIssuerAndKey(t, b, s)
@@ -166,13 +178,13 @@ func Test_KeysIssuerImport(t *testing.T) {
 
 func Test_IssuerUpgrade(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled
 	issuer, _ := genIssuerAndKey(t, b, s)
 	issuer.Version = 0
-	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(issuing.OCSPSigningUsage)
 
 	err := sc.writeIssuer(&issuer)
 	require.NoError(t, err, "failed writing out issuer")
@@ -181,13 +193,13 @@ func Test_IssuerUpgrade(t *testing.T) {
 	require.NoError(t, err, "failed fetching issuer")
 
 	require.Equal(t, uint(1), newIssuer.Version)
-	require.True(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+	require.True(t, newIssuer.Usage.HasUsage(issuing.OCSPSigningUsage))
 
 	// If CRLSigning is not present on a v0, we should not have OCSP signing after upgrade.
 	issuer, _ = genIssuerAndKey(t, b, s)
 	issuer.Version = 0
-	issuer.Usage.ToggleUsage(OCSPSigningUsage)
-	issuer.Usage.ToggleUsage(CRLSigningUsage)
+	issuer.Usage.ToggleUsage(issuing.OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(issuing.CRLSigningUsage)
 
 	err = sc.writeIssuer(&issuer)
 	require.NoError(t, err, "failed writing out issuer")
@@ -196,15 +208,15 @@ func Test_IssuerUpgrade(t *testing.T) {
 	require.NoError(t, err, "failed fetching issuer")
 
 	require.Equal(t, uint(1), newIssuer.Version)
-	require.False(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+	require.False(t, newIssuer.Usage.HasUsage(issuing.OCSPSigningUsage))
 }
 
-func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
+func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuing.IssuerEntry, issuing.KeyEntry) {
 	certBundle := genCertBundle(t, b, s)
 
 	keyId := genKeyId()
 
-	pkiKey := keyEntry{
+	pkiKey := issuing.KeyEntry{
 		ID:             keyId,
 		PrivateKeyType: certBundle.PrivateKeyType,
 		PrivateKey:     strings.TrimSpace(certBundle.PrivateKey) + "\n",
@@ -212,14 +224,14 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 
 	issuerId := genIssuerId()
 
-	pkiIssuer := issuerEntry{
+	pkiIssuer := issuing.IssuerEntry{
 		ID:           issuerId,
 		KeyID:        keyId,
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
-		Usage:        AllIssuerUsages,
-		Version:      latestIssuerVersion,
+		Usage:        issuing.AllIssuerUsages,
+		Version:      issuing.LatestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey
@@ -251,10 +263,18 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		apiData: apiData,
 		role:    role,
 	}
-	parsedCertBundle, err := generateCert(sc, input, nil, true, b.GetRandomReader())
+	parsedCertBundle, _, err := generateCert(sc, input, nil, true, b.GetRandomReader())
 
 	require.NoError(t, err)
 	certBundle, err := parsedCertBundle.ToCertBundle()
 	require.NoError(t, err)
 	return certBundle
+}
+
+func writeLegacyBundle(t *testing.T, b *backend, s logical.Storage, bundle *certutil.CertBundle) {
+	entry, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+
+	err = s.Put(context.Background(), entry)
+	require.NoError(t, err)
 }

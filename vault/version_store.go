@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -7,8 +10,10 @@ import (
 	"strings"
 	"time"
 
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
 )
 
 const (
@@ -147,6 +152,53 @@ func (c *Core) loadVersionHistory(ctx context.Context) error {
 		c.versionHistory[vaultVersion.Version] = vaultVersion
 	}
 	return nil
+}
+
+// isMajorVersionFirstMount checks the current running version of Vault against
+// the newest version in the version store to see if this major version has
+// already been mounted.
+func (c *Core) isMajorVersionFirstMount(ctx context.Context) bool {
+	// Grab the most recent previous version from the version store
+	prevMounted, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		return true
+	}
+
+	// Get versions into comparable form. Errors should be treated as the first
+	// unseal with this major version.
+	prev, err := semver.NewSemver(prevMounted)
+	if err != nil {
+		return true
+	}
+	curr, err := semver.NewSemver(version.Version)
+	if err != nil {
+		return true
+	}
+
+	// Check for milestone or major version upgrade
+	isMilestoneUpdate := curr.Segments()[0] > prev.Segments()[0]
+	isMajorVersionUpdate := curr.Segments()[1] > prev.Segments()[1]
+
+	return isMilestoneUpdate || isMajorVersionUpdate
+}
+
+// IsNewInstall consults the version store to check for empty history. This
+// property should hold during unseal of new installations of Vault.
+func (c *Core) IsNewInstall(ctx context.Context) bool {
+	oldestVersion, _, err := c.FindOldestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	newestVersion, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		return false
+	}
+
+	// We store the Vault version history at the end of unseal setup. During
+	// early unseal on a new install, the old and new versions will both be
+	// empty.
+	return oldestVersion == "" && newestVersion == ""
 }
 
 func IsJWT(token string) bool {

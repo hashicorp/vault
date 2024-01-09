@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @label}}
   <label class="is-label" ...attributes>
     {{@label}}
@@ -12,9 +17,9 @@
   <p class="sub-text" data-test-label-subtext>
     {{@subText}}
     {{#if @docLink}}
-      <a href={{@docLink}} target="_blank" rel="noopener noreferrer">
+      <DocLink @path={{@docLink}}>
         See our documentation
-      </a>
+      </DocLink>
       for help.
     {{/if}}
   </p>

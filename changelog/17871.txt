@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/gcp: Upgrades dependencies
+```

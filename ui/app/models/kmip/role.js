@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
 export const COMPUTEDS = {
   operationFields: computed('newFields', function () {
@@ -19,7 +24,7 @@ export const COMPUTEDS = {
 
   // For rendering on the create/edit pages
   defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
-    let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
+    const excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
 
@@ -29,7 +34,7 @@ export const COMPUTEDS = {
   }),
 };
 
-const ModelExport = Model.extend(COMPUTEDS, {
+export default Model.extend(COMPUTEDS, {
   useOpenAPI: true,
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
@@ -42,12 +47,12 @@ const ModelExport = Model.extend(COMPUTEDS, {
     if (this.defaultFields.length) {
       groups.unshift({ default: this.defaultFields });
     }
-    let ret = fieldToAttrs(this, groups);
+    const ret = fieldToAttrs(this, groups);
     return ret;
   }),
 
   operationFormFields: computed('operationFieldsWithoutSpecial', function () {
-    let objects = [
+    const objects = [
       'operationCreate',
       'operationActivate',
       'operationGet',
@@ -57,9 +62,11 @@ const ModelExport = Model.extend(COMPUTEDS, {
       'operationDestroy',
     ];
 
-    let attributes = ['operationAddAttribute', 'operationGetAttributes'];
-    let server = ['operationDiscoverVersion'];
-    let others = this.operationFieldsWithoutSpecial.slice().removeObjects(objects.concat(attributes, server));
+    const attributes = ['operationAddAttribute', 'operationGetAttributes'];
+    const server = ['operationDiscoverVersions'];
+    const others = this.operationFieldsWithoutSpecial
+      .slice()
+      .removeObjects(objects.concat(attributes, server));
     const groups = [
       { 'Managed Cryptographic Objects': objects },
       { 'Object Attributes': attributes },
@@ -78,8 +85,6 @@ const ModelExport = Model.extend(COMPUTEDS, {
   fields: computed('defaultFields', function () {
     return expandAttributeMeta(this, this.defaultFields);
   }),
-});
 
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`, 'backend', 'scope', 'id'),
 });

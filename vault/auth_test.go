@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -7,9 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -116,7 +123,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -148,18 +155,27 @@ func TestCore_BuiltinRegistry(t *testing.T) {
 		PluginDirectory: "/Users/foo",
 
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 	}
 	c, _, _ := TestCoreUnsealedWithConfig(t, conf)
 
-	me := &MountEntry{
-		Table: credentialTableType,
-		Path:  "approle/",
-		Type:  "approle",
-	}
-	err := c.enableCredential(namespace.RootContext(nil), me)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	for _, me := range []*MountEntry{
+		{
+			Table: credentialTableType,
+			Path:  "approle/",
+			Type:  "approle",
+		},
+		{
+			Table:   credentialTableType,
+			Path:    "approle2/",
+			Type:    "approle",
+			Version: versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
+		},
+	} {
+		err := c.enableCredential(namespace.RootContext(nil), me)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	}
 }
 
@@ -190,7 +206,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -249,7 +265,7 @@ func TestCore_EnableCredential_aws_ec2(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -451,7 +467,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}

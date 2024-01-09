@@ -1,0 +1,3 @@
+```release-note:improvement
+Reduced binary size
+```

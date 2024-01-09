@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import Controller from '@ember/controller';
 
 export default Controller.extend({
   flashMessages: service(),
-  wizard: service(),
 
   queryParams: {
     page: 'page',
@@ -19,6 +23,15 @@ export default Controller.extend({
 
   // set via the route `loading` action
   isLoading: false,
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;
@@ -49,21 +62,18 @@ export default Controller.extend({
       this.set('filterFocused', bool);
     },
     deletePolicy(model) {
-      let policyType = model.get('policyType');
-      let name = model.id;
-      let flash = this.flashMessages;
+      const policyType = model.get('policyType');
+      const name = model.id;
+      const flash = this.flashMessages;
       model
         .destroyRecord()
         .then(() => {
           // this will clear the dataset cache on the store
           this.send('reload');
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
-          if (this.wizard.featureState === 'delete') {
-            this.wizard.transitionFeatureMachine('delete', 'CONTINUE', policyType);
-          }
         })
         .catch((e) => {
-          let errors = e.errors ? e.errors.join('') : e.message;
+          const errors = e.errors ? e.errors.join('') : e.message;
           flash.danger(
             `There was an error deleting the ${policyType.toUpperCase()} policy "${name}": ${errors}.`
           );

@@ -1,2 +1,9 @@
-{{! using Icon here instead of Chevron because two nested tagless components results in a rendered line break between the tags breaking the layout in the <pre> }}
-<pre class="console-ui-command"><Icon @name="chevron-right" />{{@content}}</pre>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="is-flex-center">
+  <Icon @name="chevron-right" />
+  <pre class="console-ui-command">{{@content}}</pre>
+</div>

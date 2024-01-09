@@ -6,7 +6,7 @@ description: >-
   plugin system.
 ---
 
-# Plugin Management
+# Plugin management
 
 External plugins are the components in Vault that can be implemented separately
 from Vault's built-in plugins. These plugins can be either authentication or
@@ -18,12 +18,12 @@ backend has HA enabled and supports automatic host address detection (e.g.
 Consul), Vault will automatically attempt to determine the `api_addr` as well.
 
 Detailed information regarding the plugin system can be found in the
-[internals documentation](/docs/plugins).
+[internals documentation](/vault/docs/plugins).
 
-## Registering External Plugins
+## Registering external plugins
 
 Before an external plugin can be mounted, it needs to be
-[registered](/docs/plugins/plugin-architecture#plugin-registration) in the
+[registered](/vault/docs/plugins/plugin-architecture#plugin-registration) in the
 plugin catalog to ensure the plugin invoked by Vault is authentic and maintains
 integrity:
 
@@ -35,7 +35,7 @@ $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
 Success! Registered plugin: passthrough-plugin
 ```
 
-## Enabling/Disabling External Plugins
+## Enabling/Disabling external plugins
 
 After the plugin is registered, it can be mounted by specifying the registered
 plugin name:
@@ -60,10 +60,10 @@ Disabling an external plugins is identical to disabling a built-in plugin:
 $ vault secrets disable my-secrets
 ```
 
-## Upgrading Plugins
+## Upgrading plugins
 
 Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
 page.
 
-[api_addr]: /docs/configuration#api_addr
-[upgrading_plugins]: /docs/upgrading/plugins
+[api_addr]: /vault/docs/configuration#api_addr
+[upgrading_plugins]: /vault/docs/upgrading/plugins

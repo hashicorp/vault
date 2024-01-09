@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add user lockout field to config and configuring this for auth mount using auth tune to prevent brute forcing in auth methods 
+```

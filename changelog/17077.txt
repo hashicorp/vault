@@ -1,0 +1,12 @@
+```release-note:change
+plugins: `GET /sys/plugins/catalog/:type/:name` endpoint contains deprecation status for builtin plugins.
+```
+```release-note:change
+plugins: `GET /sys/plugins/catalog/` endpoint contains deprecation status in `detailed` list.
+```
+```release-note:change
+plugins: `plugin list` now accepts a `-detailed` flag, which display deprecation status and version info.
+```
+```release-note:change
+plugins: `plugin info` displays deprecation status for builtin plugins.
+```

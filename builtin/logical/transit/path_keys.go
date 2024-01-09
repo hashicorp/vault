@@ -1,13 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/elliptic"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
@@ -22,6 +25,11 @@ func (b *backend) pathListKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "keys",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeysList,
 		},
@@ -34,6 +42,12 @@ func (b *backend) pathListKeys() *framework.Path {
 func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -103,12 +117,40 @@ being automatically rotated. A value of 0
 (default) disables automatic rotation for the
 key.`,
 			},
+			"key_size": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: fmt.Sprintf("The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than %d bytes and no more than %d", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
+			},
+			"managed_key_name": {
+				Type:        framework.TypeString,
+				Description: "The name of the managed key to use for this transit key",
+			},
+			"managed_key_id": {
+				Type:        framework.TypeString,
+				Description: "The UUID of the managed key to use for this transit key",
+			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.DeleteOperation: b.pathPolicyDelete,
-			logical.ReadOperation:   b.pathPolicyRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathPolicyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathPolicyDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "delete",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathPolicyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "read",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
@@ -130,9 +172,12 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
+	keySize := d.Get("key_size").(int)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
+	managedKeyName := d.Get("managed_key_name").(string)
+	managedKeyId := d.Get("managed_key_id").(string)
 
 	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
 		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
@@ -152,6 +197,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		AllowPlaintextBackup: allowPlaintextBackup,
 		AutoRotatePeriod:     autoRotatePeriod,
 	}
+
 	switch keyType {
 	case "aes128-gcm96":
 		polReq.KeyType = keysutil.KeyType_AES128_GCM96
@@ -173,8 +219,30 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
+	case "hmac":
+		polReq.KeyType = keysutil.KeyType_HMAC
+	case "managed_key":
+		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+	}
+	if keySize != 0 {
+		if polReq.KeyType != keysutil.KeyType_HMAC {
+			return logical.ErrorResponse(fmt.Sprintf("key_size is not valid for algorithm %v", polReq.KeyType)), logical.ErrInvalidRequest
+		}
+		if keySize < keysutil.HmacMinKeySize || keySize > keysutil.HmacMaxKeySize {
+			return logical.ErrorResponse(fmt.Sprintf("invalid key_size %d", keySize)), logical.ErrInvalidRequest
+		}
+		polReq.KeySize = keySize
+	}
+
+	if polReq.KeyType == keysutil.KeyType_MANAGED_KEY {
+		keyId, err := GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
+		if err != nil {
+			return nil, err
+		}
+
+		polReq.ManagedKeyUUID = keyId
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -188,19 +256,22 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		p.Unlock()
 	}
 
-	resp := &logical.Response{}
+	resp, err := b.formatKeyPolicy(p, nil)
+	if err != nil {
+		return nil, err
+	}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
-
-	return nil, nil
+	return resp, nil
 }
 
 // Built-in helper type for returning asymmetric keys
 type asymKey struct {
-	Name         string    `json:"name" structs:"name" mapstructure:"name"`
-	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	Name             string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey        string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CertificateChain string    `json:"certificate_chain" structs:"certificate_chain" mapstructure:"certificate_chain"`
+	CreationTime     time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -221,6 +292,19 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	defer p.Unlock()
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	return b.formatKeyPolicy(p, context)
+}
+
+func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -241,6 +325,9 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
 			"imported_key":           p.Imported,
 		},
+	}
+	if p.KeySize != 0 {
+		resp.Data["key_size"] = p.KeySize
 	}
 
 	if p.Imported {
@@ -274,15 +361,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 	}
 
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-		}
-	}
-
 	switch p.Type {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		retKeys := map[string]int64{}
@@ -300,6 +378,18 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			}
 			if key.CreationTime.IsZero() {
 				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
+			}
+			if v.CertificateChain != nil {
+				var pemCerts []string
+				for _, derCertBytes := range v.CertificateChain {
+					pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
+						&pem.Block{
+							Type:  "CERTIFICATE",
+							Bytes: derCertBytes,
+						})))
+					pemCerts = append(pemCerts, pemCert)
+				}
+				key.CertificateChain = strings.Join(pemCerts, "\n")
 			}
 
 			switch p.Type {
@@ -320,7 +410,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						}
 						derived, err := p.GetKey(context, ver, 32)
 						if err != nil {
-							return nil, fmt.Errorf("failed to derive key to return public component")
+							return nil, fmt.Errorf("failed to derive key to return public component: %w", err)
 						}
 						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
 						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
@@ -337,21 +427,11 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					key.Name = "rsa-4096"
 				}
 
-				// Encode the RSA public key in PEM format to return over the
-				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				pubKey, err := encodeRSAPublicKey(&v)
 				if err != nil {
-					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
+					return nil, err
 				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
-				}
-				key.PublicKey = string(pemBytes)
+				key.PublicKey = pubKey
 			}
 
 			retKeys[k] = structs.New(key).Map()

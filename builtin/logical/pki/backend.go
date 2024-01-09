@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -8,16 +11,26 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
-
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 )
 
 const (
+	operationPrefixPKI        = "pki"
+	operationPrefixPKIIssuer  = "pki-issuer"
+	operationPrefixPKIIssuers = "pki-issuers"
+	operationPrefixPKIRoot    = "pki-root"
+
 	noRole       = 0
 	roleOptional = 1
 	roleRequired = 2
@@ -85,20 +98,36 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/crl/delta/der",
 				"issuer/+/crl/delta/pem",
 				"issuer/+/crl/delta",
+				"issuer/+/unified-crl/der",
+				"issuer/+/unified-crl/pem",
+				"issuer/+/unified-crl",
+				"issuer/+/unified-crl/delta/der",
+				"issuer/+/unified-crl/delta/pem",
+				"issuer/+/unified-crl/delta",
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
 				"issuers/", // LIST operations append a '/' to the requested path
 				"ocsp",     // OCSP POST
 				"ocsp/*",   // OCSP GET
+				"unified-crl/delta",
+				"unified-crl/delta/pem",
+				"unified-crl/pem",
+				"unified-crl",
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
+
+				// ACME paths are added below
 			},
 
 			LocalStorage: []string{
 				revokedPath,
-				deltaWALPath,
+				localDeltaWALPath,
 				legacyCRLPath,
+				clusterConfigPath,
 				"crls/",
 				"certs/",
+				acmePathPrefix,
 			},
 
 			Root: []string{
@@ -108,7 +137,21 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			SealWrapStorage: []string{
 				legacyCertBundlePath,
+				legacyCertBundleBackupPath,
 				keyPrefix,
+			},
+
+			WriteForwardedStorage: []string{
+				crossRevocationPath,
+				unifiedRevocationWritePathPrefix,
+				unifiedDeltaWALPath,
+			},
+
+			Binary: []string{
+				"ocsp",           // OCSP POST
+				"ocsp/*",         // OCSP GET
+				"unified-ocsp",   // Unified OCSP POST
+				"unified-ocsp/*", // Unified OCSP GET
 			},
 		},
 
@@ -124,6 +167,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
+			pathConfigCluster(&b),
 			pathSignVerbatim(&b),
 			pathSign(&b),
 			pathIssue(&b),
@@ -131,6 +175,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
+			pathListCertsRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
@@ -139,6 +184,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// Issuer APIs
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
+			pathGetUnauthedIssuer(&b),
 			pathGetIssuerCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),
@@ -173,6 +219,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// OCSP APIs
 			buildPathOcspGet(&b),
 			buildPathOcspPost(&b),
+
+			// CRL Signing
+			pathResignCrls(&b),
+			pathSignRevocationList(&b),
+
+			// ACME
+			pathAcmeConfig(&b),
+			pathAcmeEabList(&b),
+			pathAcmeEabDelete(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -183,6 +238,37 @@ func Backend(conf *logical.BackendConfig) *backend {
 		InitializeFunc: b.initialize,
 		Invalidate:     b.invalidate,
 		PeriodicFunc:   b.periodicFunc,
+		Clean:          b.cleanup,
+	}
+
+	// Add ACME paths to backend
+	for _, prefix := range []struct {
+		acmePrefix   string
+		unauthPrefix string
+		opts         acmeWrapperOpts
+	}{
+		{
+			"acme",
+			"acme",
+			acmeWrapperOpts{true, false},
+		},
+		{
+			"roles/" + framework.GenericNameRegex("role") + "/acme",
+			"roles/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/acme",
+			"issuer/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/roles/" + framework.GenericNameRegex("role") + "/acme",
+			"issuer/+/roles/+/acme",
+			acmeWrapperOpts{},
+		},
+	} {
+		setupAcmeDirectory(&b, prefix.acmePrefix, prefix.unauthPrefix, prefix.opts)
 	}
 
 	b.tidyCASGuard = new(uint32)
@@ -193,16 +279,30 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiStorageVersion.Store(0)
 
-	b.crlBuilder = newCRLBuilder()
+	// b isn't yet initialized with SystemView state; calling b.System() will
+	// result in a nil pointer dereference. Instead query BackendConfig's
+	// copy of SystemView.
+	cannotRebuildCRLs := conf.System.ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+		conf.System.ReplicationState().HasState(consts.ReplicationDRSecondary)
+	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
 
 	// Delay the first tidy until after we've started up.
 	b.lastTidy = time.Now()
 
+	b.unifiedTransferStatus = newUnifiedTransferStatus()
+
+	b.acmeState = NewACMEState()
+	b.certificateCounter = NewCertificateCounter(b.backendUUID)
+
+	// It is important that we call SetupEnt at the very end as
+	// some ENT backends need access to the member vars initialized above.
+	b.SetupEnt()
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	entBackend
 
 	backendUUID       string
 	storage           logical.Storage
@@ -214,45 +314,40 @@ type backend struct {
 	tidyStatus     *tidyStatus
 	lastTidy       time.Time
 
+	unifiedTransferStatus *UnifiedTransferStatus
+
+	certificateCounter *CertificateCounter
+
 	pkiStorageVersion atomic.Value
-	crlBuilder        *crlBuilder
+	crlBuilder        *CrlBuilder
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
+
+	// Context around ACME operations
+	acmeState       *acmeState
+	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
 }
 
-type (
-	tidyStatusState int
-	roleOperation   func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
-)
-
-const (
-	tidyStatusInactive   tidyStatusState = iota
-	tidyStatusStarted                    = iota
-	tidyStatusFinished                   = iota
-	tidyStatusError                      = iota
-	tidyStatusCancelling                 = iota
-	tidyStatusCancelled                  = iota
-)
-
-type tidyStatus struct {
-	// Parameters used to initiate the operation
-	safetyBuffer      int
-	tidyCertStore     bool
-	tidyRevokedCerts  bool
-	tidyRevokedAssocs bool
-	pauseDuration     string
-
-	// Status
-	state                   tidyStatusState
-	err                     error
-	timeStarted             time.Time
-	timeFinished            time.Time
-	message                 string
-	certStoreDeletedCount   uint
-	revokedCertDeletedCount uint
-	missingIssuerCertCount  uint
+// BackendOps a bridge/legacy interface until we can further
+// separate out backend things into distinct packages.
+type BackendOps interface {
+	managed_key.PkiManagedKeyView
+	pki_backend.SystemViewGetter
+	pki_backend.MountInfo
+	pki_backend.Logger
+	UseLegacyBundleCaStorage() bool
+	CrlBuilder() *CrlBuilder
+	GetRevokeStorageLock() *sync.RWMutex
+	GetUnifiedTransferStatus() *UnifiedTransferStatus
+	GetAcmeState() *acmeState
+	GetRole(ctx context.Context, s logical.Storage, n string) (*issuing.RoleEntry, error)
+	GetCertificateCounter() *CertificateCounter
 }
+
+var _ BackendOps = &backend{}
+
+type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error)
 
 const backendHelp = `
 The PKI backend dynamically generates X509 server and client certificates.
@@ -274,7 +369,7 @@ func metricsKey(req *logical.Request, extra ...string) []string {
 func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		key := metricsKey(req, callType)
-		var role *roleEntry
+		var role *issuing.RoleEntry
 		var labels []metrics.Label
 		var err error
 
@@ -290,7 +385,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 		}
 		if roleMode > noRole {
 			// Get the role
-			role, err = b.getRole(ctx, req.Storage, roleName)
+			role, err = b.GetRole(ctx, req.Storage, roleName)
 			if err != nil {
 				return nil, err
 			}
@@ -319,12 +414,42 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
 	sc := b.makeStorageContext(ctx, b.storage)
-	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+	if err := b.CrlBuilder().reloadConfigIfRequired(sc); err != nil {
 		return err
 	}
 
+	err := b.initializePKIIssuersStorage(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = b.GetAcmeState().Initialize(b, sc)
+	if err != nil {
+		return err
+	}
+
+	// Initialize also needs to populate our certificate and revoked certificate count
+	err = b.initializeStoredCertificateCounts(ctx)
+	if err != nil {
+		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
+		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
+		b.GetCertificateCounter().SetError(err)
+	}
+
+	return b.initializeEnt(sc, ir)
+}
+
+func (b *backend) cleanup(ctx context.Context) {
+	sc := b.makeStorageContext(ctx, b.storage)
+
+	b.GetAcmeState().Shutdown(b)
+
+	b.cleanupEnt(sc)
+}
+
+func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
@@ -350,7 +475,31 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	return nil
 }
 
-func (b *backend) useLegacyBundleCaStorage() bool {
+func (b *backend) BackendUUID() string {
+	return b.backendUUID
+}
+
+func (b *backend) CrlBuilder() *CrlBuilder {
+	return b.crlBuilder
+}
+
+func (b *backend) GetRevokeStorageLock() *sync.RWMutex {
+	return &b.revokeStorageLock
+}
+
+func (b *backend) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return b.unifiedTransferStatus
+}
+
+func (b *backend) GetAcmeState() *acmeState {
+	return b.acmeState
+}
+
+func (b *backend) GetCertificateCounter() *CertificateCounter {
+	return b.certificateCounter
+}
+
+func (b *backend) UseLegacyBundleCaStorage() bool {
 	// This helper function is here to choose whether or not we use the newer
 	// issuer/key storage format or the older legacy ca bundle format.
 	//
@@ -363,6 +512,18 @@ func (b *backend) useLegacyBundleCaStorage() bool {
 	return version == nil || version == 0
 }
 
+func (b *backend) IsSecondaryNode() bool {
+	return b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby)
+}
+
+func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
+	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
+	if !ok {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported system view")}
+	}
+	return managedKeyView, nil
+}
+
 func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock bool) {
 	info, err := getMigrationInfo(ctx, b.storage)
 	if err != nil {
@@ -370,6 +531,12 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 		return
 	}
 
+	// If this method is called outside the initialize function, like say an
+	// invalidate func on a performance replica cluster, we should be grabbing
+	// the issuers lock to offer a consistent view of the storage version while
+	// other events are processing things. Its unknown what might happen during
+	// a single event if one part thinks we are in legacy mode, and then later
+	// on we aren't.
 	if grabIssuersLock {
 		b.issuersLock.Lock()
 		defer b.issuersLock.Unlock()
@@ -383,6 +550,9 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {
+	isNotPerfPrimary := b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary))
+
 	switch {
 	case strings.HasPrefix(key, legacyMigrationBundleLogKey):
 		// This is for a secondary cluster to pick up that the migration has completed
@@ -392,28 +562,59 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		go func() {
 			b.Logger().Info("Detected a migration completed, resetting pki storage version")
 			b.updatePkiStorageVersion(ctx, true)
-			b.crlBuilder.requestRebuildIfActiveNode(b)
+			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		}()
 	case strings.HasPrefix(key, issuerPrefix):
-		if !b.useLegacyBundleCaStorage() {
+		if !b.UseLegacyBundleCaStorage() {
 			// See note in updateDefaultIssuerId about why this is necessary.
 			// We do this ahead of CRL rebuilding just so we know that things
 			// are stale.
-			b.crlBuilder.invalidateCRLBuildTime()
+			b.CrlBuilder().invalidateCRLBuildTime()
 
 			// If an issuer has changed on the primary, we need to schedule an update of our CRL,
 			// the primary cluster would have done it already, but the CRL is cluster specific so
 			// force a rebuild of ours.
-			b.crlBuilder.requestRebuildIfActiveNode(b)
+			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
-		b.crlBuilder.markConfigDirty()
+		b.CrlBuilder().markConfigDirty()
+	case key == storageAcmeConfig:
+		b.GetAcmeState().markConfigDirty()
 	case key == storageIssuerConfig:
-		b.crlBuilder.invalidateCRLBuildTime()
+		b.CrlBuilder().invalidateCRLBuildTime()
+	case strings.HasPrefix(key, crossRevocationPrefix):
+		split := strings.Split(key, "/")
+
+		if !strings.HasSuffix(key, "/confirmed") {
+			cluster := split[len(split)-2]
+			serial := split[len(split)-1]
+			b.CrlBuilder().addCertForRevocationCheck(cluster, serial)
+		} else {
+			if len(split) >= 3 {
+				cluster := split[len(split)-3]
+				serial := split[len(split)-2]
+				// Only process confirmations on the perf primary. The
+				// performance secondaries cannot remove other clusters'
+				// entries, and so do not need to track them (only to
+				// ignore them). On performance primary nodes though,
+				// we do want to track them to remove them.
+				if !isNotPerfPrimary {
+					b.CrlBuilder().addCertForRevocationRemoval(cluster, serial)
+				}
+			}
+		}
+	case strings.HasPrefix(key, unifiedRevocationReadPathPrefix):
+		// Three parts to this key: prefix, cluster, and serial.
+		split := strings.Split(key, "/")
+		cluster := split[len(split)-2]
+		serial := split[len(split)-1]
+		b.CrlBuilder().addCertFromCrossRevocation(cluster, serial)
 	}
+
+	b.invalidateEnt(ctx, key)
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
@@ -421,7 +622,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	doCRL := func() error {
 		// First attempt to reload the CRL configuration.
-		if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		if err := b.CrlBuilder().reloadConfigIfRequired(sc); err != nil {
 			return err
 		}
 
@@ -432,21 +633,47 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 			return nil
 		}
 
+		// First handle any global revocation queue entries.
+		if err := b.CrlBuilder().processRevocationQueue(sc); err != nil {
+			return err
+		}
+
+		// Then handle any unified cross-cluster revocations.
+		if err := b.CrlBuilder().processCrossClusterRevocations(sc); err != nil {
+			return err
+		}
+
 		// Check if we're set to auto rebuild and a CRL is set to expire.
-		if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+		if err := b.CrlBuilder().checkForAutoRebuild(sc); err != nil {
 			return err
 		}
 
 		// Then attempt to rebuild the CRLs if required.
-		if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		warnings, err := b.CrlBuilder().rebuildIfForced(sc)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of complete CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
+		warnings, err = b.CrlBuilder().rebuildDeltaCRLsIfForced(sc, false)
+		if err != nil {
 			return err
+		}
+		if len(warnings) > 0 {
+			msg := "During rebuild of delta CRL, got the following warnings:"
+			for index, warning := range warnings {
+				msg = fmt.Sprintf("%v\n %d. %v", msg, index+1, warning)
+			}
+			b.Logger().Warn(msg)
 		}
 
 		return nil
@@ -503,27 +730,72 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	// First tidy any ACME nonces to free memory.
+	b.GetAcmeState().DoTidyNonces()
+
+	// Then run unified transfer.
+	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
+	go runUnifiedTransfer(backgroundSc)
+
+	// Then run the CRL rebuild and tidy operation.
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
-	if crlErr != nil && tidyErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %v\n", crlErr, tidyErr)
-	}
+	// Periodically re-emit gauges so that they don't disappear/go stale
+	b.GetCertificateCounter().EmitCertStoreMetrics()
 
+	var errors error
 	if crlErr != nil {
-		return fmt.Errorf("Error building CRLs:\n - %v\n", crlErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error building CRLs:\n - %w\n", crlErr))
 	}
 
 	if tidyErr != nil {
-		return fmt.Errorf("Error running auto-tidy:\n - %v\n", tidyErr)
+		errors = multierror.Append(errors, fmt.Errorf("Error running auto-tidy:\n - %w\n", tidyErr))
+	}
+
+	if errors != nil {
+		return errors
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update
 	// accordingly.
-	if err := b.crlBuilder.flushCRLBuildTimeInvalidation(sc); err != nil {
+	if err := b.CrlBuilder().flushCRLBuildTimeInvalidation(sc); err != nil {
 		return err
 	}
 
 	// All good!
+	return b.periodicFuncEnt(backgroundSc, request)
+}
+
+func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
+	// For performance reasons, we can't lock on issuance/storage of certs until a list operation completes,
+	// but we want to limit possible miscounts / double-counts to over-counting, so we take the tidy lock which
+	// prevents (most) deletions - in particular we take a read lock (sufficient to block the write lock in
+	// tidyStatusStart while allowing tidy to still acquire a read lock to report via its endpoint)
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
+	sc := b.makeStorageContext(ctx, b.storage)
+	config, err := sc.getAutoTidyConfig()
+	if err != nil {
+		return err
+	}
+
+	certCounter := b.GetCertificateCounter()
+	isEnabled := certCounter.ReconfigureWithTidyConfig(config)
+	if !isEnabled {
+		return nil
+	}
+
+	entries, err := b.storage.List(ctx, "certs/")
+	if err != nil {
+		return err
+	}
+
+	revokedEntries, err := b.storage.List(ctx, "revoked/")
+	if err != nil {
+		return err
+	}
+
+	certCounter.InitializeCountsFromStorage(entries, revokedEntries)
 	return nil
 }

@@ -4,11 +4,11 @@ page_title: RADIUS - Auth Methods - HTTP API
 description: This is the API documentation for the Vault RADIUS auth method.
 ---
 
-# RADIUS Auth Method (API)
+# RADIUS auth method (API)
 
 This is the API documentation for the Vault RADIUS auth method. For
 general information about the usage and operation of the RADIUS method, please
-see the [Vault RADIUS method documentation](/docs/auth/radius).
+see the [Vault RADIUS method documentation](/vault/docs/auth/radius).
 
 This documentation assumes the RADIUS method is mounted at the `/auth/radius`
 path in Vault. Since it is possible to enable auth methods at any location,
@@ -39,7 +39,7 @@ RADIUS.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -49,7 +49,7 @@ RADIUS.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -59,7 +59,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/config
 ```
 
-## Register User
+## Register user
 
 Registers a new user and maps a set of policies to it. This path honors the
 distinction between the `create` and `update` capabilities inside ACL policies.
@@ -80,7 +80,7 @@ distinction between the `create` and `update` capabilities inside ACL policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -90,7 +90,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
-## Read User
+## Read user
 
 Reads the properties of an existing username.
 
@@ -102,7 +102,7 @@ Reads the properties of an existing username.
 
 - `username` `(string: <required>)` - Username for this user.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -110,7 +110,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -125,7 +125,7 @@ $ curl \
 }
 ```
 
-## Delete User
+## Delete user
 
 Deletes an existing username from the method.
 
@@ -137,7 +137,7 @@ Deletes an existing username from the method.
 
 - `username` `(string: <required>)` - Username for this user.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -146,7 +146,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/users/test-user
 ```
 
-## List Users
+## List users
 
 List the users registered with the method.
 
@@ -154,7 +154,7 @@ List the users registered with the method.
 | :----- | :------------------- |
 | `LIST` | `/auth/radius/users` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -163,7 +163,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -193,7 +193,7 @@ Login with the username and password.
 - `username` `(string: <required>)` - Username for this user.
 - `password` `(string: <required>)` - Password for the authenticating user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -201,7 +201,7 @@ Login with the username and password.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -210,7 +210,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/radius/login/test-user
 ```
 
-### Sample Response
+### Sample response
 
 ```javascript
 {

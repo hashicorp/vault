@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@ember/component';
 import layout from '../templates/components/replication-header';
 
@@ -16,7 +21,7 @@ import layout from '../templates/components/replication-header';
  * ```
  * @param {Object} model=null - An Ember data object pulled from the Ember cluster model.
  * @param {String} title=null - The title of the header.
- * @param {String} [secondaryID=null] - The secondaryID pulled off of the model object. 
+ * @param {String} [secondaryID=null] - The secondaryID pulled off of the model object.
  * @param {Boolean} isSummaryDashboard=false - True when you have both a primary performance and dr cluster dashboard.
  */
 

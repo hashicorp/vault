@@ -1,15 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.mfa.methods.index">
-            Methods
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Methods" @route="vault.cluster.access.mfa.methods.index" />
+      <Hds::Breadcrumb::Item @text={{this.model.method.name}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -20,7 +19,7 @@
 </PageHeader>
 
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs">
+  <nav class="tabs" aria-label="tabs">
     <ul>
       <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}} data-test-tab="config">
         Configuration
@@ -40,17 +39,20 @@
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @disabled={{not (is-empty this.model.enforcements)}}
+        data-test-delete-mfa-config
+        class="toolbar-button"
+        @disabledMessage={{unless
+          (is-empty this.model.enforcements)
+          "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
+        }}
+        @buttonColor="secondary"
         @onConfirmAction={{this.deleteMethod}}
-        @confirmTitle="Are you sure?"
         @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
-        @confirmButtonText="Delete"
-      >
-        Delete
-      </ConfirmAction>
+        @buttonText="Delete"
+      />
       <ToolbarLink
-        @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}
+        @route="vault.cluster.access.mfa.methods.method.edit"
+        @model={{this.model.method.id}}
         data-test-mfa-method-edit
       >
         Edit
@@ -77,7 +79,7 @@
 {{else if (eq this.tab "enforcements")}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.enforcements.create"}}>
+      <ToolbarLink @route="vault.cluster.access.mfa.enforcements.create" @type="add" data-test-enforcement-create>
         New enforcement
       </ToolbarLink>
     </ToolbarActions>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -5,12 +8,18 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-version"
 
+	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -22,7 +31,8 @@ var (
 // DatabaseConfig is used by the Factory function to configure a Database
 // object.
 type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	PluginName    string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	PluginVersion string `json:"plugin_version" structs:"plugin_version" mapstructure:"plugin_version"`
 	// ConnectionDetails stores the database specific connection settings needed
 	// by each database type.
 	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
@@ -53,6 +63,13 @@ func (c *DatabaseConfig) SupportsCredentialType(credentialType v5.CredentialType
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationVerb:   "reset",
+			OperationSuffix: "connection",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -78,17 +95,108 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
-		// Close plugin and delete the entry in the connections cache.
-		if err := b.ClearConnection(name); err != nil {
-			return nil, err
-		}
-
-		// Execute plugin again, we don't need the object so throw away.
-		if _, err := b.GetConnection(ctx, req.Storage, name); err != nil {
+		if err := b.reloadConnection(ctx, req.Storage, name); err != nil {
 			return nil, err
 		}
 
 		return nil, nil
+	}
+}
+
+func (b *databaseBackend) reloadConnection(ctx context.Context, storage logical.Storage, name string) error {
+	// Close plugin and delete the entry in the connections cache.
+	if err := b.ClearConnection(name); err != nil {
+		return err
+	}
+
+	// Execute plugin again, we don't need the object so throw away.
+	if _, err := b.GetConnection(ctx, storage, name); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// pathReloadPlugin reloads all connections using a named plugin.
+func pathReloadPlugin(b *databaseBackend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("reload/%s", framework.GenericNameRegex("plugin_name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationVerb:   "reload",
+			OperationSuffix: "plugin",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"plugin_name": {
+				Type:        framework.TypeString,
+				Description: "Name of the database plugin",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.reloadPlugin(),
+		},
+
+		HelpSynopsis:    pathReloadPluginHelpSyn,
+		HelpDescription: pathReloadPluginHelpDesc,
+	}
+}
+
+// reloadPlugin reloads all instances of a named plugin by closing the existing
+// instances and creating new ones.
+func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		pluginName := data.Get("plugin_name").(string)
+		if pluginName == "" {
+			return logical.ErrorResponse(respErrEmptyPluginName), nil
+		}
+
+		connNames, err := req.Storage.List(ctx, "config/")
+		if err != nil {
+			return nil, err
+		}
+		reloaded := []string{}
+		for _, connName := range connNames {
+			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
+			if err != nil {
+				return nil, fmt.Errorf("failed to read connection configuration: %w", err)
+			}
+			if entry == nil {
+				continue
+			}
+
+			var config DatabaseConfig
+			if err := entry.DecodeJSON(&config); err != nil {
+				return nil, err
+			}
+			if config.PluginName == pluginName {
+				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
+					var successfullyReloaded string
+					if len(reloaded) > 0 {
+						successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ",
+							len(reloaded),
+							strings.Join(reloaded, ", "))
+					}
+					return nil, fmt.Errorf("%sfailed to reload connection %q: %w", successfullyReloaded, connName, err)
+				}
+				reloaded = append(reloaded, connName)
+			}
+		}
+
+		resp := &logical.Response{
+			Data: map[string]interface{}{
+				"connections": reloaded,
+				"count":       len(reloaded),
+			},
+		}
+
+		if len(reloaded) == 0 {
+			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
+		}
+
+		return resp, nil
 	}
 }
 
@@ -97,6 +205,11 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -108,6 +221,11 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				Description: `The name of a builtin or previously registered
 				plugin known to vault. This endpoint will create an instance of
 				that plugin type.`,
+			},
+
+			"plugin_version": {
+				Type:        framework.TypeString,
+				Description: `The version of the plugin to use.`,
 			},
 
 			"verify_connection": {
@@ -138,11 +256,36 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		},
 
 		ExistenceCheck: b.connectionExistenceCheck(),
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.CreateOperation: b.connectionWriteHandler(),
-			logical.UpdateOperation: b.connectionWriteHandler(),
-			logical.ReadOperation:   b.connectionReadHandler(),
-			logical.DeleteOperation: b.connectionDeleteHandler(),
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.connectionWriteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "connection",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.connectionReadHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "connection-configuration",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.connectionDeleteHandler(),
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
+					OperationSuffix: "connection-configuration",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -169,6 +312,11 @@ func (b *databaseBackend) connectionExistenceCheck() framework.ExistenceFunc {
 func pathListPluginConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("config/?$"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixDatabase,
+			OperationSuffix: "connections",
+		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.connectionListHandler(),
@@ -218,8 +366,15 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			}
 		}
 
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			// This gets treated as though it's empty when mounting, and will get
+			// overwritten to be empty when the config is next written. See #18051.
+			config.PluginVersion = ""
+		}
+
 		delete(config.ConnectionDetails, "password")
 		delete(config.ConnectionDetails, "private_key")
+		delete(config.ConnectionDetails, "service_account_json")
 
 		return &logical.Response{
 			Data: structs.New(config).Map(),
@@ -281,6 +436,60 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(respErrEmptyPluginName), nil
 		}
 
+		if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
+			config.PluginVersion = pluginVersionRaw.(string)
+		}
+
+		var builtinShadowed bool
+		if unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase); err == nil && !unversionedPlugin.Builtin {
+			builtinShadowed = true
+		}
+		switch {
+		case config.PluginVersion != "":
+			semanticVersion, err := version.NewVersion(config.PluginVersion)
+			if err != nil {
+				return logical.ErrorResponse("version %q is not a valid semantic version: %s", config.PluginVersion, err), nil
+			}
+
+			// Canonicalize the version.
+			config.PluginVersion = "v" + semanticVersion.String()
+
+			if config.PluginVersion == versions.GetBuiltinVersion(consts.PluginTypeDatabase, config.PluginName) {
+				if builtinShadowed {
+					return logical.ErrorResponse("database plugin %q, version %s not found, as it is"+
+						" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", config.PluginName, config.PluginVersion), nil
+				}
+
+				config.PluginVersion = ""
+			}
+		case builtinShadowed:
+			// We'll select the unversioned plugin that's been registered.
+		case req.Operation == logical.CreateOperation:
+			// No version provided and no unversioned plugin of that name available.
+			// Pin to the current latest version if any versioned plugins are registered.
+			plugins, err := b.System().ListVersionedPlugins(ctx, consts.PluginTypeDatabase)
+			if err != nil {
+				return nil, err
+			}
+
+			var versionedCandidates []pluginutil.VersionedPlugin
+			for _, plugin := range plugins {
+				if !plugin.Builtin && plugin.Name == config.PluginName && plugin.Version != "" {
+					versionedCandidates = append(versionedCandidates, plugin)
+				}
+			}
+
+			if len(versionedCandidates) != 0 {
+				// Sort in reverse order.
+				sort.SliceStable(versionedCandidates, func(i, j int) bool {
+					return versionedCandidates[i].SemanticVersion.GreaterThan(versionedCandidates[j].SemanticVersion)
+				})
+
+				config.PluginVersion = "v" + versionedCandidates[0].SemanticVersion.String()
+				b.logger.Debug(fmt.Sprintf("pinning %q database plugin version %q from candidates %v", config.PluginName, config.PluginVersion, versionedCandidates))
+			}
+		}
+
 		if allowedRolesRaw, ok := data.GetOk("allowed_roles"); ok {
 			config.AllowedRoles = allowedRolesRaw.([]string)
 		} else if req.Operation == logical.CreateOperation {
@@ -301,6 +510,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		// ConnectionDetails.
 		delete(data.Raw, "name")
 		delete(data.Raw, "plugin_name")
+		delete(data.Raw, "plugin_version")
 		delete(data.Raw, "allowed_roles")
 		delete(data.Raw, "verify_connection")
 		delete(data.Raw, "root_rotation_statements")
@@ -326,7 +536,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		dbw, err := newDatabaseWrapper(ctx, config.PluginName, b.System(), b.logger)
+		dbw, err := newDatabaseWrapper(ctx, config.PluginName, config.PluginVersion, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
@@ -345,7 +555,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
 		// Close and remove the old connection
-		oldConn := b.connPut(name, &dbPluginInstance{
+		oldConn := b.connections.Put(name, &dbPluginInstance{
 			database: dbw,
 			name:     name,
 			id:       id,
@@ -354,6 +564,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			oldConn.Close()
 		}
 
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
 		err = storeConfig(ctx, req.Storage, name, config)
 		if err != nil {
 			return nil, err
@@ -427,4 +642,13 @@ Resets a database plugin.
 const pathResetConnectionHelpDesc = `
 This path resets the database connection by closing the existing database plugin
 instance and running a new one.
+`
+
+const pathReloadPluginHelpSyn = `
+Reloads all connections using a named database plugin.
+`
+
+const pathReloadPluginHelpDesc = `
+This path resets each database connection using a named plugin by closing each
+existing database plugin instance and running a new one.
 `

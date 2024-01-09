@@ -1,0 +1,3 @@
+```release-note:improvement:
+cli: User-requested -help text now appears on stdout for paging rather than stderr
+```

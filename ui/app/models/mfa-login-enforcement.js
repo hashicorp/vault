@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr, hasMany } from '@ember-data/model';
 import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import { methods } from 'vault/helpers/mountable-auth-methods';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
+import { inject as service } from '@ember/service';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -26,15 +32,17 @@ const validations = {
     },
   ],
 };
+
 @withModelValidations(validations)
 export default class MfaLoginEnforcementModel extends Model {
+  @service store;
   @attr('string') name;
-  @hasMany('mfa-method') mfa_methods;
+  @hasMany('mfa-method', { async: true, inverse: null }) mfa_methods;
   @attr('string') namespace_id;
   @attr('array', { defaultValue: () => [] }) auth_method_accessors; // ["auth_approle_17a552c6"]
   @attr('array', { defaultValue: () => [] }) auth_method_types; // ["userpass"]
-  @hasMany('identity/entity') identity_entities;
-  @hasMany('identity/group') identity_groups;
+  @hasMany('identity/entity', { async: true, inverse: null }) identity_entities;
+  @hasMany('identity/group', { async: true, inverse: null }) identity_groups;
 
   get targets() {
     return ArrayProxy.extend(PromiseProxyMixin).create({

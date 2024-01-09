@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mfa
 
 import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
@@ -13,20 +18,9 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-// TestLoginMFA_Method_CRUD tests creating/reading/updating/deleting a method config for all of the MFA providers
+// TestLoginMFA_Method_CRUD tests creating/reading/updating/deleting a method config for all the MFA providers
 func TestLoginMFA_Method_CRUD(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable userpass authentication
@@ -216,6 +210,115 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 	}
 }
 
+func TestLoginMFAMethodName(t *testing.T) {
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Enable userpass authentication
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	auths, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mountAccessor := auths["userpass/"].Accessor
+
+	testCases := []struct {
+		methodType string
+		configData map[string]interface{}
+	}{
+		{
+			"totp",
+			map[string]interface{}{
+				"issuer":      "yCorp",
+				"method_name": "totp-method",
+			},
+		},
+		{
+			"duo",
+			map[string]interface{}{
+				"mount_accessor":  mountAccessor,
+				"secret_key":      "lol-secret",
+				"integration_key": "integration-key",
+				"api_hostname":    "some-hostname",
+				"method_name":     "duo-method",
+			},
+		},
+		{
+			"okta",
+			map[string]interface{}{
+				"mount_accessor": mountAccessor,
+				"base_url":       "example.com",
+				"org_name":       "my-org",
+				"api_token":      "lol-token",
+				"method_name":    "okta-method",
+			},
+		},
+		{
+			"pingid",
+			map[string]interface{}{
+				"mount_accessor":       mountAccessor,
+				"settings_file_base64": "I0F1dG8tR2VuZXJhdGVkIGZyb20gUGluZ09uZSwgZG93bmxvYWRlZCBieSBpZD1bU1NPXSBlbWFpbD1baGFtaWRAaGFzaGljb3JwLmNvbV0KI1dlZCBEZWMgMTUgMTM6MDg6NDQgTVNUIDIwMjEKdXNlX2Jhc2U2NF9rZXk9YlhrdGMyVmpjbVYwTFd0bGVRPT0KdXNlX3NpZ25hdHVyZT10cnVlCnRva2VuPWxvbC10b2tlbgppZHBfdXJsPWh0dHBzOi8vaWRweG55bDNtLnBpbmdpZGVudGl0eS5jb20vcGluZ2lkCm9yZ19hbGlhcz1sb2wtb3JnLWFsaWFzCmFkbWluX3VybD1odHRwczovL2lkcHhueWwzbS5waW5naWRlbnRpdHkuY29tL3BpbmdpZAphdXRoZW50aWNhdG9yX3VybD1odHRwczovL2F1dGhlbnRpY2F0b3IucGluZ29uZS5jb20vcGluZ2lkL3BwbQ==",
+				"method_name":          "pingid-method",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.methodType, func(t *testing.T) {
+			// create a new method config
+			myPath := fmt.Sprintf("identity/mfa/method/%s", tc.methodType)
+			resp, err := client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			methodId := resp.Data["method_id"]
+			if methodId == "" {
+				t.Fatal("method id is empty")
+			}
+
+			// creating an MFA config with the same name should not return a new method ID
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if methodId != resp.Data["method_id"] {
+				t.Fatal("trying to create a new MFA config with the same name should not result in a new MFA config")
+			}
+
+			originalName := tc.configData["method_name"]
+
+			// create a new MFA config name
+			tc.configData["method_name"] = "newName"
+			resp, err = client.Logical().Write(myPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			myNewPath := fmt.Sprintf("%s/%s", myPath, methodId)
+
+			// Updating an existing MFA config with another config's name
+			resp, err = client.Logical().Write(myNewPath, tc.configData)
+			if err == nil {
+				t.Fatalf("expected a failure for configuring an MFA method with an existing MFA method name, %v", err)
+			}
+
+			// Create a method with a / in the name
+			tc.configData["method_name"] = fmt.Sprintf("ns1/%s", originalName)
+			_, err = client.Logical().Write(myNewPath, tc.configData)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 // TestLoginMFA_ListAllMFAConfigs tests listing all configs globally
 func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
@@ -321,18 +424,7 @@ func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_CRUD tests creating/reading/updating/deleting a login enforcement config
 func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"userpass": userpass.Factory,
-		},
-	}, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// first create a few configs
@@ -480,14 +572,7 @@ func TestLoginMFA_LoginEnforcement_CRUD(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_MethodIdsIsRequired ensures that login enforcements have method ids attached
 func TestLoginMFA_LoginEnforcement_MethodIdsIsRequired(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// create a login enforcement config, which should fail
@@ -503,14 +588,7 @@ func TestLoginMFA_LoginEnforcement_MethodIdsIsRequired(t *testing.T) {
 
 // TestLoginMFA_LoginEnforcement_RequiredParameters validates that all of the required fields must be present
 func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// first create a few configs
@@ -546,14 +624,7 @@ func TestLoginMFA_LoginEnforcement_RequiredParameters(t *testing.T) {
 }
 
 func TestLoginMFA_UpdateNonExistentConfig(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	_, err := client.Logical().Write("mfa/method/totp/a51884c6-51f2-bdc3-f4c5-0da64fe4d061", map[string]interface{}{

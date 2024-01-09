@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add vault.core.locked_users telemetry metric to emit information about total number of locked users.
+```

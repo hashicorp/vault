@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   class="list-item-row"
   @params={{array "vault.cluster.access.mfa.enforcements.enforcement" @model.id}}
@@ -15,7 +20,7 @@
     <div class="level-right is-flex is-paddingless is-marginless">
       <div class="level-item">
         <PopupMenu>
-          <nav class="menu">
+          <nav class="menu" aria-label="navigation for managing login enforcements">
             <ul class="menu-list">
               <li>
                 <LinkTo

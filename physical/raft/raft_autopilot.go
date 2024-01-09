@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -16,7 +19,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/atomic"
 )
@@ -213,13 +215,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -234,6 +238,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -287,12 +293,14 @@ type Delegate struct {
 	// dl is a lock dedicated for guarding delegate's fields
 	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
+	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
-func newDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
+		emptyVersionLogs: make(map[raft.ServerID]struct{}),
 	}
 }
 
@@ -381,6 +389,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -398,13 +407,43 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			continue
 		}
 
+		// If version isn't found in the state, fake it using the version from the leader so that autopilot
+		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
+		currentServerID := raft.ServerID(id)
+		followerVersion := state.Version
+		leaderVersion := d.effectiveSDKVersion
+		d.dl.Lock()
+		if followerVersion == "" {
+			if _, ok := d.emptyVersionLogs[currentServerID]; !ok {
+				d.logger.Trace("received empty Vault version in heartbeat state. faking it with the leader version for now", "id", id, "leader version", leaderVersion)
+				d.emptyVersionLogs[currentServerID] = struct{}{}
+			}
+			followerVersion = leaderVersion
+		} else {
+			delete(d.emptyVersionLogs, currentServerID)
+		}
+		d.dl.Unlock()
+
 		server := &autopilot.Server{
-			ID:          raft.ServerID(id),
+			ID:          currentServerID,
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
 			Meta:        d.meta(state),
-			Version:     state.Version,
+			Version:     followerVersion,
 			Ext:         d.autopilotServerExt(state),
+		}
+
+		// As KnownServers is a delegate called by autopilot let's check if we already
+		// had this data in the correct format and use it. If we don't (which sounds a
+		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
+		// done elsewhere in code to check the desired suffrage and manually set NodeType
+		// based on whether that's a voter or not. If we don't  do either of these
+		// things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
 		}
 
 		switch state.IsDead.Load() {
@@ -424,11 +463,12 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
-		Version:  version.GetVersion().Version,
+		Version:  d.effectiveSDKVersion,
 		Ext:      d.autopilotServerExt(nil),
 		IsLeader: true,
 	}
@@ -522,11 +562,32 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	tickerCh := b.followerHeartbeatTicker.C
 	b.l.RUnlock()
 
+	followerGauge := func(peerID string, suffix string, value float32) {
+		labels := []metrics.Label{
+			{
+				Name:  "peer_id",
+				Value: peerID,
+			},
+		}
+		metrics.SetGaugeWithLabels([]string{"raft_storage", "follower", suffix}, value, labels)
+	}
 	for range tickerCh {
 		b.l.RLock()
-		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-			b.followerStates.l.RLock()
-			for _, state := range b.followerStates.followers {
+		if b.raft == nil {
+			// We could be racing with teardown, which will stop the ticker
+			// but that doesn't guarantee that we won't reach this line with a nil
+			// b.raft.
+			b.l.RUnlock()
+			return
+		}
+		b.followerStates.l.RLock()
+		myAppliedIndex := b.raft.AppliedIndex()
+		for peerID, state := range b.followerStates.followers {
+			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
+			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
+			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
+
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
@@ -535,8 +596,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					state.IsDead.Store(true)
 				}
 			}
-			b.followerStates.l.RUnlock()
 		}
+		b.followerStates.l.RUnlock()
 		b.l.RUnlock()
 	}
 }
@@ -645,7 +706,7 @@ func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		// quoted string
-		dur, err = time.ParseDuration(str[1 : len(str)-1])
+		dur, err = parseutil.ParseDurationSecond(str[1 : len(str)-1])
 		if err != nil {
 			return err
 		}
@@ -778,7 +839,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
 	}
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
+	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 

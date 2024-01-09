@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -337,7 +340,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
+		c.SetClusterAddr(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
 
 	if len(c.ClusterAddr()) != 0 {
@@ -351,6 +354,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 func (c *Core) ClusterAddr() string {
 	return c.clusterAddr.Load().(string)
+}
+
+func (c *Core) SetClusterAddr(s string) {
+	c.clusterAddr.Store(s)
+	rb := c.getRaftBackend()
+
+	if rb != nil && c.clusterAddrBridge != nil {
+		c.clusterAddrBridge.UpdateClusterAddr(c.GetRaftNodeID(), s)
+	}
 }
 
 func (c *Core) getClusterListener() *cluster.Listener {
@@ -387,4 +399,8 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
+}
+
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
 }

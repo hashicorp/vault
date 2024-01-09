@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 
@@ -12,8 +17,7 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
       <Clients::RunningTotal
         @chartLegend={{this.chartLegend}}
         @selectedNamespace={{this.selectedNamespace}}
-        @barChartData={{this.byMonthNewClients}}
-        @lineChartData={{this.byMonth}}
+        @byMonthActivityData={{this.byMonth}}
         @runningTotals={{this.runningTotals}}
         @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
       />
@@ -21,38 +25,44 @@ import { calculateAverage } from 'vault/utils/chart-helpers';
 
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} selectedAuthMethod - string of auth method label for empty state message in bar chart
- * @param {array} barChartData - array of objects from /activity response, from the 'months' key
-    object example: {
+ * @param {array} byMonthActivityData - array of objects from /activity response, from the 'months' key, includes total and new clients per month
+    object structure: {
       month: '1/22',
       entity_clients: 23,
       non_entity_clients: 45,
-      total: 68,
+      clients: 68,
       namespaces: [],
       new_clients: {
         entity_clients: 11,
         non_entity_clients: 36,
-        total: 47,
+        clients: 47,
         namespaces: [],
       },
     };
- * @param {array} lineChartData - array of objects from /activity response, from the 'months' key
  * @param {object} runningTotals - top level totals from /activity response { clients: 3517, entity_clients: 1593, non_entity_clients: 1924 }
- * @param {object} upgradeData -  object containing version upgrade data e.g.: {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
+ * @param {object} upgradeData -  object containing version upgrade data e.g.: {version: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  *
  */
 export default class RunningTotal extends Component {
+  get byMonthNewClients() {
+    if (this.args.byMonthActivityData) {
+      return this.args.byMonthActivityData?.map((m) => m.new_clients);
+    }
+    return null;
+  }
+
   get entityClientData() {
     return {
       runningTotal: this.args.runningTotals.entity_clients,
-      averageNewClients: calculateAverage(this.args.barChartData, 'entity_clients') || '0',
+      averageNewClients: calculateAverage(this.byMonthNewClients, 'entity_clients'),
     };
   }
 
   get nonEntityClientData() {
     return {
       runningTotal: this.args.runningTotals.non_entity_clients,
-      averageNewClients: calculateAverage(this.args.barChartData, 'non_entity_clients') || '0',
+      averageNewClients: calculateAverage(this.byMonthNewClients, 'non_entity_clients'),
     };
   }
 
@@ -70,22 +80,7 @@ export default class RunningTotal extends Component {
     );
   }
 
-  get showSingleMonth() {
-    if (this.args.lineChartData?.length === 1) {
-      const monthData = this.args?.lineChartData[0];
-      return {
-        total: {
-          total: monthData.clients,
-          entityClients: monthData.entity_clients,
-          nonEntityClients: monthData.non_entity_clients,
-        },
-        new: {
-          total: monthData.new_clients.clients,
-          entityClients: monthData.new_clients.entity_clients,
-          nonEntityClients: monthData.new_clients.non_entity_clients,
-        },
-      };
-    }
-    return null;
+  get singleMonthData() {
+    return this.args?.byMonthActivityData[0];
   }
 }

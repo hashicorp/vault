@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click } from '@ember/test-helpers';
@@ -22,8 +27,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @hasActions="true"
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').exists(`Issuer field input renders`);
     assert.dom('[data-test-input="period"]').exists('Period field ttl renders');
     assert.dom('[data-test-input="key_size"]').exists('Key size field input renders');
@@ -48,22 +52,21 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @model={{this.model}}
         @onSave={{fn (mut this.didSave) true}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
 
     await fillIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
     await click('[data-test-confirm-button="Edit totp configuration?"]');
     assert.true(this.didSave, 'onSave callback triggered');
-    assert.equal(this.model.issuer, 'Vault', 'Issuer property set on model');
+    assert.strictEqual(this.model.issuer, 'Vault', 'Issuer property set on model');
   });
 
   test('it should populate form fields with model data', async function (assert) {
     assert.expect(3);
 
     this.model.issuer = 'Vault';
-    this.model.period = '30';
+    this.model.period = '30s';
     this.model.algorithm = 'SHA512';
 
     await render(hbs`
@@ -71,11 +74,10 @@ module('Integration | Component | mfa-method-form', function (hooks) {
         @hasActions="true"
         @model={{this.model}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
-    let checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
+    const checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
     assert.dom(checkedAlgorithm).hasValue('SHA512', 'SHA512 radio input is selected');
   });
 });

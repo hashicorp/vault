@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes crypto.randomUUID error in unsecure contexts from third party ember-data library
+```

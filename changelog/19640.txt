@@ -1,0 +1,3 @@
+```release-note:bug
+ secrets/ldap: Invalidates WAL entry for static role if `password_policy` has changed.
+```

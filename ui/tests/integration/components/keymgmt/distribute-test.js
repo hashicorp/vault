@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import Pretender from 'pretender';
@@ -6,6 +11,7 @@ import { create } from 'ember-cli-page-object';
 import { hbs } from 'ember-cli-htmlbars';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import searchSelect from '../../../pages/components/search-select';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const SELECTORS = {
   form: '[data-test-keymgmt-distribution-form]',
@@ -90,6 +96,14 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
         ];
       });
     });
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        'color-contrast': { enabled: false },
+      },
+    });
   });
 
   hooks.afterEach(function () {
@@ -99,12 +113,12 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
   test('it does not allow operation selection until valid key/provider combo selected', async function (assert) {
     assert.expect(6);
     await render(
-      hbs`<Keymgmt::Distribute @backend="keymgmt" @key="example-1" @providers={{providers}} @onClose={{fn (mut this.onClose)}} />`
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @key="example-1" @providers={{this.providers}} @onClose={{fn (mut this.onClose)}} />`
     );
     assert.dom(SELECTORS.operationsSection).hasAttribute('disabled');
     // Select
     await clickTrigger();
-    assert.equal(ssComponent.options.length, 3, 'shows all provider options');
+    assert.strictEqual(ssComponent.options.length, 3, 'shows all provider options');
     await typeInSearch('aws');
     await ssComponent.selectOption();
     await settled();
@@ -123,7 +137,7 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
   test('it shows key type select field if new key created', async function (assert) {
     assert.expect(2);
     await render(
-      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @onClose={{fn (mut this.onClose)}} />`
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{this.providers}} @onClose={{fn (mut this.onClose)}} />`
     );
     assert.dom(SELECTORS.keyTypeSection).doesNotExist('Key Type section is not rendered by default');
     // Add new item on search-select
@@ -157,7 +171,7 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
   test('it hides the key field if passed from the parent', async function (assert) {
     assert.expect(4);
     await render(
-      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{providers}} @key="example-1" @onClose={{fn (mut this.onClose)}} />`
+      hbs`<Keymgmt::Distribute @backend="keymgmt" @providers={{this.providers}} @key="example-1" @onClose={{fn (mut this.onClose)}} />`
     );
     assert.dom(SELECTORS.providerInput).exists('Provider input shown');
     assert.dom(SELECTORS.keySection).doesNotExist('Key input not shown');

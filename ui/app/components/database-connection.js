@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -19,7 +24,6 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
-  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
@@ -27,15 +31,8 @@ export default class DatabaseConnectionEdit extends Component {
   @tracked
   showSaveModal = false; // used for create mode
 
-  constructor() {
-    super(...arguments);
-    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
-  }
-
   rotateCredentials(backend, name) {
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     return adapter.rotateRootCredentials(backend, name);
   }
 
@@ -61,8 +58,8 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   async handleCreateConnection(evt) {
     evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
+    const secret = this.args.model;
+    const secretId = secret.name;
     secret.set('id', secretId);
     secret
       .save()
@@ -76,15 +73,15 @@ export default class DatabaseConnectionEdit extends Component {
   }
 
   @action
-  continueWithoutRotate(evt) {
-    evt.preventDefault();
+  continueWithoutRotate() {
+    this.showSaveModal = false;
     const { name } = this.args.model;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action
-  continueWithRotate(evt) {
-    evt.preventDefault();
+  continueWithRotate() {
+    this.showSaveModal = false;
     const { backend, name } = this.args.model;
     this.rotateCredentials(backend, name)
       .then(() => {
@@ -100,8 +97,8 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   handleUpdateConnection(evt) {
     evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
+    const secret = this.args.model;
+    const secretId = secret.name;
     secret
       .save()
       .then(() => {
@@ -126,7 +123,7 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   reset() {
     const { name, backend } = this.args.model;
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     adapter
       .resetConnection(backend, name)
       .then(() => {

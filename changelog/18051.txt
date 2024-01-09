@@ -1,0 +1,6 @@
+```release-note:change
+plugins: Mounts can no longer be pinned to a specific _builtin_ version. Mounts previously pinned to a specific builtin version will now automatically upgrade to the latest builtin version, and may now be overridden if an unversioned plugin of the same name and type is registered. Mounts using plugin versions without `builtin` in their metadata remain unaffected.
+```
+```release-note:bug
+plugins: Vault upgrades will no longer fail if a mount has been created using an explicit builtin plugin version.
+```

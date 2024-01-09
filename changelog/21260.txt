@@ -1,0 +1,4 @@
+```release-note:bug
+core: Change where we evaluate filtered paths as part of mount operations; this is part of an enterprise bugfix that will
+have its own changelog entry.  Fix wrong lock used in ListAuths link meta interface implementation.
+```

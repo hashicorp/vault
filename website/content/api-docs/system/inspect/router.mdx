@@ -1,0 +1,272 @@
+---
+layout: api
+page_title: /sys/internal/inspect/router - HTTP API
+description: >-
+  The '/sys/internal/inspect/router' endpoint focuses on viewing the contents of specific structures in the internal router subsystem.
+---
+
+# `/sys/internal/inspect/router`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/internal/inspect/router` endpoint is intended for a Vault admin to inspect the internal components of Vault's router.
+This endpoint can be accessed with a root token or sudo privileges.
+
+## Root
+
+This endpoint returns a list of router entries in the router's root tree.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/root` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/root
+```
+
+### Sample response
+```json
+{
+  "request_id": "819de627-d3bc-27f4-0e3c-5c5fb0b204ee",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "root": [
+      {
+        "accessor": "auth_token_d5fcf970",
+        "mount_namespace": "",
+        "mount_path": "token/",
+        "mount_type": "token",
+        "storage_prefix": "sys/token/",
+        "tainted": false,
+        "uuid": "de61dd8c-a181-ccc2-457d-908e417d10b0"
+      },
+      {
+        "accessor": "cubbyhole_58b6727b",
+        "mount_namespace": "",
+        "mount_path": "cubbyhole/",
+        "mount_type": "cubbyhole",
+        "storage_prefix": "logical/496bc2e4-b641-2561-1829-f6557bf1fedc/",
+        "tainted": false,
+        "uuid": "496bc2e4-b641-2561-1829-f6557bf1fedc"
+      },
+      {
+        "accessor": "identity_2ccfb6ab",
+        "mount_namespace": "",
+        "mount_path": "identity/",
+        "mount_type": "identity",
+        "storage_prefix": "logical/b15e93e0-5bf1-07b0-86d3-563f9c77eef1/",
+        "tainted": false,
+        "uuid": "b15e93e0-5bf1-07b0-86d3-563f9c77eef1"
+      },
+      {
+        "accessor": "system_0157e00a",
+        "mount_namespace": "",
+        "mount_path": "sys/",
+        "mount_type": "system",
+        "storage_prefix": "sys/",
+        "tainted": false,
+        "uuid": "8ac2615e-8a73-fe66-52a6-a422f7e3273f"
+      }
+    ]
+  },
+  "warnings": null
+}
+```
+
+## Mount UUID cache
+
+This endpoint returns a list of mount entries in the router's mount UUID cache.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/uuid` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/uuid
+```
+
+### Sample response
+```json
+{
+  "request_id": "71512d6c-bb77-2e05-c24e-07c964139fdb",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "uuid": [
+      {
+        "accessor": "auth_token_d5fcf970",
+        "mount_namespace": "",
+        "mount_path": "token/",
+        "mount_type": "token",
+        "uuid": "de61dd8c-a181-ccc2-457d-908e417d10b0"
+      },
+      {
+        "accessor": "cubbyhole_58b6727b",
+        "mount_namespace": "",
+        "mount_path": "cubbyhole/",
+        "mount_type": "cubbyhole",
+        "uuid": "496bc2e4-b641-2561-1829-f6557bf1fedc"
+      },
+      {
+        "accessor": "system_0157e00a",
+        "mount_namespace": "",
+        "mount_path": "sys/",
+        "mount_type": "system",
+        "uuid": "8ac2615e-8a73-fe66-52a6-a422f7e3273f"
+      },
+      {
+        "accessor": "identity_2ccfb6ab",
+        "mount_namespace": "",
+        "mount_path": "identity/",
+        "mount_type": "identity",
+        "uuid": "b15e93e0-5bf1-07b0-86d3-563f9c77eef1"
+      }
+    ]
+  },
+  "warnings": null
+}
+```
+
+## Mount accessor cache
+
+This endpoint returns a list of mount entries in the router's mount accessor cache.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/accessor` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/accessor
+```
+
+### Sample request
+
+```json
+{
+  "request_id": "4b7de90d-75e0-978f-bc23-23c23b19a604",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "accessor": [
+      {
+        "accessor": "auth_token_d5fcf970",
+        "mount_namespace": "",
+        "mount_path": "token/",
+        "mount_type": "token",
+        "uuid": "de61dd8c-a181-ccc2-457d-908e417d10b0"
+      },
+      {
+        "accessor": "cubbyhole_58b6727b",
+        "mount_namespace": "",
+        "mount_path": "cubbyhole/",
+        "mount_type": "cubbyhole",
+        "uuid": "496bc2e4-b641-2561-1829-f6557bf1fedc"
+      },
+      {
+        "accessor": "identity_2ccfb6ab",
+        "mount_namespace": "",
+        "mount_path": "identity/",
+        "mount_type": "identity",
+        "uuid": "b15e93e0-5bf1-07b0-86d3-563f9c77eef1"
+      },
+      {
+        "accessor": "system_0157e00a",
+        "mount_namespace": "",
+        "mount_path": "sys/",
+        "mount_type": "system",
+        "uuid": "8ac2615e-8a73-fe66-52a6-a422f7e3273f"
+      }
+    ]
+  },
+  "warnings": null
+}
+```
+
+
+## Storage prefix tree
+
+This endpoint returns a list of mount entries in the router's storage prefix tree.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/storage` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/storage
+```
+
+### Sample response
+
+```json
+{
+  "request_id": "ff94bb22-3d4d-8199-6882-f0e4188e10bd",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "storage": [
+      {
+        "accessor": "identity_2ccfb6ab",
+        "mount_namespace": "",
+        "mount_path": "identity/",
+        "mount_type": "identity",
+        "storage_prefix": "logical/b15e93e0-5bf1-07b0-86d3-563f9c77eef1/",
+        "tainted": false,
+        "uuid": "b15e93e0-5bf1-07b0-86d3-563f9c77eef1"
+      },
+      {
+        "accessor": "system_0157e00a",
+        "mount_namespace": "",
+        "mount_path": "sys/",
+        "mount_type": "system",
+        "storage_prefix": "sys/",
+        "tainted": false,
+        "uuid": "8ac2615e-8a73-fe66-52a6-a422f7e3273f"
+      },
+      {
+        "accessor": "auth_token_d5fcf970",
+        "mount_namespace": "",
+        "mount_path": "token/",
+        "mount_type": "token",
+        "storage_prefix": "sys/token/",
+        "tainted": false,
+        "uuid": "de61dd8c-a181-ccc2-457d-908e417d10b0"
+      },
+      {
+        "accessor": "cubbyhole_58b6727b",
+        "mount_namespace": "",
+        "mount_path": "cubbyhole/",
+        "mount_type": "cubbyhole",
+        "storage_prefix": "logical/496bc2e4-b641-2561-1829-f6557bf1fedc/",
+        "tainted": false,
+        "uuid": "496bc2e4-b641-2561-1829-f6557bf1fedc"
+      }
+    ]
+  },
+  "warnings": null
+}
+```
+
+
+
+

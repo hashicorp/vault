@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes issue creating mfa login enforcement from method enforcements tab
+```

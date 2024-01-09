@@ -1,5 +1,8 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 pid_file = "./pidfile"
-disable_keep_alives = ["auto-auth","caching","templating"]
+disable_keep_alives = ["auto-auth","caching","templating","proxying"]
 
 auto_auth {
   method {

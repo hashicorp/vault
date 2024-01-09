@@ -5,7 +5,7 @@ description: |-
   The replication stanza specifies various parameters for tuning replication related values.
 ---
 
-# `replication` Stanza
+# `replication` stanza
 
 The `replication` stanza specifies various parameters for tuning replication related values.
 
@@ -19,7 +19,7 @@ replication {
 }
 ```
 
-## `replication` Parameters
+## `replication` parameters
 
 - `resolver_discover_servers` `(boolean: true)` - This feature should probably always be turned on. It enables secondary
   cluster nodes to reach out to nodes in the primary cluster to request information on who the active node is. This
@@ -45,4 +45,4 @@ replication {
 - `allow_forwarding_via_token` `(string: "")` - When set to `new_token`, requests sent to non-active nodes
   are forwarded if the node does not yet have the token information in storage.
 
-Support for Server Side Consistent Tokens is now available. Refer to the [Server Side Consistent Token FAQ](/docs/faq/ssct) for details.
+Support for Server Side Consistent Tokens is now available. Refer to the [Server Side Consistent Token FAQ](/vault/docs/faq/ssct) for details.

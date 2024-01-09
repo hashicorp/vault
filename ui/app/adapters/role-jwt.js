@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 import { inject as service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -9,8 +14,8 @@ export default ApplicationAdapter.extend({
     let [path, role] = JSON.parse(id);
     path = encodePath(path);
 
-    let namespace = snapshot?.adapterOptions.namespace;
-    let url = `/v1/auth/${path}/oidc/auth_url`;
+    const namespace = snapshot?.adapterOptions.namespace;
+    const url = `/v1/auth/${path}/oidc/auth_url`;
     let redirect_uri = `${window.location.origin}${this.router.urlFor('vault.cluster.oidc-callback', {
       auth_path: path,
     })}`;

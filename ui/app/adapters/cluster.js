@@ -1,6 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
-import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
 import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
@@ -17,6 +21,7 @@ const ENDPOINTS = [
   'init',
   'capabilities-self',
   'license',
+  'internal/ui/version',
 ];
 
 const REPLICATION_ENDPOINTS = {
@@ -38,7 +43,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord(store, type, id, snapshot) {
-    let fetches = {
+    const fetches = {
       health: this.health(),
       sealStatus: this.sealStatus().catch((e) => e),
     };
@@ -50,12 +55,18 @@ export default ApplicationAdapter.extend({
         id,
         name: snapshot.attr('name'),
       };
-      ret = assign(ret, health);
+      ret = Object.assign(ret, health);
       if (sealStatus instanceof AdapterError === false) {
-        ret = assign(ret, { nodes: [sealStatus] });
+        ret = Object.assign(ret, { nodes: [sealStatus] });
       }
       if (replicationStatus && replicationStatus instanceof AdapterError === false) {
-        ret = assign(ret, replicationStatus.data);
+        ret = Object.assign(ret, replicationStatus.data);
+      } else if (
+        replicationStatus instanceof AdapterError &&
+        replicationStatus?.errors.find((err) => err === 'disabled path')
+      ) {
+        // set redacted if result is an error which only happens when redacted
+        ret = Object.assign(ret, { replication_redacted: true });
       }
       return resolve(ret);
     });
@@ -75,6 +86,11 @@ export default ApplicationAdapter.extend({
         performancestandbycode: 200,
       },
       unauthenticated: true,
+    }).catch(() => {
+      // sys/health will only fail when chroot set
+      // because it's allowed in root namespace only and
+      // configured to return a 200 response in other fail scenarios
+      return { has_chroot_namespace: true };
     });
   },
 
@@ -82,6 +98,10 @@ export default ApplicationAdapter.extend({
     return this.ajax(`${this.urlFor('license')}/features`, 'GET', {
       unauthenticated: true,
     });
+  },
+
+  fetchVersion() {
+    return this.ajax(`${this.urlFor('internal/ui/version')}`, 'GET').catch(() => ({}));
   },
 
   sealStatus() {
@@ -110,7 +130,7 @@ export default ApplicationAdapter.extend({
     const { role, jwt, token, password, username, path, nonce } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
-    let options = {
+    const options = {
       unauthenticated: true,
     };
     if (backend === 'token') {
@@ -133,7 +153,17 @@ export default ApplicationAdapter.extend({
       data: {
         mfa_request_id,
         mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
-          obj[selectedMethod.id] = passcode ? [passcode] : [];
+          let payload = [];
+          if (passcode) {
+            // duo requires passcode= prepended to the actual passcode
+            // this isn't a great UX so we add it behind the scenes to fulfill the requirement
+            // check if user added passcode= to avoid duplication
+            payload =
+              selectedMethod.type === 'duo' && !passcode.includes('passcode=')
+                ? [`passcode=${passcode}`]
+                : [passcode];
+          }
+          obj[selectedMethod.id] = payload;
           return obj;
         }, {}),
       },
@@ -196,17 +226,19 @@ export default ApplicationAdapter.extend({
   },
 
   generateDrOperationToken(data, options) {
-    let verb = options && options.checkStatus ? 'GET' : 'PUT';
-    if (options.cancel) {
-      verb = 'DELETE';
-    }
+    let verb = 'POST';
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.attempt) {
-      // start the generation
-      url = url + 'attempt';
+    if (options?.cancel) {
+      verb = 'DELETE';
+      url += 'attempt';
+    } else if (options?.checkStatus) {
+      verb = 'GET';
+      url += 'attempt';
+    } else if (data?.pgp_key || data?.attempt) {
+      url += 'attempt';
     } else {
       // progress the operation
-      url = url + 'update';
+      url += 'update';
     }
     return this.ajax(url, verb, {
       data,

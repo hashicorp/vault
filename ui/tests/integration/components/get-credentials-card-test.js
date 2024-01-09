@@ -1,13 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
-import { run } from '@ember/runloop';
 import { setupRenderingTest } from 'ember-qunit';
 import Service from '@ember/service';
-import { render, typeIn } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
-
-const TITLE = 'Get Credentials';
-const SEARCH_LABEL = 'Role to use';
+import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const storeService = Service.extend({
   query(modelType) {
@@ -29,39 +32,54 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    run(() => {
-      this.owner.unregister('service:store');
-      this.owner.register('service:store', storeService);
-      this.set('title', TITLE);
-      this.set('searchLabel', SEARCH_LABEL);
+    this.router = this.owner.lookup('service:router');
+    this.router.transitionTo = sinon.stub();
+
+    this.owner.unregister('service:store');
+    this.owner.register('service:store', storeService);
+    this.set('title', 'Get Credentials');
+    this.set('searchLabel', 'Role to use');
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
     });
   });
 
+  hooks.afterEach(function () {
+    this.router.transitionTo.reset();
+  });
+
   test('it shows a disabled button when no item is selected', async function (assert) {
+    assert.expect(2);
     await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
+    assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Button has default text');
   });
 
   test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
+    assert.expect(4);
     const models = ['database/role'];
     this.set('models', models);
     await render(
-      hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}} @models={{this.models}} @type="role"/>`
+      hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}} @placeholder="Search for a role..." @models={{this.models}} />`
     );
+    assert
+      .dom('[data-test-component="search-select"]#search-input-role')
+      .exists('renders search select component by default');
+    assert
+      .dom('[data-test-component="search-select"]#search-input-role')
+      .hasText('Search for a role...', 'renders placeholder text passed to search select');
     await clickTrigger();
     await selectChoose('', 'my-role');
     assert.dom('[data-test-get-credentials]').isEnabled();
-  });
-
-  test('it shows input field that can be clicked to a secret when role is secret', async function (assert) {
-    await render(
-      hbs`<GetCredentialsCard @title={{this.title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
+    await click('[data-test-get-credentials]');
+    assert.propEqual(
+      this.router.transitionTo.lastCall.args,
+      ['vault.cluster.secrets.backend.credentials', 'my-role'],
+      'transitionTo is called with correct route and role name'
     );
-    let card = document.querySelector('[data-test-search-roles]').childNodes[1];
-    let placeholder = card.querySelector('input').placeholder;
-    assert.equal(placeholder, 'secret/');
-
-    await typeIn(card.querySelector('input'), 'test');
-    assert.dom('[data-test-get-credentials]').isEnabled();
   });
 });

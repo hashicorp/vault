@@ -1,4 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+
+######################################################
+# NOTE: This file is managed by the Digital Team's   #
+# Terraform configuration @ hashicorp/mktg-terraform #
+######################################################
 
 # This is run during the website build step to determine if we should skip the build or not.
 # More information: https://vercel.com/docs/platform/projects#ignored-build-step

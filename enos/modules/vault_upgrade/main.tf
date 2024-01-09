@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     aws = {
@@ -32,9 +35,21 @@ variable "vault_instances" {
   description = "The vault cluster instances that were created"
 }
 
-variable "vault_local_bundle_path" {
+variable "vault_local_artifact_path" {
   type        = string
-  description = "The path to the local Vault (vault.zip) bundle"
+  description = "The path to a locally built vault artifact to install"
+  default     = null
+}
+
+variable "vault_artifactory_release" {
+  type = object({
+    username = string
+    token    = string
+    url      = string
+    sha256   = string
+  })
+  description = "Vault release version and edition to install from artifactory.hashicorp.engineering"
+  default     = null
 }
 
 variable "vault_seal_type" {
@@ -64,7 +79,8 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   for_each = local.instances
 
   destination = var.vault_install_dir
-  path        = var.vault_local_bundle_path
+  artifactory = var.vault_artifactory_release
+  path        = var.vault_local_artifact_path
 
   transport = {
     ssh = {
@@ -76,10 +92,12 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
 resource "enos_remote_exec" "get_leader_public_ip" {
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  content = templatefile("${path.module}/templates/get-leader-public-ip.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  scripts = [abspath("${path.module}/scripts/get-leader-public-ip.sh")]
+
+  environment = {
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_INSTANCES   = jsonencode(local.instances)
+  }
 
   transport = {
     ssh = {
@@ -91,10 +109,12 @@ resource "enos_remote_exec" "get_leader_public_ip" {
 resource "enos_remote_exec" "get_follower_public_ips" {
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  content = templatefile("${path.module}/templates/get-follower-public-ips.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  environment = {
+    VAULT_INSTALL_DIR = var.vault_install_dir,
+    VAULT_INSTANCES   = jsonencode(local.instances)
+  }
+
+  scripts = [abspath("${path.module}/scripts/get-follower-public-ips.sh")]
 
   transport = {
     ssh = {
@@ -107,7 +127,7 @@ resource "enos_remote_exec" "restart_followers" {
   for_each   = local.followers
   depends_on = [enos_remote_exec.get_follower_public_ips]
 
-  content = file("${path.module}/templates/restart-vault.sh")
+  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {
@@ -137,7 +157,7 @@ resource "enos_vault_unseal" "followers" {
 resource "enos_remote_exec" "restart_leader" {
   depends_on = [enos_vault_unseal.followers]
 
-  content = file("${path.module}/templates/restart-vault.sh")
+  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
 
   transport = {
     ssh = {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -19,7 +24,7 @@ export default Route.extend({
 
   setupController(controller) {
     this._super(...arguments);
-    let { scope_name: scope, role_name: role } = this.paramsFor(this.routeName);
+    const { scope_name: scope, role_name: role } = this.paramsFor(this.routeName);
     controller.setProperties({ role, scope });
   },
 });

@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { alias, equal } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import { computed } from '@ember/object';
+import { getRelativePath } from 'core/utils/sanitize-path';
 
 const ROOT_NAMESPACE = '';
 export default Service.extend({
@@ -15,6 +22,20 @@ export default Service.extend({
 
   inRootNamespace: equal('path', ROOT_NAMESPACE),
 
+  currentNamespace: computed('inRootNamespace', 'path', function () {
+    if (this.inRootNamespace) return 'root';
+
+    const parts = this.path?.split('/');
+    return parts[parts.length - 1];
+  }),
+
+  relativeNamespace: computed('path', 'userRootNamespace', function () {
+    // relative namespace is the current namespace minus the user's root.
+    // so if we're in app/staging/group1 but the user's root is app, the
+    // relative namespace is staging/group
+    return getRelativePath(this.path, this.userRootNamespace);
+  }),
+
   setNamespace(path) {
     if (!path) {
       this.set('path', '');
@@ -27,17 +48,17 @@ export default Service.extend({
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
-    let store = this.store;
-    let adapter = store.adapterFor('namespace');
-    let userRoot = this.auth.authData.userRootNamespace;
+    const store = this.store;
+    const adapter = store.adapterFor('namespace');
+    const userRoot = this.auth.authData.userRootNamespace;
     try {
-      let ns = yield adapter.findAll(store, 'namespace', null, {
+      const ns = yield adapter.findAll(store, 'namespace', null, {
         adapterOptions: {
           forUser: true,
           namespace: userRoot,
         },
       });
-      let keys = ns.data.keys || [];
+      const keys = ns.data.keys || [];
       this.set(
         'accessibleNamespaces',
         keys.map((n) => {
