@@ -19,7 +19,11 @@ export default {
   }),
   lastLogOutput: getter(function () {
     const count = this.logOutputItems.length;
-    const outputItemText = this.logOutputItems.objectAt(count - 1).text;
+    if (count === 0) {
+      // If no logOutput items are found, we can assume the response is empty
+      return '';
+    }
+    const outputItemText = this.logOutputItems[count - 1].text;
     return outputItemText;
   }),
   logTextItems: collection('[data-test-component="console/log-text"]', {
