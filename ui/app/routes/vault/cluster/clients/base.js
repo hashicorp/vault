@@ -8,7 +8,7 @@ import getStorage from 'vault/lib/token-storage';
 import { inject as service } from '@ember/service';
 import timestamp from 'core/utils/timestamp';
 
-export default class DashboardRoute extends Route {
+export default class ClientCountTokenRoute extends Route {
   @service store;
   currentDate = timestamp.now().toISOString();
 
