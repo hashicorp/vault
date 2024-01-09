@@ -105,11 +105,6 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
       - id: setup-git-private
         name: Setup Git configuration (private)
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -243,11 +238,6 @@ jobs:
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
-            kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
       - id: setup-git-private
         name: Setup Git configuration (private)
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -347,14 +337,6 @@ jobs:
           if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
             export VAULT_LICENSE_CI=${{ secrets.ci_license }}
             export VAULT_LICENSE_2=${{ secrets.ci_license_2 }}
-            export HCP_API_ADDRESS=${{ secrets.HCP_API_ADDRESS }}
-            export HCP_AUTH_URL=${{ secrets.HCP_AUTH_URL }}
-            export HCP_CLIENT_ID=${{ secrets.HCP_CLIENT_ID }}
-            export HCP_CLIENT_SECRET=${{ secrets.HCP_CLIENT_SECRET }}
-            export HCP_RESOURCE_ID=${{ secrets.HCP_RESOURCE_ID }}
-            # Temporarily removing this variable to cause HCP Link tests
-            # to be skipped.
-            #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
           fi
 
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
