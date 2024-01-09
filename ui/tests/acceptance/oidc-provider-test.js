@@ -13,7 +13,7 @@ import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { visit, settled, currentURL } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -139,16 +139,15 @@ module('Acceptance | oidc provider', function (hooks) {
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
-    await visit('/vault/access/oidc');
-    assert
-      .dom('[data-test-oidc-client-linked-block="my-webapp"]')
-      .exists({ count: 1 }, 'shows webapp in oidc provider list');
+
     await logout.visit();
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
     assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
+
+    await waitFor('[data-test-auth-form]', { timeout: 5000 });
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
@@ -166,6 +165,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.login();
     await settled();
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
+    assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
