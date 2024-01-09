@@ -44,6 +44,10 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 
+	"github.com/patrickmn/go-cache"
+	uberAtomic "go.uber.org/atomic"
+	"google.golang.org/grpc"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -69,9 +73,6 @@ import (
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
-	"github.com/patrickmn/go-cache"
-	uberAtomic "go.uber.org/atomic"
-	"google.golang.org/grpc"
 )
 
 const (

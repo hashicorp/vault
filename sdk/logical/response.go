@@ -61,7 +61,7 @@ type Response struct {
 
 	// RootCredential, if not nil, denotes that this response contains the root
 	// credential.
-	RootCredential *RootCredential `json:"root_credential" structs:"root_credential" mapstructure:"root_credential"`
+	//RootCredential *RotationJob `json:"root_credential" structs:"root_credential" mapstructure:"root_credential"`
 
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for

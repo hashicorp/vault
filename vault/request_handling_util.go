@@ -89,6 +89,6 @@ func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.To
 	return nil, nil
 }
 
-func getRotationRegisterFunc(c *Core) (func(context.Context, *logical.Request, *logical.Response) (string, error), error) {
+func getRotationRegisterFunc(c *Core) (func(context.Context, string, *logical.RotationJob) (string, error), error) {
 	return c.rotationManager.Register, nil
 }

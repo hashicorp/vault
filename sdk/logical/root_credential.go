@@ -4,7 +4,11 @@
 package logical
 
 import (
+	"context"
+	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 // RotationOptions is an embeddable struct to capture common lease
@@ -14,8 +18,8 @@ type RotationOptions struct {
 	Schedule *RootSchedule
 }
 
-// RootCredential represents the secret part of a response.
-type RootCredential struct {
+// RotationJob represents the secret part of a response.
+type RotationJob struct {
 	RotationOptions
 
 	// RotationID is the ID returned to the user to manage this secret.
@@ -24,14 +28,15 @@ type RootCredential struct {
 	RotationID string `sentinel:""`
 	Path       string
 	Name       string
+	Namespace  *namespace.Namespace
 }
 
-func (s *RootCredential) Validate() error {
+func (s *RotationJob) Validate() error {
 	// TODO: validation?
 	return nil
 }
 
-func GetRootCredential(rotationSchedule, path, credentialName string, rotationWindow int) (*RootCredential, error) {
+func GetRotationJob(ctx context.Context, rotationSchedule, path, credentialName string, rotationWindow int) (*RotationJob, error) {
 	cronSc, err := DefaultScheduler.Parse(rotationSchedule)
 	if err != nil {
 		return nil, err
@@ -47,12 +52,17 @@ func GetRootCredential(rotationSchedule, path, credentialName string, rotationWi
 		NextVaultRotation: cronSc.Next(time.Now()),
 	}
 
-	return &RootCredential{
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil ,fmt.Errorf("error obtaining namespace from context: %s", err)
+	}
+	return &RotationJob{
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
 		// Figure out how to get mount info
 		Path: path,
 		Name: credentialName,
+		Namespace: ns,
 	}, nil
 }

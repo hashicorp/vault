@@ -232,7 +232,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 	sched, sok := d.GetOk("rotation_schedule")
 	wind, wok := d.GetOk("rotation_window")
 
-	var rc *logical.RootCredential
+	var rc *logical.RotationJob
 	if sok && !wok || wok && !sok {
 		return logical.ErrorResponse("must include both schedule and window"), nil
 	} else if sok && wok {
@@ -241,7 +241,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 		b.Logger().Info("rotation", "window", cfg.RotationWindow, "schedule", cfg.RotationSchedule)
 
-		rc, err = logical.GetRootCredential(cfg.RotationSchedule, "ldap/config",
+		rc, err = logical.GetRotationJob(ctx, cfg.RotationSchedule, "ldap/config",
 			"ldap-root-creds", cfg.RotationWindow)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -257,19 +257,24 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	if rc != nil {
+		b.Logger().Debug("Injecting Root Credential into system backend")
+		rotationID, err := b.System().RegisterRotationJob(ctx, rc.Path, rc)
+		if err != nil {
+			return nil, err
+		}
+
+		rc.RotationID = rotationID
+	}
+
 	if warnings := b.checkConfigUserFilter(cfg); len(warnings) > 0 {
 		return &logical.Response{
 			Warnings: warnings,
 		}, nil
 	}
 
-	if rc != nil {
-		return &logical.Response{
-			RootCredential: rc,
-		}, nil
-	} else {
-		return nil, nil
-	}
+	return nil, nil
+
 }
 
 /*

@@ -10,15 +10,17 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
@@ -209,6 +211,39 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	}
 
 	return reply.ClusterID, nil
+}
+
+func (s gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (id string, retErr error) {
+
+	scheduleData := map[string]interface{}{
+		"schedule": job.Schedule.Schedule,
+		"rotation_window": job.Schedule.RotationWindow,
+		"rotation_schedule": job.Schedule.RotationSchedule,
+		"next_vault_rotation": job.Schedule.NextVaultRotation,
+	}
+
+	m, err := structpb.NewValue(scheduleData)
+	if err != nil {
+		return "", err
+	}
+
+	req := &pb.RegisterRotationJobRequest{
+		ReqPath: reqPath,
+		Job: &pb.RotationJobInput{
+			Schedule: m.GetStructValue(),
+			RotationID: job.RotationID,
+			Path: job.Path,
+			Name: job.Name,
+		},
+	}
+
+	resp, err := s.client.RegisterRotationJob(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	job.RotationID = resp.RotationID
+	return resp.RotationID, nil
 }
 
 type gRPCSystemViewServer struct {

@@ -16,6 +16,7 @@ import (
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -585,6 +586,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	r.l.RUnlock()
 	if !ok {
+		r.logger.Debug(fmt.Sprintf("did not find any prefixes with namespace: %s", ns.Path))
 		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry not found.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
@@ -783,6 +785,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.ControlGroup = originalControlGroup
 	}()
 
+	r.logger.Debug(fmt.Sprintf("path: %s", req.Path))
 	// Invoke the backend
 	if existenceCheck {
 		ok, exists, err := re.backend.HandleExistenceCheck(ctx, req)

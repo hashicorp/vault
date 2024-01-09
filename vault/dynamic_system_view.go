@@ -452,3 +452,21 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 
 	return clusterInfo.ID, nil
 }
+
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, reqPath string, job *logical.RotationJob) (rotationID string, err error) {
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	path := ns.Path + "/" + reqPath
+
+	d.core.logger.Debug("Registering the rotation job over the dynamic system view")
+	id, err := d.core.rotationManager.Register(ctx, path, job)
+	if err != nil {
+		return "", fmt.Errorf("error registering rotation job: %s", err)
+	}
+
+	job.RotationID = id
+	return id, nil
+}
