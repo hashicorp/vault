@@ -4,6 +4,7 @@
  */
 
 import { Response } from 'miragejs';
+import { SELECTORS as GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /** Scenarios
   Config off, no data
@@ -22,7 +23,7 @@ import { Response } from 'miragejs';
   License start date this month
 */
 export const SELECTORS = {
-  dashboardActiveTab: '.active[data-test-dashboard]',
+  ...GENERAL,
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',

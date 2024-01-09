@@ -26,7 +26,9 @@ Router.map(function () {
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('dashboard');
+        this.route('overview');
+        this.route('token');
+        this.route('sync');
         this.route('config');
         this.route('edit');
       });
