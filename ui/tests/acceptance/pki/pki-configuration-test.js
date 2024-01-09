@@ -174,7 +174,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(SELECTORS.configTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       await click(SELECTORS.configuration.issuerLink);
-      await waitFor('[data-test-confirmation-modal-title]');
+      await waitFor(SELECTORS.configuration.deleteAllIssuerModal);
       assert.dom(SELECTORS.configuration.deleteAllIssuerModal).exists();
       await fillIn(SELECTORS.configuration.deleteAllIssuerInput, 'delete-all');
       await click(SELECTORS.configuration.deleteAllIssuerButton);
