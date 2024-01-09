@@ -39,25 +39,19 @@ export default class PolicyFormComponent extends Component {
   @tracked showTemplateModal = false;
 
   @task
-  *save(event) {
-    event.preventDefault();
+  *save() {
     if (!this.args.model.name) {
-      this.error = new Error('Policy path is required.');
-      return;
+      throw new Error('Policy path is required.');
     }
     if (!this.args.model.policy) {
-      this.error = new Error('Policy contents are required.');
+      throw new Error('Policy contents are required.');
     }
-    try {
-      const { name, policyType, isNew } = this.args.model;
-      yield this.args.model.save();
-      this.flashMessages.success(
-        `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
-      );
-      this.args.onSave(this.args.model);
-    } catch (error) {
-      this.error = error;
-    }
+    const { name, policyType, isNew } = this.args.model;
+    yield this.args.model.save();
+    this.flashMessages.success(
+      `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
+    );
+    this.args.onSave(this.args.model);
   }
 
   @action handleFormChange(name, val) {

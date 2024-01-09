@@ -1,13 +1,27 @@
-<form {{on "submit" @onSubmit}} ...attributes>
-  {{#if @formError}}
+<form {{on "submit" (perform this.handleSubmit)}} ...attributes>
+  {{#if this.error}}
     <Hds::Alert @type="inline" @color="critical" class="has-top-margin-s has-bottom-margin-s" as |A|>
       <A.Title>Error</A.Title>
       <A.Description data-test-message-error-description>{{this.errorMessage}}</A.Description>
     </Hds::Alert>
   {{/if}}
-  {{yield}}
+  {{yield
+    (hash
+      Field=(component "new-field" form=this)
+      Section=(component "new-form-section" form=this)
+      NamespaceReminder=(component "namespace-reminder")
+      expand-fields=(this.modelFields)
+      expand-groups=(this.modelGroups)
+      is-valid=(this.fieldValidity validations=this.validations)
+    )
+  }}
   <Hds::ButtonSet>
-    <Hds::Button @text={{or @buttonText "Save"}} @icon={{if @saving "loading"}} type="submit" data-test-form-save />
+    <Hds::Button
+      @text={{or @buttonText "Save"}}
+      @icon={{if this.handleSubmit.isRunning "loading"}}
+      type="submit"
+      data-test-form-save
+    />
     <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-form-cancel />
   </Hds::ButtonSet>
 </form>

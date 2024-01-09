@@ -2,7 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-
+<ExampleForm />
 <NewForm
   @onCancel={{this.cancel}}
   @saving={{this.save.isRunning}}
@@ -10,170 +10,71 @@
   @validations={{this.validations}}
   @onSubmit={{perform this.save}}
   data-test-policy-form
+  as |F|
 >
-  <NewFormSection>
-    <NewField::TextInput
-      @label="Path"
-      @name="name"
-      @value={{@model.name}}
-      @onChange={{this.handleFormChange}}
-      @readonly={{not @model.isNew}}
-      @isRequired={{true}}
-    />
+  <F.NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+  <F.Section @hasDivider={{@model.additionalAttrs}}>
+    <F.Field>
+      <NewField::TextInput
+        @label="Path"
+        @name="name"
+        @value={{or @model.name @model.id}}
+        @onChange={{this.handleFormChange}}
+        @readonly={{not @model.isNew}}
+        @isRequired={{true}}
+      />
+    </F.Field>
 
     {{!-- <NewFormField @label="Path" @name="name" @value={{@model.name}} @onChange={{this.handleFieldChange}} /> --}}
-    <Hds::Tabs as |T|>
-      <T.Tab>Code editor</T.Tab>
-      <T.Tab>File upload</T.Tab>
+    <F.Field>
+      <Hds::Tabs as |T|>
+        <T.Tab>Code editor</T.Tab>
+        <T.Tab>File upload</T.Tab>
 
-      <T.Panel class="tab-contents">
-        <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
-        <p>You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.</p>
-        <JsonEditor
-          @title="Policy"
-          @showToolbar={{false}}
-          @value={{@model.policy}}
-          @valueUpdated={{action (mut @model.policy)}}
-          @mode="ruby"
-          @extraKeys={{hash Shift-Enter=(perform this.save)}}
-          data-test-policy-editor
-        />
-        <Hds::Button
-          @text="How to write a policy"
-          @icon="bulb"
-          @size="small"
-          @color="tertiary"
-          {{on "click" (fn (mut this.showTemplateModal))}}
-          data-test-policy-example-button
-        />
-        <Hds::Copy::Button
-          @text="Copy"
-          @isIconOnly={{true}}
-          @textToCopy={{@model.policy}}
-          class="transparent"
-          data-test-copy-button
-        />
-      </T.Panel>
-      <T.Panel class="tab-contents">
-        <NewField::Upload @label="Policy" @name="policy" @onChange={{this.handleFormChange}} />
-      </T.Panel>
-    </Hds::Tabs>
-  </NewFormSection>
+        <T.Panel class="tab-contents">
+          <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
+          <p>You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.</p>
+          <JsonEditor
+            @title="Policy"
+            @showToolbar={{false}}
+            @value={{@model.policy}}
+            @valueUpdated={{action (mut @model.policy)}}
+            @mode="ruby"
+            @extraKeys={{hash Shift-Enter=(perform this.save)}}
+            data-test-policy-editor
+          />
+          <Hds::Button
+            @text="How to write a policy"
+            @icon="bulb"
+            @size="small"
+            @color="tertiary"
+            {{on "click" (fn (mut this.showTemplateModal))}}
+            data-test-policy-example-button
+          />
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{@model.policy}}
+            class="transparent"
+            data-test-copy-button
+          />
+        </T.Panel>
+        <T.Panel class="tab-contents">
+          <NewField::Upload @label="Policy" @name="policy" @onChange={{this.handleFormChange}} />
+        </T.Panel>
+      </Hds::Tabs>
+    </F.Field>
+  </F.Section>
   {{#if @model.additionalAttrs}}
-    <NewFormSection>
+    <F.Section>
       {{#each @model.additionalAttrs as |attr|}}
-        <NewFormField @attr={{attr}} @model={{@model}} />
+        <F.Field>
+          <NewFormField @attr={{attr}} @model={{@model}} />
+        </F.Field>
       {{/each}}
-    </NewFormSection>
+    </F.Section>
   {{/if}}
 </NewForm>
-
-<hr />
-
-<form {{on "submit" (perform this.save)}} data-test-policy-form>
-  <div class="box is-shadowless is-fullwidth is-marginless">
-    <MessageError @errorMessage={{this.errorBanner}} />
-    <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
-    {{#if @model.isNew}}
-      <div class="field">
-        <label for="policy-name" class="is-label">Name</label>
-        <div class="control">
-          <Input
-            @type="text"
-            @value={{lowercase @model.name}}
-            id="policy-name"
-            class="input"
-            {{on "input" this.setModelName}}
-            data-test-policy-input="name"
-          />
-        </div>
-      </div>
-    {{/if}}
-    <div class="field">
-      <Toolbar aria-label="toolbar for managing {{or @model.name 'new'}} policy">
-        <label class="has-text-weight-bold has-right-margin-xxs">Policy</label>
-        {{#if @renderPolicyExampleModal}}
-          {{! only true in policy create and edit routes }}
-          <ToolbarFilters aria-label="help tools for managing {{or @model.name 'new'}} policy">
-            <Hds::Button
-              @text="How to write a policy"
-              @icon="bulb"
-              @size="small"
-              @color="tertiary"
-              {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-policy-example-button
-            />
-          </ToolbarFilters>
-        {{/if}}
-        <ToolbarActions aria-label="actions for managing {{or @model.name 'new'}} policy">
-          <div class="toolbar-separator"></div>
-          {{#if @model.isNew}}
-            <div class="control is-flex">
-              <Input
-                id="fileUploadToggle"
-                @type="checkbox"
-                name="fileUploadToggle"
-                class="toggle is-success is-small"
-                @checked={{this.showFileUpload}}
-                {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
-                data-test-policy-edit-toggle
-              />
-              <label for="fileUploadToggle" class="has-text-weight-bold is-size-8">Upload file</label>
-            </div>
-          {{else}}
-            {{! EDITING - no file upload toggle}}
-            <Hds::Copy::Button
-              @text="Copy"
-              @isIconOnly={{true}}
-              @textToCopy={{@model.policy}}
-              class="transparent"
-              data-test-copy-button
-            />
-          {{/if}}
-        </ToolbarActions>
-      </Toolbar>
-      {{#if this.showFileUpload}}
-        <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
-      {{else}}
-        <JsonEditor
-          @title="Policy"
-          @showToolbar={{false}}
-          @value={{@model.policy}}
-          @valueUpdated={{action (mut @model.policy)}}
-          @mode="ruby"
-          @extraKeys={{hash Shift-Enter=(perform this.save)}}
-          data-test-policy-editor
-        />
-      {{/if}}
-      <div class="has-top-margin-xs">
-        <span class="is-size-9 has-text-grey has-bottom-margin-l">
-          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
-        </span>
-      </div>
-    </div>
-    {{#each @model.additionalAttrs as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-    {{/each}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <Hds::ButtonSet>
-      <Hds::Button
-        @text={{if @model.isNew "Create policy" "Save"}}
-        @icon={{if this.save.isRunning "loading"}}
-        type="submit"
-        disabled={{this.save.isRunning}}
-        data-test-policy-save
-      />
-      <Hds::Button
-        @text="Cancel"
-        @color="secondary"
-        disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
-        data-test-policy-cancel
-      />
-    </Hds::ButtonSet>
-  </div>
-</form>
 
 {{! SAMPLE POLICY MODAL. Only renders in policy create and edit routes }}
 {{#if this.showTemplateModal}}

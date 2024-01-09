@@ -1,9 +1,11 @@
 <Hds::Form::TextInput::Field
+  ...attributes
+  @value={{@value}}
+  @isRequired={{@isRequired}}
+  @isValid={{this.isValid}}
   readonly={{@readonly}}
   name={{@name}}
   {{on "change" this.handleChange}}
-  class="new-form-field"
-  ...attributes
   as |F|
 >
   <F.Label>{{@label}}</F.Label>

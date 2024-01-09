@@ -1,3 +1,6 @@
-<section class="new-form-section">
+<section class="new-form-section {{if @hasDivider 'with-divider'}}">
+  {{#if @title}}
+    <Hds::Text::Display @size="300" class="has-bottom-margin-xs">{{@title}}</Hds::Text::Display>
+  {{/if}}
   {{yield}}
 </section>

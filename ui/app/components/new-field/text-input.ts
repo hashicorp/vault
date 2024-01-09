@@ -8,8 +8,8 @@ interface Args {
   label: string;
   onChange: CallableFunction;
   value: string;
+  fieldErrors?: string[];
   isRequired?: boolean;
-  isInvalid?: boolean;
   type?: string;
 }
 
@@ -20,6 +20,10 @@ export default class NewFieldTextInputComponent extends Component<Args> {
       'new-field/text-input is missing required fields',
       this.args.name && this.args.label && this.args.onChange
     );
+  }
+
+  get isValid() {
+    return !this.args.fieldErrors || this.args.fieldErrors.length === 0;
   }
 
   @action

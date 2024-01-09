@@ -1,0 +1,44 @@
+{{!-- <Hds::Text::Display @size="300">Data for {{or this.userState.fullName "new user"}}</Hds::Text::Display> --}}
+<NewForm @onSubmit={{perform this.submitForm}} @onCancel={{transition-to "vault"}} @formError={{this.errors}} as |F|>
+  <F.Section @withDivider={{true}}>
+    {{#each (F.model-fields this.fields this.allByKey) as |attr|}}
+      ATTR:
+      {{attr.name}}
+    {{/each}}
+    {{#each this.mainFields as |field|}}
+      <F.Field>
+        {{#if (eq field.editType "text")}}
+          <NewField::TextInput
+            @onChange={{this.formChange}}
+            @name={{field.name}}
+            @label={{field.label}}
+            type={{or field.type "text"}}
+          />
+        {{else if (eq field.editType "select")}}
+          <NewField::Select @onChange={{this.formChange}} @name={{field.name}} @label={{field.label}} />
+        {{/if}}
+      </F.Field>
+    {{/each}}
+  </F.Section>
+  <F.Section @title="Extra options">
+    {{#each this.settingFields as |field|}}
+      <F.Field>
+        {{#if (eq field.editType "text")}}
+          <NewField::TextInput
+            @onChange={{this.formChange}}
+            @name={{field.name}}
+            @label={{field.label}}
+            type={{or field.type "text"}}
+          />
+        {{else if (eq field.editType "select")}}
+          <NewField::Select
+            @onChange={{this.formChange}}
+            @name={{field.name}}
+            @label={{field.label}}
+            @options={{field.options}}
+          />
+        {{/if}}
+      </F.Field>
+    {{/each}}
+  </F.Section>
+</NewForm>

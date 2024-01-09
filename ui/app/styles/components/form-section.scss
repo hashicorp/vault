@@ -24,14 +24,19 @@
 }
 
 .new-form-section {
-  padding-bottom: 32px;
+  padding-bottom: 24px;
+  margin-bottom: 8px;
+  &.with-divider {
+    margin-bottom: 24px;
+    border-bottom: 1px solid grey;
+  }
 }
-.new-form-field {
-  margin-bottom: 24px;
+.new-form-field:not(:first-of-type) {
+  margin-top: 24px;
 }
 .new-form-text {
   padding-bottom: 8px;
 }
 .tab-contents {
-  padding: 24px;
+  padding: 16px 0;
 }
