@@ -7,41 +7,38 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Commands_HCPInit(t *testing.T) {
-	hcpCommands := hcpvlib.InitHCPCommand(cli.NewMockUi())
-
 	tests := map[string]struct {
 		expectError      bool
 		expectedErrorMsg string
-		commands         map[string]cli.CommandFactory
 	}{
 		"initialize with success": {
 			expectError: false,
-			commands:    map[string]cli.CommandFactory{},
 		},
 		"initialize with error: existing commands conflict with init commands": {
 			expectError:      true,
 			expectedErrorMsg: "Failed to initialize HCP commands.",
-			commands:         hcpCommands,
 		},
 	}
 
 	for n, tst := range tests {
 		t.Run(n, func(t *testing.T) {
-			mockUi := cli.NewMockUi()
-			initHCPCommands(mockUi, tst.commands)
+			t.Parallel()
 
-			errMsg := mockUi.ErrorWriter.String()
+			mockUi := cli.NewMockUi()
+			commands := initCommands(mockUi, nil, nil)
 			if tst.expectError {
+				initHCPCommands(mockUi, commands)
+				errMsg := mockUi.ErrorWriter.String()
 				require.NotEmpty(t, errMsg)
 				require.Contains(t, errMsg, tst.expectedErrorMsg)
 			} else {
+				errMsg := mockUi.ErrorWriter.String()
 				require.Empty(t, errMsg)
-				require.NotEmpty(t, tst.commands)
+				require.NotEmpty(t, commands)
 			}
 		})
 	}
