@@ -14,6 +14,7 @@ export const SELECTORS = {
   icon: (name) => `[data-test-icon="${name}"]`,
   tab: (name) => `[data-test-tab="${name}"]`,
   filter: (name) => `[data-test-filter="${name}"]`,
+  filterInput: '[data-test-filter-input]',
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmButton: '[data-test-confirm-button]',
   emptyStateTitle: '[data-test-empty-state-title]',

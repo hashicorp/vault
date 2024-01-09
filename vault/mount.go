@@ -322,7 +322,7 @@ const mountStateUnmounting = "unmounting"
 // MountEntry is used to represent a mount table entry
 type MountEntry struct {
 	Table                 string            `json:"table"`                             // The table it belongs to
-	Path                  string            `json:"path"`                              // Mount Path
+	Path                  string            `json:"path"`                              // Mount Path, as provided in the mount API call but with a trailing slash, i.e. no auth/ or namespace prefix.
 	Type                  string            `json:"type"`                              // Logical backend Type. NB: This is the plugin name, e.g. my-vault-plugin, NOT plugin type (e.g. auth).
 	Description           string            `json:"description"`                       // User-provided description
 	UUID                  string            `json:"uuid"`                              // Barrier view UUID

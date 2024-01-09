@@ -8,8 +8,8 @@ import { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 const displayFields = ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId', 'clientSecret'];
 const formFieldGroups = [
-  { default: ['name', 'tenantId', 'cloud', 'clientId'] },
-  { Credentials: ['keyVaultUri', 'clientSecret'] },
+  { default: ['name', 'keyVaultUri', 'tenantId', 'cloud', 'clientId'] },
+  { Credentials: ['clientSecret'] },
 ];
 @withFormFields(displayFields, formFieldGroups)
 export default class SyncDestinationsAzureKeyVaultModel extends SyncDestinationModel {

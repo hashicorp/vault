@@ -525,7 +525,7 @@ type Core struct {
 
 	// uiConfig contains UI configuration
 	uiConfig             *UIConfig
-	customMessageManager *uicustommessages.Manager
+	customMessageManager CustomMessagesManager
 
 	// rawEnabled indicates whether the Raw endpoint is enabled
 	rawEnabled bool

@@ -26,6 +26,12 @@ const (
 	MaximumMessageCountPerNamespace int = 100
 )
 
+// nsManager is the NamespaceManager instance used to determine the set of
+// Namespaces to consider when retrieving active Custom Message. This
+// variable is re-assigned to point to a real NamespaceManager in the
+// enterprise edition.
+var nsManager NamespaceManager = &CommunityEditionNamespaceManager{}
+
 // Manager is a struct that provides methods to manage messages stored in a
 // logical.Storage.
 type Manager struct {
@@ -223,10 +229,13 @@ func getNamespacesToSearch(ctx context.Context, filters FindFilter) ([]*namespac
 	// Add the current namespace based on the context.Context to nsList.
 	nsList = append(nsList, ns)
 
-	//if filters.IncludeAncestors {
-	// Add the parent, grand-parent, etc... namespaces all the way back up
-	// to the root namespace to nsList.
-	//}
+	if filters.IncludeAncestors {
+		parentNs := nsManager.GetParentNamespace(ns.Path)
+		for ; parentNs.ID != ns.ID; parentNs = nsManager.GetParentNamespace(ns.Path) {
+			ns = parentNs
+			nsList = append(nsList, ns)
+		}
+	}
 
 	return nsList, nil
 }
