@@ -248,12 +248,13 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - id: build
-        if: inputs.binary-tests && matrix.id == inputs.total-runners
+      - uses: ./.github/actions/install-external-tools
+      - if: inputs.binary-tests && matrix.id == inputs.total-runners
+        name: Build dev binary for binary tests
+        # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
           GOPRIVATE: github.com/hashicorp/*
-        run: time make ci-bootstrap dev
-      - uses: ./.github/actions/set-up-gotestsum
+        run: time make prep dev
       - name: Install gVisor
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
         if: ${{ !inputs.enterprise }}
@@ -342,11 +343,11 @@ jobs:
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
-          
+
           if [ -f bin/vault ]; then
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
-          
+
             package_parallelism="-p 2"
           fi
 
@@ -364,7 +365,6 @@ jobs:
           VAULT_TEST_LOG_DIR="$(pwd)/test-results/go-test/logs-${{ matrix.id }}"
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
-          
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} VAULT_ADDR='' \
             gotestsum --format=short-verbose \
