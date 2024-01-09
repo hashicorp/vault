@@ -213,7 +213,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await visit(url);
-
+    await waitFor('[data-test-consent-form]');
     assert.notOk(
       currentURL().startsWith('/vault/auth'),
       'Does not redirect to auth because user is already logged in'
