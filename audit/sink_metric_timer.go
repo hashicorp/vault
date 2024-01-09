@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
-	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/vault/internal/observability/event"
 )
 

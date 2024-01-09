@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
-	"github.com/hashicorp/go-metrics"
 )
 
 var _ eventlogger.Node = (*MetricsCounter)(nil)
