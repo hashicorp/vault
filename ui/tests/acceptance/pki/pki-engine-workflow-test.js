@@ -363,12 +363,13 @@ module('Acceptance | pki workflow', function (hooks) {
       clearRecords(this.store);
     });
     test('lists the correct issuer metadata info', async function (assert) {
-      assert.expect(6);
+      assert.expect(7);
       await authPage.login(this.pkiAdminToken);
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       assert.dom(SELECTORS.issuersTab).exists('Issuers tab is present');
       await click(SELECTORS.issuersTab);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom('[data-test-overview-issuers-count]').hasText('1', 'Shows 1 issuer on overview card');
       assert.dom('.linked-block').exists({ count: 1 }, 'One issuer is in list');
       assert.dom('[data-test-is-root-tag="0"]').hasText('root');
       assert.dom('[data-test-serial-number="0"]').exists({ count: 1 }, 'displays serial number tag');

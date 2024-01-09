@@ -306,10 +306,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     };
 
     test('shows the correct actions and links associated with database', async function (assert) {
-      await mountSecrets.enable('database', 'database');
-      await newConnection('database');
+      const databaseBackend = `db-database`;
+      await mountSecrets.enable('database', databaseBackend);
+      await newConnection(databaseBackend);
       await runCommands([
-        `write database/roles/my-role \
+        `write ${databaseBackend}/roles/my-role \
         db_name=mongodb-database-plugin \
         creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
         default_ttl="1h" \
@@ -317,7 +318,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ]);
       await settled();
       await visit('/vault/dashboard');
-      await selectChoose(SELECTORS.searchSelect('secrets-engines'), 'database');
+      await selectChoose(SELECTORS.searchSelect('secrets-engines'), databaseBackend);
       await fillIn(SELECTORS.selectEl, 'Generate credentials for database');
       assert.dom(SELECTORS.emptyState('quick-actions')).doesNotExist();
       assert.dom(SELECTORS.subtitle('param')).hasText('Role to use');
@@ -325,7 +326,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await selectChoose(SELECTORS.searchSelect('params'), '.ember-power-select-option', 0);
       await click(SELECTORS.actionButton('Generate credentials'));
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
-      await consoleComponent.runCommands(deleteEngineCmd('database'));
+      await consoleComponent.runCommands(deleteEngineCmd(databaseBackend));
     });
 
     test('shows the correct actions and links associated with kv v1', async function (assert) {
