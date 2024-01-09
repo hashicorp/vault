@@ -5,27 +5,34 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'ember-concurrency';
 
 export default class MessagesMessageEditRoute extends Route {
   @service store;
 
-  model() {
-    const { id, authenticated } = this.paramsFor('messages.message');
-    // console.log('authenticatedd', authenticated);
-    return hash({
-      message: this.store.queryRecord('config-ui/message', id),
-      messages: this.store.query('config-ui/message', {
+  async getMessages(authenticated) {
+    try {
+      return await this.store.query('config-ui/message', {
         authenticated,
-      }),
-    });
+      });
+    } catch {
+      return [];
+    }
+  }
+  async model() {
+    const { id } = this.paramsFor('messages.message');
+    const message = await this.store.queryRecord('config-ui/message', id);
+
+    return {
+      message,
+      messages: this.getMessages(message.authenticated),
+    };
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated: resolvedModel.authenticated } },
+      { label: 'Messages', route: 'messages', query: { authenticated: resolvedModel.message.authenticated } },
       { label: 'Edit Message' },
     ];
   }

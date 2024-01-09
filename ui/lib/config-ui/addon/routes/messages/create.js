@@ -16,15 +16,23 @@ export default class MessagesCreateRoute extends Route {
     },
   };
 
+  async getMessages(message) {
+    try {
+      return await this.store.query('config-ui/message', {
+        authenticated: message.authenticated,
+      });
+    } catch {
+      return [];
+    }
+  }
+
   model(params) {
     const { authenticated } = params;
     return hash({
       message: this.store.createRecord('config-ui/message', {
         authenticated,
       }),
-      messages: this.store.query('config-ui/message', {
-        authenticated,
-      }),
+      messages: this.getMessages(authenticated),
     });
   }
 
