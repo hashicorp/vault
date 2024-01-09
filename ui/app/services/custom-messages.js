@@ -18,13 +18,11 @@ export default class CustomMessageService extends Service {
   }
 
   get bannerMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'banner');
+    return (this.messages || []).filter((message) => message?.type === 'banner');
   }
 
   get modalMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'modal');
+    return (this.messages || []).filter((message) => message?.type === 'modal');
   }
 
   async fetchMessages(ns) {
