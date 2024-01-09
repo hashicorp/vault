@@ -17,12 +17,13 @@ These are common observations and behaviors operators experience as their Vault 
 
 - TTL values for dynamic secret leases or authentication tokens could be too high, resulting in unused leases consuming storage space while waiting to expire.
 
-- Some growth in the number of outstanding leases is normal. As more users/services become clients, the number of leases will rise.
 - Rapid lease count growth disproportionate to the number of clients is a sign of misconfiguration or potential anti-patterns in client usage.
 
-- Valid credentials that have already been leased are not being reused when possible. e.g. a badly behaving app requests new credentials from Vault every time it starts instead of caching ones it previously requested and using them again.
+- Lease revocation is failing. This can be caused by failures in an external service in the case of dynamic secrets.
+
+- Valid credentials which have already been leased are not being reused when possible. e.g. a badly behaving app requests new credentials from Vault every time it starts instead of caching ones it previously requested and using them again. This encourages a build up of leases associated with otherwise unused credentials.
+
 - The Vault server is not processing lease revocations as quickly as they're expiring. Usually, this is due to insufficient IOPS for the storage backend.
-- Leases depend on an external service to expire/revoke, but the external portion of the revocation is failing.
 
 You can approach lease explosions in three phases:
 
