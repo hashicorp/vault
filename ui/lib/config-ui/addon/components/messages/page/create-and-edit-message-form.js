@@ -38,6 +38,13 @@ export default class MessagesList extends Component {
     }
   }
 
+  get hasSomeActiveModals() {
+    return (
+      this.args.messages.some((message) => message.type === 'modal' && message.active) &&
+      this.args.message.type === 'modal'
+    );
+  }
+
   @task
   *save(event) {
     event.preventDefault();

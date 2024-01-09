@@ -67,12 +67,21 @@
         data-test-button="preview"
       />
 
-      <Hds::Button
-        @text="{{if @message.isNew 'Create' 'Edit'}} message"
-        disabled={{(or this.invalidFormMessage this.save.isRunning)}}
-        data-test-button="create-message"
-        type="submit"
-      />
+      {{#if this.hasSomeActiveModals}}
+        <Hds::Button
+          @text="{{if @message.isNew 'Create' 'Edit'}} message"
+          disabled={{(or this.invalidFormMessage this.save.isRunning)}}
+          {{on "click" (fn (mut this.showMultipleModalsMessage) true)}}
+          data-test-button="multiple modals message"
+        />
+      {{else}}
+        <Hds::Button
+          @text="{{if @message.isNew 'Create' 'Edit'}} message"
+          disabled={{(or this.invalidFormMessage this.save.isRunning)}}
+          data-test-button="create-message"
+          type="submit"
+        />
+      {{/if}}
 
       <Hds::Button
         @text="Cancel"
@@ -82,6 +91,34 @@
       />
     </Hds::ButtonSet>
   </div>
+  {{#if this.showMultipleModalsMessage}}
+    <Hds::Modal
+      id="multiple-message-modal"
+      @size="large"
+      @color="warning"
+      @onClose={{fn (mut this.showMultipleModalsMessage) false}}
+      data-test-modal="preview modal"
+      as |M|
+    >
+      <M.Header data-test-modal-title="Warning: more than one modal">
+        Warning: more than one modal
+      </M.Header>
+      <M.Body data-test-modal-body="Warning: more than one modal">
+        You have an active modal configured and are trying to create another one. It is recommended to
+        <b>avoid having more than one modal</b>
+        at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to
+        continue.
+      </M.Body>
+      <M.Footer>
+        <Hds::Button
+          @text="Confirm"
+          disabled={{(or this.invalidFormMessage this.save.isRunning)}}
+          data-test-button="create-message"
+          type="submit"
+        />
+      </M.Footer>
+    </Hds::Modal>
+  {{/if}}
 </form>
 
 {{#if this.showMessagePreviewModal}}

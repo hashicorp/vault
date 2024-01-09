@@ -15,6 +15,10 @@ export default class MessageSerializer extends ApplicationSerializer {
   };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
+    if (requestType === 'query' && !payload.meta) {
+      const transformed = this.mapPayload(payload);
+      return super.normalizeResponse(store, primaryModelClass, transformed, id, requestType);
+    }
     if (requestType === 'queryRecord') {
       const transformed = {
         ...payload.data,
