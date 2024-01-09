@@ -43,11 +43,13 @@ func testNewLeaseCache(t *testing.T, responses []*SendResponse) *LeaseCache {
 		t.Fatal(err)
 	}
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            NewMockProxier(responses),
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             NewMockProxier(responses),
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -64,11 +66,13 @@ func testNewLeaseCacheWithDelay(t *testing.T, cacheable bool, delay int) *LeaseC
 	}
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            &mockDelayProxier{cacheable, delay},
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             &mockDelayProxier{cacheable, delay},
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -84,12 +88,14 @@ func testNewLeaseCacheWithPersistence(t *testing.T, responses []*SendResponse, s
 	require.NoError(t, err)
 
 	lc, err := NewLeaseCache(&LeaseCacheConfig{
-		Client:             client,
-		BaseContext:        context.Background(),
-		Proxier:            NewMockProxier(responses),
-		Logger:             logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
-		Storage:            storage,
-		CacheStaticSecrets: true,
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             NewMockProxier(responses),
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		Storage:             storage,
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
 	})
 	require.NoError(t, err)
 
@@ -1645,10 +1651,15 @@ func TestLeaseCacheRestore_expired(t *testing.T) {
 	err := restoredCache.Restore(context.Background(), boltStorage)
 	assert.NoError(t, err)
 
-	// The original mem cache should have all three items
+	// The original mem cache should between one-to-three items.
+	// This will usually be three, but could be less if any renewals
+	// happens before this check, which will evict the expired cache entries.
+	// e.g. you add a time.Sleep before this, it will be 1. We check
+	// between the range to reduce flakiness.
 	beforeDB, err := lc.db.GetByPrefix(cachememdb.IndexNameID)
 	require.NoError(t, err)
-	assert.Len(t, beforeDB, 3)
+	assert.LessOrEqual(t, len(beforeDB), 3)
+	assert.LessOrEqual(t, 1, len(beforeDB))
 
 	// There should only be one item in the restored cache: the autoauth token
 	afterDB, err := restoredCache.db.GetByPrefix(cachememdb.IndexNameID)

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -49,10 +49,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
     const versionName = version.version;
-    const versionNameEnd = version.isEnterprise ? versionName.indexOf('+') : versionName.length;
-    assert
-      .dom(SELECTORS.cardHeader('Vault version'))
-      .hasText(`Vault v${versionName.slice(0, versionNameEnd)} root`);
+    const versionText = version.isEnterprise
+      ? `Vault v${versionName.slice(0, versionName.indexOf('+'))} root`
+      : `Vault v${versionName}`;
+
+    assert.dom(SELECTORS.cardHeader('Vault version')).hasText(versionText);
   });
 
   module('secrets engines card', function (hooks) {

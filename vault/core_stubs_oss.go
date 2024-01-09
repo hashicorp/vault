@@ -5,7 +5,9 @@
 
 package vault
 
-import "context"
+import (
+	"context"
+)
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 

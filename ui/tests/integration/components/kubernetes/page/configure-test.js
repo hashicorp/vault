@@ -11,6 +11,7 @@ import { render, click, waitUntil, find, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -43,6 +44,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       kubernetes_host: null,
       service_account_jwt: null,
     };
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should display proper options when toggling radio cards', async function (assert) {
@@ -222,9 +230,9 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom('[data-test-field-validation="kubernetesHost"] [data-test-inline-error-message]')
       .hasText('Kubernetes host is required', 'Error renders for required field');
-    assert.dom('[data-test-alert] p').hasText('There is an error with this form.', 'Alert renders');
+    assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });
 
   test('it should save inferred config', async function (assert) {

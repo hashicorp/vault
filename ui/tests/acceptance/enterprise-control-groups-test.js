@@ -15,6 +15,7 @@ import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import authPage from 'vault/tests/pages/auth';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -25,6 +26,12 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // TODO: fix the hashi-read-only theme
+        'color-contrast': { enabled: false },
+      },
+    });
     return authPage.login();
   });
 
@@ -130,6 +137,11 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
       'redirects to access control group route'
     );
+    // without waiting for a settled state before test teardown there was an occasional async request leak causing failures
+    // the queryRecord method in the capabilities adapter was seemingly resolving after the store was destroyed
+    // "Error: Async Request leaks detected. Add a breakpoint here and set store.generateStackTracesForTrackedRequests = true; to inspect traces for leak origins"
+    // this should allow the pending request to resolve before tear down
+    await settled();
   });
 
   const workflow = async (assert, context, shouldStoreToken) => {

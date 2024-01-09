@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
@@ -204,8 +205,11 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ReplicationDRMode:          replicationState.GetDRString(),
 		ServerTimeUTC:              time.Now().UTC().Unix(),
 		Version:                    version.GetVersion().VersionNumber(),
+		Enterprise:                 constants.IsEnterprise,
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
+		ClockSkewMillis:            core.ActiveNodeClockSkewMillis(),
+		EchoDurationMillis:         core.EchoDuration().Milliseconds(),
 	}
 
 	licenseState, err := core.EntGetLicenseState()
@@ -245,8 +249,11 @@ type HealthResponse struct {
 	ReplicationDRMode          string                 `json:"replication_dr_mode"`
 	ServerTimeUTC              int64                  `json:"server_time_utc"`
 	Version                    string                 `json:"version"`
+	Enterprise                 bool                   `json:"enterprise"`
 	ClusterName                string                 `json:"cluster_name,omitempty"`
 	ClusterID                  string                 `json:"cluster_id,omitempty"`
 	LastWAL                    uint64                 `json:"last_wal,omitempty"`
 	License                    *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis         int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis            int64                  `json:"clock_skew_ms"`
 }

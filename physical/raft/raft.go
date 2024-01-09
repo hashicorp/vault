@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
+	bolt "github.com/hashicorp-forge/bbolt"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -37,7 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/version"
-	bolt "go.etcd.io/bbolt"
+	etcdbolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -310,6 +312,33 @@ func EnsurePath(path string, dir bool) error {
 	return os.MkdirAll(path, 0o700)
 }
 
+func NewClusterAddrBridge() *ClusterAddrBridge {
+	return &ClusterAddrBridge{
+		clusterAddressByNodeID: make(map[string]string),
+	}
+}
+
+type ClusterAddrBridge struct {
+	l                      sync.RWMutex
+	clusterAddressByNodeID map[string]string
+}
+
+func (c *ClusterAddrBridge) UpdateClusterAddr(nodeId string, clusterAddr string) {
+	c.l.Lock()
+	defer c.l.Unlock()
+	cu, _ := url.Parse(clusterAddr)
+	c.clusterAddressByNodeID[nodeId] = cu.Host
+}
+
+func (c *ClusterAddrBridge) ServerAddr(id raft.ServerID) (raft.ServerAddress, error) {
+	c.l.RLock()
+	defer c.l.RUnlock()
+	if addr, ok := c.clusterAddressByNodeID[string(id)]; ok {
+		return raft.ServerAddress(addr), nil
+	}
+	return "", fmt.Errorf("could not find cluster addr for id=%s", id)
+}
+
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	path := os.Getenv(EnvVaultRaftPath)
@@ -400,10 +429,11 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 		// Create the backend raft store for logs and stable storage.
 		dbPath := filepath.Join(path, "raft.db")
-		opts := boltOptions(dbPath)
+		opts := etcdboltOptions(dbPath)
 		raftOptions := raftboltdb.Options{
-			Path:        dbPath,
-			BoltOptions: opts,
+			Path:                    dbPath,
+			BoltOptions:             opts,
+			MsgpackUseNewTimeFormat: true,
 		}
 		store, err := raftboltdb.New(raftOptions)
 		if err != nil {
@@ -631,7 +661,7 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 		stats = b.raft.Stats()
 	}
 	b.l.RUnlock()
-	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+	b.collectEtcdBoltMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
 	labels := []metrics.Label{
 		{
@@ -650,6 +680,29 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
+	txstats := stats.TxStats
+	labels := []metricsutil.Label{{"database", database}}
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.GetPageCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.GetPageAlloc()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.GetCursorCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.GetNodeCount()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.GetNodeDeref()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.GetRebalance()), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.GetRebalanceTime().Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.GetSplit()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.GetSpill()), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.GetSpillTime().Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.GetWrite()), labels)
+	sink.IncrCounterWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.GetWriteTime().Milliseconds()), labels)
+}
+
+func (b *RaftBackend) collectEtcdBoltMetricsWithStats(stats etcdbolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
 	txstats := stats.TxStats
 	labels := []metricsutil.Label{{"database", database}}
 	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
@@ -945,11 +998,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			return err
 		}
 		transConfig := &raft.NetworkTransportConfig{
-			Stream:                streamLayer,
-			MaxPool:               3,
-			Timeout:               10 * time.Second,
-			ServerAddressProvider: b.serverAddressProvider,
-			Logger:                b.logger.Named("raft-net"),
+			Stream:                  streamLayer,
+			MaxPool:                 3,
+			Timeout:                 10 * time.Second,
+			ServerAddressProvider:   b.serverAddressProvider,
+			Logger:                  b.logger.Named("raft-net"),
+			MsgpackUseNewTimeFormat: true,
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
@@ -1320,7 +1374,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		if b.raft == nil {
 			return errors.New("raft storage is not initialized")
 		}
-		b.logger.Trace("adding server to raft", "id", peerID)
+		b.logger.Trace("adding server to raft", "id", peerID, "addr", clusterAddr)
 		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
 		return future.Error()
 	}
@@ -1329,7 +1383,7 @@ func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) e
 		return errors.New("raft storage autopilot is not initialized")
 	}
 
-	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID, "addr", clusterAddr)
 	return b.autopilot.AddServer(&autopilot.Server{
 		ID:          raft.ServerID(peerID),
 		Name:        peerID,
@@ -1891,6 +1945,42 @@ func boltOptions(path string) *bolt.Options {
 
 	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
 		o.FreelistType = bolt.FreelistArrayType
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
+		o.NoFreelistSync = false
+	}
+
+	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
+	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
+	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
+	// so if users are wanting to turn this off, they can also set it to 0. Setting it
+	// to a negative value is the same as not setting it at all.
+	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
+		o.InitialMmapSize = initialMmapSize
+	} else {
+		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
+
+		// If there's an error here, it means they passed something that's not convertible to
+		// a number. Rather than fail startup, just ignore it.
+		if err == nil && imms > 0 {
+			o.InitialMmapSize = imms
+		}
+	}
+
+	return o
+}
+
+func etcdboltOptions(path string) *etcdbolt.Options {
+	o := &etcdbolt.Options{
+		Timeout:        1 * time.Second,
+		FreelistType:   etcdbolt.FreelistMapType,
+		NoFreelistSync: true,
+		MmapFlags:      getMmapFlags(path),
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
+		o.FreelistType = etcdbolt.FreelistArrayType
 	}
 
 	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {

@@ -6,7 +6,13 @@
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @libraries)}}
-      <FilterInput @placeholder="Filter libraries" @onInput={{fn (mut this.filterValue)}} />
+      <FilterInput
+        aria-label="Filter libraries"
+        placeholder="Filter libraries"
+        value={{this.filterValue}}
+        @wait={{200}}
+        @onInput={{fn (mut this.filterValue)}}
+      />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
@@ -46,7 +52,7 @@
           <Icon @name="folder" />
           <span data-test-library={{library.name}}>{{library.name}}</span>
         </Item.content>
-        <Item.menu as |Menu|>
+        <Item.menu>
           {{#if library.libraryPath.isLoading}}
             <li class="action">
               <Hds::Button disabled @color="tertiary" @icon="loading" @text="loading" @isIconOnly={{true}} />
@@ -75,16 +81,14 @@
               </LinkTo>
             </li>
             {{#if library.canDelete}}
-              <li class="action">
-                <Menu.Message
-                  data-test-delete
-                  @id={{library.id}}
-                  @triggerText="Delete"
-                  @title="Are you sure?"
-                  @message="This library and associated accounts will be permanently deleted. You will not be able to recover it."
-                  @onConfirm={{fn this.onDelete library}}
-                />
-              </li>
+              <ConfirmAction
+                data-test-delete
+                @id={{library.id}}
+                @isInDropdown={{true}}
+                @buttonText="Delete"
+                @confirmMessage="This library and associated accounts will be permanently deleted. You will not be able to recover it."
+                @onConfirmAction={{fn this.onDelete library}}
+              />
             {{/if}}
           {{/if}}
         </Item.menu>

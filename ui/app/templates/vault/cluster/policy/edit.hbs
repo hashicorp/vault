@@ -5,15 +5,16 @@
 
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <li>
-        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
-          <span class="sep">&#x0002f;</span>
-          {{uppercase this.policyType}}
-          policies
-        </LinkTo>
-      </li>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text="{{uppercase this.policyType}} policies"
+        @route="vault.cluster.policies"
+        @model={{this.policyType}}
+        data-test-policy-list-link
+      />
+      <Hds::Breadcrumb::Item @text={{this.model.id}} @route="vault.cluster.policy.show" @model={{this.model.id}} />
+      <Hds::Breadcrumb::Item @text="Edit" @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -31,13 +32,12 @@
     <ToolbarActions>
       {{#if (and (not-eq this.model.id "default") this.capabilities.canDelete)}}
         <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @confirmMessage="This may affect access to Vault data."
+          @buttonText="Delete policy"
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @confirmMessage="Deleting this policy may affect access to Vault data."
           @onConfirmAction={{this.deletePolicy}}
-          data-test-policy-delete="true"
-        >
-          Delete
-        </ConfirmAction>
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>

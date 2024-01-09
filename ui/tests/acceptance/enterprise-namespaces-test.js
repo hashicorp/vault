@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit, fillIn, currentURL } from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { click, settled, visit, fillIn, currentURL } from '@ember/test-helpers';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -34,7 +34,11 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
-  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
+  // this test is flaky and is intentionally being skipped for now
+  // after seeing it fail both in CI and locally, an attempt at stabilizing it was made in https://github.com/hashicorp/vault/pull/23867
+  // this seemed to make it consistently pass locally while continuing to fail sporadically in CI
+  // that fix attempt was reverted in favor of skipping until it can be reworked to reliably pass
+  skip('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
     await click('[data-test-namespace-toggle]');
@@ -42,6 +46,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const nses = ['beep', 'boop', 'bop'];
     for (const [i, ns] of nses.entries()) {
       await createNS(ns);
+      await settled();
       // the namespace path will include all of the namespaces up to this point
       const targetNamespace = nses.slice(0, i + 1).join('/');
       const url = `/vault/secrets?namespace=${targetNamespace}`;
@@ -56,8 +61,11 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     }
 
     await logout.visit();
+    await settled();
     await authPage.visit({ namespace: '/beep/boop' });
+    await settled();
     await authPage.tokenInput('root').submit();
+    await settled();
     await click('[data-test-namespace-toggle]');
 
     assert.dom('[data-test-current-namespace]').hasText('/beep/boop/', 'current namespace begins with a /');

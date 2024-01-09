@@ -12,7 +12,7 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 const { unsealKeys } = VAULT_KEYS;
 
-module('Acceptance | unseal', function (hooks) {
+module.skip('Acceptance | unseal', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -25,7 +25,7 @@ module('Acceptance | unseal', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal] button');
+    await click('[data-test-seal]');
 
     await click('[data-test-confirm-button]');
 

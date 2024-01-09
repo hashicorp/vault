@@ -52,7 +52,7 @@ export default class SecretEngineModel extends Model {
   local;
   @attr('boolean', {
     helpText:
-      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For K/V mounts, all values will be seal wrapped.) This can only be specified at mount time.',
+      'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For KV mounts, all values will be seal wrapped.) This can only be specified at mount time.',
   })
   sealWrap;
   @attr('boolean') externalEntropyAccess;

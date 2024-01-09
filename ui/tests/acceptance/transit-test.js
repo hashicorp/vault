@@ -17,7 +17,7 @@ const SELECTORS = {
   popupMenu: '[data-test-popup-menu-trigger]',
   versionsTab: '[data-test-transit-link="versions"]',
   actionsTab: '[data-test-transit-key-actions-link]',
-  rootCrumb: '[data-test-secret-root-link]',
+  rootCrumb: (path) => `[data-test-secret-breadcrumb="${path}"] a`,
   card: (action) => `[data-test-transit-card="${action}"]`,
   infoRow: (label) => `[data-test-value-div="${label}"]`,
   form: (item) => `[data-test-transit-key="${item}"]`,
@@ -242,7 +242,7 @@ module('Acceptance | transit (flaky)', function (hooks) {
     assert.dom(SELECTORS.infoRow('Deletion allowed')).hasText('false');
     assert.dom(SELECTORS.infoRow('Derived')).hasText('Yes');
     assert.dom(SELECTORS.infoRow('Convergent encryption')).hasText('Yes');
-    await click(SELECTORS.rootCrumb);
+    await click(SELECTORS.rootCrumb(this.path));
     await click(SELECTORS.popupMenu);
     const actions = findAll('.ember-basic-dropdown-content li');
     assert.strictEqual(actions.length, 2, 'shows 2 items in popup menu');

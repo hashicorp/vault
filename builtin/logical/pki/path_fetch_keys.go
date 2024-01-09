@@ -14,6 +14,9 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 )
 
 func pathListKeys(b *backend) *framework.Path {
@@ -62,7 +65,7 @@ their identifier and their name (if set).`
 )
 
 func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not list keys until migration has completed"), nil
 	}
 
@@ -225,7 +228,7 @@ the certificate.
 )
 
 func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not get keys until migration has completed"), nil
 	}
 
@@ -255,27 +258,27 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 	}
 
 	var pkForSkid crypto.PublicKey
-	if key.isManagedPrivateKey() {
-		managedKeyUUID, err := key.getManagedKeyUUID()
+	if key.IsManagedPrivateKey() {
+		managedKeyUUID, err := issuing.GetManagedKeyUUID(key)
 		if err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		keyInfo, err := getManagedKeyInfo(ctx, b, managedKeyUUID)
+		keyInfo, err := managed_key.GetManagedKeyInfo(ctx, b, managedKeyUUID)
 		if err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
-		pkForSkid, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		pkForSkid, err = managed_key.GetManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
 		if err != nil {
 			return nil, err
 		}
 
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
-		respData[keyTypeParam] = string(keyInfo.keyType)
-		respData[managedKeyIdArg] = string(keyInfo.uuid)
-		respData[managedKeyNameArg] = string(keyInfo.name)
+		respData[keyTypeParam] = string(keyInfo.KeyType)
+		respData[managedKeyIdArg] = string(keyInfo.Uuid)
+		respData[managedKeyNameArg] = string(keyInfo.Name)
 	} else {
 		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
 		if err != nil {
@@ -298,7 +301,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not update keys until migration has completed"), nil
 	}
 
@@ -356,7 +359,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not delete keys until migration has completed"), nil
 	}
 
@@ -368,7 +371,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 	sc := b.makeStorageContext(ctx, req.Storage)
 	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
-		if keyId == KeyRefNotFound {
+		if keyId == issuing.KeyRefNotFound {
 			// We failed to lookup the key, we should ignore any error here and reply as if it was deleted.
 			return nil, nil
 		}

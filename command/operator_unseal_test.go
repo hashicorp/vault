@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 )
 
 func testOperatorUnsealCommand(tb testing.TB) (*cli.MockUi, *OperatorUnsealCommand) {

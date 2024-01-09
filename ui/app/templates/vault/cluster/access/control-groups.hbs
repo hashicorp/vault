@@ -34,9 +34,7 @@
       </div>
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <button type="submit" class="button is-primary" disabled={{not this.model.id}}>
-        Lookup
-      </button>
+      <Hds::Button @text="Lookup" type="submit" disabled={{not this.model.id}} />
     </div>
   </form>
 {{else}}

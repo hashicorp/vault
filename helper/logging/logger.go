@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -32,7 +32,7 @@ type LogConfig struct {
 	Name string
 
 	// LogLevel is the minimum level to be logged.
-	LogLevel log.Level
+	LogLevel hclog.Level
 
 	// LogFormat is the log format to use, supported formats are 'standard' and 'json'.
 	LogFormat LogFormat
@@ -49,20 +49,26 @@ type LogConfig struct {
 	// LogRotateMaxFiles is the maximum number of past archived log files to keep
 	LogRotateMaxFiles int
 
-	// SubloggerHook handles creation of new subloggers, automatically appending
-	// them to core's running list of allLoggers.
-	// see: server.AppendToAllLoggers for more details.
-	SubloggerHook func(log.Logger) log.Logger
+	// DefaultFileName should be set to the value to be used if the LogFilePath
+	// ends in a path separator such as '/var/log/'
+	// Examples of the default name are as follows: 'vault', 'agent' or 'proxy.
+	// The creator of this struct *must* ensure that it is assigned before doing
+	// anything with LogConfig!
+	DefaultFileName string
 }
 
-// SubloggerAdder is an interface which facilitates tracking of new subloggers
-// added between phases of server startup.
-type SubloggerAdder interface {
-	SubloggerHook(logger log.Logger) log.Logger
+// NewLogConfig should be used to initialize the LogConfig struct.
+func NewLogConfig(defaultFileName string) (*LogConfig, error) {
+	defaultFileName = strings.TrimSpace(defaultFileName)
+	if defaultFileName == "" {
+		return nil, errors.New("default file name is required")
+	}
+
+	return &LogConfig{DefaultFileName: defaultFileName}, nil
 }
 
 func (c *LogConfig) isLevelInvalid() bool {
-	return c.LogLevel == log.NoLevel || c.LogLevel == log.Off || c.LogLevel.String() == "unknown"
+	return c.LogLevel == hclog.NoLevel || c.LogLevel == hclog.Off || c.LogLevel.String() == "unknown"
 }
 
 func (c *LogConfig) isFormatJson() bool {
@@ -115,7 +121,7 @@ func parseFullPath(fullPath string) (directory, fileName string, err error) {
 }
 
 // Setup creates a new logger with the specified configuration and writer
-func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
+func Setup(config *LogConfig, w io.Writer) (hclog.InterceptLogger, error) {
 	// Validate the log level
 	if config.isLevelInvalid() {
 		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
@@ -132,7 +138,9 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		if fileName == "" {
+			fileName = fmt.Sprintf("%s.log", config.DefaultFileName)
+		}
 		if config.LogRotateDuration == 0 {
 			config.LogRotateDuration = defaultRotateDuration
 		}
@@ -153,13 +161,12 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		writers = append(writers, logFile)
 	}
 
-	logger := log.NewInterceptLogger(&log.LoggerOptions{
+	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
 		Name:              config.Name,
 		Level:             config.LogLevel,
 		IndependentLevels: true,
 		Output:            io.MultiWriter(writers...),
 		JSONFormat:        config.isFormatJson(),
-		SubloggerHook:     config.SubloggerHook,
 	})
 
 	return logger, nil
@@ -181,21 +188,21 @@ func ParseLogFormat(format string) (LogFormat, error) {
 
 // ParseLogLevel returns the hclog.Level that corresponds with the provided level string.
 // This differs hclog.LevelFromString in that it supports additional level strings.
-func ParseLogLevel(logLevel string) (log.Level, error) {
-	var result log.Level
+func ParseLogLevel(logLevel string) (hclog.Level, error) {
+	var result hclog.Level
 	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
 
 	switch logLevel {
 	case "trace":
-		result = log.Trace
+		result = hclog.Trace
 	case "debug":
-		result = log.Debug
+		result = hclog.Debug
 	case "notice", "info", "":
-		result = log.Info
+		result = hclog.Info
 	case "warn", "warning":
-		result = log.Warn
+		result = hclog.Warn
 	case "err", "error":
-		result = log.Error
+		result = hclog.Error
 	default:
 		return -1, errors.New(fmt.Sprintf("unknown log level: %s", logLevel))
 	}
@@ -204,11 +211,11 @@ func ParseLogLevel(logLevel string) (log.Level, error) {
 }
 
 // TranslateLoggerLevel returns the string that corresponds with logging level of the hclog.Logger.
-func TranslateLoggerLevel(logger log.Logger) (string, error) {
+func TranslateLoggerLevel(logger hclog.Logger) (string, error) {
 	logLevel := logger.GetLevel()
 
 	switch logLevel {
-	case log.Trace, log.Debug, log.Info, log.Warn, log.Error:
+	case hclog.Trace, hclog.Debug, hclog.Info, hclog.Warn, hclog.Error:
 		return logLevel.String(), nil
 	default:
 		return "", fmt.Errorf("unknown log level")

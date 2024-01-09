@@ -6,7 +6,7 @@ description: >-
   for Vault's API.
 ---
 
-# Vault proxy API proxy
+# Vault Proxy API proxy
 
 Vault Proxy's API Proxy functionality allows you to use Vault Proxy's API as a proxy
 for Vault's API.
@@ -54,6 +54,16 @@ auto-auth token attached. If the requests already bear a token, this
 configuration will be overridden and the token in the request will be used to
 forward the request to the Vault server. If set to `"force"` Proxy will use the
 auto-auth token, overwriting the attached Vault token if set.
+
+- `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
+  namespace configured, such as through the
+  [Vault stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza), all requests
+  proxied to Vault will have the configured namespace prepended to the namespace
+  header. If Proxy's namespace is set to `ns1` and Proxy is sent a request with the
+  namespace `ns2`, the request will go to the `ns1/ns2` namespace. Likewise, if Proxy
+  is sent a request without a namespace, the request will go to the `ns1` namespace.
+  In essence, what this means is that all proxied requests must go to the configured
+  namespace or to its child namespaces.
 
 The following two `api_proxy` options are only useful when making requests to a Vault
 Enterprise cluster, and are documented as part of its

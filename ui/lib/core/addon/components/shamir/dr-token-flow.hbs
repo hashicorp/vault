@@ -50,7 +50,13 @@
         )
         as |cmd|
       }}
-        <CodeSnippet @codeBlock={{cmd}} @container="#shamir-flow-modal" />
+        <Hds::CodeBlock
+          @language="bash"
+          @hasLineNumbers={{false}}
+          @hasCopyButton={{true}}
+          @hasLineWrapping={{true}}
+          @value={{cmd}}
+        />
       {{/let}}
       {{! template-lint-enable quotes }}
     </div>
