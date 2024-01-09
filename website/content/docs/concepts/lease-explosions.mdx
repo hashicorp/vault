@@ -7,19 +7,21 @@ description: >-
 
 # Introduction
 
-As your Vault environment scales to meet deployment needs, it is important to avoid over-subscription. A lease explosion can occur when operators reach over-subscription and clients create leases much faster than Vault is set to revoke them. If this continues unchecked, the active node will run out of memory. Once a lease explosion occurs, mitigation is time consuming and resource intensive.
+As your Vault environment scales to meet deployment needs, it is important to avoid over-subscription. A lease explosion can occur when operators reach over-subscription and clients create leases much faster than Vault is set to revoke them. If this continues unchecked, the active node can run out of memory. Once a lease explosion occurs, mitigation is time consuming and resource intensive.
 
 This document shows you how to prevent lease explosions, mitigate when a lease explosion occurs, and clean up your environment after a lease explosion.
 
-Applications and users can overwhelm system resources through consistent and high-volume API requests, resulting in denial-of-service issues in some Vault nodes or even the entire Vault cluster. Review [Vault resource quotas](/vault/docs/concepts/resource-quotas) to learn more.
+Applications and users can overwhelm system resources through consistent and high-volume API requests, resulting in denial-of-service issues in some Vault nodes or even the entire Vault cluster. Review [Vault resource quotas](/vault/docs/concepts/resource-quotas) to learn more about enabling rate-limit quotas and lease-count quotas to protect against requests which could trigger lease explosions.
 
 These are common observations and behaviors operators experience as their Vault deployment matures:
 
+- TTL values for dynamic secret leases or authentication tokens could be too high, resulting in unused leases consuming storage space while waiting to expire.
+
 - Some growth in the number of outstanding leases is normal. As more users/services become clients, the number of leases will rise.
 - Rapid lease count growth disproportionate to the number of clients is a sign of misconfiguration or potential anti-patterns in client usage.
-- TTL values for dynamic secret leases or authentication tokens could be too high, resulting in unused leases consuming storage space while waiting to expire.
+
 - Valid credentials that have already been leased are not being reused when possible. e.g. a badly behaving app requests new credentials from Vault every time it starts instead of caching ones it previously requested and using them again.
-- The Vault server is underperforming and not processing lease revocations as quickly as they're expiring. Usually, this is due to insufficient IOPS for the storage backend.
+- The Vault server is not processing lease revocations as quickly as they're expiring. Usually, this is due to insufficient IOPS for the storage backend.
 - Leases depend on an external service to expire/revoke, but the external portion of the revocation is failing.
 
 You can approach lease explosions in three phases:
@@ -38,7 +40,7 @@ Although no technical maximum exists, high lease counts can cause degradation in
 
 ### Client best practices
 
-Ensure clients using Vault adhere to best practices for their authentication and secret retrieval, and do not make excessive dynamic secrets requests or service token authentications. Review [Lease Concepts](/vault/docs/concepts/lease) and [Auth Concepts](https://developer.hashicorp.com/vault/docs/concepts/auth) to learn more.
+Ensure clients using Vault adhere to best practices for their authentication and secret retrieval, and do not make excessive dynamic secrets requests or service token authentications. Review [Lease Concepts](/vault/docs/concepts/lease) and [Auth Concepts](/vault/docs/concepts/auth) to learn more.
 
 You should avoid these client behavior anti-patterns:
 Long TTLs configured, leading to a slow build over-subscription.
@@ -139,7 +141,7 @@ Example output:
 
 </CodeBlockConfig>
 
-When Alice next authenticates with Vault and gets a token, its default TTL value is set to 28800 seconds or 8 hours and the maximum TTL value is 43200 seconds or 12 hours.
+When Alice authenticates with Vault and gets a token, its default TTL value is set to 28800 seconds (8 hours) and the maximum TTL value is 43200 seconds (12 hours).
 
 </Tab>
 
@@ -369,6 +371,8 @@ Revoking or forcefully revoking leases is potentially a dangerous operation. You
 
 Proactive monitoring and periodic usage analysis are some of the best practices for Vault operators. Review the following resources for more details.
 
-[Vault key metrics for common health checks](https://developer.hashicorp.com/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
-[Troubleshoot irrevocable leases](https://developer.hashicorp.com/vault/tutorials/monitoring/troubleshoot-irrevocable-leases)
-[Troubleshooting Vault](https://developer.hashicorp.com/vault/tutorials/monitoring/troubleshooting-vault)
+- [Vault key metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
+
+- [Troubleshoot irrevocable leases](/vault/tutorials/monitoring/troubleshoot-irrevocable-leases)
+
+- [Troubleshooting Vault](/vault/tutorials/monitoring/troubleshooting-vault)
