@@ -152,7 +152,7 @@ jobs:
     if: |
       needs.setup.outputs.enterprise == 1 &&
       needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false' && 
+      needs.verify-changes.outputs.is_ui_change == 'false' &&
       (contains(github.event.pull_request.labels.*.name, 'fips') || github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     needs:
       - setup
@@ -243,8 +243,7 @@ jobs:
         run: |
           rm -rf ./pkg
           mkdir ./pkg
-
-          make ci-bootstrap dev
+          make prep dev
       - id: test-ui
         name: test-ui
         env:
