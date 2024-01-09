@@ -69,7 +69,7 @@ module('Integration | Component | pki key form', function (hooks) {
         },
         'sends params in correct type'
       );
-      return {};
+      return { key_id: 'test' };
     });
 
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
@@ -106,7 +106,7 @@ module('Integration | Component | pki key form', function (hooks) {
         },
         'sends params in correct type'
       );
-      return {};
+      return { key_id: 'test' };
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
 
