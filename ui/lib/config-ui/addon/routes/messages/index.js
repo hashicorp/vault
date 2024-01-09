@@ -25,6 +25,7 @@ export default class MessagesRoute extends Route {
         authenticated,
         responsePath: 'data.keys',
         page: page || 1,
+        size: 10,
       });
     } catch (e) {
       if (e.httpStatus === 404) {
