@@ -8,6 +8,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -28,6 +29,7 @@ export default class MessagesList extends Component {
   @tracked modelValidations;
   @tracked invalidFormMessage;
   @tracked showMessagePreviewModal = false;
+  @tracked showMultipleModalsMessage = false;
 
   willDestroy() {
     super.willDestroy();
@@ -63,6 +65,16 @@ export default class MessagesList extends Component {
     } catch (error) {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
+    }
+  }
+
+  @action
+  updateMultipleMessageModal() {
+    const { isValid, state, invalidFormMessage } = this.args.message.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = invalidFormMessage;
+    if (isValid) {
+      this.showMultipleModalsMessage = true;
     }
   }
 }

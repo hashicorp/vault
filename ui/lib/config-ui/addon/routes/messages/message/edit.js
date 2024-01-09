@@ -5,14 +5,20 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { hash } from 'ember-concurrency';
 
 export default class MessagesMessageEditRoute extends Route {
   @service store;
 
   model() {
-    const { id } = this.paramsFor('messages.message');
-
-    return this.store.queryRecord('config-ui/message', id);
+    const { id, authenticated } = this.paramsFor('messages.message');
+    // console.log('authenticatedd', authenticated);
+    return hash({
+      message: this.store.queryRecord('config-ui/message', id),
+      messages: this.store.query('config-ui/message', {
+        authenticated,
+      }),
+    });
   }
 
   setupController(controller, resolvedModel) {
