@@ -385,19 +385,6 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 		// should match because rotations should not occur outside the rotation window
 		t.Fatalf("expected passwords to match, got (%s)", checkPassword)
 	}
-	if len(eventSender.Events) == 0 {
-		t.Fatal("Expected to have some events but got none")
-	}
-	// check that we got a rotate-fail event
-	found := false
-	for _, event := range eventSender.Events {
-		if string(event.Type) == "database/rotate-fail" {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found)
-
 	// Verify new username/password
 	verifyPgConn(t, username, checkPassword, connURL)
 
@@ -425,7 +412,20 @@ func TestBackend_StaticRole_Rotation_Schedule_ErrorRecover(t *testing.T) {
 	// Verify new username/password
 	verifyPgConn(t, username, checkPassword, connURL)
 
+	eventSender.Stop() // avoid race detector
 	// check that we got a successful rotation event
+	if len(eventSender.Events) == 0 {
+		t.Fatal("Expected to have some events but got none")
+	}
+	// check that we got a rotate-fail event
+	found := false
+	for _, event := range eventSender.Events {
+		if string(event.Type) == "database/rotate-fail" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
 	found = false
 	for _, event := range eventSender.Events {
 		if string(event.Type) == "database/rotate" {

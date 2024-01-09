@@ -12,7 +12,8 @@ import (
 // meant to be used in testing. It is thread-safe.
 type MockEventSender struct {
 	sync.Mutex
-	Events []MockEvent
+	Events  []MockEvent
+	Stopped bool
 }
 
 // MockEvent is a container for an event type + event pair.
@@ -25,8 +26,16 @@ type MockEvent struct {
 func (m *MockEventSender) SendEvent(_ context.Context, eventType EventType, event *EventData) error {
 	m.Lock()
 	defer m.Unlock()
-	m.Events = append(m.Events, MockEvent{Type: eventType, Event: event})
+	if !m.Stopped {
+		m.Events = append(m.Events, MockEvent{Type: eventType, Event: event})
+	}
 	return nil
+}
+
+func (m *MockEventSender) Stop() {
+	m.Lock()
+	defer m.Unlock()
+	m.Stopped = true
 }
 
 var _ EventSender = (*MockEventSender)(nil)
