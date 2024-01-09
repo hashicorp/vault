@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -23,6 +23,15 @@ export default Controller.extend({
 
   // set via the route `loading` action
   isLoading: false,
+
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
 
   filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
     var filter = this.filter;

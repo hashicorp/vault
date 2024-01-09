@@ -5,7 +5,7 @@ description: >-
   The Vault Lambda Extension allows a Lambda function to read secrets from a Vault deployment.
 ---
 
-# Vault Lambda Extension
+# Vault lambda extension
 
 AWS Lambda lets you run code without provisioning and managing servers.
 The [Vault Lambda Extension](https://github.com/hashicorp/vault-lambda-extension) utilizes the AWS Lambda Extensions API to help your Lambda function read secrets from your Vault deployment.
@@ -45,7 +45,7 @@ to read secrets, which can both be used side-by-side:
 - Configure environment variables such as `VAULT_SECRET_PATH` for the extension
   to read a secret and write it to disk.
 
-### Adding the extension to your existing Lambda and Vault infrastructure
+### Adding the extension to your existing lambda and Vault infrastructure
 
 #### Requirements
 
@@ -53,9 +53,9 @@ to read secrets, which can both be used side-by-side:
 - An instance of Vault accessible from AWS Lambda
 - An authenticated `vault` client
 - A secret in Vault that you want your Lambda to access, and a policy giving read access to it
-- Your Lambda function must use one of the [supported runtimes][https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html] for extensions
+- Your Lambda function must use one of the [supported runtimes](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-extensions-api.html) for extensions
 
-#### Step 1. Configure Vault
+#### Step 1. configure Vault
 
 Enable the aws auth method.
 
@@ -79,7 +79,7 @@ $ vault write auth/aws/role/vault-lambda-role \
     ttl=1h
 ```
 
-#### Step 2. Option a) Install the extension for Lambda functions packaged in zip archives
+#### Step 2. option a) install the extension for lambda functions packaged in zip archives
 
 If you deploy your Lambda function as a zip file, you can add the extension
 to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html#configuration-layers-using):
@@ -88,7 +88,7 @@ to your Lambda layers using the console or [cli](https://docs.aws.amazon.com/lam
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:11
 ```
 
-#### Step 2. Option b) Install the extension for Lambda functions packaged in container images
+#### Step 2. option b) install the extension for lambda functions packaged in container images
 
 Alternatively, if you deploy your Lambda function as a container image, simply
 place the built binary in the `/opt/extensions` directory of your image.
@@ -102,7 +102,7 @@ $ curl --silent https://releases.hashicorp.com/vault-lambda-extension/0.5.0/vaul
   --output vault-lambda-extension.zip
 ```
 
-Unzip the donwloaded binary.
+Unzip the downloaded binary.
 
 ```shell-session
 $ unzip vault-lambda-extension.zip
@@ -118,7 +118,7 @@ Or to build the binary from source. This requires Golang installed. Run from the
 $ GOOS=linux GOARCH=amd64 go build -o vault-lambda-extension main.go
 ```
 
-#### Step 3. Configure vault-lambda-extension
+#### Step 3. configure vault-lambda-extension
 
 Configure the extension using [Lambda environment
 variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html):
@@ -169,16 +169,17 @@ as well as some additional variables to configure auth, which secret(s) to read 
 where to write secrets.
 
 | Environment variable              | Description                                                                                                                                                                                                                                                                                                           | Required | Example value               |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------- |
+|-----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-----------------------------|
 | `VLE_VAULT_ADDR`                  | Vault address to connect to. Takes precedence over `VAULT_ADDR` so that clients of the proxy server can be configured using the standard `VAULT_ADDR`                                                                                                                                                                 | No       | `https://x.x.x.x:8200`      |
 | `VAULT_ADDR`                      | Vault address to connect to if `VLE_VAULT_ADDR` is not set. Required if `VLE_VAULT_ADDR` is not set                                                                                                                                                                                                                   | No       | `https://x.x.x.x:8200`      |
 | `VAULT_AUTH_PROVIDER`             | Name of the configured AWS IAM auth route on Vault                                                                                                                                                                                                                                                                    | Yes      | `aws`                       |
 | `VAULT_AUTH_ROLE`                 | Vault role to authenticate as                                                                                                                                                                                                                                                                                         | Yes      | `lambda-app`                |
-| `VAULT_IAM_SERVER_ID`             | Value to pass to the Vault server via the [`X-Vault-AWS-IAM-Server-ID` HTTP Header for AWS Authentication](/vault/api-docs/auth/aws#iam_server_id_header_value)                                                                                                                                                             | No       | `vault.example.com`         |
+| `VAULT_IAM_SERVER_ID`             | Value to pass to the Vault server via the [`X-Vault-AWS-IAM-Server-ID` HTTP Header for AWS Authentication](/vault/api-docs/auth/aws#iam_server_id_header_value)                                                                                                                                                       | No       | `vault.example.com`         |
 | `VAULT_SECRET_PATH`               | Secret path to read, written to `/tmp/vault/secret.json` unless `VAULT_SECRET_FILE` is specified                                                                                                                                                                                                                      | No       | `database/creds/lambda-app` |
 | `VAULT_SECRET_FILE`               | Path to write the JSON response for `VAULT_SECRET_PATH`                                                                                                                                                                                                                                                               | No       | `/tmp/db.json`              |
 | `VAULT_SECRET_PATH_FOO`           | Additional secret path to read, where FOO can be any name, as long as a matching `VAULT_SECRET_FILE_FOO` is specified                                                                                                                                                                                                 | No       | `secret/lambda-app/token`   |
 | `VAULT_SECRET_FILE_FOO`           | Must exist for any correspondingly named `VAULT_SECRET_PATH_FOO`. Name has no further effect beyond matching to the correct path variable                                                                                                                                                                             | No       | `/tmp/token`                |
+| `VAULT_RUN_MODE`                  | Available options are `default`, `proxy`, and `file`. Proxy mode makes requests to the extension's local proxy server. File mode configures the extension to read and write secrets to disk. Default mode uses both file and proxy mode. The default is `default`.                                                    | No       | `default`                   |
 | `VAULT_TOKEN_EXPIRY_GRACE_PERIOD` | Period at the end of the proxy server's auth token TTL where it will consider the token expired and attempt to re-authenticate to Vault. Must have a unit and be parseable by `time.Duration`. Defaults to 10s.                                                                                                       | No       | `1m`                        |
 | `VAULT_STS_ENDPOINT_REGION`       | The region of the STS regional endpoint to authenticate with. If the AWS IAM auth mount specified uses a regional STS endpoint, then this needs to match the region of that endpoint. Defaults to using the global endpoint, or the region the Lambda resides in if `AWS_STS_REGIONAL_ENDPOINTS` is set to `regional` | No       | `eu-west-1`                 |
 
@@ -248,6 +249,10 @@ cached as though the header `X-Vault-Cache-Control: cache` was present. Setting
 the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
 return and cache the response from Vault as described previously.
+
+~> **Warning!** The Vault Lambda Extension's cache is only in-memory
+and will not be persisted when the Lambda execution environment shuts down.
+In order words, the cache TTL is capped to the duration of the Lambda execution environment.
 
 ## Limitations
 

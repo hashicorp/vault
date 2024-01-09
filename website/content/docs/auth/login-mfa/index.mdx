@@ -13,7 +13,7 @@ an auth method using different authentication types. We use the term `Login MFA`
 this feature and the [Vault Enterprise MFA](/vault/docs/enterprise/mfa).
 Login MFA is built on top of the Identity system of Vault.
 
-## MFA Types
+## MFA types
 
 MFA in Vault includes the following login types:
 
@@ -37,7 +37,7 @@ MFA in Vault includes the following login types:
   access to the API. The PingID username will be derived from the caller
   identity's alias.
 
-## Login MFA Procedure
+## Login MFA procedure
 
 ~> **NOTE:** Vault's built-in Login MFA feature does not protect against brute forcing of
 TOTP passcodes by default. We recommend that per-client [rate limits](/vault/docs/concepts/resource-quotas)
@@ -56,7 +56,7 @@ such as a one-time passcode, before being authenticated.
 
 There are two ways to validate a login request that is subject to MFA validation.
 
-### Single-Phase Login
+### Single-Phase login
 
 In the Single-phase login, the required MFA information is embedded in a login request using
 the `X-Vault-MFA` header. In this case, the MFA validation is done
@@ -67,7 +67,7 @@ the header is `mfa_method_id[:passcode]` for TOTP, Okta, and PingID. However, fo
 The item in the `[]` is optional. From Vault 1.13.0, the format is consistent for all supported MFA methods, and one can use either of the above two formats.
 If there are multiple MFA methods that need to be validated, a user can pass in multiple `X-Vault-MFA` HTTP headers.
 
-#### Sample Request
+#### Sample request
 
 ```shell-session
 $ curl \
@@ -106,7 +106,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/userpass/login/alice
 ```
 
-### Two-Phase Login
+### Two-Phase login
 
 The more conventional and prevalent MFA method is a two-request mechanism, also referred to as Two-phase Login MFA.
 In Two-phase login, the `X-Vault-MFA` header is not provided in the request. In this case, after sending a regular login request,
@@ -117,7 +117,7 @@ a boolean value showing whether the MFA method uses passcodes or not. MFA constr
 and represent all MFA enforcements that match a login request. While the example below is for the userpass login,
 note that this can affect the login response on any auth mount protected by MFA validation.
 
-#### Sample Two-Phase Login Response
+#### Sample Two-Phase login response
 
 ```json
 {
@@ -169,7 +169,7 @@ endpoint including the MFA request ID and MFA payload. MFA payload contains a ma
 If the configured MFA methods, such as PingID, Okta, and Duo, do not require a passcode, the associated
 credentials will be a list with one empty string.
 
-#### Sample Payload
+#### Sample payload
 
 ```json
 {
@@ -191,7 +191,7 @@ If an MFA method is configured in a namespace, the MFA method name prefixed with
 }
 ```
 
-#### Sample Request
+#### Sample request
 
 ```shell-session
 $ curl \
@@ -201,7 +201,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mfa/validate
 ```
 
-#### Sample CLI Request
+#### Sample CLI request
 
 A user is also able to use the CLI write command to validate the login request.
 
@@ -209,7 +209,7 @@ A user is also able to use the CLI write command to validate the login request.
 $ vault write sys/mfa/validate -format=json @payload.json
 ```
 
-#### Interactive CLI for Login MFA
+#### Interactive CLI for login MFA
 
 Vault supports an interactive way of authenticating to an auth method using CLI only if the
 login request is subject to a single MFA method validation. In this situation, if the MFA method
@@ -227,7 +227,7 @@ $ vault write -non-interactive sys/mfa/validate -format=json @payload.json
 To get started with Login MFA, refer to the [Login MFA](/vault/tutorials/auth-methods/multi-factor-authentication) tutorial.
 
 
-### TOTP Passcode Validation Rate Limit
+### TOTP passcode validation rate limit
 
 Rate limiting of Login MFA paths are enforced by default in Vault 1.10.1 and above.
 By default, Vault allows for 5 consecutive failed TOTP passcode validation.

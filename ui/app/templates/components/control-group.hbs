@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-fullwidth is-bottomless is-sideless">
   <MessageError @model={{this.model}} />
   <div class="control-group-header {{if this.isSuccess 'is-success'}}">
@@ -43,8 +48,13 @@
       </div>
 
       {{#if (or (not this.model.requestEntity) this.currentUserIsRequesting)}}
-        <div class="message is-list is-highlight has-copy-button" tabindex="-1" data-test-accessor-callout>
-          <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.model.id}} />
+        <div class="message is-highlight" data-test-accessor-callout>
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{this.model.id}}
+            class="transparent top-right-absolute"
+          />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Accessor
@@ -80,40 +90,43 @@
   {{/if}}
 
   {{#if this.controlGroupResponse.token}}
-    <p class="control-group-token-text" data-test-token>
-      We’ve saved your request token, but you may want to copy it just in case:
-      <span class="tag has-font-monospaced" data-test-token-value>{{this.controlGroupResponse.token}}</span>
-      <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.controlGroupResponse.token}} />
-    </p>
+    <div class="is-flex-row has-bottom-margin-m has-top-margin-m" data-test-token>
+      <p class="has-text-grey has-padding-xxs">
+        We’ve saved your request token, but you may want to copy it just in case:
+      </p>
+      <div>
+        <Hds::Copy::Snippet data-test-token-value @textToCopy={{this.controlGroupResponse.token}} @color="secondary" />
+      </div>
+    </div>
   {{/if}}
   {{! template-lint-configure simple-unless "warn" }}
   {{#unless (and this.model.approved (or (not this.model.requestEntity) this.currentUserIsRequesting))}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       {{#if this.model.canAuthorize}}
         {{#if (or this.model.approved this.currentUserHasAuthorized)}}
-          <LinkTo @route="vault.cluster.access.control-groups" class="button" data-test-back-link={{true}}>
-            <Chevron @direction="left" />
-            Back
-          </LinkTo>
+          <Hds::Button
+            @text="Back"
+            @color="secondary"
+            @route="vault.cluster.access.control-groups"
+            @icon="chevron-left"
+            @iconPosition="leading"
+            data-test-back-link
+          />
         {{else}}
-          <button
-            type="button"
-            class="button is-primary {{if this.authorize.isRunning 'is-loading'}}"
-            {{action (perform this.authorize)}}
+          <Hds::Button
+            @text="Authorize"
+            @icon={{if this.authorize.isRunning "loading"}}
+            {{on "click" (action (perform this.authorize))}}
             data-test-authorize-button
-          >
-            Authorize
-          </button>
+          />
         {{/if}}
       {{else}}
-        <button
-          type="button"
-          class="button is-primary {{if this.refresh.isRunning 'is-loading'}}"
-          {{action (perform this.refresh)}}
+        <Hds::Button
+          @text="Refresh"
+          @icon={{if this.refresh.isRunning "loading"}}
+          {{on "click" (action (perform this.refresh))}}
           data-test-refresh-button
-        >
-          Refresh
-        </button>
+        />
       {{/if}}
     </div>
   {{/unless}}

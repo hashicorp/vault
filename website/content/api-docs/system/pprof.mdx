@@ -6,6 +6,8 @@ description: The `/sys/pprof` endpoint is used to query profiling information.
 
 # `/sys/pprof`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/pprof` endpoint is used to query. The response returned by
 these endpoints are equivalent to those returned by the `http/pprof`
 package.
@@ -18,7 +20,7 @@ This endpoint returns an HTML page listing the available profiles.
 | :----- | :------------ |
 | `GET`  | `/sys/pprof/` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -35,7 +37,7 @@ of the program.
 | :----- | :---------------- |
 | `GET`  | `/sys/pprof/allocs` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -56,7 +58,7 @@ Vault binary.
 | :----- | :---------------- |
 | `GET`  | `/sys/pprof/block` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -73,7 +75,7 @@ separated by NUL bytes.
 | :----- | :------------------- |
 | `GET`  | `/sys/pprof/cmdline` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -95,7 +97,7 @@ This endpoint returns stack traces of all current goroutines.
 A value of `2` results in the stack traces being returned as text
 instead of the default pprof format.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -111,7 +113,7 @@ This endpoint returns a sampling of memory allocations of live object.
 | :----- | :---------------- |
 | `GET`  | `/sys/pprof/heap` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -131,7 +133,7 @@ Vault binary.
 | :----- | :---------------- |
 | `GET`  | `/sys/pprof/mutex` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -154,7 +156,7 @@ if not specified.
 - `seconds` `(int: 30)` - Specifies the duration to run the profiling
   command. This value is specified as a query parameter.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -170,7 +172,7 @@ This endpoint returns the program counters listed in the request.
 | :----- | :------------------ |
 | `GET`  | `/sys/pprof/symbol` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -187,7 +189,7 @@ new OS threads.
 | :----- | :--------------------- |
 | `GET`  | `/sys/pprof/threadcreate` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -211,7 +213,7 @@ specified.
 - `seconds` `(int: 1)` - Specifies the duration to run the tracing
   command. This value is specified as a query parameter.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

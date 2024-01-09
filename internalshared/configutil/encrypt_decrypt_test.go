@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package configutil
 
@@ -46,7 +46,7 @@ telemetry {
 	}
 
 	first := true
-	locs := decryptRegex.FindAllIndex([]byte(out), -1)
+	locs := decryptRegex.FindAllStringIndex(out, -1)
 	for _, match := range locs {
 		matchBytes := []byte(out)[match[0]:match[1]]
 		matchBytes = bytes.TrimSuffix(bytes.TrimPrefix(matchBytes, []byte("{{decrypt(")), []byte(")}}"))

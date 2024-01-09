@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import EmberObject from '@ember/object';
@@ -11,6 +11,8 @@ import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
+import { format, startOfDay } from 'date-fns';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const component = create(formFields);
 
@@ -26,7 +28,8 @@ module('Integration | Component | form field', function (hooks) {
   };
 
   const setup = async function (attr) {
-    const model = EmberObject.create({});
+    // ember sets model attrs from the defaultValue key, mimicking that behavior here
+    const model = EmberObject.create({ [attr.name]: attr.options?.defaultValue });
     const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('model', model);
@@ -78,12 +81,24 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: object', async function (assert) {
+    // TODO: Fix JSONEditor/CodeMirror
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await setup.call(this, createAttr('foo', 'object'));
     assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
   });
 
   test('it renders: string as json with clear button', async function (assert) {
+    // TODO: Fix JSONEditor/CodeMirror
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
     assert.strictEqual(component.fields.objectAt(0).labelText[0], 'Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
@@ -105,13 +120,23 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: editType file', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { editType: 'file' }));
+    const subText = 'My subtext.';
+    await setup.call(this, createAttr('foo', 'string', { editType: 'file', subText, docLink: '/docs' }));
     assert.ok(component.hasTextFile, 'renders the text-file component');
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(
+        `Select a file from your computer. ${subText} See our documentation for help.`,
+        'renders subtext'
+      );
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await click('[data-test-text-toggle]');
+    // assert again after toggling because subtext is rendered differently for each input
+    assert
+      .dom('.hds-form-helper-text')
+      .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
+    assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
-    assert.dom('[data-test-text-file-textarea]').hasClass('masked-font');
-    await click('[data-test-button="toggle-masked"]');
-    assert.dom('[data-test-text-file-textarea]').doesNotHaveClass('masked-font');
   });
 
   test('it renders: editType ttl', async function (assert) {
@@ -147,6 +172,44 @@ module('Integration | Component | form field', function (hooks) {
     await component.selectRadioInput(selectedValue);
     assert.strictEqual(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
+  test('it renders: radio buttons for possible values, labels, and subtext', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'radio',
+        possibleValues: [
+          { label: 'Label 1', subText: 'Some subtext 1', value: 'SHA1' },
+          { label: 'Label 2', subText: 'Some subtext 2', value: 'SHA256' },
+          { subText: 'Some subtext 3', value: 'SHA256' },
+        ],
+      })
+    );
+    assert.ok(component.hasRadio, 'renders radio buttons');
+    const selectedValue = 'SHA256';
+    await component.selectRadioInput(selectedValue);
+    assert.dom('[data-test-radio-label="Label 1"] span').hasText('Label 1');
+    assert.dom('[data-test-radio-label="Label 2"] span').hasText('Label 2');
+    assert.dom('[data-test-radio-label="SHA256"] span').hasText('SHA256');
+    assert.dom('[data-test-radio-subText="Some subtext 1"]').hasText('Some subtext 1');
+    assert.dom('[data-test-radio-subText="Some subtext 2"]').hasText('Some subtext 2');
+    assert.dom('[data-test-radio-subText="Some subtext 3"]').hasText('Some subtext 3');
+    assert.strictEqual(model.get('foo'), selectedValue);
+    assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
+  test('it renders: datetimelocal', async function (assert) {
+    const [model] = await setup.call(
+      this,
+      createAttr('bar', null, {
+        editType: 'dateTimeLocal',
+      })
+    );
+    assert.dom("[data-test-input='bar']").exists();
+    await fillIn(
+      "[data-test-input='bar']",
+      format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm")
+    );
+    assert.deepEqual(model.get('bar'), '2023-12-17T00:00', 'sets the value on the model');
   });
 
   test('it renders: editType stringArray', async function (assert) {
@@ -209,5 +272,21 @@ module('Integration | Component | form field', function (hooks) {
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
     assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
+  });
+
+  test('it should show validation warning', async function (assert) {
+    const model = this.owner.lookup('service:store').createRecord('auth-method');
+    model.path = 'foo bar';
+    this.validations = model.validate().state;
+    this.setProperties({
+      model,
+      attr: createAttr('path', 'string'),
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`
+    );
+    assert.dom('[data-test-validation-warning]').exists('Validation warning renders');
   });
 });

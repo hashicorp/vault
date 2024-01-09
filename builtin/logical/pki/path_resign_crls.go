@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,6 +44,13 @@ var (
 func pathResignCrls(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/resign-crls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "resign",
+			OperationSuffix: "crls",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
@@ -105,6 +113,13 @@ base64 encoded. Defaults to "pem".`,
 func pathSignRevocationList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-revocation-list",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "sign",
+			OperationSuffix: "revocation-list",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
@@ -171,11 +186,11 @@ return a signed CRL based on the parameter values.`,
 }
 
 func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("This API cannot be used until the migration has completed"), nil
 	}
 
-	issuerRef := getIssuerRef(data)
+	issuerRef := GetIssuerRef(data)
 	crlNumber := data.Get(crlNumberParam).(int)
 	deltaCrlBaseNumber := data.Get(deltaCrlBaseNumberParam).(int)
 	nextUpdateStr := data.Get(nextUpdateParam).(string)
@@ -238,7 +253,7 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 	if deltaCrlBaseNumber > -1 {
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlBaseNumber))
 		if err != nil {
-			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		template.ExtraExtensions = []pkix.Extension{ext}
 	}
@@ -259,11 +274,11 @@ func (b *backend) pathUpdateResignCrlsHandler(ctx context.Context, request *logi
 }
 
 func (b *backend) pathUpdateSignRevocationListHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("This API cannot be used until the migration has completed"), nil
 	}
 
-	issuerRef := getIssuerRef(data)
+	issuerRef := GetIssuerRef(data)
 	crlNumber := data.Get(crlNumberParam).(int)
 	deltaCrlBaseNumber := data.Get(deltaCrlBaseNumberParam).(int)
 	nextUpdateStr := data.Get(nextUpdateParam).(string)
@@ -311,7 +326,7 @@ func (b *backend) pathUpdateSignRevocationListHandler(ctx context.Context, reque
 	if deltaCrlBaseNumber > -1 {
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(int64(deltaCrlBaseNumber))
 		if err != nil {
-			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		crlExtensions = append(crlExtensions, ext)
 	}
@@ -635,7 +650,7 @@ func getCaBundle(sc *storageContext, issuerRef string) (*certutil.CAInfoBundle, 
 		return nil, fmt.Errorf("failed to resolve issuer %s: %w", issuerRefParam, err)
 	}
 
-	return sc.fetchCAInfoByIssuerId(issuerId, CRLSigningUsage)
+	return sc.fetchCAInfoByIssuerId(issuerId, issuing.CRLSigningUsage)
 }
 
 func decodePemCrls(rawCrls []string) ([]*x509.RevocationList, error) {

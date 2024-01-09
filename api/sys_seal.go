@@ -109,6 +109,7 @@ type SealStatusResponse struct {
 	ClusterName       string   `json:"cluster_name,omitempty"`
 	ClusterID         string   `json:"cluster_id,omitempty"`
 	RecoverySeal      bool     `json:"recovery_seal"`
+	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
 	StorageType       string   `json:"storage_type,omitempty"`
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`

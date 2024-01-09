@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { clickable, create, isPresent } from 'ember-cli-page-object';
@@ -10,9 +10,9 @@ export default create({
   clickCurrentMonth: clickable('[data-test-current-month]'),
   clickCurrentBillingPeriod: clickable('[data-test-current-billing-period]'),
   customEndMonthBtn: clickable('[data-test-show-calendar]'),
-  menuToggle: clickable('[data-test-popup-menu-trigger="true"]'),
+  menuToggle: clickable('[data-test-calendar-widget-trigger]'),
   showsCalendar: isPresent('[data-test-calendar-widget-container]'),
-  dateRangeTrigger: '[data-test-popup-menu-trigger="true"]',
+  dateRangeTrigger: '[data-test-show-calendar]',
   async openCalendar() {
     await this.menuToggle();
     await this.customEndMonthBtn();

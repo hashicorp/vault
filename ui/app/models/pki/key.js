@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -12,6 +12,15 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   type: [{ type: 'presence', message: 'Type is required.' }],
   keyType: [{ type: 'presence', message: 'Please select a key type.' }],
+  keyName: [
+    {
+      validator(model) {
+        if (model.keyName === 'default') return false;
+        return true;
+      },
+      message: `Key name cannot be the reserved value 'default'`,
+    },
+  ],
 };
 const displayFields = ['keyId', 'keyName', 'keyType', 'keyBits'];
 const formFieldGroups = [{ default: ['keyName', 'type'] }, { 'Key parameters': ['keyType', 'keyBits'] }];

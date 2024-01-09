@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @route="vault.cluster.access.oidc.assignments.create" @type="add" data-test-oidc-assignment-create>
@@ -23,7 +28,7 @@
           {{#if (eq model.name "allow_all")}}
             <div class="is-size-8">
               This is a built-in assignment that cannot be modified or deleted.
-              <DocLink @path="/docs/concepts/oidc-provider#assignments">
+              <DocLink @path="/vault/docs/concepts/oidc-provider#assignments">
                 Learn more
               </DocLink>
             </div>

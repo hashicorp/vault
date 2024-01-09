@@ -7,7 +7,7 @@ description: |-
   offers transactional consistency at global scale.
 ---
 
-# Google Cloud Spanner Storage Backend
+# Google Cloud spanner storage backend
 
 The Google Cloud Spanner storage backend is used to persist Vault's data in
 [Spanner][spanner-docs], a fully managed, mission-critical, relational database
@@ -33,7 +33,7 @@ storage "spanner" {
 For more information on schemas or Google Cloud Spanner, please see the [Google
 Cloud Spanner documentation][spanner-docs].
 
-## `spanner` Setup
+## `spanner` setup
 
 To use the Google Cloud Spanner Vault storage backend, you must have a Google
 Cloud Platform account. Either using the API or web interface, create a database
@@ -62,7 +62,7 @@ automatically at this time, but this could be a future enhancement. For more
 information on schemas or Google Cloud Spanner, please see the [Google Cloud
 Spanner documentation][spanner-docs].
 
-## `spanner` Authentication
+## `spanner` authentication
 
 The Google Cloud Spanner Vault storage backend uses the official Google Cloud
 Golang SDK. This means it supports the common ways of [providing credentials to
@@ -86,7 +86,7 @@ minimum scope(s):
 https://www.googleapis.com/auth/google-cloud-spanner.data
 ```
 
-## `spanner` Parameters
+## `spanner` parameters
 
 - `database` `(string: <required>)` – Specifies the name of the database. Note
   that this is specified as a "path" including the project ID and instance, for
@@ -102,7 +102,7 @@ https://www.googleapis.com/auth/google-cloud-spanner.data
 - `max_parallel` `(int: 128)` - Specifies the maximum number of parallel
   operations to take place.
 
-### High Availability Parameters
+### High availability parameters
 
 - `ha_enabled` `(string: "false")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
@@ -112,9 +112,9 @@ https://www.googleapis.com/auth/google-cloud-spanner.data
   storing high availability information. By default, this is the name of the
   `table` suffixed with "HA".
 
-## `spanner` Examples
+## `spanner` examples
 
-### High Availability
+### High availability
 
 This example shows configuring Google Cloud Spanner with high availability
 enabled.
@@ -128,7 +128,7 @@ storage "spanner" {
 }
 ```
 
-### Custom Tables
+### Custom tables
 
 This example shows listing custom table names for data and HA with the Google
 Cloud Spanner Vault storage backend.

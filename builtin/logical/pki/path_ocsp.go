@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/errutil"
-
-	"golang.org/x/crypto/ocsp"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -38,7 +38,7 @@ type ocspRespInfo struct {
 	serialNumber      *big.Int
 	ocspStatus        int
 	revocationTimeUTC *time.Time
-	issuerID          issuerID
+	issuerID          issuing.IssuerID
 }
 
 // These response variables should not be mutated, instead treat them as constants
@@ -71,16 +71,33 @@ var (
 )
 
 func buildPathOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspGet(b *backend) *framework.Path {
-	return buildOcspGetWithPath(b, "unified-ocsp/"+framework.MatchAllRegex(ocspReqParam))
+	pattern := "unified-ocsp/" + framework.MatchAllRegex(ocspReqParam)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp-with-get-req",
+	}
+
+	return buildOcspGetWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspGetWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Fields: map[string]*framework.FieldSchema{
 			ocspReqParam: {
 				Type:        framework.TypeString,
@@ -99,16 +116,33 @@ func buildOcspGetWithPath(b *backend, pattern string) *framework.Path {
 }
 
 func buildPathOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "ocsp")
+	pattern := "ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
 func buildPathUnifiedOcspPost(b *backend) *framework.Path {
-	return buildOcspPostWithPath(b, "unified-ocsp")
+	pattern := "unified-ocsp"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "query",
+		OperationSuffix: "unified-ocsp",
+	}
+
+	return buildOcspPostWithPath(b, pattern, displayAttrs)
 }
 
-func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
+func buildOcspPostWithPath(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.ocspHandler,
@@ -122,7 +156,7 @@ func buildOcspPostWithPath(b *backend, pattern string) *framework.Path {
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, request.Storage)
-	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	cfg, err := b.CrlBuilder().getConfigWithUpdate(sc)
 	if err != nil || cfg.OcspDisable || (isUnifiedOcspPath(request) && !cfg.UnifiedCRL) {
 		return OcspUnauthorizedResponse, nil
 	}
@@ -214,7 +248,7 @@ func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.R
 		return logAndReturnInternalError(sc.Backend, err)
 	}
 
-	if !issuer.Usage.HasUsage(OCSPSigningUsage) {
+	if !issuer.Usage.HasUsage(issuing.OCSPSigningUsage) {
 		// If we don't have any issuers or default issuers set, no way to sign a response so Unauthorized it is.
 		return OcspUnauthorizedResponse
 	}
@@ -325,7 +359,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 	return &info, nil
 }
 
-func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
+func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer issuing.IssuerID) (*certutil.ParsedCertBundle, *issuing.IssuerEntry, error) {
 	reqHash := req.HashAlgorithm
 	if !reqHash.Available() {
 		return nil, nil, x509.ErrUnsupportedAlgorithm
@@ -362,7 +396,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 		}
 
 		if matches {
-			if !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			if !issuer.Usage.HasUsage(issuing.OCSPSigningUsage) {
 				matchedButNoUsage = true
 				// We found a matching issuer, but it's not allowed to sign the
 				// response, there might be another issuer that we rotated
@@ -382,7 +416,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 	return nil, nil, ErrUnknownIssuer
 }
 
-func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
+func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuing.IssuerID) (*certutil.ParsedCertBundle, *issuing.IssuerEntry, error) {
 	issuer, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
 	if err != nil {
 		switch err.(type) {
@@ -407,13 +441,13 @@ func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil
 	return caBundle, issuer, nil
 }
 
-func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuerID) ([]issuerID, error) {
+func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuing.IssuerID) ([]issuing.IssuerID, error) {
 	if optRevokedIssuer != "" {
-		return []issuerID{optRevokedIssuer}, nil
+		return []issuing.IssuerID{optRevokedIssuer}, nil
 	}
 
-	if sc.Backend.useLegacyBundleCaStorage() {
-		return []issuerID{legacyBundleShimID}, nil
+	if sc.Backend.UseLegacyBundleCaStorage() {
+		return []issuing.IssuerID{legacyBundleShimID}, nil
 	}
 
 	return sc.listIssuers()
@@ -442,7 +476,7 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 
 func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash, revSigAlg x509.SignatureAlgorithm) ([]byte, error) {
 	curTime := time.Now()
-	duration, err := time.ParseDuration(cfg.OcspExpiry)
+	duration, err := parseutil.ParseDurationSecond(cfg.OcspExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -465,15 +499,24 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		revSigAlg = x509.SHA512WithRSA
 	}
 
+	// Due to a bug in Go's ocsp.ParseResponse(...), we do not provision
+	// Certificate any more on the response to help Go based OCSP clients.
+	// This was technically unnecessary, as the Certificate given here
+	// both signed the OCSP response and issued the leaf cert, and so
+	// should already be trusted by the client.
+	//
+	// See also: https://github.com/golang/go/issues/59641
 	template := ocsp.Response{
 		IssuerHash:         reqHash,
 		Status:             info.ocspStatus,
 		SerialNumber:       info.serialNumber,
 		ThisUpdate:         curTime,
-		NextUpdate:         curTime.Add(duration),
-		Certificate:        caBundle.Certificate,
 		ExtraExtensions:    []pkix.Extension{},
 		SignatureAlgorithm: revSigAlg,
+	}
+
+	if duration > 0 {
+		template.NextUpdate = curTime.Add(duration)
 	}
 
 	if info.ocspStatus == ocsp.Revoked {

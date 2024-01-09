@@ -1,0 +1,47 @@
+### File audit devices do not honor SIGHUP signal to reload
+
+#### Affected versions
+
+- 1.15.0
+
+#### Issue
+
+The new underlying event framework for auditing causes Vault to continue using
+audit log files instead of reopening the file paths even when you send
+[`SIGHUP`](/vault/docs/audit/file#log-file-rotation) after log rotation. The
+issue impacts any Vault cluster with `file` audit devices enabled.
+
+Not honoring the `SIGHUP` signal has two key consequences when moving or
+deleting audit files.
+
+If you **move or rename your audit log file** locally, Vault continues to log
+data to the original file. For example, if you archive a file locally:
+
+```shell-session
+$ mv /var/log/vault/audit.log /var/log/vault/archive/audit.log.bak
+```
+
+Vault continues to write data to `/var/log/vault/archive/audit.log.bak`
+instead of logging audit entries to a newly created file at
+`/var/log/vault/audit.log`.
+
+If you **delete your audit log file**, the OS unlinks the file from the
+directory structure, but Vault still has the file open. Vault continues to write
+data to the deleted file, which continues to consume disk space as it grows.
+When Vault is sealed or restarted, the OS deletes the previously unlinked file,
+and you will lose all data logged to the audit file after it was tagged for
+deletion.
+
+The issue with `file` audit devices not honoring `SIGHUP` signals is fixed as a
+patch release in Vault `1.15.1`.
+
+#### Workaround
+
+Set the `VAULT_AUDIT_DISABLE_EVENTLOGGER` environment variable to `true` to
+disable the new underlying event framework and restart Vault:
+
+```shell-session
+$ export VAULT_AUDIT_DISABLE_EVENTLOGGER=true
+```
+
+On startup, Vault reverts to the audit behavior used in `1.14.x`.

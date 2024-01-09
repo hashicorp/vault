@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
+import { STANDARD_META } from 'vault/tests/helpers/pki';
 
 module('Integration | Component | pki key list page', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,12 +33,20 @@ module('Integration | Component | pki key list page', function (hooks) {
       key_type: 'rsa',
       key_name: 'another-key',
     });
-    this.keyModels = this.store.peekAll('pki/key');
+    const keyModels = this.store.peekAll('pki/key');
+    keyModels.meta = STANDARD_META;
+    this.keyModels = keyModels;
   });
 
   test('it renders empty state when no keys exist', async function (assert) {
     assert.expect(3);
-    this.keyModels = [];
+    this.keyModels = {
+      meta: {
+        total: 0,
+        currentPage: 1,
+        pageSize: 100,
+      },
+    };
     await render(
       hbs`
         <Page::PkiKeyList
@@ -45,7 +54,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @mountPoint="vault.cluster.secrets.backend.pki"
           @canImportKey={{true}}
           @canGenerateKey={{true}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );
@@ -67,7 +76,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{true}}
           @canRead={{true}}
           @canEdit={{true}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );
@@ -93,7 +102,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{false}}
           @canRead={{false}}
           @canEdit={{false}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );

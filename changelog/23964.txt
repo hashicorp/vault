@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update sidebar Secrets engine to title case.
+```

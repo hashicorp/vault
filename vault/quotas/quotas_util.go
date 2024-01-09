@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -11,7 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 
-	memdb "github.com/hashicorp/go-memdb"
+	"github.com/hashicorp/go-memdb"
 )
 
 func quotaTypes() []string {
@@ -32,9 +32,14 @@ func (m *Manager) inLeasePathCache(path string) bool {
 	return false
 }
 
+func (m *Manager) setupDefaultLeaseCountQuotaInStorage(_ctx context.Context) error {
+	return nil
+}
+
 type entManager struct {
 	isPerfStandby bool
 	isDRSecondary bool
+	isNewInstall  bool
 }
 
 func (*entManager) Reset() error {
@@ -42,6 +47,14 @@ func (*entManager) Reset() error {
 }
 
 type LeaseCountQuota struct{}
+
+func (l LeaseCountQuota) GetNamespacePath() string {
+	panic("implement me")
+}
+
+func (l LeaseCountQuota) IsInheritable() bool {
+	panic("implement me")
+}
 
 func (l LeaseCountQuota) allow(_ context.Context, _ *Request) (Response, error) {
 	panic("implement me")

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // base handlers used in mirage config when a specific handler is not specified
@@ -18,6 +18,7 @@ export default function (server) {
 
   server.get('/sys/health', function () {
     return {
+      enterprise: true,
       initialized: true,
       sealed: false,
       standby: false,

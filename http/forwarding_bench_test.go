@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -59,7 +59,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
-		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
+		bytes.NewBufferString("{\"type\": \"transit\"}"))
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		numOps++
 	}
 
-	doReq(b, "POST", host+"keys/test1", bytes.NewBuffer([]byte("{}")))
+	doReq(b, "POST", host+"keys/test1", bytes.NewBufferString("{}"))
 	keyUrl := host + "encrypt/test1"
 	reqBuf := []byte(fmt.Sprintf("{\"plaintext\": \"%s\"}", testPlaintextB64))
 

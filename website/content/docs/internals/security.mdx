@@ -4,7 +4,7 @@ page_title: Security Model
 description: Learn about the security model of Vault.
 ---
 
-# Security Model
+# Security model
 
 Due to the nature of Vault and the confidentiality of data it manages,
 the Vault security model is very critical. The overall goal of Vault's security
@@ -17,7 +17,7 @@ to access data or modify policies. All interactions must be auditable and traced
 uniquely back to the origin entity, and the system must be robust against intentional
 attempts to bypass any of its access controls.
 
-# Threat Model
+# Threat model
 
 The following are the various parts of the Vault threat model:
 
@@ -75,7 +75,13 @@ The following are not considered part of the Vault threat model:
   credentials, they can access Vault with the level of privilege associated with this
   client.
 
-# External Threat Overview
+- Protecting against Vault administrators supplying vulnerable or malicious configuration
+  data. Any data provided as configuration values to Vault's administrative endpoints
+  (e.g. [secret engines](/vault/docs/secrets) configurations), or Vault's
+  configuration files should be validated. If an attacker can write to Vault's
+  configuration, then the confidentiality or integrity of data can be compromised.
+
+# External threat overview
 
 Vault architecture compromises of three distinct systems:
 
@@ -115,7 +121,7 @@ this is not applicable. Because storage backends are untrusted, an eavesdropper
 would only gain access to encrypted data even if communication with the backend
 was intercepted.
 
-# Internal Threat Overview
+# Internal threat overview
 
 Within the Vault system, a critical security concern is an attacker attempting
 to gain access to secret material they are not authorized to. This is an internal

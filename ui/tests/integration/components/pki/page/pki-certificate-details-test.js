@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -34,11 +34,31 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
         common_name: 'example.com Intermediate Authority',
         issue_date: 1673540867000,
         serial_number: id,
-        not_valid_after: 1831220897000,
-        not_valid_before: 1673540867000,
+        parsed_certificate: {
+          not_valid_after: 1831220897000,
+          not_valid_before: 1673540867000,
+        },
+      },
+    });
+    store.pushPayload('pki/certificate/generate', {
+      modelName: 'pki/certificate/generate',
+      data: {
+        certificate: '-----BEGIN CERTIFICATE-----',
+        ca_chain: '-----BEGIN CERTIFICATE-----',
+        issuer_ca: '-----BEGIN CERTIFICATE-----',
+        private_key: '-----BEGIN PRIVATE KEY-----',
+        private_key_type: 'rsa',
+        common_name: 'example.com Intermediate Authority',
+        issue_date: 1673540867000,
+        serial_number: id,
+        parsed_certificate: {
+          not_valid_after: 1831220897000,
+          not_valid_before: 1673540867000,
+        },
       },
     });
     this.model = store.peekRecord('pki/certificate/base', id);
+    this.generatedModel = store.peekRecord('pki/certificate/generate', id);
 
     this.server.post('/sys/capabilities-self', () => ({
       data: {
@@ -48,7 +68,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     }));
   });
 
-  test('it should render actions and fields', async function (assert) {
+  test('it should render actions and fields for base cert', async function (assert) {
     assert.expect(6);
 
     this.server.post('/pki/revoke', (schema, req) => {
@@ -67,14 +87,63 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     });
 
     await render(hbs`<Page::PkiCertificateDetails @model={{this.model}} />`, { owner: this.engine });
-
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: 5 }, 'Correct number of fields render when certificate has not been revoked');
     assert
-      .dom('[data-test-value-div="Certificate"] [data-test-masked-input]')
-      .exists('Masked input renders for certificate');
+      .dom('[data-test-value-div="Certificate"] [data-test-certificate-card]')
+      .exists('Certificate card renders for certificate');
     assert.dom('[data-test-value-div="Serial number"] code').exists('Serial number renders as monospace');
+
+    await click('[data-test-pki-cert-download-button]');
+    const { serialNumber, certificate } = this.model;
+    assert.ok(
+      this.downloadSpy.calledWith(serialNumber.replace(/(\s|:)+/g, '-'), certificate),
+      'Download pem method called with correct args'
+    );
+
+    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-confirm-button]');
+
+    assert.dom('[data-test-value-div="Revocation time"]').exists('Revocation time is displayed');
+  });
+
+  test('it should render actions and fields for generated cert', async function (assert) {
+    assert.expect(10);
+
+    this.server.post('/pki/revoke', (schema, req) => {
+      const data = JSON.parse(req.requestBody);
+      assert.strictEqual(
+        data.serial_number,
+        this.model.serialNumber,
+        'Revoke request made with serial number'
+      );
+      return {
+        data: {
+          revocation_time: 1673972804,
+          revocation_time_rfc3339: '2023-01-17T16:26:44.960933411Z',
+        },
+      };
+    });
+
+    await render(hbs`<Page::PkiCertificateDetails @model={{this.generatedModel}} />`, { owner: this.engine });
+    assert.dom('[data-test-cert-detail-next-steps]').exists('Private key next steps warning shows');
+    assert
+      .dom('[data-test-component="info-table-row"]')
+      .exists({ count: 9 }, 'Correct number of fields render when certificate has not been revoked');
+    assert
+      .dom('[data-test-value-div="Certificate"] [data-test-certificate-card]')
+      .exists('Certificate card renders for certificate');
+    assert.dom('[data-test-value-div="Serial number"] code').exists('Serial number renders as monospace');
+    assert
+      .dom('[data-test-value-div="CA Chain"] [data-test-certificate-card]')
+      .exists('Certificate card renders for CA Chain');
+    assert
+      .dom('[data-test-value-div="Issuing CA"] [data-test-certificate-card]')
+      .exists('Certificate card renders for Issuing CA');
+    assert
+      .dom('[data-test-value-div="Private key"] [data-test-certificate-card]')
+      .exists('Certificate card renders for private key');
 
     await click('[data-test-pki-cert-download-button]');
     const { serialNumber, certificate } = this.model;

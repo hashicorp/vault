@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -39,7 +40,7 @@ type mockIAMClient struct {
 	iamiface.IAMAPI
 }
 
-func (m *mockIAMClient) CreateUser(input *iam.CreateUserInput) (*iam.CreateUserOutput, error) {
+func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUserInput, _ ...request.Option) (*iam.CreateUserOutput, error) {
 	return nil, awserr.New("Throttling", "", nil)
 }
 
@@ -147,7 +148,7 @@ func TestBackend_throttled(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -666,7 +667,7 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 			var d struct {
 				AccessKey string `mapstructure:"access_key"`
 				SecretKey string `mapstructure:"secret_key"`
-				STSToken  string `mapstructure:"security_token"`
+				STSToken  string `mapstructure:"session_token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -683,26 +684,28 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.TestStep {
+func testAccStepReadWithMFA(t *testing.T, path, name, mfaCode string, credentialTests []credentialTestFunc) logicaltest.TestStep {
+	step := testAccStepRead(t, path, name, credentialTests)
+	step.Data = map[string]interface{}{
+		"mfa_code": mfaCode,
+	}
+
+	return step
+}
+
+func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
-			if resp.Secret != nil {
-				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
+			if resp.Secret == nil {
+				return fmt.Errorf("bad: nil Secret returned")
 			}
-
-			if ttl, exists := resp.Data["ttl"]; exists {
-				ttlVal := ttl.(uint64)
-
-				if ttlVal > maximumTTL {
-					return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
-				}
-
-				return nil
+			ttl := resp.Secret.TTL
+			if ttl > maximumTTL {
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
 			}
-
-			return fmt.Errorf("response data missing ttl, received: %+v", resp.Data)
+			return nil
 		},
 	}
 }
@@ -907,6 +910,7 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) logicaltest.
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
 				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1030,6 +1034,7 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{groupName},
 		"iam_tags":                 map[string]string(nil),
+		"mfa_serial_number":        "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1074,6 +1079,7 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 		"permissions_boundary_arn": "",
 		"iam_groups":               []string{group1Name, group2Name},
 		"iam_tags":                 map[string]string(nil),
+		"mfa_serial_number":        "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1324,6 +1330,86 @@ func TestAcceptanceBackend_FederationTokenWithGroups(t *testing.T) {
 	})
 }
 
+func TestAcceptanceBackend_SessionToken(t *testing.T) {
+	t.Parallel()
+	userName := generateUniqueUserName(t.Name())
+	accessKey := &awsAccessKey{}
+
+	roleData := map[string]interface{}{
+		"credential_type": sessionTokenCred,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createUser(t, userName, accessKey)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepRead(t, "sts", "test", []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepRead(t, "creds", "test", []credentialTestFunc{listDynamoTablesTest}),
+		},
+		Teardown: func() error {
+			return deleteTestUser(accessKey, userName)
+		},
+	})
+}
+
+// Running this test requires a pre-made IAM user that has the necessary access permissions set
+// and a set MFA device. This device serial number along with the other associated values must
+// be set to the environment variables in the function below.
+// For this reason, the test is currently a manually run-only acceptance test.
+func TestAcceptanceBackend_SessionTokenWithMFA(t *testing.T) {
+	t.Parallel()
+
+	serial, found := os.LookupEnv("AWS_TEST_MFA_SERIAL_NUMBER")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_SERIAL_NUMBER not set, skipping")
+	}
+	code, found := os.LookupEnv("AWS_TEST_MFA_CODE")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_CODE not set, skipping")
+	}
+	accessKeyID, found := os.LookupEnv("AWS_TEST_MFA_USER_ACCESS_KEY")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_USER_ACCESS_KEY not set, skipping")
+	}
+	secretKey, found := os.LookupEnv("AWS_TEST_MFA_USER_SECRET_KEY")
+	if !found {
+		t.Skipf("AWS_TEST_MFA_USER_SECRET_KEY not set, skipping")
+	}
+
+	accessKey := &awsAccessKey{}
+	accessKey.AccessKeyID = accessKeyID
+	accessKey.SecretAccessKey = secretKey
+
+	roleData := map[string]interface{}{
+		"credential_type":   sessionTokenCred,
+		"mfa_serial_number": serial,
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// Sleep sometime because AWS is eventually consistent
+			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
+			time.Sleep(10 * time.Second)
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigWithCreds(t, accessKey),
+			testAccStepWriteRole(t, "test", roleData),
+			testAccStepReadWithMFA(t, "sts", "test", code, []credentialTestFunc{listDynamoTablesTest}),
+			testAccStepReadWithMFA(t, "creds", "test", code, []credentialTestFunc{listDynamoTablesTest}),
+		},
+	})
+}
+
 func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
@@ -1351,7 +1437,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadSTSResponse("test", uint64(minAwsAssumeRoleDuration)), // allow a little slack
+			testAccStepReadSTSResponse("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)
@@ -1398,6 +1484,7 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) logicalte
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
 				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1468,6 +1555,7 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) logica
 				"permissions_boundary_arn": "",
 				"iam_groups":               groups,
 				"iam_tags":                 map[string]string(nil),
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
@@ -1527,6 +1615,7 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 				"permissions_boundary_arn": "",
 				"iam_groups":               []string(nil),
 				"iam_tags":                 tags,
+				"mfa_serial_number":        "",
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)

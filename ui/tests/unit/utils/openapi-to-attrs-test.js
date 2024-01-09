@@ -1,11 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { attr } from '@ember-data/model';
 import { expandOpenApiProps, combineAttributes, combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import { module, test } from 'qunit';
+import { camelize } from '@ember/string';
 
 module('Unit | Util | OpenAPI Data Utilities', function () {
   const OPENAPI_RESPONSE_PROPS = {
@@ -145,6 +146,56 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
 
   const NEW_FIELDS = ['one', 'two', 'three'];
 
+  const OPENAPI_DESCRIPTIONS = {
+    token_bound_cidrs: {
+      type: 'array',
+      description:
+        'Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.',
+      items: {
+        type: 'string',
+      },
+      'x-vault-displayAttrs': {
+        description:
+          'List of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.',
+        name: "Generated Token's Bound CIDRs",
+        group: 'Tokens',
+      },
+    },
+    blah_blah: {
+      type: 'array',
+      description: 'Comma-separated list of policies',
+      items: {
+        type: 'string',
+      },
+      'x-vault-displayAttrs': {
+        name: "Generated Token's Policies",
+        group: 'Tokens',
+      },
+    },
+    only_display_description: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      'x-vault-displayAttrs': {
+        description: 'Hello there, you look nice today',
+      },
+    },
+  };
+
+  const STRING_ARRAY_DESCRIPTIONS = {
+    token_bound_cidrs: {
+      helpText:
+        'List of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.',
+    },
+    blah_blah: {
+      helpText: 'Comma-separated list of policies',
+    },
+    only_display_description: {
+      helpText: 'Hello there, you look nice today',
+    },
+  };
+
   test('it creates objects from OpenAPI schema props', function (assert) {
     assert.expect(6);
     const generatedProps = expandOpenApiProps(OPENAPI_RESPONSE_PROPS);
@@ -227,6 +278,18 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     const fieldGroups = combineFieldGroups(modelFieldGroups, NEW_FIELDS, excludedFields);
     for (const groupName in modelFieldGroups) {
       assert.deepEqual(fieldGroups[groupName], expectedGroups[groupName], 'it incorporates all new fields');
+    }
+  });
+
+  test('it uses the description from the display attrs block if it exists', async function (assert) {
+    assert.expect(3);
+    const generatedProps = expandOpenApiProps(OPENAPI_DESCRIPTIONS);
+    for (const propName in STRING_ARRAY_DESCRIPTIONS) {
+      assert.strictEqual(
+        generatedProps[camelize(propName)].helpText,
+        STRING_ARRAY_DESCRIPTIONS[propName].helpText,
+        `correctly updates helpText for ${propName}`
+      );
     }
   });
 });

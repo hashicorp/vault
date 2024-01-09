@@ -6,12 +6,14 @@ description: >-
   and recovery keys as well as rekey and recovery operations.
 ---
 
-# Vault Enterprise HSM Behavioral Changes
+# Vault enterprise HSM behavioral changes
+
+@include 'alerts/enterprise-only.mdx'
 
 This page contains information about the behavioral differences that take
 effect when using Vault with an HSM.
 
-## Key Split Between Unseal Keys and Recovery Keys
+## Key split between unseal keys and recovery keys
 
 Normally, Vault uses a single set of unseal keys to perform both decryption of
 the cryptographic barrier and to authorize recovery operations, such as the
@@ -26,7 +28,7 @@ sets of keys: unseal keys and recovery keys.
  [Seal/Unseal](/vault/docs/concepts/seal#recovery-key) documentation to learn more
  about recovery keys.
 
-## Unseal (Root) Key
+## Unseal (Root) key
 
 Vault usually generates a root key and splits it using [Shamir's Secret
 Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to prevent a
@@ -44,9 +46,9 @@ rather than change parameters set by an operator.)
 Both rekeying the root key and rotation of the underlying data
 encryption key are supported when using an HSM.
 
-## Performance and Availability
+## Performance and availability
 
-When an HSM is used for generating various CSPs or for entropy augmentation,
+When an HSM is used for generating various Critical Security Parameters (CSPs) or for entropy augmentation,
 interaction with the HSM becomes part of the request processing for
 functionality using it. This means the HSM must be online and available for
 those requests to succeed. Additionally, some operations are performed much

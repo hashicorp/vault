@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -15,15 +15,24 @@ import (
 func pathLookup(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "lookup",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "list",
+			OperationSuffix: "roles-by-ip",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"ip": {
 				Type:        framework.TypeString,
 				Description: "[Required] IP address of remote host",
 			},
 		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathLookupWrite,
 		},
+
 		HelpSynopsis:    pathLookupSyn,
 		HelpDescription: pathLookupDesc,
 	}

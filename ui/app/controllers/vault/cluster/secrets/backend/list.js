@@ -1,16 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { or } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
-import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import ListController from 'core/mixins/list-controller';
+import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNearestAncestor, {
   flashMessages: service(),
@@ -18,8 +18,17 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   tab: '',
 
+  // callback from HDS pagination to set the queryParams page
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        page,
+      };
+    };
+  },
+
   filterIsFolder: computed('filter', function () {
-    return !!utils.keyIsFolder(this.filter);
+    return !!keyIsFolder(this.filter);
   }),
 
   isConfigurableTab: or('isCertTab', 'isConfigure'),

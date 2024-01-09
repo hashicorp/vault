@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import {
@@ -16,7 +16,8 @@ import {
 } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-const CURRENT_DATE = new Date();
+// Matches mocked date in client-dashboard-test file
+const CURRENT_DATE = new Date('2023-01-13T14:15:00');
 const COUNTS_START = subMonths(CURRENT_DATE, 12); // pretend vault user started cluster 6 months ago
 // for testing, we're in the middle of a license/billing period
 const LICENSE_START = startOfMonth(subMonths(CURRENT_DATE, 6));

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/db: Remove the `service_account_json` parameter when reading DB connection details
+```

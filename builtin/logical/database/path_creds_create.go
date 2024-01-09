@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,6 +19,13 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "generate",
+				OperationSuffix: "credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -34,6 +42,13 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "read",
+				OperationSuffix: "static-role-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -157,6 +172,27 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 			// Set output credential
 			respData["rsa_private_key"] = string(private)
+		case v5.CredentialTypeClientCertificate:
+			generator, err := newClientCertificateGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the client certificate
+			cb, subject, err := generator.generate(b.GetRandomReader(), expiration,
+				newUserReq.UsernameConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate client certificate: %w", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = dbplugin.CredentialTypeClientCertificate
+			newUserReq.Subject = subject
+
+			// Set output credential
+			respData["client_certificate"] = cb.Certificate
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 
 		// Overwriting the password in the event this is a legacy database
@@ -213,8 +249,16 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 		respData := map[string]interface{}{
 			"username":            role.StaticAccount.Username,
 			"ttl":                 role.StaticAccount.CredentialTTL().Seconds(),
-			"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
 			"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+		}
+
+		if role.StaticAccount.UsesRotationPeriod() {
+			respData["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
+		} else if role.StaticAccount.UsesRotationSchedule() {
+			respData["rotation_schedule"] = role.StaticAccount.RotationSchedule
+			if role.StaticAccount.RotationWindow.Seconds() != 0 {
+				respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			}
 		}
 
 		switch role.CredentialType {

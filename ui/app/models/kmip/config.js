@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { belongsTo } from '@ember-data/model';
@@ -10,7 +10,7 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 export default Model.extend({
   useOpenAPI: true,
-  ca: belongsTo('kmip/ca', { async: false }),
+  ca: belongsTo('kmip/ca', { async: false, inverse: 'config' }),
   getHelpUrl(path) {
     return `/v1/${path}/config?help=1`;
   },
