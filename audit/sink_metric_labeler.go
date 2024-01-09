@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	MetricLabelAuditSinkSuccess         = "audit.sink.success"
-	MetricLabelAuditSinkFailure         = "audit.sink.failure"
-	MetricLabelAuditSinkFallbackSuccess = "audit.fallback.success"
-	MetricLabelAuditSinkFallbackMiss    = "audit.fallback.miss"
+	metricLabelAuditSinkSuccess         = "audit.sink.success"
+	metricLabelAuditSinkFailure         = "audit.sink.failure"
+	metricLabelAuditSinkFallbackSuccess = "audit.fallback.success"
+	metricLabelAuditSinkFallbackMiss    = "audit.fallback.miss"
 	metricLabelSeparator                = "."
 )
 
@@ -36,10 +36,10 @@ type MetricLabelerAuditFallback struct{}
 // Failure: 'vault.audit.sink.failure'
 func (m MetricLabelerAuditSink) Labels(_ *eventlogger.Event, err error) []string {
 	if err != nil {
-		return splitLabel(MetricLabelAuditSinkFailure)
+		return splitLabel(metricLabelAuditSinkFailure)
 	}
 
-	return splitLabel(MetricLabelAuditSinkSuccess)
+	return splitLabel(metricLabelAuditSinkSuccess)
 }
 
 // Labels provides the success and failures labels for an audit fallback sink, based on the error supplied.
@@ -47,10 +47,16 @@ func (m MetricLabelerAuditSink) Labels(_ *eventlogger.Event, err error) []string
 // Failure: 'vault.audit.sink.failure'
 func (m MetricLabelerAuditFallback) Labels(_ *eventlogger.Event, err error) []string {
 	if err != nil {
-		return splitLabel(MetricLabelAuditSinkFailure)
+		return splitLabel(metricLabelAuditSinkFailure)
 	}
 
-	return splitLabel(MetricLabelAuditSinkFallbackSuccess)
+	return splitLabel(metricLabelAuditSinkFallbackSuccess)
+}
+
+// MetricLabelsFallbackMiss returns the labels which indicate an audit entry was missed.
+// 'vault.audit.fallback.miss'
+func MetricLabelsFallbackMiss() []string {
+	return splitLabel(metricLabelAuditSinkFallbackMiss)
 }
 
 // splitLabel takes a label and splits it using the metricLabelSeparator.
