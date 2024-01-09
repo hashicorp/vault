@@ -39,7 +39,7 @@ export default ApplicationSerializer.extend({
     delete payload[path];
     // return the payload if it's expecting a single object or wrap
     // it as an array if not
-    return requestType === 'queryRecord' ? payload : [payload];
+    return payload;
   },
 
   serialize(snapshot) {
