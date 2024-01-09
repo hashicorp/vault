@@ -126,6 +126,101 @@ func TestAuditFilteringMultipleDevices(t *testing.T) {
 	require.False(t, ok)
 }
 
+// TestAuditFilteringFallbackDevice validates that the audit device 'fallback'
+// option works as expected. We create two audit devices, one with 'fallback'
+// enabled and one with a filter, and make some auditable requests, then we
+// ensure that correct entries were written to the respective log files.
+func TestAuditFilteringFallbackDevice(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client, err := cluster.Cores[0].Client.Clone()
+	require.NoError(t, err)
+	client.SetToken(cluster.RootToken)
+
+	tempDir := t.TempDir()
+	fallbackLogFile, err := os.CreateTemp(tempDir, "")
+	fallbackDevicePath := "fallback"
+	fallbackDeviceData := map[string]interface{}{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]interface{}{
+			"file_path": fallbackLogFile.Name(),
+			"fallback":  "true",
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+fallbackDevicePath, fallbackDeviceData)
+	require.NoError(t, err)
+
+	filteredLogFile, err := os.CreateTemp(tempDir, "")
+	filteredDevicePath := "filtered"
+	filteredDeviceData := map[string]interface{}{
+		"type":        "file",
+		"description": "",
+		"local":       false,
+		"options": map[string]interface{}{
+			"file_path": filteredLogFile.Name(),
+			"filter":    "mount_type == kv",
+		},
+	}
+	_, err = client.Logical().Write("sys/audit/"+filteredDevicePath, filteredDeviceData)
+	require.NoError(t, err)
+
+	// A write to KV should produce an audit entry that is written to the
+	// filtered device.
+	data := map[string]interface{}{
+		"foo": "bar",
+	}
+	err = client.KVv1("secret/").Put(context.Background(), "foo", data)
+	require.NoError(t, err)
+
+	// Disable the audit devices.
+	err = client.Sys().DisableAudit(fallbackDevicePath)
+	require.NoError(t, err)
+	err = client.Sys().DisableAudit(filteredDevicePath)
+	require.NoError(t, err)
+	// Ensure the devices are no longer there.
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	_, ok := devices[fallbackDevicePath]
+	require.False(t, ok)
+	_, ok = devices[filteredDevicePath]
+	require.False(t, ok)
+
+	// Validate that only the entries matching the filter were written to the filtered log file.
+	counter := 0
+	filterDecoder := json.NewDecoder(filteredLogFile)
+	var auditRecord map[string]interface{}
+	for filterDecoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		} else {
+			t.Fatal("failed to parse request data from audit log entry")
+		}
+
+		require.Equal(t, "kv", auditRequest["mount_type"])
+		counter += 1
+	}
+	require.Equal(t, 2, counter)
+
+	// Validate that only the entries not matching the filter were written to the fallback log file.
+	counter = 0
+	fallbackDecoder := json.NewDecoder(fallbackLogFile)
+	for fallbackDecoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		} else {
+			t.Fatal("failed to parse request data from audit log entry")
+		}
+
+		require.NotEqual(t, "kv", auditRequest["mount_type"])
+		counter += 1
+	}
+	require.Equal(t, 5, counter)
+}
+
 func getFileSize(t *testing.T, filePath string) int64 {
 	t.Helper()
 	fi, err := os.Stat(filePath)
