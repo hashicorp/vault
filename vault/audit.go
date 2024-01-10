@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -41,12 +40,6 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
-
-	// featureFlagDisableEventLogger contains the feature flag name which can be
-	// used to disable internal eventlogger behavior for the audit system.
-	// NOTE: this is an undocumented and temporary feature flag, it should not
-	// be relied on to remain part of Vault for any subsequent releases.
-	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -152,7 +145,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		if err != nil {
 			return err
 		}
-		err = backend.LogTestMessage(ctx, testProbe, entry.Options)
+		err = backend.LogTestMessage(ctx, testProbe)
 		if err != nil {
 			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
 			return fmt.Errorf("audit backend failed test message: %w", err)
@@ -416,14 +409,9 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
-
 	brokerLogger := c.baseLogger.Named("audit")
 
-	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	broker, err := NewAuditBroker(brokerLogger)
 	if err != nil {
 		return err
 	}
@@ -530,11 +518,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		Location: salt.DefaultLocation,
 	}
 
-	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-	}
-
 	be, err := f(
 		ctx, &audit.BackendConfig{
 			SaltView:   view,
@@ -542,7 +525,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 			Config:     conf,
 			MountPath:  entry.Path,
 		},
-		!disableEventLogger,
 		c.auditedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create new audit backend: %w", err)

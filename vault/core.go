@@ -38,7 +38,6 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -2435,15 +2434,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	} else {
-		var err error
-		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
-		if err != nil {
-			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
-		}
-		c.auditBroker, err = NewAuditBroker(logger, !disableEventLogger)
+		broker, err := NewAuditBroker(logger)
 		if err != nil {
 			return err
 		}
+		c.auditBroker = broker
 	}
 
 	if c.isPrimary() {

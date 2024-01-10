@@ -42,7 +42,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 		MountPath: path,
 	}
 
-	be, err := syslog.Factory(context.Background(), cfg, true, headersCfg)
+	be, err := syslog.Factory(context.Background(), cfg, headersCfg)
 	require.NoError(t, err)
 	require.NotNil(t, be)
 
@@ -58,7 +58,7 @@ func testAuditBackend(t *testing.T, path string, config map[string]string) audit
 func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 	t.Parallel()
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -100,7 +100,7 @@ func TestAuditBroker_Register_SuccessThresholdSinks(t *testing.T) {
 func TestAuditBroker_Deregister_SuccessThresholdSinks(t *testing.T) {
 	t.Parallel()
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -147,7 +147,7 @@ func TestAuditBroker_Register_Fallback(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -168,7 +168,7 @@ func TestAuditBroker_Register_FallbackMultiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -194,7 +194,7 @@ func TestAuditBroker_Deregister_Fallback(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -225,7 +225,7 @@ func TestAuditBroker_Deregister_Multiple(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
@@ -242,7 +242,7 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	t.Parallel()
 
 	l := corehelpers.NewTestLogger(t)
-	a, err := NewAuditBroker(l, true)
+	a, err := NewAuditBroker(l)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 
