@@ -54,11 +54,11 @@ export default class MessagesList extends Component {
     try {
       let isValid;
 
-      if (!this.showMessagePreviewModal) {
+      if (!this.hasSomeActiveModals) {
         isValid = this.validateMessageForm();
       }
 
-      if (isValid || this.showMessagePreviewModal) {
+      if (isValid || this.hasSomeActiveModals) {
         const { isNew } = this.args.message;
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
