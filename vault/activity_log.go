@@ -1581,16 +1581,16 @@ type ResponseCounts struct {
 	SecretSyncs      int `json:"secret_syncs" mapstructure:"secret_syncs"`
 }
 
-func (existingRecord *ResponseCounts) Add(newRecord *ResponseCounts) {
+func (r *ResponseCounts) Add(newRecord *ResponseCounts) {
 	if newRecord == nil {
 		return
 	}
-	existingRecord.EntityClients += newRecord.EntityClients
-	existingRecord.Clients += newRecord.Clients
-	existingRecord.DistinctEntities += newRecord.DistinctEntities
-	existingRecord.NonEntityClients += newRecord.NonEntityClients
-	existingRecord.NonEntityTokens += newRecord.NonEntityTokens
-	existingRecord.SecretSyncs += newRecord.SecretSyncs
+	r.EntityClients += newRecord.EntityClients
+	r.Clients += newRecord.Clients
+	r.DistinctEntities += newRecord.DistinctEntities
+	r.NonEntityClients += newRecord.NonEntityClients
+	r.NonEntityTokens += newRecord.NonEntityTokens
+	r.SecretSyncs += newRecord.SecretSyncs
 }
 
 type ResponseNamespace struct {
@@ -1600,23 +1600,23 @@ type ResponseNamespace struct {
 	Mounts        []*ResponseMount `json:"mounts"`
 }
 
-func (existingRecord *ResponseNamespace) Add(newRecord *ResponseNamespace) {
+func (r *ResponseNamespace) Add(newRecord *ResponseNamespace) {
 	// Create a map of the existing mounts, so we don't duplicate them
 	mountMap := make(map[string]*ResponseCounts)
-	for _, erm := range existingRecord.Mounts {
+	for _, erm := range r.Mounts {
 		mountMap[erm.MountPath] = erm.Counts
 	}
 
-	existingRecord.Counts.Add(&newRecord.Counts)
+	r.Counts.Add(&newRecord.Counts)
 
 	// Check the current month mounts against the existing mounts and if there are matches, update counts
 	// accordingly. If there is no match, append the new mount to the existing mounts, so it will be counted
 	// later.
 	for _, newRecordMount := range newRecord.Mounts {
-		if existingRecordMountCounts, ook := mountMap[newRecordMount.MountPath]; ook {
+		if existingRecordMountCounts, ok := mountMap[newRecordMount.MountPath]; ok {
 			existingRecordMountCounts.Add(&newRecord.Counts)
 		} else {
-			existingRecord.Mounts = append(existingRecord.Mounts, newRecordMount)
+			r.Mounts = append(r.Mounts, newRecordMount)
 		}
 	}
 }
