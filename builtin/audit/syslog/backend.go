@@ -287,6 +287,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 
 	b.nodeIDList = append(b.nodeIDList, filterNodeID)
 	b.nodeMap[filterNodeID] = filterNode
+
 	return nil
 }
 
