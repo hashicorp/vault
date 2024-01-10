@@ -10,9 +10,9 @@ export default class MessageAdapter extends ApplicationAdapter {
     return 'config/ui/custom-messages';
   }
 
-  async query(store, type, query) {
+  query(store, type, query) {
     const { authenticated } = query;
-    return await super.query(store, type, { authenticated, list: true });
+    return super.query(store, type, { authenticated, list: true });
   }
 
   queryRecord(store, type, id) {

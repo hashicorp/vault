@@ -41,8 +41,9 @@ export default class MessagesList extends Component {
   }
 
   get hasSomeActiveModals() {
+    if (!this.args.messages) return false;
     return (
-      (this.args.messages || []).some((message) => message.type === 'modal' && message.active) &&
+      this.args.messages?.some((message) => message.type === 'modal' && message.active) &&
       this.args.message.type === 'modal'
     );
   }
