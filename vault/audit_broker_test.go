@@ -261,6 +261,21 @@ func TestAuditBroker_Register_MultipleFails(t *testing.T) {
 	require.EqualError(t, err, "vault.(AuditBroker).Register: backend already registered 'b2-no-filter'")
 }
 
+// BenchmarkAuditBroker_File_Request_DevNull Attempts to register a single `file`
+// audit device on the broker, which points at /dev/null.
+// It will then attempt to benchmark how long it takes Vault to complete logging
+// a request, this really only shows us how Vault can handle lots of calls to the
+// broker to trigger the eventlogger pipelines that audit devices are configured as.
+// Since we aren't writing anything to file or doing any I/O.
+// This test used to live in the file package for the file backend, but once the
+// move to eventlogger was complete, there wasn't a way to create a file backend
+// and manually just write to the underlying file itself, the old code used to do
+// formatting and writing all together, but we've split this up with eventlogger
+// with different nodes in a pipeline (think 1 audit device:1 pipeline) each
+// handling a responsibility, for example:
+// filter nodes filter events, so you can select which ones make it to your audit log
+// formatter nodes format the events (to JSON/JSONX and perform HMACing etc)
+// sink nodes handle sending the formatted data to a file, syslog or socket.
 func BenchmarkAuditBroker_File_Request_DevNull(b *testing.B) {
 	backendConfig := &audit.BackendConfig{
 		Config: map[string]string{
