@@ -137,11 +137,9 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput) erro
 }
 
 func (b *Backend) Reload(ctx context.Context) error {
-	if len(b.nodeMap) > 0 {
-		for _, n := range b.nodeMap {
-			if n.Type() == eventlogger.NodeTypeSink {
-				return n.Reopen()
-			}
+	for _, n := range b.nodeMap {
+		if n.Type() == eventlogger.NodeTypeSink {
+			return n.Reopen()
 		}
 	}
 

@@ -281,17 +281,6 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 		return retErr.ErrorOrNil()
 	}
 
-	// Audit event ended up in at least 1 sink.
-	if len(status.CompleteSinks()) > 0 {
-		return retErr.ErrorOrNil()
-	}
-
-	// There were errors from inside the pipeline and we didn't write to a sink.
-	if len(status.Warnings) > 0 {
-		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
-		return retErr.ErrorOrNil()
-	}
-
 	// If a fallback device is registered we can rely on that to 'catch all'
 	// and also the broker level guarantee for completed sinks.
 	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
