@@ -36,6 +36,7 @@ export default class MessagesCreateRoute extends Route {
     return hash({
       message,
       messages,
+      authenticated,
       hasSomeActiveModals:
         messages.length && messages?.some((message) => message.type === 'modal' && message.active),
     });
@@ -45,7 +46,7 @@ export default class MessagesCreateRoute extends Route {
     super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: 'Messages', route: 'messages', query: { authenticated: controller.authenticated } },
+      { label: 'Messages', route: 'messages', query: { authenticated: !!resolvedModel.authenticated } },
       { label: 'Create Message' },
     ];
   }
