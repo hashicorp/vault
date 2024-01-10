@@ -215,11 +215,12 @@ module('Integration | Component | messages/page/create-and-edit-message', functi
     );
     await click(PAGE.radio('modal'));
     await click(PAGE.button('create-message'));
-    await assert.dom(PAGE.modalTitle('Warning: more than one modal')).exists();
-    await assert
+    assert.dom(PAGE.modalTitle('Warning: more than one modal')).exists();
+    assert
       .dom(PAGE.modalBody('Warning: more than one modal'))
       .hasText(
         'You have an active modal configured and are trying to create another one. It is recommended to avoid having more than one modal at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to continue.'
       );
+    await click(PAGE.modalButton('confirm'));
   });
 });

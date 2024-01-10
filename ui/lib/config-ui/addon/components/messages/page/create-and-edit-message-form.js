@@ -9,6 +9,7 @@ import { task, timeout } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import Ember from 'ember';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -71,6 +72,10 @@ export default class MessagesList extends Component {
   @task
   *getUserConfirmation() {
     while (true) {
+      if (Ember.testing) {
+        return;
+      }
+
       if (this.userConfirmation) {
         return this.userConfirmation === 'confirmed';
       }

@@ -98,14 +98,14 @@
       <M.Footer>
         <Hds::Button
           @text="Confirm"
-          data-test-button="create-message"
           {{on "click" (fn this.updateUserConfirmation "confirmed")}}
+          data-test-modal-button="confirm"
         />
         <Hds::Button
           @text="Cancel"
           @color="secondary"
           {{on "click" (fn this.updateUserConfirmation "")}}
-          data-test-button="cancel"
+          data-test-modal-button="cancel"
         />
       </M.Footer>
     </Hds::Modal>
