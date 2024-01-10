@@ -409,11 +409,12 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 	return retErr.ErrorOrNil()
 }
 
-func (a *AuditBroker) Invalidate(ctx context.Context, key string) {
-	// For now, we ignore the key as this would only apply to salts. We just
-	// sort of brute force it on each one.
+func (a *AuditBroker) Invalidate(ctx context.Context, _ string) {
+	// For now, we ignore the key as this would only apply to salts.
+	// We just sort of brute force it on each one.
 	a.Lock()
 	defer a.Unlock()
+
 	for _, be := range a.backends {
 		be.backend.Invalidate(ctx)
 	}
