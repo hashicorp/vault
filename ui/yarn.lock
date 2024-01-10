@@ -5628,9 +5628,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-helpers@npm:2.9.3":
-  version: 2.9.3
-  resolution: "@ember/test-helpers@npm:2.9.3"
+"@ember/test-helpers@npm:^2.9.3":
+  version: 2.9.4
+  resolution: "@ember/test-helpers@npm:2.9.4"
   dependencies:
     "@ember/test-waiters": ^3.0.0
     "@embroider/macros": ^1.10.0
@@ -5642,7 +5642,7 @@ __metadata:
     ember-destroyable-polyfill: ^2.0.3
   peerDependencies:
     ember-source: ">=3.8.0"
-  checksum: 4591d33275c6035d41aa95184200074a727cc660aa43e48e9ed63ba07881a12fa332360fe7e5ba3b7a466fd740d92aa9f97e5d3584e95e2337c9b57ee844da69
+  checksum: 55f73d6220db28e61a8a8a69b7768ac4adc89355d86d8d5f3773dd6c45b435ab358c9ce29407275bf9d195bcf1cdf25b39786401ff6c09afc7fae6307fe930ab
   languageName: node
   linkType: hard
 
@@ -27845,7 +27845,7 @@ __metadata:
     "@ember/optional-features": ^2.0.0
     "@ember/render-modifiers": ^1.0.2
     "@ember/string": ^3.0.1
-    "@ember/test-helpers": 2.9.3
+    "@ember/test-helpers": ^2.9.3
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2

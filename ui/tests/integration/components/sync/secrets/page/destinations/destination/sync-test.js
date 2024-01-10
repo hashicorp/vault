@@ -70,7 +70,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   });
 
   test('it should sync secret', async function (assert) {
-    assert.expect(6);
+    assert.expect(7);
 
     const { type, name } = this.destination;
     this.server.post(`/sys/sync/destinations/${type}/${name}/associations/set`, (schema, req) => {
@@ -91,6 +91,8 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     assert
       .dom(successMessage)
       .includesText('Sync operation successfully initiated for my-secret.', 'Success banner renders');
+    await click(searchSelect.removeSelected);
+    assert.dom(successMessage).doesNotExist('clearing kv v2 mount path clears success banner');
   });
 
   test('it should allow manual mount path input if kv mounts are not returned', async function (assert) {

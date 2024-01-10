@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -285,9 +286,9 @@ func TestBackend_configureSinkNode(t *testing.T) {
 				id := b.nodeIDList[0]
 				node := b.nodeMap[id]
 				require.Equal(t, eventlogger.NodeTypeSink, node.Type())
-				sw, ok := node.(*audit.SinkWrapper)
+				mc, ok := node.(*event.MetricsCounter)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedName, sw.Name)
+				require.Equal(t, tc.expectedName, mc.Name)
 			}
 		})
 	}
