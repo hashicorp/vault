@@ -1,11 +1,11 @@
 ---
 layout: docs
-page_title: 'Guard against lease explosions'
+page_title: 'Lease Explosions'
 description: >-
   Learn about lease explosions and how you can prevent them.
 ---
 
-# Introduction
+# Lease Explosions
 
 As your Vault environment scales to meet deployment needs, it is important to avoid over-subscription. A lease explosion can occur when operators reach over-subscription and clients create leases much faster than Vault is set to revoke them. If this continues unchecked, the active node can run out of memory. Once a lease explosion occurs, mitigation is time consuming and resource intensive.
 
