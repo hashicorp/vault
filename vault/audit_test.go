@@ -12,19 +12,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
@@ -451,17 +449,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	reqErrs := errors.New("errs")
 
-	headersConf := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-	}
-
 	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
 		OuterErr: reqErrs,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -484,13 +478,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Auth:    auth,
 		Request: req,
 	}
-	if err := b.LogRequest(ctx, logInput, headersConf); err != nil {
+	if err := b.LogRequest(ctx, logInput); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(ctx, logInput, headersConf); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
+	if err := b.LogRequest(ctx, logInput); !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -553,10 +547,6 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respCopy := respCopyRaw.(*logical.Response)
 
-	headersConf := &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-	}
-
 	logInput := &logical.LogInput{
 		Auth:     authCopy,
 		Request:  reqCopy,
@@ -564,7 +554,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		OuterErr: respErr,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -592,12 +582,12 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		Response: resp,
 		OuterErr: respErr,
 	}
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	require.NoError(t, err)
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(ctx, logInput, headersConf)
+	err = b.LogResponse(ctx, logInput)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "event not processed by enough 'sink' nodes")
 }
@@ -660,7 +650,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		OuterErr: respErr,
 	}
 	ctx := namespace.RootContext(context.Background())
-	err = b.LogRequest(ctx, logInput, nil)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -683,14 +673,14 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		Request:  req,
 		OuterErr: respErr,
 	}
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	err = b.LogRequest(ctx, logInput, headersConf)
+	err = b.LogRequest(ctx, logInput)
 	if !errwrap.Contains(err, "event not processed by enough 'sink' nodes") {
 		t.Fatalf("err: %v", err)
 	}

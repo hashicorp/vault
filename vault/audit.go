@@ -13,8 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -589,14 +588,14 @@ func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogRequest(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogRequest(ctx, input)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	if b.c.auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogResponse(ctx, input, b.c.auditedHeaders)
+	return b.c.auditBroker.LogResponse(ctx, input)
 }
 
 type genericAuditor struct {
@@ -609,12 +608,12 @@ func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInpu
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-request"
-	return g.c.auditBroker.LogRequest(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogRequest(ctx, &logInput)
 }
 
 func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
-	return g.c.auditBroker.LogResponse(ctx, &logInput, g.c.auditedHeaders)
+	return g.c.auditBroker.LogResponse(ctx, &logInput)
 }

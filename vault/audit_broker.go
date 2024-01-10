@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -51,17 +51,13 @@ type AuditBroker struct {
 
 // NewAuditBroker creates a new audit broker
 func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
-	var eventBroker *eventlogger.Broker
-	var fallbackBroker *eventlogger.Broker
-	var err error
-
-	eventBroker, err = eventlogger.NewBroker()
+	eventBroker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
 	}
 
 	// Set up the broker that will support a single fallback device.
-	fallbackBroker, err = eventlogger.NewBroker()
+	fallbackBroker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, fmt.Errorf("error creating event fallback broker for audit event: %w", err)
 	}
@@ -206,7 +202,12 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret error) {
+	// If no backends are registered then we have no devices to log the request.
+	if len(a.backends) < 1 {
+		return nil
+	}
+
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 
 	a.RLock()
@@ -243,45 +244,43 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		in.Request.Headers = headers
 	}()
 
-	if len(a.backends) > 0 {
-		e, err := audit.NewEvent(audit.RequestType)
+	e, err := audit.NewEvent(audit.RequestType)
+	if err != nil {
+		retErr = multierror.Append(retErr, err)
+		return retErr.ErrorOrNil()
+	}
+
+	e.Data = in
+
+	// There may be cases where only the fallback device was added but no other
+	// normal audit devices, so check if the broker had an audit based pipeline
+	// registered before trying to send to it.
+	var status eventlogger.Status
+	if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
+		status, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
 		if err != nil {
-			retErr = multierror.Append(retErr, err)
+			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			return retErr.ErrorOrNil()
 		}
+	}
 
-		e.Data = in
+	// Audit event ended up in at least 1 sink.
+	if len(status.CompleteSinks()) > 0 {
+		return retErr.ErrorOrNil()
+	}
 
-		// There may be cases where only the fallback device was added but no other
-		// normal audit devices, so check if the broker had an audit based pipeline
-		// registered before trying to send to it.
-		var status eventlogger.Status
-		if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-			status, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
-			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
-				return retErr.ErrorOrNil()
-			}
-		}
+	// There were errors from inside the pipeline and we didn't write to a sink.
+	if len(status.Warnings) > 0 {
+		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+		return retErr.ErrorOrNil()
+	}
 
-		// Audit event ended up in at least 1 sink.
-		if len(status.CompleteSinks()) > 0 {
-			return retErr.ErrorOrNil()
-		}
-
-		// There were errors from inside the pipeline and we didn't write to a sink.
-		if len(status.Warnings) > 0 {
-			retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
-			return retErr.ErrorOrNil()
-		}
-
-		// If a fallback device is registered we can rely on that to 'catch all'
-		// and also the broker level guarantee for completed sinks.
-		if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-			status, err = a.fallbackBroker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
-			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
-			}
+	// If a fallback device is registered we can rely on that to 'catch all'
+	// and also the broker level guarantee for completed sinks.
+	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
+		status, err = a.fallbackBroker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+		if err != nil {
+			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 		}
 	}
 
@@ -290,7 +289,12 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
-func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
+func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (ret error) {
+	// If no backends are registered then we have no devices to send audit entries to.
+	if len(a.backends) < 1 {
+		return nil
+	}
+
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -326,61 +330,59 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 		in.Request.Headers = headers
 	}()
 
-	if len(a.backends) > 0 {
-		e, err := audit.NewEvent(audit.ResponseType)
+	e, err := audit.NewEvent(audit.ResponseType)
+	if err != nil {
+		retErr = multierror.Append(retErr, err)
+		return retErr.ErrorOrNil()
+	}
+
+	e.Data = in
+
+	// In cases where we are trying to audit the response, we detach
+	// ourselves from the original context (keeping only the namespace).
+	// This is so that we get a fair run at writing audit entries if Vault
+	// Took up a lot of time handling the request before audit (response)
+	// is triggered. Pipeline nodes may check for a cancelled context and
+	// refuse to process the nodes further.
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
+		return retErr.ErrorOrNil()
+	}
+
+	auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer auditCancel()
+	auditContext = namespace.ContextWithNamespace(auditContext, ns)
+
+	// There may be cases where only the fallback device was added but no other
+	// normal audit devices, so check if the broker had an audit based pipeline
+	// registered before trying to send to it.
+	var status eventlogger.Status
+	if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
+		status, err = a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 		if err != nil {
-			retErr = multierror.Append(retErr, err)
+			retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
 			return retErr.ErrorOrNil()
 		}
+	}
 
-		e.Data = in
+	// Audit event ended up in at least 1 sink.
+	if len(status.CompleteSinks()) > 0 {
+		return retErr.ErrorOrNil()
+	}
 
-		// In cases where we are trying to audit the response, we detach
-		// ourselves from the original context (keeping only the namespace).
-		// This is so that we get a fair run at writing audit entries if Vault
-		// Took up a lot of time handling the request before audit (response)
-		// is triggered. Pipeline nodes may check for a cancelled context and
-		// refuse to process the nodes further.
-		ns, err := namespace.FromContext(ctx)
+	// There were errors from inside the pipeline and we didn't write to a sink.
+	if len(status.Warnings) > 0 {
+		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+		return retErr.ErrorOrNil()
+	}
+
+	// If a fallback device is registered we can rely on that to 'catch all'
+	// and also the broker level guarantee for completed sinks.
+	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
+		status, err = a.fallbackBroker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
-			return retErr.ErrorOrNil()
-		}
-
-		auditContext, auditCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer auditCancel()
-		auditContext = namespace.ContextWithNamespace(auditContext, ns)
-
-		// There may be cases where only the fallback device was added but no other
-		// normal audit devices, so check if the broker had an audit based pipeline
-		// registered before trying to send to it.
-		var status eventlogger.Status
-		if a.broker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-			status, err = a.broker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
-			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(err, status.Warnings...))
-				return retErr.ErrorOrNil()
-			}
-		}
-
-		// Audit event ended up in at least 1 sink.
-		if len(status.CompleteSinks()) > 0 {
-			return retErr.ErrorOrNil()
-		}
-
-		// There were errors from inside the pipeline and we didn't write to a sink.
-		if len(status.Warnings) > 0 {
-			retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
-			return retErr.ErrorOrNil()
-		}
-
-		// If a fallback device is registered we can rely on that to 'catch all'
-		// and also the broker level guarantee for completed sinks.
-		if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
-			status, err = a.fallbackBroker.Send(auditContext, eventlogger.EventType(event.AuditType.String()), e)
-			if err != nil {
-				retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
-			}
+			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
 		}
 	}
 

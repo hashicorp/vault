@@ -28,8 +28,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	kv "github.com/hashicorp/vault-plugin-secrets-kv"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -42,6 +40,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
@@ -2176,7 +2175,7 @@ func (c *Core) sealInitCommon(ctx context.Context, req *logical.Request) (retErr
 		Auth:    auth,
 		Request: req,
 	}
-	if err := c.auditBroker.LogRequest(ctx, logInput, c.auditedHeaders); err != nil {
+	if err := c.auditBroker.LogRequest(ctx, logInput); err != nil {
 		c.logger.Error("failed to audit request", "request_path", req.Path, "error", err)
 		return errors.New("failed to audit request, cannot continue")
 	}
