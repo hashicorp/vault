@@ -235,6 +235,7 @@ func (b *Backend) configureFilterNode(filter string) error {
 
 	b.nodeIDList = append(b.nodeIDList, filterNodeID)
 	b.nodeMap[filterNodeID] = filterNode
+
 	return nil
 }
 
@@ -254,6 +255,7 @@ func (b *Backend) configureFormatterNode(formatConfig audit.FormatterConfig, opt
 
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = formatterNode
+
 	return nil
 }
 
@@ -286,10 +288,29 @@ func (b *Backend) configureSinkNode(name string, address string, format string, 
 		return fmt.Errorf("%s: error creating socket sink node: %w", op, err)
 	}
 
-	sinkNode := &audit.SinkWrapper{Name: name, Sink: n}
+	// Wrap the sink node with metrics middleware
+	sinkMetricTimer, err := audit.NewSinkMetricTimer(name, n)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add timing metrics to sink for path %q: %w", op, name, err)
+	}
+
+	// Decide what kind of labels we want and wrap the sink node inside a metrics counter.
+	var metricLabeler event.Labeler
+	switch {
+	case b.fallback:
+		metricLabeler = &audit.MetricLabelerAuditFallback{}
+	default:
+		metricLabeler = &audit.MetricLabelerAuditSink{}
+	}
+
+	sinkMetricCounter, err := event.NewMetricsCounter(name, sinkMetricTimer, metricLabeler)
+	if err != nil {
+		return fmt.Errorf("%s: unable to add counting metrics to sink for path %q: %w", op, name, err)
+	}
 
 	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
+	b.nodeMap[sinkNodeID] = sinkMetricCounter
+
 	return nil
 }
 
@@ -315,6 +336,10 @@ func (b *Backend) EventType() eventlogger.EventType {
 
 // HasFiltering determines if the first node for the pipeline is an eventlogger.NodeTypeFilter.
 func (b *Backend) HasFiltering() bool {
+	if b.nodeMap == nil {
+		return false
+	}
+
 	return len(b.nodeIDList) > 0 && b.nodeMap[b.nodeIDList[0]].Type() == eventlogger.NodeTypeFilter
 }
 

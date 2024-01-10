@@ -51,28 +51,31 @@ type AuditBroker struct {
 
 // NewAuditBroker creates a new audit broker
 func NewAuditBroker(log hclog.Logger) (*AuditBroker, error) {
+	const op = "vault.NewAuditBroker"
+
 	eventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
+		return nil, fmt.Errorf("%s: error creating event broker for audit events: %w", op, err)
 	}
 
 	// Set up the broker that will support a single fallback device.
-	fallbackBroker, err := eventlogger.NewBroker()
+	fallbackEventBroker, err := eventlogger.NewBroker()
 	if err != nil {
-		return nil, fmt.Errorf("error creating event fallback broker for audit event: %w", err)
+		return nil, fmt.Errorf("%s: error creating event fallback broker for audit event: %w", op, err)
 	}
 
-	b := &AuditBroker{
+	broker := &AuditBroker{
 		backends:       make(map[string]backendEntry),
 		logger:         log,
 		broker:         eventBroker,
-		fallbackBroker: fallbackBroker,
+		fallbackBroker: fallbackEventBroker,
 	}
-	return b, nil
+
+	return broker, nil
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
+func (a *AuditBroker) Register(name string, backend audit.Backend, local bool) error {
 	const op = "vault.(AuditBroker).Register"
 
 	a.Lock()
@@ -89,7 +92,7 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	}
 
 	// Fallback devices are singleton instances, we cannot register more than one or overwrite the existing one.
-	if b.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
+	if backend.IsFallback() && a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
 		existing, err := a.existingFallbackName()
 		if err != nil {
 			return fmt.Errorf("%s: existing fallback device already registered: %w", op, err)
@@ -98,25 +101,25 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 		return fmt.Errorf("%s: existing fallback device already registered: %q", op, existing)
 	}
 
-	if name != b.Name() {
-		return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, b.Name())
+	if name != backend.Name() {
+		return fmt.Errorf("%s: audit registration failed due to device name mismatch: %q, %q", op, name, backend.Name())
 	}
 
 	switch {
-	case b.IsFallback():
-		err := a.registerFallback(name, b)
+	case backend.IsFallback():
+		err := a.registerFallback(name, backend)
 		if err != nil {
 			return fmt.Errorf("%s: unable to register fallback device for %q: %w", op, name, err)
 		}
 	default:
-		err := a.register(name, b)
+		err := a.register(name, backend)
 		if err != nil {
 			return fmt.Errorf("%s: unable to register device for %q: %w", op, name, err)
 		}
 	}
 
 	a.backends[name] = backendEntry{
-		backend: b,
+		backend: backend,
 		local:   local,
 	}
 
@@ -181,10 +184,12 @@ func (a *AuditBroker) isRegistered(name string) bool {
 func (a *AuditBroker) IsLocal(name string) (bool, error) {
 	a.RLock()
 	defer a.RUnlock()
+
 	be, ok := a.backends[name]
 	if ok {
 		return be.local, nil
 	}
+
 	return false, fmt.Errorf("unknown audit backend %q", name)
 }
 
@@ -192,6 +197,7 @@ func (a *AuditBroker) IsLocal(name string) (bool, error) {
 func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (string, error) {
 	a.RLock()
 	defer a.RUnlock()
+
 	be, ok := a.backends[name]
 	if !ok {
 		return "", fmt.Errorf("unknown audit backend %q", name)
@@ -275,6 +281,17 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 		return retErr.ErrorOrNil()
 	}
 
+	// Audit event ended up in at least 1 sink.
+	if len(status.CompleteSinks()) > 0 {
+		return retErr.ErrorOrNil()
+	}
+
+	// There were errors from inside the pipeline and we didn't write to a sink.
+	if len(status.Warnings) > 0 {
+		retErr = multierror.Append(retErr, multierror.Append(errors.New("error during audit pipeline processing"), status.Warnings...))
+		return retErr.ErrorOrNil()
+	}
+
 	// If a fallback device is registered we can rely on that to 'catch all'
 	// and also the broker level guarantee for completed sinks.
 	if a.fallbackBroker.IsAnyPipelineRegistered(eventlogger.EventType(event.AuditType.String())) {
@@ -282,6 +299,9 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput) (ret
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing request to fallback device failed: %w", err), status.Warnings...))
 		}
+	} else {
+		// This audit event won't make it to any devices, we class this as a 'miss' for auditing.
+		metrics.IncrCounter(audit.MetricLabelsFallbackMiss(), 1)
 	}
 
 	return retErr.ErrorOrNil()
@@ -296,16 +316,14 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 	}
 
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
+
 	a.RLock()
 	defer a.RUnlock()
-	if in.Request.InboundSSCToken != "" {
-		if in.Auth != nil {
-			reqAuthToken := in.Auth.ClientToken
-			in.Auth.ClientToken = in.Request.InboundSSCToken
-			defer func() {
-				in.Auth.ClientToken = reqAuthToken
-			}()
-		}
+
+	if in.Request.InboundSSCToken != "" && in.Auth != nil {
+		reqAuthToken := in.Auth.ClientToken
+		in.Auth.ClientToken = in.Request.InboundSSCToken
+		defer func() { in.Auth.ClientToken = reqAuthToken }()
 	}
 
 	var retErr *multierror.Error
@@ -317,7 +335,6 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 		}
 
 		ret = retErr.ErrorOrNil()
-
 		failure := float32(0.0)
 		if ret != nil {
 			failure = 1.0
@@ -341,9 +358,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 	// In cases where we are trying to audit the response, we detach
 	// ourselves from the original context (keeping only the namespace).
 	// This is so that we get a fair run at writing audit entries if Vault
-	// Took up a lot of time handling the request before audit (response)
-	// is triggered. Pipeline nodes may check for a cancelled context and
-	// refuse to process the nodes further.
+	// has taken up a lot of time handling the request before audit (response)
+	// is triggered. Pipeline nodes and the eventlogger.Broker may check for a
+	// cancelled context and refuse to process the nodes further.
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		retErr = multierror.Append(retErr, fmt.Errorf("namespace missing from context: %w", err))
@@ -384,6 +401,9 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput) (re
 		if err != nil {
 			retErr = multierror.Append(retErr, multierror.Append(fmt.Errorf("auditing response to fallback device failed: %w", err), status.Warnings...))
 		}
+	} else {
+		// This audit event won't make it to any devices, we class this as a 'miss' for auditing.
+		metrics.IncrCounter(audit.MetricLabelsFallbackMiss(), 1)
 	}
 
 	return retErr.ErrorOrNil()

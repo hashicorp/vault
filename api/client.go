@@ -530,6 +530,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 		return nil, err
 	}
 
+	previousAddress := c.Address
 	c.Address = address
 
 	if strings.HasPrefix(address, "unix://") {
@@ -552,7 +553,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
 		}
-	} else if strings.HasPrefix(c.Address, "unix://") {
+	} else if strings.HasPrefix(previousAddress, "unix://") {
 		// When the address being set does not begin with unix:// but the previous
 		// address in the Config did, change the transport's DialContext back to
 		// use the default configuration that cleanhttp uses.
