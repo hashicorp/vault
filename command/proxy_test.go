@@ -2184,6 +2184,8 @@ func TestProxy_LogFile_Config(t *testing.T) {
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 }
 
+// TestProxy_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
 func TestProxy_EnvVar_Overrides(t *testing.T) {
 	configFile := populateTempFile(t, "proxy-config.hcl", BasicHclConfig)
 
@@ -2194,9 +2196,7 @@ func TestProxy_EnvVar_Overrides(t *testing.T) {
 
 	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
 
-	defer os.Unsetenv("VAULT_SKIP_VERIFY")
-
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
 	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &ProxyCommand{BaseCommand: &BaseCommand{}}
 	f := cmd.Flags()
@@ -2208,7 +2208,7 @@ func TestProxy_EnvVar_Overrides(t *testing.T) {
 	cmd.applyConfigOverrides(f, cfg)
 	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
 
-	os.Setenv("VAULT_SKIP_VERIFY", "false")
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
 
 	cmd.applyConfigOverrides(f, cfg)
 	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)

@@ -2820,6 +2820,8 @@ func TestAgent_LogFile_Config(t *testing.T) {
 	assert.Equal(t, 1048576, cfg.LogRotateBytes)
 }
 
+// TestAgent_EnvVar_Overrides tests that environment variables are properly
+// parsed and override defaults.
 func TestAgent_EnvVar_Overrides(t *testing.T) {
 	configFile := populateTempFile(t, "agent-config.hcl", BasicHclConfig)
 
@@ -2830,9 +2832,7 @@ func TestAgent_EnvVar_Overrides(t *testing.T) {
 
 	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
 
-	defer os.Unsetenv("VAULT_SKIP_VERIFY")
-
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
+	t.Setenv("VAULT_SKIP_VERIFY", "true")
 	// Parse the cli flags (but we pass in an empty slice)
 	cmd := &AgentCommand{BaseCommand: &BaseCommand{}}
 	f := cmd.Flags()
@@ -2844,7 +2844,7 @@ func TestAgent_EnvVar_Overrides(t *testing.T) {
 	cmd.applyConfigOverrides(f, cfg)
 	assert.Equal(t, true, cfg.Vault.TLSSkipVerify)
 
-	os.Setenv("VAULT_SKIP_VERIFY", "false")
+	t.Setenv("VAULT_SKIP_VERIFY", "false")
 
 	cmd.applyConfigOverrides(f, cfg)
 	assert.Equal(t, false, cfg.Vault.TLSSkipVerify)
