@@ -5,12 +5,12 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { hash } from 'ember-concurrency';
+import { hash } from 'rsvp';
 
 export default class MessagesMessageEditRoute extends Route {
   @service store;
 
-  async getMessages(authenticated) {
+  async getMessages(authenticated = true) {
     try {
       return await this.store.query('config-ui/message', {
         authenticated,

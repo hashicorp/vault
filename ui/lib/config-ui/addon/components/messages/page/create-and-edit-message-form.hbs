@@ -67,15 +67,7 @@
         data-test-button="preview"
       />
 
-      {{#if this.hasSomeActiveModals}}
-        <Hds::Button
-          @text="{{if @message.isNew 'Create' 'Edit'}} message"
-          {{on "click" this.updateMultipleMessageModal}}
-          data-test-button="multiple modals message"
-        />
-      {{else}}
-        <Hds::Button @text="{{if @message.isNew 'Create' 'Edit'}} message" data-test-button="create-message" type="submit" />
-      {{/if}}
+      <Hds::Button @text="{{if @message.isNew 'Create' 'Edit'}} message" data-test-button="create-message" type="submit" />
 
       <Hds::Button
         @text="Cancel"
@@ -106,14 +98,13 @@
       <M.Footer>
         <Hds::Button
           @text="Confirm"
-          disabled={{(or this.invalidFormMessage this.save.isRunning)}}
           data-test-button="create-message"
-          type="submit"
+          {{on "click" (fn this.updateUserConfirmation "confirmed")}}
         />
         <Hds::Button
           @text="Cancel"
           @color="secondary"
-          {{on "click" (fn (mut this.showMultipleModalsMessage) false)}}
+          {{on "click" (fn this.updateUserConfirmation "")}}
           data-test-button="cancel"
         />
       </M.Footer>

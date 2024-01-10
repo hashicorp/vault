@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -30,6 +30,7 @@ export default class MessagesList extends Component {
   @tracked invalidFormMessage;
   @tracked showMessagePreviewModal = false;
   @tracked showMultipleModalsMessage = false;
+  @tracked userConfirmation = '';
 
   willDestroy() {
     super.willDestroy();
@@ -40,25 +41,21 @@ export default class MessagesList extends Component {
     }
   }
 
-  get hasSomeActiveModals() {
-    if (!this.args.messages) return false;
-    return (
-      this.args.messages?.some((message) => message.type === 'modal' && message.active) &&
-      this.args.message.type === 'modal'
-    );
-  }
-
   @task
   *save(event) {
     event.preventDefault();
     try {
-      let isValid;
+      const { isValid, state, invalidFormMessage } = this.args.message.validate();
+      this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
 
-      if (!this.hasSomeActiveModals) {
-        isValid = this.validateMessageForm();
+      if (this.args.hasSomeActiveModals) {
+        this.showMultipleModalsMessage = true;
+        const isConfirmed = yield this.getUserConfirmation.perform();
+        if (!isConfirmed) return;
       }
 
-      if (isValid || this.hasSomeActiveModals) {
+      if (isValid) {
         const { isNew } = this.args.message;
         const { id, title } = yield this.args.message.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} ${title} message.`);
@@ -71,18 +68,19 @@ export default class MessagesList extends Component {
     }
   }
 
-  validateMessageForm() {
-    const { isValid, state, invalidFormMessage } = this.args.message.validate();
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = invalidFormMessage;
-    return isValid;
+  @task
+  *getUserConfirmation() {
+    while (true) {
+      if (this.userConfirmation) {
+        return this.userConfirmation === 'confirmed';
+      }
+      yield timeout(500);
+    }
   }
 
   @action
-  updateMultipleMessageModal() {
-    const isValid = this.validateMessageForm();
-    if (isValid) {
-      this.showMultipleModalsMessage = true;
-    }
+  updateUserConfirmation(userConfirmation) {
+    this.userConfirmation = userConfirmation;
+    this.showMultipleModalsMessage = false;
   }
 }
