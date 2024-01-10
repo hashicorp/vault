@@ -380,7 +380,7 @@ jobs:
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && (success() || failure())
+        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
