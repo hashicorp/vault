@@ -3,4 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Messages::Page::CreateAndEditMessageForm @message={{this.model}} @breadcrumbs={{this.breadcrumbs}} />
+<Messages::Page::CreateAndEditMessageForm
+  @message={{this.model.message}}
+  @messages={{this.model.messages}}
+  @hasSomeActiveModals={{this.model.hasSomeActiveModals}}
+  @breadcrumbs={{this.breadcrumbs}}
+/>

@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { hash } from 'rsvp';
 
 export default class MessagesCreateRoute extends Route {
   @service store;
@@ -15,11 +16,29 @@ export default class MessagesCreateRoute extends Route {
     },
   };
 
-  model(params) {
-    const { authenticated } = params;
+  async getMessages(authenticated) {
+    try {
+      return await this.store.query('config-ui/message', {
+        authenticated,
+      });
+    } catch {
+      return [];
+    }
+  }
 
-    return this.store.createRecord('config-ui/message', {
+  async model(params) {
+    const { authenticated } = params;
+    const message = this.store.createRecord('config-ui/message', {
       authenticated,
+    });
+    const messages = await this.getMessages(authenticated);
+
+    return hash({
+      message,
+      messages,
+      authenticated,
+      hasSomeActiveModals:
+        messages.length && messages?.some((message) => message.type === 'modal' && message.active),
     });
   }
 

@@ -5,9 +5,11 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { task } from 'ember-concurrency';
+import { task, timeout } from 'ember-concurrency';
 import errorMessage from 'vault/utils/error-message';
 import { inject as service } from '@ember/service';
+import { action } from '@ember/object';
+import Ember from 'ember';
 
 /**
  * @module Page::CreateAndEditMessageForm
@@ -28,6 +30,8 @@ export default class MessagesList extends Component {
   @tracked modelValidations;
   @tracked invalidFormMessage;
   @tracked showMessagePreviewModal = false;
+  @tracked showMultipleModalsMessage = false;
+  @tracked userConfirmation = '';
 
   willDestroy() {
     super.willDestroy();
@@ -42,9 +46,17 @@ export default class MessagesList extends Component {
   *save(event) {
     event.preventDefault();
     try {
+      this.userConfirmation = '';
+
       const { isValid, state, invalidFormMessage } = this.args.message.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
+
+      if (this.args.hasSomeActiveModals && this.args.message.type === 'modal') {
+        this.showMultipleModalsMessage = true;
+        const isConfirmed = yield this.getUserConfirmation.perform();
+        if (!isConfirmed) return;
+      }
 
       if (isValid) {
         const { isNew } = this.args.message;
@@ -57,5 +69,24 @@ export default class MessagesList extends Component {
       this.errorBanner = errorMessage(error);
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
+  }
+
+  @task
+  *getUserConfirmation() {
+    while (true) {
+      if (Ember.testing) {
+        return;
+      }
+      if (this.userConfirmation) {
+        return this.userConfirmation === 'confirmed';
+      }
+      yield timeout(500);
+    }
+  }
+
+  @action
+  updateUserConfirmation(userConfirmation) {
+    this.userConfirmation = userConfirmation;
+    this.showMultipleModalsMessage = false;
   }
 }
