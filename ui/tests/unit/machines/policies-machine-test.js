@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import PoliciesMachineConfig from 'vault/machines/policies-machine';

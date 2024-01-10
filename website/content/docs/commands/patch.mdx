@@ -28,7 +28,7 @@ from stdin. This argument will be ignored if used in conjunction with any
 For a full list of examples and paths, please see the documentation that
 corresponds to the secrets engines in use.
 
-Unlike [the `write` command](/docs/commands/write), the `patch` command only
+Unlike [the `write` command](/vault/docs/commands/write), the `patch` command only
 modifies data specified on the command line.
 
 ## Examples
@@ -68,19 +68,19 @@ The `vault patch` command simplifies the API call.
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
-- `-field` `(string: "")` - Print only the field with the given name. Specifying
-  this option will take precedence over other formatting directives. The result
-  will not have a trailing newline making it ideal for piping to other processes.
+- `-field` `(string: "")` - Print only the field with the given name, in the format
+  specified in the `-format` directive. The result will not have a trailing
+  newline making it ideal for piping to other processes.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-force` `(bool: false)` - Allow the operation to continue with no key=value
   pairs. This allows writing to keys that do not need or expect data. This is

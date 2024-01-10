@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -7,8 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 )
 
 func TestRegisterPlugin(t *testing.T) {
@@ -43,32 +45,32 @@ func TestListPlugins(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		input           ListPluginsInput
-		expectedPlugins map[consts.PluginType][]string
+		expectedPlugins map[PluginType][]string
 	}{
 		"no type specified": {
 			input: ListPluginsInput{},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeCredential: {"alicloud"},
-				consts.PluginTypeDatabase:   {"cassandra-database-plugin"},
-				consts.PluginTypeSecrets:    {"ad", "alicloud"},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeCredential: {"alicloud"},
+				PluginTypeDatabase:   {"cassandra-database-plugin"},
+				PluginTypeSecrets:    {"ad", "alicloud"},
 			},
 		},
 		"only auth plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeCredential},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeCredential: {"alicloud"},
+			input: ListPluginsInput{Type: PluginTypeCredential},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeCredential: {"alicloud"},
 			},
 		},
 		"only database plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeDatabase},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeDatabase: {"cassandra-database-plugin"},
+			input: ListPluginsInput{Type: PluginTypeDatabase},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeDatabase: {"cassandra-database-plugin"},
 			},
 		},
 		"only secret plugins": {
-			input: ListPluginsInput{Type: consts.PluginTypeSecrets},
-			expectedPlugins: map[consts.PluginType][]string{
-				consts.PluginTypeSecrets: {"ad", "alicloud"},
+			input: ListPluginsInput{Type: PluginTypeSecrets},
+			expectedPlugins: map[PluginType][]string{
+				PluginTypeSecrets: {"ad", "alicloud"},
 			},
 		},
 	} {
@@ -104,7 +106,7 @@ func TestListPlugins(t *testing.T) {
 			}
 
 			for _, actual := range resp.Details {
-				pluginType, err := consts.ParsePluginType(actual.Type)
+				pluginType, err := ParsePluginType(actual.Type)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -159,6 +161,21 @@ func TestGetPlugin(t *testing.T) {
 				Version:           "",
 			},
 		},
+		"oci image": {
+			version: "v0.16.0",
+			body:    getResponseOCIImageVersion,
+			expected: GetPluginResponse{
+				Args:              []string{},
+				Builtin:           false,
+				Command:           "",
+				Name:              "jwt",
+				OCIImage:          "hashicorp/vault-plugin-auth-jwt",
+				Runtime:           "gvisor",
+				SHA256:            "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
+				DeprecationStatus: "",
+				Version:           "v0.16.0",
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerInfo(tc.body)))
@@ -173,7 +190,7 @@ func TestGetPlugin(t *testing.T) {
 
 			input := GetPluginInput{
 				Name: "azure",
-				Type: consts.PluginTypeSecrets,
+				Type: PluginTypeSecrets,
 			}
 			if tc.version != "" {
 				input.Version = tc.version
@@ -245,6 +262,25 @@ const getResponseOldServerVersion = `{
         "command": "",
         "name": "azure",
         "sha256": ""
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null
+}`
+
+const getResponseOCIImageVersion = `{
+	"request_id": "e93d3f93-8e4f-8443-a803-f1c97c495241",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 0,
+    "data": {
+        "args": [],
+        "builtin": false,
+        "name": "jwt",
+        "oci_image" : "hashicorp/vault-plugin-auth-jwt",
+        "runtime" : "gvisor",
+        "sha256": "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
+        "version": "v0.16.0"
     },
     "wrap_info": null,
     "warnings": null,

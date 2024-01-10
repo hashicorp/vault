@@ -4,13 +4,13 @@ page_title: Token - Auth Methods - HTTP API
 description: This is the API documentation for the Vault token auth method.
 ---
 
-# Token Auth Method (API)
+# Token auth method (API)
 
 This is the API documentation for the Vault token auth method. For
 general information about the usage and operation of the token method, please
-see the [Vault Token method documentation](/docs/auth/token).
+see the [Vault Token method documentation](/vault/docs/auth/token).
 
-## List Accessors
+## List accessors
 
 This endpoint lists token accessor. This requires `sudo` capability, and access
 to it should be tightly controlled as the accessors can be used to revoke very
@@ -20,7 +20,7 @@ large numbers of tokens and their associated leases at once.
 | :----- | :---------------------- |
 | `LIST` | `/auth/token/accessors` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -29,7 +29,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/accessors
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -48,7 +48,7 @@ $ curl \
 }
 ```
 
-## Create Token
+## Create token
 
 Creates a new token. Certain options are only available when called by a
 root token. If used via the `/auth/token/create-orphan` endpoint, a root
@@ -88,7 +88,7 @@ during this call.
 - `lease` `(string: "")` - DEPRECATED; use `ttl` instead
 - `ttl` `(string: "")` - The TTL period of the token, provided as "1h", where
   hour is the largest suffix. If not provided, the token is valid for the
-  [default lease TTL](/docs/configuration), or indefinitely if the
+  [default lease TTL](/vault/docs/configuration), or indefinitely if the
   root policy is used.
 - `type` `(string: "")` - The token type. Can be "batch" or "service". Defaults
   to the type specified by the role configuration named by `role_name`.
@@ -109,7 +109,7 @@ during this call.
   and used entity alias must be listed in `allowed_entity_aliases`. If this has
   been specified, the entity will not be inherited from the parent.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -122,7 +122,7 @@ during this call.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -132,7 +132,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/create
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -164,7 +164,7 @@ $ curl \
 }
 ```
 
-## Lookup a Token
+## Lookup a token
 
 Returns information about the client token.
 
@@ -176,7 +176,7 @@ Returns information about the client token.
 
 - `token` `(string: <required>)` - Token to lookup.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -184,7 +184,7 @@ Returns information about the client token.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -194,7 +194,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/lookup
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -222,7 +222,7 @@ $ curl \
 }
 ```
 
-## Lookup a Token (Self)
+## Lookup a token (Self)
 
 Returns information about the current client token.
 
@@ -230,7 +230,7 @@ Returns information about the current client token.
 | :----- | :------------------------ |
 | `GET`  | `/auth/token/lookup-self` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -238,7 +238,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/lookup-self
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -266,7 +266,7 @@ $ curl \
 }
 ```
 
-## Lookup a Token (Accessor)
+## Lookup a token (Accessor)
 
 Returns information about the client token from the accessor.
 
@@ -278,7 +278,7 @@ Returns information about the client token from the accessor.
 
 - `accessor` `(string: <required>)` - Token accessor to lookup.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -286,7 +286,7 @@ Returns information about the client token from the accessor.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -296,7 +296,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/lookup-accessor
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -324,7 +324,7 @@ $ curl \
 }
 ```
 
-## Renew a Token
+## Renew a token
 
 Renews a lease associated with a token. This is used to prevent the expiration
 of a token, and the automatic revocation of it. Token renewal is possible only
@@ -343,7 +343,7 @@ if there is a lease associated with it.
   If not supplied, Vault will use the default TTL. This is specified as a numeric string
   with suffix like "30s" or "5m".
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -351,7 +351,7 @@ if there is a lease associated with it.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -361,7 +361,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/renew
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -377,7 +377,7 @@ $ curl \
 }
 ```
 
-## Renew a Token (Self)
+## Renew a token (Self)
 
 Renews a lease associated with the calling token. This is used to prevent the
 expiration of a token, and the automatic revocation of it. Token renewal is
@@ -394,7 +394,7 @@ possible only if there is a lease associated with it.
   If not supplied, Vault will use the default TTL. This is specified as a numeric string
   with suffix like "30s" or "5m".
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -402,7 +402,7 @@ possible only if there is a lease associated with it.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -412,7 +412,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/renew-self
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -428,7 +428,7 @@ $ curl \
 }
 ```
 
-## Renew a Token (Accessor)
+## Renew a token (Accessor)
 
 Renews a lease associated with a token using its accessor. This is used to
 prevent the expiration of a token, and the automatic revocation of it. Token
@@ -445,7 +445,7 @@ renewal is possible only if there is a lease associated with it.
 - `increment` `(string: "")` - An optional requested lease increment can be
   provided. This increment may be ignored.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -453,7 +453,7 @@ renewal is possible only if there is a lease associated with it.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -463,7 +463,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/renew-accessor
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -479,7 +479,7 @@ $ curl \
 }
 ```
 
-## Revoke a Token
+## Revoke a token
 
 Revokes a token and all child tokens. When the token is revoked, all dynamic secrets
 generated with it are also revoked.
@@ -492,7 +492,7 @@ generated with it are also revoked.
 
 - `token` `(string: <required>)` - Token to revoke.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -500,7 +500,7 @@ generated with it are also revoked.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -510,7 +510,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/revoke
 ```
 
-## Revoke a Token (Self)
+## Revoke a token (Self)
 
 Revokes the token used to call it and all child tokens. When the token is
 revoked, all dynamic secrets generated with it are also revoked.
@@ -519,7 +519,7 @@ revoked, all dynamic secrets generated with it are also revoked.
 | :----- | :------------------------ |
 | `POST` | `/auth/token/revoke-self` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -528,7 +528,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/revoke-self
 ```
 
-## Revoke a Token Accessor
+## Revoke a token accessor
 
 Revoke the token associated with the accessor and all the child tokens. This is
 meant for purposes where there is no access to token ID but there is need to
@@ -542,7 +542,7 @@ revoke a token and its children.
 
 - `accessor` `(string: <required>)` - Accessor of the token.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -550,7 +550,7 @@ revoke a token and its children.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -560,7 +560,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/revoke-accessor
 ```
 
-## Revoke Token and Orphan Children
+## Revoke token and orphan children
 
 Revokes a token but not its child tokens. When the token is revoked, all secrets
 generated with it are also revoked. All child tokens are orphaned, but can be
@@ -576,7 +576,7 @@ endpoint.
 - `token` `(string: <required>)` - Token to revoke. This can be part of the URL
   or the body.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -584,7 +584,7 @@ endpoint.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -594,7 +594,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/revoke-orphan
 ```
 
-## Read Token Role
+## Read token role
 
 Fetches the named role configuration.
 
@@ -606,7 +606,7 @@ Fetches the named role configuration.
 
 - `role_name` `(string: <required>)` - The name of the token role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -614,7 +614,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/roles/nomad
 ```
 
-### Sample Response
+### Sample response
 
 ```javascript
 {
@@ -645,7 +645,7 @@ $ curl \
 }
 ```
 
-## List Token Roles
+## List token roles
 
 List available token roles.
 
@@ -653,7 +653,7 @@ List available token roles.
 | :----- | :------------------ |
 | `LIST` | `/auth/token/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -662,7 +662,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -672,7 +672,7 @@ $ curl \
 }
 ```
 
-## Create/Update Token Role
+## Create/Update token role
 
 Creates (or replaces) the named role. Roles enforce specific behavior when
 creating tokens that allow token functionality that is otherwise not
@@ -739,7 +739,7 @@ tokens created against a role to be revoked using the
 
 @include 'tokenstorefields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
   "allowed_policies": [
@@ -752,7 +752,7 @@ tokens created against a role to be revoked using the
   "allowed_entity_aliases": ["web-entity-alias", "app-entity-*"]
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -762,7 +762,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/roles/nomad
 ```
 
-## Delete Token Role
+## Delete token role
 
 This endpoint deletes the named token role.
 
@@ -774,7 +774,7 @@ This endpoint deletes the named token role.
 
 - `role_name` `(string: <required>)` - The name of the token role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -783,7 +783,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/roles/admins
 ```
 
-## Tidy Tokens
+## Tidy tokens
 
 Performs some maintenance tasks to clean up invalid entries that may remain
 in the token store. On Enterprise, Tidy will only impact the tokens in the
@@ -800,7 +800,7 @@ be cached. Listing the `/auth/token/accessors` endpoint is a good way to get
 some sense of the potential impact: tidy does this and more, so if this call creates problems
 for your cluster, it would be wise to give Vault more resources before attempting
 tidy. Note that the request may time out depending on
-[max duration](https://www.vaultproject.io/docs/configuration#default_max_request_duration)
+[max duration](/vault/docs/configuration#default_max_request_duration)
 and your client's timeout configuration, make sure to allow it run to completion
 to properly judge the impact.
 
@@ -824,7 +824,7 @@ valid in the above steps will be deleted.
 | :----- | :----------------- |
 | `POST` | `/auth/token/tidy` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -833,7 +833,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/token/tidy
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/ad: Fix bug where updates to config would fail if password isn't provided 
+```

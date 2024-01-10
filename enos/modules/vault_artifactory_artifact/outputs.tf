@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 output "url" {
   value       = data.enos_artifactory_item.vault.results[0].url

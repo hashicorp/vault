@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .auth-form {
   @extend .box;
   @extend .is-bottomless;
@@ -20,18 +25,18 @@
 }
 
 .toolbar-namespace-picker {
-  padding: 0 $spacing-s;
+  padding: 0 $spacing-12;
 
   .field {
     width: 100%;
   }
 
   .field-label {
-    margin-right: $spacing-s;
+    margin-right: $spacing-12;
     align-self: center;
   }
 
   .is-label {
-    color: $grey;
+    color: var(--token-color-foreground-faint);
   }
 }

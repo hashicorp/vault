@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix regression breaking non-raft clusters whose nodes share the same cluster_addr/api_addr.
+```

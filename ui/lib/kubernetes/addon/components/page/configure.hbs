@@ -1,0 +1,115 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Configure Kubernetes
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<hr class="is-marginless has-background-gray-200" />
+
+<p class="has-top-margin-m">
+  To customize your configuration, specify the type of Kubernetes cluster that credentials will be generated for.
+</p>
+
+<div class="is-flex-row has-top-margin-s">
+  <RadioCard
+    class="has-fixed-width"
+    @title="Local cluster"
+    @description="Generate credentials for the local Kubernetes cluster that Vault is running on, using Vault’s service account."
+    @icon="kubernetes-color"
+    @value={{false}}
+    @groupValue={{@model.disableLocalCaJwt}}
+    @onChange={{this.onRadioSelect}}
+    data-test-radio-card="local"
+  />
+  <RadioCard
+    class="has-fixed-width"
+    @title="Manual configuration"
+    @description="Generate credentials for an external Kubernetes cluster, using a service account that you specify."
+    @icon="vault"
+    @iconClass="has-text-black"
+    @value={{true}}
+    @groupValue={{@model.disableLocalCaJwt}}
+    @onChange={{this.onRadioSelect}}
+    data-test-radio-card="manual"
+  />
+</div>
+
+<div class="has-top-margin-m" data-test-config>
+  {{#if @model.disableLocalCaJwt}}
+    <MessageError @errorMessage={{this.error}} />
+    {{#each @model.formFields as |attr|}}
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+  {{else if (eq this.inferredState "success")}}
+    <Icon @name="check-circle-fill" class="has-text-success" />
+    <span>Configuration values were inferred successfully.</span>
+  {{else if (eq this.inferredState "error")}}
+    <Icon @name="x-square-fill" class="has-text-danger" />
+    <span class="has-text-danger">
+      Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete
+      them, or configure manually.
+    </span>
+  {{else}}
+    <p>
+      Configuration values can be inferred from the pod and your local environment variables.
+    </p>
+    <div>
+      <Hds::Button
+        @text="Get config values"
+        @color="secondary"
+        @icon={{if this.fetchInferred.isRunning "loading"}}
+        class="has-top-margin-s"
+        disabled={{this.fetchInferred.isRunning}}
+        {{on "click" (perform this.fetchInferred)}}
+      />
+    </div>
+  {{/if}}
+</div>
+
+<hr class="has-background-gray-200 has-top-margin-l" />
+
+<Hds::ButtonSet class="has-top-margin-s has-bottom-margin-s">
+
+  <Hds::Button @text="Save" data-test-config-save disabled={{this.isDisabled}} {{on "click" (perform this.save)}} />
+  <Hds::Button
+    @text="Back"
+    @color="secondary"
+    class="has-left-margin-xs"
+    data-test-config-cancel
+    disabled={{or this.save.isRunning this.fetchInferred.isRunning}}
+    {{on "click" this.cancel}}
+  />
+  {{#if this.alert}}
+    <AlertInline @type="danger" class="has-top-padding-s" @message={{this.alert}} data-test-alert />
+  {{/if}}
+</Hds::ButtonSet>
+
+{{#if this.showConfirm}}
+  <Hds::Modal id="kubernetes-edit-config-modal" @onClose={{fn (mut this.showConfirm) false}} @color="warning" as |M|>
+    <M.Header @icon="alert-triangle">
+      Edit configuration
+    </M.Header>
+    <M.Body data-test-edit-config-body>
+      <p>
+        Making changes to your configuration may affect how Vault will reach the Kubernetes API and authenticate with it. Are
+        you sure?
+      </p>
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button data-test-config-confirm {{on "click" (perform this.save)}} @text="Confirm" />
+        <Hds::Button {{on "click" F.close}} @color="secondary" @text="Cancel" />
+      </Hds::ButtonSet>
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 )
 
 func testAuthTuneCommand(tb testing.TB) (*cli.MockUi, *AuthTuneCommand) {
@@ -76,8 +78,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			pluginDir, cleanup := vault.MakeTestPluginDir(t)
-			defer cleanup(t)
+			pluginDir := corehelpers.MakeTestPluginDir(t)
 
 			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()
@@ -105,7 +106,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
 			}
 
-			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "userpass", consts.PluginTypeCredential)
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "userpass", api.PluginTypeCredential)
 
 			code := cmd.Run([]string{
 				"-description", "new description",

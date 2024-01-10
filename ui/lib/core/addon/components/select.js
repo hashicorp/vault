@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@ember/component';
 import layout from '../templates/components/select';
 
@@ -20,6 +25,7 @@ import layout from '../templates/components/select';
  * @param {boolean} [isFullwidth = false] - Whether or not the select should take up the full width of the parent element.
  * @param {boolean} [noDefault = false] - shows Select One with empty value as first option
  * @param {Func} [onChange] - The action to take once the user has selected an item. This method will be passed the `value` of the select.
+ * @param {string} [ariaLabel] - pass when label is defined elsewhere to ensure the select input has a valid label
  */
 
 export default Component.extend({
@@ -35,4 +41,5 @@ export default Component.extend({
   isFullwidth: false,
   noDefault: false,
   onChange() {},
+  ariaLabel: null,
 });

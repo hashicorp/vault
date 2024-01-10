@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
@@ -207,13 +212,6 @@ export default Component.extend(TRANSIT_PARAMS, {
     clearParams(params) {
       const arr = Array.isArray(params) ? params : [params];
       arr.forEach((param) => this.set(param, null));
-    },
-
-    toggleModal(successMessage) {
-      if (!!successMessage && typeof successMessage === 'string') {
-        this.flashMessages.success(successMessage);
-      }
-      this.toggleProperty('isModalActive');
     },
 
     doSubmit(data, options = {}, maybeEvent) {

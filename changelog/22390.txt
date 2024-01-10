@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes text readability issue in revoke token confirmation dialog
+```

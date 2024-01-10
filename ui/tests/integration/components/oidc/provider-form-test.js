@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -12,6 +17,7 @@ import {
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -44,6 +50,16 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should save new provider', async function (assert) {
@@ -64,7 +80,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     assert
       .dom('[data-test-oidc-provider-title]')
-      .hasText('Create provider', 'Form title renders correct text');
+      .hasText('Create Provider', 'Form title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Create', 'Save button has correct text');
     assert
       .dom('[data-test-input="issuer"]')
@@ -127,7 +143,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-provider-title]').hasText('Edit provider', 'Title renders correct text');
+    assert.dom('[data-test-oidc-provider-title]').hasText('Edit Provider', 'Title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert
@@ -219,6 +235,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

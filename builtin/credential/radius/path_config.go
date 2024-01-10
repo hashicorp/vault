@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package radius
 
 import (
@@ -12,6 +15,12 @@ import (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRadius,
+			Action:          "Configure",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"host": {
 				Type:        framework.TypeString,
@@ -35,9 +44,10 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": {
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: empty)",
+				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policies for unregistered users",
+					Name:        "Policies for unregistered users",
+					Description: "List of policies to grant upon successful RADIUS authentication of an unregistered user (default: empty)",
 				},
 			},
 			"dial_timeout": {
@@ -77,17 +87,29 @@ func pathConfig(b *backend) *framework.Path {
 
 		ExistenceCheck: b.configExistenceCheck,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigCreateUpdate,
-			logical.UpdateOperation: b.pathConfigCreateUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "configuration",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
 		HelpDescription: pathConfigHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

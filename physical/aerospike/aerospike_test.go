@@ -1,18 +1,27 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aerospike
 
 import (
 	"context"
+	"math/bits"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	aero "github.com/aerospike/aerospike-client-go/v5"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func TestAerospikeBackend(t *testing.T) {
+	if bits.UintSize == 32 {
+		t.Skip("Aerospike storage is only supported on 64-bit architectures")
+	}
 	cleanup, config := prepareAerospikeContainer(t)
 	defer cleanup()
 
@@ -40,6 +49,11 @@ type aerospikeConfig struct {
 }
 
 func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/aerospike/aerospike-server",
 		ContainerName: "aerospikedb",

@@ -1,21 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
-import { parseRFC3339 } from 'core/utils/date-formatters';
 import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';
+import timestamp from 'core/utils/timestamp';
 export default class ActivitySerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    const response_timestamp = formatISO(new Date());
+    const response_timestamp = formatISO(timestamp.now());
     const transformedPayload = {
       ...payload,
       response_timestamp,
       by_namespace: formatByNamespace(payload.data.by_namespace),
       by_month: formatByMonths(payload.data.months),
       total: homogenizeClientNaming(payload.data.total),
-      formatted_end_time: parseRFC3339(payload.data.end_time),
-      formatted_start_time: parseRFC3339(payload.data.start_time),
     };
     delete payload.data.by_namespace;
     delete payload.data.months;
@@ -23,7 +26,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
-/* 
+/*
 SAMPLE PAYLOAD BEFORE/AFTER:
 
 payload.data.by_namespace = [

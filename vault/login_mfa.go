@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -69,6 +72,12 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "mfa/validate",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "mfa",
+				OperationVerb:   "validate",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"mfa_request_id": {
 					Type:        framework.TypeString,
@@ -83,7 +92,12 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  b.Core.loginMFABackend.handleMFALoginValidate,
+					Callback: b.Core.loginMFABackend.handleMFALoginValidate,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
 					Summary:                   "Validates the login for the given MFA methods. Upon successful validation, it returns an auth response containing the client token",
 					ForwardPerformanceStandby: true,
 				},
@@ -92,8 +106,14 @@ func (b *SystemBackend) loginMFAPaths() []*framework.Path {
 	}
 }
 
-func genericOptionalUUIDRegex(name string) string {
-	return fmt.Sprintf("(/(?P<%s>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?", name)
+// uuidRegex crafts a regex for use in URL paths, somewhat similar to framework.GenericNameRegex, but only accepting
+// UUIDs, and only lowercase UUIDs at that.
+// It is currently exclusively used for the method_id parameter for MFA methods.
+// Think twice before making use of it in any other context, as restricting the valid input in the URL regex results in
+// an "unsupported path" error, given input which does not match the regex, which is a fairly unclear way to report an
+// invalid parameter value, unless the person seeing the error has an excellent understanding of Vault URL routing.
+func uuidRegex(name string) string {
+	return fmt.Sprintf("(?P<%s>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", name)
 }
 
 type MFABackend struct {
@@ -167,22 +187,6 @@ func (b *LoginMFABackend) ResetLoginMFAMemDB() error {
 	return nil
 }
 
-func (i *IdentityStore) handleMFAMethodListTOTP(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypeTOTP)
-}
-
-func (i *IdentityStore) handleMFAMethodListDuo(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypeDuo)
-}
-
-func (i *IdentityStore) handleMFAMethodListOkta(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypeOkta)
-}
-
-func (i *IdentityStore) handleMFAMethodListPingID(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypePingID)
-}
-
 func (i *IdentityStore) handleMFAMethodListGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, "")
 	if err != nil {
@@ -192,29 +196,13 @@ func (i *IdentityStore) handleMFAMethodListGlobal(ctx context.Context, req *logi
 	return logical.ListResponseWithInfo(keys, configInfo), nil
 }
 
-func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodListCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, methodType)
 	if err != nil {
 		return nil, err
 	}
 
 	return logical.ListResponseWithInfo(keys, configInfo), nil
-}
-
-func (i *IdentityStore) handleMFAMethodTOTPRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeTOTP)
-}
-
-func (i *IdentityStore) handleMFAMethodOKTARead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeOkta)
-}
-
-func (i *IdentityStore) handleMFAMethodDuoRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeDuo)
-}
-
-func (i *IdentityStore) handleMFAMethodPingIDRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypePingID)
 }
 
 func (i *IdentityStore) handleMFAMethodReadGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -260,7 +248,7 @@ func (i *IdentityStore) handleMFAMethodReadCommon(ctx context.Context, req *logi
 	}, nil
 }
 
-func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodWriteCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	var err error
 	var mConfig *mfa.Config
 	ns, err := namespace.FromContext(ctx)
@@ -268,7 +256,15 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		return nil, err
 	}
 
-	methodID := d.Get("method_id").(string)
+	// This method handles both the create and update flow. The method_id field is not part of the field schema for the
+	// create flow, so we need to use GetOk in order to not panic.
+	var methodID string
+	methodIDAsInterface, ok := d.GetOk("method_id")
+	if ok {
+		methodID = methodIDAsInterface.(string)
+	}
+
+	methodName := d.Get("method_name").(string)
 
 	b := i.mfaBackend
 	b.mfaLock.Lock()
@@ -286,6 +282,23 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 		}
 	}
 
+	// check if an MFA method configuration exists with that method name
+	if methodName != "" {
+		namedMfaConfig, err := b.MemDBMFAConfigByName(ctx, methodName)
+		if err != nil {
+			return nil, err
+		}
+		if namedMfaConfig != nil {
+			if mConfig == nil {
+				mConfig = namedMfaConfig
+			} else {
+				if mConfig.ID != namedMfaConfig.ID {
+					return nil, fmt.Errorf("a login MFA method configuration with the method name %s already exists", methodName)
+				}
+			}
+		}
+	}
+
 	if mConfig == nil {
 		configID, err := uuid.GenerateUUID()
 		if err != nil {
@@ -296,6 +309,11 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 			Type:        methodType,
 			NamespaceID: ns.ID,
 		}
+	}
+
+	// Updating the method config name
+	if methodName != "" {
+		mConfig.Name = methodName
 	}
 
 	mfaNs, err := i.namespacer.NamespaceByID(ctx, mConfig.NamespaceID)
@@ -366,38 +384,6 @@ func (i *IdentityStore) handleMFAMethodUpdateCommon(ctx context.Context, req *lo
 	} else {
 		return nil, nil
 	}
-}
-
-func (i *IdentityStore) handleMFAMethodTOTPUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypeTOTP)
-}
-
-func (i *IdentityStore) handleMFAMethodOKTAUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypeOkta)
-}
-
-func (i *IdentityStore) handleMFAMethodDuoUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypeDuo)
-}
-
-func (i *IdentityStore) handleMFAMethodPingIDUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypePingID)
-}
-
-func (i *IdentityStore) handleMFAMethodTOTPDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeTOTP)
-}
-
-func (i *IdentityStore) handleMFAMethodOKTADelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeOkta)
-}
-
-func (i *IdentityStore) handleMFAMethodDUODelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeDuo)
-}
-
-func (i *IdentityStore) handleMFAMethodPingIDDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypePingID)
 }
 
 func (i *IdentityStore) handleMFAMethodDeleteCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
@@ -647,6 +633,55 @@ func (b *LoginMFABackend) loginMFAMethodExistenceCheck(eConfig *mfa.MFAEnforceme
 	return aggErr.ErrorOrNil()
 }
 
+// sanitizeMFACredsWithLoginEnforcementMethodIDs updates the MFACred map
+// looping through the matched login enforcement configurations, and
+// replacing MFA method names with MFA method IDs
+func (b *LoginMFABackend) sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx context.Context, mfaCredsMap logical.MFACreds, mfaMethodIDs []string) (logical.MFACreds, error) {
+	sanitizedMfaCreds := make(logical.MFACreds, 0)
+	var multiError *multierror.Error
+	for _, methodID := range mfaMethodIDs {
+		val, ok := mfaCredsMap[methodID]
+		if ok {
+			sanitizedMfaCreds[methodID] = val
+			continue
+		}
+		mConfig, err := b.MemDBMFAConfigByID(methodID)
+		if err != nil {
+			return nil, err
+		}
+		if mConfig == nil {
+			multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA config for method ID %s", methodID))
+			continue
+		}
+
+		// method name in the MFACredsMap should be the method full name,
+		// i.e., namespacePath+name. This is because, a user in a child
+		// namespace can reference an MFA method ID in a parent namespace
+		configNS, err := NamespaceByID(ctx, mConfig.NamespaceID, b.Core)
+		if err != nil {
+			return nil, err
+		}
+		if configNS != nil {
+			val, ok = mfaCredsMap[configNS.Path+mConfig.Name]
+			if ok {
+				sanitizedMfaCreds[mConfig.ID] = val
+			} else {
+				multiError = multierror.Append(multiError, fmt.Errorf("failed to find MFA credentials associated with an MFA method ID %v, method name %v", methodID, configNS.Path+mConfig.Name))
+			}
+		} else {
+			multiError = multierror.Append(multiError, fmt.Errorf("failed to find the namespace associated with an MFA method ID %v", mConfig.ID))
+		}
+	}
+
+	// we don't need to find every MFA method identifiers in the MFA header
+	// So, don't return errors if that is the case.
+	if len(sanitizedMfaCreds) > 0 {
+		return sanitizedMfaCreds, nil
+	}
+
+	return sanitizedMfaCreds, multiError
+}
+
 func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logical.Request, d *framework.FieldData) (retResp *logical.Response, retErr error) {
 	// mfaReqID is the ID of the login request
 	mfaReqID := d.Get("mfa_request_id").(string)
@@ -655,13 +690,13 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	// a map of methodID to passcode
-	methodIDToPasscodeInterface := d.Get("mfa_payload")
-	if methodIDToPasscodeInterface == nil {
+	mfaPayload := d.Get("mfa_payload")
+	if mfaPayload == nil {
 		return logical.ErrorResponse("missing mfa payload"), nil
 	}
 
 	var mfaCreds logical.MFACreds
-	err := mapstructure.Decode(methodIDToPasscodeInterface, &mfaCreds)
+	err := mapstructure.Decode(mfaPayload, &mfaCreds)
 	if err != nil {
 		return logical.ErrorResponse("invalid mfa payload"), nil
 	}
@@ -756,12 +791,17 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 		return nil, fmt.Errorf("namespace not found: %w", err)
 	}
 
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
+
 	// The request successfully authenticated itself. Run the quota checks on
 	// the original login request path before creating the token.
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),
-		Role:          c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx),
+		Role:          role,
 		NamespacePath: ns.Path,
 	})
 
@@ -781,7 +821,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, loginRequestData)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, role, resp)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
@@ -1574,11 +1614,19 @@ func parseOktaConfig(mConfig *mfa.Config, d *framework.FieldData) error {
 }
 
 func (c *Core) validateLoginMFA(ctx context.Context, eConfig *mfa.MFAEnforcementConfig, entity *identity.Entity, requestConnRemoteAddr string, mfaCredsMap logical.MFACreds) error {
+	sanitizedMfaCreds, err := c.loginMFABackend.sanitizeMFACredsWithLoginEnforcementMethodIDs(ctx, mfaCredsMap, eConfig.MFAMethodIDs)
+	if err != nil {
+		return fmt.Errorf("failed to sanitize MFA creds, %w", err)
+	}
+	if len(sanitizedMfaCreds) == 0 && len(eConfig.MFAMethodIDs) > 0 {
+		return fmt.Errorf("login MFA validation failed for methodID: %v", eConfig.MFAMethodIDs)
+	}
+
 	var retErr error
 	for _, methodID := range eConfig.MFAMethodIDs {
 		// as configID is the same as methodID, and methodID is unique, we can
 		// use it to retrieve the MFACreds
-		mfaCreds, ok := mfaCredsMap[methodID]
+		mfaCreds, ok := sanitizedMfaCreds[methodID]
 		if !ok || mfaCreds == nil {
 			continue
 		}
@@ -1634,6 +1682,11 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 		}
 	}
 
+	mfaFactors, err := parseMfaFactors(mfaCreds)
+	if err != nil {
+		return fmt.Errorf("failed to parse MFA factor, %w", err)
+	}
+
 	switch mConfig.Type {
 	case mfaMethodTypeTOTP:
 		// Get the MFA secret data required to validate the supplied credentials
@@ -1645,17 +1698,13 @@ func (c *Core) validateLoginMFAInternal(ctx context.Context, methodID string, en
 			return fmt.Errorf("MFA secret for method name %q not present in entity %q", mConfig.Name, entity.ID)
 		}
 
-		if mfaCreds == nil {
-			return fmt.Errorf("MFA credentials not supplied")
-		}
-
-		return c.validateTOTP(ctx, mfaCreds, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
+		return c.validateTOTP(ctx, mfaFactors, entityMFASecret, mConfig.ID, entity.ID, c.loginMFABackend.usedCodes, mConfig.GetTOTPConfig().MaxValidationAttempts)
 
 	case mfaMethodTypeOkta:
 		return c.validateOkta(ctx, mConfig, finalUsername)
 
 	case mfaMethodTypeDuo:
-		return c.validateDuo(ctx, mfaCreds, mConfig, finalUsername, reqConnectionRemoteAddress)
+		return c.validateDuo(ctx, mfaFactors, mConfig, finalUsername, reqConnectionRemoteAddress)
 
 	case mfaMethodTypePingID:
 		return c.validatePingID(ctx, mConfig, finalUsername)
@@ -1693,7 +1742,8 @@ ECONFIG_LOOP:
 		if err != nil {
 			return nil, fmt.Errorf("failed to find the MFAEnforcementConfig namespace")
 		}
-		if eConfig == nil || (eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS)) {
+
+		if eConfig == nil || eConfigNS == nil || (eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS)) {
 			continue
 		}
 
@@ -1764,23 +1814,56 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	return username
 }
 
-func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
+type MFAFactor struct {
+	passcode string
+}
+
+func parseMfaFactors(creds []string) (*MFAFactor, error) {
+	mfaFactor := &MFAFactor{}
+
+	for _, cred := range creds {
+		switch {
+		case cred == "": // for the case of push notification
+			continue
+		case strings.HasPrefix(cred, "passcode="):
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
+
+			splits := strings.SplitN(cred, "=", 2)
+			if splits[1] == "" {
+				return nil, fmt.Errorf("invalid passcode")
+			}
+
+			mfaFactor.passcode = splits[1]
+		case strings.Contains(cred, "="):
+			return nil, fmt.Errorf("found an invalid MFA cred: %v", cred)
+		default:
+			// a non-empty cred that does not match the above
+			// means it is a passcode
+			if mfaFactor.passcode != "" {
+				return nil, fmt.Errorf("found multiple passcodes for the same MFA method")
+			}
+			mfaFactor.passcode = cred
+		}
+	}
+
+	if mfaFactor.passcode == "" {
+		return nil, nil
+	}
+
+	return mfaFactor, nil
+}
+
+func (c *Core) validateDuo(ctx context.Context, mfaFactors *MFAFactor, mConfig *mfa.Config, username, reqConnectionRemoteAddr string) error {
 	duoConfig := mConfig.GetDuoConfig()
 	if duoConfig == nil {
 		return fmt.Errorf("failed to get Duo configuration for method %q", mConfig.Name)
 	}
 
-	passcode := ""
-	for _, cred := range creds {
-		if strings.HasPrefix(cred, "passcode") {
-			splits := strings.SplitN(cred, "=", 2)
-			if len(splits) != 2 {
-				return fmt.Errorf("invalid credential %q", cred)
-			}
-			if splits[0] == "passcode" {
-				passcode = splits[1]
-			}
-		}
+	var passcode string
+	if mfaFactors != nil {
+		passcode = mfaFactors.passcode
 	}
 
 	client := duoapi.NewDuoApi(
@@ -1846,6 +1929,7 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		}
 	}
 
+	options = append(options, authapi.AuthIpAddr(reqConnectionRemoteAddr))
 	options = append(options, authapi.AuthUsername(username))
 	options = append(options, authapi.AuthAsync())
 
@@ -1880,11 +1964,13 @@ func (c *Core) validateDuo(ctx context.Context, creds []string, mConfig *mfa.Con
 		case "allow":
 			return nil
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("duo push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2009,11 +2095,13 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 		default:
 			return fmt.Errorf("unknown status code")
 		}
+		timer := time.NewTimer(time.Second)
 
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("push verification operation canceled")
-		case <-time.After(time.Second):
+		case <-timer.C:
 		}
 	}
 }
@@ -2229,21 +2317,18 @@ func (c *Core) validatePingID(ctx context.Context, mConfig *mfa.Config, username
 	return nil
 }
 
-func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
-	if len(creds) == 0 {
-		return fmt.Errorf("missing TOTP passcode")
+func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMethodSecret *mfa.Secret, configID, entityID string, usedCodes *cache.Cache, maximumValidationAttempts uint32) error {
+	if mfaFactors == nil || mfaFactors.passcode == "" {
+		return fmt.Errorf("MFA credentials not supplied")
 	}
-
-	if len(creds) > 1 {
-		return fmt.Errorf("more than one TOTP passcode supplied")
-	}
+	passcode := mfaFactors.passcode
 
 	totpSecret := entityMethodSecret.GetTOTPSecret()
 	if totpSecret == nil {
 		return fmt.Errorf("entity does not contain the TOTP secret")
 	}
 
-	usedName := fmt.Sprintf("%s_%s", configID, creds[0])
+	usedName := fmt.Sprintf("%s_%s", configID, passcode)
 
 	_, ok := usedCodes.Get(usedName)
 	if ok {
@@ -2290,7 +2375,7 @@ func (c *Core) validateTOTP(ctx context.Context, creds []string, entityMethodSec
 		Algorithm: otplib.Algorithm(int(totpSecret.Algorithm)),
 	}
 
-	valid, err := totplib.ValidateCustom(creds[0], key, time.Now(), validateOpts)
+	valid, err := totplib.ValidateCustom(passcode, key, time.Now(), validateOpts)
 	if err != nil && err != otplib.ErrValidateInputInvalidLength {
 		return errwrap.Wrapf("failed to validate TOTP passcode: {{err}}", err)
 	}
@@ -2338,6 +2423,21 @@ func loginMFAConfigTableSchema() *memdb.TableSchema {
 				Unique: false,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "Type",
+				},
+			},
+			"name": {
+				Name:         "name",
+				Unique:       true,
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "Name",
+						},
+					},
 				},
 			},
 		},
@@ -2487,6 +2587,47 @@ func (b *LoginMFABackend) MemDBMFAConfigByID(mConfigID string) (*mfa.Config, err
 	return b.MemDBMFAConfigByIDInTxn(txn, mConfigID)
 }
 
+func (b *LoginMFABackend) MemDBMFAConfigByNameInTxn(ctx context.Context, txn *memdb.Txn, mConfigName string) (*mfa.Config, error) {
+	if mConfigName == "" {
+		return nil, fmt.Errorf("missing config name")
+	}
+
+	if txn == nil {
+		return nil, fmt.Errorf("txn is nil")
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	mConfigRaw, err := txn.First(b.methodTable, "name", ns.ID, mConfigName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch MFA config from memdb using name: %w", err)
+	}
+
+	if mConfigRaw == nil {
+		return nil, nil
+	}
+
+	mConfig, ok := mConfigRaw.(*mfa.Config)
+	if !ok {
+		return nil, fmt.Errorf("failed to declare the type of fetched MFA config")
+	}
+
+	return mConfig.Clone()
+}
+
+func (b *LoginMFABackend) MemDBMFAConfigByName(ctx context.Context, name string) (*mfa.Config, error) {
+	if name == "" {
+		return nil, fmt.Errorf("missing config name")
+	}
+
+	txn := b.db.Txn(false)
+
+	return b.MemDBMFAConfigByNameInTxn(ctx, txn, name)
+}
+
 func (b *LoginMFABackend) MemDBMFALoginEnforcementConfigByNameAndNamespace(name, namespaceId string) (*mfa.MFAEnforcementConfig, error) {
 	if name == "" {
 		return nil, fmt.Errorf("missing config name")
@@ -2539,6 +2680,10 @@ func (b *LoginMFABackend) deleteMFALoginEnforcementConfigByNameAndNamespace(ctx 
 	eConfig, err := b.MemDBMFALoginEnforcementConfigByNameAndNamespace(name, namespaceId)
 	if err != nil {
 		return err
+	}
+
+	if eConfig == nil {
+		return nil
 	}
 
 	entryIndex := mfaLoginEnforcementPrefix + eConfig.ID

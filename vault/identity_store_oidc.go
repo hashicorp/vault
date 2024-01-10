@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -17,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -29,8 +34,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/crypto/ed25519"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 type oidcConfig struct {
@@ -105,6 +108,7 @@ var errNilNamespace = errors.New("nil namespace in oidc cache request")
 const (
 	issuerPath           = "identity/oidc"
 	oidcTokensPrefix     = "oidc_tokens/"
+	namedKeyCachePrefix  = "namedKeys/"
 	oidcConfigStorageKey = oidcTokensPrefix + "config/"
 	namedKeyConfigPath   = oidcTokensPrefix + "named_keys/"
 	publicKeysConfigPath = oidcTokensPrefix + "public_keys/"
@@ -135,21 +139,44 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "oidc/config/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"issuer": {
 					Type:        framework.TypeString,
 					Description: "Issuer URL to be used in the iss claim of the token. If not set, Vault's app_addr will be used.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   i.pathOIDCReadConfig,
-				logical.UpdateOperation: i.pathOIDCUpdateConfig,
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathOIDCReadConfig,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "configuration",
+					},
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathOIDCUpdateConfig,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
+				},
 			},
+
 			HelpSynopsis:    "OIDC configuration",
 			HelpDescription: "Update OIDC configuration in the identity backend",
 		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "key",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -191,6 +218,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/key/" + framework.GenericNameRegex("name") + "/rotate/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "rotate",
+				OperationSuffix: "key",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -209,6 +241,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/key/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "keys",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListKey,
 			},
@@ -216,7 +252,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all named OIDC keys",
 		},
 		{
-			Pattern: "oidc/.well-known/openid-configuration/?$",
+			Pattern: "oidc/\\.well-known/openid-configuration/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "open-id-configuration",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCDiscovery,
 			},
@@ -224,7 +264,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/.well-known/keys/?$",
+			Pattern: "oidc/\\.well-known/keys/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "public-keys",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: i.pathOIDCReadPublicKeys,
 			},
@@ -233,6 +277,11 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/token/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "generate",
+				OperationSuffix: "token",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -247,6 +296,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/role/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "role",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -283,6 +336,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/role/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationSuffix: "roles",
+			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathOIDCListRole,
 			},
@@ -291,6 +348,10 @@ func oidcPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/introspect/?$",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "oidc",
+				OperationVerb:   "introspect",
+			},
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
@@ -923,7 +984,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Attempt to get the key from the cache
-	keyRaw, found, err := i.oidcCache.Get(ns, "namedKeys/"+name)
+	keyRaw, found, err := i.oidcCache.Get(ns, namedKeyCachePrefix+name)
 	if err != nil {
 		return nil, err
 	}
@@ -945,7 +1006,7 @@ func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name
 	}
 
 	// Cache the key
-	if err := i.oidcCache.SetDefault(ns, "namedKeys/"+name, &key); err != nil {
+	if err := i.oidcCache.SetDefault(ns, namedKeyCachePrefix+name, &key); err != nil {
 		i.logger.Warn("failed to cache key", "error", err)
 	}
 
@@ -1114,6 +1175,12 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 
 	if role.Key == "" {
 		return logical.ErrorResponse("the key parameter is required"), nil
+	}
+
+	if role.Key == defaultKeyName {
+		if err := i.lazyGenerateDefaultKey(ctx, req.Storage); err != nil {
+			return nil, fmt.Errorf("failed to generate default key: %w", err)
+		}
 	}
 
 	if template, ok := d.GetOk("template"); ok {

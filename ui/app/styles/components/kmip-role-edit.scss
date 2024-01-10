@@ -1,8 +1,8 @@
-.kmip-allowed-operations-header {
-  @extend .title;
-  @extend .is-6;
-  padding-left: $spacing-s;
-}
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .kmip-role-allowed-operations {
   @extend .box;
   flex: 1 1 auto;
@@ -10,5 +10,5 @@
   padding: 0;
 }
 .kmip-role-allowed-operations .field {
-  margin-bottom: $spacing-xxs;
+  margin-bottom: $spacing-4;
 }

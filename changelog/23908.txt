@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Updates OIDC/JWT login error handling to surface all role related errors
+```

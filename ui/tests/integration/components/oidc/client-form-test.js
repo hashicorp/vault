@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -13,6 +18,7 @@ import {
   overrideMirageResponse,
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const searchSelect = create(ss);
 
@@ -56,6 +62,17 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         },
       };
     });
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        'color-contrast': { enabled: false },
+      },
+    });
   });
 
   test('it should save new client', async function (assert) {
@@ -78,7 +95,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await click('[data-test-toggle-group="More options"]');
     assert
       .dom('[data-test-oidc-client-title]')
-      .hasText('Create application', 'Form title renders correct text');
+      .hasText('Create Application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
     assert.strictEqual(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     assert
@@ -141,7 +158,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
     await click('[data-test-toggle-group="More options"]');
-    assert.dom('[data-test-oidc-client-title]').hasText('Edit application', 'Title renders correct text');
+    assert.dom('[data-test-oidc-client-title]').hasText('Edit Application', 'Title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-app', 'Name input is populated with model value');
@@ -203,16 +220,15 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
-      <div id="modal-wormhole"></div>
-    `);
+          `);
     await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
-    assert.dom('[data-test-modal-div]').hasClass('is-active', 'modal with form opens');
+    assert.dom('#search-select-modal').exists('modal with form opens');
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
     await click(SELECTORS.assignmentCancelButton);
-    assert.dom('[data-test-modal-div]').doesNotExist('modal disappears onCancel');
+    assert.dom('#search-select-modal').doesNotExist('modal disappears onCancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
@@ -249,6 +265,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

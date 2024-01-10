@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -80,6 +85,10 @@ type Response struct {
 	// Headers will contain the http headers from the plugin that it wishes to
 	// have as part of the output
 	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
+
+	// MountType, if non-empty, provides some information about what kind
+	// of mount this secret came from.
+	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 }
 
 // AddWarning adds a warning into the response's warning list
@@ -240,6 +249,13 @@ func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*Custom
 		StatusCode:  200,
 		headers:     h,
 	}
+}
+
+func (w *StatusHeaderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := w.wrapped.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("could not hijack because wrapped connection is %T and it does not implement http.Hijacker", w.wrapped)
 }
 
 func (w *StatusHeaderResponseWriter) Wrapped() http.ResponseWriter {

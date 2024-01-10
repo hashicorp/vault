@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
 
@@ -6,10 +11,7 @@ export default RESTSerializer.extend({
 
   serializeAttribute(snapshot, json, key, attributes) {
     // Don't send values that are undefined
-    if (
-      undefined !== snapshot.attr(key) &&
-      (snapshot.record.get('isNew') || snapshot.changedAttributes()[key])
-    ) {
+    if (undefined !== snapshot.attr(key)) {
       this._super(snapshot, json, key, attributes);
     }
   },

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -38,7 +41,7 @@ const (
 
 	// undoLogSafeVersion is the minimum version Vault must be at in order
 	// for undo logs to be turned on.
-	undoLogSafeVersion = "1.12.0-rc1"
+	undoLogSafeVersion = "1.12.0"
 )
 
 var (
@@ -46,9 +49,6 @@ var (
 	raftTLSRotationPeriod = 24 * time.Hour
 
 	raftAutopilotConfigurationStoragePath = "core/raft/autopilot/configuration"
-
-	// TestingUpdateClusterAddr is used in tests to override the cluster address
-	TestingUpdateClusterAddr uint32
 
 	ErrJoinWithoutAutoloading = errors.New("attempt to join a cluster using autoloaded licenses while not using autoloading ourself")
 )
@@ -67,7 +67,10 @@ func (c *Core) GetRaftNodeID() string {
 func (c *Core) GetRaftIndexes() (committed uint64, applied uint64) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
+	return c.GetRaftIndexesLocked()
+}
 
+func (c *Core) GetRaftIndexesLocked() (committed uint64, applied uint64) {
 	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
 	if !ok {
 		return 0, 0
@@ -195,7 +198,15 @@ func (c *Core) monitorUndoLogs() error {
 	}
 
 	if persisted {
+		c.EnableUndoLogs()
 		logger.Debug("undo logs are safe, no need to check any more")
+		return nil
+	}
+
+	// If undo logs have been explicitly enabled, likely via VAULT_REPLICATION_USE_UNDO_LOGS, then exit, as presumably
+	// we don't want to be checking for safety if we already know it's safe.
+	if c.UndoLogsEnabled() {
+		logger.Debug("undo logs have been explicitly enabled. exiting monitor.")
 		return nil
 	}
 
@@ -282,7 +293,7 @@ func (c *Core) monitorUndoLogs() error {
 					continue
 				}
 
-				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker loop.")
+				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker.")
 				return
 			}
 		}
@@ -300,14 +311,6 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 	c.logger.Info("starting raft active node")
 	raftBackend.SetEffectiveSDKVersion(c.effectiveSDKVersion)
 
-	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
-	if err != nil {
-		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
-	}
-	disableAutopilot := c.disableAutopilot
-
-	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
-
 	c.pendingRaftPeers = &sync.Map{}
 
 	// Reload the raft TLS keys to ensure we are using the latest version.
@@ -315,12 +318,23 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
-	if c.UndoLogsEnabled() {
-		if err := c.monitorUndoLogs(); err != nil {
-			return err
-		}
+	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
+	// will monitor for safety until they are enabled.
+	if err := c.monitorUndoLogs(); err != nil {
+		return err
 	}
-	return c.startPeriodicRaftTLSRotate(ctx)
+
+	if err := c.startPeriodicRaftTLSRotate(ctx); err != nil {
+		return err
+	}
+
+	autopilotConfig, err := c.loadAutopilotConfiguration(ctx)
+	if err != nil {
+		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+	}
+	disableAutopilot := c.disableAutopilot
+	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
+	return nil
 }
 
 func (c *Core) stopRaftActiveNode() {
@@ -426,8 +440,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -439,6 +454,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}
@@ -790,8 +806,8 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 		if err != nil {
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
-			switch c.seal.BarrierType() {
-			case wrapping.WrapperTypeShamir:
+			switch c.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -935,8 +951,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType().String() {
-		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
+	if sealConfig.Type != c.seal.BarrierSealConfigType().String() {
+		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
 
 	challengeB64, ok := secret.Data["challenge"]
@@ -1044,7 +1060,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !c.isRaftHAOnly() {
 			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
@@ -1067,7 +1083,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
+		if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && !isRaftHAOnly {
 			// Reset the state
 			c.raftInfo.Store((*raftInformation)(nil))
 
@@ -1227,6 +1243,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 	return ret, nil
 }
 
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
+}
+
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
 // in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
@@ -1251,7 +1272,7 @@ func (c *Core) isRaftHAOnly() bool {
 	return isRaftHA && !isRaftStorage
 }
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}
@@ -1265,7 +1286,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
+	multiWrapValue := &seal.MultiWrapValue{
+		Generation: sealAccess.Generation(),
+		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
+	}
+	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		return fmt.Errorf("error decrypting challenge: %w", err)
 	}
@@ -1275,7 +1300,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return fmt.Errorf("error parsing cluster address: %w", err)
 	}
 	clusterAddr := parsedClusterAddr.Host
-	if atomic.LoadUint32(&TestingUpdateClusterAddr) == 1 && strings.HasSuffix(clusterAddr, ":0") {
+	if c.clusterAddrBridge != nil && strings.HasSuffix(clusterAddr, ":0") {
 		// We are testing and have an address provider, so just create a random
 		// addr, it will be overwritten later.
 		var err error
@@ -1308,7 +1333,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, 
 		return err
 	}
 
-	if answerResp.Data.AutoloadedLicense && !LicenseAutoloaded(c) {
+	if answerResp.Data.AutoloadedLicense && !c.entIsLicenseAutoloaded() {
 		return ErrJoinWithoutAutoloading
 	}
 	if err := raftBackend.Bootstrap(answerResp.Data.Peers); err != nil {

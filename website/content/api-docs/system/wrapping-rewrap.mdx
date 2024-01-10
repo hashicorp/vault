@@ -11,7 +11,7 @@ description: >-
 The `/sys/wrapping/rewrap` endpoint can be used to rotate a wrapping token and
 refresh its TTL.
 
-## Wrapping Rewrap
+## Wrapping rewrap
 
 This endpoint rewraps a response-wrapped token. The new token will use the same
 creation TTL as the original token and contain the same response. The old token
@@ -26,7 +26,7 @@ response-wrapped token when rotation is a requirement.
 
 - `token` `(string: <required>)` – Specifies the wrapping token ID.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -34,7 +34,7 @@ response-wrapped token when rotation is a requirement.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -44,7 +44,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/wrapping/rewrap
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

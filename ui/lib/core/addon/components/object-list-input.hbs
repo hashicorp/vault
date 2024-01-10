@@ -1,0 +1,65 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{yield}}
+{{#each this.inputList as |row index|}}
+  {{#let (get @validationErrors index) as |rowValidations|}}
+    <div class="columns">
+      {{#each-in row as |inputKey value|}}
+        {{#let (find-by "key" inputKey @objectKeys) as |field|}}
+          <div class="column">
+            {{#if (eq index 0)}}
+              <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
+            {{/if}}
+            {{#let (get rowValidations field.key) as |inputError|}}
+              <Input
+                data-test-object-list-input="{{field.key}}-{{index}}"
+                aria-label="{{or field.placeholder field.label}} input for row index {{index}}"
+                class="input {{if (and (not inputError.isValid) inputError.errors) 'has-error-border'}}"
+                placeholder={{or field.placeholder ""}}
+                @type="text"
+                @value={{value}}
+                name={{field.key}}
+                id="{{field.key}}-{{index}}"
+                {{on "input" (fn this.handleInput index)}}
+              />
+              {{#if (and (not inputError.isValid) inputError.errors)}}
+                <Hds::Alert class="has-top-margin-xxs" @type="compact" @color="critical" as |A|>
+                  <A.Description>
+                    {{inputError.errors}}
+                  </A.Description>
+                </Hds::Alert>
+              {{/if}}
+            {{/let}}
+          </div>
+        {{/let}}
+      {{/each-in}}
+      <div class="column is-1">
+        {{#if (eq index 0)}}
+          <br />
+        {{/if}}
+        {{#if (eq (inc index) this.inputList.length)}}
+          <Hds::Button
+            data-test-object-list-add-button
+            @text="Add"
+            disabled={{this.disableAdd}}
+            {{on "click" this.addRow}}
+            @isFullWidth={{true}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="delete row"
+            @icon="trash"
+            @color="secondary"
+            @isIconOnly={{true}}
+            @isFullWidth={{true}}
+            {{on "click" (fn this.removeRow index)}}
+            data-test-object-list-delete-button={{index}}
+          />
+        {{/if}}
+      </div>
+    </div>
+  {{/let}}
+{{/each}}

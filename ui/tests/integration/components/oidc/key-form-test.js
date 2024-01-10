@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -11,6 +16,7 @@ import {
   overrideMirageResponse,
   overrideCapabilities,
 } from 'vault/tests/helpers/oidc-config';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -27,6 +33,16 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    setRunOptions({
+      rules: {
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+      },
+    });
   });
 
   test('it should save new key', async function (assert) {
@@ -45,7 +61,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Create key', 'Form title renders correct text');
+    assert.dom('[data-test-oidc-key-title]').hasText('Create Key', 'Form title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
@@ -90,7 +106,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-key-title]').hasText('Edit key', 'Title renders correct text');
+    assert.dom('[data-test-oidc-key-title]').hasText('Edit Key', 'Title renders correct text');
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
@@ -199,6 +215,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

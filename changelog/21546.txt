@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Avoid printing "Success" message when `-field` flag is provided during a `vault write`.
+```

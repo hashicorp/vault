@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/github: Allow for an optional Github auth token environment variable to make authenticated requests when fetching org id
+website/docs: Add docs for `VAULT_AUTH_CONFIG_GITHUB_TOKEN` environment variable when writing Github config
+```

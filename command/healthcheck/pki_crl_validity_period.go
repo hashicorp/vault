@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package healthcheck
 
 import (
@@ -169,7 +172,7 @@ func (h *CRLValidityPeriod) Evaluate(e *Executor) (results []*Result, err error)
 			ret.Status = ResultCritical
 			ret.Message = fmt.Sprintf("CRL's validity is outside of suggested rotation window: CRL's next update is expected at %v, but expires within %v%% of validity window (starting on %v and ending on %v). It is suggested to rotate this CRL and start propagating it to hosts to avoid any issues caused by stale CRLs.", crl.NextUpdate.Format("2006-01-02"), h.CRLExpiryPercentage, crl.ThisUpdate.Format("2006-01-02"), expWhen.Format("2006-01-02"))
 
-			if crlDisabled == true {
+			if crlDisabled {
 				ret.Status = ResultInformational
 				ret.Message += " Because the CRL is disabled, this is less of a concern."
 			}
@@ -192,7 +195,7 @@ func (h *CRLValidityPeriod) Evaluate(e *Executor) (results []*Result, err error)
 			ret.Status = ResultCritical
 			ret.Message = fmt.Sprintf("Delta CRL's validity is outside of suggested rotation window: Delta CRL's next update is expected at %v, but expires within %v%% of validity window (starting on %v and ending on %v). It is suggested to rotate this Delta CRL and start propagating it to hosts to avoid any issues caused by stale CRLs.", crl.NextUpdate.Format("2006-01-02"), h.CRLExpiryPercentage, crl.ThisUpdate.Format("2006-01-02"), expWhen.Format("2006-01-02"))
 
-			if crlDisabled == true {
+			if crlDisabled {
 				ret.Status = ResultInformational
 				ret.Message += " Because the CRL is disabled, this is less of a concern."
 			}

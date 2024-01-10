@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package healthcheck
 
 import (
@@ -12,6 +15,7 @@ type AllowIfModifiedSince struct {
 	UnsupportedVersion bool
 
 	TuneData map[string]interface{}
+	Fetcher  *PathFetch
 }
 
 func NewAllowIfModifiedSinceCheck() Check {
@@ -42,15 +46,16 @@ func (h *AllowIfModifiedSince) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *AllowIfModifiedSince) FetchResources(e *Executor) error {
-	exit, _, data, err := fetchMountTune(e, func() {
+	var exit bool
+	var err error
+
+	exit, h.Fetcher, h.TuneData, err = fetchMountTune(e, func() {
 		h.UnsupportedVersion = true
 	})
-	if exit {
+
+	if exit || err != nil {
 		return err
 	}
-
-	h.TuneData = data
-
 	return nil
 }
 
@@ -59,22 +64,39 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 		ret := Result{
 			Status:   ResultInvalidVersion,
 			Endpoint: "/sys/mounts/{{mount}}/tune",
-			Message:  "This health check requires Vault 1.9+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
+			Message:  "This health check requires Vault 1.12+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
 		}
 		return []*Result{&ret}, nil
 	}
 
-	req, err := stringList(h.TuneData["passthrough_request_headers"])
+	if h.Fetcher.IsSecretPermissionsError() {
+		ret := Result{
+			Status:   ResultInsufficientPermissions,
+			Endpoint: "/sys/mounts/{{mount}}/tune",
+			Message:  "Without this information, this health check is unable to function.",
+		}
+
+		if e.Client.Token() == "" {
+			ret.Message = "No token available so unable read the tune endpoint for this mount. " + ret.Message
+		} else {
+			ret.Message = "This token lacks permission to read the tune endpoint for this mount. " + ret.Message
+		}
+
+		results = append(results, &ret)
+		return
+	}
+
+	req, err := StringList(h.TuneData["passthrough_request_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for passthrough_request_headers: %w", err)
 	}
 
-	resp, err := stringList(h.TuneData["allowed_response_headers"])
+	resp, err := StringList(h.TuneData["allowed_response_headers"])
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse value from server for allowed_response_headers: %w", err)
 	}
 
-	var foundIMS bool = false
+	foundIMS := false
 	for _, param := range req {
 		if strings.EqualFold(param, "If-Modified-Since") {
 			foundIMS = true
@@ -82,7 +104,7 @@ func (h *AllowIfModifiedSince) Evaluate(e *Executor) (results []*Result, err err
 		}
 	}
 
-	var foundLM bool = false
+	foundLM := false
 	for _, param := range resp {
 		if strings.EqualFold(param, "Last-Modified") {
 			foundLM = true

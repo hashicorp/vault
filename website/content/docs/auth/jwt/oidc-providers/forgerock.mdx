@@ -29,7 +29,7 @@ description: OIDC provider configuration for ForgeRock
       oidc_discovery_url="https://openam.example.com:8443/openam/oauth2"
    ```
 
-1. Configure the [OIDC Role](/api-docs/auth/jwt) with the following:
+1. Configure the [OIDC Role](/vault/api-docs/auth/jwt) with the following:
   - `user_claim` should be `"sub"`.
   - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
   - `oidc_scopes` should be set to the OIDC scopes.

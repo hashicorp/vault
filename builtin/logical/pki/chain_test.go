@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -13,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -309,6 +313,8 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 }
 
 func ToCertificate(t testing.TB, cert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -323,6 +329,8 @@ func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 }
 
 func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(crl))
 	if block == nil {
 		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)
@@ -568,7 +576,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 			if resp == nil {
 				t.Fatalf("failed to read default issuer config: nil response")
 			}
-			defaultID := resp.Data["default"].(issuerID).String()
+			defaultID := resp.Data["default"].(issuing.IssuerID).String()
 			c.Issuer = defaultID
 			issuer = nil
 		}
@@ -630,7 +638,7 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	if resp == nil {
 		t.Fatalf("failed to read default issuer config: nil response")
 	}
-	defaultID := resp.Data["default"].(issuerID).String()
+	defaultID := resp.Data["default"].(issuing.IssuerID).String()
 
 	resp, err = CBRead(b, s, "issuer/"+c.Issuer)
 	if err != nil {
@@ -639,7 +647,7 @@ func (c CBIssueLeaf) Run(t testing.TB, b *backend, s logical.Storage, knownKeys 
 	if resp == nil {
 		t.Fatalf("failed to read issuer %v: nil response", c.Issuer)
 	}
-	ourID := resp.Data["issuer_id"].(issuerID).String()
+	ourID := resp.Data["issuer_id"].(issuing.IssuerID).String()
 	areDefault := ourID == defaultID
 
 	for _, usage := range []string{"read-only", "crl-signing", "issuing-certificates", "issuing-certificates,crl-signing"} {

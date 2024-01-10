@@ -7,11 +7,26 @@ description: >-
   compares to existing software, and contains a quick start for using Vault.
 ---
 
-## What is Vault?
+# What is Vault?
 
 HashiCorp Vault is an identity-based secrets and encryption management system. A _secret_ is anything that you want to tightly control access to, such as API encryption keys, passwords, and certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
 
-A modern system requires access to a multitude of secrets, including database credentials,
+If you are already familiar with the basics of Vault, the
+[documentation](/vault/docs) provides a better reference guide for all
+available features as well as internals.
+
+## What is Vault?
+
+HashiCorp Vault is an identity-based secrets and encryption management system.
+It provides encryption services that are gated by authentication and authorization 
+methods to ensure secure, auditable and restricted access to _secrets_. 
+It is used to secure, store and protect secrets and other sensitive data using a UI, CLI, or HTTP API.
+
+A secret is anything that you
+want to tightly control access to, such as tokens, API keys, passwords, encryption keys or certificates.
+Vault provides a unified interface to any secret, while providing tight access
+control and recording a detailed audit log.
+
 API keys for external services, credentials for service-oriented architecture
 communication, etc. It can be difficult to understand who is accessing which secrets, especially since this can be platform-specific. Adding on key rolling, secure storage, and
 detailed audit logs is almost impossible without a custom solution. This is
@@ -70,13 +85,13 @@ The key features of Vault are:
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
--> **Tip**: Learn more about Vault [use cases](/docs/use-cases).
+-> **Tip**: Learn more about Vault [use cases](/vault/docs/use-cases).
 
 ### What is HCP Vault?
 
-HashiCorp Cloud Platform (HCP) Vault is a hosted version of Vault, which is operated by HashiCorp to allow organizations to get up and running quickly. HCP Vault uses the same binary as self-hosted Vault, which means you will have a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with a self-hosted Vault. Refer to the [HCP Vault](https://cloud.hashicorp.com/docs/vault) documentation to learn more.
+HashiCorp Cloud Platform (HCP) Vault is a hosted version of Vault, which is operated by HashiCorp to allow organizations to get up and running quickly. HCP Vault uses the same binary as self-hosted Vault, which means you will have a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with a self-hosted Vault. Refer to the [HCP Vault](/hcp/docs/vault) documentation to learn more.
 
--> **Hands On:** Try the [Get started](https://learn.hashicorp.com/collections/vault/cloud) tutorials to set up a managed Vault cluster.
+-> **Hands On:** Try the [Get started](/vault/tutorials/cloud) tutorials to set up a managed Vault cluster.
 
 ### Community
 

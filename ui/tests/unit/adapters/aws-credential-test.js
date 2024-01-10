@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
@@ -46,6 +51,17 @@ module('Unit | Adapter | aws credential', function (hooks) {
     [
       'federation_token type no ttl',
       [storeStub, type, makeSnapshot({ credentialType: 'federation_token', roleArn: 'arn' })],
+      'POST',
+    ],
+    [
+      'session_token type with ttl',
+      [storeStub, type, makeSnapshot({ credentialType: 'session_token', ttl: '3h' })],
+      'POST',
+      { ttl: '3h' },
+    ],
+    [
+      'session_token type no ttl',
+      [storeStub, type, makeSnapshot({ credentialType: 'session_token' })],
       'POST',
     ],
     [

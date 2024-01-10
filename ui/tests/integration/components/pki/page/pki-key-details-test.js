@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-key-details';
+import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-keys';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);
@@ -35,9 +40,9 @@ module('Integration | Component | pki key details page', function (hooks) {
     await render(
       hbs`
         <Page::PkiKeyDetails
-          @key={{this.model}} 
+          @key={{this.model}}
           @canDelete={{true}}
-          @canEdit={{true}} 
+          @canEdit={{true}}
         />
       `,
       { owner: this.engine }
@@ -59,6 +64,23 @@ module('Integration | Component | pki key details page', function (hooks) {
     await render(
       hbs`
         <Page::PkiKeyDetails
+          @key={{this.model}}
+          @canDelete={{false}}
+          @canEdit={{false}}
+        />
+      `,
+      { owner: this.engine }
+    );
+
+    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
+    assert.dom(SELECTORS.keyEditLink).doesNotExist('does not render edit button if no permission');
+  });
+
+  test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {
+    this.model.privateKey = 'private-key-value';
+    await render(
+      hbs`
+        <Page::PkiKeyDetails
           @key={{this.model}} 
           @canDelete={{false}}
           @canEdit={{false}} 
@@ -67,7 +89,6 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
-    assert.dom(SELECTORS.keyEditLink).doesNotExist('does not render edit button if no permission');
+    assert.dom('[data-test-certificate-card]').exists('Certificate card renders for the private key');
   });
 });

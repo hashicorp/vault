@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -53,15 +56,38 @@ type Path struct {
 	// This should be a valid regular expression. Named captures will be
 	// exposed as fields that should map to a schema in Fields. If a named
 	// capture is not a field in the Fields map, then it will be ignored.
+	//
+	// The pattern will automatically have a ^ prepended and a $ appended before
+	// use, if these are not already present, so these may be omitted for clarity.
+	//
+	// If a ListOperation is being defined, the pattern must end with /? to match
+	// a trailing slash optionally, as ListOperations are always processed with a
+	// trailing slash added to the path if not already present. The match must not
+	// require the presence of a trailing slash, as HelpOperations, even for a
+	// path which only implements ListOperation, are processed without a trailing
+	// slash - so failure to make the trailing slash optional will break the
+	// `vault path-help` command for the path.
 	Pattern string
 
 	// Fields is the mapping of data fields to a schema describing that
-	// field. Named captures in the Pattern also map to fields. If a named
-	// capture name matches a PUT body name, the named capture takes
-	// priority.
+	// field.
 	//
-	// Note that only named capture fields are available in every operation,
-	// whereas all fields are available in the Write operation.
+	// Field values are obtained from:
+	//
+	// - Named captures in the Pattern.
+	//
+	// - Parameters in the HTTP request body, for HTTP methods where a
+	//   request body is expected, i.e. PUT/POST/PATCH. The request body is
+	//   typically formatted as JSON, though
+	//   "application/x-www-form-urlencoded" format can also be accepted.
+	//
+	// - Parameters in the HTTP URL query-string, for HTTP methods where
+	//   there is no request body, i.e. GET/LIST/DELETE. The query-string
+	//   is *not* parsed at all for PUT/POST/PATCH requests.
+	//
+	// Should the same field be specified both as a named capture and as
+	// a parameter, the named capture takes precedence, and a warning is
+	// returned.
 	Fields map[string]*FieldSchema
 
 	// Operations is the set of operations supported and the associated OperationsHandler.
@@ -192,6 +218,11 @@ type DisplayAttributes struct {
 	// Name is the name of the field suitable as a label or documentation heading.
 	Name string `json:"name,omitempty"`
 
+	// Description of the field that renders as tooltip help text beside the label (name) in the UI.
+	// This may be used to replace descriptions that reference comma separation but correspond
+	// to UI inputs where only arrays are valid. For example params with Type: framework.TypeCommaStringSlice
+	Description string `json:"description,omitempty"`
+
 	// Value is a sample value to display for this field. This may be used
 	// to indicate a default value, but it is for display only and completely separate
 	// from any Default member handling.
@@ -211,6 +242,28 @@ type DisplayAttributes struct {
 
 	// Action is the verb to use for the operation.
 	Action string `json:"action,omitempty"`
+
+	// OperationPrefix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). OperationPrefix is
+	// typically a human-readable name of the plugin or a prefix shared by
+	// multiple related endpoints.
+	OperationPrefix string `json:"operationPrefix,omitempty"`
+
+	// OperationVerb is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). OperationVerb is typically
+	// an action to be performed (e.g. "generate", "sign", "login", etc.). If
+	// not specified, the verb defaults to `logical.Operation.String()`
+	// (e.g. "read", "list", "delete", "write" for Create/Update)
+	OperationVerb string `json:"operationVerb,omitempty"`
+
+	// OperationSuffix is a hyphenated lower-case string used to construct
+	// OpenAPI OperationID (prefix + verb + suffix). It is typically the name
+	// of the resource on which the action is performed (e.g. "role",
+	// "credentials", etc.). A pipe (|) separator can be used to list different
+	// suffixes for various permutations of the `Path.Pattern` regular
+	// expression. If not specified, the suffix defaults to the `Path.Pattern`
+	// split by dashes.
+	OperationSuffix string `json:"operationSuffix,omitempty"`
 
 	// EditType is the optional type of form field needed for a property
 	// This is only necessary for a "textarea" or "file"
@@ -246,6 +299,7 @@ type PathOperation struct {
 	Deprecated                  bool
 	ForwardPerformanceSecondary bool
 	ForwardPerformanceStandby   bool
+	DisplayAttrs                *DisplayAttributes
 }
 
 func (p *PathOperation) Handler() OperationFunc {
@@ -262,6 +316,7 @@ func (p *PathOperation) Properties() OperationProperties {
 		Deprecated:                  p.Deprecated,
 		ForwardPerformanceSecondary: p.ForwardPerformanceSecondary,
 		ForwardPerformanceStandby:   p.ForwardPerformanceStandby,
+		DisplayAttrs:                p.DisplayAttrs,
 	}
 }
 
@@ -330,7 +385,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			}
 		}
 		doc := NewOASDocument(vaultVersion)
-		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, b.BackendType, doc); err != nil {
+		if err := documentPath(p, b, requestResponsePrefix, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

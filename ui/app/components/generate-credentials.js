@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { computed, set } from '@ember/object';
 import Component from '@ember/component';
@@ -15,18 +20,10 @@ const MODEL_TYPES = {
     title: 'Generate AWS Credentials',
     backIsListLink: true,
   },
-  'pki-issue': {
-    model: 'pki/cert',
-    title: 'Issue Certificate',
-  },
-  'pki-sign': {
-    model: 'pki-certificate-sign',
-    title: 'Sign Certificate',
-  },
 };
 
 export default Component.extend({
-  wizard: service(),
+  controlGroup: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -58,15 +55,10 @@ export default Component.extend({
     this.createOrReplaceModel();
   },
 
-  didReceiveAttrs() {
-    this._super();
-    if (this.wizard.featureState === 'displayRole') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
-    }
-  },
-
   willDestroy() {
-    if (!this.model.isDestroyed && !this.model.isDestroying) {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.unloadRecord();
     }
     this._super(...arguments);
@@ -100,13 +92,19 @@ export default Component.extend({
       this.set('loading', true);
       this.model
         .save()
-        .catch(() => {
-          if (this.wizard.featureState === 'credentials') {
-            this.wizard.transitionFeatureMachine(this.wizard.featureState, 'ERROR', this.backendType);
+        .then(() => {
+          model.set('hasGenerated', true);
+        })
+        .catch((error) => {
+          // Handle control group AdapterError
+          if (error.message === 'Control Group encountered') {
+            this.controlGroup.saveTokenFromError(error);
+            const err = this.controlGroup.logFromError(error);
+            error.errors = [err.content];
           }
+          throw error;
         })
         .finally(() => {
-          model.set('hasGenerated', true);
           this.set('loading', false);
         });
     },

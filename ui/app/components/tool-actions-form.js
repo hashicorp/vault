@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { match } from '@ember/object/computed';
 import { assign } from '@ember/polyfills';
 import { inject as service } from '@ember/service';
@@ -5,6 +10,7 @@ import Component from '@ember/component';
 import { setProperties, computed, set } from '@ember/object';
 import { addSeconds, parseISO } from 'date-fns';
 import { A } from '@ember/array';
+import { capitalize } from '@ember/string';
 
 const DEFAULTS = {
   token: null,
@@ -25,8 +31,8 @@ const DEFAULTS = {
 const WRAPPING_ENDPOINTS = ['lookup', 'wrap', 'unwrap', 'rewrap'];
 
 export default Component.extend(DEFAULTS, {
+  flashMessages: service(),
   store: service(),
-  wizard: service(),
   // putting these attrs here so they don't get reset when you click back
   //random
   bytes: 32,
@@ -35,7 +41,6 @@ export default Component.extend(DEFAULTS, {
   algorithm: 'sha2-256',
 
   tagName: '',
-  unwrapActiveTab: 'data',
 
   didReceiveAttrs() {
     this._super(...arguments);
@@ -93,10 +98,8 @@ export default Component.extend(DEFAULTS, {
       const keyName = action === 'rewrap' ? 'rewrap_token' : 'token';
       props = assign({}, props, { [keyName]: resp.wrap_info.token });
     }
-    if (props.token || props.rewrap_token || props.unwrap_data || action === 'lookup') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
-    }
     setProperties(this, props);
+    this.flashMessages.success(`${capitalize(action)} was successful.`);
   },
 
   getData() {

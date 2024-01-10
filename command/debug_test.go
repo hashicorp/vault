@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -13,9 +16,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/mholt/archiver/v3"
-	"github.com/mitchellh/cli"
 )
 
 func testDebugCommand(tb testing.TB) (*cli.MockUi, *DebugCommand) {
@@ -531,6 +534,10 @@ func TestDebugCommand_NoConnection(t *testing.T) {
 
 	client, err := api.NewClient(nil)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.SetAddress(""); err != nil {
 		t.Fatal(err)
 	}
 

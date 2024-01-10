@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -11,8 +14,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -41,6 +42,10 @@ type Secret struct {
 	// cubbyhole of the given token (which has a TTL of the given number of
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+
+	// MountType, if non-empty, provides some information about what kind
+	// of mount this secret came from.
+	MountType string `json:"mount_type,omitempty"`
 }
 
 // TokenID returns the standardized token ID (token) for the given secret.
@@ -149,8 +154,8 @@ TOKEN_DONE:
 
 	// Identity policies
 	{
-		_, ok := s.Data["identity_policies"]
-		if !ok {
+		v, ok := s.Data["identity_policies"]
+		if !ok || v == nil {
 			goto DONE
 		}
 
@@ -283,6 +288,22 @@ type SecretWrapInfo struct {
 	WrappedAccessor string    `json:"wrapped_accessor"`
 }
 
+type MFAMethodID struct {
+	Type         string `json:"type,omitempty"`
+	ID           string `json:"id,omitempty"`
+	UsesPasscode bool   `json:"uses_passcode,omitempty"`
+	Name         string `json:"name,omitempty"`
+}
+
+type MFAConstraintAny struct {
+	Any []*MFAMethodID `json:"any,omitempty"`
+}
+
+type MFARequirement struct {
+	MFARequestID   string                       `json:"mfa_request_id,omitempty"`
+	MFAConstraints map[string]*MFAConstraintAny `json:"mfa_constraints,omitempty"`
+}
+
 // SecretAuth is the structure containing auth information if we have it.
 type SecretAuth struct {
 	ClientToken      string            `json:"client_token"`
@@ -297,7 +318,7 @@ type SecretAuth struct {
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`
 
-	MFARequirement *logical.MFARequirement `json:"mfa_requirement"`
+	MFARequirement *MFARequirement `json:"mfa_requirement"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.
@@ -323,14 +344,18 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
-	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
+	dec := json.NewDecoder(&buf)
+	dec.UseNumber()
+	if err := dec.Decode(&secret); err != nil {
 		return nil, err
 	}
 
 	// If the secret is null, add raw data to secret data if present
 	if reflect.DeepEqual(secret, Secret{}) {
 		data := make(map[string]interface{})
-		if err := jsonutil.DecodeJSONFromReader(&teebuf, &data); err != nil {
+		dec := json.NewDecoder(&teebuf)
+		dec.UseNumber()
+		if err := dec.Decode(&data); err != nil {
 			return nil, err
 		}
 		errRaw, errPresent := data["errors"]

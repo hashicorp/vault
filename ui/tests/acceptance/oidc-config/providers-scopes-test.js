@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -34,15 +38,11 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
@@ -114,7 +114,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
@@ -224,7 +224,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       .hasText('this is an edit test', 'has correct edited description');
 
     // create a provider using test-scope
-    await click('[data-test-breadcrumb-link="oidc-scopes"]');
+    await click('[data-test-breadcrumb-link="oidc-scopes"] a');
     await click('[data-test-tab="providers"]');
     assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
@@ -368,7 +368,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
 
     // navigate to details from index page
-    await click('[data-test-breadcrumb-link="oidc-providers"]');
+    await click('[data-test-breadcrumb-link="oidc-providers"] a');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.index',
@@ -376,7 +376,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-provider-linked-block="default"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-provider-menu-link="details"]');
-    assert.dom(SELECTORS.providerDeleteButton).isDisabled('delete button is disabled for default provider');
+    assert.dom(SELECTORS.providerDeleteButton).doesNotExist('delete button hidden for default provider');
   });
 
   // PROVIDER DELETE + EDIT PERMISSIONS

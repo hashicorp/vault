@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -74,9 +78,23 @@ func (a AssocDataFactory) GetAssociatedData() ([]byte, error) {
 	return base64.StdEncoding.DecodeString(a.Encoded)
 }
 
+type ManagedKeyFactory struct {
+	managedKeyParams keysutil.ManagedKeyParameters
+}
+
+func (m ManagedKeyFactory) GetManagedKeyParameters() keysutil.ManagedKeyParameters {
+	return m.managedKeyParams
+}
+
 func (b *backend) pathEncrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "encrypt/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "encrypt",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -151,6 +169,14 @@ must be passed on subsequent decryption requests but can be transited in
 plaintext. On successful decryption, both the ciphertext and the associated
 data are attested not to have been tampered with.
 				`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be encrypted in a single batch. When this parameter
+is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
+will be ignored. Any batch output will preserve the order of the batch input.`,
 			},
 		},
 
@@ -412,6 +438,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
 		case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
+		case "managed_key":
+			polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
@@ -440,6 +468,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			userErrorInBatch = true
+			continue
+		}
+
+		if item.Nonce != "" && !nonceAllowed(p) {
+			userErrorInBatch = true
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
@@ -457,7 +492,23 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			factory = AssocDataFactory{item.AssociatedData}
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory)
+		var managedKeyFactory ManagedKeyFactory
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			}
+
+			managedKeyFactory = ManagedKeyFactory{
+				managedKeyParams: keysutil.ManagedKeyParameters{
+					ManagedKeySystemView: managedKeySystemView,
+					BackendUUID:          b.backendUUID,
+					Context:              ctx,
+				},
+			}
+		}
+
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory, managedKeyFactory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
@@ -522,6 +573,25 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	p.Unlock()
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
+}
+
+func nonceAllowed(p *keysutil.Policy) bool {
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_MANAGED_KEY:
+		return true
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	return false
 }
 
 // Depending on the errors in the batch, different status codes should be returned. User errors

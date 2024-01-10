@@ -1,0 +1,36 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-header-title>
+      <Icon @name={{@model.icon}} @size="24" class="has-text-grey-light" />
+      {{@model.id}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="ldap tabs">
+    <ul>
+      <li><LinkTo @route="overview" data-test-tab="overview">Overview</LinkTo></li>
+      <li><LinkTo @route="roles" data-test-tab="roles">Roles</LinkTo></li>
+      <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
+      <li><LinkTo @route="configuration" data-test-tab="config">Configuration</LinkTo></li>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar aria-label="nav for managing LDAP">
+  <ToolbarFilters aria-label="filter for LDAP items">
+    {{yield to="toolbarFilters"}}
+  </ToolbarFilters>
+  <ToolbarActions aria-label="actions for LDAP items">
+    {{yield to="toolbarActions"}}
+  </ToolbarActions>
+</Toolbar>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,9 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -152,7 +154,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringVar(&StringVar{
 		Name:       "plugin-name",
 		Target:     &c.flagPluginName,
-		Completion: c.PredictVaultPlugins(consts.PluginTypeCredential),
+		Completion: c.PredictVaultPlugins(api.PluginTypeCredential),
 		Usage: "Name of the auth method plugin. This plugin name must already " +
 			"exist in the Vault server's plugin catalog.",
 	})

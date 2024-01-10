@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package sealmigration
 
 import (
@@ -10,6 +13,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -798,7 +802,7 @@ func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.Reusable
 			t.Fatal(err)
 		}
 	} else {
-		if err := cluster.UnsealCoresWithError(true); err != nil {
+		if err := cluster.UnsealCoresWithError(t, true); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -841,7 +845,7 @@ func joinRaftFollowers(t *testing.T, cluster *vault.TestCluster, useStoredKeys b
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 

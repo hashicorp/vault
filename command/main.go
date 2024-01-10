@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -12,10 +15,11 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
-	"github.com/mitchellh/cli"
+	"github.com/mattn/go-colorable"
 )
 
 type VaultUI struct {
@@ -131,11 +135,12 @@ func getGlobalFlagValue(arg string) string {
 }
 
 type RunOptions struct {
-	TokenHelper token.TokenHelper
-	Stdout      io.Writer
-	Stderr      io.Writer
-	Address     string
-	Client      *api.Client
+	TokenHelper    token.TokenHelper
+	HCPTokenHelper hcpvlib.HCPTokenHelper
+	Stdout         io.Writer
+	Stderr         io.Writer
+	Address        string
+	Client         *api.Client
 }
 
 func Run(args []string) int {
@@ -217,14 +222,14 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
-	initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),

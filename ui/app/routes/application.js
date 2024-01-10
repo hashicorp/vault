@@ -1,12 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
-import { next } from '@ember/runloop';
 import Route from '@ember/routing/route';
 import ControlGroupError from 'vault/lib/control-group-error';
 
 export default Route.extend({
   controlGroup: service(),
   routing: service('router'),
-  wizard: service(),
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
 
@@ -58,28 +61,6 @@ export default Route.extend({
         router.get('location').setURL(errorURL);
       }
 
-      return true;
-    },
-    didTransition() {
-      const wizard = this.wizard;
-
-      if (wizard.get('currentState') !== 'active.feature') {
-        return true;
-      }
-      next(() => {
-        const applicationURL = this.routing.currentURL;
-        const activeRoute = this.routing.currentRouteName;
-
-        if (this.wizard.setURLAfterTransition) {
-          this.set('wizard.setURLAfterTransition', false);
-          this.set('wizard.expectedURL', applicationURL);
-          this.set('wizard.expectedRouteName', activeRoute);
-        }
-        const expectedRouteName = this.wizard.expectedRouteName;
-        if (this.routing.isActive(expectedRouteName) === false) {
-          wizard.transitionTutorialMachine(wizard.get('currentState'), 'PAUSE');
-        }
-      });
       return true;
     },
   },

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -212,13 +215,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -233,6 +238,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -289,7 +296,7 @@ type Delegate struct {
 	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
-func newDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
@@ -382,6 +389,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -425,6 +433,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Ext:         d.autopilotServerExt(state),
 		}
 
+		// As KnownServers is a delegate called by autopilot let's check if we already
+		// had this data in the correct format and use it. If we don't (which sounds a
+		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
+		// done elsewhere in code to check the desired suffrage and manually set NodeType
+		// based on whether that's a voter or not. If we don't  do either of these
+		// things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
+		}
+
 		switch state.IsDead.Load() {
 		case true:
 			d.logger.Debug("informing autopilot that the node left", "id", id)
@@ -442,6 +463,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
@@ -551,6 +573,13 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	}
 	for range tickerCh {
 		b.l.RLock()
+		if b.raft == nil {
+			// We could be racing with teardown, which will stop the ticker
+			// but that doesn't guarantee that we won't reach this line with a nil
+			// b.raft.
+			b.l.RUnlock()
+			return
+		}
 		b.followerStates.l.RLock()
 		myAppliedIndex := b.raft.AppliedIndex()
 		for peerID, state := range b.followerStates.followers {
@@ -677,7 +706,7 @@ func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		// quoted string
-		dur, err = time.ParseDuration(str[1 : len(str)-1])
+		dur, err = parseutil.ParseDurationSecond(str[1 : len(str)-1])
 		if err != nil {
 			return err
 		}
@@ -810,7 +839,7 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
 	}
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
+	b.autopilot = autopilot.New(b.raft, NewDelegate(b), options...)
 	b.followerStates = followerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
 

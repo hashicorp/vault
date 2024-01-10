@@ -1,11 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
-import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
-  wizard: service(),
-
   model(params) {
     const { section_name: section } = params;
     if (section !== 'configuration') {
@@ -13,9 +15,7 @@ export default Route.extend({
       set(error, 'httpStatus', 404);
       throw error;
     }
-    const backend = this.modelFor('vault.cluster.access.method');
-    this.wizard.transitionFeatureMachine(this.wizard.featureState, 'DETAILS', backend.type);
-    return backend;
+    return this.modelFor('vault.cluster.access.method');
   },
 
   setupController(controller) {

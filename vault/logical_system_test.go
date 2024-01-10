@@ -1,16 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -18,63 +22,38 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	semver "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/audit"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
-	"github.com/hashicorp/vault/sdk/helper/salt"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/plugincatalog"
+	"github.com/hashicorp/vault/vault/seal"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-func TestSystemBackend_RootPaths(t *testing.T) {
-	expected := []string{
-		"auth/*",
-		"remount",
-		"audit",
-		"audit/*",
-		"raw",
-		"raw/*",
-		"replication/primary/secondary-token",
-		"replication/performance/primary/secondary-token",
-		"replication/dr/primary/secondary-token",
-		"replication/reindex",
-		"replication/dr/reindex",
-		"replication/performance/reindex",
-		"rotate",
-		"config/cors",
-		"config/auditing/*",
-		"config/ui/headers/*",
-		"plugins/catalog/*",
-		"revoke-prefix/*",
-		"revoke-force/*",
-		"leases/revoke-prefix/*",
-		"leases/revoke-force/*",
-		"leases/lookup/*",
-		"storage/raft/snapshot-auto/config/*",
-		"leases",
-		"internal/inspect/*",
-	}
-
-	b := testSystemBackend(t)
-	actual := b.SpecialPaths().Root
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
-	}
-}
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
+	paths := b.(*SystemBackend).configPaths()
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "")
 	b.(*SystemBackend).Core.systemBarrierView = view
@@ -104,37 +83,67 @@ func TestSystemConfigCORS(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		actual,
+		true,
+	)
 
 	// Do it again. Bug #6182
 	req = logical.TestRequest(t, logical.UpdateOperation, "config/cors")
 	req.Data["allowed_origins"] = "http://www.example.com"
 	req.Data["allowed_headers"] = "X-Custom-Header"
-	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatal(err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
 	actual, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		actual,
+		true,
+	)
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
 
 	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
-	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
 	actual, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.FindResponseSchema(t, paths, 0, req.Operation),
+		actual,
+		true,
+	)
 
 	expected = &logical.Response{
 		Data: map[string]interface{}{
@@ -248,6 +257,14 @@ func TestSystemBackend_mounts(t *testing.T) {
 		if diff := deep.Equal(resp.Data, conf); len(diff) > 0 {
 			t.Fatalf("bad, diff: %#v", diff)
 		}
+
+		// validate the response structure for mount named read
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 	}
 }
 
@@ -270,9 +287,14 @@ func TestSystemBackend_mount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+
+	// validate the response structure for mount named update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "mounts")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -433,9 +455,14 @@ func TestSystemBackend_unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
+
+	// validate the response structure for mount named delete
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 }
 
 var capabilitiesPolicy = `
@@ -483,31 +510,45 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using the root token
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req := &logical.Request{
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 			"token": rootToken,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Check the capabilities using capabilities-self
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		ClientToken: rootToken,
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Lookup the accessor of the root token
@@ -517,17 +558,24 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using capabilities-accessor endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	rootCheckFunc(t, resp)
 
 	// Create a non-root token
@@ -548,32 +596,46 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 	}
 
 	// Check the capabilities using a non-root token
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 			"token": "tokenid",
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 
 	// Check the capabilities of a non-root token using capabilities-self
 	// endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		ClientToken: "tokenid",
 		Path:        "capabilities-self",
 		Operation:   logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths": []string{path1, path2, path3, path4},
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 
 	// Lookup the accessor of the non-root token
@@ -584,17 +646,24 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 
 	// Check the capabilities using a non-root token using
 	// capabilities-accessor endpoint
-	resp, err = b.HandleRequest(namespace.RootContext(nil), &logical.Request{
+	req = &logical.Request{
 		Path:      "capabilities-accessor",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"paths":    []string{path1, path2, path3, path4},
 			"accessor": te.Accessor,
 		},
-	})
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr: %v", resp, err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	nonRootCheckFunc(t, resp)
 }
 
@@ -740,12 +809,29 @@ func TestSystemBackend_remount_auth(t *testing.T) {
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 
-	RetryUntil(t, 5*time.Second, func() error {
+	// validate the response structure for remount named read
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		// validate the response structure for remount status read
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+
 		migrationInfo := resp.Data["migration_info"].(*MountMigrationInfo)
 		if migrationInfo.MigrationStatus != MigrationSuccessStatus.String() {
 			return fmt.Errorf("Expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
@@ -892,7 +978,7 @@ func TestSystemBackend_remount(t *testing.T) {
 	req.Data["to"] = "foo"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		req = logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 		if err != nil {
@@ -1026,40 +1112,50 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
-	req.Data["from"] = " foo / "
+	req.Data["from"] = " foo/ "
 	req.Data["to"] = "bar"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+	if resp.Data["error"] != `'from' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
-func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "foo"
-	req.Data["to"] = " bar / "
+	req.Data["to"] = " bar/ "
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+	if resp.Data["error"] != `'to' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
 func TestSystemBackend_leases(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1095,6 +1191,15 @@ func TestSystemBackend_leases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for Update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if resp.Data["renewable"] == nil || resp.Data["renewable"].(bool) {
 		t.Fatal("kv leases are not renewable")
 	}
@@ -1109,7 +1214,13 @@ func TestSystemBackend_leases(t *testing.T) {
 }
 
 func TestSystemBackend_leases_list(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1144,9 +1255,14 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil || resp.Data == nil {
-		t.Fatalf("bad: %#v", resp)
-	}
+
+	// validate the response body for list
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	var keys []string
 	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
 		t.Fatalf("err: %v", err)
@@ -1269,7 +1385,13 @@ func TestSystemBackend_leases_list(t *testing.T) {
 }
 
 func TestSystemBackend_renew(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1304,6 +1426,14 @@ func TestSystemBackend_renew(t *testing.T) {
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Validate lease renewal response structure
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	// Should get error about non-renewability
 	if resp2.Data["error"] != "lease is not renewable" {
@@ -1440,7 +1570,13 @@ func TestSystemBackend_renew_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revoke(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1563,6 +1699,15 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for lease revoke
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
@@ -1594,7 +1739,13 @@ func TestSystemBackend_revoke_invalidID_origUrl(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1630,9 +1781,14 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
 	}
-	if resp2 != nil {
-		t.Fatalf("bad: %#v", resp)
-	}
+
+	// validate the response structure for lease revoke-prefix
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	// Attempt renew
 	req3 := logical.TestRequest(t, logical.UpdateOperation, "leases/renew/"+resp.Secret.LeaseID)
@@ -1646,7 +1802,13 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 }
 
 func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
-	core, b, root := testCoreSystemBackend(t)
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := core.systemBackend
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
@@ -1708,7 +1870,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}), bc)
 	err := b.Backend.Setup(namespace.RootContext(nil), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1772,7 +1934,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}))
+	b := NewSystemBackend(core, hclog.New(&hclog.LoggerOptions{}), bc)
 	err := b.Backend.Setup(namespace.RootContext(nil), bc)
 	if err != nil {
 		t.Fatal(err)
@@ -1833,6 +1995,12 @@ func TestSystemBackend_authTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"token/": map[string]interface{}{
@@ -1864,6 +2032,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	if diff := deep.Equal(resp.Data, exp["token/"]); diff != nil {
 		t.Fatal(diff)
 	}
@@ -1891,6 +2066,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "auth")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -1900,6 +2081,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"foo/": map[string]interface{}{
@@ -1979,10 +2166,23 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 }
 
 func TestSystemBackend_tuneAuth(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
+	tempDir, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: tempDir,
+	})
+	b := c.systemBackend
 	c.credentialBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{BackendType: logical.TypeCredential}, nil
 	}
@@ -1995,6 +2195,12 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"description":       "token based credentials",
@@ -2012,17 +2218,19 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	req.Data["description"] = ""
 	req.Data["plugin_version"] = "v1.0.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), plugincatalog.ErrPluginNotFound.Error()) {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Register the plugin in the catalog, and then try the same request again.
 	{
-		tempDir, err := filepath.EvalSymlinks(t.TempDir())
-		if err != nil {
-			t.Fatal(err)
-		}
-		c.pluginCatalog.directory = tempDir
 		file, err := os.Create(filepath.Join(tempDir, "foo"))
 		if err != nil {
 			t.Fatal(err)
@@ -2030,7 +2238,15 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 		if err := file.Close(); err != nil {
 			t.Fatal(err)
 		}
-		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+			Name:    "token",
+			Type:    consts.PluginTypeCredential,
+			Version: "v1.0.0",
+			Command: "foo",
+			Args:    []string{},
+			Env:     []string{},
+			Sha256:  []byte{},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2049,6 +2265,12 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if resp == nil {
 		t.Fatal("resp is nil")
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
@@ -2065,6 +2287,14 @@ func TestSystemBackend_policyList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for policy read
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"keys":     []string{"default", "root"},
@@ -2090,12 +2320,28 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	// validate the response structure for policy named Update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Read the policy
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// validate the response structure for policy named read
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"name":  "foo",
@@ -2145,6 +2391,14 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	// validate the response structure for policy named delete
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Read the policy (deleted)
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -2173,11 +2427,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 
 func TestSystemBackend_enableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2191,24 +2441,63 @@ func TestSystemBackend_enableAudit(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_decodeToken ensures the correct decoding of the encoded token.
+// It also ensures that the API fails if there is some payload missing.
+func TestSystemBackend_decodeToken(t *testing.T) {
+	encodedToken := "Bxg9JQQqOCNKBRICNwMIRzo2J3cWCBRi"
+	otp := "3JhHkONiyiaNYj14nnD9xZQS"
+	tokenExpected := "4RUmoevJ3lsLni9sTXcNnRE1"
+
+	_, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "decode-token")
+	req.Data["encoded_token"] = encodedToken
+	req.Data["otp"] = otp
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	token, ok := resp.Data["token"]
+	if !ok {
+		t.Fatalf("did not get token back in response, response was %#v", resp.Data)
+	}
+
+	if token.(string) != tokenExpected {
+		t.Fatalf("bad token back: %s", token.(string))
+	}
+
+	datas := []map[string]interface{}{
+		nil,
+		{"encoded_token": encodedToken},
+		{"otp": otp},
+	}
+	for _, data := range datas {
+		req.Data = data
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err == nil {
+			t.Fatalf("no error despite missing payload")
+		}
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+	}
+}
+
 func TestSystemBackend_auditHash(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		view := &logical.InmemStorage{}
-		view.Put(namespace.RootContext(nil), &logical.StorageEntry{
-			Key:   "salt",
-			Value: []byte("foo"),
-		})
-		config.SaltView = view
-		config.SaltConfig = &salt.Config{
-			HMAC:     sha256.New,
-			HMACType: "hmac-sha256",
-			Location: salt.DefaultLocation,
-		}
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2221,6 +2510,13 @@ func TestSystemBackend_auditHash(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	req = logical.TestRequest(t, logical.UpdateOperation, "audit-hash/foo")
 	req.Data["input"] = "bar"
 
@@ -2231,6 +2527,14 @@ func TestSystemBackend_auditHash(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("response or its data was nil")
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	hash, ok := resp.Data["hash"]
 	if !ok {
 		t.Fatalf("did not get hash back in response, response was %#v", resp.Data)
@@ -2255,11 +2559,7 @@ func TestSystemBackend_enableAudit_invalid(t *testing.T) {
 
 func TestSystemBackend_auditTable(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2294,11 +2594,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 
 func TestSystemBackend_disableAudit(t *testing.T) {
 	c, b, _ := testCoreSystemBackend(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
-			Config: config,
-		}, nil
-	}
+	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "audit/foo")
 	req.Data["type"] = "noop"
@@ -2328,6 +2624,14 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
+
 		if !strings.HasPrefix(resp.Data["value"].(string), `{"type":"mounts"`) {
 			t.Fatalf("bad: %v", resp)
 		}
@@ -2429,6 +2733,13 @@ func TestSystemBackend_rawRead_Compressed(t *testing.T) {
 		if resp != nil {
 			t.Fatalf("bad: %v", resp)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 
 		req = logical.TestRequest(t, logical.ReadOperation, "raw/test_raw")
 		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -2617,6 +2928,13 @@ func TestSystemBackend_rawReadWrite_Compressed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
+
+		schema.ValidateResponse(
+			t,
+			schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+			resp,
+			true,
+		)
 
 		// Read back and check gzip was applied by looking for prefix byte
 		req = logical.TestRequest(t, logical.ReadOperation, "raw/core/mounts")
@@ -2859,6 +3177,13 @@ func TestSystemBackend_rawDelete(t *testing.T) {
 		t.Fatalf("bad: %v", resp)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	// Policy should be gone
 	c.policyStore.tokenPoliciesLRU.Purge()
 	out, err := c.policyStore.GetPolicy(namespace.RootContext(nil), "test", PolicyTypeToken)
@@ -2896,6 +3221,13 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	exp := map[string]interface{}{
 		"max_operations": absoluteOperationMaximum,
 		"interval":       0,
@@ -2914,11 +3246,22 @@ func TestSystemBackend_rotateConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req2.Path), req2.Operation),
+		resp,
+		true,
+	)
 
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation), resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"max_operations": int64(3221225472),
@@ -2984,19 +3327,27 @@ func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
 }
 
 func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	c.pluginCatalog.directory = sym
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	req := logical.TestRequest(t, logical.ListOperation, "plugins/catalog/database")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	if len(resp.Data["keys"].([]string)) != len(c.builtinRegistry.Keys(consts.PluginTypeDatabase)) {
 		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.Registry.Keys(consts.PluginTypeDatabase)))
@@ -3007,6 +3358,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	// Get deprecation status directly from the registry so we can compare it to the API response
 	deprecationStatus, _ := c.builtinRegistry.DeprecationStatus("mysql-database-plugin", consts.PluginTypeDatabase)
@@ -3046,6 +3404,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", resp.Error())
 	}
 
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	delete(req.Data, "args")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || resp.Error() != nil {
@@ -3077,6 +3442,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -3130,6 +3502,95 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
+// with oci_image set get recorded properly in the catalog.
+func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
+
+	for name, tc := range map[string]struct {
+		in, expected map[string]any
+	}{
+		"minimal": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "",
+				"args":      []string{},
+				"builtin":   false,
+				"version":   "",
+			},
+		},
+		"fully specified": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"version":   "v1.0.0",
+				"env":       []string{"X=2"},
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"builtin":   false,
+				"version":   "v1.0.0",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Add a container plugin.
+			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			for k, v := range tc.in {
+				req.Data[k] = v
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+			// We should get a nice error back from the API if we're not on linux, but
+			// that's all we can test on non-linux.
+			if runtime.GOOS != "linux" {
+				if err != nil || resp.Error() == nil {
+					t.Fatalf("err: %v %v", err, resp.Error())
+				}
+				return
+			}
+
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp.Error())
+			}
+
+			req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+			if tc.in["version"] != nil {
+				req.Data["version"] = tc.in["version"]
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp == nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp)
+			}
+
+			actual := resp.Data
+			if !reflect.DeepEqual(actual, tc.expected) {
+				t.Fatalf("expected did not match actual\ngot      %#v\nexpected %#v\n", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
@@ -3163,13 +3624,14 @@ func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *
 }
 
 func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
-	c, b, _ := testCoreSystemBackend(t)
-	// Bootstrap the pluginCatalog
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
-	c.pluginCatalog.directory = sym
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
 
 	// Set a plugin
 	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
@@ -3191,10 +3653,16 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"input": "dGhlIHF1aWNrIGJyb3duIGZveA==",
 	}
-	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	doRequest := func(req *logical.Request, errExpected bool, expected string) {
 		t.Helper()
@@ -3205,12 +3673,21 @@ func TestSystemBackend_ToolsHash(t *testing.T) {
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
+
 		if errExpected {
 			if !resp.IsError() {
 				t.Fatalf("bad: got error response: %#v", *resp)
 			}
 			return
+		} else {
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 		}
+
 		if resp.IsError() {
 			t.Fatalf("bad: got error response: %#v", *resp)
 		}
@@ -3276,10 +3753,16 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/random")
 
-	_, err := b.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	doRequest := func(req *logical.Request, errExpected bool, format string, numBytes int) {
 		t.Helper()
@@ -3296,7 +3779,15 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 					t.Fatalf("bad: got error response: %#v", *resp)
 				}
 				return nil
+			} else {
+				schema.ValidateResponse(
+					t,
+					schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+					resp,
+					true,
+				)
 			}
+
 			if resp.IsError() {
 				t.Fatalf("bad: got error response: %#v", *resp)
 			}
@@ -3359,6 +3850,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 
 func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	// Ensure no entries are in the endpoint as a starting point
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
@@ -3366,6 +3858,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp := map[string]interface{}{
 		"secret": map[string]interface{}{},
@@ -3381,6 +3879,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3503,11 +4007,25 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
 	}
 
+	// validate the response structure for mount update
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
 	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 
 	exp = map[string]interface{}{
 		"secret": map[string]interface{}{
@@ -3532,6 +4050,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 
 func TestSystemBackend_InternalUIMount(t *testing.T) {
 	core, b, rootToken := testCoreSystemBackend(t)
+	systemBackend := b.(*SystemBackend)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/secret")
 	req.ClientToken = rootToken
@@ -3561,6 +4080,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3580,6 +4105,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "kv" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3590,6 +4121,12 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, systemBackend.Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
 	if resp.Data["type"] != "system" {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
@@ -3603,104 +4140,135 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 }
 
 func TestSystemBackend_OpenAPI(t *testing.T) {
-	_, b, rootToken := testCoreSystemBackend(t)
-	var oapi map[string]interface{}
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": LeasedPassthroughBackendFactory,
+		},
+	}
+	c, _, rootToken := TestCoreUnsealedWithConfig(t, coreConfig)
+	b := c.systemBackend
 
 	// Ensure no paths are reported if there is no token
-	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.RootContext(context.Background()), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	body := resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	exp := map[string]interface{}{
-		"openapi": framework.OASVersion,
-		"info": map[string]interface{}{
-			"title":       "HashiCorp Vault API",
-			"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			"version":     version.GetVersion().Version,
-			"license": map[string]interface{}{
-				"name": "Mozilla Public License 2.0",
-				"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		exp := map[string]interface{}{
+			"openapi": framework.OASVersion,
+			"info": map[string]interface{}{
+				"title":       "HashiCorp Vault API",
+				"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+				"version":     version.GetVersion().Version,
+				"license": map[string]interface{}{
+					"name": "Mozilla Public License 2.0",
+					"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+				},
 			},
-		},
-		"paths": map[string]interface{}{},
-		"components": map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
-	}
-
-	if diff := deep.Equal(oapi, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Check that default paths are present with a root token
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	body = resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	doc, err := framework.NewOASDocumentFromMap(oapi)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pathSamples := []struct {
-		path string
-		tag  string
-	}{
-		{"/auth/{token_mount_path}/lookup", "auth"},
-		{"/{cubbyhole_mount_path}/{path}", "secrets"},
-		{"/identity/group/id", "identity"},
-		{"/{secret_mount_path}/.*", "secrets"}, // TODO update after kv repo update
-		{"/sys/policy", "system"},
-	}
-
-	for _, path := range pathSamples {
-		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path %q.", path)
+			"paths": map[string]interface{}{},
+			"components": map[string]interface{}{
+				"schemas": map[string]interface{}{},
+			},
 		}
-		tag := doc.Paths[path.path].Get.Tags[0]
-		if tag != path.tag {
-			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+
+		if diff := deep.Equal(oapi, exp); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 
-	// Simple check of response size (which is much larger than most
-	// Vault responses), mainly to catch mass omission of expected path data.
-	const minLen = 70000
-	if len(body) < minLen {
-		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	// Check that default paths are present with a root token (with and without generic_mount_paths)
+	for _, genericMountPaths := range []bool{false, true} {
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		if genericMountPaths {
+			req.Data["generic_mount_paths"] = true
+		}
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		doc, err := framework.NewOASDocumentFromMap(oapi)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedSecretPrefix := "/secret/"
+		if genericMountPaths {
+			expectedSecretPrefix = "/{secret_mount_path}/"
+		}
+
+		pathSamples := []struct {
+			path        string
+			tag         string
+			unpublished bool
+		}{
+			{path: "/auth/token/lookup", tag: "auth"},
+			{path: "/cubbyhole/{path}", tag: "secrets"},
+			{path: "/identity/group/id/", tag: "identity"},
+			{path: expectedSecretPrefix + "^.*$", unpublished: true},
+			{path: "/sys/policy", tag: "system"},
+		}
+
+		for _, path := range pathSamples {
+			if doc.Paths[path.path] == nil {
+				t.Fatalf("didn't find expected path %q.", path.path)
+			}
+			getOperation := doc.Paths[path.path].Get
+			if getOperation == nil && !path.unpublished {
+				t.Fatalf("path: %s; expected a get operation, but it was absent", path.path)
+			}
+			if getOperation != nil && path.unpublished {
+				t.Fatalf("path: %s; expected absent get operation, but it was present", path.path)
+			}
+			if !path.unpublished {
+				tag := getOperation.Tags[0]
+				if tag != path.tag {
+					t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+				}
+			}
+		}
+
+		// Simple check of response size (which is much larger than most
+		// Vault responses), mainly to catch mass omission of expected path data.
+		const minLen = 70000
+		if len(body) < minLen {
+			t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+		}
 	}
 
 	// Test path-help response
-	req = logical.TestRequest(t, logical.HelpOperation, "rotate")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.HelpOperation, "rotate")
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	doc = resp.Data["openapi"].(*framework.OASDocument)
-	if len(doc.Paths) != 1 {
-		t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
-	}
+		doc := resp.Data["openapi"].(*framework.OASDocument)
+		if len(doc.Paths) != 1 {
+			t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
+		}
 
-	if doc.Paths["/rotate"] == nil {
-		t.Fatalf("expected to find path '/rotate'")
+		if doc.Paths["/rotate"] == nil {
+			t.Fatalf("expected to find path '/rotate'")
+		}
 	}
 }
 
@@ -4218,6 +4786,66 @@ func TestHandlePoliciesPasswordList(t *testing.T) {
 						"testpolicy",
 						"unrelated_policy",
 					},
+				},
+			},
+		},
+		"policy with /": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("testpolicy/testpolicy1"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"testpolicy/testpolicy1"},
+				},
+			},
+		},
+		"list path/to/policy": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy"},
+				},
+			},
+		},
+		"policy ending with /": {
+			storage: makeStorage(t,
+				&logical.StorageEntry{
+					Key: getPasswordPolicyKey("path/to/policy/"),
+					Value: toJson(t,
+						passwordPolicyConfig{
+							HCLPolicy: "length = 18\n" +
+								"rule \"charset\" {\n" +
+								"	charset=\"ABCDEFGHIJ\"\n" +
+								"}",
+						}),
+				},
+			),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					"keys": []string{"path/to/policy/"},
 				},
 			},
 		},
@@ -4816,7 +5444,6 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
-
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
 			// to get expected values is based off of config and not
@@ -4831,6 +5458,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
+
 			req = &logical.Request{
 				Path:      "loggers",
 				Operation: logical.ReadOperation,
@@ -4840,6 +5474,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			initialLoggers := resp.Data
 
@@ -4853,6 +5494,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 			respIsError := resp != nil && resp.IsError()
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			if err != nil || (!tc.expectError && respIsError) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
@@ -4872,6 +5520,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				if err != nil || (resp != nil && resp.IsError()) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
+
+				schema.ValidateResponse(
+					t,
+					schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+					resp,
+					true,
+				)
 
 				for _, logger := range core.allLoggers {
 					loggerName := logger.Name()
@@ -4897,6 +5552,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
+
 			req = &logical.Request{
 				Path:      "loggers",
 				Operation: logical.ReadOperation,
@@ -4906,6 +5568,13 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			if err != nil || (resp != nil && resp.IsError()) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
+
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+				resp,
+				true,
+			)
 
 			for _, logger := range core.allLoggers {
 				loggerName := logger.Name()
@@ -5026,7 +5695,10 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
 			t.Parallel()
 
-			core, b, _ := testCoreSystemBackend(t)
+			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+			})
+			b := core.systemBackend
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -5151,79 +5823,6 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 	}
 }
 
-func TestSortVersionedPlugins(t *testing.T) {
-	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
-		return pluginutil.VersionedPlugin{
-			Type:    typ.String(),
-			Name:    name,
-			Version: version,
-			SHA256:  "",
-			Builtin: builtin,
-			SemanticVersion: func() *semver.Version {
-				if version != "" {
-					return semver.Must(semver.NewVersion(version))
-				}
-
-				return semver.Must(semver.NewVersion("0.0.0"))
-			}(),
-		}
-	}
-
-	differingTypes := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-	}
-	differingNames := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
-	}
-	differingVersions := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
-	}
-	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
-	}
-
-	for name, tc := range map[string][]pluginutil.VersionedPlugin{
-		"ascending types":    differingTypes,
-		"ascending names":    differingNames,
-		"ascending versions": differingVersions,
-		// Include differing versions twice so we can test out equality too.
-		"differing types, names and versions": append(differingTypes,
-			append(differingNames,
-				append(differingVersions, differingVersions...)...)...),
-		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
-	} {
-		t.Run(name, func(t *testing.T) {
-			sortVersionedPlugins(tc)
-			for i := 1; i < len(tc); i++ {
-				previous := tc[i-1]
-				current := tc[i]
-				if current.Type > previous.Type {
-					continue
-				}
-				if current.Name > previous.Name {
-					continue
-				}
-				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
-					continue
-				}
-				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
-					continue
-				}
-
-				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
-			}
-		})
-	}
-}
-
 func TestValidateVersion(t *testing.T) {
 	b := testSystemBackend(t).(*SystemBackend)
 	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
@@ -5262,12 +5861,13 @@ func TestValidateVersion(t *testing.T) {
 }
 
 func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	tempDir, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("error: %v", err)
 	}
-	core.pluginCatalog.directory = tempDir
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: tempDir,
+	})
 	b := core.systemBackend
 
 	// Shadow a builtin and test getting a helpful error back.
@@ -5278,7 +5878,15 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "kubernetes",
+		Type:    consts.PluginTypeCredential,
+		Version: "",
+		Command: command,
+		Args:    nil,
+		Env:     nil,
+		Sha256:  nil,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5390,4 +5998,553 @@ func TestCanUnseal_WithNonExistentBuiltinPluginVersion_InMountStorage(t *testing
 			t.Errorf("expected empty plugin version in config: %#v", config)
 		}
 	}
+}
+
+func TestSystemBackend_ReadExperiments(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	for name, tc := range map[string][]string{
+		"no experiments enabled": {},
+		"one experiment enabled": {experiments.VaultExperimentEventsAlpha1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Set the enabled experiments.
+			c.experiments = tc
+
+			req := logical.TestRequest(t, logical.ReadOperation, "experiments")
+			resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp == nil {
+				t.Fatal("Expected a response")
+			}
+			if !reflect.DeepEqual(experiments.ValidExperiments(), resp.Data["available"]) {
+				t.Fatalf("Expected %v but got %v", experiments.ValidExperiments(), resp.Data["available"])
+			}
+			if !reflect.DeepEqual(tc, resp.Data["enabled"]) {
+				t.Fatal("No experiments should be enabled by default")
+			}
+		})
+	}
+}
+
+func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
+	b := testSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+		Rootless:     true,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	readExp := map[string]any{
+		"type":          conf.Type.String(),
+		"name":          conf.Name,
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+		"rootless":      conf.Rootless,
+	}
+	if !reflect.DeepEqual(resp.Data, readExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
+	}
+
+	// List the plugin runtimes of container type
+	for _, op := range []logical.Operation{logical.ListOperation, logical.ReadOperation} {
+		req = logical.TestRequest(t, op, "plugins/runtimes/catalog")
+		req.Data["type"] = "container"
+		resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		listExp := map[string]interface{}{
+			"runtimes": []map[string]any{readExp},
+		}
+		if !reflect.DeepEqual(resp.Data, listExp) {
+			t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+		}
+	}
+
+	// Delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal("expected a 404")
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	listExp := map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+
+	// List the plugin runtimes of container type
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	req.Data["type"] = "container"
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+}
+
+func TestGetSealBackendStatus(t *testing.T) {
+	testCases := []struct {
+		name          string
+		sealOpts      seal.TestSealOpts
+		expectHealthy bool
+	}{
+		{
+			name: "healthy-autoseal",
+			sealOpts: seal.TestSealOpts{
+				StoredKeys:   seal.StoredKeysSupportedGeneric,
+				Name:         "autoseal-test",
+				WrapperCount: 1,
+				Generation:   1,
+			},
+			expectHealthy: true,
+		},
+		{
+			name: "unhealthy-autoseal",
+			sealOpts: seal.TestSealOpts{
+				StoredKeys:   seal.StoredKeysSupportedGeneric,
+				Name:         "autoseal-test",
+				WrapperCount: 1,
+				Generation:   1,
+			},
+			expectHealthy: false,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			testAccess, wrappers := seal.NewTestSeal(&tt.sealOpts)
+
+			c := TestCoreWithSeal(t, NewAutoSeal(testAccess), false)
+			_, keys, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+			for _, key := range keys {
+				_, err := TestCoreUnseal(c, key)
+				require.NoError(t, err)
+			}
+
+			if c.Sealed() {
+				t.Fatal("vault is sealed")
+			}
+
+			if !tt.expectHealthy {
+				// set encryption error and perform encryption to mark seal unhealthy
+				wrappers[0].SetEncryptError(errors.New("test error encrypting"))
+
+				_, errs := c.seal.GetAccess().Encrypt(context.Background(), []byte("test-plaintext"))
+				if len(errs) == 0 {
+					t.Fatalf("expected error on encryption, but got none")
+				}
+			}
+
+			resp, err := c.GetSealBackendStatus(ctx)
+			require.NoError(t, err)
+
+			if resp.Healthy && !tt.expectHealthy {
+				t.Fatal("expected seal to be unhealthy, but status was healthy")
+			} else if !resp.Healthy && tt.expectHealthy {
+				t.Fatal("expected seal to be healthy, but status was unhealthy")
+			}
+
+			if !tt.expectHealthy && resp.UnhealthySince == "" {
+				t.Fatal("missing UnhealthySince field in response with unhealthy seal")
+			}
+
+			if len(resp.Backends) == 0 {
+				t.Fatal("Backend list in response was empty")
+			}
+
+			if !tt.expectHealthy && resp.Backends[0].Healthy {
+				t.Fatal("expected seal to be unhealthy, received healthy status")
+			} else if tt.expectHealthy && !resp.Backends[0].Healthy {
+				t.Fatal("expected seal to be healthy, received unhealthy status")
+			}
+
+			if !tt.expectHealthy && resp.Backends[0].UnhealthySince == "" {
+				t.Fatal("missing UnhealthySince field in unhealthy seal")
+			}
+		})
+	}
+
+	a, err := seal.NewAccess(nil,
+		&seal.SealGenerationInfo{
+			Generation: 1,
+			Seals:      []*configutil.KMS{{Type: wrapping.WrapperTypeShamir.String()}},
+		},
+		[]*seal.SealWrapper{
+			{
+				Wrapper:        aeadwrapper.NewShamirWrapper(),
+				SealConfigType: wrapping.WrapperTypeShamir.String(),
+				Priority:       1,
+				Configured:     true,
+			},
+		},
+	)
+	require.NoError(t, err)
+	shamirSeal := NewDefaultSeal(a)
+
+	c := TestCoreWithSeal(t, shamirSeal, false)
+	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		require.NoError(t, err)
+	}
+
+	if c.Sealed() {
+		t.Fatal("vault is sealed")
+	}
+
+	resp, err := c.GetSealBackendStatus(ctx)
+	require.NoError(t, err)
+
+	if !resp.Healthy {
+		t.Fatal("expected healthy seal, got unhealthy")
+	}
+
+	if len(resp.Backends) != 1 {
+		t.Fatalf("expected response Backends to contain one seal, got %d", len(resp.Backends))
+	}
+
+	if !resp.Backends[0].Healthy {
+		t.Fatal("expected healthy seal, got unhealthy")
+	}
+}
+
+func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Currently plugincontainer only supports linux")
+	}
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		PluginDirectory: sym,
+	})
+	b := c.systemBackend
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Register the plugin referencing the runtime.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = ""
+	req.Data["oci_image"] = "hashicorp/vault-plugin-auth-jwt"
+	req.Data["runtime"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// Expect to fail to delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete the plugin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// This time deleting the runtime should work.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+}
+
+type testingCustomMessageManager struct {
+	findFilters []uicustommessages.FindFilter
+}
+
+func (m *testingCustomMessageManager) FindMessages(_ context.Context, filter uicustommessages.FindFilter) ([]uicustommessages.Message, error) {
+	m.findFilters = append(m.findFilters, filter)
+
+	return []uicustommessages.Message{}, nil
+}
+
+func (m *testingCustomMessageManager) AddMessage(_ context.Context, _ uicustommessages.Message) (*uicustommessages.Message, error) {
+	return nil, nil
+}
+
+func (m *testingCustomMessageManager) ReadMessage(_ context.Context, _ string) (*uicustommessages.Message, error) {
+	return nil, nil
+}
+
+func (m *testingCustomMessageManager) UpdateMessage(_ context.Context, _ uicustommessages.Message) (*uicustommessages.Message, error) {
+	return nil, nil
+}
+
+func (m *testingCustomMessageManager) DeleteMessage(_ context.Context, _ string) error {
+	return nil
+}
+
+// TestPathInternalUIUnauthenticatedMessages verifies the correct behaviour of
+// the pathInternalUIUnauthenticatedMessages method, which is to call the
+// FindMessages method of the Core.customMessagesManager field with a FindFilter
+// that has the IncludeAncestors field set to true, the active field pointing to
+// a true value, and the authenticated field pointing to a false value.
+func TestPathInternalUIUnauthenticatedMessages(t *testing.T) {
+	testingCMM := &testingCustomMessageManager{}
+	backend := &SystemBackend{
+		Core: &Core{
+			customMessageManager: testingCMM,
+		},
+	}
+
+	resp, err := backend.pathInternalUIUnauthenticatedMessages(context.Background(), &logical.Request{}, &framework.FieldData{})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	expectedFilter := uicustommessages.FindFilter{IncludeAncestors: true}
+	expectedFilter.Active(true)
+	expectedFilter.Authenticated(false)
+
+	assert.ElementsMatch(t, testingCMM.findFilters, []uicustommessages.FindFilter{expectedFilter})
+}
+
+// TestPathInternalUIAuthenticatedMessages verifies the correct behaviour of the
+// pathInternalUIAuthenticatedMessages method, which is to first check if the
+// request has a valid token included, then call the FindMessages method of the
+// Core.customMessagesManager field with a FindFilter that has the
+// IncludeAncestors field set to true, the active field pointing to a true
+// value, and the authenticated field pointing to a true value. If the request
+// does not have a valid token, the method behaves as if no messages meet the
+// criteria.
+func TestPathInternalUIAuthenticatedMessages(t *testing.T) {
+	testingCMM := &testingCustomMessageManager{}
+	testCore := TestCoreRaw(t)
+	_, _, token := testCoreUnsealed(t, testCore)
+	testCore.customMessageManager = testingCMM
+
+	backend := &SystemBackend{
+		Core: testCore,
+	}
+
+	nsCtx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	// Check with a request that includes a valid token
+	resp, err := backend.pathInternalUIAuthenticatedMessages(nsCtx, &logical.Request{
+		ClientToken: token,
+	}, &framework.FieldData{})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	expectedFilter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	expectedFilter.Active(true)
+	expectedFilter.Authenticated(true)
+
+	assert.ElementsMatch(t, testingCMM.findFilters, []uicustommessages.FindFilter{expectedFilter})
+
+	// Now, check with a request that has no token: expecting no new filter
+	// in the testingCMM.
+	resp, err = backend.pathInternalUIAuthenticatedMessages(nsCtx, &logical.Request{}, &framework.FieldData{})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotContains(t, resp.Data, "keys")
+	assert.NotContains(t, resp.Data, "key_info")
+
+	assert.ElementsMatch(t, testingCMM.findFilters, []uicustommessages.FindFilter{expectedFilter})
+
+	// Finally, check with an invalid token in the request: again, expecting no
+	// new filter in the testingCMM.
+	resp, err = backend.pathInternalUIAuthenticatedMessages(nsCtx, &logical.Request{ClientToken: "invalid"}, &framework.FieldData{})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotContains(t, resp.Data, "keys")
+	assert.NotContains(t, resp.Data, "key_info")
+
+	assert.ElementsMatch(t, testingCMM.findFilters, []uicustommessages.FindFilter{expectedFilter})
+}
+
+// TestPathInternalUICustomMessagesCommon verifies the correct behaviour of the
+// (*SystemBackend).pathInternalUICustomMessagesCommon method.
+func TestPathInternalUICustomMessagesCommon(t *testing.T) {
+	var storage logical.Storage = &testingStorage{getFails: true}
+	testingCMM := uicustommessages.NewManager(storage)
+	backend := &SystemBackend{
+		Core: &Core{
+			customMessageManager: testingCMM,
+		},
+	}
+
+	// First, check that when an error occurs in the FindMessages method, it's
+	// handled correctly.
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: true,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+
+	resp, err := backend.pathInternalUICustomMessagesCommon(context.Background(), filter)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data, "error")
+	assert.Contains(t, resp.Data["error"], "failed to retrieve custom messages")
+
+	// Next, check that when no error occur and messages are returned by
+	// FindMessages that they are correctly translated.
+	storage = &logical.InmemStorage{}
+	backend.Core.customMessageManager = uicustommessages.NewManager(storage)
+
+	// Load some messages for the root namespace and a testNS namespace.
+	startTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
+	endTime := time.Now().Add(time.Hour).Format(time.RFC3339Nano)
+
+	messagesTemplate := `{"messages":{"%[1]d01":{"id":"%[1]d01","title":"Title-%[1]d01","message":"Message of Title-%[1]d01","authenticated":false,"type":"banner","start_time":"%[2]s"},"%[1]d02":{"id":"%[1]d02","title":"Title-%[1]d02","message":"Message of Title-%[1]d02","authenticated":false,"type":"modal","start_time":"%[2]s","end_time":"%[3]s"},"%[1]d03":{"id":"%[1]d03","title":"Title-%[1]d03","message":"Message of Title-%[1]d03","authenticated":false,"type":"banner","start_time":"%[2]s","link":{"Link":"www.example.com"}}}}`
+
+	cmStorageEntry := &logical.StorageEntry{
+		Key:   "sys/config/ui/custom-messages",
+		Value: []byte(fmt.Sprintf(messagesTemplate, 0, startTime, endTime)),
+	}
+	storage.Put(context.Background(), cmStorageEntry)
+
+	cmStorageEntry = &logical.StorageEntry{
+		Key:   "namespaces/testNS/sys/config/ui/custom-messages",
+		Value: []byte(fmt.Sprintf(messagesTemplate, 1, startTime, endTime)),
+	}
+	storage.Put(context.Background(), cmStorageEntry)
+
+	resp, err = backend.pathInternalUICustomMessagesCommon(namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace), filter)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Contains(t, resp.Data, "keys")
+	assert.Equal(t, 3, len(resp.Data["keys"].([]string)))
+	assert.Contains(t, resp.Data, "key_info")
+	assert.Equal(t, 3, len(resp.Data["key_info"].(map[string]any)))
 }

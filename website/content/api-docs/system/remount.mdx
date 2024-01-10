@@ -10,14 +10,15 @@ description: >-
 
 The Remount documentation details the endpoints required to trigger and monitor the status of a remount operation.
 
-## Move Backend
+## Move backend
 
-The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. This process works for both secret 
+The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. Remounting works for both secret
 engines and auth methods.
 
-The remount operation returns a migration ID to the user. The user may utilize the migration ID to look up 
-the status of the mount migration. More details about the remount operation are described in 
-[Mount Migration](/docs/concepts/mount-migration).
+Vault returns a migration ID when the remount operation completes. You
+can use the migration ID to look up the status of the mount migration.
+More details about the remount operation are described in
+[Mount Migration](/vault/docs/concepts/mount-migration).
 
 ~> Note: This endpoint requires a policy with both `sudo` and `update` capabilities to `sys/remount`
 
@@ -35,7 +36,7 @@ depending on which type of backend is being moved.
 
 - `to` `(string: <required>)` – Specifies the new destination mount point.
 
-### Sample Payload ( Cross Namespace )
+### Sample payload ( cross namespace )
 
 ```json
 {
@@ -44,7 +45,7 @@ depending on which type of backend is being moved.
 }
 ```
 
-### Sample Payload ( Cross Namespace, Auth Mount )
+### Sample payload ( cross namespace, auth mount )
 
 ```json
 {
@@ -53,7 +54,7 @@ depending on which type of backend is being moved.
 }
 ```
 
-### Sample Payload ( Within Namespace )
+### Sample payload ( within namespace )
 
 ```json
 {
@@ -62,7 +63,7 @@ depending on which type of backend is being moved.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -72,7 +73,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/remount
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -80,7 +81,7 @@ $ curl \
 }
 ```
 
-## Monitor Migration Status
+## Monitor migration status
 
 This endpoint is used to monitor the status of a mount migration operation, using the ID returned in the response
 of the `sys/remount` call. The response contains the passed-in ID, the source and target mounts, and a status field
@@ -94,7 +95,7 @@ that displays `in-progress`, `success` or `failure`.
 
 - `migration_id` `(string: <required>)` – Specifies the id of the mount migration
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -102,7 +103,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

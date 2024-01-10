@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import selectors from 'vault/tests/helpers/components/ttl-picker';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | ttl-picker', function (hooks) {
   setupRenderingTest(hooks);
@@ -181,6 +187,12 @@ module('Integration | Component | ttl-picker', function (hooks) {
     });
 
     test('it shows subtext and description when passed', async function (assert) {
+      setRunOptions({
+        rules: {
+          // TODO: remove Tooltip
+          'aria-command-name': { enabled: false },
+        },
+      });
       this.set('label', 'My Label');
       await render(hbs`
         <TtlPicker
@@ -268,9 +280,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
       this.set('onChange', changeSpy);
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="clicktest"
-          @initialValue="10m"
+          @label={{this.label}} @initialValue="10m"
           @onChange={{this.onChange}}
         />
       `);
@@ -290,9 +300,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('inputs reflect initial value when toggled on', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="inittest"
-          @onChange={{this.onChange}}
+          @label={{this.label}} @onChange={{this.onChange}}
           @initialValue="100m"
         />
       `);
@@ -306,9 +314,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('it is enabled on init if initialEnabled is true', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="inittest"
-          @onChange={{this.onChange}}
+          @label={{this.label}} @onChange={{this.onChange}}
           @initialValue="100m"
           @initialEnabled={{true}}
         />
@@ -325,9 +331,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('it is enabled on init if initialEnabled evals to truthy', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="inittest"
-          @onChange={{this.onChange}}
+          @label={{this.label}} @onChange={{this.onChange}}
           @initialValue="100m"
           @initialEnabled="100m"
         />
@@ -340,9 +344,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('it converts days to go safe time', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="clicktest"
-          @initialValue="2d"
+          @label={{this.label}} @initialValue="2d"
           @onChange={{this.onChange}}
         />
       `);
@@ -362,9 +364,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('it converts to the largest round unit on init', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="convertunits"
-          @onChange={{this.onChange}}
+          @label={{this.label}} @onChange={{this.onChange}}
           @initialValue="60000s"
           @initialEnabled="true"
         />
@@ -376,9 +376,7 @@ module('Integration | Component | ttl-picker', function (hooks) {
     test('it converts to the largest round unit on init when no unit provided', async function (assert) {
       await render(hbs`
         <TtlPicker
-          @label={{this.label}}
-          @label="convertunits"
-          @onChange={{this.onChange}}
+          @label={{this.label}} @onChange={{this.onChange}}
           @initialValue={{86400}}
           @initialEnabled="true"
         />

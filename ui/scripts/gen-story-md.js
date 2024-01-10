@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-disable */
 // run this script via yarn in the ui directory:
 // yarn gen-story-md some-component

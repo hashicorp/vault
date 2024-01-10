@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestDialLDAP duplicates a potential panic that was
@@ -26,15 +31,20 @@ func TestDialLDAP(t *testing.T) {
 
 func TestLDAPEscape(t *testing.T) {
 	testcases := map[string]string{
-		"#test":       "\\#test",
-		"test,hello":  "test\\,hello",
-		"test,hel+lo": "test\\,hel\\+lo",
-		"test\\hello": "test\\\\hello",
-		"  test  ":    "\\  test \\ ",
-		"":            "",
-		"\\test":      "\\\\test",
-		"test\\":      "test\\\\",
-		"test\\ ":     "test\\\\\\ ",
+		"#test":                      "\\#test",
+		"test,hello":                 "test\\,hello",
+		"test,hel+lo":                "test\\,hel\\+lo",
+		"test\\hello":                "test\\\\hello",
+		"  test  ":                   "\\  test \\ ",
+		"":                           "",
+		`\`:                          `\\`,
+		"trailing\000":               `trailing\00`,
+		"mid\000dle":                 `mid\00dle`,
+		"\000":                       `\00`,
+		"multiple\000\000":           `multiple\00\00`,
+		"backlash-before-null\\\000": `backlash-before-null\\\00`,
+		"trailing\\":                 `trailing\\`,
+		"double-escaping\\>":         `double-escaping\\\>`,
 	}
 
 	for test, answer := range testcases {
@@ -83,5 +93,60 @@ func TestSIDBytesToString(t *testing.T) {
 		} else if answer != res {
 			t.Errorf("Failed to convert %#v: %s != %s", test, res, answer)
 		}
+	}
+}
+
+func TestClient_renderUserSearchFilter(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		conf        *ConfigEntry
+		username    string
+		want        string
+		errContains string
+	}{
+		{
+			name:     "valid-default",
+			username: "alice",
+			conf: &ConfigEntry{
+				UserAttr: "cn",
+			},
+			want: "(cn=alice)",
+		},
+		{
+			name:     "escaped-malicious-filter",
+			username: "foo@example.com)((((((((((((((((((((((((((((((((((((((userPrincipalName=foo",
+			conf: &ConfigEntry{
+				UPNDomain:  "example.com",
+				UserFilter: "(&({{.UserAttr}}={{.Username}})({{.UserAttr}}=admin@example.com))",
+			},
+			want: "(&(userPrincipalName=foo@example.com\\29\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28\\28userPrincipalName=foo@example.com)(userPrincipalName=admin@example.com))",
+		},
+		{
+			name:     "bad-filter-unclosed-action",
+			username: "alice",
+			conf: &ConfigEntry{
+				UserFilter: "hello{{range",
+			},
+			errContains: "search failed due to template compilation error",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := Client{
+				Logger: hclog.NewNullLogger(),
+				LDAP:   NewLDAP(),
+			}
+
+			f, err := c.RenderUserSearchFilter(tc.conf, tc.username)
+			if tc.errContains != "" {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tc.errContains)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, f)
+			assert.Equal(t, tc.want, f)
+		})
 	}
 }

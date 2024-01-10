@@ -1,1 +1,41 @@
-route: issuers.issuer.cross-sign
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-pki-issuer-page-title>
+      Cross-Sign Issuers
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="is-flex-row has-top-margin-s box is-fullwidth has-only-top-shadow">
+  <div class="has-right-margin-m" data-test-pki-cross-sign-steps>
+    <h2 class="title is-5">Cross-signing</h2>
+    <p class="has-text-grey">
+      Cross-signing will ensure that a chain of trust leads back to both your old root and the new one. This completes the
+      process of root rotation.
+    </p>
+    <h2 class="title is-5 has-top-padding-m">How cross-signing will work</h2>
+    <p class="has-text-grey">
+      <ol class="has-left-margin-m has-bottom-margin-s">
+        <li>You identify which intermediates need to be cross-signed.</li>
+        <li>The new CSR for your intermediate(s) will be generated.</li>
+        <li>The CSR is signed with the root <strong>{{this.model.issuerRef}}</strong>.</li>
+        <li>Your new intermediate(s) are imported into any existing mount(s).</li>
+      </ol>
+      Then, you can begin re-issuing leaf certs and phase out the old root.
+    </p>
+  </div>
+
+  <div class="has-left-margin-m">
+    <img data-test-pki-cross-sign-img src={{img-path "~/pki-cross-sign.png"}} alt="cross signing issuers diagram" />
+  </div>
+</div>
+
+<PkiIssuerCrossSign @parentIssuer={{this.model}} />

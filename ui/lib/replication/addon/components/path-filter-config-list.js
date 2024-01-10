@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@ember/component';
 import { set, computed } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -117,10 +122,6 @@ export default Component.extend({
   singletonMountTypes: computed(function () {
     return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
   }),
-
-  willDestroyElement() {
-    this._super(...arguments);
-  },
 
   actions: {
     async pathsChanged(paths) {
