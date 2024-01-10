@@ -90,6 +90,14 @@ export default function (server) {
         connection_details,
         name,
         type,
+        /* 
+        these only exist if a delete has been initiated, including here for dev/testing purposes
+        if only `purge_initiated_at` present the delete progress banner renders
+        if `purge_error` also has a value then delete failed banner renders
+        */
+        // purge_initiated_at: '2024-01-09T16:54:28.463879-07:00',
+        // WIP (backend hasn't added yet) update when we have a realistic error message)
+        // purge_error: '1 error occurred: association could for some confusing reason not be un-synced!',
       },
     };
   };
