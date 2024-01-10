@@ -143,35 +143,35 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         );
       assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
     });
-  });
-  test('login works when reduced disclosure enabled (ent)', async function (assert) {
-    const namespace = 'reduced-disclosure';
-    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
-    await authPage.login();
-    assert.strictEqual(currentURL(), '/vault/dashboard');
+    test('login works when reduced disclosure enabled (ent)', async function (assert) {
+      const namespace = 'reduced-disclosure';
+      assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
+      await authPage.login();
+      assert.strictEqual(currentURL(), '/vault/dashboard');
 
-    // Ensure it shows version on dashboard
-    assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+      // Ensure it shows version on dashboard
+      assert.dom(SELECTORS.dashboardTitle).includesText(`Vault v1.`);
+      assert
+        .dom(SELECTORS.footerVersion)
+        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
 
-    await runCmd(`write sys/namespaces/${namespace} -f`, false);
-    await authPage.loginNs(namespace);
+      await runCmd(`write sys/namespaces/${namespace} -f`, false);
+      await authPage.loginNs(namespace);
 
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
+      assert
+        .dom(SELECTORS.footerVersion)
+        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
 
-    const token = await runCmd(createTokenCmd('default'));
+      const token = await runCmd(createTokenCmd('default'));
 
-    await authPage.logout();
-    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
+      await authPage.logout();
+      assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
 
-    await authPage.loginNs(namespace, token);
-    assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+      await authPage.loginNs(namespace, token);
+      assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
+      assert
+        .dom(SELECTORS.footerVersion)
+        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+    });
   });
 });
