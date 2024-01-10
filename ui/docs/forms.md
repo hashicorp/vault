@@ -46,7 +46,7 @@ export default class UserModel extends Model {
 }
 ```
 
-In this model for a user, there are a few fields that are relevant to every user, and some fields whose values depend on other values on the model.
+In this model for a user, there are a few fields that are relevant to every user, and some fields whose values depend on other values on the model. Some acceptance criteria for this form: 
 
 - Depending on the value of `department`, the `search-select` will query and show different manager values
 - Both `onboarded` and `admin` are boolean values, but since selecting `admin` will show new field options (`adminReason`), the `admin` editType is `toggle` while `onboarded` is a checkbox since there are no UI side effects.
@@ -72,7 +72,7 @@ Now that we have some understanding of which fields go where, let's get templati
 
 ### Step 3 - Create your form component
 
-Each form will still need its own component, with a backing class to define the save and cancel functionality, and track errors and validations. However, the Form component makes much of the form boilerplate.
+Each form will still need its own component, with a backing class to define the save and cancel functionality. However, the EasyForm component makes much of the form boilerplate.
 
 Create your form component `ember g component -gc user-form` and fill in with the following to create a bare minimum form. This component assumes we're passing the ember-data model created above as `@model`.
 
@@ -105,7 +105,7 @@ With just this minimum amount of code, we have a form which:
 
 #### Custom errors
 
-What if we want to show a custom error message at some point in the save method? As long as an Error is thrown, the Form's submit handler will be able to manage the error message.
+What if we want to show a custom error message at some point in the save method? As long as an `Error` is thrown, the EasyForm's submit handler will be able to manage the error message.
 
 ```js
 // user-form.js
