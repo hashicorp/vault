@@ -75,7 +75,6 @@ export default class MessagesList extends Component {
       if (Ember.testing) {
         return;
       }
-
       if (this.userConfirmation) {
         return this.userConfirmation === 'confirmed';
       }
